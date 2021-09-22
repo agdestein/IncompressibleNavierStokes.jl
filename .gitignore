@@ -3,3 +3,10 @@
 *.jl.mem
 /Manifest.toml
 /docs/build/
+
+# Vim swap
+*.swp
+
+# Mac OS
+*.DS_Store
+
