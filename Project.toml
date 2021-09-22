@@ -1,0 +1,13 @@
+name = "IncompressibleNavierStokes"
+uuid = "5e318141-6589-402b-868d-77d7df8c442e"
+authors = ["Syver Døving Agdestein <syverda@icloud.com> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
