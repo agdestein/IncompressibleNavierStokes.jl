@@ -4,12 +4,14 @@ module IncompressibleNavierStokes
 using SparseArrays
 using UnPack
 
+# Preprocess
+include("preprocess/check_input.jl")
+
 # Spatial
-include("spatial/momentum.jl")
 include("spatial/check_conservation.jl")
-include("spatial/boundary_conditions/set_bc_vectors.jl")
 include("spatial/convection.jl")
 include("spatial/diffusion.jl")
+include("spatial/momentum.jl")
 include("spatial/strain_tensor.jl")
 include("spatial/turbulent_viscosity.jl")
 include("spatial/boundary_conditions/BC_general.jl")
