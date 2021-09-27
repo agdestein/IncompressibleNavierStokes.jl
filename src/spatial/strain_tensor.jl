@@ -52,7 +52,7 @@ function strain_tensor(V, t, setup, getJacobian)
             # "cut-off" the double points in case of periodic BC
             # for periodic boundary conditions S11(Npx+1, :) = S11(1, :)
             # so S11 has size (Npx+1)*Npy; the last row are "ghost" points equal to the
-            # first points. we have S11 at positions ([xp(1)-0.5*(hx(1)+hx(end)); xp], yp)
+            # first points. we have S11 at positions ([xp[1]-0.5*(hx[1]+hx[end]); xp], yp)
             S11_p = reshape(S11, Nux_in + 1, Nuy_in)
             S11_p = S11_p(2:Nux_in+1, :) # b
 
@@ -69,13 +69,13 @@ function strain_tensor(V, t, setup, getJacobian)
             # get S12 and S21 at all corner points
             S12_temp = zeros(Nx + 1, Ny + 1)
             S12_temp[2:Nx+1, :] = reshape(S12, Nx, Ny + 1)
-            S12_temp[1, :] = S12_temp[2, :] # copy from x(2) to x(1); one could do this more accurately in principle by using the BC
+            S12_temp[1, :] = S12_temp[2, :] # copy from x[2] to x[1]; one could do this more accurately in principle by using the BC
         else
             error("BC not implemented in strain_tensor.m")
         end
 
         if BC.v.low == "per" && BC.v.up == "per"
-            # similarly, S22(:, Npy+1) = S22(:, 1). positions (xp, [yp;yp(1)])
+            # similarly, S22(:, Npy+1) = S22(:, 1). positions (xp, [yp;yp[1]])
             S22_p = reshape(S22, Nvx_in, Nvy_in + 1)
             S22_p = S22_p(:, 2:Nvy_in+1) # why not 1:Nvy_in?
 
@@ -122,8 +122,7 @@ function strain_tensor(V, t, setup, getJacobian)
         S_abs = sqrt(4 * q)
 
         # should be zero:
-        # r = (S11[:].^2+S12[:].*S21[:]).*S11[:] + (S11[:].*S12[:]+S12[:].*S22[:]).*S21[:] + ...
-        #     (S11[:].*S21[:]+S21[:].*S22[:]).*S12[:] + (S12[:].*S21[:]+S22[:].^2).*S22[:]; #-(S11[:].*S22[:] - S12[:].*S21[:]);
+        # r = (S11[:].^2+S12[:].*S21[:]).*S11[:] + (S11[:].*S12[:]+S12[:].*S22[:]).*S21[:] +         #     (S11[:].*S21[:]+S21[:].*S22[:]).*S12[:] + (S12[:].*S21[:]+S22[:].^2).*S22[:]; #-(S11[:].*S22[:] - S12[:].*S21[:]);
 
         # figure
         # contour(xp, yp, reshape(q, Npx, Npy)", 25);

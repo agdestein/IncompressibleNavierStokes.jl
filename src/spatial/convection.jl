@@ -6,16 +6,16 @@ V: velocity field
 C: 'convection' field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
 c_y = v
 """
-function convection(V, C, t, options, getJacobian)
+function convection(V, C, t, setup, getJacobian)
     # evaluate convective terms and, optionally, Jacobians
     # V: velocity field
     # C: 'convection' field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
     # c_y = v
 
-    α = options.discretization.α
-    order4 = options.discretization.order4
+    α = setup.discretization.α
+    order4 = setup.discretization.order4
 
-    regularize = options.case.regularize
+    regularize = setup.case.regularize
 
     @unpack Nu, Nv, NV, indu, indv = setup.grid
 
@@ -30,11 +30,11 @@ function convection(V, C, t, options, getJacobian)
 
     if regularize == 0
         # no regularization
-        convu, convv, Jacu, Jacv = convection_components(C, V, options, getJacobian, false)
+        convu, convv, Jacu, Jacv = convection_components(C, V, setup, getJacobian, false)
 
         if order4 == 1
             convu3, convv3, Jacu3, Jacv3 =
-                convection_components(C, V, options, getJacobian, true)
+                convection_components(C, V, setup, getJacobian, true)
             convu = α * convu - convu3
             convv = α * convv - convv3
             Jacu = α * Jacu - Jacu3
@@ -54,7 +54,7 @@ function convection(V, C, t, options, getJacobian)
         maxdiv_f = max(abs(M * C_filtered + yM))
 
         convu, convv, Jacu, Jacv =
-            convection_components(C_filtered, V, options, getJacobian)
+            convection_components(C_filtered, V, setup, getJacobian)
     elseif regularize == 2
         ## C2
 
@@ -71,7 +71,7 @@ function convection(V, C, t, options, getJacobian)
         maxdiv_f = max(abs(M * C_filtered + yM))
 
         [convu, convv, Jacu, Jacv] =
-            convection_components(C_filtered, V_filtered, options, getJacobian)
+            convection_components(C_filtered, V_filtered, setup, getJacobian)
 
         convu = filter_convection(convu, Diffu_f, yDiffu_f, α)
         convv = filter_convection(convv, Diffv_f, yDiffv_f, α)
@@ -100,13 +100,13 @@ function convection(V, C, t, options, getJacobian)
         maxdiv_f[n] = max(abs(M * V_filtered + yM))
 
         convu1, convv1, Jacu, Jacv =
-            convection_components(C_filtered, V_filtered, options, getJacobian)
+            convection_components(C_filtered, V_filtered, setup, getJacobian)
 
         convu2, convv2, Jacu, Jacv =
-            convection_components(C_filtered, dV, options, getJacobian)
+            convection_components(C_filtered, dV, setup, getJacobian)
 
         convu3, convv3, Jacu, Jacv =
-            convection_components(dC, V_filtered, options, getJacobian)
+            convection_components(dC, V_filtered, setup, getJacobian)
 
         convu = convu1 + filter_convection(convu2 + convu3, Diffu_f, yDiffu_f, α)
         convv = convv1 + filter_convection(convv2 + convv3, Diffv_f, yDiffv_f, α)
@@ -114,66 +114,66 @@ function convection(V, C, t, options, getJacobian)
     convu, convv, Jacu, Jacv
 end
 
-function convection_components(C, V, options, getJacobian, order4 = false)
+function convection_components(C, V, setup, getJacobian, order4 = false)
 
     if order4
-        Cux = options.discretization.Cux3
-        Cuy = options.discretization.Cuy3
-        Cvx = options.discretization.Cvx3
-        Cvy = options.discretization.Cvy3
+        Cux = setup.discretization.Cux3
+        Cuy = setup.discretization.Cuy3
+        Cvx = setup.discretization.Cvx3
+        Cvy = setup.discretization.Cvy3
 
-        Au_ux = options.discretization.Au_ux3
-        Au_uy = options.discretization.Au_uy3
-        Av_vx = options.discretization.Av_vx3
-        Av_vy = options.discretization.Av_vy3
+        Au_ux = setup.discretization.Au_ux3
+        Au_uy = setup.discretization.Au_uy3
+        Av_vx = setup.discretization.Av_vx3
+        Av_vy = setup.discretization.Av_vy3
 
-        yAu_ux = options.discretization.yAu_ux3
-        yAu_uy = options.discretization.yAu_uy3
-        yAv_vx = options.discretization.yAv_vx3
-        yAv_vy = options.discretization.yAv_vy3
+        yAu_ux = setup.discretization.yAu_ux3
+        yAu_uy = setup.discretization.yAu_uy3
+        yAv_vx = setup.discretization.yAv_vx3
+        yAv_vy = setup.discretization.yAv_vy3
 
-        Iu_ux = options.discretization.Iu_ux3
-        Iv_uy = options.discretization.Iv_uy3
-        Iu_vx = options.discretization.Iu_vx3
-        Iv_vy = options.discretization.Iv_vy3
+        Iu_ux = setup.discretization.Iu_ux3
+        Iv_uy = setup.discretization.Iv_uy3
+        Iu_vx = setup.discretization.Iu_vx3
+        Iv_vy = setup.discretization.Iv_vy3
 
-        yIu_ux = options.discretization.yIu_ux3
-        yIv_uy = options.discretization.yIv_uy3
-        yIu_vx = options.discretization.yIu_vx3
-        yIv_vy = options.discretization.yIv_vy3
+        yIu_ux = setup.discretization.yIu_ux3
+        yIv_uy = setup.discretization.yIv_uy3
+        yIu_vx = setup.discretization.yIu_vx3
+        yIv_vy = setup.discretization.yIv_vy3
     else
-        Cux = options.discretization.Cux
-        Cuy = options.discretization.Cuy
-        Cvx = options.discretization.Cvx
-        Cvy = options.discretization.Cvy
+        Cux = setup.discretization.Cux
+        Cuy = setup.discretization.Cuy
+        Cvx = setup.discretization.Cvx
+        Cvy = setup.discretization.Cvy
 
-        Au_ux = options.discretization.Au_ux
-        Au_uy = options.discretization.Au_uy
-        Av_vx = options.discretization.Av_vx
-        Av_vy = options.discretization.Av_vy
+        Au_ux = setup.discretization.Au_ux
+        Au_uy = setup.discretization.Au_uy
+        Av_vx = setup.discretization.Av_vx
+        Av_vy = setup.discretization.Av_vy
 
-        yAu_ux = options.discretization.yAu_ux
-        yAu_uy = options.discretization.yAu_uy
-        yAv_vx = options.discretization.yAv_vx
-        yAv_vy = options.discretization.yAv_vy
+        yAu_ux = setup.discretization.yAu_ux
+        yAu_uy = setup.discretization.yAu_uy
+        yAv_vx = setup.discretization.yAv_vx
+        yAv_vy = setup.discretization.yAv_vy
 
-        Iu_ux = options.discretization.Iu_ux
-        Iv_uy = options.discretization.Iv_uy
-        Iu_vx = options.discretization.Iu_vx
-        Iv_vy = options.discretization.Iv_vy
+        Iu_ux = setup.discretization.Iu_ux
+        Iv_uy = setup.discretization.Iv_uy
+        Iu_vx = setup.discretization.Iu_vx
+        Iv_vy = setup.discretization.Iv_vy
 
-        yIu_ux = options.discretization.yIu_ux
-        yIv_uy = options.discretization.yIv_uy
-        yIu_vx = options.discretization.yIu_vx
-        yIv_vy = options.discretization.yIv_vy
+        yIu_ux = setup.discretization.yIu_ux
+        yIv_uy = setup.discretization.yIv_uy
+        yIu_vx = setup.discretization.yIu_vx
+        yIv_vy = setup.discretization.yIv_vy
     end
 
-    indu = options.grid.indu
-    indv = options.grid.indv
+    indu = setup.grid.indu
+    indv = setup.grid.indv
 
-    Nu = options.grid.Nu
-    Nv = options.grid.Nv
-    NV = options.grid.NV
+    Nu = setup.grid.Nu
+    Nv = setup.grid.Nv
+    NV = setup.grid.NV
 
     Jacu = sparse(Nu, NV)
     Jacv = sparse(Nv, NV)
@@ -204,11 +204,11 @@ function convection_components(C, V, options, getJacobian, order4 = false)
     convv = duvdx + dv2dy
 
     if getJacobian
-        Newton = options.solversettings.Newton_factor
-        N1 = length(u_ux) #options.grid.N1;
-        N2 = length(u_uy) #options.grid.N2;
-        N3 = length(v_vx) #options.grid.N3;
-        N4 = length(v_vy) #options.grid.N4;
+        Newton = setup.solversettings.Newton_factor
+        N1 = length(u_ux) #setup.grid.N1;
+        N2 = length(u_uy) #setup.grid.N2;
+        N3 = length(v_vx) #setup.grid.N3;
+        N4 = length(v_vy) #setup.grid.N4;
 
         ## convective terms, u-component
         # c^n * u^(n+1), c = u

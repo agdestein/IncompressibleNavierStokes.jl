@@ -63,13 +63,13 @@ function diffusion(V, t, setup, getJacobian)
             @unpack N1, N2, N3, N4 = setup.grid
 
             Jacu1 =
-                Dux * 2 * spdiags(ν + ν_t_ux, 0, N1, N1) * Su_ux +
-                Duy * 2 * spdiags(ν + ν_t_uy, 0, N2, N2) * 1 / 2 * Su_uy
-            Jacu2 = Duy * 2 * spdiags(ν + ν_t_uy, 0, N2, N2) * 1 / 2 * Sv_uy
-            Jacv1 = Dvx * 2 * spdiags(ν + ν_t_vx, 0, N3, N3) * 1 / 2 * Su_vx
+                Dux * 2 * spdiagm(N2, N2, ν + ν_t_ux, ) * Su_ux +
+                Duy * 2 * spdiagm(N1, N1, ν + ν_t_uy, ) * 1 / 2 * Su_uy
+            Jacu2 = Duy * 2 * spdiagm(N2, N2, ν + ν_t_uy, ) * 1 / 2 * Sv_uy
+            Jacv1 = Dvx * 2 * spdiagm(N3, N3, ν + ν_t_vx, ) * 1 / 2 * Su_vx
             Jacv2 =
-                Dvx * 2 * spdiags(ν + ν_t_vx, 0, N3, N3) * 1 / 2 * Sv_vx +
-                Dvy * 2 * spdiags(ν + ν_t_vy, 0, N4, N4) * Sv_vy
+                Dvx * 2 * spdiagm(N3, N3, ν + ν_t_vx) * 1 / 2 * Sv_vx +
+                Dvy * 2 * spdiagm(N4, N4, ν + ν_t_vy) * Sv_vy
             Jacu = [Jacu1 Jacu2]
             Jacv = [Jacv1 Jacv2]
 
@@ -90,13 +90,13 @@ function diffusion(V, t, setup, getJacobian)
                 error("wrong value for visc parameter")
             end
             tmpu1 =
-                2 * Dux * spdiags(S11, 0, N1, N1) * Aν_ux * S_abs_u +
-                2 * Duy * spdiags(S12, 0, N2, N2) * Aν_uy * S_abs_u
-            tmpu2 = 2 * Duy * spdiags(S12, 0, N2, N2) * Aν_uy * S_abs_v
-            tmpv1 = 2 * Dvx * spdiags(S21, 0, N3, N3) * Aν_vx * S_abs_u
+                2 * Dux * spdiagm(N1, N1, S11) * Aν_ux * S_abs_u +
+                2 * Duy * spdiagm(N2, N2, S12) * Aν_uy * S_abs_u
+            tmpu2 = 2 * Duy * spdiagm(N2, N2, S12) * Aν_uy * S_abs_v
+            tmpv1 = 2 * Dvx * spdiagm(N3, N3, S21) * Aν_vx * S_abs_u
             tmpv2 =
-                2 * Dvx * spdiags(S21, 0, N3, N3) * Aν_vx * S_abs_v +
-                2 * Dvy * spdiags(S22, 0, N4, N4) * Aν_vy * S_abs_v
+                2 * Dvx * spdiagm(N3, N3, S21) * Aν_vx * S_abs_v +
+                2 * Dvy * spdiagm(N4, N4, S22) * Aν_vy * S_abs_v
             Jacu += K * [tmpu1 tmpu2]
             Jacv += K * [tmpv1 tmpv2]
         end

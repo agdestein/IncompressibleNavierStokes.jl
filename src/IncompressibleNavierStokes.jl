@@ -4,6 +4,9 @@ module IncompressibleNavierStokes
 using SparseArrays
 using UnPack
 
+# Setup
+include("parameters.jl")
+
 # Preprocess
 include("preprocess/check_input.jl")
 
@@ -35,9 +38,14 @@ include("solvers/set_timestep.jl")
 
 # Solvers
 include("solvers/solve_steady.jl")
+include("solvers/set_timestep.jl")
+include("solvers/pressure/make_cholinc.jl")
 
 # Utils
 include("utils/filter_convection.jl")
+
+# Setup
+export Case, Fluid, Visc, Grid, Discretization, Force, ROM, IBM, Time, SolverSettings, Visualization
 
 # Solvers
 export solve_steady

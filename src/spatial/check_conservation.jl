@@ -7,15 +7,14 @@ function check_conservation(V, t, setup)
     uh = V(1:Nu)
     vh = V(Nu+1:Nu+Nv)
 
-    global uBC, vBC
-
     BC = setup.BC
+    @unpack uBC, vBC = BC
+
     if setup.BC.BC_unsteady
-        setup = set_bc_vectors(t, setup)
+        set_bc_vectors!(setup, t)
     end
 
     @unpack M, yM = setup.discretization
-
     @unpack Nu, Nv, Omu, Omv, x, y, xp, yp, hx, hy, gx, gy = setup.grid
 
     uLe_i = uBC(x[1], yp, t, setup)
@@ -34,7 +33,7 @@ function check_conservation(V, t, setup)
     if BC.u.left == "dir"
         umom = umom + sum(uLe_i .* hy) * gx[1]
         # 4th order
-        # umom[n] = umom[n] + sum(uLe_i .* (alfa * hy * gx[1] - hy3 * (gx[1] + gx[2])))
+        # umom[n] = umom[n] + sum(uLe_i .* (α * hy * gx[1] - hy3 * (gx[1] + gx[2])))
     end
     if BC.u.right == "dir"
         umom = umom + sum(uRi_i .* hy) * gx[end]

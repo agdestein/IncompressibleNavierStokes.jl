@@ -51,6 +51,7 @@ function set_timestep(setup)
         dt_conv = λ_conv_max / λ_conv
         dt = CFL * min(dt_conv, dt_diff)
 
-        dt
     end
+
+    dt
 end
