@@ -4,32 +4,24 @@
 Construct boundary conditions
 """
 function set_bc_vectors!(setup, t)
-
     # steady
     steady = setup.case.steady
-
-    # 4th order
     order4 = setup.discretization.order4
-
-    # Reynolds number
     Re = setup.fluid.Re
-
-    # boundary conditions
     BC = setup.BC
 
-    global uBC, vBC, dudtBC, dvdtBC
+    @unpack uBC, vBC, dudtBC, dvdtBC = BC
 
-    # type of stress tensor
+    # Type of stress tensor
     visc = setup.case.visc
 
     if order4
-        alfa = setup.discretization.alfa
+        α = setup.discretization.α
     end
 
-    ## grid settings
-
-    # number of interior points and boundary points
-    @unpack Nux_in, Nvy_in, Np, Npx, Npy, xin, yin, x, y, hx, hy, xp, yp = setup.grid
+    # Grid settings
+    @unpack Nux_in, Nvy_in, Np, Npx, Npy = setup.grid
+    @unpack xin, yin, x, y, hx, hy, xp, yp = setup.grid
 
     ## get BC values
     uLo = uBC(x, y[1], t, setup)
@@ -55,7 +47,6 @@ function set_bc_vectors!(setup, t)
     if !steady && setup.BC.BC_unsteady
         dudtLe_i = dudtBC(x[1], setup.grid.yp, t, setup)
         dudtRi_i = dudtBC(x[end], setup.grid.yp, t, setup)
-
         dvdtLo_i = dvdtBC(setup.grid.xp, y[1], t, setup)
         dvdtUp_i = dvdtBC(setup.grid.xp, y[end], t, setup)
     end
@@ -77,7 +68,7 @@ function set_bc_vectors!(setup, t)
     if order4
         ybc3 = kron(uLe_i, Mx_BC3.ybc1) + kron(uRi_i, Mx_BC3.ybc2)
         yMx3 = Mx_BC3.Bbc * ybc3
-        yMx = alfa * yMx - yMx3
+        yMx = α * yMx - yMx3
     end
 
     # My
@@ -86,22 +77,21 @@ function set_bc_vectors!(setup, t)
     if order4
         ybc3 = kron(My_BC3.ybc1, vLo_i) + kron(My_BC3.ybc2, vUp_i)
         yMy3 = My_BC3.Bbc * ybc3
-        yMy = alfa * yMy - yMy3
+        yMy = α * yMy - yMy3
     end
 
     yM = yMx + yMy
     setup.discretization.yM = yM
 
-
-    ## time derivative of divergence
-    if ~steady
+    # time derivative of divergence
+    if !steady
         if setup.BC.BC_unsteady
             ybc = kron(dudtLe_i, Mx_BC.ybc1) + kron(dudtRi_i, Mx_BC.ybc2)
             ydMx = Mx_BC.Bbc * ybc
             if order4
                 ybc3 = kron(dudtLe_i, Mx_BC3.ybc1) + kron(dudtRi_i, Mx_BC3.ybc2)
                 ydMx3 = Mx_BC3.Bbc * ybc3
-                ydMx = alfa * ydMx - ydMx3
+                ydMx = α * ydMx - ydMx3
             end
 
             # My
@@ -110,7 +100,7 @@ function set_bc_vectors!(setup, t)
             if order4
                 ybc3 = kron(My_BC3.ybc1, dvdtLo_i) + kron(My_BC3.ybc2, dvdtUp_i)
                 ydMy3 = My_BC3.Bbc * ybc3
-                ydMy = alfa * ydMy - ydMy3
+                ydMy = α * ydMy - ydMy3
             end
 
             ydM = ydMx + ydMy
@@ -121,7 +111,7 @@ function set_bc_vectors!(setup, t)
         end
     end
 
-    # if ibm == 1
+    # if ibm
     #     ydM = [ydM; zeros(n_ibm, 1)];
     #     yM = [yM; zeros(n_ibm, 1)];
     # end
@@ -129,8 +119,8 @@ function set_bc_vectors!(setup, t)
     ## boundary conditions for pressure
 
     # left and right side
-    y1D_le = zeros(Nux_in, 1)
-    y1D_ri = zeros(Nux_in, 1)
+    y1D_le = zeros(Nux_in)
+    y1D_ri = zeros(Nux_in)
     if BC.u.left == "pres"
         y1D_le[1] = -1
     end
@@ -140,8 +130,8 @@ function set_bc_vectors!(setup, t)
     y_px = kron(hy .* pLe, y1D_le) + kron(hy .* pRi, y1D_ri)
 
     # lower and upper side
-    y1D_lo = zeros(Nvy_in, 1)
-    y1D_up = zeros(Nvy_in, 1)
+    y1D_lo = zeros(Nvy_in)
+    y1D_up = zeros(Nvy_in)
     if strcmp(BC.v.low, "pres")
         y1D_lo[1] = -1
     end
@@ -150,22 +140,14 @@ function set_bc_vectors!(setup, t)
     end
     y_py = kron(y1D_lo, hx .* pLo) + kron(y1D_up, hx .* pUp)
 
-
     setup.discretization.y_px = y_px
     setup.discretization.y_py = y_py
 
-
     ## boundary conditions for averaging
 
-    Au_ux_BC = setup.discretization.Au_ux_BC
-    Au_uy_BC = setup.discretization.Au_uy_BC
-    Av_vx_BC = setup.discretization.Av_vx_BC
-    Av_vy_BC = setup.discretization.Av_vy_BC
+    @unpack Au_ux_BC, Au_uy_BC, Av_vx_BC, Av_vy_BC = setup.discretization
     if order4
-        Au_ux_BC3 = setup.discretization.Au_ux_BC3
-        Au_uy_BC3 = setup.discretization.Au_uy_BC3
-        Av_vx_BC3 = setup.discretization.Av_vx_BC3
-        Av_vy_BC3 = setup.discretization.Av_vy_BC3
+        @unpack Au_ux_BC3, Au_uy_BC3, Av_vx_BC3, Av_vy_BC3 = setup.discretization
     end
 
     # Au_ux
@@ -218,18 +200,10 @@ function set_bc_vectors!(setup, t)
 
     ## boundary conditions for diffusion
 
-    Su_ux_BC = setup.discretization.Su_ux_BC
-    Su_uy_BC = setup.discretization.Su_uy_BC
-    Sv_vx_BC = setup.discretization.Sv_vx_BC
-    Sv_vy_BC = setup.discretization.Sv_vy_BC
-    Dux = setup.discretization.Dux
-    Duy = setup.discretization.Duy
-    Dvx = setup.discretization.Dvx
-    Dvy = setup.discretization.Dvy
-
+    @unpack Su_ux_BC, Su_uy_BC, Sv_vx_BC, Sv_vy_BC = setup.discretization
+    @unpack Dux, Duy, Dvx, Dvy = setup.discretization
 
     if order4 == 0
-
         Su_vx_BC_lr = setup.discretization.Su_vx_BC_lr
         Su_vx_BC_lu = setup.discretization.Su_vx_BC_lu
         Sv_uy_BC_lr = setup.discretization.Sv_uy_BC_lr
@@ -285,7 +259,6 @@ function set_bc_vectors!(setup, t)
         if visc == "laminar"
             yDiffu = Dux * ((1 / Re) * ySu_ux) + Duy * ((1 / Re) * ySu_uy)
             yDiffv = Dvx * ((1 / Re) * ySv_vx) + Dvy * ((1 / Re) * ySv_vy)
-
             setup.discretization.yDiffu = yDiffu
             setup.discretization.yDiffv = yDiffv
         elseif visc ∈ ["keps", "LES", "qr", "ML"]
@@ -301,31 +274,24 @@ function set_bc_vectors!(setup, t)
     end
 
     if order4
-
-        Su_ux_BC3 = setup.discretization.Su_ux_BC3
-        Su_uy_BC3 = setup.discretization.Su_uy_BC3
-        Sv_vx_BC3 = setup.discretization.Sv_vx_BC3
-        Sv_vy_BC3 = setup.discretization.Sv_vy_BC3
-        Diffux_div = setup.discretization.Diffux_div
-        Diffuy_div = setup.discretization.Diffuy_div
-        Diffvx_div = setup.discretization.Diffvx_div
-        Diffvy_div = setup.discretization.Diffvy_div
+        @unpack Su_ux_BC3, Su_uy_BC3, Sv_vx_BC3, Sv_vy_BC3 = setup.discretization
+        @unpack Diffux_div, Diffuy_div, Diffvx_div, Diffvy_div = setup.discretization
 
         ybc1 = kron(uLe_i, Su_ux_BC.ybc1) + kron(uRi_i, Su_ux_BC.ybc2)
         ybc3 = kron(uLe_i, Su_ux_BC3.ybc1) + kron(uRi_i, Su_ux_BC3.ybc2)
-        ySu_ux = alfa * Su_ux_BC.Bbc * ybc1 - Su_ux_BC3.Bbc * ybc3
+        ySu_ux = α * Su_ux_BC.Bbc * ybc1 - Su_ux_BC3.Bbc * ybc3
 
         ybc1 = kron(Su_uy_BC.ybc1, uLo_i) + kron(Su_uy_BC.ybc2, uUp_i)
         ybc3 = kron(Su_uy_BC3.ybc1, uLo_i) + kron(Su_uy_BC3.ybc2, uUp_i)
-        ySu_uy = alfa * Su_uy_BC.Bbc * ybc1 - Su_uy_BC3.Bbc * ybc3
+        ySu_uy = α * Su_uy_BC.Bbc * ybc1 - Su_uy_BC3.Bbc * ybc3
 
         ybc1 = kron(vLe_i, Sv_vx_BC.ybc1) + kron(vRi_i, Sv_vx_BC.ybc2)
         ybc3 = kron(vLe_i, Sv_vx_BC3.ybc1) + kron(vRi_i, Sv_vx_BC3.ybc2)
-        ySv_vx = alfa * Sv_vx_BC.Bbc * ybc1 - Sv_vx_BC3.Bbc * ybc3
+        ySv_vx = α * Sv_vx_BC.Bbc * ybc1 - Sv_vx_BC3.Bbc * ybc3
 
         ybc1 = kron(Sv_vy_BC.ybc1, vLo_i) + kron(Sv_vy_BC.ybc2, vUp_i)
         ybc3 = kron(Sv_vy_BC3.ybc1, vLo_i) + kron(Sv_vy_BC3.ybc2, vUp_i)
-        ySv_vy = alfa * Sv_vy_BC.Bbc * ybc1 - Sv_vy_BC3.Bbc * ybc3
+        ySv_vy = α * Sv_vy_BC.Bbc * ybc1 - Sv_vy_BC3.Bbc * ybc3
 
         if visc == "laminar"
             yDiffu = (1 / Re) * (Diffux_div * ySu_ux + Diffuy_div * ySu_uy)
@@ -339,20 +305,12 @@ function set_bc_vectors!(setup, t)
     end
 
     ## boundary conditions for interpolation
-    Iu_ux_BC = setup.discretization.Iu_ux_BC
-    Iv_uy_BC_lr = setup.discretization.Iv_uy_BC_lr
-    Iv_uy_BC_lu = setup.discretization.Iv_uy_BC_lu
-    Iu_vx_BC_lr = setup.discretization.Iu_vx_BC_lr
-    Iu_vx_BC_lu = setup.discretization.Iu_vx_BC_lu
-    Iv_vy_BC = setup.discretization.Iv_vy_BC
+    @unpack Iu_ux_BC, Iv_uy_BC_lr, Iv_uy_BC_lu = setup.discretization
+    @unpack Iu_vx_BC_lr, Iu_vx_BC_lu, Iv_vy_BC = setup.discretization
 
     if order4
-        Iu_ux_BC3 = setup.discretization.Iu_ux_BC3
-        Iv_uy_BC_lu3 = setup.discretization.Iv_uy_BC_lu3
-        Iv_uy_BC_lr3 = setup.discretization.Iv_uy_BC_lr3
-        Iu_vx_BC_lu3 = setup.discretization.Iu_vx_BC_lu3
-        Iu_vx_BC_lr3 = setup.discretization.Iu_vx_BC_lr3
-        Iv_vy_BC3 = setup.discretization.Iv_vy_BC3
+        @unpack Iu_ux_BC3, Iv_uy_BC_lu3, Iv_uy_BC_lr3 = setup.discretization
+        @unpack Iu_vx_BC_lu3, Iu_vx_BC_lr3, Iv_vy_BC3 = setup.discretization
     end
 
     # Iu_ux
@@ -377,18 +335,18 @@ function set_bc_vectors!(setup, t)
 
     if order4
         if BC.v.low == "dir"
-            vLe_ext = [2 * vLe[1] - vLe(2); vLe]
-            vRi_ext = [2 * vRi[1] - vRi(2); vRi]
+            vLe_ext = [2 * vLe[1] - vLe[2]; vLe]
+            vRi_ext = [2 * vRi[1] - vRi[2]; vRi]
         elseif BC.v.low == "per"
             vLe_ext = [0; vLe]
             vRi_ext = [0; vRi]
         elseif BC.v.low == "pres"
-            vLe_ext = [vLe(2); vLe] # zero gradient
-            vRi_ext = [vRi(2); vRi] # zero gradient
+            vLe_ext = [vLe[2]; vLe] # zero gradient
+            vRi_ext = [vRi[2]; vRi] # zero gradient
         end
         if BC.v.up == "dir"
             vLe_ext = [vLe_ext; 2 * vLe[end] - vLe[end-1]]
-            vRi_ext = [vRi_ext; 2 * vRi[1] - vRi(2)]
+            vRi_ext = [vRi_ext; 2 * vRi[1] - vRi[2]]
         elseif BC.v.up == "per"
             vLe_ext = [vLe_ext; 0]
             vRi_ext = [vRi_ext; 0]
@@ -416,18 +374,18 @@ function set_bc_vectors!(setup, t)
 
     if order4
         if BC.u.left == "dir"
-            uLo_ext = [2 * uLo[1] - uLo(2); uLo]
-            uUp_ext = [2 * uUp[1] - uUp(2); uUp]
+            uLo_ext = [2 * uLo[1] - uLo[2]; uLo]
+            uUp_ext = [2 * uUp[1] - uUp[2]; uUp]
         elseif BC.u.left == "per"
             uLo_ext = [0; uLo]
             uUp_ext = [0; uUp]
         elseif BC.u.left == "pres"
-            uLo_ext = [uLo(2); uLo] # zero gradient
-            uUp_ext = [uUp(2); uUp] # zero gradient
+            uLo_ext = [uLo[2]; uLo] # zero gradient
+            uUp_ext = [uUp[2]; uUp] # zero gradient
         end
         if BC.u.right == "dir"
             uLo_ext = [uLo_ext; 2 * uLo[end] - uLo[end-1]]
-            uUp_ext = [uUp_ext; 2 * uUp[1] - uUp(2)]
+            uUp_ext = [uUp_ext; 2 * uUp[1] - uUp[2]]
         elseif BC.u.right == "per"
             uLo_ext = [uLo_ext; 0]
             uUp_ext = [uUp_ext; 0]
