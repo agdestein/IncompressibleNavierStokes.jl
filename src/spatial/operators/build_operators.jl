@@ -22,7 +22,7 @@ function build_operators!(setup)
     # Turbulence
 
     # Regularization modelling - this changes the convective term
-    if regularize != "no"
+    if regularization != "no"
         operator_regularization!(setup)
     end
 

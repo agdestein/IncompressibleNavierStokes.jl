@@ -13,7 +13,7 @@ function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
     @unpack Nu, Nv, nV = setup.grid
 
     # Unsteady BC
-    if setup.BC.BC_unsteady
+    if setup.bcbc_unsteady
         setup = set_bc_vectors(t, setup)
     end
 
@@ -32,7 +32,7 @@ function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
     # Body force
     if setup.force.isforce
         if setup.force.force_unsteady
-            [Fx, Fy, dFx, dFy] = force(V, t, setup, getJacobian);
+            Fx, Fy, dFx, dFy = force(V, t, setup, getJacobian);
         else
             Fx = setup.force.Fx;
             Fy = setup.force.Fy;

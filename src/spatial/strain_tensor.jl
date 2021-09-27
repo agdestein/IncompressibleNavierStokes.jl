@@ -47,8 +47,8 @@ function strain_tensor(V, t, setup, getJacobian)
 
     if get_S_abs
         # option 2b
-        BC = setup.BC
-        if BC.u.left == "per" && BC.u.right == "per"
+        bc =  setup.bc
+        if bc.u.left == "per" && bc.u.right == "per"
             # "cut-off" the double points in case of periodic BC
             # for periodic boundary conditions S11(Npx+1, :) = S11(1, :)
             # so S11 has size (Npx+1)*Npy; the last row are "ghost" points equal to the
@@ -61,7 +61,7 @@ function strain_tensor(V, t, setup, getJacobian)
             S12_temp = zeros(Nx + 1, Ny + 1)
             S12_temp[1:Nx, :] = reshape(S12, Nx, Ny + 1)
             S12_temp[Nx+1, :] = S12_temp[1, :]
-        elseif BC.u.left == "dir" && BC.u.right == "pres"
+        elseif bc.u.left == "dir" && bc.u.right == "pres"
             S11_p = reshape(S11, Nux_in + 1, Nuy_in)
             S11_p = S11_p[1:Nux_in, :] # cut off last point
 
@@ -74,7 +74,7 @@ function strain_tensor(V, t, setup, getJacobian)
             error("BC not implemented in strain_tensor.m")
         end
 
-        if BC.v.low == "per" && BC.v.up == "per"
+        if bc.v.low == "per" && bc.v.up == "per"
             # similarly, S22(:, Npy+1) = S22(:, 1). positions (xp, [yp;yp[1]])
             S22_p = reshape(S22, Nvx_in, Nvy_in + 1)
             S22_p = S22_p(:, 2:Nvy_in+1) # why not 1:Nvy_in?
@@ -83,7 +83,7 @@ function strain_tensor(V, t, setup, getJacobian)
             S21_temp = zeros(Nx + 1, Ny + 1)
             S21_temp[:, 1:Ny] = reshape(S21, Nx + 1, Ny)
             S21_temp[:, Ny+1] = S21_temp[:, 1]
-        elseif strcmp(BC.v.low, "pres") && strcmp(BC.v.up, "pres")
+        elseif strcmp(bc.v.low, "pres") && strcmp(bc.v.up, "pres")
             S22_p = reshape(S22, Nvx_in, Nvy_in + 1)
             S22_p = S22_p(:, 2:Nvy_in)
 

@@ -19,14 +19,14 @@ function ke_diffusion!(setup)
     # BCs for k
     # Ak_kx is already constructed in ke_convection
     [B1Dk, Btempk, ybcl, ybcr] =
-        BC_general_stag(Npx + 2, Npx, 2, BC.k.left, BC.k.right, hx[1], hx[end])
+        bc_general_stag(Npx + 2, Npx, 2, bck.left, bck.right, hx[1], hx[end])
     ybck = kron(kLe, ybcl) + kron(kRi, ybcr)
     yAk_kx = kron(sparse(I, Npy, Npy), A1D * Btempk) * ybck
     Ak_kx = kron(sparse(I, Npy, Npy), A1D * B1Dk)
 
     # BCs for e
     [B1De, Btempe, ybcl, ybcr] =
-        BC_general_stag(Npx + 2, Npx, 2, BC.e.left, BC.e.right, hx[1], hx[end])
+        bc_general_stag(Npx + 2, Npx, 2, bce.left, bce.right, hx[1], hx[end])
     ybce = kron(eLe, ybcl) + kron(eRi, ybcr)
     yAe_ex = kron(sparse(I, Npy, Npy), A1D * Btempe) * ybce
     Ae_ex = kron(sparse(I, Npy, Npy), A1D * B1De)
@@ -63,14 +63,14 @@ function ke_diffusion!(setup)
     # BCs for k:
     # k is already constructed in ke_convection
     B1Dk, Btempk, ybcl, ybcu =
-        BC_general_stag(Npy + 2, Npy, 2, BC.k.low, BC.k.up, hy[1], hy[end])
+        bc_general_stag(Npy + 2, Npy, 2, bck.low, bck.up, hy[1], hy[end])
     ybck = kron(ybcl, kLo) + kron(ybcu, kUp)
     yAk_ky = kron(A1D * Btempk, sparse(I, Npx, Npx)) * ybck
     Ak_ky = kron(A1D * B1Dk, sparse(I, Npx, Npx))
 
     # BCs for e:
     B1De, Btempe, ybcl, ybcu =
-        BC_general_stag(Npy + 2, Npy, 2, BC.e.low, BC.e.up, hy[1], hy[end])
+        bc_general_stag(Npy + 2, Npy, 2, bce.low, bce.up, hy[1], hy[end])
     ybce = kron(ybcl, eLo) + kron(ybcu, eUp)
     yAe_ey = kron(A1D * Btempe, sparse(I, Npx, Npx)) * ybce
     Ae_ey = kron(A1D * B1De, sparse(I, Npx, Npx))

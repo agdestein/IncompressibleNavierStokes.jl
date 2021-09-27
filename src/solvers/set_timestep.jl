@@ -28,7 +28,7 @@ function set_timestep(setup)
 
         # based on max. value of stability region
         if method == 5
-            λ_diff_max = 4 * beta / (2 * beta + 1)
+            λ_diff_max = 4 * β / (2 * β + 1)
         elseif method == 1
             λ_diff_max = 2
         elseif method == 2

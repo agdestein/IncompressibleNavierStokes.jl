@@ -7,7 +7,7 @@ function solve_steady(setup)
     @unpack Nu, Nv, Np = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack nonlinear_accuracy, Jacobian_type, nPicard, Newton_factor, nonlinear_maxit =
-        setup.solversettings
+        setup.solver_settings
     @unpack use_rom = setup.rom
 
     Z2 = sparse(Np, Np)
@@ -22,7 +22,7 @@ function solve_steady(setup)
     while max_residual[n] > nonlinear_accuracy
         if Jacobian_type == "Newton" && nPicard < n
             # Switch to Newton
-            setup.solversettings.Newton_factor = true
+            setup.solver_settings.Newton_factor = true
         end
 
         n += 1

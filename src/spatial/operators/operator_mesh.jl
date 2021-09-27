@@ -1,5 +1,5 @@
 function operator_mesh!(setup)
-    BC = setup.BC
+    bc =  setup.bc
     order4 = setup.discretization.order4
     α = setup.discretization.α
 
@@ -26,14 +26,14 @@ function operator_mesh!(setup)
     # x-dir
     Nux_b = 2               # boundary points
     Nux_in = Nx + 1            # inner points
-    if BC.u.left == "dir" || BC.u.left == "sym"
-        Nux_in = Nux_in - 1
+    if bc.u.left ∈ ["dir", "sym"]
+        Nux_in -= 1
     end
-    if BC.u.right == "dir" || BC.u.right == "sym"
-        Nux_in = Nux_in - 1
+    if bc.u.right ∈ ["dir", "sym"]
+        Nux_in -= 1
     end
-    if BC.u.left == "per" && BC.u.right == "per"
-        Nux_in = Nux_in - 1
+    if bc.u.left == "per" && bc.u.right == "per"
+        Nux_in -= 1
     end
     Nux_t = Nux_in + Nux_b  # total number
 
@@ -56,13 +56,13 @@ function operator_mesh!(setup)
     # y-dir
     Nvy_b = 2               # boundary points
     Nvy_in = Ny + 1            # inner points
-    if BC.v.low == "dir" || BC.v.low == "sym"
+    if bc.v.low == "dir" || bc.v.low == "sym"
         Nvy_in = Nvy_in - 1
     end
-    if BC.v.up == "dir" || BC.v.up == "sym"
+    if bc.v.up == "dir" || bc.v.up == "sym"
         Nvy_in = Nvy_in - 1
     end
-    if BC.v.low == "per" && BC.v.up == "per"
+    if bc.v.low == "per" && bc.v.up == "per"
         Nvy_in = Nvy_in - 1
     end
     Nvy_t = Nvy_in + Nvy_b  # total number
@@ -87,7 +87,7 @@ function operator_mesh!(setup)
     if order4
         hx3 = zeros(Nx, 1)
         hx3[2:end-1] = hx[1:end-2] + hx[2:end-1] + hx[3:end]
-        if BC.u.left == "per" && BC.u.right == "per"
+        if bc.u.left == "per" && bc.u.right == "per"
             hx3[1] = hx[end] + hx[1] + hx[2]
             hx3[end] = hx[end-1] + hx[end] + hx[1]
         else
@@ -97,7 +97,7 @@ function operator_mesh!(setup)
 
         hy3 = zeros(Ny, 1)
         hy3[2:end-1] = hy[1:end-2] + hy[2:end-1] + hy[3:end]
-        if BC.v.low == "per" && BC.v.up == "per"
+        if bc.v.low == "per" && bc.v.up == "per"
             hy3[1] = hy[end] + hy[1] + hy[2]
             hy3[end] = hy[end-1] + hy[end] + hy[1]
         else
@@ -112,7 +112,7 @@ function operator_mesh!(setup)
         # distance between pressure points
         gx3 = zeros(Nx + 1, 1)
         gx3[3:Nx-1] = gx[2:end-3] + gx[3:end-2] + gx[4:end-1]
-        if BC.u.left == "per" && BC.u.right == "per"
+        if bc.u.left == "per" && bc.u.right == "per"
             gx3[1] = gx[end-1] + gx[end] + gx[1] + gx[2]
             gx3[2] = gx[end] + gx[1] + gx[2] + gx[3]
             gx3[end-1] = gx[end-2] + gx[end-1] + gx[end] + gx[1]
@@ -127,7 +127,7 @@ function operator_mesh!(setup)
         # distance between pressure points
         gy3 = zeros(Ny + 1, 1)
         gy3[3:Ny-1] = gy[2:end-3] + gy[3:end-2] + gy[4:end-1]
-        if BC.v.low == "per" && BC.v.up == "per"
+        if bc.v.low == "per" && bc.v.up == "per"
             gy3[1] = gy[end-1] + gy[end] + gy[1] + gy[2]
             gy3[2] = gy[end] + gy[1] + gy[2] + gy[3]
             gy3[end-1] = gy[end-2] + gy[end-1] + gy[end] + gy[1]
@@ -154,7 +154,7 @@ function operator_mesh!(setup)
     hxi = hx
 
     # restrict Nx+2 to Nux_in+1 points
-    if BC.u.left == "dir" && BC.u.right == "dir"
+    if bc.u.left == "dir" && bc.u.right == "dir"
         xin = x[2:end-1]
         hxd = hx
         gxi = gx[2:end-1]
@@ -169,28 +169,28 @@ function operator_mesh!(setup)
         end
     end
 
-    if BC.u.left == "dir" && BC.u.right == "pres"
+    if bc.u.left == "dir" && bc.u.right == "pres"
         xin = x[2:end]
         hxd = [hx; hx[end]]
         gxi = gx[2:end]
         diagpos = 1
     end
 
-    if BC.u.left == "pres" && BC.u.right == "dir"
+    if bc.u.left == "pres" && bc.u.right == "dir"
         xin = x[1:end-1]
         hxd = [hx[1]; hx]
         gxi = gx[1:end-1]
         diagpos = 0
     end
 
-    if BC.u.left == "pres" && BC.u.right == "pres"
+    if bc.u.left == "pres" && bc.u.right == "pres"
         xin = x[1:end]
         hxd = [hx[1]; hx; hx[end]]
         gxi = gx
         diagpos = 0
     end
 
-    if BC.u.left == "per" && BC.u.right == "per"
+    if bc.u.left == "per" && bc.u.right == "per"
         xin = x[1:end-1]
         hxd = [hx[end]; hx]
         gxi = [gx[1] + gx[end]; gx[2:end-1]]
@@ -211,7 +211,7 @@ function operator_mesh!(setup)
 
     # matrix to map from Nvx_t-1 to Nux_in points
     # (used in interpolation, convection_diffusion, viscosity)
-    Bvux = spdiagm(Nux_in, Nvx_t - 1, diagpos => ones(Nvx_t - 1))
+    Bvux = spdiagm(Nux_in, Nvx_t - 1, diagpos => ones(Nux_in))
     # map from Npx+2 points to Nux_t-1 points (ux faces)
     Bkux = Bmap
 
@@ -229,7 +229,7 @@ function operator_mesh!(setup)
 
 
     # restrict Ny+2 to Nvy_in+1 points
-    if BC.v.low == "dir" && BC.v.up == "dir"
+    if bc.v.low == "dir" && bc.v.up == "dir"
         yin = y[2:end-1]
         hyd = hy
         gyi = gy[2:end-1]
@@ -244,28 +244,28 @@ function operator_mesh!(setup)
         end
     end
 
-    if BC.v.low == "dir" && BC.v.up == "pres"
+    if bc.v.low == "dir" && bc.v.up == "pres"
         yin = y[2:end]
         hyd = [hy; hy[end]]
         gyi = gy[2:end]
         diagpos = 1
     end
 
-    if BC.v.low == "pres" && BC.v.up == "dir"
+    if bc.v.low == "pres" && bc.v.up == "dir"
         yin = y[1:end-1]
         hyd = [hy[1]; hy]
         gyi = gy[1:end-1]
         diagpos = 0
     end
 
-    if BC.v.low == "pres" && BC.v.up == "pres"
+    if bc.v.low == "pres" && bc.v.up == "pres"
         yin = y[1:end]
         hyd = [hy[1]; hy; hy[end]]
         gyi = gy
         diagpos = 0
     end
 
-    if BC.v.low == "per" && BC.v.up == "per"
+    if bc.v.low == "per" && bc.v.up == "per"
         yin = y[1:end-1]
         hyd = [hy[end]; hy]
         gyi = [gy[1] + gy[end]; gy[2:end-1]]
@@ -286,7 +286,7 @@ function operator_mesh!(setup)
 
     # matrix to map from Nuy_t-1 to Nvy_in points
     # (used in interpolation, convection_diffusion)
-    Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(Nuy_t - 1, 1))
+    Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(Nvy_in))
     # map from Npy+2 points to Nvy_t-1 points (vy faces)
     Bkvy = Bmap
 
@@ -374,10 +374,10 @@ function operator_mesh!(setup)
     ypp = reshape(ypp, Nx, Ny)
 
     # indices of unknowns in velocity vector
-    indu = (1:Nu)'
-    indv = (Nu+1:Nu+Nv)'
+    indu = 1:Nu
+    indv = Nu+1:Nu+Nv
     indV = [indu; indv]
-    indp = (NV+1:NV+Np)'
+    indp = NV+1:NV+Np
 
     ## store quantities in the structure
     setup.grid.Npx = Npx

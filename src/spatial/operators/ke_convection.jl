@@ -13,7 +13,7 @@ function ke_convection!(setup)
 
     # boundary conditions
     B1Du, Btempu, ybcl, ybcr =
-        BC_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, BC.u.left, BC.u.right, hx[1], hx[end])
+        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.left, bc.u.right, hx[1], hx[end])
     mat_hy = spdiagm(hy)
     uLe_i = interp1(y, uLe, yp)
     uRi_i = interp1(y, uRi, yp)
@@ -28,7 +28,7 @@ function ke_convection!(setup)
 
     # boundary conditions
     B1D, Btemp, ybcl, ybcr =
-        BC_general_stag(Npx + 2, Npx, 2, BC.k.left, BC.k.right, hx[1], hx[end])
+        bc_general_stag(Npx + 2, Npx, 2, bck.left, bck.right, hx[1], hx[end])
     ybc = kron(kLe, ybcl) + kron(kRi, ybcr)
     yAk_kx = kron(speye(Npy), A1D * Btemp) * ybc
     Ak_kx = kron(speye(Npy), A1D * B1D)
@@ -47,7 +47,7 @@ function ke_convection!(setup)
 
     # boundary conditions
     B1Dv, Btempv, ybcl, ybcu =
-        BC_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, BC.v.low, BC.v.up, hy[1], hy[end])
+        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.low, bc.v.up, hy[1], hy[end])
     mat_hx = spdiagm(hx, 0, Npx, Npx)
     vLo_i = interp1(x, vLo, xp)
     vUp_i = interp1(x, vUp, xp)
@@ -61,7 +61,7 @@ function ke_convection!(setup)
 
     # boundary conditions
     B1D, Btemp, ybcl, ybcr =
-        BC_general_stag(Npy + 2, Npy, 2, BC.k.low, BC.k.up, hy[1], hy[end])
+        bc_general_stag(Npy + 2, Npy, 2, bck.low, bck.up, hy[1], hy[end])
     ybc = kron(ybcl, kLo) + kron(ybcr, kUp)
     yAk_ky = kron(A1D * Btemp, speye(Npx)) * ybc
     Ak_ky = kron(A1D * B1D, speye(Npx))

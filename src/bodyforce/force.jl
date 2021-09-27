@@ -5,7 +5,11 @@ Body force in momentum equations in Finite Volume setting, so integrated dFx, dF
 function force(V, t, setup, getJacobian)
     if setup.force.isforce
         # create function handle with name bodyforce
-        Fx, Fy, dFx, dFy = setup.force.bodyforce(V, t, setup, getJacobian)
+        Fx, dFx = setup.force.bodyforce_x.(xu, yu, t, setup, getJacobian)
+        Fy, dFy = setup.force.bodyforce_y.(xv, yv, t, setup, getJacobian)
+
+        # this works for both 2nd and 4th order method
+        Fy = -Omv .* Fy[:]
     else
         Nu = setup.grid.Nu
         Nv = setup.grid.Nv
@@ -14,8 +18,9 @@ function force(V, t, setup, getJacobian)
         dFx = sparse(Nu, Nu + Nv)
         dFy = sparse(Nv, Nu + Nv)
         if setup.case.force_unsteady
-            error("Body force file $file_name not available")
+            error("Unsteady body force not provided")
         end
     end
+
     Fx, Fy, dFx, dFy
 end

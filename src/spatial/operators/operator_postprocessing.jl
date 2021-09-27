@@ -2,7 +2,7 @@ function operator_postprocessing!(setup)
     # construct postprocessing operators such as vorticity
 
     # boundary conditions
-    BC = setup.BC
+    bc =  setup.bc
 
     @unpack Nx, Ny = setup.grid
     @unpack hx, hy, gx, gy = setup.grid
@@ -12,7 +12,7 @@ function operator_postprocessing!(setup)
 
     if order4
         α = setup.discretization.α
-        beta = setup.discretization.beta
+        β = setup.discretization.β
         gxi3 = setup.grid.gxi3
         gyi3 = setup.grid.gyi3
         Omvort3 = setup.grid.Omvort3
@@ -36,7 +36,7 @@ function operator_postprocessing!(setup)
 
 
     ## for periodic BC, covering entire mesh
-    if BC.u.left == "per" && BC.v.low == "per"
+    if bc.u.left == "per" && bc.v.low == "per"
 
         # du/dy, like Su_uy
         diag1 = 1 ./ gyd

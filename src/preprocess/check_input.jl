@@ -9,8 +9,8 @@ function check_input!(setup)
             )
         end
 
-        if regularize != "no"
-            error("order 4 only implemented for standard convection with regularize = 0")
+        if regularization != "no"
+            error("order 4 only implemented for standard convection with regularization == \"no\"")
         end
     end
 
@@ -85,7 +85,7 @@ function check_input!(setup)
             # for steady state computations, the initial guess is the provided initial condition
             p = p_start[:]
         else
-            if setup.solversettings.p_initial
+            if setup.solver_settings.p_initial
                 # calculate initial pressure from a Poisson equation
                 p = pressure_additional_solve(V, p_start[:], t, setup)
             else
@@ -107,10 +107,10 @@ function check_input!(setup)
 
     # for steady problems, with Newton linearization and full Jacobian, first start with nPicard Picard iterations
     if setup.case.steady
-        setup.solversettings.Newton_factor = false
+        setup.solver_settings.Newton_factor = false
     elseif method == 21 || (exist("method_startup", "var") && method_startup == 21)
         # implicit RK time integration
-        setup.solversettings.Newton_factor = true
+        setup.solver_settings.Newton_factor = true
     end
 
     # residual of momentum equations at start

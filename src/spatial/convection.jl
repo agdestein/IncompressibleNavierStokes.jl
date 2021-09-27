@@ -15,7 +15,7 @@ function convection(V, C, t, setup, getJacobian)
     α = setup.discretization.α
     order4 = setup.discretization.order4
 
-    regularize = setup.case.regularize
+    regularization = setup.case.regularization
 
     @unpack Nu, Nv, NV, indu, indv = setup.grid
 
@@ -28,7 +28,7 @@ function convection(V, C, t, setup, getJacobian)
     cu = C[indu]
     cv = C[indv]
 
-    if regularize == 0
+    if regularization == "no"
         # no regularization
         convu, convv, Jacu, Jacv = convection_components(C, V, setup, getJacobian, false)
 
@@ -40,7 +40,7 @@ function convection(V, C, t, setup, getJacobian)
             Jacu = α * Jacu - Jacu3
             Jacv = α * Jacv - Jacv3
         end
-    elseif regularize == 1
+    elseif regularization == "leray"
         # Leray
         # TODO: needs finishing
 
@@ -55,7 +55,7 @@ function convection(V, C, t, setup, getJacobian)
 
         convu, convv, Jacu, Jacv =
             convection_components(C_filtered, V, setup, getJacobian)
-    elseif regularize == 2
+    elseif regularization == "C2"
         ## C2
 
         cu_f = filter_convection(cu, Diffu_f, yDiffu_f, α) #uh + (α^2)*Re*(Diffu*uh + yDiffu);
@@ -70,12 +70,12 @@ function convection(V, C, t, setup, getJacobian)
         # divergence of filtered velocity field; should be zero!
         maxdiv_f = max(abs(M * C_filtered + yM))
 
-        [convu, convv, Jacu, Jacv] =
+        convu, convv, Jacu, Jacv =
             convection_components(C_filtered, V_filtered, setup, getJacobian)
 
         convu = filter_convection(convu, Diffu_f, yDiffu_f, α)
         convv = filter_convection(convv, Diffv_f, yDiffv_f, α)
-    elseif regularize == 4
+    elseif regularization == "C4"
         # C4 consists of 3 terms:
         # C4 = conv(filter(u), filter(u)) + filter(conv(filter(u), u') +
         #      filter(conv(u', filter(u)))
@@ -204,7 +204,7 @@ function convection_components(C, V, setup, getJacobian, order4 = false)
     convv = duvdx + dv2dy
 
     if getJacobian
-        Newton = setup.solversettings.Newton_factor
+        Newton = setup.solver_settings.Newton_factor
         N1 = length(u_ux) #setup.grid.N1;
         N2 = length(u_uy) #setup.grid.N2;
         N3 = length(v_vx) #setup.grid.N3;
