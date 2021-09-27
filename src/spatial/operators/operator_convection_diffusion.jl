@@ -67,131 +67,8 @@ function operator_convection_diffusion!(setup)
     # Cv = [Cvx Cvy];
     # Dv = [Dvx Dvy];
 
-    if !order4
-        ## Diffusion operator (stress tensor), u-component
-        # similar to averaging, but with mesh sizes
-
-        ## Su_ux: evaluate ux
-        diag1 = 1 ./ hxd
-        S1D = spdiagm(Nux_t - 1, Nux_t, 0 => -diag1, 1 => diag1)
-
-        # boundary conditions
-        Su_ux_bc = bc_general(Nux_t, Nux_in, Nux_b, bc.u.left, bc.u.right, hx[1], hx[end])
-
-        # extend to 2D
-        Su_ux = kron(sparse(I, Ny, Ny), S1D * Su_ux_bc.B1D)
-        Su_ux_bc = (; Su_ux_bc..., Bbc = kron(sparse(I, Ny, Ny), S1D * Su_ux_bc.Btemp))
-
-        ## Su_uy: evaluate uy
-        diag1 = 1 ./ gyd
-        S1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => -diag1, 1 => diag1)
-
-        # boundary conditions
-        # Su_uy_bc = bc_general_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.low, bc.u.up, hy[1], hy[end]);
-        Su_uy_bc = bc_diff_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.low, bc.u.up, hy[1], hy[end])
-
-        # extend to 2D
-        Su_uy = kron(S1D * Su_uy_bc.B1D, sparse(I, Nux_in, Nux_in))
-        Su_uy_bc =
-            (; Su_uy_bc..., Bbc = kron(S1D * Su_uy_bc.Btemp, sparse(I, Nux_in, Nux_in)))
-
-        ## Sv_uy: evaluate vx at uy;
-        # same as Iv_uy except for mesh sizes and -diag diag
-
-        diag1 = 1 ./ gxd
-        S1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => -diag1, 1 => diag1)
-        # the restriction is essentially 1D so it can be directly applied to I1D
-        S1D = Bvux * S1D
-        S2D = kron(sparse(I, Nuy_t - 1, Nuy_t - 1), S1D)
-
-
-        # boundary conditions low/up
-        Nb = Nuy_in + 1 - Nvy_in
-        Sv_uy_bc_lu = bc_general(Nuy_in + 1, Nvy_in, Nb, bc.v.low, bc.v.up, hy[1], hy[end])
-        Sv_uy_bc_lu =
-            (; Sv_uy_bc_lu..., B2D = kron(Sv_uy_bc_lu.B1D, sparse(I, Nvx_in, Nvx_in)))
-        Sv_uy_bc_lu =
-            (; Sv_uy_bc_lu..., Bbc = kron(Sv_uy_bc_lu.Btemp, sparse(I, Nvx_in, Nvx_in)))
-
-        # boundary conditions left/right
-        Sv_uy_bc_lr =
-            bc_general_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.left, bc.v.right, hx[1], hx[end])
-        # take I2D into left/right operators for convenience
-        Sv_uy_bc_lr = (;
-            Sv_uy_bc_lr...,
-            B2D = S2D * kron(sparse(I, Nuy_t - 1, Nuy_t - 1), Sv_uy_bc_lr.B1D),
-        )
-        Sv_uy_bc_lr = (;
-            Sv_uy_bc_lr...,
-            Bbc = S2D * kron(sparse(I, Nuy_t - 1, Nuy_t - 1), Sv_uy_bc_lr.Btemp),
-        )
-
-        # resulting operator:
-        Sv_uy = Sv_uy_bc_lr.B2D * Sv_uy_bc_lu.B2D
-
-        ## Diffusion operator (stress tensor), v-component
-        # similar to averaging!
-
-        ## Su_vx: evaluate uy at vx
-        # same as Iu_vx except for mesh sizes and -diag diag
-
-        diag1 = 1 ./ gyd
-        S1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => -diag1, 1 => diag1)
-        S1D = Buvy * S1D
-        S2D = kron(S1D, sparse(I, Nvx_t - 1, Nvx_t - 1))
-
-        # boundary conditions low/up
-        Su_vx_bc_lu =
-            bc_general_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.low, bc.u.up, hy[1], hy[end])
-        Su_vx_bc_lu = (;
-            Su_vx_bc_lu...,
-            B2D = S2D * kron(Su_vx_bc_lu.B1D, sparse(I, Nvx_t - 1, Nvx_t - 1)),
-        )
-        Su_vx_bc_lu = (;
-            Su_vx_bc_lu...,
-            Bbc = S2D * kron(Su_vx_bc_lu.Btemp, sparse(I, Nvx_t - 1, Nvx_t - 1)),
-        )
-
-        # boundary conditions left/right
-        Nb = Nvx_in + 1 - Nux_in
-        Su_vx_bc_lr =
-            bc_general(Nvx_in + 1, Nux_in, Nb, bc.u.left, bc.u.right, hx[1], hx[end])
-
-        Su_vx_bc_lr =
-            (; Su_vx_bc_lr..., B2D = kron(sparse(I, Nuy_in, Nuy_in), Su_vx_bc_lr.B1D))
-        Su_vx_bc_lr =
-            (; Su_vx_bc_lr..., Bbc = kron(sparse(I, Nuy_in, Nuy_in), Su_vx_bc_lr.Btemp))
-
-        # resulting operator:
-        Su_vx = Su_vx_bc_lu.B2D * Su_vx_bc_lr.B2D
-
-        ## Sv_vx: evaluate vx
-        diag1 = 1 ./ gxd
-        S1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => -diag1, 1 => diag1)
-
-        # boundary conditions
-        # Sv_vx_bc = bc_general_stag(Nvx_t, Nvx_in, Nvx_b, #                                            bc.v.left, bc.v.right, hx[1], hx[end]);
-        Sv_vx_bc = bc_diff_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.left, bc.v.right, hx[1], hx[end])
-
-        # extend to 2D
-        Sv_vx = kron(sparse(I, Nvy_in, Nvy_in), S1D * Sv_vx_bc.B1D)
-        Sv_vx_bc =
-            (; Sv_vx_bc..., Bbc = kron(sparse(I, Nvy_in, Nvy_in), S1D * Sv_vx_bc.Btemp))
-
-        ## Sv_vy: evaluate vy
-        diag1 = 1 ./ hyd
-        S1D = spdiagm(Nvy_t - 1, Nvy_t, 0 => -diag1, 1 => diag1)
-
-        # boundary conditions
-        Sv_vy_bc = bc_general(Nvy_t, Nvy_in, Nvy_b, bc.v.low, bc.v.up, hy[1], hy[end])
-
-        # extend to 2D
-        Sv_vy = kron(S1D * Sv_vy_bc.B1D, sparse(I, Nx, Nx))
-        Sv_vy_bc = (; Sv_vy_bc..., Bbc = kron(S1D * Sv_vy_bc.Btemp, sparse(I, Nx, Nx)))
-    end
-
-    ## fourth order operators
     if order4
+        ## fourth order operators
         ## Convection (differencing) operator Cu
 
         # calculates difference from pressure points to velocity points
@@ -413,14 +290,132 @@ function operator_convection_diffusion!(setup)
         Sv_vy3 = spdiagm(Omvy3) * kron(S1D3 * Sv_vy_bc3.B1D, sparse(I, Nvx_in, Nvx_in))
         Sv_vy_bc3.Bbc =
             spdiagm(Omvy3) * kron(S1D3 * Sv_vy_bc3.Btemp, sparse(I, Nvx_in, Nvx_in))
+    else
+        ## Diffusion operator (stress tensor), u-component
+        # similar to averaging, but with mesh sizes
+
+        ## Su_ux: evaluate ux
+        diag1 = 1 ./ hxd
+        S1D = spdiagm(Nux_t - 1, Nux_t, 0 => -diag1, 1 => diag1)
+
+        # boundary conditions
+        Su_ux_bc = bc_general(Nux_t, Nux_in, Nux_b, bc.u.left, bc.u.right, hx[1], hx[end])
+
+        # extend to 2D
+        Su_ux = kron(sparse(I, Ny, Ny), S1D * Su_ux_bc.B1D)
+        Su_ux_bc = (; Su_ux_bc..., Bbc = kron(sparse(I, Ny, Ny), S1D * Su_ux_bc.Btemp))
+
+        ## Su_uy: evaluate uy
+        diag1 = 1 ./ gyd
+        S1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => -diag1, 1 => diag1)
+
+        # boundary conditions
+        # Su_uy_bc = bc_general_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.low, bc.u.up, hy[1], hy[end]);
+        Su_uy_bc = bc_diff_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.low, bc.u.up, hy[1], hy[end])
+
+        # extend to 2D
+        Su_uy = kron(S1D * Su_uy_bc.B1D, sparse(I, Nux_in, Nux_in))
+        Su_uy_bc =
+            (; Su_uy_bc..., Bbc = kron(S1D * Su_uy_bc.Btemp, sparse(I, Nux_in, Nux_in)))
+
+        ## Sv_uy: evaluate vx at uy;
+        # same as Iv_uy except for mesh sizes and -diag diag
+
+        diag1 = 1 ./ gxd
+        S1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => -diag1, 1 => diag1)
+        # the restriction is essentially 1D so it can be directly applied to I1D
+        S1D = Bvux * S1D
+        S2D = kron(sparse(I, Nuy_t - 1, Nuy_t - 1), S1D)
+
+        # boundary conditions low/up
+        Nb = Nuy_in + 1 - Nvy_in
+        Sv_uy_bc_lu = bc_general(Nuy_in + 1, Nvy_in, Nb, bc.v.low, bc.v.up, hy[1], hy[end])
+        Sv_uy_bc_lu =
+            (; Sv_uy_bc_lu..., B2D = kron(Sv_uy_bc_lu.B1D, sparse(I, Nvx_in, Nvx_in)))
+        Sv_uy_bc_lu =
+            (; Sv_uy_bc_lu..., Bbc = kron(Sv_uy_bc_lu.Btemp, sparse(I, Nvx_in, Nvx_in)))
+
+        # boundary conditions left/right
+        Sv_uy_bc_lr =
+            bc_general_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.left, bc.v.right, hx[1], hx[end])
+        # take I2D into left/right operators for convenience
+        Sv_uy_bc_lr = (;
+            Sv_uy_bc_lr...,
+            B2D = S2D * kron(sparse(I, Nuy_t - 1, Nuy_t - 1), Sv_uy_bc_lr.B1D),
+        )
+        Sv_uy_bc_lr = (;
+            Sv_uy_bc_lr...,
+            Bbc = S2D * kron(sparse(I, Nuy_t - 1, Nuy_t - 1), Sv_uy_bc_lr.Btemp),
+        )
+
+        # resulting operator:
+        Sv_uy = Sv_uy_bc_lr.B2D * Sv_uy_bc_lu.B2D
+
+        ## Diffusion operator (stress tensor), v-component
+        # similar to averaging!
+
+        ## Su_vx: evaluate uy at vx
+        # same as Iu_vx except for mesh sizes and -diag diag
+
+        diag1 = 1 ./ gyd
+        S1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => -diag1, 1 => diag1)
+        S1D = Buvy * S1D
+        S2D = kron(S1D, sparse(I, Nvx_t - 1, Nvx_t - 1))
+
+        # boundary conditions low/up
+        Su_vx_bc_lu =
+            bc_general_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.low, bc.u.up, hy[1], hy[end])
+        Su_vx_bc_lu = (;
+            Su_vx_bc_lu...,
+            B2D = S2D * kron(Su_vx_bc_lu.B1D, sparse(I, Nvx_t - 1, Nvx_t - 1)),
+        )
+        Su_vx_bc_lu = (;
+            Su_vx_bc_lu...,
+            Bbc = S2D * kron(Su_vx_bc_lu.Btemp, sparse(I, Nvx_t - 1, Nvx_t - 1)),
+        )
+
+        # boundary conditions left/right
+        Nb = Nvx_in + 1 - Nux_in
+        Su_vx_bc_lr =
+            bc_general(Nvx_in + 1, Nux_in, Nb, bc.u.left, bc.u.right, hx[1], hx[end])
+
+        Su_vx_bc_lr =
+            (; Su_vx_bc_lr..., B2D = kron(sparse(I, Nuy_in, Nuy_in), Su_vx_bc_lr.B1D))
+        Su_vx_bc_lr =
+            (; Su_vx_bc_lr..., Bbc = kron(sparse(I, Nuy_in, Nuy_in), Su_vx_bc_lr.Btemp))
+
+        # resulting operator:
+        Su_vx = Su_vx_bc_lu.B2D * Su_vx_bc_lr.B2D
+
+        ## Sv_vx: evaluate vx
+        diag1 = 1 ./ gxd
+        S1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => -diag1, 1 => diag1)
+
+        # boundary conditions
+        # Sv_vx_bc = bc_general_stag(Nvx_t, Nvx_in, Nvx_b, #                                            bc.v.left, bc.v.right, hx[1], hx[end]);
+        Sv_vx_bc = bc_diff_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.left, bc.v.right, hx[1], hx[end])
+
+        # extend to 2D
+        Sv_vx = kron(sparse(I, Nvy_in, Nvy_in), S1D * Sv_vx_bc.B1D)
+
+        Sv_vx_bc =
+            (; Sv_vx_bc..., Bbc = kron(sparse(I, Nvy_in, Nvy_in), S1D * Sv_vx_bc.Btemp))
+
+        ## Sv_vy: evaluate vy
+        diag1 = 1 ./ hyd
+        S1D = spdiagm(Nvy_t - 1, Nvy_t, 0 => -diag1, 1 => diag1)
+
+        # boundary conditions
+        Sv_vy_bc = bc_general(Nvy_t, Nvy_in, Nvy_b, bc.v.low, bc.v.up, hy[1], hy[end])
+
+        # extend to 2D
+        Sv_vy = kron(S1D * Sv_vy_bc.B1D, sparse(I, Nx, Nx))
+        Sv_vy_bc = (; Sv_vy_bc..., Bbc = kron(S1D * Sv_vy_bc.Btemp, sparse(I, Nx, Nx)))
     end
 
     ## assemble operators
     if visc == "laminar"
-        if !order4
-            Diffu = Dux * 1 / Re * Su_ux + Duy * 1 / Re * Su_uy
-            Diffv = Dvx * 1 / Re * Sv_vx + Dvy * 1 / Re * Sv_vy
-        elseif order4
+        if order4
             Diffux_div = (α * Dux - Dux3) * spdiagm(1 ./ Omux)
             Diffuy_div = (α * Duy - Duy3) * spdiagm(1 ./ Omuy)
             Diffvx_div = (α * Dvx - Dvx3) * spdiagm(1 ./ Omvx)
@@ -431,6 +426,9 @@ function operator_convection_diffusion!(setup)
             Diffv =
                 1 / Re * Diffvx_div * (α * Sv_vx - Sv_vx3) +
                 1 / Re * Diffvy_div * (α * Sv_vy - Sv_vy3)
+        else
+            Diffu = Dux * 1 / Re * Su_ux + Duy * 1 / Re * Su_uy
+            Diffv = Dvx * 1 / Re * Sv_vx + Dvy * 1 / Re * Sv_vy
         end
     elseif visc ∈ ["keps", "LES", "qr", "ML"]
         # only implemented for 2nd order
@@ -454,8 +452,10 @@ function operator_convection_diffusion!(setup)
     setup.discretization.Cuy = Cuy
     setup.discretization.Cvx = Cvx
     setup.discretization.Cvy = Cvy
+
     setup.discretization.Su_ux = Su_ux
     setup.discretization.Su_uy = Su_uy
+
     setup.discretization.Sv_vx = Sv_vx
     setup.discretization.Sv_vy = Sv_vy
     setup.discretization.Su_ux_bc = Su_ux_bc
