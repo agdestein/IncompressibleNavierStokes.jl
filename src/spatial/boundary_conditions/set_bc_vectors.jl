@@ -10,7 +10,7 @@ function set_bc_vectors!(setup, t)
     Re = setup.fluid.Re
     bc =  setup.bc
 
-    @unpack u_bc, v_bc, dudt_bc, dvdt_bc = BC
+    @unpack u_bc, v_bc, dudt_bc, dvdt_bc = bc
 
     # Type of stress tensor
     visc = setup.case.visc
@@ -24,31 +24,31 @@ function set_bc_vectors!(setup, t)
     @unpack xin, yin, x, y, hx, hy, xp, yp = setup.grid
 
     ## get BC values
-    uLo = u_bc(x, y[1], t, setup)
-    uUp = u_bc(x, y[end], t, setup)
-    # uLe = u_bc(x[1], y, t, setup);
-    # uRi = u_bc(x[end], y, t, setup);
+    uLo = u_bc.(x, y[1], t, [setup])
+    uUp = u_bc.(x, y[end], t, [setup])
+    # uLe = u_bc.(x[1], y, t, [setup]);
+    # uRi = u_bc.(x[end], y, t, [setup]);
 
-    uLo_i = u_bc(xin, y[1], t, setup)
-    uUp_i = u_bc(xin, y[end], t, setup)
-    uLe_i = u_bc(x[1], yp, t, setup)
-    uRi_i = u_bc(x[end], yp, t, setup)
+    uLo_i = u_bc.(xin, y[1], t, [setup])
+    uUp_i = u_bc.(xin, y[end], t, [setup])
+    uLe_i = u_bc.(x[1], yp, t, [setup])
+    uRi_i = u_bc.(x[end], yp, t, [setup])
 
-    # vLo = v_bc(x, y[1], t, setup);
-    # vUp = v_bc(x, y[end], t, setup);
-    vLe = v_bc(x[1], y, t, setup)
-    vRi = v_bc(x[end], y, t, setup)
+    # vLo = v_bc.(x, y[1], t, [setup]);
+    # vUp = v_bc.(x, y[end], t, [setup]);
+    vLe = v_bc.(x[1], y, t, [setup])
+    vRi = v_bc.(x[end], y, t, [setup])
 
-    vLo_i = v_bc(xp, y[1], t, setup)
-    vUp_i = v_bc(xp, y[end], t, setup)
-    vLe_i = v_bc(x[1], yin, t, setup)
-    vRi_i = v_bc(x[end], yin, t, setup)
+    vLo_i = v_bc.(xp, y[1], t, [setup])
+    vUp_i = v_bc.(xp, y[end], t, [setup])
+    vLe_i = v_bc.(x[1], yin, t, [setup])
+    vRi_i = v_bc.(x[end], yin, t, [setup])
 
     if !steady && setup.bcbc_unsteady
-        dudtLe_i = dudt_bc(x[1], setup.grid.yp, t, setup)
-        dudtRi_i = dudt_bc(x[end], setup.grid.yp, t, setup)
-        dvdtLo_i = dvdt_bc(setup.grid.xp, y[1], t, setup)
-        dvdtUp_i = dvdt_bc(setup.grid.xp, y[end], t, setup)
+        dudtLe_i = dudt_bc.(x[1], [setup].grid.yp, t, setup)
+        dudtRi_i = dudt_bc.(x[end], [setup].grid.yp, t, setup)
+        dvdtLo_i = dvdt_bc.(setup.grid.xp, y[1], t, [setup])
+        dvdtUp_i = dvdt_bc.(setup.grid.xp, y[end], t, [setup])
     end
 
     @unpack pLe, pRi, pLo, pUp = setup.bc
@@ -132,10 +132,10 @@ function set_bc_vectors!(setup, t)
     # lower and upper side
     y1D_lo = zeros(Nvy_in)
     y1D_up = zeros(Nvy_in)
-    if strcmp(bc.v.low, "pres")
+    if bc.v.low == "pres"
         y1D_lo[1] = -1
     end
-    if strcmp(bc.v.up, "pres")
+    if bc.v.up == "pres"
         y1D_up[end] = 1
     end
     y_py = kron(y1D_lo, hx .* pLo) + kron(y1D_up, hx .* pUp)
@@ -483,11 +483,11 @@ function set_bc_vectors!(setup, t)
 
         # set BC for getting du/dx, du/dy, dv/dx, dv/dy at cell centers
 
-        uLo_p = u_bc(xp, y[1], t, setup)
-        uUp_p = u_bc(xp, y[end], t, setup)
+        uLo_p = u_bc.(xp, y[1], t, [setup])
+        uUp_p = u_bc.(xp, y[end], t, [setup])
 
-        vLe_p = v_bc(x[1], yp, t, setup)
-        vRi_p = v_bc(x[end], yp, t, setup)
+        vLe_p = v_bc.(x[1], yp, t, [setup])
+        vRi_p = v_bc.(x[end], yp, t, [setup])
 
         Cux_k_bc = setup.discretization.Cux_k_bc
         ybc = kron(uLe_i, Cux_k_bc.ybc1) + kron(uRi_i, Cux_k_bc.ybc2)

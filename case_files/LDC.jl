@@ -149,14 +149,21 @@ function LDC()
     end
 
     """
-        u, v = boundary_conditions(x, y, setup[, tol])
+        u = u_bc(x, y, setup[, tol])
 
-    Compute boundary conditions at point `(x, y)`.
+    Compute boundary conditions for `u` at point `(x, y)`.
     """
-    setup.bc.boundary_conditions = function boundary_conditions(x, y, setup, tol = 1e-10)
-        u = ≈(y, setup.y2, tol) ? 1 : 0
+    setup.bc.u_bc = function u_bc(x, y, t, setup, tol = 1e-10)
+        u = ≈(y, setup.grid.y2; rtol = tol) ? 1 : 0
+    end
+
+    """
+        v = v_bc(x, y, setup)
+
+    Compute boundary conditions for `u` at point `(x, y)`.
+    """
+    setup.bc.v_bc = function v_bc(x, y, t, setup)
         v = 0
-        u, v
     end
 
     """

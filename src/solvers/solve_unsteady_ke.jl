@@ -1,7 +1,7 @@
 """
-    solve_steady_ke(setup)
+    solve_unsteady_ke!(solution, setup)
 
 Solve ke.
 """
-function solve_ubsteady_ke(setup)
+function solve_ubsteady_ke!(solution, setup)
 end

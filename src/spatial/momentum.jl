@@ -10,10 +10,10 @@ getJacobian = true: return dFdV
 nopressure = true: exclude pressure gradient; in this case input argument p is not used
 """
 function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
-    @unpack Nu, Nv, nV = setup.grid
+    @unpack Nu, Nv, NV = setup.grid
 
     # Unsteady BC
-    if setup.bcbc_unsteady
+    if setup.bc.bc_unsteady
         setup = set_bc_vectors(t, setup)
     end
 
@@ -36,14 +36,14 @@ function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
         else
             Fx = setup.force.Fx;
             Fy = setup.force.Fy;
-            dFx = sparse(Nu, NV)
-            dFy = sparse(Nv, NV)
+            dFx = spzeros(Nu, NV)
+            dFy = spzeros(Nv, NV)
         end
     else
         Fx = zeros(Nu);
         Fy = zeros(Nv);
-        dFx = sparse(Nu, NV)
-        dFy = sparse(Nv, NV)
+        dFx = spzeros(Nu, NV)
+        dFy = spzeros(Nv, NV)
     end
 
     # residual in Finite Volume form, including the pressure contribution
@@ -60,7 +60,7 @@ function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
     Fres = [Fu; Fv]
 
     # norm of residual
-    maxres = max(abs(Fres))
+    maxres = maximum(abs.(Fres))
 
     if getJacobian
         # Jacobian requested
@@ -69,7 +69,7 @@ function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
         dFv = - dconvv + dDiffv + dFy
         dF = [dFu; dFv]
     else
-        dF = sparse(Nu + Nv, Nu + Nv)
+        dF = spzeros(Nu + Nv, Nu + Nv)
     end
 
     maxres, Fres, dF

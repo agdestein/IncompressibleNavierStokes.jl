@@ -2,8 +2,9 @@
 module IncompressibleNavierStokes
 
 using LinearAlgebra: I
-using SparseArrays: sparse, spdiagm, spzeros
-using UnPack
+using SparseArrays: SparseMatrixCSC, sparse, spdiagm, spzeros
+using UnPack: @unpack
+using Plots: contour, contourf
 
 # Setup
 include("parameters.jl")
@@ -14,8 +15,9 @@ include("preprocess/create_mesh.jl")
 
 # Spatial
 include("spatial/check_conservation.jl")
+include("spatial/check_symmetry.jl")
 include("spatial/convection.jl")
-include("spatial/create_intial_conditions.jl")
+include("spatial/create_initial_conditions.jl")
 include("spatial/diffusion.jl")
 include("spatial/momentum.jl")
 include("spatial/strain_tensor.jl")
@@ -45,16 +47,21 @@ include("spatial/operators/operator_turbulent_diffusion.jl")
 include("bodyforce/force.jl")
 
 # Solvers
+include("solvers/get_timestep.jl")
 include("solvers/solve_steady.jl")
 include("solvers/solve_steady_ke.jl")
 include("solvers/solve_steady_ibm.jl")
 include("solvers/solve_unsteady.jl")
 include("solvers/solve_unsteady_ke.jl")
 include("solvers/solve_unsteady_rom.jl")
-include("solvers/set_timestep.jl")
 
 # Utils
 include("utils/filter_convection.jl")
+
+# Postprocess
+include("postprocess/postprocess.jl")
+include("postprocess/get_vorticity.jl")
+include("postprocess/get_streamfunction.jl")
 
 # Main driver
 include("main.jl")

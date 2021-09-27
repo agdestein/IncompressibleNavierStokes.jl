@@ -2,7 +2,7 @@
 estimate time step based on eigenvalues of operators,
 using Gershgorin
 """
-function set_timestep(setup)
+function get_timestep(setup)
     # for explicit methods only
     if method ∈ [1, 2, 5, 81, 82]
         ## Convective part
@@ -50,7 +50,6 @@ function set_timestep(setup)
         end
         dt_conv = λ_conv_max / λ_conv
         dt = CFL * min(dt_conv, dt_diff)
-
     end
 
     dt

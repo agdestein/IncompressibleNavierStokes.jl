@@ -1,25 +1,29 @@
 """
-    V, p = solve_steady(setup)
+    solve_steady!(solution, setup)
 
 Solve the entire saddlepoint system arising from the steady Navier-Stokes equations with linearization of the convective terms
 """
-function solve_steady(setup)
+function solve_steady!(solution, setup)
+    @unpack steady, visc = setup.case
     @unpack Nu, Nv, Np = setup.grid
     @unpack G, M, yM = setup.discretization
-    @unpack nonlinear_accuracy, Jacobian_type, nPicard, Newton_factor, nonlinear_maxit =
+    @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
         setup.solver_settings
     @unpack use_rom = setup.rom
 
-    Z2 = sparse(Np, Np)
+    # Solution
+    @unpack V, p, t, dt, n, maxres, maxdiv, k, vmom, nonlinear_its, time, umom = solution
+
+    Z2 = spzeros(Np, Np)
 
     # Right hand side
-    f = zeros(Nu+Nv+Np, 1)
+    f = zeros(Nu+Nv+Np)
 
     Newton = false
 
     maxres[2] = maxres[1]
 
-    while max_residual[n] > nonlinear_accuracy
+    while maxres[n] > nonlinear_acc
         if Jacobian_type == "Newton" && nPicard < n
             # Switch to Newton
             setup.solver_settings.Newton_factor = true
@@ -27,7 +31,7 @@ function solve_steady(setup)
 
         n += 1
 
-        _, fmom, dmom = momementum(V, V, p, t, setup, true)
+        _, fmom, dfmom = momentum(V, V, p, t, setup, true)
         fmass = M * V + yM
         f = [-fmom; fmass]
         Z = [dfmom -G; -M Z2]
@@ -51,19 +55,14 @@ function solve_steady(setup)
             # get ROM residual
             maxres[n], _ = F_ROM(R, 0, t, setup, false)
         else
-            if visc ≂̸ "keps"
+            if visc != "keps"
                 maxres[n], _ = momentum(V, V, p, t, setup, false)
             end
         end
 
         # change timestep based on operators
         if !steady && timestep.set && rem(n, timestep.n) == 0
-            dt = set_timestep(setup)
-        end
-
-        # write restart file
-        if restart.write && rem(n, restart.n) == 0
-            write_restart()
+            dt = get_timestep(setup)
         end
 
         # store unsteady data in an array
@@ -85,7 +84,7 @@ function solve_steady(setup)
             end
         end
 
-        println("Residual momentum equation: $(max_residual[n])")
+        println("Residual momentum equation: $(maxres[n])")
 
         if n > nonlinear_maxit
             @warn "Newton not converged in $nonlinear_maxit iterations, showing results anyway"

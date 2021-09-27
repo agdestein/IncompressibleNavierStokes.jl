@@ -14,8 +14,8 @@ function diffusion(V, t, setup, getJacobian)
     uh = V[indu]
     vh = V[indv]
 
-    Jacu = sparse(Nu, Nu + Nv)
-    Jacv = sparse(Nv, Nu + Nv)
+    Jacu = spzeros(Nu, Nu + Nv)
+    Jacv = spzeros(Nv, Nu + Nv)
 
     if visc == "laminar"
         @unpack Diffu, Diffv, yDiffu, yDiffv = setup.discretization
@@ -24,8 +24,8 @@ function diffusion(V, t, setup, getJacobian)
         d2v = Diffv * vh + yDiffv
 
         if getJacobian
-            Jacu = [Diffu sparse(Nu, Nv)]
-            Jacv = [sparse(Nv, Nu) Diffv]
+            Jacu = [Diffu spzeros(Nu, Nv)]
+            Jacv = [spzeros(Nv, Nu) Diffv]
         end
 
     elseif visc ∈ ["qr", "LES", "ML"]

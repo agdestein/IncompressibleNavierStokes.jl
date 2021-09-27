@@ -1,7 +1,7 @@
 """
-    solve_steady_ke(setup)
+    solve_unsteady_rom!(solution, setup)
 
 Solve ke.
 """
-function solve_unsteady_rom(setup)
+function solve_unsteady_rom!(solution, setup)
 end

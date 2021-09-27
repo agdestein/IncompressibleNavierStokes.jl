@@ -19,8 +19,8 @@ function convection(V, C, t, setup, getJacobian)
 
     @unpack Nu, Nv, NV, indu, indv = setup.grid
 
-    Jacu = sparse(Nu, NV)
-    Jacv = sparse(Nv, NV)
+    Jacu = spzeros(Nu, NV)
+    Jacv = spzeros(Nv, NV)
 
     uh = V[indu]
     vh = V[indv]
@@ -175,8 +175,8 @@ function convection_components(C, V, setup, getJacobian, order4 = false)
     Nv = setup.grid.Nv
     NV = setup.grid.NV
 
-    Jacu = sparse(Nu, NV)
-    Jacv = sparse(Nv, NV)
+    Jacu = spzeros(Nu, NV)
+    Jacv = spzeros(Nv, NV)
 
     uh = V[indu]
     vh = V[indv]
@@ -204,7 +204,7 @@ function convection_components(C, V, setup, getJacobian, order4 = false)
     convv = duvdx + dv2dy
 
     if getJacobian
-        Newton = setup.solver_settings.Newton_factor
+        Newton_factor = setup.solver_settings.Newton_factor
         N1 = length(u_ux) #setup.grid.N1;
         N2 = length(u_uy) #setup.grid.N2;
         N3 = length(v_vx) #setup.grid.N3;
@@ -213,11 +213,11 @@ function convection_components(C, V, setup, getJacobian, order4 = false)
         ## convective terms, u-component
         # c^n * u^(n+1), c = u
         C1 = Cux * spdiagm(uf_ux)
-        C2 = Cux * spdiagm(u_ux) * Newton
+        C2 = Cux * spdiagm(u_ux) * Newton_factor
         Conv_ux_11 = C1 * Au_ux + C2 * Iu_ux
 
         C1 = Cuy * spdiagm(vf_uy)
-        C2 = Cuy * spdiagm(u_uy) * Newton
+        C2 = Cuy * spdiagm(u_uy) * Newton_factor
         Conv_uy_11 = C1 * Au_uy
         Conv_uy_12 = C2 * Iv_uy
 
@@ -225,12 +225,12 @@ function convection_components(C, V, setup, getJacobian, order4 = false)
 
         ## convective terms, v-component
         C1 = Cvx * spdiagm(uf_vx)
-        C2 = Cvx * spdiagm(v_vx) * Newton
+        C2 = Cvx * spdiagm(v_vx) * Newton_factor
         Conv_vx_21 = C2 * Iu_vx
         Conv_vx_22 = C1 * Av_vx
 
         C1 = Cvy * spdiagm(vf_vy)
-        C2 = Cvy * spdiagm(v_vy) * Newton
+        C2 = Cvy * spdiagm(v_vy) * Newton_factor
         Conv_vy_22 = C1 * Av_vy + C2 * Iv_vy
 
         Jacv = [Conv_vx_21 Conv_vx_22 + Conv_vy_22]

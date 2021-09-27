@@ -1,7 +1,7 @@
 """
-    solve_steady_ke(setup)
+    solve_steady_ibm!(solution, setup)
 
-Solve ke.
+Solve ibm.
 """
-function solve_steady_ibm(setup)
+function solve_steady_ibm!(solution, setup)
 end

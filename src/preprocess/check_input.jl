@@ -1,7 +1,11 @@
 """
 Check input.
 """
-function check_input!(setup)
+function check_input!(setup, V_start, p_start, t)
+    @unpack steady, visc = setup.case
+    @unpack order4 = setup.discretization
+    @unpack nonlinear_maxit = setup.solver_settings
+
     if order4
         if visc != "laminar"
             error(
@@ -10,7 +14,9 @@ function check_input!(setup)
         end
 
         if regularization != "no"
-            error("order 4 only implemented for standard convection with regularization == \"no\"")
+            error(
+                "order 4 only implemented for standard convection with regularization == \"no\"",
+            )
         end
     end
 
@@ -19,8 +25,6 @@ function check_input!(setup)
     n = 1
 
     # initial velocity field
-    # uh = u_start[:]
-    # vh = v_start[:]
     V = V_start # [uh; vh]
     V_old = V
 
@@ -35,21 +39,24 @@ function check_input!(setup)
     if !steady
         t = t_start
         if timestep.set
-            dt = set_timestep(setup)
+            dt = get_timestep(setup)
         end
 
         # Estimate number of time steps that will be taken
-        nt = ceil((t_end - t_start) / dt)
-
-        # allocate variables, including initial condition
-        maxres = zeros(nt + 1)
-        maxdiv = zeros(nt + 1)
-        k = zeros(nt + 1)
-        umom = zeros(nt + 1)
-        vmom = zeros(nt + 1)
-        time = zeros(nt + 1)
-        nonlinear_its = zeros(nt + 1)
+        nt = ceil(Int, (t_end - t_start) / dt)
+    else
+        dt = setup.time.dt
+        nt = nonlinear_maxit 
     end
+
+    # allocate variables, including initial condition
+    maxres = zeros(nt + 1)
+    maxdiv = zeros(nt + 1)
+    k = zeros(nt + 1)
+    umom = zeros(nt + 1)
+    vmom = zeros(nt + 1)
+    time = zeros(nt + 1)
+    nonlinear_its = zeros(nt + 1)
 
     # kinetic energy and momentum of initial velocity field
     # iteration 1 corresponds to t = 0 (for unsteady simulations)
@@ -57,22 +64,16 @@ function check_input!(setup)
 
     if maxdiv[1] > 1e-12 && !steady
         @warn "Initial velocity field not (discretely) divergence free: $(maxdiv[1])"
-        fprintf(
-            fcw,
-            "additional projection to make initial velocity field divergence free\n",
-        )
+        println("Additional projection to make initial velocity field divergence free")
 
         # make velocity field divergence free
         Om_inv = setup.grid.Om_inv
         G = setup.discretization.G
-        Nu = setup.grid.Nu
-        Nv = setup.grid.Nv
 
         f = setup.discretization.M * V + setup.discretization.yM
         dp = pressure_poisson(f, t, setup)
         V -= Om_inv .* (G * dp)
-        # uh = V[1:Nu]
-        # vh = V[Nu+1:end]
+
         # repeat conservation with updated velocity field
         maxdiv[1], umom[1], vmom[1], k[1] = check_conservation(V, t, setup)
     end
@@ -128,15 +129,5 @@ function check_input!(setup)
         p_total[1, :] = p_start[:]
     end
 
-    if !rtp.show && rtp.movie
-        warning(
-            "real-time plotting off (rtp.show = 0) but movie generation is on (rtp.movie = true). no movie will be generated.",
-        )
-    end
-
-    if !steady && save_unsteady && !save_file
-        @warn "unsteady data is stored in workspace (save_unsteady = true) but not saved to a file (save_file = false)"
-    end
-
-    setup
+    (; V, p, t, dt, n, maxres, maxdiv, k, vmom, nonlinear_its, time, umom)
 end
