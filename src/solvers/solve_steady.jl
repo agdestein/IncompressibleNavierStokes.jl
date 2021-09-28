@@ -37,11 +37,11 @@ function solve_steady!(solution, setup)
         Z = [dfmom -G; -M Z2]
         Δq = Z \ f
 
-        ΔV = Δq[1:Nu+Nv]
-        Δp = Δq[Nu+Nv+1:end]
+        ΔV = @view Δq[1:Nu+Nv]
+        Δp = @view Δq[Nu+Nv+1:end]
 
-        V = V + ΔV
-        p = p + Δp
+        V .+= ΔV
+        p .+= Δp
 
         ## Process data from this iteration
 
