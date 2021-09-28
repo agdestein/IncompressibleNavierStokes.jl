@@ -15,9 +15,9 @@ function postprocess(solution, setup)
 
     # Shift pressure to get zero pressure in the centre
     if iseven(Nx) && iseven(Ny)
-        Δpres -= (pres[Nx÷2+1, Ny÷2+1] + pres[Nx÷2, Ny÷2]) / 2
+        Δpres = pres .- (pres[Nx÷2+1, Ny÷2+1] + pres[Nx÷2, Ny÷2]) / 2
     else
-        Δpres -= pres[ceil(Int, Nx / 2), ceil(Int, Ny / 2)]
+        Δpres = pres .- pres[ceil(Int, Nx / 2), ceil(Int, Ny / 2)]
     end
 
     # Get fields
