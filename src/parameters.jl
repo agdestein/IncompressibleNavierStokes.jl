@@ -286,8 +286,8 @@ end
 
 # Visualization settings
 Base.@kwdef mutable struct Visualization
-    plotgrid::Bool = false                   # plot gridlines and pressure points
-    rtp_show::Bool = true                    # real time plotting
+    plotgrid::Bool = false                   # Plot gridlines and pressure points
+    do_rtp::Bool = true                      # Do real time plotting
     rtp_type::String = "velocity"            # "velocity", "quiver", "vorticity" or "pressure"
     rtp_n::Int = 10                          # Number of iterations between real time plots
 end

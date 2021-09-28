@@ -90,7 +90,7 @@ function main(setup)
     println("total elapsed CPU time: $totaltime")
 
     # Post-processing
-    postprocess(solution, setup)
+    # postprocess(solution, setup)
 
     (; V, p, setup, totaltime, solution)
 end

@@ -107,9 +107,9 @@ function BFS_unsteady()
 
     # Visualization settings
     setup.visualization.plotgrid = false                   # plot gridlines and pressure points
-    setup.visualization.rtp_show = false                   # real time plotting
+    setup.visualization.do_rtp = true                      # real time plotting
     setup.visualization.rtp_type = "velocity"              # "velocity", "quiver", "vorticity" or "pressure"
-    setup.visualization.rtp_n = 1                          # Number of iterations between real time plots
+    setup.visualization.rtp_n = 5                          # Number of iterations between real time plots
 
 
     """

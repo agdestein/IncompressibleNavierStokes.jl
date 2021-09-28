@@ -23,20 +23,21 @@ function postprocess(solution, setup)
     # Get fields
     ω_flat = get_vorticity(V, t, setup)
     ω = reshape(ω_flat, Nx - 1, Ny - 1)
-    ψ = get_streamfunction(V, t, setup)
+    ψ_flat = get_streamfunction(V, t, setup)
+    ψ = reshape(ψ_flat, Nx - 1, Ny - 1)
 
-    # # Plot vorticity
+    # Plot vorticity
     levels = [minimum(ω) - 1, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, maximum(ω) + 1]
     pl = contourf(
         x[2:(end-1)],
         y[2:(end-1)],
-        ω';
+        ω;
         aspect_ratio = :equal,
         #levels,
         xlabel = "x",
         ylabel = "y",
+        title = "Vorticity ω",
     )
-    title!(pl, "Vorticity ω")
     display(pl)
 
     # Plot pressure
@@ -57,13 +58,13 @@ function postprocess(solution, setup)
     pl = contourf(
         xp,
         yp,
-        Δpres';
+        Δpres;
         aspect_ratio = :equal,
         #levels,
         xlabel = "x",
         ylabel = "y",
+        title = "Pressure deviation Δp",
     )
-    title!(pl, "Pressure deviation Δp")
     display(pl)
 
     # Plot stream function
@@ -95,12 +96,12 @@ function postprocess(solution, setup)
     pl = contourf(
         x[2:(end-1)],
         y[2:(end-1)],
-        reshape(ψ, Nx - 1, Ny - 1)';
+        ψ;
         aspect_ratio = :equal,
         # levels,
         xlabel = "x",
         ylabel = "y",
+        title = "Stream function ψ",
     )
-    title!(pl, "Stream function ψ")
     display(pl)
 end

@@ -4,7 +4,8 @@ module IncompressibleNavierStokes
 using LinearAlgebra: Factorization, I, cholesky, factorize, ldiv!
 using SparseArrays: SparseMatrixCSC, sparse, spdiagm, spzeros
 using UnPack: @unpack
-using Plots: contour, contourf, title!
+# using Plots: contour, contourf, title!
+using Makie: Figure, Node, contourf
 
 # Setup
 include("solvers/time/runge_kutta_methods.jl")

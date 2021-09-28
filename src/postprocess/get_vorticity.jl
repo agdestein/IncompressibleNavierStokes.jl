@@ -4,8 +4,8 @@ function get_vorticity(V, t, setup)
     @unpack Nu, Nv, Nux_in, Nvy_in, Nx, Ny = setup.grid
     @unpack Wv_vx, Wu_uy = setup.discretization
 
-    uₕ = V[1:Nu]
-    vₕ = V[Nu+1:Nu+Nv]
+    uₕ = @view V[1:Nu]
+    vₕ = @view V[Nu+1:Nu+Nv]
 
     if setup.bc.u.left == "per" && setup.bc.v.low == "per"
         uₕ_in = uₕ

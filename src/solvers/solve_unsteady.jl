@@ -6,16 +6,18 @@ Main solver file for unsteady calculations
 function solve_unsteady!(solution, setup)
     # Setup
     @unpack is_steady, visc = setup.case
-    @unpack Nu, Nv, Np = setup.grid
+    @unpack Nu, Nv, Np, Nx, Ny, x, y = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
         setup.solver_settings
     @unpack use_rom = setup.rom
     @unpack isadaptive, method, method_startup = setup.time
     @unpack save_unsteady = setup.output
+    @unpack do_rtp, rtp_n = setup.visualization
 
     # Solution
-    @unpack V, p, t, Δt, n, nt, maxres, maxdiv, k, vmom, nonlinear_its, time, umom = solution
+    @unpack V, p, t, Δt, n, nt, maxres, maxdiv, k, vmom, nonlinear_its, time, umom =
+        solution
 
     # for methods that need convection from previous time step
     if method == 2
@@ -44,6 +46,14 @@ function solve_unsteady!(solution, setup)
     Δtₙ = Δt
 
     method_temp = method
+
+    if do_rtp
+        ω = get_vorticity(V, t, setup)
+        ω = reshape(ω, Nx - 1, Ny - 1)
+        ω = Node(ω)
+        pl = contourf(x[2:(end-1)], y[2:(end-1)], ω)
+        display(pl)
+    end
 
     while n ≤ nt
         # Advance one time step
@@ -112,6 +122,11 @@ function solve_unsteady!(solution, setup)
             p_total[n, :] = p
         end
 
+        if do_rtp && mod(n, rtp_n) == 0
+            ω[] = reshape(get_vorticity(V, t, setup), Nx - 1, Ny - 1)
+            # display(pl)
+            sleep(0.05)
+        end
     end
 
     V, p
