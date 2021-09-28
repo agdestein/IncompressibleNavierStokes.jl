@@ -11,8 +11,8 @@ function diffusion(V, t, setup, getJacobian)
 
     indu = setup.grid.indu
     indv = setup.grid.indv
-    uh = V[indu]
-    vh = V[indv]
+    uₕ = V[indu]
+    vₕ = V[indv]
 
     Jacu = spzeros(Nu, Nu + Nv)
     Jacv = spzeros(Nv, Nu + Nv)
@@ -20,8 +20,8 @@ function diffusion(V, t, setup, getJacobian)
     if visc == "laminar"
         @unpack Diffu, Diffv, yDiffu, yDiffv = setup.discretization
 
-        d2u = Diffu * uh + yDiffu
-        d2v = Diffv * vh + yDiffv
+        d2u = Diffu * uₕ + yDiffu
+        d2v = Diffv * vₕ + yDiffv
 
         if getJacobian
             Jacu = [Diffu spzeros(Nu, Nv)]

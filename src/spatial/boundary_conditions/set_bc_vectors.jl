@@ -48,7 +48,7 @@ function set_bc_vectors!(setup, t)
     vLe_i = v_bc.(x[1], yin, t, [setup])
     vRi_i = v_bc.(x[end], yin, t, [setup])
 
-    if !steady && setup.bcbc_unsteady
+    if !steady && setup.bc.bc_unsteady
         dudtLe_i = dudt_bc.(x[1], [setup].grid.yp, t, setup)
         dudtRi_i = dudt_bc.(x[end], [setup].grid.yp, t, setup)
         dvdtLo_i = dvdt_bc.(setup.grid.xp, y[1], t, [setup])
@@ -80,7 +80,7 @@ function set_bc_vectors!(setup, t)
 
     # time derivative of divergence
     if !steady
-        if setup.bcbc_unsteady
+        if setup.bc.bc_unsteady
             ybc = kron(dudtLe_i, Mx_bc.ybc1) + kron(dudtRi_i, Mx_bc.ybc2)
             ydMx = Mx_bc.Bbc * ybc
             if order4
@@ -102,7 +102,7 @@ function set_bc_vectors!(setup, t)
 
             setup.discretization.ydM = ydM
         else
-            setup.discretization.ydM = zeros(Np, 1)
+            setup.discretization.ydM = zeros(Np)
         end
     end
 

@@ -7,11 +7,11 @@ function get_timestep(setup)
     if method ∈ [1, 2, 5, 81, 82]
         ## Convective part
         Cu =
-            Cux * spdiagm(Iu_ux * uh + yIu_ux) * Au_ux +
-            Cuy * spdiagm(Iv_uy * vh + yIv_uy) * Au_uy
+            Cux * spdiagm(Iu_ux * uₕ + yIu_ux) * Au_ux +
+            Cuy * spdiagm(Iv_uy * vₕ + yIv_uy) * Au_uy
         Cv =
-            Cvx * spdiagm(Iu_vx * uh + yIu_vx) * Av_vx +
-            Cvy * spdiagm(Iv_vy * vh + yIv_vy) * Av_vy
+            Cvx * spdiagm(Iu_vx * uₕ + yIu_vx) * Av_vx +
+            Cvy * spdiagm(Iv_vy * vₕ + yIv_vy) * Av_vy
 
         test = spdiagm(Omu_inv) * Cu
         sum_conv_u = abs(test) * ones(Nu) - diag(abs(test)) - diag(test)
@@ -37,7 +37,7 @@ function get_timestep(setup)
             λ_diff_max = 2.78
         end
 
-        dt_diff = λ_diff_max / λ_diff
+        Δt_diff = λ_diff_max / λ_diff
 
         # based on max. value of stability region (not a very good indication
         # for the methods that do not include the imaginary axis)
@@ -48,9 +48,9 @@ function get_timestep(setup)
         else
             λ_conv_max = 1
         end
-        dt_conv = λ_conv_max / λ_conv
-        dt = CFL * min(dt_conv, dt_diff)
+        Δt_conv = λ_conv_max / λ_conv
+        Δt = CFL * min(Δt_conv, Δt_diff)
     end
 
-    dt
+    Δt
 end

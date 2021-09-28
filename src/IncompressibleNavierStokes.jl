@@ -1,12 +1,13 @@
 "Incompressible Navier-Stokes solver"
 module IncompressibleNavierStokes
 
-using LinearAlgebra: I
+using LinearAlgebra: Factorization, I, cholesky, factorize, ldiv!
 using SparseArrays: SparseMatrixCSC, sparse, spdiagm, spzeros
 using UnPack: @unpack
-using Plots: contour, contourf
+using Plots: contour, contourf, title!
 
 # Setup
+include("solvers/time/runge_kutta_methods.jl")
 include("parameters.jl")
 
 # Preprocess
@@ -55,6 +56,16 @@ include("solvers/solve_unsteady.jl")
 include("solvers/solve_unsteady_ke.jl")
 include("solvers/solve_unsteady_rom.jl")
 
+include("solvers/pressure/pressure_poisson.jl")
+include("solvers/pressure/pressure_additional_solve.jl")
+
+include("solvers/time/step_AB_CN.jl")
+include("solvers/time/step_ERK.jl")
+include("solvers/time/step_ERK_ROM.jl")
+include("solvers/time/step_IRK.jl")
+include("solvers/time/step_IRK_ROM.jl")
+
+
 # Utils
 include("utils/filter_convection.jl")
 
@@ -89,6 +100,30 @@ export nonuniform_grid
 
 # Main driver
 export main
+# Runge Kutta methods
 
+# Explicit Methods
+export FE11, SSP22, SSP42, SSP33, SSP43, SSP104, rSSPs2, rSSPs3, Wray3, RK56, DOPRI6
+
+# Implicit Methods
+export BE11, SDIRK34, ISSPm2, ISSPs3
+
+# Half explicit methods
+export HEM3, HEM3BS, HEM5
+
+# Classical Methods
+export GL1, GL2, GL3, RIA1, RIA2, RIA3, RIIA1, RIIA2, RIIA3, LIIIA2, LIIIA3
+
+#Chebyshev methods
+export CHDIRK3, CHCONS3, CHC3, CHC5
+
+# Miscellaneous Methods
+export Mid22, MTE22, CN22, Heun33, RK33C2, RK33P2, RK44, RK44C2, RK44C23, RK44P2
+
+# DSRK Methods
+export DSso2, DSRK2, DSRK3
+
+# "Non-SSP" Methods of Wong & Spiteri
+export NSSP21, NSSP32, NSSP33, NSSP53
 
 end

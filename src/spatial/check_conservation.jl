@@ -8,8 +8,8 @@ function check_conservation(V, t, setup)
     @unpack Nu, Nv, Omu, Omv, x, y, xp, yp, hx, hy, gx, gy = setup.grid
     @unpack u_bc, v_bc = setup.bc
 
-    uh = V[1:Nu]
-    vh = V[Nu+1:Nu+Nv]
+    uₕ = V[1:Nu]
+    vₕ = V[Nu+1:Nu+Nv]
 
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, t)
@@ -24,8 +24,8 @@ function check_conservation(V, t, setup)
     maxdiv = maximum(abs.(M * V + yM))
 
     # calculate total momentum
-    umom = sum(Omu .* uh)
-    vmom = sum(Omv .* vh)
+    umom = sum(Omu .* uₕ)
+    vmom = sum(Omv .* vₕ)
 
     # add boundary contributions in case of Dirichlet BC
     if setup.bc.u.left == "dir"
@@ -42,8 +42,8 @@ function check_conservation(V, t, setup)
     end
 
 
-    # Calculate total kinetic energy (this equals 0.5*(V')*(Omega.*V))
-    k = 0.5 * sum(Omu .* uh .^ 2) + 0.5 * sum(Omv .* vh .^ 2)
+    # Calculate total kinetic energy (this equals 0.5*V'*(Omega.*V))
+    k = 0.5 * sum(Omu .* uₕ .^ 2) + 0.5 * sum(Omv .* vₕ .^ 2)
 
     # Add boundary contributions in case of Dirichlet BC
     if setup.bc.u.left == "dir"

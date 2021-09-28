@@ -11,15 +11,15 @@ function check_symmetry(V, t, setup, ϵ = 1e-14)
     @unpack yIu_ux, yIv_uy, yIu_vx, yIv_vy = setup.discretization
     @unpack N1, N2, N3, N4 = setup.grid
 
-    uh = V[indu]
-    vh = V[indv]
+    uₕ = V[indu]
+    vₕ = V[indv]
 
     Cu =
-        Cux * spdiagm(Iu_ux * uh + yIu_ux) * Au_ux +
-        Cuy * spdiagm(Iv_uy * vh + yIv_uy) * Au_uy
+        Cux * spdiagm(Iu_ux * uₕ + yIu_ux) * Au_ux +
+        Cuy * spdiagm(Iv_uy * vₕ + yIv_uy) * Au_uy
     Cv =
-        Cvx * spdiagm(Iu_vx * uh + yIu_vx) * Av_vx +
-        Cvy * spdiagm(Iv_vy * vh + yIv_vy) * Av_vy
+        Cvx * spdiagm(Iu_vx * uₕ + yIu_vx) * Av_vx +
+        Cvy * spdiagm(Iv_vy * vₕ + yIv_vy) * Av_vy
 
     error_u = maximum(abs.(Cu + Cu'))
     error_v = maximum(abs.(Cv + Cv'))

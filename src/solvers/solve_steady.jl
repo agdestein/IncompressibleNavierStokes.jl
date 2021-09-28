@@ -4,6 +4,7 @@
 Solve the entire saddlepoint system arising from the steady Navier-Stokes equations with linearization of the convective terms
 """
 function solve_steady!(solution, setup)
+    # Setup
     @unpack steady, visc = setup.case
     @unpack Nu, Nv, Np = setup.grid
     @unpack G, M, yM = setup.discretization
@@ -12,7 +13,7 @@ function solve_steady!(solution, setup)
     @unpack use_rom = setup.rom
 
     # Solution
-    @unpack V, p, t, dt, n, maxres, maxdiv, k, vmom, nonlinear_its, time, umom = solution
+    @unpack V, p, t, Δt, n, maxres, maxdiv, k, vmom, nonlinear_its, time, umom = solution
 
     Z2 = spzeros(Np, Np)
 
@@ -61,14 +62,14 @@ function solve_steady!(solution, setup)
         end
 
         # change timestep based on operators
-        if !steady && timestep.set && rem(n, timestep.n) == 0
-            dt = get_timestep(setup)
+        if !steady && isadaptive && rem(n, n_adapt_Δt) == 0
+            Δt = get_timestep(setup)
         end
 
         # store unsteady data in an array
         if !steady && save_unsteady
-            uh_total[n, :] = V[1:setup.grid.Nu]
-            vh_total[n, :] = V[setup.grid.Nu+1:end]
+            uₕ_total[n, :] = V[1:setup.grid.Nu]
+            vₕ_total[n, :] = V[setup.grid.Nu+1:end]
             p_total[n, :] = p
         end
 
@@ -77,14 +78,14 @@ function solve_steady!(solution, setup)
             if !steady
                 println(
                     fconv,
-                    "$n $dt $t $(maxres[n]) $(maxdiv[n]) $(umom[n]) $(vmom[n]) $(k[n])",
+                    "$n $Δt $t $(maxres[n]) $(maxdiv[n]) $(umom[n]) $(vmom[n]) $(k[n])",
                 )
             elseif steady
                 println(fconv, "$n $(maxres[n]) $(maxdiv[n]) $(umom[n]) $(vmom[n]) $(k[n])")
             end
         end
 
-        println("Residual momentum equation: $(maxres[n])")
+        println("Iteration $n: momentum residual = $(maxres[n])")
 
         if n > nonlinear_maxit
             @warn "Newton not converged in $nonlinear_maxit iterations, showing results anyway"

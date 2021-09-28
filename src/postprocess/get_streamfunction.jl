@@ -6,8 +6,8 @@ function get_streamfunction(V, t, setup)
     @unpack hx, hy, x, y, xp, yp = setup.grid
     @unpack Wv_vx, Wu_uy = setup.discretization
 
-    uh = V[1:Nu]
-    vh = V[Nu+1:end]
+    uₕ = V[1:Nu]
+    vₕ = V[Nu+1:end]
 
     # boundary values by integrating around domain
     # start with ψ = 0 at lower left corner
@@ -17,7 +17,7 @@ function get_streamfunction(V, t, setup)
         #     u1 = interp1(y, uLe, yp);
         u1 = u_bc.(x[1], yp, t, [setup])
     elseif setup.bc.u.left ∈ ["pres", "per"]
-        u1 = uh[1:Nux_in:end]
+        u1 = uₕ[1:Nux_in:end]
     end
     ψLe = cumsum(hy .* u1)
     ψUpLe = ψLe[end]
@@ -27,9 +27,9 @@ function get_streamfunction(V, t, setup)
     if setup.bc.v.up == "dir"
         v1 = v_bc.(xp, y[end], t, [setup])
     elseif setup.bc.v.up == "pres"
-        v1 = vh[end-Nvx_in+1:end]
+        v1 = vₕ[end-Nvx_in+1:end]
     elseif setup.bc.v.up == "per"
-        v1 = vh[1:Nvx_in]
+        v1 = vₕ[1:Nvx_in]
     end
     ψUp = ψUpLe .- cumsum(hx .* v1)
     ψUpRi = ψUp[end]
@@ -39,9 +39,9 @@ function get_streamfunction(V, t, setup)
     if setup.bc.u.right == "dir"
         u2 = u_bc.(x[end], yp, t, [setup])
     elseif setup.bc.u.right == "pres"
-        u2 = uh[Nux_in:Nux_in:end]
+        u2 = uₕ[Nux_in:Nux_in:end]
     elseif setup.bc.u.right == "per"
-        u2 = uh[1:Nux_in:end]
+        u2 = uₕ[1:Nux_in:end]
     end
     ψRi = ψUpRi .- cumsum(hy[end:-1:1] .* u2[end:-1:1])
     ψLoRi = ψRi[end]
@@ -51,7 +51,7 @@ function get_streamfunction(V, t, setup)
     if setup.bc.v.low == "dir"
         v2 = v_bc.(xp, y[1], t, [setup])
     elseif setup.bc.v.low ∈ ["pres", "per"]
-        v2 = vh[1:Nvx_in]
+        v2 = vₕ[1:Nvx_in]
     end
     ψLo = ψLoRi .+ cumsum(hx[end:-1:1] .* v2[end:-1:1])
     ψLoLe = ψLo[end]

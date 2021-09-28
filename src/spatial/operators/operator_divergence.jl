@@ -181,11 +181,11 @@ function operator_divergence!(setup)
     ## Pressure matrix for pressure correction method;
     # also used to make initial data divergence free or compute additional poisson solve
     if !steady && visc != "keps"
-        #   Note that the matrix for the pressure is constant in time.
-        #   Only the right hand side vector changes, so the pressure matrix
-        #   can be set up outside the time-stepping-loop.
+        # Note that the matrix for the pressure is constant in time.
+        # Only the right hand side vector changes, so the pressure matrix
+        # can be set up outside the time-stepping-loop.
 
-        #   Laplace = div grad
+        # Laplace = div grad
         A = M * spdiagm(Om_inv) * G
         setup.discretization.A = A
 
@@ -196,8 +196,8 @@ function operator_divergence!(setup)
         end
 
         # LU decomposition
-        setup.solver_settings.decomp = factorize(A)
-
+        setup.discretization.A_fact = factorize(A)
+        
         # check if all the row sums of the pressure matrix are zero, which
         # should be the case if there are no pressure boundary conditions
         if bc.v.low != "pres" &&

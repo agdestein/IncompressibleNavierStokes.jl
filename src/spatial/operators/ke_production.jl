@@ -16,7 +16,7 @@ function ke_production!(setup)
     ybc = kron(uLe_i, ybcl) + kron(uRi_i, ybcr)
     yCux_k = kron(sparse(I, Npy, Npy), C1D * Btemp) * ybc
 
-    # Cux_k*uh+yCux_k;
+    # Cux_k*uₕ+yCux_k;
 
 
     ## du/dy
@@ -50,7 +50,7 @@ function ke_production!(setup)
     ybc = kron(ybcl, uLo_i) + kron(ybcu, uUp_i)
     yCuy_k = kron(C1D * Btemp, sparse(I, Npx, Npx)) * ybc
 
-    # Cuy_k*(Auy_k*uh+yAuy_k) + yCuy_k;
+    # Cuy_k*(Auy_k*uₕ+yAuy_k) + yCuy_k;
 
 
     ## dv/dx
@@ -83,7 +83,7 @@ function ke_production!(setup)
     ybc = kron(vLe_i, ybcl) + kron(vRi_i, ybcr)
     yCvx_k = kron(sparse(I, Npy, Npy), C1D * Btemp) * ybc
 
-    # Cvx_k*(Avx_k*vh+yAvx_k) + yCvx_k;
+    # Cvx_k*(Avx_k*vₕ+yAvx_k) + yCvx_k;
 
 
     ## dv/dy
@@ -102,6 +102,6 @@ function ke_production!(setup)
     ybc = kron(ybcl, vLo_i) + kron(ybcu, vUp_i)
     yCvy_k = kron(C1D * Btemp, sparse(I, Npx, Npx)) * ybc
 
-    # Cvy_k*vh+yCvy_k;
+    # Cvy_k*vₕ+yCvy_k;
     setup
 end

@@ -205,7 +205,7 @@ function operator_turbulent_diffusion!(setup)
     Cux_k = kron(sparse(I, Npy, Npy), C1D * Cux_k_bc.B1D)
     Cux_k_bc.Bbc = kron(sparse(I, Npy, Npy), C1D * Cux_k_bc.Btemp)
 
-    # Cux_k*uh+yCux_k;
+    # Cux_k*uₕ+yCux_k;
 
 
     ## du/dy
@@ -240,7 +240,7 @@ function operator_turbulent_diffusion!(setup)
     # ybc = kron(ybcl, uLo_i) + kron(ybcu, uUp_i);
     # yCuy_k = kron(C1D*Cuy_k_bc.Btemp, sparse(I, Npx, Npx))*ybc;
 
-    # Cuy_k*(Auy_k*uh+yAuy_k) + yCuy_k
+    # Cuy_k*(Auy_k*uₕ+yAuy_k) + yCuy_k
 
     ## dv/dx
 
@@ -272,7 +272,7 @@ function operator_turbulent_diffusion!(setup)
     # vRi_i = interp1(y, vRi, yp);
     Cvx_k_bc.Bbc = kron(sparse(I, Npy, Npy), C1D * Cvx_k_bc.Btemp)
 
-    # Cvx_k*(Avx_k*vh+yAvx_k) + yCvx_k;
+    # Cvx_k*(Avx_k*vₕ+yAvx_k) + yCvx_k;
 
 
     ## dv/dy
@@ -291,7 +291,7 @@ function operator_turbulent_diffusion!(setup)
     # ybc = kron(ybcl, vLo_i) + kron(ybcu, vUp_i);
     Cvy_k_bc.Bbc = kron(C1D * Cvy_k_bc.Btemp, sparse(I, Npx, Npx))
 
-    # Cvy_k*vh+yCvy_k;
+    # Cvy_k*vₕ+yCvy_k;
 
     ## store in struct
     setup.discretization.Cux_k = Cux_k

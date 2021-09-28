@@ -3,7 +3,7 @@
 
 Calculate rhs of momentum equations and, optionally, Jacobian with respect to velocity field
 V: velocity field
-C: 'convection' field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
+C: "convection" field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
 c_y = v, so C = V
 p: pressure
 getJacobian = true: return dFdV

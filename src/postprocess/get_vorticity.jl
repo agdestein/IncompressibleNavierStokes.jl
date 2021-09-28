@@ -4,12 +4,12 @@ function get_vorticity(V, t, setup)
     @unpack Nu, Nv, Nux_in, Nvy_in, Nx, Ny = setup.grid
     @unpack Wv_vx, Wu_uy = setup.discretization
 
-    uh = V[1:Nu]
-    vh = V[Nu+1:Nu+Nv]
+    uₕ = V[1:Nu]
+    vₕ = V[Nu+1:Nu+Nv]
 
     if setup.bc.u.left == "per" && setup.bc.v.low == "per"
-        uh_in = uh
-        vh_in = vh
+        uₕ_in = uₕ
+        vₕ_in = vₕ
     else
         # velocity at inner points
         diagpos = 0
@@ -24,7 +24,7 @@ function get_vorticity(V, t, setup)
         B1D = spdiagm(Nx - 1, Nux_in, diagpos => ones(Nx - 1))
         B2D = kron(sparse(I, Ny, Ny), B1D)
 
-        uh_in = B2D * uh
+        uₕ_in = B2D * uₕ
 
         diagpos = 0
         if setup.bc.v.low == "pres"
@@ -38,8 +38,8 @@ function get_vorticity(V, t, setup)
         B1D = spdiagm(Ny - 1, Nvy_in, diagpos => ones(Ny - 1))
         B2D = kron(B1D, sparse(I, Nx, Nx))
 
-        vh_in = B2D * vh
+        vₕ_in = B2D * vₕ
     end
 
-    Wv_vx * vh_in - Wu_uy * uh_in
+    Wv_vx * vₕ_in - Wu_uy * uₕ_in
 end

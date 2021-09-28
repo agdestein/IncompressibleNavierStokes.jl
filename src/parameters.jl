@@ -2,13 +2,13 @@
 Base.@kwdef mutable struct Case
     name::String = "example"                 # Case name
     steady::Bool = false                     # Is steady steate (not unsteady)
-    visc::String = "laminar"                 # 'laminar', 'keps', 'ML', 'LES, 'qr'
+    visc::String = "laminar"                 # "laminar", "keps", "ML", "LES, "qr"
     regularization::String = "no"            # convective term regularization: "no", "leray", "C2", "C4"
     ibm::Bool = false                        # Use immersed boundary method
     force_unsteady::Bool = false             # false: steady forcing or no forcing; true: unsteady forcing
-    initial_velocity_u::Function = () -> error("initial_velocity_u function not implemented")
-    initial_velocity_v::Function = () -> error("initial_velocity_v function not implemented")
-    initial_pressure::Function = () -> error("initial_pressure function not implemented")
+    initial_velocity_u::Function = () -> error("initial_velocity_u not implemented")
+    initial_velocity_v::Function = () -> error("initial_velocity_v not implemented")
+    initial_pressure::Function = () -> error("initial_pressure not implemented")
 end
 
 # Physical properties
@@ -37,7 +37,7 @@ Base.@kwdef mutable struct Grid{T}
     deltay::T = 0.1                          # Mesh sizee in y-direction
     sx::T = 1                                # Stretch factor in x-direction
     sy::T = 1                                # Stretch factor in y-direction
-    create_mesh::Function = () -> error("mesh function not implemented")
+    create_mesh::Function = () -> error("mesh not implemented")
 
     # Fill in later
     x::Vector{T} = T[]                       # Vector of x-points
@@ -115,7 +115,7 @@ end
 Base.@kwdef mutable struct Discretization{T}
     order4::Bool = false                     # Use 4th order in time (otherwise 2nd order)
     α::T = 81                                # richardson extrapolation factor = 3^4
-    β::T = 9 / 8                            # interpolation factor
+    β::T = 9 // 8                            # interpolation factor
 
     # Filled in by function
     Au_ux::SparseMatrixCSC{T, Int} = spzeros(0, 0)
@@ -191,6 +191,16 @@ Base.@kwdef mutable struct Discretization{T}
     Cvy_k_bc::NamedTuple = (;)
     Auy_k_bc::NamedTuple = (;)
     Avx_k_bc::NamedTuple = (;)
+
+    A::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+    A_fact::Factorization{T} = cholesky(spzeros(0, 0))
+
+    lu_diffu::Factorization{T} = cholesky(spzeros(0, 0))
+    lu_diffv::Factorization{T} = cholesky(spzeros(0, 0))
+
+    ydM::Vector{T} = T[]
+    ypx::Vector{T} = T[]
+    ypy::Vector{T} = T[]
 end
 
 # Forcing parameters
@@ -215,7 +225,7 @@ Base.@kwdef mutable struct ROM
     precompute_diffusion::Bool = true        # precomputed diffusion matrices
     precompute_force::Bool = true            # precomputed forcing term
     t_snapshots::Int = 0                     # snapshots
-    dt_snapshots::Bool = false
+    Δt_snapshots::Bool = false
     mom_cons::Bool = false                   # momentum conserving SVD
     rom_bc::Int = 0                          # 0: homogeneous (no-slip = periodic) 1: non-homogeneous = time-independent 2: non-homogeneous = time-dependent
     weighted_norm::Bool = true               # Use weighted norm (using finite volumes as weights)
@@ -231,15 +241,19 @@ Base.@kwdef mutable struct IBM
     ibm::Bool = false                        # use immersed boundary method
 end
 
-# Time marching
+# Time stepping
 Base.@kwdef mutable struct Time{T}
     t_start::T = 0                           # Start time
     t_end::T = 1                             # End time
-    dt::T = (t_end - t_start) / 100          # Timestep
-    RK::String = "RK44"                      # RK method
+    Δt::T = (t_end - t_start) / 100          # Timestep
+    rk_method::RungeKuttaMethod = RK44()     # Runge Kutta method
     method::Int = 0                          # Method number
+    method_startup::Int = 0                  # Startup method for methods that are not self-starting
+    method_startup_number::Int = 0           # number of velocity fields necessary for start-up = equal to order of method
+    isadaptive::Bool = false                 # Adapt timestep every n_adapt_Δt iterations
+    n_adapt_Δt::Int = 1                      # Number of iterations between timestep adjustment
     θ::T = 1 // 2                            # θ value for implicit θ method
-    β::T = 1 // 2                         # β value for oneleg β method
+    β::T = 1 // 2                            # β value for oneleg β method
 end
 
 # Solver settings
@@ -252,7 +266,7 @@ Base.@kwdef mutable struct SolverSettings{T}
     nonlinear_relacc::T = 1e-14              # Relative accuracy
     nonlinear_maxit::Int = 10                # Maximum number of iterations
 
-    # "no": do not compute Jacobian, but approximate iteration matrix with I/dt
+    # "no": do not compute Jacobian, but approximate iteration matrix with I/Δt
     # "approximate: approximate Newton build Jacobian once at beginning of nonlinear iterations
     # "full": full Newton build Jacobian at each iteration
     nonlinear_Newton::String = "approximate"
@@ -286,15 +300,15 @@ Base.@kwdef mutable struct BC{T}
     k::NamedTuple = (;)
     e::NamedTuple = (;)
     ν::NamedTuple = (;)
-    u_bc::Function = () -> error("u_bc function not implemented")
-    v_bc::Function = () -> error("v_bc function not implemented")
-    dudt_bc::Function = () -> error("dudt_bc function not implemented")
-    dvdt_bc::Function = () -> error("dvdt_bc function not implemented")
+    u_bc::Function = () -> error("u_bc not implemented")
+    v_bc::Function = () -> error("v_bc not implemented")
+    dudt_bc::Function = () -> error("dudt_bc not implemented")
+    dvdt_bc::Function = () -> error("dvdt_bc not implemented")
     pLe::T = 0
     pRi::T = 0
     pLo::T = 0
     pUp::T = 0
-    bc_type::Function = () -> error("bc_type function not implemented")
+    bc_type::Function = () -> error("bc_type not implemented")
 end
 
 Base.@kwdef struct Setup{T}

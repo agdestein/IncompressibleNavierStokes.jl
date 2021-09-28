@@ -4,27 +4,22 @@
 Evaluate rate of strain tensor S(u) and its magnitude
 """
 function strain_tensor(V, t, setup, getJacobian)
-    indu = setup.grid.indu
-    indv = setup.grid.indv
-    uh = V[indu]
-    vh = V[indv]
-
-    Nx = setup.grid.Nx
-    Ny = setup.grid.Ny
-
-    Nu = setup.grid.Nu
-    Nv = setup.grid.Nv
-    Np = setup.grid.Np
-
+    @unpack Nx, Ny, Nu, Nv, Np, indu, indv = setup.grid
     @unpack Nux_in, Nuy_in, Nvx_in, Nvy_in, = setup.grid
+    @unpack x, y, xp, yp = setup.grid
     @unpack Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy = setup.discretization
     @unpack ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy = setup.discretization
+    @unpack Cux_k, Cuy_k, Cvx_k, Cvy_k, Auy_k, Avx_k = setup.discretization
+    @unpack yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k = setup.discretization
+
+    uₕ = V[indu]
+    vₕ = V[indv]
 
     # these four components are approximated by
-    S11 = 1 / 2 * 2 * (Su_ux * uh + ySu_ux)
-    S12 = 1 / 2 * (Su_uy * uh + ySu_uy + Sv_uy * vh + ySv_uy)
-    S21 = 1 / 2 * (Su_vx * uh + ySu_vx + Sv_vx * vh + ySv_vx)
-    S22 = 1 / 2 * 2 * (Sv_vy * vh + ySv_vy)
+    S11 = 1 / 2 * 2 * (Su_ux * uₕ + ySu_ux)
+    S12 = 1 / 2 * (Su_uy * uₕ + ySu_uy + Sv_uy * vₕ + ySv_uy)
+    S21 = 1 / 2 * (Su_vx * uₕ + ySu_vx + Sv_vx * vₕ + ySv_vx)
+    S22 = 1 / 2 * 2 * (Sv_vy * vₕ + ySv_vy)
 
     # Note: S11 and S22 at xp, yp locations (pressure locations)
     # S12, S21 at vorticity locations (corners of pressure cells, (x, y))
@@ -32,7 +27,7 @@ function strain_tensor(V, t, setup, getJacobian)
     # option 1: get each S11, S12, S21, S22 at 4 locations (ux locations, at uy locations, at vx
     # locations and at vy locations); this gives 16 S fields. determine S_abs at each of these
     # locations, giving 4 S_abs fields, that can be used in computing
-    # Dux*(S_abs_ux .* (Su_ux*uh+ySu_ux)) etc.
+    # Dux*(S_abs_ux .* (Su_ux*uₕ+ySu_ux)) etc.
 
     # option 2: interpolate S11, S12, S21, S22 to pressure locations
     # determine S_abs at pressure location
@@ -47,7 +42,7 @@ function strain_tensor(V, t, setup, getJacobian)
 
     if get_S_abs
         # option 2b
-        bc =  setup.bc
+        bc = setup.bc
         if bc.u.left == "per" && bc.u.right == "per"
             # "cut-off" the double points in case of periodic BC
             # for periodic boundary conditions S11(Npx+1, :) = S11(1, :)
@@ -95,25 +90,12 @@ function strain_tensor(V, t, setup, getJacobian)
 
         # now interpolate S12 and S21 to pressure points
         # S11 and S22 have already been trimmed down to this grid
-        @unpack x, y, xp, yp = setup.grid
-
-        S12_p = interp2(y', x, S12_temp, yp', xp) #interp2(x, y', S12_temp, xp, yp');
-        S21_p = interp2(y', x, S21_temp, yp', xp) #interp2(x, y', S21_temp, xp, yp');
 
         # S21 and S12 should be equal!
-
-        # contour(xp, yp, S11");
-        # contour(xp, yp, S22");
-        # contour(xp, yp, S12");
-        # contour(xp, yp, S21");
-
+        S12_p = interp2(y', x, S12_temp, yp', xp)
+        S21_p = interp2(y', x, S21_temp, yp', xp)
 
         ## invariants
-
-        # Verstappen:
-        # q = 1/2 * trace(S^2)
-        # r = -1/3 * trace(S^3) ( = -det(S) only in 3D); in 2D we should get r = 0
-
         q = (1 / 2) * (S11_p[:] .^ 2 + S12_p[:] .^ 2 + S21_p[:] .^ 2 + S22_p[:] .^ 2)
 
         # absolute value of strain tensor
@@ -123,26 +105,18 @@ function strain_tensor(V, t, setup, getJacobian)
 
         # should be zero:
         # r = (S11[:].^2+S12[:].*S21[:]).*S11[:] + (S11[:].*S12[:]+S12[:].*S22[:]).*S21[:] +         #     (S11[:].*S21[:]+S21[:].*S22[:]).*S12[:] + (S12[:].*S21[:]+S22[:].^2).*S22[:]; #-(S11[:].*S22[:] - S12[:].*S21[:]);
-
-        # figure
-        # contour(xp, yp, reshape(q, Npx, Npy)", 25);
-        # figure
-        # contour(xp, yp, reshape(r, Npx, Npy)", 25);
     else
         # option 2a
-        @unpack Cux_k, Cuy_k, Cvx_k, Cvy_k, Auy_k, Avx_k = setup.discretization
-        @unpack yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k = setup.discretization
-
-        S11_p = 1 / 2 * 2 * (Cux_k * uh + yCux_k)
+        S11_p = 1 / 2 * 2 * (Cux_k * uₕ + yCux_k)
         S12_p =
             1 / 2 * (
-                Cuy_k * (Auy_k * uh + yAuy_k) +
+                Cuy_k * (Auy_k * uₕ + yAuy_k) +
                 yCuy_k +
-                Cvx_k * (Avx_k * vh + yAvx_k) +
+                Cvx_k * (Avx_k * vₕ + yAvx_k) +
                 yCvx_k
             )
         S21_p = S12_p
-        S22_p = 1 / 2 * 2 * (Cvy_k * vh + yCvy_k)
+        S22_p = 1 / 2 * 2 * (Cvy_k * vₕ + yCvy_k)
 
         S_abs = sqrt(2 * S11_p .^ 2 + 2 * S22_p .^ 2 + 2 * S12_p .^ 2 + 2 * S21_p .^ 2)
 
@@ -159,5 +133,6 @@ function strain_tensor(V, t, setup, getJacobian)
             Jacv = sparse(Np, Nv)
         end
     end
+
     S11, S12, S21, S22, S_abs, Jacu, Jacv
 end

@@ -3,8 +3,11 @@ Check input.
 """
 function check_input!(setup, V_start, p_start, t)
     @unpack steady, visc = setup.case
-    @unpack order4 = setup.discretization
+    @unpack order4, G, M, yM = setup.discretization
+    @unpack Om_inv = setup.grid
     @unpack nonlinear_maxit = setup.solver_settings
+    @unpack t_start, t_end, Δt, isadaptive, method, method_startup = setup.time
+    @unpack save_unsteady = setup.output
 
     if order4
         if visc != "laminar"
@@ -25,7 +28,7 @@ function check_input!(setup, V_start, p_start, t)
     n = 1
 
     # initial velocity field
-    V = V_start # [uh; vh]
+    V = V_start # [uₕ; vₕ]
     V_old = V
 
     if visc == "keps"
@@ -38,15 +41,14 @@ function check_input!(setup, V_start, p_start, t)
     # since normally only a few iterations are required
     if !steady
         t = t_start
-        if timestep.set
-            dt = get_timestep(setup)
+        if isadaptive
+            Δt = get_timestep(setup)
         end
 
         # Estimate number of time steps that will be taken
-        nt = ceil(Int, (t_end - t_start) / dt)
+        nt = ceil(Int, (t_end - t_start) / Δt)
     else
-        dt = setup.time.dt
-        nt = nonlinear_maxit 
+        nt = nonlinear_maxit
     end
 
     # allocate variables, including initial condition
@@ -67,12 +69,9 @@ function check_input!(setup, V_start, p_start, t)
         println("Additional projection to make initial velocity field divergence free")
 
         # make velocity field divergence free
-        Om_inv = setup.grid.Om_inv
-        G = setup.discretization.G
-
-        f = setup.discretization.M * V + setup.discretization.yM
-        dp = pressure_poisson(f, t, setup)
-        V -= Om_inv .* (G * dp)
+        f = M * V + yM
+        Δp = pressure_poisson(f, t, setup)
+        V .-= Om_inv .* (G * Δp)
 
         # repeat conservation with updated velocity field
         maxdiv[1], umom[1], vmom[1], k[1] = check_conservation(V, t, setup)
@@ -109,7 +108,7 @@ function check_input!(setup, V_start, p_start, t)
     # for steady problems, with Newton linearization and full Jacobian, first start with nPicard Picard iterations
     if setup.case.steady
         setup.solver_settings.Newton_factor = false
-    elseif method == 21 || (exist("method_startup", "var") && method_startup == 21)
+    elseif method == 21 || method_startup == 21
         # implicit RK time integration
         setup.solver_settings.Newton_factor = true
     end
@@ -119,15 +118,15 @@ function check_input!(setup, V_start, p_start, t)
 
     if !steady && save_unsteady
         # allocate space for variables
-        uh_total = zeros(nt, setup.grid.Nu)
-        vh_total = zeros(nt, setup.grid.Nv)
+        uₕ_total = zeros(nt, setup.grid.Nu)
+        vₕ_total = zeros(nt, setup.grid.Nv)
         p_total = zeros(nt, setup.grid.Np)
 
         # store initial solution
-        uh_total[1, :] = u_start[:]
-        vh_total[1, :] = v_start[:]
+        uₕ_total[1, :] = u_start[:]
+        vₕ_total[1, :] = v_start[:]
         p_total[1, :] = p_start[:]
     end
 
-    (; V, p, t, dt, n, maxres, maxdiv, k, vmom, nonlinear_its, time, umom)
+    (; V, p, t, Δt, n, nt, maxres, maxdiv, k, vmom, nonlinear_its, time, umom)
 end

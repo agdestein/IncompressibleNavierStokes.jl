@@ -7,10 +7,10 @@ function postprocess(solution, setup)
     @unpack V, p, t = solution
 
     # Reshape
-    uh = @view V[1:Nu]
-    vh = @view V[Nu+1:Nu+Nv]
-    u = reshape(uh, Nux_in, Nuy_in)
-    v = reshape(vh, Nvx_in, Nvy_in)
+    uₕ = @view V[1:Nu]
+    vₕ = @view V[Nu+1:Nu+Nv]
+    u = reshape(uₕ, Nux_in, Nuy_in)
+    v = reshape(vₕ, Nvx_in, Nvy_in)
     pres = reshape(p, Npx, Npy)
 
     # Shift pressure to get zero pressure in the centre
@@ -27,10 +27,16 @@ function postprocess(solution, setup)
 
     # # Plot vorticity
     levels = [minimum(ω) - 1, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, maximum(ω) + 1]
-    pl = contourf(x[2:(end-1)], y[2:(end-1)], ω'; levels, xlabel = "x", ylabel = "y")
+    pl = contourf(
+        x[2:(end-1)],
+        y[2:(end-1)],
+        ω';
+        #levels,
+        xlabel = "x",
+        ylabel = "y",
+    )
     title!(pl, "Vorticity ω")
     display(pl)
-    display(sort(levels))
 
     # Plot pressure
     levels = [
@@ -47,7 +53,14 @@ function postprocess(solution, setup)
         0.3
         maximum(Δpres) + 0.1
     ]
-    pl = contourf(xp, yp, Δpres'; levels, xlabel = "x", ylabel = "y")
+    pl = contourf(
+        xp,
+        yp,
+        Δpres';
+        #levels,
+        xlabel = "x",
+        ylabel = "y",
+    )
     title!(pl, "Pressure deviation Δp")
     display(pl)
 

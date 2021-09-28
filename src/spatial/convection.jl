@@ -3,13 +3,13 @@
 
 evaluate convective terms and, optionally, Jacobians
 V: velocity field
-C: 'convection' field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
+C: "convection" field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
 c_y = v
 """
 function convection(V, C, t, setup, getJacobian)
     # evaluate convective terms and, optionally, Jacobians
     # V: velocity field
-    # C: 'convection' field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
+    # C: "convection" field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
     # c_y = v
 
     α = setup.discretization.α
@@ -22,8 +22,8 @@ function convection(V, C, t, setup, getJacobian)
     Jacu = spzeros(Nu, NV)
     Jacv = spzeros(Nv, NV)
 
-    uh = V[indu]
-    vh = V[indv]
+    uₕ = V[indu]
+    vₕ = V[indv]
 
     cu = C[indu]
     cv = C[indv]
@@ -45,30 +45,30 @@ function convection(V, C, t, setup, getJacobian)
         # TODO: needs finishing
 
         # filter the convecting field
-        cu_f = filter_convection(cu, Diffu_f, yDiffu_f, α) #uh + (α^2)*Re*(Diffu*uh + yDiffu);
+        cu_f = filter_convection(cu, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
         cv_f = filter_convection(cv, Diffv_f, yDiffv_f, α)
 
         C_filtered = [cu_f; cv_f]
 
         # divergence of filtered velocity field; should be zero!
-        maxdiv_f = max(abs(M * C_filtered + yM))
+        maxdiv_f = maximum(abs.(M * C_filtered + yM))
 
         convu, convv, Jacu, Jacv =
             convection_components(C_filtered, V, setup, getJacobian)
     elseif regularization == "C2"
         ## C2
 
-        cu_f = filter_convection(cu, Diffu_f, yDiffu_f, α) #uh + (α^2)*Re*(Diffu*uh + yDiffu);
+        cu_f = filter_convection(cu, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
         cv_f = filter_convection(cv, Diffv_f, yDiffv_f, α)
 
-        uh_f = filter_convection(uh, Diffu_f, yDiffu_f, α) #uh + (α^2)*Re*(Diffu*uh + yDiffu);
-        vh_f = filter_convection(vh, Diffv_f, yDiffv_f, α)
+        uₕ_f = filter_convection(uₕ, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        vₕ_f = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
 
         C_filtered = [cu_f; cv_f]
-        V_filtered = [uh_f; vh_f]
+        V_filtered = [uₕ_f; vₕ_f]
 
         # divergence of filtered velocity field; should be zero!
-        maxdiv_f = max(abs(M * C_filtered + yM))
+        maxdiv_f = maximum(abs.(M * C_filtered + yM))
 
         convu, convv, Jacu, Jacv =
             convection_components(C_filtered, V_filtered, setup, getJacobian)
@@ -82,14 +82,14 @@ function convection(V, C, t, setup, getJacobian)
         # where u' = u - filter(u)
 
         # filter both convecting and convected velocity
-        uh_f = filter_convection(uh, Diffu_f, yDiffu_f, α) #uh + (α^2)*Re*(Diffu*uh + yDiffu);
-        vh_f = filter_convection(vh, Diffv_f, yDiffv_f, α)
+        uₕ_f = filter_convection(uₕ, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        vₕ_f = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
 
-        V_filtered = [uh_f; vh_f]
+        V_filtered = [uₕ_f; vₕ_f]
 
         dV = V - V_filtered
 
-        cu_f = filter_convection(cu, Diffu_f, yDiffu_f, α) #uh + (α^2)*Re*(Diffu*uh + yDiffu);
+        cu_f = filter_convection(cu, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
         cv_f = filter_convection(cv, Diffv_f, yDiffv_f, α)
 
         C_filtered = [cu_f; cv_f]
@@ -97,7 +97,7 @@ function convection(V, C, t, setup, getJacobian)
 
 
         # divergence of filtered velocity field; should be zero!
-        maxdiv_f[n] = max(abs(M * V_filtered + yM))
+        maxdiv_f[n] = maximum(abs.(M * V_filtered + yM))
 
         convu1, convv1, Jacu, Jacv =
             convection_components(C_filtered, V_filtered, setup, getJacobian)
@@ -178,25 +178,25 @@ function convection_components(C, V, setup, getJacobian, order4 = false)
     Jacu = spzeros(Nu, NV)
     Jacv = spzeros(Nv, NV)
 
-    uh = V[indu]
-    vh = V[indv]
+    uₕ = V[indu]
+    vₕ = V[indv]
 
     cu = C[indu]
     cv = C[indv]
 
-    u_ux = Au_ux * uh + yAu_ux                 # u at ux
+    u_ux = Au_ux * uₕ + yAu_ux                 # u at ux
     uf_ux = Iu_ux * cu + yIu_ux                 # ubar at ux
     du2dx = Cux * (uf_ux .* u_ux)
 
-    u_uy = Au_uy * uh + yAu_uy                 # u at uy
+    u_uy = Au_uy * uₕ + yAu_uy                 # u at uy
     vf_uy = Iv_uy * cv + yIv_uy                 # vbar at uy
     duvdy = Cuy * (vf_uy .* u_uy)
 
-    v_vx = Av_vx * vh + yAv_vx                 # v at vx
+    v_vx = Av_vx * vₕ + yAv_vx                 # v at vx
     uf_vx = Iu_vx * cu + yIu_vx                 # ubar at vx
     duvdx = Cvx * (uf_vx .* v_vx)
 
-    v_vy = Av_vy * vh + yAv_vy                 # v at vy
+    v_vy = Av_vy * vₕ + yAv_vy                 # v at vy
     vf_vy = Iv_vy * cv + yIv_vy                 # vbar at vy
     dv2dy = Cvy * (vf_vy .* v_vy)
 

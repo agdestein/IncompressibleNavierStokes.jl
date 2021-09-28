@@ -48,7 +48,7 @@ function main(setup)
         # Steady
         if setup.case.visc == "keps"
             # Steady flow with k-epsilon model, 2nd order
-            solve_steady_ke!(solution, setup)
+            V, p = solve_steady_ke!(solution, setup)
         elseif setup.case.visc == "laminar"
             if setup.discretization.order4
                 # Steady flow with laminar viscosity model, 4th order
@@ -56,7 +56,7 @@ function main(setup)
             else
                 if setup.ibm.ibm
                     #Steady flow with laminar viscosity model and immersed boundary method, 2nd order
-                    solve_steady_ibm!(solution, setup)
+                    V, p = solve_steady_ibm!(solution, setup)
                 else
                     # Steady flow with laminar viscosity model, 2nd order
                     V, p = solve_steady!(solution, setup)
@@ -64,7 +64,7 @@ function main(setup)
             end
         elseif setup.case.visc == "ML"
             # Steady flow with mixing length, 2nd order
-            solve_steady!(solution, setup)
+            V, p = solve_steady!(solution, setup)
         else
             error("wrong value for visc parameter")
         end
@@ -72,14 +72,14 @@ function main(setup)
         # Unsteady
         if setup.case.visc == "keps"
             # Unsteady flow with k-eps model, 2nd order
-            solve_unsteady_ke!(solution, setup)
+            V, p = solve_unsteady_ke!(solution, setup)
         elseif setup.case.visc ∈ ["laminar", "qr", "LES", "ML"]
-            if setup.rom.rom
+            if setup.rom.use_rom
                 # Unsteady flow with reduced order model with $(setup.rom.M) modes
-                solve_unsteady_rom!(solution, setup)
+                V, p = solve_unsteady_rom!(solution, setup)
             else
                 # Unsteady flow with laminar or LES model
-                solve_unsteady!(solution, setup)
+                V, p = solve_unsteady!(solution, setup)
             end
         else
             error("wrong value for visc parameter")
@@ -92,5 +92,5 @@ function main(setup)
     # Post-processing
     postprocess(solution, setup)
 
-    (; V, p, setup, totaltime)
+    (; V, p, setup, totaltime, solution)
 end

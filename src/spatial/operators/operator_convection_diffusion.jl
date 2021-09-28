@@ -11,6 +11,7 @@ function operator_convection_diffusion!(setup)
     @unpack hx, hy, hxi, hyi, hxd, hyd = setup.grid
     @unpack gxi, gyi, gxd, gyd = setup.grid
     @unpack Buvy, Bvux = setup.grid
+    @unpack Omu_inv = setup.grid
 
     order4 = setup.discretization.order4
 
@@ -75,6 +76,7 @@ function operator_convection_diffusion!(setup)
         diag1 = ones(Nux_t)
         D1D = spdiagm(Nux_t - 2, Nux_t + 1, 1 => -diag1, 2 => diag1)
         Dux = kron(spdiagm(Ny, Ny, hyi), D1D)
+
         # the "second order" Cux is unchanged
         # the "second order" Dux changes, because we also use the "second
         # order" flux at "fourth order" ghost points (Dux should have the same
@@ -276,7 +278,6 @@ function operator_convection_diffusion!(setup)
         S1D3 = spdiagm(Nvy_in + 3, Nvy_t + 4, 0 => -diag1, 3 => diag1)
 
         # boundary conditions
-        # Su_uy_bc = bc_general_stag(Nuy_t, Nuy_in, Nuy_b, #                                            bc.u.low, bc.u.up, hy[1], hy[end]);
         Sv_vy_bc3 = bc_diff3(
             Nvy_t + 4,
             Nvy_in,
@@ -293,7 +294,6 @@ function operator_convection_diffusion!(setup)
     else
         ## Diffusion operator (stress tensor), u-component
         # similar to averaging, but with mesh sizes
-
         ## Su_ux: evaluate ux
         diag1 = 1 ./ hxd
         S1D = spdiagm(Nux_t - 1, Nux_t, 0 => -diag1, 1 => diag1)
@@ -310,7 +310,6 @@ function operator_convection_diffusion!(setup)
         S1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => -diag1, 1 => diag1)
 
         # boundary conditions
-        # Su_uy_bc = bc_general_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.low, bc.u.up, hy[1], hy[end]);
         Su_uy_bc = bc_diff_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.low, bc.u.up, hy[1], hy[end])
 
         # extend to 2D
@@ -323,6 +322,7 @@ function operator_convection_diffusion!(setup)
 
         diag1 = 1 ./ gxd
         S1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => -diag1, 1 => diag1)
+
         # the restriction is essentially 1D so it can be directly applied to I1D
         S1D = Bvux * S1D
         S2D = kron(sparse(I, Nuy_t - 1, Nuy_t - 1), S1D)
@@ -353,10 +353,8 @@ function operator_convection_diffusion!(setup)
 
         ## Diffusion operator (stress tensor), v-component
         # similar to averaging!
-
         ## Su_vx: evaluate uy at vx
         # same as Iu_vx except for mesh sizes and -diag diag
-
         diag1 = 1 ./ gyd
         S1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => -diag1, 1 => diag1)
         S1D = Buvy * S1D
@@ -392,7 +390,6 @@ function operator_convection_diffusion!(setup)
         S1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => -diag1, 1 => diag1)
 
         # boundary conditions
-        # Sv_vx_bc = bc_general_stag(Nvx_t, Nvx_in, Nvx_b, #                                            bc.v.left, bc.v.right, hx[1], hx[end]);
         Sv_vx_bc = bc_diff_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.left, bc.v.right, hx[1], hx[end])
 
         # extend to 2D
@@ -473,10 +470,6 @@ function operator_convection_diffusion!(setup)
     elseif visc ∈ ["keps", "LES", "qr", "ML"]
         setup.discretization.Sv_uy = Sv_uy
         setup.discretization.Su_vx = Su_vx
-        # setup.discretization.Diffu_u = Diffu_u;
-        # setup.discretization.Diffu_v = Diffu_v;
-        # setup.discretization.Diffv_u = Diffv_u;
-        # setup.discretization.Diffv_v = Diffv_v;
     end
 
     if order4
@@ -502,13 +495,12 @@ function operator_convection_diffusion!(setup)
     ## additional for implicit time stepping diffusion
     if setup.time.method == 2 && visc == "laminar"
         θ = setup.time.θ
-        dt = setup.time.dt
-        Omu_inv = setup.grid.Omu_inv
-        Omv_inv = setup.grid.Omv_inv
+        Δt = setup.time.Δt
+
         # implicit time-stepping for diffusion
-        # solving (I-dt*Diffu)*uh* =
-        Diffu_impl = sparse(I, Nu, Nu) - θ * dt * spdiagm(Omu_inv) * Diffu
-        Diffv_impl = sparse(I, Nv, Nv) - θ * dt * spdiagm(Omv_inv) * Diffv
+        # solving (I-Δt*Diffu)*uₕ* =
+        Diffu_impl = sparse(I, Nu, Nu) - θ * Δt * spdiagm(Omu_inv) * Diffu
+        Diffv_impl = sparse(I, Nv, Nv) - θ * Δt * spdiagm(Omv_inv) * Diffv
 
         # LU decomposition
         setup.discretization.lu_diffu = lu(Diffu_impl)

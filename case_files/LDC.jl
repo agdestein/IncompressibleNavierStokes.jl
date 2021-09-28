@@ -15,101 +15,101 @@ function LDC()
     setup.case.force_unsteady = false
 
     # Physical properties
-    setup.fluid.Re = 1000                                # Reynolds number
-    setup.fluid.U1 = 1                                # velocity scales
-    setup.fluid.U2 = 1                                # velocity scales
-    setup.fluid.d_layer = 1                           # thickness of layer
+    setup.fluid.Re = 1000                          # Reynolds number
+    setup.fluid.U1 = 1                             # velocity scales
+    setup.fluid.U2 = 1                             # velocity scales
+    setup.fluid.d_layer = 1                        # thickness of layer
 
     # Turbulent flow settings
-    setup.visc.lm = 1                                # mixing length
-    setup.visc.Cs = 0.17                             # Smagorinsky constant
+    setup.visc.lm = 1                              # mixing length
+    setup.visc.Cs = 0.17                           # Smagorinsky constant
 
     # Grid parameters
     setup.grid.Nx = 80                             # Number of volumes in the x-direction
     setup.grid.Ny = 80                             # Number of volumes in the y-direction
-    setup.grid.x1 = 0                                # Left
-    setup.grid.x2 = 1                                # Right
-    setup.grid.y1 = 0                                # Bottom
-    setup.grid.y2 = 1                                # Top
-    setup.grid.sx = 1                                # Stretch factor in x-direction
-    setup.grid.sy = 1                                # Stretch factor in y-direction
+    setup.grid.x1 = 0                              # Left
+    setup.grid.x2 = 1                              # Right
+    setup.grid.y1 = 0                              # Bottom
+    setup.grid.y2 = 1                              # Top
+    setup.grid.sx = 1                              # Stretch factor in x-direction
+    setup.grid.sy = 1                              # Stretch factor in y-direction
 
     # Discretization parameters
-    setup.discretization.order4 = false                     # Use 4th order in time (otherwise 2nd order)
-    setup.discretization.α = 81                                # richardson extrapolation factor = 3^4
-    setup.discretization.β = 9 / 8                            # interpolation factor
+    setup.discretization.order4 = false            # Use 4th order in time (otherwise 2nd order)
+    setup.discretization.α = 81                    # richardson extrapolation factor = 3^4
+    setup.discretization.β = 9 / 8                 # interpolation factor
 
     # Forcing parameters
-    setup.force.x_c = 0                               # x-coordinate of body
-    setup.force.y_c = 0                               # y-coordinate of body
-    setup.force.Ct = 0                                # thrust coefficient for actuator disk computations
-    setup.force.D = 1                                 # Actuator disk diameter
+    setup.force.x_c = 0                            # x-coordinate of body
+    setup.force.y_c = 0                            # y-coordinate of body
+    setup.force.Ct = 0                             # thrust coefficient for actuator disk computations
+    setup.force.D = 1                              # Actuator disk diameter
     setup.force.isforce = false                    # presence of a force file
     setup.force.force_unsteady = false             # steady (0) or unsteady (1) force
 
     # Rom parameters
-    setup.rom.use_rom = false                    # use reduced order model
-    setup.rom.rom_type = "POD"                 # "POD",  "Fourier"
-    setup.rom.M = 10                              # number of velocity modes for reduced order model
-    setup.rom.Mp = 10                             # number of pressure modes for reduced order model
-    setup.rom.precompute_convection = true       # precomputed convection matrices
-    setup.rom.precompute_diffusion = true        # precomputed diffusion matrices
-    setup.rom.precompute_force = true            # precomputed forcing term
-    setup.rom.t_snapshots = 0                     # snapshots
-    setup.rom.dt_snapshots = false
-    setup.rom.mom_cons = false                   # momentum conserving SVD
-    setup.rom.rom_bc = 0                          # 0: homogeneous (no-slip = periodic) 1: non-homogeneous = time-independent 2: non-homogeneous = time-dependent
-    setup.rom.weighted_norm = true               # Use weighted norm (using finite volumes as weights)
-    setup.rom.pressure_recovery = false          # false: no pressure computation, true: compute pressure with PPE-ROM
-    setup.rom.pressure_precompute = 0             # in case of pressure_recovery: compute RHS Poisson equation based on FOM (0) or ROM (1)
-    setup.rom.subtract_pressure_mean = false     # Subtract pressure mean from snapshots
-    setup.rom.process_iteration_FOM = true       # compute divergence = residuals = kinetic energy etc. on FOM level
-    setup.rom.basis_type = "default"           # "default" (code chooses), "svd", "direct", "snapshot"
+    setup.rom.use_rom = false                      # use reduced order model
+    setup.rom.rom_type = "POD"                     # "POD",  "Fourier"
+    setup.rom.M = 10                               # number of velocity modes for reduced order model
+    setup.rom.Mp = 10                              # number of pressure modes for reduced order model
+    setup.rom.precompute_convection = true         # precomputed convection matrices
+    setup.rom.precompute_diffusion = true          # precomputed diffusion matrices
+    setup.rom.precompute_force = true              # precomputed forcing term
+    setup.rom.t_snapshots = 0                      # snapshots
+    setup.rom.Δt_snapshots = false
+    setup.rom.mom_cons = false                     # momentum conserving SVD
+    setup.rom.rom_bc = 0                           # 0: homogeneous (no-slip = periodic) 1: non-homogeneous = time-independent 2: non-homogeneous = time-dependent
+    setup.rom.weighted_norm = true                 # Use weighted norm (using finite volumes as weights)
+    setup.rom.pressure_recovery = false            # false: no pressure computation, true: compute pressure with PPE-ROM
+    setup.rom.pressure_precompute = 0              # in case of pressure_recovery: compute RHS Poisson equation based on FOM (0) or ROM (1)
+    setup.rom.subtract_pressure_mean = false       # Subtract pressure mean from snapshots
+    setup.rom.process_iteration_FOM = true         # compute divergence = residuals = kinetic energy etc. on FOM level
+    setup.rom.basis_type = "default"               # "default" (code chooses), "svd", "direct", "snapshot"
 
     # Immersed boundary method
-    setup.ibm.ibm = false                        # use immersed boundary method
+    setup.ibm.ibm = false                          # use immersed boundary method
 
     # Time marching
-    setup.time.t_start = 0                           # Start time
-    setup.time.t_end = 10                            # End time
-    setup.time.dt = 0.01          # Timestep
-    setup.time.RK = "RK44"                      # RK method
-    setup.time.method = 20                          # Method number
-    setup.time.θ = 0.5                               # θ value for implicit θ method
-    setup.time.β = 0.5                            # β value for oneleg β method
+    setup.time.t_start = 0                         # Start time
+    setup.time.t_end = 10                          # End time
+    setup.time.Δt = 0.01                           # Timestep
+    setup.time.rk_method = RK44()                  # Runge Kutta method
+    setup.time.isadaptive = false                  # Adapt timestep every n_adapt_Δt iterations
+    setup.time.n_adapt_Δt = 1                      # Number of iterations between timestep adjustment
+    setup.time.method = 20                         # Method number
+    setup.time.method_startup = 21                 # Startup method for methods that are not self-starting
+    setup.time.method_startup_number = 2           # number of velocity fields necessary for start-up = equal to order of method
+    setup.time.θ = 0.5                             # θ value for implicit θ method
+    setup.time.β = 0.5                             # β value for oneleg β method
 
     # Solver settings
-    setup.solver_settings.p_initial = true                   # calculate compatible IC for the pressure
-    setup.solver_settings.p_add_solve = true                 # additional pressure solve to make it same order as velocity
+    setup.solver_settings.p_initial = true         # calculate compatible IC for the pressure
+    setup.solver_settings.p_add_solve = true       # additional pressure solve to make it same order as velocity
 
     # Accuracy for non-linear solves (method 62 = 72 = 9)
-    setup.solver_settings.nonlinear_acc = 1e-14                 # Absolute accuracy
-    setup.solver_settings.nonlinear_relacc = 1e-14              # Relative accuracy
-    setup.solver_settings.nonlinear_maxit = 10                # Maximum number of iterations
+    setup.solver_settings.nonlinear_acc = 1e-14    # Absolute accuracy
+    setup.solver_settings.nonlinear_relacc = 1e-14 # Relative accuracy
+    setup.solver_settings.nonlinear_maxit = 50     # Maximum number of iterations
 
-    # "no": do not compute Jacobian, but approximate iteration matrix with I/dt
+    # "no": do not compute Jacobian, but approximate iteration matrix with I/Δt
     # "approximate: approximate Newton build Jacobian once at beginning of nonlinear iterations
     # "full": full Newton build Jacobian at each iteration
     setup.solver_settings.nonlinear_Newton = "approximate"
 
-    setup.solver_settings.Jacobian_type = "newton"         # "picard": Picard linearization, "newton": Newton linearization
+    setup.solver_settings.Jacobian_type = "newton"           # "picard": Picard linearization, "newton": Newton linearization
     setup.solver_settings.nonlinear_startingvalues = false   # Extrapolate values from last time step to get accurate initial guess (for unsteady problems only)
-    setup.solver_settings.nPicard = 2                         # number of Picard steps before switching to Newton when linearization is Newton (for steady problems only)
+    setup.solver_settings.nPicard = 2                        # number of Picard steps before switching to Newton when linearization is Newton (for steady problems only)
 
     # Output files
-    setup.output.save_results::Bool = false               # Save results
-    setup.output.savepath::String = "results"             # Path for saving
-    setup.output.save_unsteady::Bool = false              # Save intermediate time steps
+    setup.output.save_results = false                        # Save results
+    setup.output.savepath = "results"                        # Path for saving
+    setup.output.save_unsteady = false                       # Save intermediate time steps
 
     # Visualization settings
-    setup.visualization.plotgrid = false                   # plot gridlines and pressure points
-    setup.visualization.rtp_show = false                    # real time plotting
-    setup.visualization.rtp_type = "velocity"            # "velocity", "quiver", "vorticity" or "pressure"
-    setup.visualization.rtp_n = 1                          # Number of iterations between real time plots
-
-
-    # relax = 0    # relaxation parameter to make matrix diagonal more dominant
-    # ν = 1 / Re
+    setup.visualization.plotgrid = false                     # plot gridlines and pressure points
+    setup.visualization.rtp_show = false                     # real time plotting
+    setup.visualization.rtp_type = "velocity"                # "velocity", "quiver", "vorticity", or "pressure"
+    setup.visualization.rtp_n = 1                            # Number of iterations between real time plots
 
 
     """
@@ -149,18 +149,18 @@ function LDC()
     end
 
     """
-        u = u_bc(x, y, setup[, tol])
+        u = u_bc(x, y, t, setup[, tol])
 
-    Compute boundary conditions for `u` at point `(x, y)`.
+    Compute boundary conditions for `u` at point `(x, y)` at time `t`.
     """
     setup.bc.u_bc = function u_bc(x, y, t, setup, tol = 1e-10)
         u = ≈(y, setup.grid.y2; rtol = tol) ? 1 : 0
     end
 
     """
-        v = v_bc(x, y, setup)
+        v = v_bc(x, y, t, setup)
 
-    Compute boundary conditions for `u` at point `(x, y)`.
+    Compute boundary conditions for `u` at point `(x, y)` at time `t`.
     """
     setup.bc.v_bc = function v_bc(x, y, t, setup)
         v = 0
