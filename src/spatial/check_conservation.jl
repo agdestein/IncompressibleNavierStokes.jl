@@ -4,20 +4,16 @@
 Check mass, momentum and energy conservation properties of velocity field
 """
 function check_conservation(V, t, setup)
-    @unpack Nu, Nv = setup.grid
-    
+    @unpack M, yM = setup.discretization
+    @unpack Nu, Nv, Omu, Omv, x, y, xp, yp, hx, hy, gx, gy = setup.grid
+    @unpack u_bc, v_bc = setup.bc
+
     uh = V[1:Nu]
     vh = V[Nu+1:Nu+Nv]
-
-    bc = setup.bc
-    @unpack u_bc, v_bc = bc
 
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, t)
     end
-
-    @unpack M, yM = setup.discretization
-    @unpack Nu, Nv, Omu, Omv, x, y, xp, yp, hx, hy, gx, gy = setup.grid
 
     uLe_i = u_bc.(x[1], yp, t, [setup])
     uRi_i = u_bc.(x[end], yp, t, [setup])
@@ -32,16 +28,16 @@ function check_conservation(V, t, setup)
     vmom = sum(Omv .* vh)
 
     # add boundary contributions in case of Dirichlet BC
-    if bc.u.left == "dir"
+    if setup.bc.u.left == "dir"
         umom += sum(uLe_i .* hy) * gx[1]
     end
-    if bc.u.right == "dir"
+    if setup.bc.u.right == "dir"
         umom += sum(uRi_i .* hy) * gx[end]
     end
-    if bc.v.low == "dir"
+    if setup.bc.v.low == "dir"
         vmom += sum(vLo_i .* hx) * gy[1]
     end
-    if bc.v.up == "dir"
+    if setup.bc.v.up == "dir"
         vmom += sum(vUp_i .* hx) * gy[end]
     end
 
@@ -50,16 +46,16 @@ function check_conservation(V, t, setup)
     k = 0.5 * sum(Omu .* uh .^ 2) + 0.5 * sum(Omv .* vh .^ 2)
 
     # Add boundary contributions in case of Dirichlet BC
-    if bc.u.left == "dir"
+    if setup.bc.u.left == "dir"
         k += 0.5 * sum(uLe_i .^ 2 .* hy) * gx[1]
     end
-    if bc.u.right == "dir"
+    if setup.bc.u.right == "dir"
         k += 0.5 * sum(uRi_i .^ 2 .* hy) * gx[end]
     end
-    if bc.v.low == "dir"
+    if setup.bc.v.low == "dir"
         k += 0.5 * sum(vLo_i .^ 2 .* hx) * gy[1]
     end
-    if bc.v.up == "dir"
+    if setup.bc.v.up == "dir"
         k += 0.5 * sum(vUp_i .^ 2 .* hx) * gy[end]
     end
 

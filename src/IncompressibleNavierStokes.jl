@@ -70,7 +70,19 @@ include("main.jl")
 export @unpack
 
 # Setup
-export Case, Fluid, Visc, Grid, Discretization, Force, ROM, IBM, Time, SolverSettings, Visualization, BC, Setup
+export Case,
+    Fluid,
+    Visc,
+    Grid,
+    Discretization,
+    Force,
+    ROM,
+    IBM,
+    Time,
+    SolverSettings,
+    Visualization,
+    BC,
+    Setup
 
 # Spatial
 export nonuniform_grid

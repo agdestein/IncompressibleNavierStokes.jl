@@ -5,20 +5,18 @@ Create discrete boundary condtions.
 """
 function create_boundary_conditions!(setup)
     # Get BC type
-    bc = setup.bc.bc_type()
-    for (key, value) ∈ zip(keys(bc), bc)
+    bc_type = setup.bc.bc_type()
+    for (key, value) ∈ zip(keys(bc_type), bc_type)
         setfield!(setup.bc, key, value)
     end
-    setup.bc.u.left ∈ ["dir", "per", "pres"] || error("wrong BC for u-left")
-    setup.bc.u.right ∈ ["dir", "per", "pres"] || error("wrong BC for u-right")
-    setup.bc.u.low ∈ ["dir", "per", "sym"] || error("wrong BC for u-low")
-    setup.bc.u.up ∈ ["dir", "per", "sym"] || error("wrong BC for u-up")
-    setup.bc.v.left ∈ ["dir", "per", "sym"] || error("wrong BC for v-left")
-    setup.bc.v.right ∈ ["dir", "per", "sym"] || error("wrong BC for v-right")
-    setup.bc.v.low ∈ ["dir", "per", "pres"] || error("wrong BC for v-low")
-    setup.bc.v.up ∈ ["dir", "per", "pres"] || error("wrong BC for v-up")
-
-    ## set BC functions
+    setup.bc.u.left ∈ ["dir", "per", "pres"] || error("Wrong BC for u-left")
+    setup.bc.u.right ∈ ["dir", "per", "pres"] || error("Wrong BC for u-right")
+    setup.bc.u.low ∈ ["dir", "per", "sym"] || error("Wrong BC for u-low")
+    setup.bc.u.up ∈ ["dir", "per", "sym"] || error("Wrong BC for u-up")
+    setup.bc.v.left ∈ ["dir", "per", "sym"] || error("Wrong BC for v-left")
+    setup.bc.v.right ∈ ["dir", "per", "sym"] || error("Wrong BC for v-right")
+    setup.bc.v.low ∈ ["dir", "per", "pres"] || error("Wrong BC for v-low")
+    setup.bc.v.up ∈ ["dir", "per", "pres"] || error("Wrong BC for v-up")
 
     # values set below can be either Dirichlet or Neumann value,
     # depending on BC set above. in case of Neumann (symmetry, pressure)
