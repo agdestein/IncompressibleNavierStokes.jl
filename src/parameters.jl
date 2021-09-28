@@ -183,6 +183,14 @@ Base.@kwdef mutable struct Discretization{T}
     yIv_uy::Vector{T} = T[]
     yIu_vx::Vector{T} = T[]
     yIv_vy::Vector{T} = T[]
+
+    Anu_vy_bc::NamedTuple = (;)
+    Cux_k_bc::NamedTuple = (;)
+    Cuy_k_bc::NamedTuple = (;)
+    Cvx_k_bc::NamedTuple = (;)
+    Cvy_k_bc::NamedTuple = (;)
+    Auy_k_bc::NamedTuple = (;)
+    Avx_k_bc::NamedTuple = (;)
 end
 
 # Forcing parameters
@@ -192,9 +200,9 @@ Base.@kwdef mutable struct Force{T}
     Ct::T = 0                                # thrust coefficient for actuator disk computations
     D::T = 1                                 # Actuator disk diameter
     isforce::Bool = false                    # presence of a force file
-    force_unsteady::Bool = false             # steady (0) or unsteady (1) force
-    bodyforce_x::Function = () -> error("bodyforce_x function not implemented")
-    bodyforce_y::Function = () -> error("bodyforce_y function not implemented")
+    force_unsteady::Bool = false             # steady (false) or unsteady (true) force
+    bodyforce_x::Function = () -> error("bodyforce_x not implemented")
+    bodyforce_y::Function = () -> error("bodyforce_y not implemented")
 end
 
 # Rom parameters
