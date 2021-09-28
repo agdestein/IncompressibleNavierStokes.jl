@@ -81,7 +81,8 @@ r = 0
 """
     A, b, c, r = tableau(rk_method, s = 1)
 
-Set up Butcher arrays `A`, `b`, and `c` for the given `rk_method`. Also returns SSP coefficient r
+Set up Butcher arrays `A`, `b`, and `c` for the given `rk_method`.
+Also return SSP coefficient `r`.
 For families of methods, optional input `s` is the number of stages.
 """
 function tableau end
@@ -263,7 +264,6 @@ end
 
 ##===================Half explicit methods========================
 function tableau(::HEM3, s = 1)
-
     # Brasey and Hairer
     A = [0 0 0; 1//3 0 0; -1 2 0]
     b = [0, 3 // 4, 1 // 4]
@@ -277,7 +277,6 @@ function tableau(::HEM3BS, s = 1)
     A, b, c, r
 end
 function tableau(::HEM5, s = 1)
-
     # Brasey and Hairer, 5 stage, 4th order
     A = [
         0 0 0 0 0
@@ -320,10 +319,10 @@ function tableau(::GL3, s = 1)
     ]
     b = [5 / 18, 4 / 9, 5 / 18]
     c = [(5 - sqrt(15)) / 10, 1 / 2, (5 + sqrt(15)) / 10]
-
-    #Radau IA methods -- order 2s-1
     A, b, c, r
 end
+
+#Radau IA methods -- order 2s-1
 function tableau(::RIA1, s = 1)
     # this is implicit Euler
     r = 1
@@ -351,10 +350,10 @@ function tableau(::RIA3, s = 1)
     ]
     b = [1 // 9, (16 + sqrt(6)) / 36, (16 - sqrt(6)) / 36]
     c = [0, (6 - sqrt(6)) / 10, (6 + sqrt(6)) / 10]
-
-    #Radau IIA methods -- order 2s-1
     A, b, c, r
 end
+
+#Radau IIA methods -- order 2s-1
 function tableau(::RIIA1, s = 1)
     r = 1
     A = 1
@@ -382,9 +381,10 @@ function tableau(::RIIA3, s = 1)
     b = [(16 - sqrt(6)) / 36, (16 + sqrt(6)) / 36, 1 / 9]
     c = [(4 - sqrt(6)) / 10, (4 + sqrt(6)) / 10, 1]
 
-    #Lobatto IIIA methods -- order 2s-2
     A, b, c, r
 end
+
+# Lobatto IIIA methods -- order 2s-2
 function tableau(::LIIIA2, s = 1)
     r = 0
     A = [
@@ -407,7 +407,7 @@ function tableau(::LIIIA3, s = 1)
     A, b, c, r
 end
 
-##= Chebyshev methods
+# Chebyshev methods
 function tableau(::CHDIRK3, s = 1)
     # Chebyshev based DIRK (not algebraically stable)
     A = [
@@ -516,7 +516,7 @@ function tableau(::RK33P2, s = 1)
     A, b, c, r
 end
 function tableau(::RK44, s = 1)
-    #Classical fourth order
+    # Classical fourth order
     s = 4
     r = 0
     A = [0 0 0 0; 1//2 0 0 0; 0 1//2 0 0; 0 0 1 0]

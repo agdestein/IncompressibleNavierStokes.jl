@@ -1,7 +1,7 @@
 # Case information
 Base.@kwdef mutable struct Case
     name::String = "example"                 # Case name
-    steady::Bool = false                     # Is steady steate (not unsteady)
+    is_steady::Bool = false                  # Is steady steate (not unsteady)
     visc::String = "laminar"                 # "laminar", "keps", "ML", "LES, "qr"
     regularization::String = "no"            # convective term regularization: "no", "leray", "C2", "C4"
     ibm::Bool = false                        # Use immersed boundary method
@@ -210,7 +210,7 @@ Base.@kwdef mutable struct Force{T}
     Ct::T = 0                                # thrust coefficient for actuator disk computations
     D::T = 1                                 # Actuator disk diameter
     isforce::Bool = false                    # presence of a force file
-    force_unsteady::Bool = false             # steady (false) or unsteady (true) force
+    force_unsteady::Bool = false             # is_steady (false) or unsteady (true) force
     bodyforce_x::Function = () -> error("bodyforce_x not implemented")
     bodyforce_y::Function = () -> error("bodyforce_y not implemented")
 end
@@ -274,7 +274,7 @@ Base.@kwdef mutable struct SolverSettings{T}
     Jacobian_type::String = "picard"         # "picard": Picard linearization, "newton": Newton linearization
     Newton_factor::Bool = false              # Newton factor
     nonlinear_startingvalues::Bool = false   # Extrapolate values from last time step to get accurate initial guess (for unsteady problems only)
-    nPicard::Int = 5                         # number of Picard steps before switching to Newton when linearization is Newton (for steady problems only)
+    nPicard::Int = 5                         # number of Picard steps before switching to Newton when linearization is Newton (for is_steady problems only)
 end
 
 # Output files

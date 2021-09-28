@@ -44,7 +44,7 @@ function main(setup)
     solution = check_input!(setup, V_start, p_start, t)
 
     # Choose between steady and unsteady
-    if setup.case.steady
+    if setup.case.is_steady
         # Steady
         if setup.case.visc == "keps"
             # Steady flow with k-epsilon model, 2nd order

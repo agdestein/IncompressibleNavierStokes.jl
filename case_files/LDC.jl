@@ -1,7 +1,7 @@
 """
     setup = LDC()
 
-Setup for lid-driven cavity case (LDC).
+Setup for Lid-Driven Cavity case (LDC).
 """
 function LDC()
     # Construct Setup object, containing substructures with default values
@@ -9,7 +9,7 @@ function LDC()
 
     # Case information
     setup.case.name = "LDC"
-    setup.case.steady = true
+    setup.case.is_steady = true
     setup.case.visc = "laminar"
     setup.case.regularization = "no"
     setup.case.force_unsteady = false

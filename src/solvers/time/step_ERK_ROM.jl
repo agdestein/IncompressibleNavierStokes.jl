@@ -5,7 +5,6 @@ General explicit Runge-Kutta method for ROM
 Perform one tᵢme step for the general explicit Runge-Kutta method (ERK) with Reduced Order Model (ROM).
 """
 function step_ERK_ROM(Vₙ, pₙ, tₙ, Δt, setup)
-
     # number of unknowns (modes) in ROM
     M = setup.rom.M
 

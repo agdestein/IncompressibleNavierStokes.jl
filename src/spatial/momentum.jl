@@ -14,7 +14,7 @@ function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
 
     # Unsteady BC
     if setup.bc.bc_unsteady
-        setup = set_bc_vectors(t, setup)
+        set_bc_vectors!(setup, t)
     end
 
     if !nopressure

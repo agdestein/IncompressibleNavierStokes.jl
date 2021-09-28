@@ -1,4 +1,4 @@
-"Incompressible Navier-Stokes solver"
+"Incompressible Navier-Stokes solvers"
 module IncompressibleNavierStokes
 
 using LinearAlgebra: Factorization, I, cholesky, factorize, ldiv!
@@ -65,7 +65,6 @@ include("solvers/time/step_ERK_ROM.jl")
 include("solvers/time/step_IRK.jl")
 include("solvers/time/step_IRK_ROM.jl")
 
-
 # Utils
 include("utils/filter_convection.jl")
 
@@ -114,7 +113,7 @@ export HEM3, HEM3BS, HEM5
 # Classical Methods
 export GL1, GL2, GL3, RIA1, RIA2, RIA3, RIIA1, RIIA2, RIIA3, LIIIA2, LIIIA3
 
-#Chebyshev methods
+# Chebyshev methods
 export CHDIRK3, CHCONS3, CHC3, CHC5
 
 # Miscellaneous Methods

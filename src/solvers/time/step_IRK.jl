@@ -3,8 +3,6 @@
 # (unsteady) Dirichlet boundary points are not part of solution vector but
 # are prescribed in a "strong" manner via the ubc and vbc functions
 function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
-
-
     ## grid info
     Nu = setup.grid.Nu
     Nv = setup.grid.Nv
@@ -20,37 +18,33 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
     yMn = yM
 
     # get coefficients of RK method
-    A_RK, b_RK, c_RK, = tableau(setup.time.rk_method)
+    A, b, c, = tableau(setup.time.rk_method)
 
     # Number of stages
-    nstage = length(b_RK)
+    nstage = length(b)
 
-    setup.time.A_RK = A_RK
-    setup.time.b_RK = b_RK
-    setup.time.c_RK = c_RK
+    setup.time.A = A
+    setup.time.b = b
+    setup.time.c = c
     setup.time.nstage = nstage
 
     # extend the Butcher tableau
     Is = sparse(I, nstage, nstage)
     Om_sNV = kron(Is, spdiagm(Om))
-    A_RK_ext = kron(A_RK, sparse(I, NV, NV))
-    b_RK_ext = kron(b_RK', sparse(I, NV, NV))
-    c_RK_ext = spdiagm(c_RK)
+    A_ext = kron(A, sparse(I, NV, NV))
+    b_ext = kron(b', sparse(I, NV, NV))
+    c_ext = spdiagm(c)
 
     ## preprocessing
 
     # store variables at start of time step
-    # tₙ = t;
-    # Vₙ = V;
-    # pₙ = p;
-    # qn = [Vₙ; pₙ];
-    p = pₙ
+    p .= pₙ
 
-    # tj contains the time instances at all stages, tj = [t1;t2;...;ts]
-    tj = tₙ + c_RK * Δt
+    # tⱼ contains the time instances at all stages, tⱼ = [t1;t2;...;ts]
+    tⱼ = tₙ + c * Δt
 
     # gradient operator
-    Gtot = kron(A_RK, G) # could also use 1 instead of c_RK and later scale the pressure
+    Gtot = kron(A, G) # could also use 1 instead of c and later scale the pressure
 
     # divergence operator
     Mtot = kron(Is, M)
@@ -68,8 +62,8 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
     if setup.bc.bc_unsteady
         yMtot = zeros(Np, nstage)
         for i = 1:nstage
-            ti = tj[i]
-            setup = set_bc_vectors(ti, setup)
+            tᵢ = tⱼ[i]
+            setup = set_bc_vectors(setup, tᵢ)
             yMtot[:, i] = setup.discretization.yM
         end
         yMtot = yMtot[:]
@@ -103,9 +97,11 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
     Qⱼ = [Vⱼ; pⱼ]
 
     # initialize right-hand side for all stages
-    _, F_rhs, = F_multiple(Vⱼ, Vⱼ, pⱼ, tj, setup, false)
+    _, F_rhs, = F_multiple(Vⱼ, Vⱼ, pⱼ, tⱼ, setup, false)
+
     # initialize momentum residual
-    fmom = -(Omtot .* Vⱼ - Omtot .* Vtotₙ) / Δt + A_RK_ext * F_rhs
+    fmom = -(Omtot .* Vⱼ - Omtot .* Vtotₙ) / Δt + A_ext * F_rhs
+
     # initialize mass residual
     fmass = -(Mtot * Vⱼ + yMtot)
     f = [fmom; fmass]
@@ -113,34 +109,31 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
     if setup.solversettings.nonlinear_Newton == "approximate"
         # approximate Newton
         # Jacobian based on current solution un
-        _, _, Jn = F(Vₙ, Vₙ, pₙ, tₙ, setup, true)
+        _, _, Jn = momentum(Vₙ, Vₙ, pₙ, tₙ, setup, true)
         # form iteration matrix, which is now fixed during iterations
-        dfmom = Om_sNV / Δt - kron(A_RK, Jn)
-        #
+        dfmom = Om_sNV / Δt - kron(A, Jn)
         Z = [dfmom Gtot; Mtot Z2]
 
-        # determine LU decomposition; often this is too slow
-        #     [L, U] = lu(Z);
+        # Determine LU decomposition
+        Z_fact = factorize(Z);
     end
 
     while maximum(abs.(f)) > setup.solversettings.nonlinear_acc
-
         if setup.solversettings.nonlinear_Newton == "approximate"
-            # approximate Newton
-            # do not rebuild Z
-            ΔQⱼ = Z \ f
+            # Approximate Newton
+            # ΔQⱼ = Z \ f
 
-            # re-use the LU decomposition (often too slow):
-            # ΔQⱼ = U\(L\f);
+            # Re-use the decomposition
+            ΔQⱼ = Z_fact \ f;
         elseif setup.solversettings.nonlinear_Newton == "full"
-            # full Newton
-            _, _, J = F_multiple(Vⱼ, Vⱼ, pⱼ, tj, setup, true)
+            # Full Newton
+            _, _, J = F_multiple(Vⱼ, Vⱼ, pⱼ, tⱼ, setup, true)
 
-            # form iteration matrix
-            dfmom = Om_sNV / Δt - A_RK_ext * J
+            # Form iteration matrix
+            dfmom = Om_sNV / Δt - A_ext * J
             Z = [dfmom Gtot; Mtot Z2]
 
-            # get change
+            # Get change
             ΔQⱼ = Z \ f
         end
 
@@ -150,12 +143,12 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
         pⱼ = @view Qⱼ[indxp]
 
         # update iteration counter
-        i = i + 1
+        i += 1
 
         # evaluate rhs for next iteration and check residual based on
         # computed Vⱼ, pⱼ
-        _, F_rhs, = F_multiple(Vⱼ, Vⱼ, pⱼ, tj, setup, false)
-        fmom = -(Omtot .* Vⱼ - Omtot .* Vtotₙ) / Δt + A_RK_ext * F_rhs
+        _, F_rhs, = F_multiple(Vⱼ, Vⱼ, pⱼ, tⱼ, setup, false)
+        fmom = -(Omtot .* Vⱼ - Omtot .* Vtotₙ) / Δt + A_ext * F_rhs
         fmass = -(Mtot * Vⱼ + yMtot)
 
         f = [fmom; fmass]
@@ -164,43 +157,36 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
         if i > nonlinear_maxit
             error("Newton not converged in $nonlinear_maxit iterations")
         end
-
     end
 
     # store number of iterations
     iterations = i
 
     # solution at new time step with b-coefficients of RK method
-    V = Vₙ + Δt * Om_inv .* (b_RK_ext * F_rhs)
+    V .= Vₙ .+ Δt .* Om_inv .* (b_ext * F_rhs)
 
     # make V satisfy the incompressibility constraint at n+1; this is only
     # needed when the boundary conditions are time-dependent
     # for stiffly accurate methods, this can also be skipped (e.g. Radau IIA) -
     # this still needs to be implemented
     if setup.bc.bc_unsteady
-        setup = set_bc_vectors(tₙ + Δt, setup)
+        set_bc_vectors!(setup, tₙ + Δt)
         f = 1 / Δt * (M * V + yM)
         Δp = pressure_poisson(f, tₙ + Δt, setup)
-        V .-= Δt * Om_inv .* (G * Δp)
-    end
-
-    if setup.bc.bc_unsteady
+        V .-= Δt .* Om_inv .* (G * Δp)
         if setup.solversettings.p_add_solve
-            p = pressure_additional_solve(V, p, tₙ + Δt, setup)
+            pressure_additional_solve!(V, p, tₙ + Δt, setup)
         else
             # standard method; take last pressure
-            p = pⱼ[end-Np+1:end]
+            p .= pⱼ[end-Np+1:end]
         end
     else
         # for steady bc we do an additional pressure solve
         # that saves a pressure solve for i = 1 in the next time step
-        # p = pressure_additional_solve(V, p, tₙ+Δt, setup);
+        # pressure_additional_solve!(V, p, tₙ+Δt, setup);
         # standard method; take pressure of last stage
         p = pⱼ[end-Np+1:end]
     end
 
-    V_new = V
-    p_new = p
-
-    V_new, p_new, iterations
+    V, p, iterations
 end

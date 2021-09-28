@@ -5,7 +5,7 @@ Main solver file for unsteady calculations
 """
 function solve_unsteady!(solution, setup)
     # Setup
-    @unpack steady, visc = setup.case
+    @unpack is_steady, visc = setup.case
     @unpack Nu, Nv, Np = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
@@ -20,21 +20,19 @@ function solve_unsteady!(solution, setup)
     # for methods that need convection from previous time step
     if method == 2
         if setup.bc.bc_unsteady
-            set_bc_vectors(t, setup)
+            set_bc_vectors!(setup, t)
         end
-        convu_old, convv_old = convection(V, V, t, setup, false)
-        conv_old = [convu_old; convv_old]
+        convuₙ₋₁, convvₙ₋₁ = convection(V, V, t, setup, false)
+        convₙ₋₁ = [convuₙ₋₁; convvₙ₋₁]
     end
 
-    # for methods that need u^(n-1)
-    if method == 5
-        V_old = copy(V)
-        p_old = copy(p)
-    end
+    # for methods that need uₙ₋₁
+    Vₙ₋₁ = copy(V)
+    pₙ₋₁ = copy(p)
 
-    # set current velocity and pressure
-    Vₙ = V
-    pₙ = p
+    # Current solution
+    Vₙ = copy(V)
+    pₙ = copy(p)
     tₙ = t
 
     # for methods that need extrapolation of convective terms
@@ -47,9 +45,14 @@ function solve_unsteady!(solution, setup)
 
     method_temp = method
 
-    while n <= nt
-        # time step counter
+    while n ≤ nt
+        # Advance one time step
         n = n + 1
+        Vₙ₋₁ .= Vₙ
+        pₙ₋₁ .= pₙ
+        Vₙ .= V
+        pₙ .= p
+        tₙ = t
 
         # for methods that need a velocity field at n-1 the first time step
         # (e.g. AB-CN, oneleg beta) use ERK or IRK
@@ -62,12 +65,12 @@ function solve_unsteady!(solution, setup)
 
         # Perform a single time step with the time integration method
         if method == 2
-            V, p, conv = time_AB_CN(Vₙ, pₙ, conv_old, tₙ, Δt, setup)
-            conv_old = conv
+            V, p, conv = time_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup)
+            convₙ₋₁ = conv
         elseif method == 5
-            V, p = step_oneleg(Vₙ, pₙ, V_old, p_old, tₙ, Δt, setup)
+            step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup)
         elseif method == 20
-            V, p = step_ERK(Vₙ, pₙ, tₙ, Δt, setup)
+            step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup)
         elseif method == 21
             V, p, nonlinear_its[n] = step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
         else
@@ -78,13 +81,6 @@ function solve_unsteady!(solution, setup)
         # the new time level t+Δt:
         t = tₙ + Δt
         time[n] = t
-
-        # Update solution
-        V_old = Vₙ
-        p_old = pₙ
-        Vₙ = V
-        pₙ = p
-        tₙ = t
 
         ## Process data from this iteration
         # check residuals, conservation, set timestep, write output files
@@ -97,24 +93,25 @@ function solve_unsteady!(solution, setup)
         # in solver_unsteady_ke
         if use_rom
             # get ROM residual
-            maxres[n], _ = F_ROM(R, 0, t, setup, false)
+            maxres[n], = F_ROM(R, 0, t, setup, false)
         else
             if visc != "keps"
-                maxres[n], _ = momentum(V, V, p, t, setup, false)
+                maxres[n], = momentum(V, V, p, t, setup, false)
             end
         end
 
         # change timestep based on operators
-        if !steady && isadaptive && rem(n, n_adapt_Δt) == 0
+        if !is_steady && isadaptive && rem(n, n_adapt_Δt) == 0
             Δt = get_timestep(setup)
         end
 
         # store unsteady data in an array
-        if !steady && save_unsteady
+        if !is_steady && save_unsteady
             uₕ_total[n, :] = V[1:setup.grid.Nu]
             vₕ_total[n, :] = V[setup.grid.Nu+1:end]
             p_total[n, :] = p
         end
+
     end
 
     V, p

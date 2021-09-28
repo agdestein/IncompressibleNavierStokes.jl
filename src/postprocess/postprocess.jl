@@ -31,6 +31,7 @@ function postprocess(solution, setup)
         x[2:(end-1)],
         y[2:(end-1)],
         ω';
+        aspect_ratio = :equal,
         #levels,
         xlabel = "x",
         ylabel = "y",
@@ -57,6 +58,7 @@ function postprocess(solution, setup)
         xp,
         yp,
         Δpres';
+        aspect_ratio = :equal,
         #levels,
         xlabel = "x",
         ylabel = "y",
@@ -94,6 +96,7 @@ function postprocess(solution, setup)
         x[2:(end-1)],
         y[2:(end-1)],
         reshape(ψ, Nx - 1, Ny - 1)';
+        aspect_ratio = :equal,
         # levels,
         xlabel = "x",
         ylabel = "y",

@@ -5,7 +5,7 @@ Solve the entire saddlepoint system arising from the steady Navier-Stokes equati
 """
 function solve_steady!(solution, setup)
     # Setup
-    @unpack steady, visc = setup.case
+    @unpack is_steady, visc = setup.case
     @unpack Nu, Nv, Np = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
@@ -62,12 +62,12 @@ function solve_steady!(solution, setup)
         end
 
         # change timestep based on operators
-        if !steady && isadaptive && rem(n, n_adapt_Δt) == 0
+        if !is_steady && isadaptive && rem(n, n_adapt_Δt) == 0
             Δt = get_timestep(setup)
         end
 
         # store unsteady data in an array
-        if !steady && save_unsteady
+        if !is_steady && save_unsteady
             uₕ_total[n, :] = V[1:setup.grid.Nu]
             vₕ_total[n, :] = V[setup.grid.Nu+1:end]
             p_total[n, :] = p
@@ -75,12 +75,12 @@ function solve_steady!(solution, setup)
 
         # write convergence information to file
         if setup.output.save_results
-            if !steady
+            if !is_steady
                 println(
                     fconv,
                     "$n $Δt $t $(maxres[n]) $(maxdiv[n]) $(umom[n]) $(vmom[n]) $(k[n])",
                 )
-            elseif steady
+            elseif is_steady
                 println(fconv, "$n $(maxres[n]) $(maxdiv[n]) $(umom[n]) $(vmom[n]) $(k[n])")
             end
         end

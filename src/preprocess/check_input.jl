@@ -2,7 +2,7 @@
 Check input.
 """
 function check_input!(setup, V_start, p_start, t)
-    @unpack steady, visc = setup.case
+    @unpack is_steady, visc = setup.case
     @unpack order4, G, M, yM = setup.discretization
     @unpack Om_inv = setup.grid
     @unpack nonlinear_maxit = setup.solver_settings
@@ -39,7 +39,7 @@ function check_input!(setup, V_start, p_start, t)
     # for unsteady problems allocate k, umom and vmom, maxdiv and time
     # for steady problems the time for allocating during running is negligible,
     # since normally only a few iterations are required
-    if !steady
+    if !is_steady
         t = t_start
         if isadaptive
             Δt = get_timestep(setup)
@@ -64,7 +64,7 @@ function check_input!(setup, V_start, p_start, t)
     # iteration 1 corresponds to t = 0 (for unsteady simulations)
     maxdiv[1], umom[1], vmom[1], k[1] = check_conservation(V, t, setup)
 
-    if maxdiv[1] > 1e-12 && !steady
+    if maxdiv[1] > 1e-12 && !is_steady
         @warn "Initial velocity field not (discretely) divergence free: $(maxdiv[1])"
         println("Additional projection to make initial velocity field divergence free")
 
@@ -80,33 +80,28 @@ function check_input!(setup, V_start, p_start, t)
     symmetry_flag, symmetry_error = check_symmetry(V, t, setup)
 
     # initialize pressure
-    if !setup.rom.use_rom
-        if setup.case.steady
+    p = p_start[:]
+    if setup.rom.use_rom
+        # ROM: uses the IC for the pressure; note that in solver_unsteady the pressure will be
+        # computed from the ROM PPE, after the ROM basis has been set-up
+        if setup.case.is_steady
+            error("ROM not implemented for steady flow")
+        end
+    else
+        if setup.case.is_steady
             # for steady state computations, the initial guess is the provided initial condition
-            p = p_start[:]
         else
             if setup.solver_settings.p_initial
                 # calculate initial pressure from a Poisson equation
-                p = pressure_additional_solve(V, p_start[:], t, setup)
+                pressure_additional_solve!(V, p, t, setup)
             else
                 # use provided initial condition (not recommended)
-                p = p_start[:]
             end
         end
     end
 
-    # ROM: uses the IC for the pressure; note that in solver_unsteady the pressure will be
-    # computed from the ROM PPE, after the ROM basis has been set-up
-    if setup.rom.use_rom
-        if setup.case.steady
-            error("ROM not implemented for steady flow")
-        else
-            p = p_start[:]
-        end
-    end
-
     # for steady problems, with Newton linearization and full Jacobian, first start with nPicard Picard iterations
-    if setup.case.steady
+    if setup.case.is_steady
         setup.solver_settings.Newton_factor = false
     elseif method == 21 || method_startup == 21
         # implicit RK time integration
@@ -116,7 +111,7 @@ function check_input!(setup, V_start, p_start, t)
     # residual of momentum equations at start
     maxres[1], _ = momentum(V, V, p, t, setup, false)
 
-    if !steady && save_unsteady
+    if !is_steady && save_unsteady
         # allocate space for variables
         uₕ_total = zeros(nt, setup.grid.Nu)
         vₕ_total = zeros(nt, setup.grid.Nv)

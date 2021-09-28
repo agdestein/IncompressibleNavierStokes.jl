@@ -22,7 +22,7 @@ function operator_divergence!(setup)
         hyi3 = setup.grid.hyi3
     end
 
-    steady = setup.case.steady
+    is_steady = setup.case.is_steady
     visc = setup.case.visc
 
     ## Divergence operator M
@@ -180,7 +180,7 @@ function operator_divergence!(setup)
 
     ## Pressure matrix for pressure correction method;
     # also used to make initial data divergence free or compute additional poisson solve
-    if !steady && visc != "keps"
+    if !is_steady && visc != "keps"
         # Note that the matrix for the pressure is constant in time.
         # Only the right hand side vector changes, so the pressure matrix
         # can be set up outside the time-stepping-loop.
@@ -197,7 +197,7 @@ function operator_divergence!(setup)
 
         # LU decomposition
         setup.discretization.A_fact = factorize(A)
-        
+
         # check if all the row sums of the pressure matrix are zero, which
         # should be the case if there are no pressure boundary conditions
         if bc.v.low != "pres" &&
