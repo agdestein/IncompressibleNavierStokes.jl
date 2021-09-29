@@ -45,6 +45,8 @@ include("spatial/operators/operator_postprocessing.jl")
 include("spatial/operators/operator_regularization.jl")
 include("spatial/operators/operator_turbulent_diffusion.jl")
 
+include("spatial/rom/momentum_rom.jl")
+
 # Bodyforce
 include("bodyforce/force.jl")
 

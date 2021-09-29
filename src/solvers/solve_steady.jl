@@ -32,7 +32,7 @@ function solve_steady!(solution, setup)
 
         n += 1
 
-        _, fmom, dfmom = momentum(V, V, p, t, setup, true)
+        fmom, dfmom = momentum(V, V, p, t, setup, true)
         fmass = M * V + yM
         f = [-fmom; fmass]
         Z = [dfmom -G; -M Z2]
@@ -54,10 +54,12 @@ function solve_steady!(solution, setup)
         # in solver_unsteady_ke
         if use_rom
             # get ROM residual
-            maxres[n], _ = F_ROM(R, 0, t, setup, false)
+            Fres = momentum_rom(R, 0, t, setup, false)
+            maxres[n] = maximum(abs.(Fres))
         else
             if visc != "keps"
-                maxres[n], _ = momentum(V, V, p, t, setup, false)
+                Fres, = momentum(V, V, p, t, setup, false)
+                maxres[n] = maximum(abs.(Fres))
             end
         end
 

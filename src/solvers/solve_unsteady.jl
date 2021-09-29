@@ -113,10 +113,13 @@ function solve_unsteady!(solution, setup)
         # in solver_unsteady_ke
         if use_rom
             # get ROM residual
-            maxres[n], = F_ROM(R, 0, t, setup, false)
+            Fres, = momentum_rom(R, 0, t, setup, false)
+            maxres[n] = maximum(abs.(Fres))
         else
             if visc != "keps"
-                maxres[n], = momentum(V, V, p, t, setup, false)
+                # norm of residual
+                Fres, = momentum(V, V, p, t, setup, false)
+                maxres[n] = maximum(abs.(Fres))
             end
         end
 

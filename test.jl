@@ -7,7 +7,7 @@ include("case_files/$case_name.jl")
 setup = eval(:($(Symbol(case_name))()))
 
 ##
-V, p, setup, totaltime = main(setup)
+@profview V, p, setup, totaltime = main(setup)
 
 ##
 # Turbulence constants

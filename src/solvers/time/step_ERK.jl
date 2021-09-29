@@ -50,7 +50,7 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup)
         # boundary conditions will be set through set_bc_vectors! inside momentum
         # the pressure p is not important here, it will be removed again in the
         # next step
-        _, F_rhs = momentum(V, V, p, tᵢ, setup)
+        F_rhs = momentum(V, V, p, tᵢ, setup)
 
         # Store right-hand side of stage i
         # by adding G*p we effectively REMOVE the pressure contribution Gx*p and Gy*p (but not the

@@ -109,7 +109,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
     if setup.solversettings.nonlinear_Newton == "approximate"
         # approximate Newton
         # Jacobian based on current solution un
-        _, _, Jn = momentum(Vₙ, Vₙ, pₙ, tₙ, setup, true)
+        _, Jn = momentum(Vₙ, Vₙ, pₙ, tₙ, setup, true)
         # form iteration matrix, which is now fixed during iterations
         dfmom = Om_sNV / Δt - kron(A, Jn)
         Z = [dfmom Gtot; Mtot Z2]

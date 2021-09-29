@@ -20,7 +20,7 @@ function step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup
     p_int = (1 + β) * pₙ - β * pₙ₋₁
 
     # Right-hand side of the momentum equation
-    _, F_rhs = momentum(V_int, V_int, p_int, t_int, setup)
+    F_rhs, = momentum(V_int, V_int, p_int, t_int, setup)
 
     # Take a time step with this right-hand side, this gives an
     # intermediate velocity field (not divergence free)

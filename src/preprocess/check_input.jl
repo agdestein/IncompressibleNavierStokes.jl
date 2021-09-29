@@ -109,7 +109,11 @@ function check_input!(setup, V_start, p_start, t)
     end
 
     # residual of momentum equations at start
-    maxres[1], _ = momentum(V, V, p, t, setup, false)
+    Fres, = momentum(V, V, p, t, setup, false)
+
+    # norm of residual
+    maxres[1] = maximum(abs.(Fres))
+
 
     if !is_steady && save_unsteady
         # allocate space for variables

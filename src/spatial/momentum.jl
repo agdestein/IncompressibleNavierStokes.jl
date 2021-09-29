@@ -50,7 +50,7 @@ function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
     Fu = - convu + d2u + Fx
     Fv = - convv + d2v + Fy
 
-    # nopressure = 0 is the most common situation, in which we return the entire
+    # nopressure = false is the most common situation, in which we return the entire
     # right-hand side vector
     if !nopressure
         Fu -= Gpx
@@ -58,9 +58,6 @@ function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
     end
 
     Fres = [Fu; Fv]
-
-    # norm of residual
-    maxres = maximum(abs.(Fres))
 
     if getJacobian
         # Jacobian requested
@@ -72,5 +69,5 @@ function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
         dF = spzeros(Nu + Nv, Nu + Nv)
     end
 
-    maxres, Fres, dF
+    Fres, dF
 end
