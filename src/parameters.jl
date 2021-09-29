@@ -113,7 +113,7 @@ end
 
 # Discretization parameters
 Base.@kwdef mutable struct Discretization{T}
-    order4::Bool = false                     # Use 4th order in time (otherwise 2nd order)
+    order4::Bool = false                     # Use 4th order in space (otherwise 2nd order)
     α::T = 81                                # richardson extrapolation factor = 3^4
     β::T = 9 // 8                            # interpolation factor
 

@@ -35,7 +35,7 @@ function LDC()
     setup.grid.sy = 1                              # Stretch factor in y-direction
 
     # Discretization parameters
-    setup.discretization.order4 = false            # Use 4th order in time (otherwise 2nd order)
+    setup.discretization.order4 = false            # Use 4th order in space (otherwise 2nd order)
     setup.discretization.α = 81                    # richardson extrapolation factor = 3^4
     setup.discretization.β = 9 / 8                 # interpolation factor
 
