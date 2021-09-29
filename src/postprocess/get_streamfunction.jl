@@ -2,7 +2,7 @@ function get_streamfunction(V, t, setup)
     # compute streamfunction from a Poisson equation nabla^2 ψ = -ω
 
     @unpack u_bc, v_bc = setup.bc
-    @unpack indu, indv Nux_in, Nvx_in, Nx, Ny = setup.grid
+    @unpack indu, indv, Nux_in, Nvx_in, Nx, Ny = setup.grid
     @unpack hx, hy, x, y, xp, yp = setup.grid
     @unpack Wv_vx, Wu_uy = setup.discretization
 

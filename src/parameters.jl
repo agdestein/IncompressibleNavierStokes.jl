@@ -48,9 +48,11 @@ Base.@kwdef mutable struct Grid{T}
     hy::Vector{T} = T[]
     gx::Vector{T} = T[]
     gy::Vector{T} = T[]
+
+    # Number of pressure points in each dimension
     Npx::Int = 0
     Npy::Int = 0
-    Np::Int = 0
+
     Nux_in::Int = 0
     Nux_b::Int = 0
     Nux_t::Int = 0
@@ -63,14 +65,20 @@ Base.@kwdef mutable struct Grid{T}
     Nvy_in::Int = 0
     Nvy_b::Int = 0
     Nvy_t::Int = 0
+
+    # Number of points in solution vector
     Nu::Int = 0
     Nv::Int = 0
     NV::Int = 0
+    Np::Int = 0
     Ntot::Int = 0
+
     N1::Int = 0
     N2::Int = 0
     N3::Int = 0
     N4::Int = 0
+
+    # Operator mesh?
     Omp::Vector{T} = T[]
     Omp_inv::Vector{T} = T[]
     Om::Vector{T} = T[]
@@ -84,6 +92,7 @@ Base.@kwdef mutable struct Grid{T}
     Omuy::Vector{T} = T[]
     Omvy::Vector{T} = T[]
     Omvort::Vector{T} = T[]
+
     hxi::Vector{T} = T[]
     hyi::Vector{T} = T[]
     hxd::Vector{T} = T[]
@@ -92,12 +101,16 @@ Base.@kwdef mutable struct Grid{T}
     gyi::Vector{T} = T[]
     gxd::Vector{T} = T[]
     gyd::Vector{T} = T[]
+
     Buvy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Bvux::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Bkux::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Bkvy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+
     xin::Vector{T} = T[]
     yin::Vector{T} = T[]
+
+    # Separate grids for u, v, and p
     xu::Matrix{T} = zeros(T, 0, 0)
     yu::Matrix{T} = zeros(T, 0, 0)
     xv::Matrix{T} = zeros(T, 0, 0)
@@ -124,54 +137,73 @@ Base.@kwdef mutable struct Discretization{T}
     Au_uy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Av_vx::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Av_vy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+
     Au_ux_bc::NamedTuple = (;)
     Au_uy_bc::NamedTuple = (;)
     Av_vx_bc::NamedTuple = (;)
     Av_vy_bc::NamedTuple = (;)
+
     Iu_ux::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Iv_uy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Iu_vx::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Iv_vy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+
     Iu_ux_bc::NamedTuple = (;)
     Iv_vy_bc::NamedTuple = (;)
     Iv_uy_bc_lr::NamedTuple = (;)
     Iv_uy_bc_lu::NamedTuple = (;)
     Iu_vx_bc_lr::NamedTuple = (;)
     Iu_vx_bc_lu::NamedTuple = (;)
+
     M::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Mx::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     My::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+
     Mx_bc::NamedTuple = (;)
     My_bc::NamedTuple = (;)
+
     G::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Gx::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Gy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+
     Bup::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Bvp::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+
     Cux::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Cuy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Cvx::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Cvy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+
     Su_ux::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Su_uy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+    Su_vx::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+    # Su_vy never defined
+    # Sv_ux never defined
+    Sv_uy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Sv_vx::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Sv_vy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+
     Su_ux_bc::NamedTuple = (;)
     Su_uy_bc::NamedTuple = (;)
     Sv_vx_bc::NamedTuple = (;)
     Sv_vy_bc::NamedTuple = (;)
-    Dux::SparseMatrixCSC{T, Int} = spzeros(0, 0)
-    Duy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
-    Dvx::SparseMatrixCSC{T, Int} = spzeros(0, 0)
-    Dvy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
-    Diffu::SparseMatrixCSC{T, Int} = spzeros(0, 0)
-    Diffv::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+
     Su_vx_bc_lr::NamedTuple = (;)
     Su_vx_bc_lu::NamedTuple = (;)
     Sv_uy_bc_lr::NamedTuple = (;)
     Sv_uy_bc_lu::NamedTuple = (;)
+
+    Dux::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+    Duy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+    Dvx::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+    Dvy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+
+    Diffu::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+    Diffv::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+
     Wv_vx::SparseMatrixCSC{T, Int} = spzeros(0, 0)
     Wu_uy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+
     yM::Vector{T} = T[]
     y_px::Vector{T} = T[]
     y_py::Vector{T} = T[]
@@ -187,10 +219,12 @@ Base.@kwdef mutable struct Discretization{T}
     yIv_vy::Vector{T} = T[]
 
     Anu_vy_bc::NamedTuple = (;)
+
     Cux_k_bc::NamedTuple = (;)
     Cuy_k_bc::NamedTuple = (;)
     Cvx_k_bc::NamedTuple = (;)
     Cvy_k_bc::NamedTuple = (;)
+
     Auy_k_bc::NamedTuple = (;)
     Avx_k_bc::NamedTuple = (;)
 
@@ -203,6 +237,11 @@ Base.@kwdef mutable struct Discretization{T}
     ydM::Vector{T} = T[]
     ypx::Vector{T} = T[]
     ypy::Vector{T} = T[]
+
+    Aν_ux::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+    Aν_uy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+    Aν_vx::SparseMatrixCSC{T, Int} = spzeros(0, 0)
+    Aν_vy::SparseMatrixCSC{T, Int} = spzeros(0, 0)
 end
 
 # Forcing parameters
