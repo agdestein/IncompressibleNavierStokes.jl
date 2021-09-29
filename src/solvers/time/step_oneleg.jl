@@ -8,7 +8,7 @@ formulation:
 ((β+1/2)*u^{n+1} -2*β*u^{n} + (β-1/2)*u^{n-1})/Δt =
  F((1+β)*u^n - β*u^{n-1})
 """
-function step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup)
+function step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup, cache)
     @unpack G, M, yM = setup.discretization
 
     Om_inv = setup.grid.Om_inv
@@ -20,7 +20,7 @@ function step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup
     p_int = (1 + β) * pₙ - β * pₙ₋₁
 
     # Right-hand side of the momentum equation
-    F_rhs, = momentum(V_int, V_int, p_int, t_int, setup)
+    momentum!(F_rhs, nothing, V_int, V_int, p_int, t_int, setup, cache)
 
     # Take a time step with this right-hand side, this gives an
     # intermediate velocity field (not divergence free)
@@ -49,7 +49,7 @@ function step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup
 
     # Alternatively, do an additional Poisson solve:
     if setup.solversettings.p_add_solve
-        pressure_additional_solve!(V, p, tₙ + Δt, setup)
+        pressure_additional_solve!(V, p, tₙ + Δt, setup, cache, F)
     end
 
     V, p

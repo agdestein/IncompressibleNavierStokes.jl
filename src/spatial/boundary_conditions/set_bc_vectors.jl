@@ -134,49 +134,48 @@ function set_bc_vectors!(setup, t)
     setup.discretization.y_py = y_py
 
     ## boundary conditions for averaging
-
-    # Au_ux
-    ybc = kron(uLe_i, Au_ux_bc.ybc1) + kron(uRi_i, Au_ux_bc.ybc2)
-    yAu_ux = Au_ux_bc.Bbc * ybc
     if order4
+        # Au_ux
         ybc3 = kron(uLe_i, Au_ux_bc3.ybc1) + kron(uRi_i, Au_ux_bc3.ybc2)
         yAu_ux3 = Au_ux_bc3.Bbc * ybc3
-    end
 
-    # Au_uy
-    ybc = kron(Au_uy_bc.ybc1, uLo_i) + kron(Au_uy_bc.ybc2, uUp_i)
-    yAu_uy = Au_uy_bc.Bbc * ybc
-    if order4
+        # Au_uy
         ybc3 = kron(Au_uy_bc3.ybc1, uLo_i) + kron(Au_uy_bc3.ybc2, uUp_i)
         yAu_uy3 = Au_uy_bc3.Bbc * ybc3
-    end
 
-    # Av_vx
-    ybc = kron(vLe_i, Av_vx_bc.ybc1) + kron(vRi_i, Av_vx_bc.ybc2)
-    yAv_vx = Av_vx_bc.Bbc * ybc
-    if order4
+        # Av_vx
         ybc3 = kron(vLe_i, Av_vx_bc3.ybc1) + kron(vRi_i, Av_vx_bc3.ybc2)
         yAv_vx3 = Av_vx_bc3.Bbc * ybc3
-    end
 
-    # Av_vy
-    ybc = kron(Av_vy_bc.ybc1, vLo_i) + kron(Av_vy_bc.ybc2, vUp_i)
-    yAv_vy = Av_vy_bc.Bbc * ybc
-    if order4
+        # Av_vy
         ybc3 = kron(Av_vy_bc3.ybc1, vLo_i) + kron(Av_vy_bc3.ybc2, vUp_i)
         yAv_vy3 = Av_vy_bc3.Bbc * ybc3
-    end
 
-    setup.discretization.yAu_ux = yAu_ux
-    setup.discretization.yAu_uy = yAu_uy
-    setup.discretization.yAv_vx = yAv_vx
-    setup.discretization.yAv_vy = yAv_vy
-
-    if order4
         setup.discretization.yAu_ux3 = yAu_ux3
         setup.discretization.yAu_uy3 = yAu_uy3
         setup.discretization.yAv_vx3 = yAv_vx3
         setup.discretization.yAv_vy3 = yAv_vy3
+    else
+        # Au_ux
+        ybc = kron(uLe_i, Au_ux_bc.ybc1) + kron(uRi_i, Au_ux_bc.ybc2)
+        yAu_ux = Au_ux_bc.Bbc * ybc
+
+        # Au_uy
+        ybc = kron(Au_uy_bc.ybc1, uLo_i) + kron(Au_uy_bc.ybc2, uUp_i)
+        yAu_uy = Au_uy_bc.Bbc * ybc
+
+        # Av_vx
+        ybc = kron(vLe_i, Av_vx_bc.ybc1) + kron(vRi_i, Av_vx_bc.ybc2)
+        yAv_vx = Av_vx_bc.Bbc * ybc
+
+        # Av_vy
+        ybc = kron(Av_vy_bc.ybc1, vLo_i) + kron(Av_vy_bc.ybc2, vUp_i)
+        yAv_vy = Av_vy_bc.Bbc * ybc
+
+        setup.discretization.yAu_ux = yAu_ux
+        setup.discretization.yAu_uy = yAu_uy
+        setup.discretization.yAv_vx = yAv_vx
+        setup.discretization.yAv_vy = yAv_vy
     end
 
     ## boundary conditions for diffusion

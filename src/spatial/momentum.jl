@@ -1,17 +1,33 @@
+function momentum(V, ϕ, p, t, setup, getJacobian = false, nopressure = false)
+    @unpack NV = setup.grid
+
+    cache = MomentumCache(setup)
+    F = zeros(NV)
+    ∇F = spzeros(NV, NV)
+
+    convection!(F, ∇F, V, ϕ, t, setup, cache, getJacobian)
+end
+
 """
-    momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
+    momentum!(F, ∇F, V, ϕ, p, t, setup, cache = MomentumCache(setup), getJacobian = false, nopressure = false)
 
 Calculate rhs of momentum equations and, optionally, Jacobian with respect to velocity field
 V: velocity field
-C: "convection" field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
-c_y = v, so C = V
+ϕ: "convection" field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
+c_y = v, so ϕ = V
 p: pressure
-getJacobian = true: return dFdV
+getJacobian = true: return ∇FdV
 nopressure = true: exclude pressure gradient; in this case input argument p is not used
 """
-function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
-    @unpack Nu, Nv, NV = setup.grid
+function momentum!(F, ∇F, V, ϕ, p, t, setup, cache = MomentumCache(setup), getJacobian = false, nopressure = false)
+    @unpack Nu, Nv, NV, indu, indv = setup.grid
     @unpack Gx, Gy, y_px, y_py = setup.discretization
+
+    # Store intermediate results in temporary variables
+    @unpack c, ∇c, d, ∇d, b, ∇b, Gp = cache
+
+    Gpx = @view Gp[indu]
+    Gpy = @view Gp[indv]
 
     # Unsteady BC
     if setup.bc.bc_unsteady
@@ -19,55 +35,33 @@ function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
     end
 
     if !nopressure
-        Gpx = Gx * p + y_px
-        Gpy = Gy * p + y_py
+        Gpx .= Gx * p .+ y_px
+        Gpy .= Gy * p .+ y_py
     end
 
     # Convection
-    convu, convv, dconvu, dconvv = convection(V, C, t, setup, getJacobian)
+    convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian)
 
     # Diffusion
-    d2u, d2v, dDiffu, dDiffv = diffusion(V, t, setup, getJacobian)
+    diffusion!(d, ∇d, V, t, setup, getJacobian)
 
     # Body force
-    if setup.force.isforce
-        if setup.force.force_unsteady
-            Fx, Fy, dFx, dFy = force(V, t, setup, getJacobian);
-        else
-            Fx = setup.force.Fx;
-            Fy = setup.force.Fy;
-            dFx = spzeros(Nu, NV)
-            dFy = spzeros(Nv, NV)
-        end
-    else
-        Fx = zeros(Nu);
-        Fy = zeros(Nv);
-        dFx = spzeros(Nu, NV)
-        dFy = spzeros(Nv, NV)
-    end
+    bodyforce!(b, ∇b, V, t, setup, getJacobian);
 
     # residual in Finite Volume form, including the pressure contribution
-    Fu = - convu + d2u + Fx
-    Fv = - convv + d2v + Fy
+    @. F = - c + d + b
 
     # nopressure = false is the most common situation, in which we return the entire
     # right-hand side vector
     if !nopressure
-        Fu -= Gpx
-        Fv -= Gpy
+        F .-= Gp
     end
-
-    Fres = [Fu; Fv]
 
     if getJacobian
         # Jacobian requested
         # we return only the Jacobian with respect to V (not p)
-        dFu = - dconvu + dDiffu + dFx
-        dFv = - dconvv + dDiffv + dFy
-        dF = [dFu; dFv]
-    else
-        dF = spzeros(Nu + Nv, Nu + Nv)
+        @. ∇F = - ∇c + ∇d + ∇b
     end
 
-    Fres, dF
+    F, ∇F
 end

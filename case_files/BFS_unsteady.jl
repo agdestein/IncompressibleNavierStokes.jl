@@ -12,7 +12,6 @@ function BFS_unsteady()
     setup.case.is_steady = false
     setup.case.visc = "laminar"
     setup.case.regularization = "no"
-    setup.case.force_unsteady = false
 
     # Physical properties
     setup.fluid.Re = 1000                         # Reynolds number
@@ -44,7 +43,7 @@ function BFS_unsteady()
     setup.force.y_c = 0                           # y-coordinate of body
     setup.force.Ct = 0                            # thrust coefficient for actuator disk computations
     setup.force.D = 1                             # Actuator disk diameter
-    setup.force.isforce = false                   # presence of a force file
+    setup.force.isforce = false                   # Presence of a body force
     setup.force.force_unsteady = false            # steady (0) or unsteady (1) force
 
     # Rom parameters

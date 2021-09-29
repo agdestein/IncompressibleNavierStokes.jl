@@ -1,8 +1,8 @@
 "Incompressible Navier-Stokes solvers"
 module IncompressibleNavierStokes
 
-using LinearAlgebra: Factorization, I, cholesky, factorize, ldiv!
-using SparseArrays: SparseMatrixCSC, sparse, spdiagm, spzeros
+using LinearAlgebra: Factorization, I, cholesky, factorize, ldiv!, mul!
+using SparseArrays: SparseMatrixCSC, blockdiag, sparse, spdiagm, spzeros
 using UnPack: @unpack
 # using Plots: contour, contourf, title!
 using Makie: Axis, Colorbar, DataAspect, Figure, Node, contourf, contourf!, limits!, lines!, record
@@ -16,6 +16,7 @@ include("preprocess/check_input.jl")
 include("preprocess/create_mesh.jl")
 
 # Spatial
+include("spatial/momentumcache.jl")
 include("spatial/check_conservation.jl")
 include("spatial/check_symmetry.jl")
 include("spatial/convection.jl")
@@ -48,7 +49,7 @@ include("spatial/operators/operator_turbulent_diffusion.jl")
 include("spatial/rom/momentum_rom.jl")
 
 # Bodyforce
-include("bodyforce/force.jl")
+include("spatial/bodyforce.jl")
 
 # Solvers
 include("solvers/get_timestep.jl")

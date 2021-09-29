@@ -218,6 +218,13 @@ Base.@kwdef mutable struct Discretization{T}
     yIu_vx::Vector{T} = T[]
     yIv_vy::Vector{T} = T[]
 
+    ySu_ux::Vector{T} = T[] # TODO: Vectors or matrices?
+    ySu_uy::Vector{T} = T[] # TODO: Vectors or matrices?
+    ySu_vx::Vector{T} = T[] # TODO: Vectors or matrices?
+    ySv_vx::Vector{T} = T[] # TODO: Vectors or matrices?
+    ySv_vy::Vector{T} = T[] # TODO: Vectors or matrices?
+    ySv_uy::Vector{T} = T[] # TODO: Vectors or matrices?
+
     Anu_vy_bc::NamedTuple = (;)
 
     Cux_k_bc::NamedTuple = (;)
@@ -250,6 +257,8 @@ Base.@kwdef mutable struct Force{T}
     y_c::T = 0                               # y-coordinate of body
     Ct::T = 0                                # thrust coefficient for actuator disk computations
     D::T = 1                                 # Actuator disk diameter
+    Fx::Vector{T} = T[]                      # For storing constant body force
+    Fy::Vector{T} = T[]                      # For storing constant body force
     isforce::Bool = false                    # presence of a force file
     force_unsteady::Bool = false             # is_steady (false) or unsteady (true) force
     bodyforce_x::Function = () -> error("bodyforce_x not implemented")

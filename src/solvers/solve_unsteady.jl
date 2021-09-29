@@ -6,7 +6,7 @@ Main solver file for unsteady calculations
 function solve_unsteady!(solution, setup)
     # Setup
     @unpack is_steady, visc = setup.case
-    @unpack Nu, Nv, Np, Nx, Ny, x, y = setup.grid
+    @unpack Nu, Nv, NV, Np, Nx, Ny, x, y = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
         setup.solver_settings
@@ -24,9 +24,13 @@ function solve_unsteady!(solution, setup)
         if setup.bc.bc_unsteady
             set_bc_vectors!(setup, t)
         end
-        convuₙ₋₁, convvₙ₋₁ = convection(V, V, t, setup, false)
-        convₙ₋₁ = [convuₙ₋₁; convvₙ₋₁]
+        convₙ₋₁ = convection(V, V, t, setup, false)
     end
+
+    # Temporary variables
+    cache = MomentumCache(setup)
+    F = zeros(NV)
+    ∇F = spzeros(NV, NV)
 
     # for methods that need uₙ₋₁
     Vₙ₋₁ = copy(V)
@@ -39,7 +43,7 @@ function solve_unsteady!(solution, setup)
 
     # for methods that need extrapolation of convective terms
     if method ∈ [62, 92, 142, 172, 182, 192]
-        V_ep = zeros(Nu + Nv, method_startup_no)
+        V_ep = zeros(NV, method_startup_no)
         V_ep[:, 1] .= V
     end
 
@@ -85,14 +89,14 @@ function solve_unsteady!(solution, setup)
 
         # Perform a single time step with the time integration method
         if method == 2
-            V, p, conv = step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup)
+            V, p, conv = step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
             convₙ₋₁ = conv
         elseif method == 5
-            step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup)
+            step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup, cache)
         elseif method == 20
-            step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup)
+            step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache, F, ∇F)
         elseif method == 21
-            V, p, nonlinear_its[n] = step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
+            V, p, nonlinear_its[n] = step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
         else
             error("time integration method unknown")
         end
@@ -113,25 +117,25 @@ function solve_unsteady!(solution, setup)
         # in solver_unsteady_ke
         if use_rom
             # get ROM residual
-            Fres, = momentum_rom(R, 0, t, setup, false)
-            maxres[n] = maximum(abs.(Fres))
+            F, = momentum_rom(R, 0, t, setup, false)
+            maxres[n] = maximum(abs.(F))
         else
             if visc != "keps"
                 # norm of residual
-                Fres, = momentum(V, V, p, t, setup, false)
-                maxres[n] = maximum(abs.(Fres))
+                momentum!(F, ∇F, V, V, p, t, setup, cache, false)
+                maxres[n] = maximum(abs.(F))
             end
         end
 
-        # change timestep based on operators
+        # Change timestep based on operators
         if !is_steady && isadaptive && rem(n, n_adapt_Δt) == 0
             Δt = get_timestep(setup)
         end
 
-        # store unsteady data in an array
+        # Store unsteady data in an array
         if !is_steady && save_unsteady
-            uₕ_total[n, :] = V[1:setup.grid.Nu]
-            vₕ_total[n, :] = V[setup.grid.Nu+1:end]
+            uₕ_total[n, :] = V[indu]
+            vₕ_total[n, :] = V[indv]
             p_total[n, :] = p
         end
 
