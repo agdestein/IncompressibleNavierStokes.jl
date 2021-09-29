@@ -51,13 +51,23 @@ function solve_unsteady!(solution, setup)
         ω = get_vorticity(V, t, setup)
         ω = reshape(ω, Nx - 1, Ny - 1)
         ω = Node(ω)
-        pl = contourf(x[2:(end-1)], y[2:(end-1)], ω)
-        display(pl)
+        fig = Figure(resolution = (2000, 300))
+        ax, hm = contourf(fig[1, 1], x[2:(end-1)], y[2:(end-1)], ω; levels = -10:2:10)
+        ax.aspect = DataAspect()
+        ax.title = "Vorticity"
+        ax.xlabel = "x"
+        ax.ylabel = "y"
+        limits!(ax, 0, 10, -0.5, 0.5)
+        lines!(ax, [0, 0], [-0.5, 0]; color = :red)
+        Colorbar(fig[1, 2], hm)
+        display(fig)
+        fps = 60
     end
 
+    # record(fig, "output/vorticity.mp4", 2:nt; framerate = 60) do n
     while n ≤ nt
         # Advance one time step
-        n = n + 1
+        n += 1
         Vₙ₋₁ .= Vₙ
         pₙ₋₁ .= pₙ
         Vₙ .= V
@@ -122,10 +132,9 @@ function solve_unsteady!(solution, setup)
             p_total[n, :] = p
         end
 
-        if do_rtp && mod(n, rtp_n) == 0
+        if do_rtp #&& mod(n, rtp_n) == 0
             ω[] = reshape(get_vorticity(V, t, setup), Nx - 1, Ny - 1)
-            # display(pl)
-            sleep(0.05)
+            sleep(1 / fps)
         end
     end
 
