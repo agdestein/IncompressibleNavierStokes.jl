@@ -376,7 +376,7 @@ function operator_mesh!(setup)
     # indices of unknowns in velocity vector
     indu = 1:Nu
     indv = Nu+1:Nu+Nv
-    indV = [indu; indv]
+    indV = 1:NV
     indp = NV+1:NV+Np
 
     ## store quantities in the structure

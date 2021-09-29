@@ -104,10 +104,12 @@ Base.@kwdef mutable struct Grid{T}
     yv::Matrix{T} = zeros(T, 0, 0)
     xpp::Matrix{T} = zeros(T, 0, 0)
     ypp::Matrix{T} = zeros(T, 0, 0)
-    indu::Vector{Int} = Int[]
-    indv::Vector{Int} = Int[]
-    indV::Vector{Int} = Int[]
-    indp::Vector{Int} = Int[]
+
+    # Ranges
+    indu::UnitRange{Int} = 1:0
+    indv::UnitRange{Int} = 1:0
+    indV::UnitRange{Int} = 1:0
+    indp::UnitRange{Int} = 1:0
 end
 
 
