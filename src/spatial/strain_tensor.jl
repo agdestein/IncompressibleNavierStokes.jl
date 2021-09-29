@@ -12,8 +12,8 @@ function strain_tensor(V, t, setup, getJacobian)
     @unpack Cux_k, Cuy_k, Cvx_k, Cvy_k, Auy_k, Avx_k = setup.discretization
     @unpack yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k = setup.discretization
 
-    uₕ = V[indu]
-    vₕ = V[indv]
+    uₕ = @view V[indu]
+    vₕ = @view V[indv]
 
     # these four components are approximated by
     S11 = 1 / 2 * 2 * (Su_ux * uₕ + ySu_ux)

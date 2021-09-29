@@ -15,11 +15,11 @@ function convection(V, C, t, setup, getJacobian)
     Jacu = spzeros(Nu, NV)
     Jacv = spzeros(Nv, NV)
 
-    uₕ = V[indu]
-    vₕ = V[indv]
+    uₕ = @view V[indu]
+    vₕ = @view V[indv]
 
-    cu = C[indu]
-    cv = C[indv]
+    cu = @view C[indu]
+    cv = @view C[indv]
 
     if regularization == "no"
         # no regularization
@@ -144,11 +144,11 @@ function convection_components(C, V, setup, getJacobian, order4 = false)
     Jacu = spzeros(Nu, NV)
     Jacv = spzeros(Nv, NV)
 
-    uₕ = V[indu]
-    vₕ = V[indv]
+    uₕ = @view V[indu]
+    vₕ = @view V[indv]
 
-    cu = C[indu]
-    cv = C[indv]
+    cu = @view C[indu]
+    cv = @view C[indv]
 
     u_ux = Au_ux * uₕ + yAu_ux                 # u at ux
     uf_ux = Iu_ux * cu + yIu_ux                 # ubar at ux

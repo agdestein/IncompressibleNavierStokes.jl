@@ -11,8 +11,8 @@ function check_symmetry(V, t, setup, ϵ = 1e-14)
     @unpack yIu_ux, yIv_uy, yIu_vx, yIv_vy = setup.discretization
     @unpack N1, N2, N3, N4 = setup.grid
 
-    uₕ = V[indu]
-    vₕ = V[indv]
+    uₕ = @view V[indu]
+    vₕ = @view V[indv]
 
     Cu =
         Cux * spdiagm(Iu_ux * uₕ + yIu_ux) * Au_ux +
