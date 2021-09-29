@@ -29,11 +29,9 @@ function check_symmetry(V, t, setup, ϵ = 1e-14)
     flag = 0
     if symmetry_error > ϵ
         if setup.bc.u.right != "pres" && setup.bc.u.left != "pres"
-            println(error_u)
             flag = 1
         end
         if setup.bc.v.low != "pres" && setup.bc.v.up != "pres"
-            println(error_v)
             flag = 1
         end
     end

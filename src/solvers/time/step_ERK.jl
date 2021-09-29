@@ -86,7 +86,7 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup)
         kp[:, i] = Δp
 
         # Update velocity current stage, which is now divergence free
-        V .= Vₙ + Δt * (Vtemp - c[i] * Om_inv .* (G * Δp))
+        V .= Vₙ .+ Δt .* (Vtemp .- c[i] .* Om_inv .* (G * Δp))
     end
 
     if setup.bc.bc_unsteady

@@ -20,6 +20,7 @@ function set_bc_vectors!(setup, t)
     @unpack Anu_vy_bc = setup.discretization
     @unpack Cux_k_bc, Cuy_k_bc, Cvx_k_bc, Cvy_k_bc, Auy_k_bc, Avx_k_bc =
         setup.discretization
+    @unpack Su_vx_bc_lr, Su_vx_bc_lu, Sv_uy_bc_lr, Sv_uy_bc_lu = setup.discretization
 
     if order4
         @unpack α = setup.discretization
@@ -49,8 +50,8 @@ function set_bc_vectors!(setup, t)
     vRi_i = v_bc.(x[end], yin, t, [setup])
 
     if !is_steady && setup.bc.bc_unsteady
-        dudtLe_i = dudt_bc.(x[1], [setup].grid.yp, t, setup)
-        dudtRi_i = dudt_bc.(x[end], [setup].grid.yp, t, setup)
+        dudtLe_i = dudt_bc.(x[1], setup.grid.yp, t, [setup])
+        dudtRi_i = dudt_bc.(x[end], setup.grid.yp, t, [setup])
         dvdtLo_i = dvdt_bc.(setup.grid.xp, y[1], t, [setup])
         dvdtUp_i = dvdt_bc.(setup.grid.xp, y[end], t, [setup])
     end
@@ -99,11 +100,10 @@ function set_bc_vectors!(setup, t)
             end
 
             ydM = ydMx + ydMy
-
-            setup.discretization.ydM = ydM
         else
-            setup.discretization.ydM = zeros(Np)
+            ydM = zeros(Np)
         end
+        setup.discretization.ydM = ydM
     end
 
     ## boundary conditions for pressure
@@ -180,13 +180,32 @@ function set_bc_vectors!(setup, t)
     end
 
     ## boundary conditions for diffusion
+    if order4
+        ybc1 = kron(uLe_i, Su_ux_bc.ybc1) + kron(uRi_i, Su_ux_bc.ybc2)
+        ybc3 = kron(uLe_i, Su_ux_bc3.ybc1) + kron(uRi_i, Su_ux_bc3.ybc2)
+        ySu_ux = α * Su_ux_bc.Bbc * ybc1 - Su_ux_bc3.Bbc * ybc3
 
-    if order4 == 0
-        Su_vx_bc_lr = setup.discretization.Su_vx_bc_lr
-        Su_vx_bc_lu = setup.discretization.Su_vx_bc_lu
-        Sv_uy_bc_lr = setup.discretization.Sv_uy_bc_lr
-        Sv_uy_bc_lu = setup.discretization.Sv_uy_bc_lu
+        ybc1 = kron(Su_uy_bc.ybc1, uLo_i) + kron(Su_uy_bc.ybc2, uUp_i)
+        ybc3 = kron(Su_uy_bc3.ybc1, uLo_i) + kron(Su_uy_bc3.ybc2, uUp_i)
+        ySu_uy = α * Su_uy_bc.Bbc * ybc1 - Su_uy_bc3.Bbc * ybc3
 
+        ybc1 = kron(vLe_i, Sv_vx_bc.ybc1) + kron(vRi_i, Sv_vx_bc.ybc2)
+        ybc3 = kron(vLe_i, Sv_vx_bc3.ybc1) + kron(vRi_i, Sv_vx_bc3.ybc2)
+        ySv_vx = α * Sv_vx_bc.Bbc * ybc1 - Sv_vx_bc3.Bbc * ybc3
+
+        ybc1 = kron(Sv_vy_bc.ybc1, vLo_i) + kron(Sv_vy_bc.ybc2, vUp_i)
+        ybc3 = kron(Sv_vy_bc3.ybc1, vLo_i) + kron(Sv_vy_bc3.ybc2, vUp_i)
+        ySv_vy = α * Sv_vy_bc.Bbc * ybc1 - Sv_vy_bc3.Bbc * ybc3
+
+        if visc == "laminar"
+            yDiffu = 1 / Re * (Diffux_div * ySu_ux + Diffuy_div * ySu_uy)
+            yDiffv = 1 / Re * (Diffvx_div * ySv_vx + Diffvy_div * ySv_vy)
+            setup.discretization.yDiffu = yDiffu
+            setup.discretization.yDiffv = yDiffv
+        elseif visc ∈ ["keps", "LES", "qr", "ML"]
+            error("fourth order turbulent diffusion not implemented")
+        end
+    else
         # Su_ux
         ybc = kron(uLe_i, Su_ux_bc.ybc1) + kron(uRi_i, Su_ux_bc.ybc2)
         ySu_ux = Su_ux_bc.Bbc * ybc
@@ -223,8 +242,8 @@ function set_bc_vectors!(setup, t)
         ySv_vy = Sv_vy_bc.Bbc * ybc
 
         if visc == "laminar"
-            yDiffu = Dux * ((1 / Re) * ySu_ux) + Duy * ((1 / Re) * ySu_uy)
-            yDiffv = Dvx * ((1 / Re) * ySv_vx) + Dvy * ((1 / Re) * ySv_vy)
+            yDiffu = Dux * (1 / Re * ySu_ux) + Duy * (1 / Re * ySu_uy)
+            yDiffv = Dvx * (1 / Re * ySv_vx) + Dvy * (1 / Re * ySv_vy)
             setup.discretization.yDiffu = yDiffu
             setup.discretization.yDiffv = yDiffv
         elseif visc ∈ ["keps", "LES", "qr", "ML"]
@@ -235,33 +254,6 @@ function set_bc_vectors!(setup, t)
             setup.discretization.ySv_vx = ySv_vx
             setup.discretization.ySv_vy = ySv_vy
             setup.discretization.ySv_uy = ySv_uy
-        end
-    end
-
-    if order4
-        ybc1 = kron(uLe_i, Su_ux_bc.ybc1) + kron(uRi_i, Su_ux_bc.ybc2)
-        ybc3 = kron(uLe_i, Su_ux_bc3.ybc1) + kron(uRi_i, Su_ux_bc3.ybc2)
-        ySu_ux = α * Su_ux_bc.Bbc * ybc1 - Su_ux_bc3.Bbc * ybc3
-
-        ybc1 = kron(Su_uy_bc.ybc1, uLo_i) + kron(Su_uy_bc.ybc2, uUp_i)
-        ybc3 = kron(Su_uy_bc3.ybc1, uLo_i) + kron(Su_uy_bc3.ybc2, uUp_i)
-        ySu_uy = α * Su_uy_bc.Bbc * ybc1 - Su_uy_bc3.Bbc * ybc3
-
-        ybc1 = kron(vLe_i, Sv_vx_bc.ybc1) + kron(vRi_i, Sv_vx_bc.ybc2)
-        ybc3 = kron(vLe_i, Sv_vx_bc3.ybc1) + kron(vRi_i, Sv_vx_bc3.ybc2)
-        ySv_vx = α * Sv_vx_bc.Bbc * ybc1 - Sv_vx_bc3.Bbc * ybc3
-
-        ybc1 = kron(Sv_vy_bc.ybc1, vLo_i) + kron(Sv_vy_bc.ybc2, vUp_i)
-        ybc3 = kron(Sv_vy_bc3.ybc1, vLo_i) + kron(Sv_vy_bc3.ybc2, vUp_i)
-        ySv_vy = α * Sv_vy_bc.Bbc * ybc1 - Sv_vy_bc3.Bbc * ybc3
-
-        if visc == "laminar"
-            yDiffu = 1 / Re * (Diffux_div * ySu_ux + Diffuy_div * ySu_uy)
-            yDiffv = 1 / Re * (Diffvx_div * ySv_vx + Diffvy_div * ySv_vy)
-            setup.discretization.yDiffu = yDiffu
-            setup.discretization.yDiffv = yDiffv
-        elseif visc ∈ ["keps", "LES", "qr", "ML"]
-            error("fourth order turbulent diffusion not implemented")
         end
     end
 

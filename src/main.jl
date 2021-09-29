@@ -84,10 +84,8 @@ function main(setup)
         else
             error("wrong value for visc parameter")
         end
-        println("simulated time: $t")
     end
     totaltime = Base.time() - starttime
-    println("total elapsed CPU time: $totaltime")
 
     # Post-processing
     # postprocess(solution, setup)

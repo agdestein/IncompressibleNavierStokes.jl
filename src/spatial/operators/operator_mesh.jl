@@ -347,10 +347,10 @@ function operator_mesh!(setup)
         Om = [Omu; Omv]
         Om_inv = [Omu_inv; Omv_inv]
 
-        Omux = α * Omux1 - Omux3
-        Omuy = α * Omuy1 - Omuy3
-        Omvx = α * Omvx1 - Omvx3
-        Omvy = α * Omvy1 - Omvy3
+        Omux = @. α * Omux1 - Omux3
+        Omuy = @. α * Omuy1 - Omuy3
+        Omvx = @. α * Omvx1 - Omvx3
+        Omvy = @. α * Omvy1 - Omvy3
 
         Omvort1 = Omvort
         Omvort3 = kron(gyi3, gxi3)

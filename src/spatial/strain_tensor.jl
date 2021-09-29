@@ -96,15 +96,12 @@ function strain_tensor(V, t, setup, getJacobian)
         S21_p = interp2(y', x, S21_temp, yp', xp)
 
         ## invariants
-        q = (1 / 2) * (S11_p[:] .^ 2 + S12_p[:] .^ 2 + S21_p[:] .^ 2 + S22_p[:] .^ 2)
+        q = 1 / 2 * (S11_p[:] .^ 2 + S12_p[:] .^ 2 + S21_p[:] .^ 2 + S22_p[:] .^ 2)
 
         # absolute value of strain tensor
         # with S as defined above, i.e. 0.5*(grad u + grad u^T)
         # S_abs = sqrt(2*tr(S^2)) = sqrt(4*q)
-        S_abs = sqrt(4 * q)
-
-        # should be zero:
-        # r = (S11[:].^2+S12[:].*S21[:]).*S11[:] + (S11[:].*S12[:]+S12[:].*S22[:]).*S21[:] +         #     (S11[:].*S21[:]+S21[:].*S22[:]).*S12[:] + (S12[:].*S21[:]+S22[:].^2).*S22[:]; #-(S11[:].*S22[:] - S12[:].*S21[:]);
+        S_abs = sqrt(4q)
     else
         # option 2a
         S11_p = 1 / 2 * 2 * (Cux_k * uₕ + yCux_k)

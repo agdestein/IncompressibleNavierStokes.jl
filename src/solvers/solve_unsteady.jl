@@ -75,7 +75,7 @@ function solve_unsteady!(solution, setup)
 
         # Perform a single time step with the time integration method
         if method == 2
-            V, p, conv = time_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup)
+            V, p, conv = step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup)
             convₙ₋₁ = conv
         elseif method == 5
             step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup)

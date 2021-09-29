@@ -100,6 +100,21 @@ export nonuniform_grid
 
 # Main driver
 export main
+export create_mesh!,
+    create_boundary_conditions!,
+    build_operators!,
+    create_initial_conditions,
+    set_bc_vectors!,
+    force,
+    check_input!,
+    solve_steady_ke!,
+    solve_steady!,
+    solve_steady_ibm!,
+    solve_unsteady_ke!,
+    solve_unsteady_rom!,
+    solve_unsteady!,
+    postprocess
+
 # Runge Kutta methods
 
 # Explicit Methods

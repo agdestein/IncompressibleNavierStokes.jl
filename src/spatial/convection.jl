@@ -7,16 +7,9 @@ C: "convection" field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
 c_y = v
 """
 function convection(V, C, t, setup, getJacobian)
-    # evaluate convective terms and, optionally, Jacobians
-    # V: velocity field
-    # C: "convection" field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
-    # c_y = v
-
-    α = setup.discretization.α
-    order4 = setup.discretization.order4
-
-    regularization = setup.case.regularization
-
+    @unpack order4 = setup.discretization
+    @unpack regularization = setup.case
+    @unpack α = setup.discretization
     @unpack Nu, Nv, NV, indu, indv = setup.grid
 
     Jacu = spzeros(Nu, NV)
@@ -32,13 +25,13 @@ function convection(V, C, t, setup, getJacobian)
         # no regularization
         convu, convv, Jacu, Jacv = convection_components(C, V, setup, getJacobian, false)
 
-        if order4 == 1
+        if order4
             convu3, convv3, Jacu3, Jacv3 =
                 convection_components(C, V, setup, getJacobian, true)
-            convu = α * convu - convu3
-            convv = α * convv - convv3
-            Jacu = α * Jacu - Jacu3
-            Jacv = α * Jacv - Jacv3
+            @. convu = α * convu - convu3
+            @. convv = α * convv - convv3
+            @. Jacu = α * Jacu - Jacu3
+            @. Jacv = α * Jacv - Jacv3
         end
     elseif regularization == "leray"
         # Leray
@@ -53,8 +46,7 @@ function convection(V, C, t, setup, getJacobian)
         # divergence of filtered velocity field; should be zero!
         maxdiv_f = maximum(abs.(M * C_filtered + yM))
 
-        convu, convv, Jacu, Jacv =
-            convection_components(C_filtered, V, setup, getJacobian)
+        convu, convv, Jacu, Jacv = convection_components(C_filtered, V, setup, getJacobian)
     elseif regularization == "C2"
         ## C2
 
@@ -95,7 +87,6 @@ function convection(V, C, t, setup, getJacobian)
         C_filtered = [cu_f; cv_f]
         dC = C - C_filtered
 
-
         # divergence of filtered velocity field; should be zero!
         maxdiv_f[n] = maximum(abs.(M * V_filtered + yM))
 
@@ -115,7 +106,6 @@ function convection(V, C, t, setup, getJacobian)
 end
 
 function convection_components(C, V, setup, getJacobian, order4 = false)
-
     if order4
         Cux = setup.discretization.Cux3
         Cuy = setup.discretization.Cuy3
@@ -142,38 +132,14 @@ function convection_components(C, V, setup, getJacobian, order4 = false)
         yIu_vx = setup.discretization.yIu_vx3
         yIv_vy = setup.discretization.yIv_vy3
     else
-        Cux = setup.discretization.Cux
-        Cuy = setup.discretization.Cuy
-        Cvx = setup.discretization.Cvx
-        Cvy = setup.discretization.Cvy
-
-        Au_ux = setup.discretization.Au_ux
-        Au_uy = setup.discretization.Au_uy
-        Av_vx = setup.discretization.Av_vx
-        Av_vy = setup.discretization.Av_vy
-
-        yAu_ux = setup.discretization.yAu_ux
-        yAu_uy = setup.discretization.yAu_uy
-        yAv_vx = setup.discretization.yAv_vx
-        yAv_vy = setup.discretization.yAv_vy
-
-        Iu_ux = setup.discretization.Iu_ux
-        Iv_uy = setup.discretization.Iv_uy
-        Iu_vx = setup.discretization.Iu_vx
-        Iv_vy = setup.discretization.Iv_vy
-
-        yIu_ux = setup.discretization.yIu_ux
-        yIv_uy = setup.discretization.yIv_uy
-        yIu_vx = setup.discretization.yIu_vx
-        yIv_vy = setup.discretization.yIv_vy
+        @unpack Cux, Cuy, Cvx, Cvy = setup.discretization
+        @unpack Au_ux, Au_uy, Av_vx, Av_vy = setup.discretization
+        @unpack yAu_ux, yAu_uy, yAv_vx, yAv_vy = setup.discretization
+        @unpack Iu_ux, Iv_uy, Iu_vx, Iv_vy = setup.discretization
+        @unpack yIu_ux, yIv_uy, yIu_vx, yIv_vy = setup.discretization
     end
 
-    indu = setup.grid.indu
-    indv = setup.grid.indv
-
-    Nu = setup.grid.Nu
-    Nv = setup.grid.Nv
-    NV = setup.grid.NV
+    @unpack Nu, Nv, NV, indu, indv = setup.grid
 
     Jacu = spzeros(Nu, NV)
     Jacv = spzeros(Nv, NV)
@@ -233,7 +199,7 @@ function convection_components(C, V, setup, getJacobian, order4 = false)
         C2 = Cvy * spdiagm(v_vy) * Newton_factor
         Conv_vy_22 = C1 * Av_vy + C2 * Iv_vy
 
-        Jacv = [Conv_vx_21 Conv_vx_22 + Conv_vy_22]
+        Jacv = [Conv_vx_21 (Conv_vx_22 + Conv_vy_22)]
     end
 
     convu, convv, Jacu, Jacv

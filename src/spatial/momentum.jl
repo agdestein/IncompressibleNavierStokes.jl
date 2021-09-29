@@ -11,6 +11,7 @@ nopressure = true: exclude pressure gradient; in this case input argument p is n
 """
 function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
     @unpack Nu, Nv, NV = setup.grid
+    @unpack Gx, Gy, y_px, y_py = setup.discretization
 
     # Unsteady BC
     if setup.bc.bc_unsteady
@@ -18,7 +19,6 @@ function momentum(V, C, p, t, setup, getJacobian = false, nopressure = false)
     end
 
     if !nopressure
-        @unpack Gx, Gy, y_px, y_py = setup.discretization
         Gpx = Gx * p + y_px
         Gpy = Gy * p + y_py
     end
