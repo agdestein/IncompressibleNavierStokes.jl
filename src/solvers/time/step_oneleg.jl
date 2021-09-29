@@ -29,7 +29,7 @@ function step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need
     # the boundary conditions at tₙ₊₁
     if setup.BC.BC_unsteady
-        set_bc_vectors!(tₙ + Δt, setup)
+        set_bc_vectors!(setup, tₙ + Δt)
     end
 
     # Define an adapted time step; this is only influencing the pressure calculation

@@ -66,7 +66,7 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup)
         # the boundary conditions at tᵢ₊₁
         tᵢ = tₙ + c[i] * Δt
         if setup.bc.bc_unsteady
-            set_bc_vectors!(tᵢ, setup)
+            set_bc_vectors!(setup, tᵢ)
         end
 
         # Divergence of intermediate velocity field is directly calculated with M

@@ -54,7 +54,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
 
     # boundary condition for divergence operator
     if setup.bc.bc_unsteady
-        set_bc_vectors!(tₙ, setup)
+        set_bc_vectors!(setup, tₙ)
     end
 
     # to make the velocity field u_(i+1) at t_(i+1) divergence-free we need
@@ -63,7 +63,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
         yMtot = zeros(Np, nstage)
         for i = 1:nstage
             tᵢ = tⱼ[i]
-            setup = set_bc_vectors(setup, tᵢ)
+            set_bc_vectors!(setup, tᵢ)
             yMtot[:, i] = setup.discretization.yM
         end
         yMtot = yMtot[:]

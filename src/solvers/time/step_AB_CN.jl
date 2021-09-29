@@ -56,7 +56,7 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup)
 
     # unsteady bc at current time
     if setup.bc.bc_unsteady
-        set_bc_vectors!(tₙ, setup)
+        set_bc_vectors!(setup, tₙ)
     end
 
     # Convection of current solution
