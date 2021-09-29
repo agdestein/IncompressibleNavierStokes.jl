@@ -13,6 +13,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
+GLMakie = "0.4"
 Makie = "0.15"
 Plots = "1"
 UnPack = "1"
