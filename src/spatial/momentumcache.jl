@@ -10,9 +10,34 @@ struct MomentumCache{T}
     ∇c3::SparseMatrixCSC{T,Int}
     ∇d::SparseMatrixCSC{T,Int}
     ∇b::SparseMatrixCSC{T,Int}
+
+    u_ux::Vector{T}
+    ū_ux::Vector{T}
+    uū_ux::Vector{T}
+
+    u_uy::Vector{T}
+    v̄_uy::Vector{T}
+    uv̄_uy::Vector{T}
+
+    v_vx::Vector{T}
+    ū_vx::Vector{T}
+    vū_vx::Vector{T}
+
+    v_vy::Vector{T}
+    v̄_vy::Vector{T}
+    vv̄_vy::Vector{T}
+
+    ∂uū∂x::Vector{T}
+    ∂uv̄∂y::Vector{T}
+    ∂vū∂x::Vector{T}
+    ∂vv̄∂y::Vector{T}
 end
 function MomentumCache(setup::Setup{T}) where {T}
-    @unpack NV = setup.grid
+    @unpack Nu, Nv, NV = setup.grid
+    @unpack yIu_ux,
+yIv_uy,
+yIu_vx,
+yIv_vy = setup.discretization
     Gp = zeros(T, NV)
     c = zeros(T, NV)
     c2 = zeros(T, NV)
@@ -24,5 +49,59 @@ function MomentumCache(setup::Setup{T}) where {T}
     ∇c3 = spzeros(T, NV, NV)
     ∇d = spzeros(T, NV, NV)
     ∇b = spzeros(T, NV, NV)
-    MomentumCache{T}(Gp, c, c2, c3, d, b, ∇c, ∇c2, ∇c3, ∇d, ∇b)
+
+    u_ux = zeros(T, length(yIu_ux))
+    ū_ux = zeros(T, length(yIu_ux))
+    uū_ux = zeros(T, length(yIu_ux))
+
+    u_uy = zeros(T, length(yIv_uy))
+    v̄_uy = zeros(T, length(yIv_uy))
+    uv̄_uy = zeros(T, length(yIv_uy))
+
+    v_vx = zeros(T, length(yIu_vx))
+    ū_vx = zeros(T, length(yIu_vx))
+    vū_vx = zeros(T, length(yIu_vx))
+
+    v_vy = zeros(T, length(yIv_vy))
+    v̄_vy = zeros(T, length(yIv_vy))
+    vv̄_vy = zeros(T, length(yIv_vy))
+
+    ∂uū∂x = zeros(T, Nu)
+    ∂uv̄∂y = zeros(T, Nu)
+    ∂vū∂x = zeros(T, Nv)
+    ∂vv̄∂y = zeros(T, Nv)
+    MomentumCache{T}(
+        Gp,
+        c,
+        c2,
+        c3,
+        d,
+        b,
+        ∇c,
+        ∇c2,
+        ∇c3,
+        ∇d,
+        ∇b,
+
+        u_ux,
+        ū_ux,
+        uū_ux,
+
+        u_uy,
+        v̄_uy,
+        uv̄_uy,
+
+        v_vx,
+        ū_vx,
+        vū_vx,
+
+        v_vy,
+        v̄_vy,
+        vv̄_vy,
+
+        ∂uū∂x,
+        ∂uv̄∂y,
+        ∂vū∂x,
+        ∂vv̄∂y,
+    )
 end
