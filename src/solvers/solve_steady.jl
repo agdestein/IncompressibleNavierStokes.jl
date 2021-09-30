@@ -30,7 +30,7 @@ function solve_steady!(solution, setup)
     maxres[2] = maxres[1]
 
     while maxres[n] > nonlinear_acc
-        if Jacobian_type == "Newton" && nPicard < n
+        if Jacobian_type == "newton" && nPicard < n
             # Switch to Newton
             setup.solver_settings.Newton_factor = true
         end
@@ -55,7 +55,7 @@ function solve_steady!(solution, setup)
 
         if visc != "keps"
             momentum!(F, ∇F, V, V, p, t, setup, cache, false)
-            maxres[n] = maximum(abs.(Fres))
+            maxres[n] = maximum(abs.(F))
         end
 
         println("Iteration $n: momentum residual = $(maxres[n])")

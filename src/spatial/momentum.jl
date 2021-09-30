@@ -5,7 +5,7 @@ function momentum(V, ϕ, p, t, setup, getJacobian = false, nopressure = false)
     F = zeros(NV)
     ∇F = spzeros(NV, NV)
 
-    convection!(F, ∇F, V, ϕ, t, setup, cache, getJacobian)
+    momentum!(F, ∇F, V, ϕ, p, t, setup, cache, getJacobian)
 end
 
 """
