@@ -39,8 +39,8 @@ function momentum!(
 
     Gpx = @view Gp[indu]
     Gpy = @view Gp[indv]
-    Fx = @view Gp[indu]
-    Fy = @view Gp[indv]
+    Fx = @view F[indu]
+    Fy = @view F[indv]
 
     # Unsteady BC
     if setup.bc.bc_unsteady
