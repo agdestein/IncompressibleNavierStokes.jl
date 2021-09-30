@@ -2,12 +2,12 @@ function get_streamfunction(V, t, setup)
     # compute streamfunction from a Poisson equation nabla^2 ψ = -ω
 
     @unpack u_bc, v_bc = setup.bc
-    @unpack Nu, Nux_in, Nvx_in, Nx, Ny = setup.grid
+    @unpack indu, indv, Nux_in, Nvx_in, Nx, Ny = setup.grid
     @unpack hx, hy, x, y, xp, yp = setup.grid
     @unpack Wv_vx, Wu_uy = setup.discretization
 
-    uₕ = V[1:Nu]
-    vₕ = V[Nu+1:end]
+    uₕ = @view V[indu]
+    vₕ = @view V[indv]
 
     # boundary values by integrating around domain
     # start with ψ = 0 at lower left corner

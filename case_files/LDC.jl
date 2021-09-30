@@ -12,7 +12,6 @@ function LDC()
     setup.case.is_steady = true
     setup.case.visc = "laminar"
     setup.case.regularization = "no"
-    setup.case.force_unsteady = false
 
     # Physical properties
     setup.fluid.Re = 1000                          # Reynolds number
@@ -35,7 +34,7 @@ function LDC()
     setup.grid.sy = 1                              # Stretch factor in y-direction
 
     # Discretization parameters
-    setup.discretization.order4 = false            # Use 4th order in time (otherwise 2nd order)
+    setup.discretization.order4 = false            # Use 4th order in space (otherwise 2nd order)
     setup.discretization.α = 81                    # richardson extrapolation factor = 3^4
     setup.discretization.β = 9 / 8                 # interpolation factor
 
@@ -44,8 +43,8 @@ function LDC()
     setup.force.y_c = 0                            # y-coordinate of body
     setup.force.Ct = 0                             # thrust coefficient for actuator disk computations
     setup.force.D = 1                              # Actuator disk diameter
-    setup.force.isforce = false                    # presence of a force file
-    setup.force.force_unsteady = false             # steady (0) or unsteady (1) force
+    setup.force.isforce = false                    # Presence of a body force
+    setup.force.force_unsteady = false             # steady (false) or unsteady (true) force
 
     # Rom parameters
     setup.rom.use_rom = false                      # use reduced order model

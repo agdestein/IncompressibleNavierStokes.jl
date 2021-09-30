@@ -4,7 +4,7 @@ Check input.
 function check_input!(setup, V_start, p_start, t)
     @unpack is_steady, visc = setup.case
     @unpack order4, G, M, yM = setup.discretization
-    @unpack Om_inv = setup.grid
+    @unpack Om_inv, NV = setup.grid
     @unpack nonlinear_maxit = setup.solver_settings
     @unpack t_start, t_end, Δt, isadaptive, method, method_startup = setup.time
     @unpack save_unsteady = setup.output
@@ -50,6 +50,17 @@ function check_input!(setup, V_start, p_start, t)
     else
         nt = nonlinear_maxit
     end
+
+    # Construct body force or immersed boundary method
+    # The body force is called in the residual routines e.g. momentum.jl
+    # Steady force can be precomputed once:
+    if setup.force.isforce
+        setup.force.Fx, setup.force.Fy, _ = bodyforce(V, t, setup)
+    else
+        setup.force.Fx = zeros(NV)
+        setup.force.Fy = zeros(NV)
+    end
+
 
     # allocate variables, including initial condition
     maxres = zeros(nt + 1)
@@ -109,7 +120,8 @@ function check_input!(setup, V_start, p_start, t)
     end
 
     # residual of momentum equations at start
-    maxres[1], _ = momentum(V, V, p, t, setup, false)
+    Fres, =  momentum(V, V, p, t, setup, false)
+    maxres[1] = maximum(abs.(Fres))
 
     if !is_steady && save_unsteady
         # allocate space for variables

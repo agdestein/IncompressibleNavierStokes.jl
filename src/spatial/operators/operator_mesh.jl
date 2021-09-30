@@ -347,10 +347,10 @@ function operator_mesh!(setup)
         Om = [Omu; Omv]
         Om_inv = [Omu_inv; Omv_inv]
 
-        Omux = α * Omux1 - Omux3
-        Omuy = α * Omuy1 - Omuy3
-        Omvx = α * Omvx1 - Omvx3
-        Omvy = α * Omvy1 - Omvy3
+        Omux = @. α * Omux1 - Omux3
+        Omuy = @. α * Omuy1 - Omuy3
+        Omvx = @. α * Omvx1 - Omvx3
+        Omvy = @. α * Omvy1 - Omvy3
 
         Omvort1 = Omvort
         Omvort3 = kron(gyi3, gxi3)
@@ -376,7 +376,7 @@ function operator_mesh!(setup)
     # indices of unknowns in velocity vector
     indu = 1:Nu
     indv = Nu+1:Nu+Nv
-    indV = [indu; indv]
+    indV = 1:NV
     indp = NV+1:NV+Np
 
     ## store quantities in the structure

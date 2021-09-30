@@ -6,7 +6,7 @@ Solve the entire saddlepoint system arising from the steady Navier-Stokes equati
 function solve_steady!(solution, setup)
     # Setup
     @unpack is_steady, visc = setup.case
-    @unpack Nu, Nv, Np = setup.grid
+    @unpack Nu, Nv, NV, Np = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
         setup.solver_settings
@@ -18,7 +18,12 @@ function solve_steady!(solution, setup)
     Z2 = spzeros(Np, Np)
 
     # Right hand side
-    f = zeros(Nu+Nv+Np)
+    f = zeros(NV+Np)
+
+    # Temporary variables
+    cache = MomentumCache(setup)
+    F = zeros(NV)
+    ∇F = spzeros(NV, NV)
 
     Newton = false
 
@@ -32,57 +37,25 @@ function solve_steady!(solution, setup)
 
         n += 1
 
-        _, fmom, dfmom = momentum(V, V, p, t, setup, true)
+        momentum!(F, ∇F, V, V, p, t, setup, cache, true)
+
         fmass = M * V + yM
-        f = [-fmom; fmass]
-        Z = [dfmom -G; -M Z2]
+        f = [-F; fmass]
+        Z = [∇F -G; -M Z2]
         Δq = Z \ f
 
-        ΔV = @view Δq[1:Nu+Nv]
-        Δp = @view Δq[Nu+Nv+1:end]
+        ΔV = @view Δq[1:NV]
+        Δp = @view Δq[NV+1:end]
 
         V .+= ΔV
         p .+= Δp
 
-        ## Process data from this iteration
-
         # calculate mass, momentum and energy
         maxdiv[n], umom[n], vmom[n], k[n] = check_conservation(V, t, setup)
 
-        # residual (in Finite Volume form)
-        # for ke model residual also contains k and e terms and is computed
-        # in solver_unsteady_ke
-        if use_rom
-            # get ROM residual
-            maxres[n], _ = F_ROM(R, 0, t, setup, false)
-        else
-            if visc != "keps"
-                maxres[n], _ = momentum(V, V, p, t, setup, false)
-            end
-        end
-
-        # change timestep based on operators
-        if !is_steady && isadaptive && rem(n, n_adapt_Δt) == 0
-            Δt = get_timestep(setup)
-        end
-
-        # store unsteady data in an array
-        if !is_steady && save_unsteady
-            uₕ_total[n, :] = V[1:setup.grid.Nu]
-            vₕ_total[n, :] = V[setup.grid.Nu+1:end]
-            p_total[n, :] = p
-        end
-
-        # write convergence information to file
-        if setup.output.save_results
-            if !is_steady
-                println(
-                    fconv,
-                    "$n $Δt $t $(maxres[n]) $(maxdiv[n]) $(umom[n]) $(vmom[n]) $(k[n])",
-                )
-            elseif is_steady
-                println(fconv, "$n $(maxres[n]) $(maxdiv[n]) $(umom[n]) $(vmom[n]) $(k[n])")
-            end
+        if visc != "keps"
+            momentum!(F, ∇F, V, V, p, t, setup, cache, false)
+            maxres[n] = maximum(abs.(Fres))
         end
 
         println("Iteration $n: momentum residual = $(maxres[n])")

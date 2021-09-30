@@ -5,11 +5,11 @@ Check mass, momentum and energy conservation properties of velocity field
 """
 function check_conservation(V, t, setup)
     @unpack M, yM = setup.discretization
-    @unpack Nu, Nv, Omu, Omv, x, y, xp, yp, hx, hy, gx, gy = setup.grid
+    @unpack indu, indv, Omu, Omv, x, y, xp, yp, hx, hy, gx, gy = setup.grid
     @unpack u_bc, v_bc = setup.bc
 
-    uₕ = V[1:Nu]
-    vₕ = V[Nu+1:Nu+Nv]
+    uₕ = @view V[indu]
+    vₕ = @view V[indv]
 
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, t)

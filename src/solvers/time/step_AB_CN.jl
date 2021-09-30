@@ -25,12 +25,12 @@ operator_convection_diffusion
 note that, in constrast to explicit methods, the pressure from previous
 time steps has an influence on the accuracy of the velocity
 """
-function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup)
+function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
     # Adams-Bashforth coefficients
     α₁ = 3 // 2
     α₂ = -1 // 2
 
-    @unpack Nu, Nv = setup.grid.Nv
+    @unpack Nu, Nv, indu, indv = setup.grid.Nv
     @unpack Omu_inv, Omv_inv, Om_inv = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Gx, Gy, y_px, y_py = setup.discretization
@@ -39,12 +39,12 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup)
     @unpack lu_diffu, lu_diffv = setup.discretization
     @unpack θ = setup.time
 
-    uₕ = @view Vₙ[1:Nu]
-    vₕ = @view Vₙ[Nu+1:end]
+    uₕ = @view Vₙ[indu]
+    vₕ = @view Vₙ[indv]
 
     # convection from previous time step
-    convuₙ₋₁ = @view convₙ₋₁[1:Nu]
-    convvₙ₋₁ = @view convₙ₋₁[Nu+1:end]
+    convuₙ₋₁ = @view convₙ₋₁[indu]
+    convvₙ₋₁ = @view convₙ₋₁[indv]
 
     yDiffuₙ = yDiffu
     yDiffvₙ = yDiffv
@@ -52,15 +52,15 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup)
     yDiffvₙ₊₁ = yDiffv
 
     # evaluate bc and force at starting point
-    Fxₙ, Fyₙ = force(Vₙ, tₙ, setup, false)
+    Fxₙ, Fyₙ = bodyforce(Vₙ, tₙ, setup, false)
 
     # unsteady bc at current time
     if setup.bc.bc_unsteady
-        set_bc_vectors!(tₙ, setup)
+        set_bc_vectors!(setup, tₙ)
     end
 
     # Convection of current solution
-    convuₙ, convvₙ = convection(Vₙ, Vₙ, tₙ, setup, false)
+    convuₙ, convvₙ = convection!(Vₙ, Vₙ, tₙ, setup, cache, false)
 
     # Evaluate BC and force at end of time step
 

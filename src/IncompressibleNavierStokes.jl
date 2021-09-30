@@ -1,11 +1,11 @@
 "Incompressible Navier-Stokes solvers"
 module IncompressibleNavierStokes
 
-using LinearAlgebra: Factorization, I, cholesky, factorize, ldiv!
-using SparseArrays: SparseMatrixCSC, sparse, spdiagm, spzeros
+using LinearAlgebra: Factorization, I, cholesky, factorize, ldiv!, mul!
+using SparseArrays: SparseMatrixCSC, blockdiag, sparse, spdiagm, spzeros
 using UnPack: @unpack
 # using Plots: contour, contourf, title!
-using Makie: Figure, Node, contourf
+using Makie: Axis, Colorbar, DataAspect, Figure, Node, contourf, contourf!, limits!, lines!, record
 
 # Setup
 include("solvers/time/runge_kutta_methods.jl")
@@ -16,6 +16,7 @@ include("preprocess/check_input.jl")
 include("preprocess/create_mesh.jl")
 
 # Spatial
+include("spatial/momentumcache.jl")
 include("spatial/check_conservation.jl")
 include("spatial/check_symmetry.jl")
 include("spatial/convection.jl")
@@ -45,8 +46,10 @@ include("spatial/operators/operator_postprocessing.jl")
 include("spatial/operators/operator_regularization.jl")
 include("spatial/operators/operator_turbulent_diffusion.jl")
 
+include("spatial/rom/momentum_rom.jl")
+
 # Bodyforce
-include("bodyforce/force.jl")
+include("spatial/bodyforce.jl")
 
 # Solvers
 include("solvers/get_timestep.jl")
@@ -100,6 +103,21 @@ export nonuniform_grid
 
 # Main driver
 export main
+export create_mesh!,
+    create_boundary_conditions!,
+    build_operators!,
+    create_initial_conditions,
+    set_bc_vectors!,
+    force,
+    check_input!,
+    solve_steady_ke!,
+    solve_steady!,
+    solve_steady_ibm!,
+    solve_unsteady_ke!,
+    solve_unsteady_rom!,
+    solve_unsteady!,
+    postprocess
+
 # Runge Kutta methods
 
 # Explicit Methods

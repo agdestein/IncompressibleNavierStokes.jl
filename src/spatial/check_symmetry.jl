@@ -11,8 +11,8 @@ function check_symmetry(V, t, setup, ϵ = 1e-14)
     @unpack yIu_ux, yIv_uy, yIu_vx, yIv_vy = setup.discretization
     @unpack N1, N2, N3, N4 = setup.grid
 
-    uₕ = V[indu]
-    vₕ = V[indv]
+    uₕ = @view V[indu]
+    vₕ = @view V[indv]
 
     Cu =
         Cux * spdiagm(Iu_ux * uₕ + yIu_ux) * Au_ux +
@@ -29,11 +29,9 @@ function check_symmetry(V, t, setup, ϵ = 1e-14)
     flag = 0
     if symmetry_error > ϵ
         if setup.bc.u.right != "pres" && setup.bc.u.left != "pres"
-            println(error_u)
             flag = 1
         end
         if setup.bc.v.low != "pres" && setup.bc.v.up != "pres"
-            println(error_v)
             flag = 1
         end
     end

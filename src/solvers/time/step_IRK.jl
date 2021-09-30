@@ -2,7 +2,7 @@
 
 # (unsteady) Dirichlet boundary points are not part of solution vector but
 # are prescribed in a "strong" manner via the ubc and vbc functions
-function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
+function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
     ## grid info
     Nu = setup.grid.Nu
     Nv = setup.grid.Nv
@@ -54,7 +54,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
 
     # boundary condition for divergence operator
     if setup.bc.bc_unsteady
-        set_bc_vectors!(tₙ, setup)
+        set_bc_vectors!(setup, tₙ)
     end
 
     # to make the velocity field u_(i+1) at t_(i+1) divergence-free we need
@@ -63,7 +63,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
         yMtot = zeros(Np, nstage)
         for i = 1:nstage
             tᵢ = tⱼ[i]
-            setup = set_bc_vectors(setup, tᵢ)
+            set_bc_vectors!(setup, tᵢ)
             yMtot[:, i] = setup.discretization.yM
         end
         yMtot = yMtot[:]
@@ -109,7 +109,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
     if setup.solversettings.nonlinear_Newton == "approximate"
         # approximate Newton
         # Jacobian based on current solution un
-        _, _, Jn = momentum(Vₙ, Vₙ, pₙ, tₙ, setup, true)
+        momentum!(F_rhs, Jn, Vₙ, Vₙ, pₙ, tₙ, setup, cache, true)
         # form iteration matrix, which is now fixed during iterations
         dfmom = Om_sNV / Δt - kron(A, Jn)
         Z = [dfmom Gtot; Mtot Z2]
@@ -175,7 +175,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
         Δp = pressure_poisson(f, tₙ + Δt, setup)
         V .-= Δt .* Om_inv .* (G * Δp)
         if setup.solversettings.p_add_solve
-            pressure_additional_solve!(V, p, tₙ + Δt, setup)
+            pressure_additional_solve!(V, p, tₙ + Δt, setup, cache, F)
         else
             # standard method; take last pressure
             p .= pⱼ[end-Np+1:end]
@@ -183,7 +183,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup)
     else
         # for steady bc we do an additional pressure solve
         # that saves a pressure solve for i = 1 in the next time step
-        # pressure_additional_solve!(V, p, tₙ+Δt, setup);
+        # pressure_additional_solve!(V, p, tₙ+Δt, setup, cache, F);
         # standard method; take pressure of last stage
         p = pⱼ[end-Np+1:end]
     end

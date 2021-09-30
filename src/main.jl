@@ -33,13 +33,6 @@ function main(setup)
     # Boundary conditions
     set_bc_vectors!(setup, t)
 
-    # Construct body force or immersed boundary method
-    # The body force is called in the residual routines e.g. F.m
-    # Steady force can be precomputed once:
-    if setup.force.isforce && !setup.force.force_unsteady
-        setup.force.Fx, setup.force.Fy, _ = force(V_start, t, setup, false)
-    end
-
     # Input checking
     solution = check_input!(setup, V_start, p_start, t)
 
@@ -84,10 +77,8 @@ function main(setup)
         else
             error("wrong value for visc parameter")
         end
-        println("simulated time: $t")
     end
     totaltime = Base.time() - starttime
-    println("total elapsed CPU time: $totaltime")
 
     # Post-processing
     # postprocess(solution, setup)

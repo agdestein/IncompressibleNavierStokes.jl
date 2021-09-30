@@ -28,17 +28,16 @@ function postprocess(solution, setup)
 
     # Plot vorticity
     levels = [minimum(ω) - 1, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, maximum(ω) + 1]
-    pl = contourf(
+    f = Figure()
+    ax = Axis(f[1, 1]; aspect = DataAspect(),title = "Vorticity ω", xlabel = "x", ylabel = "y")
+    contourf!(
+        ax,
         x[2:(end-1)],
         y[2:(end-1)],
         ω;
-        aspect_ratio = :equal,
         #levels,
-        xlabel = "x",
-        ylabel = "y",
-        title = "Vorticity ω",
     )
-    display(pl)
+    display(f)
 
     # Plot pressure
     levels = [
@@ -55,17 +54,17 @@ function postprocess(solution, setup)
         0.3
         maximum(Δpres) + 0.1
     ]
-    pl = contourf(
+    f = Figure()
+    ax = Axis(f[1, 1]; aspect = DataAspect(),
+    title = "Pressure deviation Δp", xlabel = "x", ylabel = "y")
+    contourf!(
+        ax,
         xp,
         yp,
         Δpres;
-        aspect_ratio = :equal,
-        #levels,
-        xlabel = "x",
-        ylabel = "y",
-        title = "Pressure deviation Δp",
+        # levels,
     )
-    display(pl)
+    display(f)
 
     # Plot stream function
     levels = [
@@ -93,15 +92,20 @@ function postprocess(solution, setup)
         0.0015
         maximum(ψ) + 1
     ]
-    pl = contourf(
+    f = Figure()
+    ax = Axis(
+        f[1, 1],
+        aspect = DataAspect(),
+        title = "Stream function ψ",
+        xlabel = "x",
+        ylabel = "y",
+    )
+    contourf!(
+        ax,
         x[2:(end-1)],
         y[2:(end-1)],
         ψ;
-        aspect_ratio = :equal,
         # levels,
-        xlabel = "x",
-        ylabel = "y",
-        title = "Stream function ψ",
     )
-    display(pl)
+    display(f)
 end

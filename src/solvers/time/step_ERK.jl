@@ -5,7 +5,7 @@ Perform one time step for the general explicit Runge-Kutta method (ERK).
 
 Dirichlet boundary points are not part of solution vector but are prescribed in a strong manner via the `ubc` and `vbc` functions.
 """
-function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup)
+function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache, F, ∇F)
     @unpack Nu, Nv, Np, Om_inv = setup.grid
     @unpack G, M, yM = setup.discretization
 
@@ -50,12 +50,12 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup)
         # boundary conditions will be set through set_bc_vectors! inside momentum
         # the pressure p is not important here, it will be removed again in the
         # next step
-        _, F_rhs = momentum(V, V, p, tᵢ, setup)
+        momentum!(F, ∇F, V, V, p, tᵢ, setup, cache)
 
         # Store right-hand side of stage i
         # by adding G*p we effectively REMOVE the pressure contribution Gx*p and Gy*p (but not the
         # vectors y_px and y_py)
-        kV[:, i] = Om_inv .* (F_rhs + G * p)
+        kV[:, i] = Om_inv .* (F + G * p)
 
         # Update velocity current stage by sum of Fᵢ's until this stage,
         # weighted with Butcher tableau coefficients
@@ -66,7 +66,7 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup)
         # the boundary conditions at tᵢ₊₁
         tᵢ = tₙ + c[i] * Δt
         if setup.bc.bc_unsteady
-            set_bc_vectors!(tᵢ, setup)
+            set_bc_vectors!(setup, tᵢ)
         end
 
         # Divergence of intermediate velocity field is directly calculated with M
@@ -86,12 +86,12 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup)
         kp[:, i] = Δp
 
         # Update velocity current stage, which is now divergence free
-        V .= Vₙ + Δt * (Vtemp - c[i] * Om_inv .* (G * Δp))
+        V .= Vₙ .+ Δt .* (Vtemp .- c[i] .* Om_inv .* (G * Δp))
     end
 
     if setup.bc.bc_unsteady
         if setup.solversettings.p_add_solve
-            pressure_additional_solve!(V, p, tₙ + Δt, setup)
+            pressure_additional_solve!(V, p, tₙ + Δt, setup, cache, F)
         else
             # Standard method
             p .= kp[:, end]
@@ -99,7 +99,7 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup)
     else
         # For steady bc we do an additional pressure solve
         # that saves a pressure solve for i = 1 in the next time step
-        pressure_additional_solve!(V, p, tₙ + Δt, setup)
+        pressure_additional_solve!(V, p, tₙ + Δt, setup, cache, F)
     end
 
     V, p
