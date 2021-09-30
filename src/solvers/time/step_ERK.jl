@@ -6,7 +6,7 @@ Perform one time step for the general explicit Runge-Kutta method (ERK).
 Dirichlet boundary points are not part of solution vector but are prescribed in a strong manner via the `ubc` and `vbc` functions.
 """
 function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup, cache, F, ∇F)
-    @unpack Nu, Nv, Np, Om_inv = setup.grid
+    @unpack Nu, Nv, Np, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
 
     ## get coefficients of RK method
@@ -51,8 +51,8 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup,
         # vectors y_px and y_py)
         kVi = @view kV[:, i]
         mul!(kV[:, i], G, p)
-        @. kV[:, i] = Om_inv * (F + kV[:, i])
-        # kV[:, i] = Om_inv .* (F + G * p)
+        @. kV[:, i] = Ω⁻¹ * (F + kV[:, i])
+        # kV[:, i] = Ω⁻¹ .* (F + G * p)
 
         # Update velocity current stage by sum of Fᵢ's until this stage,
         # weighted with Butcher tableau coefficients
@@ -88,7 +88,7 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup,
         mul!(Vtemp2, G, Δp)
 
         # Update velocity current stage, which is now divergence free
-        @. V = Vₙ + Δt * (Vtemp - c[i] * Om_inv * Vtemp2)
+        @. V = Vₙ + Δt * (Vtemp - c[i] * Ω⁻¹ * Vtemp2)
     end
 
     if setup.bc.bc_unsteady

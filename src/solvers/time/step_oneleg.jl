@@ -11,7 +11,7 @@ formulation:
 function step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup, cache)
     @unpack G, M, yM = setup.discretization
 
-    Om_inv = setup.grid.Om_inv
+    Ω⁻¹ = setup.grid.Ω⁻¹
     β = setup.time.β
 
     # Intermediate ("offstep") velocities (see paper: "DNS at lower cost")
@@ -24,7 +24,7 @@ function step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup
 
     # Take a time step with this right-hand side, this gives an
     # intermediate velocity field (not divergence free)
-    Vtemp = (2 * β * Vₙ - (β - 0.5) * Vₙ₋₁ + Δt * Om_inv .* F_rhs) / (β + 0.5)
+    Vtemp = (2 * β * Vₙ - (β - 0.5) * Vₙ₋₁ + Δt * Ω⁻¹ .* F_rhs) / (β + 0.5)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need
     # the boundary conditions at tₙ₊₁
@@ -42,7 +42,7 @@ function step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup
     Δp = pressure_poisson(f, tₙ + Δt, setup)
 
     # Update velocity field
-    V .= Vtemp .- Δtᵦ .* Om_inv .* G * Δp
+    V .= Vtemp .- Δtᵦ .* Ω⁻¹ .* G * Δp
 
     # Update pressure (second order)
     @. p = 2pₙ - pₙ₋₁ + 4 / 3 * Δp

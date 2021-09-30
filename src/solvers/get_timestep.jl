@@ -13,16 +13,16 @@ function get_timestep(setup)
             Cvx * spdiagm(Iu_vx * uₕ + yIu_vx) * Av_vx +
             Cvy * spdiagm(Iv_vy * vₕ + yIv_vy) * Av_vy
 
-        test = spdiagm(Omu_inv) * Cu
+        test = spdiagm(Ωu⁻¹) * Cu
         sum_conv_u = abs(test) * ones(Nu) - diag(abs(test)) - diag(test)
-        test = spdiagm(Omv_inv) * Cv
+        test = spdiagm(Ωv⁻¹) * Cv
         sum_conv_v = abs(test) * ones(Nv) - diag(abs(test)) - diag(test)
         λ_conv = max([max(sum_conv_u) max(sum_conv_v)])
 
         ## diffusive part
-        test = spdiagm(Omu_inv) * Diffu
+        test = spdiagm(Ωu⁻¹) * Diffu
         sum_diff_u = abs(test) * ones(Nu) - diag(abs(test)) - diag(test)
-        test = spdiagm(Omv_inv) * Diffv
+        test = spdiagm(Ωv⁻¹) * Diffv
         sum_diff_v = abs(test) * ones(Nv) - diag(abs(test)) - diag(test)
         λ_diff = max(maximum(sum_diff_u), maximum(sum_diff_v))
 

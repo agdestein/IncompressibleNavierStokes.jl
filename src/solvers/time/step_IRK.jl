@@ -3,17 +3,8 @@
 # (unsteady) Dirichlet boundary points are not part of solution vector but
 # are prescribed in a "strong" manner via the ubc and vbc functions
 function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
-    ## grid info
-    Nu = setup.grid.Nu
-    Nv = setup.grid.Nv
-    NV = Nu + Nv
-    Np = setup.grid.Np
-    Om_inv = setup.grid.Om_inv
-    Om = setup.grid.Om
-
-    G = setup.discretization.G
-    M = setup.discretization.M
-    yM = setup.discretization.yM
+    @unpack Nu, Nv, NV, Np, Ω, Ω⁻¹ = setup.grid
+    @unpack G, M, yM = setup.discretization
 
     yMn = yM
 
@@ -30,7 +21,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
 
     # extend the Butcher tableau
     Is = sparse(I, nstage, nstage)
-    Om_sNV = kron(Is, spdiagm(Om))
+    Ω_sNV = kron(Is, spdiagm(Ω))
     A_ext = kron(A, sparse(I, NV, NV))
     b_ext = kron(b', sparse(I, NV, NV))
     c_ext = spdiagm(c)
@@ -50,7 +41,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
     Mtot = kron(Is, M)
 
     # finite volumes
-    Omtot = kron(ones(nstage), Om)
+    Ωtot = kron(ones(nstage), Ω)
 
     # boundary condition for divergence operator
     if setup.bc.bc_unsteady
@@ -100,7 +91,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
     _, F_rhs, = F_multiple(Vⱼ, Vⱼ, pⱼ, tⱼ, setup, false)
 
     # initialize momentum residual
-    fmom = -(Omtot .* Vⱼ - Omtot .* Vtotₙ) / Δt + A_ext * F_rhs
+    fmom = -(Ωtot .* Vⱼ - Ωtot .* Vtotₙ) / Δt + A_ext * F_rhs
 
     # initialize mass residual
     fmass = -(Mtot * Vⱼ + yMtot)
@@ -111,7 +102,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
         # Jacobian based on current solution un
         momentum!(F_rhs, Jn, Vₙ, Vₙ, pₙ, tₙ, setup, cache, true)
         # form iteration matrix, which is now fixed during iterations
-        dfmom = Om_sNV / Δt - kron(A, Jn)
+        dfmom = Ω_sNV / Δt - kron(A, Jn)
         Z = [dfmom Gtot; Mtot Z2]
 
         # Determine LU decomposition
@@ -130,7 +121,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
             _, _, J = F_multiple(Vⱼ, Vⱼ, pⱼ, tⱼ, setup, true)
 
             # Form iteration matrix
-            dfmom = Om_sNV / Δt - A_ext * J
+            dfmom = Ω_sNV / Δt - A_ext * J
             Z = [dfmom Gtot; Mtot Z2]
 
             # Get change
@@ -148,7 +139,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
         # evaluate rhs for next iteration and check residual based on
         # computed Vⱼ, pⱼ
         _, F_rhs, = F_multiple(Vⱼ, Vⱼ, pⱼ, tⱼ, setup, false)
-        fmom = -(Omtot .* Vⱼ - Omtot .* Vtotₙ) / Δt + A_ext * F_rhs
+        fmom = -(Ωtot .* Vⱼ - Ωtot .* Vtotₙ) / Δt + A_ext * F_rhs
         fmass = -(Mtot * Vⱼ + yMtot)
 
         f = [fmom; fmass]
@@ -163,7 +154,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
     iterations = i
 
     # solution at new time step with b-coefficients of RK method
-    V .= Vₙ .+ Δt .* Om_inv .* (b_ext * F_rhs)
+    V .= Vₙ .+ Δt .* Ω⁻¹ .* (b_ext * F_rhs)
 
     # make V satisfy the incompressibility constraint at n+1; this is only
     # needed when the boundary conditions are time-dependent
@@ -173,7 +164,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
         set_bc_vectors!(setup, tₙ + Δt)
         f = 1 / Δt * (M * V + yM)
         Δp = pressure_poisson(f, tₙ + Δt, setup)
-        V .-= Δt .* Om_inv .* (G * Δp)
+        V .-= Δt .* Ω⁻¹ .* (G * Δp)
         if setup.solversettings.p_add_solve
             pressure_additional_solve!(V, p, tₙ + Δt, setup, cache, F)
         else

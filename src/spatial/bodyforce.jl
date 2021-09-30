@@ -14,7 +14,7 @@ function bodyforce!(F, ∇F, V, t, setup, getJacobian = false)
         Fy, ∇Fy = setup.force.bodyforce_y.(xv, yv, t, [setup], getJacobian)
 
         # this works for both 2nd and 4th order method
-        Fy = -Omv .* Fy[:]
+        Fy = -Ωv .* Fy[:]
 
         F[indu] .= Fx
         F[indv] .= Fy
@@ -41,7 +41,7 @@ function bodyforce(V, t, setup, getJacobian = false)
     # Fy, dFy = setup.force.bodyforce_y.(xv, yv, t, [setup], getJacobian)
 
     # # this works for both 2nd and 4th order method
-    # Fy = -Omv .* Fy[:]
+    # Fy = -Ωv .* Fy[:]
 
     @unpack Nu, Nv = setup.grid
 

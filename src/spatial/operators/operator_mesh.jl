@@ -292,69 +292,69 @@ function operator_mesh!(setup)
 
     ##
     # volume (area) of pressure control volumes
-    Omp = kron(hyi, hxi)
-    Omp_inv = 1 ./ Omp
+    Ωp = kron(hyi, hxi)
+    Ωp⁻¹ = 1 ./ Ωp
     # volume (area) of u control volumes
-    Omu = kron(hyi, gxi)
-    Omu_inv = 1 ./ Omu
+    Ωu = kron(hyi, gxi)
+    Ωu⁻¹ = 1 ./ Ωu
     # volume of ux volumes
-    Omux = kron(hyi, hxd)
+    Ωux = kron(hyi, hxd)
     # volume of uy volumes
-    Omuy = kron(gyd, gxi)
+    Ωuy = kron(gyd, gxi)
     # volume (area) of v control volumes
-    Omv = kron(gyi, hxi)
-    Omv_inv = 1 ./ Omv
+    Ωv = kron(gyi, hxi)
+    Ωv⁻¹ = 1 ./ Ωv
     # volume of vx volumes
-    Omvx = kron(gyi, gxd)
+    Ωvx = kron(gyi, gxd)
     # volume of vy volumes
-    Omvy = kron(hyd, hxi)
+    Ωvy = kron(hyd, hxi)
     # volume (area) of vorticity control volumes
-    Omvort = kron(gyi, gxi)
-    Omvort_inv = 1 ./ Omvort
-
-    Om = [Omu; Omv]
-    Om_inv = [Omu_inv; Omv_inv]
+    Ωvort = kron(gyi, gxi)
+    Ωvort⁻¹ = 1 ./ Ωvort
+\
+    Ω = [Ωu; Ωv]
+    Ω⁻¹ = [Ωu⁻¹; Ωv⁻¹]
 
     if setup.discretization.order4
         # differencing for second order operators on the fourth order mesh
-        Omux1 = kron(hyi, hxd13)
-        Omuy1 = kron(gyd13, gxi)
-        Omvx1 = kron(gyi, gxd13)
-        Omvy1 = kron(hyd13, hxi)
+        Ωux1 = kron(hyi, hxd13)
+        Ωuy1 = kron(gyd13, gxi)
+        Ωvx1 = kron(gyi, gxd13)
+        Ωvy1 = kron(hyd13, hxi)
 
         # volume (area) of pressure control volumes
-        Omp3 = kron(hyi3, hxi3)
+        Ωp3 = kron(hyi3, hxi3)
         # volume (area) of u-vel control volumes
-        Omu3 = kron(hyi3, gxi3)
+        Ωu3 = kron(hyi3, gxi3)
         # volume (area) of v-vel control volumes
-        Omv3 = kron(gyi3, hxi3)
+        Ωv3 = kron(gyi3, hxi3)
         # volume (area) of dudx control volumes
-        Omux3 = kron(hyi3, hxd3)
+        Ωux3 = kron(hyi3, hxd3)
         # volume (area) of dudy control volumes
-        Omuy3 = kron(gyd3, gxi3)
+        Ωuy3 = kron(gyd3, gxi3)
         # volume (area) of dvdx control volumes
-        Omvx3 = kron(gyi3, gxd3)
+        Ωvx3 = kron(gyi3, gxd3)
         # volume (area) of dvdy control volumes
-        Omvy3 = kron(hyd3, hxi3)
+        Ωvy3 = kron(hyd3, hxi3)
 
-        Omu1 = Omu
-        Omv1 = Omv
+        Ωu1 = Ωu
+        Ωv1 = Ωv
 
-        Omu = α * Omu1 - Omu3
-        Omv = α * Omv1 - Omv3
-        Omu_inv = 1 ./ Omu
-        Omv_inv = 1 ./ Omv
-        Om = [Omu; Omv]
-        Om_inv = [Omu_inv; Omv_inv]
+        Ωu = α * Ωu1 - Ωu3
+        Ωv = α * Ωv1 - Ωv3
+        Ωu⁻¹ = 1 ./ Ωu
+        Ωv⁻¹ = 1 ./ Ωv
+        Ω = [Ωu; Ωv]
+        Ω⁻¹ = [Ωu⁻¹; Ωv⁻¹]
 
-        Omux = @. α * Omux1 - Omux3
-        Omuy = @. α * Omuy1 - Omuy3
-        Omvx = @. α * Omvx1 - Omvx3
-        Omvy = @. α * Omvy1 - Omvy3
+        Ωux = @. α * Ωux1 - Ωux3
+        Ωuy = @. α * Ωuy1 - Ωuy3
+        Ωvx = @. α * Ωvx1 - Ωvx3
+        Ωvy = @. α * Ωvy1 - Ωvy3
 
-        Omvort1 = Omvort
-        Omvort3 = kron(gyi3, gxi3)
-        #     Omvort = α*Omvort - Omvort3;
+        Ωvort1 = Ωvort
+        Ωvort3 = kron(gyi3, gxi3)
+        # Ωvort = α*Ωvort - Ωvort3;
     end
 
     # metrics that can be useful for initialization:
@@ -410,19 +410,19 @@ function operator_mesh!(setup)
     setup.grid.N3 = N3
     setup.grid.N4 = N4
 
-    setup.grid.Omp = Omp
-    setup.grid.Omp_inv = Omp_inv
-    setup.grid.Om = Om
-    setup.grid.Omu = Omu
-    setup.grid.Omv = Omv
-    setup.grid.Om_inv = Om_inv
-    setup.grid.Omu_inv = Omu_inv
-    setup.grid.Omv_inv = Omv_inv
-    setup.grid.Omux = Omux
-    setup.grid.Omvx = Omvx
-    setup.grid.Omuy = Omuy
-    setup.grid.Omvy = Omvy
-    setup.grid.Omvort = Omvort
+    setup.grid.Ωp = Ωp
+    setup.grid.Ωp⁻¹ = Ωp⁻¹
+    setup.grid.Ω = Ω
+    setup.grid.Ωu = Ωu
+    setup.grid.Ωv = Ωv
+    setup.grid.Ω⁻¹ = Ω⁻¹
+    setup.grid.Ωu⁻¹ = Ωu⁻¹
+    setup.grid.Ωv⁻¹ = Ωv⁻¹
+    setup.grid.Ωux = Ωux
+    setup.grid.Ωvx = Ωvx
+    setup.grid.Ωuy = Ωuy
+    setup.grid.Ωvy = Ωvy
+    setup.grid.Ωvort = Ωvort
 
     setup.grid.hxi = hxi
     setup.grid.hyi = hyi
@@ -469,15 +469,15 @@ function operator_mesh!(setup)
         setup.grid.gxd3 = gxd3
         setup.grid.gyd13 = gyd13
         setup.grid.gyd3 = gyd3
-        setup.grid.Omux1 = Omux1
-        setup.grid.Omux3 = Omux3
-        setup.grid.Omuy1 = Omuy1
-        setup.grid.Omuy3 = Omuy3
-        setup.grid.Omvx1 = Omvx1
-        setup.grid.Omvx3 = Omvx3
-        setup.grid.Omvy1 = Omvy1
-        setup.grid.Omvy3 = Omvy3
-        setup.grid.Omvort3 = Omvort3
+        setup.grid.Ωux1 = Ωux1
+        setup.grid.Ωux3 = Ωux3
+        setup.grid.Ωuy1 = Ωuy1
+        setup.grid.Ωuy3 = Ωuy3
+        setup.grid.Ωvx1 = Ωvx1
+        setup.grid.Ωvx3 = Ωvx3
+        setup.grid.Ωvy1 = Ωvy1
+        setup.grid.Ωvy3 = Ωvy3
+        setup.grid.Ωvort3 = Ωvort3
     end
 
     # plot the grid: velocity points and pressure points

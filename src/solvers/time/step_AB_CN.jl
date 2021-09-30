@@ -31,7 +31,7 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
     α₂ = -1 // 2
 
     @unpack Nu, Nv, indu, indv = setup.grid.Nv
-    @unpack Omu_inv, Omv_inv, Om_inv = setup.grid
+    @unpack Ωu⁻¹, Ωv⁻¹, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Gx, Gy, y_px, y_py = setup.discretization
     @unpack yDiffu, yDiffv = setup.discretization
@@ -79,13 +79,13 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
     # right hand side of the momentum equation update
     Rur =
         uₕ +
-        Omu_inv * Δt .* (
+        Ωu⁻¹ * Δt .* (
             -(α₁ * convuₙ + α₂ * convuₙ₋₁) + (1 - θ) * Diffu * uₕ + yDiffu + Fx - Gx * pₙ -
             y_px
         )
     Rvr =
         vₕ +
-        Omv_inv * Δt .* (
+        Ωv⁻¹ * Δt .* (
             -(α₁ * convvₙ + α₂ * convvₙ₋₁) + (1 - θ) * Diffv * vₕ + yDiffv + Fy - Gy * pₙ -
             y_py
         )
@@ -114,7 +114,7 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
     Δp = pressure_poisson(f, tₙ + Δt, setup)
 
     # Update velocity field
-    V .= Vtemp .- Δt .* Om_inv .* (G * Δp .+ y_Δp)
+    V .= Vtemp .- Δt .* Ω⁻¹ .* (G * Δp .+ y_Δp)
 
     # First order pressure:
     p .= pₙ .+ Δp

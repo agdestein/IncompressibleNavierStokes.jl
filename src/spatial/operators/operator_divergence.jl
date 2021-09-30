@@ -12,7 +12,7 @@ function operator_divergence!(setup)
     @unpack Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t = setup.grid
     @unpack Nu, Nv, Np = setup.grid
     @unpack hx, hy = setup.grid
-    @unpack Om_inv = setup.grid
+    @unpack Ω⁻¹ = setup.grid
 
     order4 = setup.discretization.order4
 
@@ -186,7 +186,7 @@ function operator_divergence!(setup)
         # can be set up outside the time-stepping-loop.
 
         # Laplace = div grad
-        A = M * spdiagm(Om_inv) * G
+        A = M * spdiagm(Ω⁻¹) * G
         setup.discretization.A = A
 
         # ROM does not require Poisson solve for simple BC

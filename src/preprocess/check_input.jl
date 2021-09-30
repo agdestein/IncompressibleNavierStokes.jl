@@ -4,7 +4,7 @@ Check input.
 function check_input!(setup, V_start, p_start, t)
     @unpack is_steady, visc = setup.case
     @unpack order4, G, M, yM = setup.discretization
-    @unpack Om_inv, NV = setup.grid
+    @unpack Ω⁻¹, NV = setup.grid
     @unpack nonlinear_maxit = setup.solver_settings
     @unpack t_start, t_end, Δt, isadaptive, method, method_startup = setup.time
     @unpack save_unsteady = setup.output
@@ -81,7 +81,7 @@ function check_input!(setup, V_start, p_start, t)
         # make velocity field divergence free
         f = M * V + yM
         Δp = pressure_poisson(f, t, setup)
-        V .-= Om_inv .* (G * Δp)
+        V .-= Ω⁻¹ .* (G * Δp)
 
         # repeat conservation with updated velocity field
         maxdiv[1], umom[1], vmom[1], k[1] = check_conservation(V, t, setup)

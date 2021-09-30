@@ -18,7 +18,7 @@ function step_IRK_ROM(Vₙ, pₙ, tₙ, Δt, setup)
 
         # extend the Butcher tableau
         Is = sparse(I, nstage, nstage)
-        Om_sM = kron(Is, spdiagm(ones(M)))
+        Ω_sM = kron(Is, sparse(I, M, M))
         A_RK_ext = kron(A_RK, sparse(I, M, M))
         b_RK_ext = kron(b_RK', sparse(I, M, M))
         c_RK_ext = spdiagm(c_RK)
@@ -62,7 +62,7 @@ function step_IRK_ROM(Vₙ, pₙ, tₙ, Δt, setup)
         # Jacobian based on current solution un
         _, _, Jn = F_ROM(Rₙ, [], tₙ, setup, true)
         # form iteration matrix, which is now fixed during iterations
-        dfmom = Om_sM / Δt - kron(A_RK, Jn)
+        dfmom = Ω_sM / Δt - kron(A_RK, Jn)
         Z = dfmom
     end
 
@@ -75,7 +75,7 @@ function step_IRK_ROM(Vₙ, pₙ, tₙ, Δt, setup)
             # full Newton
             _, _, J = F_multiple_ROM(Rⱼ, [], tⱼ, setup, true)
             # form iteration matrix
-            dfmom = Om_sM / Δt - A_RK_ext * J
+            dfmom = Ω_sM / Δt - A_RK_ext * J
 
             Z = dfmom
 

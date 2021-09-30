@@ -15,7 +15,7 @@ function operator_postprocessing!(setup)
         β = setup.discretization.β
         gxi3 = setup.grid.gxi3
         gyi3 = setup.grid.gyi3
-        Omvort3 = setup.grid.Omvort3
+        Ωvort3 = setup.grid.Ωvort3
     end
 
     ## vorticity

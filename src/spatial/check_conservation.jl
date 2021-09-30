@@ -5,11 +5,14 @@ Check mass, momentum and energy conservation properties of velocity field
 """
 function check_conservation(V, t, setup)
     @unpack M, yM = setup.discretization
-    @unpack indu, indv, Omu, Omv, x, y, xp, yp, hx, hy, gx, gy = setup.grid
+    @unpack indu, indv, Ω, x, y, xp, yp, hx, hy, gx, gy = setup.grid
     @unpack u_bc, v_bc = setup.bc
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
+
+    Ωu = @view Ω[indu]
+    Ωv = @view Ω[indv]
 
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, t)
@@ -24,8 +27,8 @@ function check_conservation(V, t, setup)
     maxdiv = maximum(abs.(M * V + yM))
 
     # calculate total momentum
-    umom = sum(Omu .* uₕ)
-    vmom = sum(Omv .* vₕ)
+    umom = sum(Ωu .* uₕ)
+    vmom = sum(Ωv .* vₕ)
 
     # add boundary contributions in case of Dirichlet BC
     if setup.bc.u.left == "dir"
@@ -41,22 +44,21 @@ function check_conservation(V, t, setup)
         vmom += sum(vUp_i .* hx) * gy[end]
     end
 
-
-    # Calculate total kinetic energy (this equals 0.5*V'*(Omega.*V))
-    k = 0.5 * sum(Omu .* uₕ .^ 2) + 0.5 * sum(Omv .* vₕ .^ 2)
+    # Calculate total kinetic energy
+    k = 1 / 2 * sum(Ω .* V .^ 2)
 
     # Add boundary contributions in case of Dirichlet BC
     if setup.bc.u.left == "dir"
-        k += 0.5 * sum(uLe_i .^ 2 .* hy) * gx[1]
+        k += 1 / 2 * sum(uLe_i .^ 2 .* hy) * gx[1]
     end
     if setup.bc.u.right == "dir"
-        k += 0.5 * sum(uRi_i .^ 2 .* hy) * gx[end]
+        k += 1 / 2 * sum(uRi_i .^ 2 .* hy) * gx[end]
     end
     if setup.bc.v.low == "dir"
-        k += 0.5 * sum(vLo_i .^ 2 .* hx) * gy[1]
+        k += 1 / 2 * sum(vLo_i .^ 2 .* hx) * gy[1]
     end
     if setup.bc.v.up == "dir"
-        k += 0.5 * sum(vUp_i .^ 2 .* hx) * gy[end]
+        k += 1 / 2 * sum(vUp_i .^ 2 .* hx) * gy[end]
     end
 
     maxdiv, umom, vmom, k
