@@ -15,17 +15,12 @@ function solve_steady!(solution, setup)
     # Solution
     @unpack V, p, t, Δt, n, maxres, maxdiv, k, vmom, nonlinear_its, time, umom = solution
 
-    Z2 = spzeros(Np, Np)
-
-    # Right hand side
-    f = zeros(NV+Np)
-
     # Temporary variables
     cache = MomentumCache(setup)
     F = zeros(NV)
+    f = zeros(NV+Np)
     ∇F = spzeros(NV, NV)
-
-    Newton = false
+    Z2 = spzeros(Np, Np)
 
     maxres[2] = maxres[1]
 
