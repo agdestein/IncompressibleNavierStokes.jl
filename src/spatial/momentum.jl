@@ -28,15 +28,12 @@ function momentum!(F, ∇F, V, ϕ, p, t, setup, cache = MomentumCache(setup), ge
 
     Gpx = @view Gp[indu]
     Gpy = @view Gp[indv]
+    Fx = @view Gp[indu]
+    Fy = @view Gp[indv]
 
     # Unsteady BC
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, t)
-    end
-
-    if !nopressure
-        Gpx .= Gx * p .+ y_px
-        Gpy .= Gy * p .+ y_py
     end
 
     # Convection
@@ -54,7 +51,10 @@ function momentum!(F, ∇F, V, ϕ, p, t, setup, cache = MomentumCache(setup), ge
     # nopressure = false is the most common situation, in which we return the entire
     # right-hand side vector
     if !nopressure
-        F .-= Gp
+        mul!(Gpx, Gx, p)
+        mul!(Gpy, Gy, p)
+        @. Fx -= Gpx + y_px
+        @. Fy -= Gpy + y_py
     end
 
     if getJacobian

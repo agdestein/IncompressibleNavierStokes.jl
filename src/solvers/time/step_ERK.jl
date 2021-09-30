@@ -5,7 +5,7 @@ Perform one time step for the general explicit Runge-Kutta method (ERK).
 
 Dirichlet boundary points are not part of solution vector but are prescribed in a strong manner via the `ubc` and `vbc` functions.
 """
-function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache, F, ∇F)
+function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup, cache, F, ∇F)
     @unpack Nu, Nv, Np, Om_inv = setup.grid
     @unpack G, M, yM = setup.discretization
 
@@ -26,12 +26,6 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache, F, ∇F)
     # store variables at start of time step
     V .= Vₙ
     p .= pₙ
-
-    # right hand side evaluations, initialized at zero
-    kV = zeros(Nu + Nv, nstage)
-
-    # array for the pressure
-    kp = zeros(Np, nstage)
 
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ)
@@ -55,12 +49,15 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache, F, ∇F)
         # Store right-hand side of stage i
         # by adding G*p we effectively REMOVE the pressure contribution Gx*p and Gy*p (but not the
         # vectors y_px and y_py)
-        kV[:, i] = Om_inv .* (F + G * p)
+        kVi = @view kV[:, i]
+        mul!(kV[:, i], G, p)
+        @. kV[:, i] = Om_inv * (F + kV[:, i])
+        # kV[:, i] = Om_inv .* (F + G * p)
 
         # Update velocity current stage by sum of Fᵢ's until this stage,
         # weighted with Butcher tableau coefficients
         # this gives uᵢ₊₁, and for i=s gives uᵢ₊₁
-        Vtemp = kV * A[i, :]
+        mul!(Vtemp, kV, A[i, :])
 
         # To make the velocity field uᵢ₊₁ at tᵢ₊₁ divergence-free we need
         # the boundary conditions at tᵢ₊₁
@@ -70,7 +67,10 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache, F, ∇F)
         end
 
         # Divergence of intermediate velocity field is directly calculated with M
-        f = (M * (Vₙ / Δt + Vtemp) + yM / Δt) / c[i]
+        @. Vtemp2 = Vₙ / Δt + Vtemp
+        mul!(f, M, Vtemp2)
+        @. f = (f + yM / Δt) / c[i]
+        # f = (M * (Vₙ / Δt + Vtemp) + yM / Δt) / c[i]
 
         # Solve the Poisson equation for the pressure, but not for the first
         # step if the boundary conditions are steady
@@ -83,10 +83,12 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache, F, ∇F)
         end
 
         # Store pressure
-        kp[:, i] = Δp
+        kp[:, i] .= Δp
+
+        mul!(Vtemp2, G, Δp)
 
         # Update velocity current stage, which is now divergence free
-        V .= Vₙ .+ Δt .* (Vtemp .- c[i] .* Om_inv .* (G * Δp))
+        @. V = Vₙ + Δt * (Vtemp - c[i] * Om_inv * Vtemp2)
     end
 
     if setup.bc.bc_unsteady

@@ -11,7 +11,7 @@ function solve_unsteady!(solution, setup)
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
         setup.solver_settings
     @unpack use_rom = setup.rom
-    @unpack isadaptive, method, method_startup = setup.time
+    @unpack isadaptive, method, method_startup, rk_method = setup.time
     @unpack save_unsteady = setup.output
     @unpack do_rtp, rtp_n = setup.visualization
 
@@ -31,6 +31,13 @@ function solve_unsteady!(solution, setup)
     cache = MomentumCache(setup)
     F = zeros(NV)
     ∇F = spzeros(NV, NV)
+    Vtemp = zeros(NV)
+    Vtemp2 = zeros(NV)
+    f = zeros(Np)
+
+    # Runge Kutta intermediate stages
+    kV = zeros(NV, nstage(rk_method))
+    kp = zeros(Np, nstage(rk_method))
 
     # for methods that need uₙ₋₁
     Vₙ₋₁ = copy(V)
@@ -78,6 +85,8 @@ function solve_unsteady!(solution, setup)
         pₙ .= p
         tₙ = t
 
+        # @show t
+
         # for methods that need a velocity field at n-1 the first time step
         # (e.g. AB-CN, oneleg beta) use ERK or IRK
         if method_temp ∈ [2, 5] && n ≤ method_startup_no
@@ -94,7 +103,7 @@ function solve_unsteady!(solution, setup)
         elseif method == 5
             step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup, cache)
         elseif method == 20
-            step_ERK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache, F, ∇F)
+            step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup, cache, F, ∇F)
         elseif method == 21
             V, p, nonlinear_its[n] = step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
         else

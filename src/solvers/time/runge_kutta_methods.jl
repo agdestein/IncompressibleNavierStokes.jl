@@ -47,7 +47,7 @@ struct RIIA3 <: RungeKuttaMethod end
 struct LIIIA2 <: RungeKuttaMethod end
 struct LIIIA3 <: RungeKuttaMethod end
 
-#Chebyshev methods
+# Chebyshev methods
 struct CHDIRK3 <: RungeKuttaMethod end
 struct CHCONS3 <: RungeKuttaMethod end
 struct CHC3 <: RungeKuttaMethod end
@@ -76,6 +76,8 @@ struct NSSP32 <: RungeKuttaMethod end
 struct NSSP33 <: RungeKuttaMethod end
 struct NSSP53 <: RungeKuttaMethod end
 
+nstage(rkm::RungeKuttaMethod) = length(tableau(rkm)[2])
+
 r = 0
 
 """
@@ -88,7 +90,7 @@ For families of methods, optional input `s` is the number of stages.
 function tableau end
 
 ##================Explicit Methods=========================
-function tableau(::FE11, s = 1)
+function tableau(::FE11)
     #Forward Euler
     s = 1
     r = 1
@@ -97,7 +99,7 @@ function tableau(::FE11, s = 1)
     c = [0]
     A, b, c, r
 end
-function tableau(::SSP22, s = 1)
+function tableau(::SSP22)
     s = 2
     r = 1
     A = [0 0; 1 0]
@@ -105,7 +107,7 @@ function tableau(::SSP22, s = 1)
     c = sum(A; dims = 2)
     A, b, c, r
 end
-function tableau(::SSP42, s = 1)
+function tableau(::SSP42)
     s = 4
     r = 3
     A = [0 0 0 0; 1//3 0 0 0; 1//3 1//3 0 0; 1//3 1//3 1//3 0]
@@ -113,7 +115,7 @@ function tableau(::SSP42, s = 1)
     c = sum(A; dims = 2)
     A, b, c, r
 end
-function tableau(::SSP33, s = 1)
+function tableau(::SSP33)
     s = 3
     r = 1
     A = [0 0 0; 1 0 0; 1//4 1//4 0]
@@ -121,7 +123,7 @@ function tableau(::SSP33, s = 1)
     c = sum(A; dims = 2)
     A, b, c, r
 end
-function tableau(::SSP43, s = 1)
+function tableau(::SSP43)
     s = 4
     r = 2
     A = [0 0 0 0; 1//2 0 0 0; 1//2 1//2 0 0; 1//6 1//6 1//6 0]
@@ -129,7 +131,7 @@ function tableau(::SSP43, s = 1)
     c = sum(A; dims = 2)
     A, b, c, r
 end
-function tableau(::SSP104, s = 1)
+function tableau(::SSP104)
     s = 10
     r = 6
     α0 = diag(-1 => ones(1, s - 1))
@@ -158,7 +160,7 @@ function tableau(::rSSPs2, s = 1)
 end
 function tableau(::rSSPs3, s = 1)
     #Rational (optimal, low-storage) s^2-stage 3rd order SSP
-    if round(sqrt(s)) != sqrt(s) || s < 4
+    if !(round(sqrt(s)) ≈ sqrt(s)) || s < 4
         error("Explicit third order SSP family requires s = n^2, n > 1")
     end
     n = s^2
@@ -173,7 +175,7 @@ function tableau(::rSSPs3, s = 1)
     c = sum(A; dims = 2)
     A, b, c, r
 end
-function tableau(::Wray3, s = 1)
+function tableau(::Wray3)
     # Wray"s RK3
     A = zeros(Rational, 3, 3)
     A[2, 1] = 8 // 15
@@ -184,7 +186,7 @@ function tableau(::Wray3, s = 1)
     r = 0 # ?
     A, b, c, r
 end
-function tableau(::RK56, s = 1)
+function tableau(::RK56)
     A = [
         0 0 0 0 0 0
         1//4 0 0 0 0 0
@@ -197,7 +199,7 @@ function tableau(::RK56, s = 1)
     c = [0, 1 // 4, 1 // 4, 1 // 2, 3 // 4, 1]
     A, b, c, r
 end
-function tableau(::DOPRI6, s = 1)
+function tableau(::DOPRI6)
     # Dormand-Price pair
     A = [
         0 0 0 0 0 0
@@ -214,7 +216,7 @@ function tableau(::DOPRI6, s = 1)
 end
 
 ##================Implicit Methods=========================
-function tableau(::BE11, s = 1)
+function tableau(::BE11)
     #Backward Euler
     s = 1
     r = 1.e10
@@ -223,7 +225,7 @@ function tableau(::BE11, s = 1)
     c = [1]
     A, b, c, r
 end
-function tableau(::SDIRK34, s = 1)
+function tableau(::SDIRK34)
     #3-stage, 4th order singly diagonally implicit (SSP)
     s = 3
     r = 1.7588
@@ -240,7 +242,7 @@ function tableau(::SDIRK34, s = 1)
 end
 function tableau(::ISSPm2, s = 1)
     #Optimal DIRK SSP schemes of order 2
-    r = 2 * s
+    # r = 2 * s
     i = repmat(1:s, 1, s)
     j = repmat(1:s, s, 1)
     A = 1 // s * (j < i) + 1 // (2 * s) * (i == j)
@@ -263,20 +265,20 @@ function tableau(::ISSPs3, s = 1)
 end
 
 ##===================Half explicit methods========================
-function tableau(::HEM3, s = 1)
+function tableau(::HEM3)
     # Brasey and Hairer
     A = [0 0 0; 1//3 0 0; -1 2 0]
     b = [0, 3 // 4, 1 // 4]
     c = sum(A; dims = 2)
     A, b, c, r
 end
-function tableau(::HEM3BS, s = 1)
+function tableau(::HEM3BS)
     A = [0 0 0; 1//2 0 0; -1 2 0]
     b = [1 // 6, 2 // 3, 1 // 6]
     c = sum(A; dims = 2)
     A, b, c, r
 end
-function tableau(::HEM5, s = 1)
+function tableau(::HEM5)
     # Brasey and Hairer, 5 stage, 4th order
     A = [
         0 0 0 0 0
@@ -293,14 +295,14 @@ end
 ##================Classical Methods=========================
 
 #Gauss-Legendre methods -- order 2s
-function tableau(::GL1, s = 1)
+function tableau(::GL1)
     r = 2
     A = fill(1 // 2, 1, 1)
     b = [1]
     c = [1 // 2]
     A, b, c, r
 end
-function tableau(::GL2, s = 1)
+function tableau(::GL2)
     r = 0
     A = [
         1/4 1/4-sqrt(3)/6
@@ -310,7 +312,7 @@ function tableau(::GL2, s = 1)
     c = [1 / 2 - sqrt(3) / 6, 1 / 2 + sqrt(3) / 6]
     A, b, c, r
 end
-function tableau(::GL3, s = 1)
+function tableau(::GL3)
     r = 0
     A = [
         5/36 (80-24*sqrt(15))/360 (50-12*sqrt(15))/360
@@ -323,7 +325,7 @@ function tableau(::GL3, s = 1)
 end
 
 #Radau IA methods -- order 2s-1
-function tableau(::RIA1, s = 1)
+function tableau(::RIA1)
     # this is implicit Euler
     r = 1
     A = fill(1, 1, 1)
@@ -331,7 +333,7 @@ function tableau(::RIA1, s = 1)
     c = [0]
     A, b, c, r
 end
-function tableau(::RIA2, s = 1)
+function tableau(::RIA2)
     r = 0
     A = [
         1//4 -1//4
@@ -341,7 +343,7 @@ function tableau(::RIA2, s = 1)
     c = [0, 2 // 3]
     A, b, c, r
 end
-function tableau(::RIA3, s = 1)
+function tableau(::RIA3)
     r = 0
     A = [
         1/9 (-1-sqrt(6))/18 (-1+sqrt(6))/18
@@ -354,14 +356,14 @@ function tableau(::RIA3, s = 1)
 end
 
 #Radau IIA methods -- order 2s-1
-function tableau(::RIIA1, s = 1)
+function tableau(::RIIA1)
     r = 1
     A = 1
     b = 1
     c = 1
     A, b, c, r
 end
-function tableau(::RIIA2, s = 1)
+function tableau(::RIIA2)
     r = 0
     A = [
         5//12 -1//12
@@ -371,7 +373,7 @@ function tableau(::RIIA2, s = 1)
     c = [1 // 3, 1]
     A, b, c, r
 end
-function tableau(::RIIA3, s = 1)
+function tableau(::RIIA3)
     r = 0
     A = [
         (88-7*sqrt(6))/360 (296-169*sqrt(6))/1800 (-2+3*sqrt(6))/225
@@ -385,7 +387,7 @@ function tableau(::RIIA3, s = 1)
 end
 
 # Lobatto IIIA methods -- order 2s-2
-function tableau(::LIIIA2, s = 1)
+function tableau(::LIIIA2)
     r = 0
     A = [
         0 0
@@ -395,7 +397,7 @@ function tableau(::LIIIA2, s = 1)
     c = [0, 1]
     A, b, c, r
 end
-function tableau(::LIIIA3, s = 1)
+function tableau(::LIIIA3)
     r = 0
     A = [
         0 0 0
@@ -408,7 +410,7 @@ function tableau(::LIIIA3, s = 1)
 end
 
 # Chebyshev methods
-function tableau(::CHDIRK3, s = 1)
+function tableau(::CHDIRK3)
     # Chebyshev based DIRK (not algebraically stable)
     A = [
         0 0 0
@@ -420,7 +422,7 @@ function tableau(::CHDIRK3, s = 1)
     r = 0
     A, b, c, r
 end
-function tableau(::CHCONS3, s = 1)
+function tableau(::CHCONS3)
     A = [
         1//12 -1//6 1//12
         5//24 1//3 -1//24
@@ -431,7 +433,7 @@ function tableau(::CHCONS3, s = 1)
     r = 0
     A, b, c, r
 end
-function tableau(::CHC3, s = 1)
+function tableau(::CHC3)
     # Chebyshev quadrature and C(3) satisfied
     # note this equals Lobatto IIIA
     A = [
@@ -443,7 +445,7 @@ function tableau(::CHC3, s = 1)
     c = [0, 1 // 2, 1]
     A, b, c, r
 end
-function tableau(::CHC5, s = 1)
+function tableau(::CHC5)
     A = [
         0 0 0 0 0
         0.059701779686442 0.095031716019062 -0.012132034355964 0.006643368370744 -0.002798220313558
@@ -457,7 +459,7 @@ function tableau(::CHC5, s = 1)
 end
 
 ##==================Miscellaneous Methods================
-function tableau(::Mid22, s = 1)
+function tableau(::Mid22)
     #Midpoint 22 method
     s = 2
     r = 0.5
@@ -469,7 +471,7 @@ function tableau(::Mid22, s = 1)
     c = [0, 1 // 2]
     A, b, c, r
 end
-function tableau(::MTE22, s = 1)
+function tableau(::MTE22)
     #Minimal truncation error 22 method (Heun)
     s = 2
     r = 0.5
@@ -481,7 +483,7 @@ function tableau(::MTE22, s = 1)
     c = [0, 2 // 3]
     A, b, c, r
 end
-function tableau(::CN22, s = 1)
+function tableau(::CN22)
     #Crank-Nicholson
     s = 2
     r = 2
@@ -493,7 +495,7 @@ function tableau(::CN22, s = 1)
     c = [0, 1]
     A, b, c, r
 end
-function tableau(::Heun33, s = 1)
+function tableau(::Heun33)
     s = 3
     r = 0
     A = [0 0 0; 1//3 0 0; 0 2//3 0]
@@ -501,21 +503,21 @@ function tableau(::Heun33, s = 1)
     c = sum(A; dims = 2)
     A, b, c, r
 end
-function tableau(::RK33C2, s = 1)
+function tableau(::RK33C2)
     # RK3 satisfying C(2) for i=3
     A = [0 0 0; 2//3 0 0; 1//3 1//3 0]
     b = [1 // 4, 0, 3 // 4]
     c = [0, 2 // 3, 2 // 3]
     A, b, c, r
 end
-function tableau(::RK33P2, s = 1)
+function tableau(::RK33P2)
     # RK3 satisfying the second order condition for the pressure
     A = [0 0 0; 1//3 0 0; -1 2 0]
     b = [0, 3 // 4, 1 // 4]
     c = [0, 1 // 3, 1]
     A, b, c, r
 end
-function tableau(::RK44, s = 1)
+function tableau(::RK44)
     # Classical fourth order
     s = 4
     r = 0
@@ -524,21 +526,21 @@ function tableau(::RK44, s = 1)
     c = sum(A; dims = 2)
     A, b, c, r
 end
-function tableau(::RK44C2, s = 1)
+function tableau(::RK44C2)
     # RK4 satisfying C(2) for i=3
     A = [0 0 0 0; 1//4 0 0 0; 0 1//2 0 0; 1 -2 2 0]
     b = [1 // 6, 0, 2 // 3, 1 // 6]
     c = [0, 1 // 4, 1 // 2, 1]
     A, b, c, r
 end
-function tableau(::RK44C23, s = 1)
+function tableau(::RK44C23)
     # RK4 satisfying C(2) for i=3 and c2=c3
     A = [0 0 0 0; 1//2 0 0 0; 1//4 1//4 0 0; 0 -1 2 0]
     b = [1 // 6, 0, 2 // 3, 1 // 6]
     c = [0, 1 // 2, 1 // 2, 1]
     A, b, c, r
 end
-function tableau(::RK44P2, s = 1)
+function tableau(::RK44P2)
     # RK4 satisfying the second order condition for the pressure (but not third
     # order)
     A = [0 0 0 0; 1 0 0 0; 3//8 1//8 0 0; -1//8 -3//8 3//2 0]
@@ -548,7 +550,7 @@ function tableau(::RK44P2, s = 1)
 end
 
 ##===================DSRK Methods========================
-function tableau(::DSso2, s = 1)
+function tableau(::DSso2)
     #CBM"s DSRKso2
     s = 2
     isdsrk = 1
@@ -564,7 +566,7 @@ function tableau(::DSso2, s = 1)
     c = [1 // 2, 1]
     A, b, c, r
 end
-function tableau(::DSRK2, s = 1)
+function tableau(::DSRK2)
     #CBM"s DSRK2
     s = 2
     A = [
@@ -579,7 +581,7 @@ function tableau(::DSRK2, s = 1)
     c = [0, 1]
     A, b, c, r
 end
-function tableau(::DSRK3, s = 1)
+function tableau(::DSRK3)
     #Zennaro"s DSRK3
     s = 3
     isdsrk = 1
@@ -599,8 +601,8 @@ function tableau(::DSRK3, s = 1)
 end
 
 ##==================="Non-SSP" Methods of Wong & Sπteri========================
-function tableau(::NSSP21, s = 1)
-    m = 2
+function tableau(::NSSP21)
+    s = 2
     r = 0
     A = [
         0 0
@@ -610,8 +612,8 @@ function tableau(::NSSP21, s = 1)
     c = [0, 3 // 4]
     A, b, c, r
 end
-function tableau(::NSSP32, s = 1)
-    m = 3
+function tableau(::NSSP32)
+    s = 3
     r = 0
     A = [
         0 0 0
@@ -622,8 +624,8 @@ function tableau(::NSSP32, s = 1)
     c = [0, 1 // 3, 1]
     A, b, c, r
 end
-function tableau(::NSSP33, s = 1)
-    m = 3
+function tableau(::NSSP33)
+    s = 3
     r = 0
     A = [
         0 0 0
@@ -634,8 +636,8 @@ function tableau(::NSSP33, s = 1)
     c = [0, -4 // 9, 2 // 3]
     A, b, c, r
 end
-function tableau(::NSSP53, s = 1)
-    m = 5
+function tableau(::NSSP53)
+    s = 5
     r = 0
     A = [
         0 0 0 0 0
