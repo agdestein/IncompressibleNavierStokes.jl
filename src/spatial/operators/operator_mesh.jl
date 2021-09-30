@@ -1,5 +1,5 @@
 function operator_mesh!(setup)
-    bc =  setup.bc
+    bc = setup.bc
     order4 = setup.discretization.order4
     α = setup.discretization.α
 

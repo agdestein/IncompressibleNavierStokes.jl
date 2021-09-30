@@ -115,7 +115,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
         Z = [dfmom Gtot; Mtot Z2]
 
         # Determine LU decomposition
-        Z_fact = factorize(Z);
+        Z_fact = factorize(Z)
     end
 
     while maximum(abs.(f)) > setup.solversettings.nonlinear_acc
@@ -124,7 +124,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
             # ΔQⱼ = Z \ f
 
             # Re-use the decomposition
-            ΔQⱼ = Z_fact \ f;
+            ΔQⱼ = Z_fact \ f
         elseif setup.solversettings.nonlinear_Newton == "full"
             # Full Newton
             _, _, J = F_multiple(Vⱼ, Vⱼ, pⱼ, tⱼ, setup, true)

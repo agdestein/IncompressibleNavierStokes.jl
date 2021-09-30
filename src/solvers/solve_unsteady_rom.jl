@@ -3,5 +3,4 @@
 
 Solve ke.
 """
-function solve_unsteady_rom!(solution, setup)
-end
+function solve_unsteady_rom!(solution, setup) end

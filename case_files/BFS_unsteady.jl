@@ -106,7 +106,7 @@ function BFS_unsteady()
 
     # Visualization settings
     setup.visualization.plotgrid = false                   # plot gridlines and pressure points
-    setup.visualization.do_rtp = false                     # real time plotting
+    setup.visualization.do_rtp = true                      # real time plotting
     setup.visualization.rtp_type = "velocity"              # "velocity", "quiver", "vorticity" or "pressure"
     setup.visualization.rtp_n = 5                          # Number of iterations between real time plots
 
@@ -218,8 +218,7 @@ function BFS_unsteady()
 
     Get body force (`y`-component) at point `(x, y)` at time `t`.
     """
-    setup.force.bodyforce_y = function bodyforce_y(V, t, setup, getJacobian = false)
-    end
+    setup.force.bodyforce_y = function bodyforce_y(V, t, setup, getJacobian = false) end
 
     function Fp(x, y, t, setup, getJacobian = false)
         # at pressure points, for pressure solution

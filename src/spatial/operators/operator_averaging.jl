@@ -55,7 +55,7 @@ function operator_averaging!(setup)
     ## Averaging operators, v-component
 
     ## Av_vx: evaluate v at vx location
-    diag1 = weight * ones(Nvx_t-1)
+    diag1 = weight * ones(Nvx_t - 1)
     A1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => diag1, 1 => diag1)
 
     # boundary conditions
@@ -67,7 +67,7 @@ function operator_averaging!(setup)
 
 
     ## Av_vy: evaluate v at vy location
-    diag1 = weight * ones(Nvy_t-1)
+    diag1 = weight * ones(Nvy_t - 1)
     A1D = spdiagm(Nvy_t - 1, Nvy_t, 0 => diag1, 1 => diag1)
 
     # boundary conditions
@@ -145,7 +145,8 @@ function operator_averaging!(setup)
             bc_av3(Nvy_t + 4, Nvy_in, Nvy_t + 4 - Nvy_in, bc.v.low, bc.v.up, hy[1], hy[end])
         # extend to 2D
         Av_vy3 = kron(A1D3 * Av_vy_bc3.B1D, sparse(I, Nvx_in, Nvx_in))
-        Av_vy_bc3 = (; Av_vy_bc3..., Bbc = kron(A1D3 * Av_vy_bc3.Btemp, sparse(I, Nvx_in, Nvx_in)))
+        Av_vy_bc3 =
+            (; Av_vy_bc3..., Bbc = kron(A1D3 * Av_vy_bc3.Btemp, sparse(I, Nvx_in, Nvx_in)))
     end
 
     ## store in setup structure

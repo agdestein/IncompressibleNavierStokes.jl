@@ -3,5 +3,4 @@
 
 Solve ibm.
 """
-function solve_steady_ibm!(solution, setup)
-end
+function solve_steady_ibm!(solution, setup) end

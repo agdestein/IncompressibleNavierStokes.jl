@@ -2,12 +2,16 @@ using IncompressibleNavierStokes
 using GLMakie
 
 ## Load input parameters and constants
-case_name = "BFS_unsteady"
+case_name = "LDC"
+# case_name = "BFS_unsteady"
 include("case_files/$case_name.jl")
 setup = eval(:($(Symbol(case_name))()))
 
 ##
-@profview V, p, setup, totaltime = main(setup)
+@profview main(setup)
+
+##
+V, p, setup, totaltime, solution = main(setup)
 
 ##
 # Turbulence constants
@@ -33,7 +37,7 @@ set_bc_vectors!(setup, t)
 # Input checking
 solution = check_input!(setup, V_start, p_start, t)
 
-# Choose between steady and unsteady
+## Choose between steady and unsteady
 if setup.case.is_steady
     # Steady
     if setup.case.visc == "keps"
@@ -79,3 +83,6 @@ end
 
 ## Post-processing
 postprocess(solution, setup)
+plot_vorticity(solution, setup)
+plot_pressure(solution, setup)
+plot_streamfunction(solution, setup)

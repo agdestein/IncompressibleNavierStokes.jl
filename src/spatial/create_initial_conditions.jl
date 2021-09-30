@@ -4,7 +4,7 @@
 Create initial vectors.
 """
 function create_initial_conditions(setup)
-    t = setup.time.t_start;
+    t = setup.time.t_start
 
     # Grid points for u, v, and p
     @unpack xu, yu, xv, yv, xpp, ypp = setup.grid
@@ -22,7 +22,7 @@ function create_initial_conditions(setup)
     p .= setup.case.initial_pressure.(xpp, ypp, [setup])
 
     # Stack all u components and v components
-    V = [u[:]; v[:]];
+    V = [u[:]; v[:]]
 
     V, p, t
 end

@@ -2,7 +2,7 @@ function operator_postprocessing!(setup)
     # construct postprocessing operators such as vorticity
 
     # boundary conditions
-    bc =  setup.bc
+    bc = setup.bc
 
     @unpack Nx, Ny = setup.grid
     @unpack hx, hy, gx, gy = setup.grid

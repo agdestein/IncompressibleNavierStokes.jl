@@ -8,7 +8,7 @@ function operator_turbulent_diffusion!(setup)
     # averaging weight:
     weight = 1 / 2
 
-    bc =  setup.bc
+    bc = setup.bc
 
     # number of interior points and boundary points
     @unpack Npx, Npy = setup.grid

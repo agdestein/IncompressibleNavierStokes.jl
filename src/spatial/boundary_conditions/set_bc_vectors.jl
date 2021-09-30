@@ -1,7 +1,7 @@
 """
     set_bc_vectors!(setup, t)
 
-Construct boundary conditions
+Construct boundary conditions.
 """
 function set_bc_vectors!(setup, t)
     @unpack is_steady, visc = setup.case
@@ -282,8 +282,8 @@ function set_bc_vectors!(setup, t)
             vLe_ext = [0; vLe]
             vRi_ext = [0; vRi]
         elseif setup.bc.v.low == "pres"
-            vLe_ext = [vLe[2]; vLe] # zero gradient
-            vRi_ext = [vRi[2]; vRi] # zero gradient
+            vLe_ext = [vLe[2]; vLe]
+            vRi_ext = [vRi[2]; vRi]
         end
         if setup.bc.v.up == "dir"
             vLe_ext = [vLe_ext; 2 * vLe[end] - vLe[end-1]]
@@ -292,8 +292,8 @@ function set_bc_vectors!(setup, t)
             vLe_ext = [vLe_ext; 0]
             vRi_ext = [vRi_ext; 0]
         elseif setup.bc.v.up == "pres"
-            vLe_ext = [vLe_ext; vLe[end-1]] # zero gradient
-            vRi_ext = [vRi_ext; vRi[end-1]] # zero gradient
+            vLe_ext = [vLe_ext; vLe[end-1]]
+            vRi_ext = [vRi_ext; vRi[end-1]]
         end
         ybc3 = kron(vLe_ext, Iv_uy_bc_lr3.ybc1) + kron(vRi_ext, Iv_uy_bc_lr3.ybc2)
         yIv_uy_lr3 = Iv_uy_bc_lr3.Bbc * ybc3
@@ -319,8 +319,8 @@ function set_bc_vectors!(setup, t)
             uLo_ext = [0; uLo]
             uUp_ext = [0; uUp]
         elseif setup.bc.u.left == "pres"
-            uLo_ext = [uLo[2]; uLo] # zero gradient
-            uUp_ext = [uUp[2]; uUp] # zero gradient
+            uLo_ext = [uLo[2]; uLo]
+            uUp_ext = [uUp[2]; uUp]
         end
         if setup.bc.u.right == "dir"
             uLo_ext = [uLo_ext; 2 * uLo[end] - uLo[end-1]]
@@ -329,8 +329,8 @@ function set_bc_vectors!(setup, t)
             uLo_ext = [uLo_ext; 0]
             uUp_ext = [uUp_ext; 0]
         elseif setup.bc.u.right == "pres"
-            uLo_ext = [uLo_ext; uLo[end-1]] # zero gradient
-            uUp_ext = [uUp_ext; uUp[end-1]] # zero gradient
+            uLo_ext = [uLo_ext; uLo[end-1]]
+            uUp_ext = [uUp_ext; uUp[end-1]]
         end
         ybc3 = kron(Iu_vx_bc_lu3.ybc1, uLo_ext) + kron(Iu_vx_bc_lu3.ybc2, uUp_ext)
         yIu_vx_lu3 = Iu_vx_bc_lu3.Bbc * ybc3
@@ -341,8 +341,6 @@ function set_bc_vectors!(setup, t)
     end
 
     # Iv_vy
-    # vLo_i = interp1(x, vLo, xp);
-    # vUp_i = interp1(x, vUp, xp);
     ybc = kron(Iv_vy_bc.ybc1, vLo_i) + kron(Iv_vy_bc.ybc2, vUp_i)
     yIv_vy = Iv_vy_bc.Bbc * ybc
     if order4

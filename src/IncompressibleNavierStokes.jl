@@ -5,7 +5,8 @@ using LinearAlgebra: Factorization, I, cholesky, factorize, ldiv!, mul!
 using SparseArrays: SparseMatrixCSC, blockdiag, sparse, spdiagm, spzeros
 using UnPack: @unpack
 # using Plots: contour, contourf, title!
-using Makie: Axis, Colorbar, DataAspect, Figure, Node, contourf, contourf!, limits!, lines!, record
+using Makie:
+    Axis, Colorbar, DataAspect, Figure, Node, contourf, contourf!, limits!, lines!, record
 
 # Setup
 include("solvers/time/runge_kutta_methods.jl")

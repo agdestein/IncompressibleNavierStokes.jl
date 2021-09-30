@@ -88,7 +88,7 @@ function LDC()
     # Accuracy for non-linear solves (method 62 = 72 = 9)
     setup.solver_settings.nonlinear_acc = 1e-14    # Absolute accuracy
     setup.solver_settings.nonlinear_relacc = 1e-14 # Relative accuracy
-    setup.solver_settings.nonlinear_maxit = 50     # Maximum number of iterations
+    setup.solver_settings.nonlinear_maxit = 10     # Maximum number of iterations
 
     # "no": do not compute Jacobian, but approximate iteration matrix with I/Δt
     # "approximate: approximate Newton build Jacobian once at beginning of nonlinear iterations

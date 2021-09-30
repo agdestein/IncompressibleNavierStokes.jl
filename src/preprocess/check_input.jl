@@ -28,8 +28,7 @@ function check_input!(setup, V_start, p_start, t)
     n = 1
 
     # initial velocity field
-    V = V_start # [uₕ; vₕ]
-    V_old = V
+    V = copy(V_start) # [uₕ; vₕ]
 
     if visc == "keps"
         kth = kt[:]
@@ -120,8 +119,8 @@ function check_input!(setup, V_start, p_start, t)
     end
 
     # residual of momentum equations at start
-    Fres, =  momentum(V, V, p, t, setup, false)
-    maxres[1] = maximum(abs.(Fres))
+    F, = momentum(V, V, p, t, setup, false)
+    maxres[1] = maximum(abs.(F))
 
     if !is_steady && save_unsteady
         # allocate space for variables

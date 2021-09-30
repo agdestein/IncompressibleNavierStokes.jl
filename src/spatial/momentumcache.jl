@@ -34,10 +34,7 @@ struct MomentumCache{T}
 end
 function MomentumCache(setup::Setup{T}) where {T}
     @unpack Nu, Nv, NV = setup.grid
-    @unpack yIu_ux,
-yIv_uy,
-yIu_vx,
-yIv_vy = setup.discretization
+    @unpack yIu_ux, yIv_uy, yIu_vx, yIv_vy = setup.discretization
     Gp = zeros(T, NV)
     c = zeros(T, NV)
     c2 = zeros(T, NV)
@@ -82,23 +79,18 @@ yIv_vy = setup.discretization
         ∇c3,
         ∇d,
         ∇b,
-
         u_ux,
         ū_ux,
         uū_ux,
-
         u_uy,
         v̄_uy,
         uv̄_uy,
-
         v_vx,
         ū_vx,
         vū_vx,
-
         v_vy,
         v̄_vy,
         vv̄_vy,
-
         ∂uū∂x,
         ∂uv̄∂y,
         ∂vū∂x,

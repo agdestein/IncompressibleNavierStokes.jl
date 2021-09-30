@@ -90,7 +90,7 @@ function operator_divergence!(setup)
 
     ## My
     # same as Mx but reversing indices and kron arguments
-    diag1 = ones(Nvy_t-1)
+    diag1 = ones(Nvy_t - 1)
     M1D = spdiagm(Nvy_t - 1, Nvy_t, 0 => -diag1, 1 => diag1)
 
     # we only need derivative at inner pressure points, so we map the resulting

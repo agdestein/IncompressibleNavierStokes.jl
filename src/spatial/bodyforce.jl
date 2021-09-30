@@ -19,12 +19,12 @@ function bodyforce!(F, ∇F, V, t, setup, getJacobian = false)
         F[indu] .= Fx
         F[indv] .= Fy
         if getJacobian
-            ∇F[indu, :]  = ∇Fx
-            ∇F[indv, :]  = ∇Fy
+            ∇F[indu, :] = ∇Fx
+            ∇F[indv, :] = ∇Fy
         end
     else
-        Fx = setup.force.Fx;
-        Fy = setup.force.Fy;
+        Fx = setup.force.Fx
+        Fy = setup.force.Fy
 
         getJacobian && (∇F .= 0)
     end

@@ -19,7 +19,18 @@ p: pressure
 getJacobian = true: return ∇FdV
 nopressure = true: exclude pressure gradient; in this case input argument p is not used
 """
-function momentum!(F, ∇F, V, ϕ, p, t, setup, cache = MomentumCache(setup), getJacobian = false, nopressure = false)
+function momentum!(
+    F,
+    ∇F,
+    V,
+    ϕ,
+    p,
+    t,
+    setup,
+    cache = MomentumCache(setup),
+    getJacobian = false,
+    nopressure = false,
+)
     @unpack Nu, Nv, NV, indu, indv = setup.grid
     @unpack Gx, Gy, y_px, y_py = setup.discretization
 
@@ -43,10 +54,10 @@ function momentum!(F, ∇F, V, ϕ, p, t, setup, cache = MomentumCache(setup), ge
     diffusion!(d, ∇d, V, t, setup, getJacobian)
 
     # Body force
-    bodyforce!(b, ∇b, V, t, setup, getJacobian);
+    bodyforce!(b, ∇b, V, t, setup, getJacobian)
 
     # residual in Finite Volume form, including the pressure contribution
-    @. F = - c + d + b
+    @. F = -c + d + b
 
     # nopressure = false is the most common situation, in which we return the entire
     # right-hand side vector
@@ -60,7 +71,7 @@ function momentum!(F, ∇F, V, ϕ, p, t, setup, cache = MomentumCache(setup), ge
     if getJacobian
         # Jacobian requested
         # we return only the Jacobian with respect to V (not p)
-        @. ∇F = - ∇c + ∇d + ∇b
+        @. ∇F = -∇c + ∇d + ∇b
     end
 
     F, ∇F

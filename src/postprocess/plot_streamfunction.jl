@@ -2,7 +2,7 @@
 Plot streamfunction.
 """
 function plot_streamfunction(solution, setup)
-    @unpack Nx, Ny, x, y =  setup.grid
+    @unpack Nx, Ny, x, y = setup.grid
     @unpack V, p, t = solution
 
     # Get fields

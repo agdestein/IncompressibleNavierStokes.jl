@@ -5,7 +5,7 @@ Build discrete operators.
 """
 function build_operators!(setup)
     @unpack regularization, visc = setup.case
-    
+
     # Mesh
     operator_mesh!(setup)
 

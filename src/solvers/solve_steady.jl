@@ -18,7 +18,7 @@ function solve_steady!(solution, setup)
     # Temporary variables
     cache = MomentumCache(setup)
     F = zeros(NV)
-    f = zeros(NV+Np)
+    f = zeros(NV + Np)
     ∇F = spzeros(NV, NV)
     Z2 = spzeros(Np, Np)
 
