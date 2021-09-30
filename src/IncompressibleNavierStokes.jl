@@ -76,6 +76,9 @@ include("utils/filter_convection.jl")
 include("postprocess/postprocess.jl")
 include("postprocess/get_vorticity.jl")
 include("postprocess/get_streamfunction.jl")
+include("postprocess/plot_vorticity.jl")
+include("postprocess/plot_pressure.jl")
+include("postprocess/plot_streamfunction.jl")
 
 # Main driver
 include("main.jl")
@@ -115,8 +118,9 @@ export create_mesh!,
     solve_steady_ibm!,
     solve_unsteady_ke!,
     solve_unsteady_rom!,
-    solve_unsteady!,
-    postprocess
+    solve_unsteady!
+
+export postprocess, plot_pressure, plot_streamfunction, plot_vorticity
 
 # Runge Kutta methods
 
