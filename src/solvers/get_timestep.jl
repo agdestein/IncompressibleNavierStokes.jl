@@ -3,6 +3,12 @@ estimate time step based on eigenvalues of operators,
 using Gershgorin
 """
 function get_timestep(setup)
+    @unpack Nu, Nv = setup.grid
+    @unpack Iu_ux, Iu_vx, Iv_uy, Iv_vy = setup.discretization
+    @unpack yIu_ux, yIu_vx, yIv_uy, @unpack yIv_vy = setup.discretization
+    Au_ux, Au_uy, Av_vx, Av_vy = setup.discretization
+    @unpack CFL, β = setup.time
+
     # for explicit methods only
     if method ∈ [1, 2, 5, 81, 82]
         ## Convective part
@@ -14,16 +20,16 @@ function get_timestep(setup)
             Cvy * spdiagm(Iv_vy * vₕ + yIv_vy) * Av_vy
 
         test = spdiagm(Ωu⁻¹) * Cu
-        sum_conv_u = abs(test) * ones(Nu) - diag(abs(test)) - diag(test)
+        sum_conv_u = abs.(test) * ones(Nu) - Diagonal(abs.(test)) - Diagonal(test)
         test = spdiagm(Ωv⁻¹) * Cv
-        sum_conv_v = abs(test) * ones(Nv) - diag(abs(test)) - diag(test)
+        sum_conv_v = abs.(test) * ones(Nv) - Diagonal(abs.(test)) - Diagonal(test)
         λ_conv = max([max(sum_conv_u) max(sum_conv_v)])
 
         ## diffusive part
         test = spdiagm(Ωu⁻¹) * Diffu
-        sum_diff_u = abs(test) * ones(Nu) - diag(abs(test)) - diag(test)
+        sum_diff_u = abs.(test) * ones(Nu) - Diagonal(abs.(test)) - Diagonal(test)
         test = spdiagm(Ωv⁻¹) * Diffv
-        sum_diff_v = abs(test) * ones(Nv) - diag(abs(test)) - diag(test)
+        sum_diff_v = abs.(test) * ones(Nv) - Diagonal(abs.(test)) - Diagonal(test)
         λ_diff = max(maximum(sum_diff_u), maximum(sum_diff_v))
 
         # based on max. value of stability region

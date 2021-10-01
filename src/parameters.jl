@@ -304,6 +304,7 @@ Base.@kwdef mutable struct Time{T}
     n_adapt_Δt::Int = 1                      # Number of iterations between timestep adjustment
     θ::T = 1 // 2                            # θ value for implicit θ method
     β::T = 1 // 2                            # β value for oneleg β method
+    CFL::T = 1 // 2                          # CFL number for adaptive methods
 end
 
 # Solver settings

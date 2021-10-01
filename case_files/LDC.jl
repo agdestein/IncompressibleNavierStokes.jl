@@ -80,6 +80,7 @@ function LDC()
     setup.time.method_startup_number = 2           # number of velocity fields necessary for start-up = equal to order of method
     setup.time.θ = 0.5                             # θ value for implicit θ method
     setup.time.β = 0.5                             # β value for oneleg β method
+    setup.time.CFL = 0.5                           # CFL number for adaptive methods
 
     # Solver settings
     setup.solver_settings.p_initial = true         # calculate compatible IC for the pressure

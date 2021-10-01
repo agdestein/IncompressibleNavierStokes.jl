@@ -85,6 +85,8 @@ function solve_unsteady!(solution, setup)
         pₙ .= p
         tₙ = t
 
+        println("t = $t, maxres = $(maxres[n-1])")
+
         # @show t
 
         # for methods that need a velocity field at n-1 the first time step

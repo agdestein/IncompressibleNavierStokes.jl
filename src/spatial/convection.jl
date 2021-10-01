@@ -46,29 +46,29 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian)
         # TODO: needs finishing
 
         # filter the convecting field
-        ϕu_f = filter_convection(ϕu, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
-        ϕv_f = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
 
-        ϕ_filtered = [ϕu_f; ϕv_f]
+        ϕ̄ = [ϕ̄u; ϕ̄v]
 
         # divergence of filtered velocity field; should be zero!
-        maxdiv_f = maximum(abs.(M * ϕ_filtered + yM))
+        maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-        convection_components!(c, ∇c, V, ϕ_filtered, setup, cache, getJacobian)
+        convection_components!(c, ∇c, V, ϕ̄, setup, cache, getJacobian)
     elseif regularization == "C2"
-        ϕu_f = filter_convection(ϕu, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
-        ϕv_f = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
 
-        uₕ_f = filter_convection(uₕ, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
-        vₕ_f = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
+        ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
 
-        ϕ_filtered = [ϕu_f; ϕv_f]
-        V_filtered = [uₕ_f; vₕ_f]
+        ϕ̄ = [ϕ̄u; ϕ̄v]
+        V̄ = [ūₕ; v̄ₕ]
 
         # divergence of filtered velocity field; should be zero!
-        maxdiv_f = maximum(abs.(M * ϕ_filtered + yM))
+        maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-        convection_components!(c, ∇c, V_filtered, ϕ_filtered, setup, cache, getJacobian)
+        convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian)
 
         cu .= filter_convection(cu, Diffu_f, yDiffu_f, α)
         cv .= filter_convection(cv, Diffv_f, yDiffv_f, α)
@@ -79,25 +79,24 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian)
         # where u' = u - filter(u)
 
         # filter both convecting and convected velocity
-        uₕ_f = filter_convection(uₕ, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
-        vₕ_f = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
+        ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
 
-        V_filtered = [uₕ_f; vₕ_f]
+        V̄ = [ūₕ; v̄ₕ]
+        ΔV = V - V̄
 
-        dV = V - V_filtered
+        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
 
-        ϕu_f = filter_convection(ϕu, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
-        ϕv_f = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
-
-        ϕ_filtered = [ϕu_f; ϕv_f]
-        Δϕ = ϕ - ϕ_filtered
+        ϕ̄ = [ϕ̄u; ϕ̄v]
+        Δϕ = ϕ - ϕ̄
 
         # divergence of filtered velocity field; should be zero!
-        maxdiv_f[n] = maximum(abs.(M * V_filtered + yM))
+        maxdiv_f[n] = maximum(abs.(M * V̄ + yM))
 
-        convection_components!(c, ∇c, V_filtered, ϕ_filtered, setup, cache, getJacobian)
-        convection_components!(c2, ∇c2, dV, ϕ_filtered, setup, cache, getJacobian)
-        convection_components!(c3, ∇c3, V_filtered, Δϕ, setup, cache, getJacobian)
+        convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian)
+        convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache, getJacobian)
+        convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache, getJacobian)
 
         cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
         cv .+= filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α)
@@ -146,7 +145,6 @@ function convection_components!(c, ∇c, V, ϕ, setup, cache, getJacobian, order
     @unpack u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy = cache
     @unpack v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy = cache
     @unpack ∂uū∂x, ∂uv̄∂y, ∂vū∂x, ∂vv̄∂y = cache
-
 
     cu = @view c[indu]
     cv = @view c[indv]

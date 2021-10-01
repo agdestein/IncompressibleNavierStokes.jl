@@ -80,6 +80,7 @@ function BFS_unsteady()
     setup.time.method_startup_number = 2          # number of velocity fields necessary for start-up = equal to order of method
     setup.time.θ = 0.5                            # θ value for implicit θ method
     setup.time.β = 0.5                            # β value for oneleg β method
+    setup.time.CFL = 0.5                          # CFL number for adaptive methods
 
     # Solver settings
     setup.solver_settings.p_initial = true                 # calculate compatible IC for the pressure
@@ -106,7 +107,7 @@ function BFS_unsteady()
 
     # Visualization settings
     setup.visualization.plotgrid = false                   # plot gridlines and pressure points
-    setup.visualization.do_rtp = true                      # real time plotting
+    setup.visualization.do_rtp = false                     # real time plotting
     setup.visualization.rtp_type = "velocity"              # "velocity", "quiver", "vorticity" or "pressure"
     setup.visualization.rtp_n = 5                          # Number of iterations between real time plots
 
