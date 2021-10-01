@@ -50,33 +50,30 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup,
         momentum!(F, ∇F, V, V, p, tᵢ, setup, cache)
 
         # Store right-hand side of stage i
-        # By adding G*p we effectively REMOVE the pressure contribution Gx*p and Gy*p (but not the
-        # Vectors y_px and y_py)
+        # By adding G*p we effectively REMOVE the pressure contribution Gx*p and Gy*p (but not the vectors y_px and y_py)
         kVi = @view kV[:, i]
-        mul!(kV[:, i], G, p)
-        @. kV[:, i] = Ω⁻¹ * (F + kV[:, i])
-        # KV[:, i] = Ω⁻¹ .* (F + G * p)
+        mul!(kVi, G, p)
+        @. kVi = Ω⁻¹ * (F + kVi)
+        # kVi = Ω⁻¹ .* (F + G * p)
 
         # Update velocity current stage by sum of Fᵢ's until this stage,
         # Weighted with Butcher tableau coefficients
         # This gives uᵢ₊₁, and for i=s gives uᵢ₊₁
         mul!(Vtemp, kV, A[i, :])
 
-        # To make the velocity field uᵢ₊₁ at tᵢ₊₁ divergence-free we need
-        # The boundary conditions at tᵢ₊₁
+        # Boundary conditions at tᵢ₊₁
         tᵢ = tₙ + c[i] * Δt
         if setup.bc.bc_unsteady
             set_bc_vectors!(setup, tᵢ)
         end
 
-        # Divergence of intermediate velocity field is directly calculated with M
+        # Divergence of intermediate velocity field
         @. Vtemp2 = Vₙ / Δt + Vtemp
         mul!(f, M, Vtemp2)
         @. f = (f + yM / Δt) / c[i]
         # F = (M * (Vₙ / Δt + Vtemp) + yM / Δt) / c[i]
 
-        # Solve the Poisson equation for the pressure, but not for the first
-        # Step if the boundary conditions are steady
+        # Solve the Poisson equation, but not for the first step if the boundary conditions are steady
         if setup.bc.bc_unsteady || i > 1
             # The time tᵢ below is only for output writing
             Δp = pressure_poisson(f, tᵢ, setup)

@@ -5,17 +5,17 @@ using GLMakie
 # Case_name = "LDC"
 case_name = "BFS_unsteady"
 include("case_files/$case_name.jl")
-setup = eval(:($(Symbol(case_name))()))
-
-##
-@profview main(setup)
+setup = eval(:($(Symbol(case_name))()));
 
 ##
 V, p, setup, totaltime, solution = main(setup);
 
 ##
+@profview main(setup)
+
+##
 # Turbulence constants
-if setup.case.visc == "keps"
+ if setup.case.visc == "keps"
     constants_ke()
 end
 

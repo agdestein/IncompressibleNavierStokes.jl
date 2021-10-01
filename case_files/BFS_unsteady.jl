@@ -177,11 +177,7 @@ function BFS_unsteady()
     """
     setup.case.initial_velocity_u = function initial_velocity_u(x, y, setup, tol = 1e-10)
         # Initial velocity field BFS (extend inflow)
-        if ≈(x, setup.grid.x1; rtol = tol) && y ≥ 0
-            24y * (1 // 2 - y)
-        else
-            zero(y)
-        end
+        y ≥ 0 ? 24y * (1 // 2 - y) : zero(y)
     end
 
     """

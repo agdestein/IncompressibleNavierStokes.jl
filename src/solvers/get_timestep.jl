@@ -5,8 +5,8 @@ using Gershgorin
 function get_timestep(setup)
     @unpack Nu, Nv = setup.grid
     @unpack Iu_ux, Iu_vx, Iv_uy, Iv_vy = setup.discretization
-    @unpack yIu_ux, yIu_vx, yIv_uy, @unpack yIv_vy = setup.discretization
-    Au_ux, Au_uy, Av_vx, Av_vy = setup.discretization
+    @unpack yIu_ux, yIu_vx, yIv_uy, yIv_vy = setup.discretization
+    @unpack Au_ux, Au_uy, Av_vx, Av_vy = setup.discretization
     @unpack CFL, β = setup.time
 
     # For explicit methods only
@@ -23,7 +23,7 @@ function get_timestep(setup)
         sum_conv_u = abs.(test) * ones(Nu) - Diagonal(abs.(test)) - Diagonal(test)
         test = spdiagm(Ωv⁻¹) * Cv
         sum_conv_v = abs.(test) * ones(Nv) - Diagonal(abs.(test)) - Diagonal(test)
-        λ_conv = max([max(sum_conv_u) max(sum_conv_v)])
+        λ_conv = max(maximum(sum_conv_u), maximum(sum_conv_v))
 
         ## Diffusive part
         test = spdiagm(Ωu⁻¹) * Diffu

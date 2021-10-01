@@ -7,6 +7,7 @@ we should have sum(f) = 0 for periodic and no-slip BC
 """
 function pressure_poisson(f, t, setup, tol = 1e-14)
     @unpack A_fact = setup.discretization
+
     # Use pre-determined decomposition
     Δp = A_fact \ f
 end

@@ -22,7 +22,7 @@ function ke_convection!(setup)
 
     # Averaging k
     # Already constructed in ke_production!
-    diag2 = 0.5 * ones(Npx + 1)
+    diag2 = fill(1 / 2, Npx + 1)
     A1D = spdiagm([diag2 diag2], [0 1], Npx + 1, Npx + 2)
 
     # Boundary conditions
@@ -54,7 +54,7 @@ function ke_convection!(setup)
     Iv_ky = kron(I1D * B1Dv, mat_hx)
 
     # Averaging k
-    diag2 = 0.5 * ones(Npy + 1)
+    diag2 = fill(1 / 2, Npy + 1)
     A1D = spdiagm(Npy + 1, Npy + 2, 0 => diag2, 1 => diag2)
 
     # Boundary conditions

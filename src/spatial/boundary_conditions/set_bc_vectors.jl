@@ -7,7 +7,7 @@ function set_bc_vectors!(setup, t)
     @unpack is_steady, visc = setup.case
     @unpack Re = setup.fluid
     @unpack u_bc, v_bc, dudt_bc, dvdt_bc = setup.bc
-    @unpack pLe, pRi, pLo, pUp = setup.bc
+    @unpack pLe, pRi, pLo, pUp, bc_unsteady = setup.bc
     @unpack Nux_in, Nvy_in, Np, Npx, Npy = setup.grid
     @unpack xin, yin, x, y, hx, hy, xp, yp = setup.grid
     @unpack order4 = setup.discretization
@@ -49,11 +49,11 @@ function set_bc_vectors!(setup, t)
     vLe_i = v_bc.(x[1], yin, t, [setup])
     vRi_i = v_bc.(x[end], yin, t, [setup])
 
-    if !is_steady && setup.bc.bc_unsteady
-        dudtLe_i = dudt_bc.(x[1], setup.grid.yp, t, [setup])
-        dudtRi_i = dudt_bc.(x[end], setup.grid.yp, t, [setup])
-        dvdtLo_i = dvdt_bc.(setup.grid.xp, y[1], t, [setup])
-        dvdtUp_i = dvdt_bc.(setup.grid.xp, y[end], t, [setup])
+    if !is_steady && bc_unsteady
+        dudtLe_i = dudt_bc.(x[1], yp, t, [setup])
+        dudtRi_i = dudt_bc.(x[end], yp, t, [setup])
+        dvdtLo_i = dvdt_bc.(xp, y[1], t, [setup])
+        dvdtUp_i = dvdt_bc.(xp, y[end], t, [setup])
     end
 
     ## Boundary conditions for divergence
@@ -77,11 +77,11 @@ function set_bc_vectors!(setup, t)
     end
 
     yM = yMx + yMy
-    setup.discretization.yM = yM
+    @pack! setup.discretization = yM
 
     # Time derivative of divergence
     if !is_steady
-        if setup.bc.bc_unsteady
+        if bc_unsteady
             ybc = kron(dudtLe_i, Mx_bc.ybc1) + kron(dudtRi_i, Mx_bc.ybc2)
             ydMx = Mx_bc.Bbc * ybc
             if order4
@@ -103,7 +103,7 @@ function set_bc_vectors!(setup, t)
         else
             ydM = zeros(Np)
         end
-        setup.discretization.ydM = ydM
+        @pack! setup.discretization = ydM
     end
 
     ## Boundary conditions for pressure
@@ -130,8 +130,7 @@ function set_bc_vectors!(setup, t)
     end
     y_py = kron(y1D_lo, hx .* pLo) + kron(y1D_up, hx .* pUp)
 
-    setup.discretization.y_px = y_px
-    setup.discretization.y_py = y_py
+    @pack! setup.discretization = y_px, y_py
 
     ## Boundary conditions for averaging
     # Au_ux
@@ -150,10 +149,7 @@ function set_bc_vectors!(setup, t)
     ybc = kron(Av_vy_bc.ybc1, vLo_i) + kron(Av_vy_bc.ybc2, vUp_i)
     yAv_vy = Av_vy_bc.Bbc * ybc
 
-    setup.discretization.yAu_ux = yAu_ux
-    setup.discretization.yAu_uy = yAu_uy
-    setup.discretization.yAv_vx = yAv_vx
-    setup.discretization.yAv_vy = yAv_vy
+    @pack! setup.discretization = yAu_ux, yAu_uy, yAv_vx, yAv_vy
 
     if order4
         # Au_ux
@@ -172,10 +168,7 @@ function set_bc_vectors!(setup, t)
         ybc3 = kron(Av_vy_bc3.ybc1, vLo_i) + kron(Av_vy_bc3.ybc2, vUp_i)
         yAv_vy3 = Av_vy_bc3.Bbc * ybc3
 
-        setup.discretization.yAu_ux3 = yAu_ux3
-        setup.discretization.yAu_uy3 = yAu_uy3
-        setup.discretization.yAv_vx3 = yAv_vx3
-        setup.discretization.yAv_vy3 = yAv_vy3
+        @pack! setup.discretization = yAu_ux3, yAu_uy3, yAv_vx3, yAv_vy3
     end
 
     ## Boundary conditions for diffusion
@@ -199,8 +192,7 @@ function set_bc_vectors!(setup, t)
         if visc == "laminar"
             yDiffu = 1 / Re * (Diffux_div * ySu_ux + Diffuy_div * ySu_uy)
             yDiffv = 1 / Re * (Diffvx_div * ySv_vx + Diffvy_div * ySv_vy)
-            setup.discretization.yDiffu = yDiffu
-            setup.discretization.yDiffv = yDiffv
+            @pack! setup.discretization = yDiffu, yDiffv
         elseif visc ∈ ["keps", "LES", "qr", "ML"]
             error("fourth order turbulent diffusion not implemented")
         end
@@ -243,16 +235,10 @@ function set_bc_vectors!(setup, t)
         if visc == "laminar"
             yDiffu = Dux * (1 / Re * ySu_ux) + Duy * (1 / Re * ySu_uy)
             yDiffv = Dvx * (1 / Re * ySv_vx) + Dvy * (1 / Re * ySv_vy)
-            setup.discretization.yDiffu = yDiffu
-            setup.discretization.yDiffv = yDiffv
+            @pack! setup.discretization = yDiffu, yDiffv
         elseif visc ∈ ["keps", "LES", "qr", "ML"]
             # Instead, we will use the following values directly (see diffusion.jl and strain_tensor.jl)
-            setup.discretization.ySu_ux = ySu_ux
-            setup.discretization.ySu_uy = ySu_uy
-            setup.discretization.ySu_vx = ySu_vx
-            setup.discretization.ySv_vx = ySv_vx
-            setup.discretization.ySv_vy = ySv_vy
-            setup.discretization.ySv_uy = ySv_uy
+            @pack! setup.discretization = ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy
         end
     end
 
@@ -348,16 +334,10 @@ function set_bc_vectors!(setup, t)
         yIv_vy3 = Iv_vy_bc3.Bbc * ybc3
     end
 
-    setup.discretization.yIu_ux = yIu_ux
-    setup.discretization.yIv_uy = yIv_uy
-    setup.discretization.yIu_vx = yIu_vx
-    setup.discretization.yIv_vy = yIv_vy
+    @pack! setup.discretization = yIu_ux, yIv_uy, yIu_vx, yIv_vy
 
     if order4
-        setup.discretization.yIu_ux3 = yIu_ux3
-        setup.discretization.yIv_uy3 = yIv_uy3
-        setup.discretization.yIu_vx3 = yIu_vx3
-        setup.discretization.yIv_vy3 = yIv_vy3
+        @pack! setup.discretization = yIu_ux3, yIv_uy3, yIu_vx3, yIv_vy3
     end
 
     if visc ∈ ["qr", "LES", "ML"]
@@ -371,13 +351,12 @@ function set_bc_vectors!(setup, t)
         nuUp = zeros(Npx)
 
         ## Nu_ux
-        Anu_ux_bc = setup.discretization.Anu_ux_bc
+        @unpack Anu_ux_bc = setup.discretization
         ybc = kron(nuLe, Anu_ux_bc.ybc1) + kron(nuRi, Anu_ux_bc.ybc2)
         yAnu_ux = Anu_ux_bc.Bbc * ybc
 
         ## Nu_uy
-        Anu_uy_bc_lr = setup.discretization.Anu_uy_bc_lr
-        Anu_uy_bc_lu = setup.discretization.Anu_uy_bc_lu
+        @unpack Anu_uy_bc_lr, Anu_uy_bc_lu = setup.discretization
 
         nuLe_i = [nuLe[1]; nuLe; nuLe[end]]
         nuRi_i = [nuRi[1]; nuRi; nuRi[end]]
@@ -392,8 +371,7 @@ function set_bc_vectors!(setup, t)
         yAnu_uy = yAnu_uy_lu + yAnu_uy_lr
 
         ## Nu_vx
-        Anu_vx_bc_lr = setup.discretization.Anu_vx_bc_lr
-        Anu_vx_bc_lu = setup.discretization.Anu_vx_bc_lu
+        @unpack Anu_vx_bc_lr, Anu_vx_bc_lu = setup.discretization
 
         nuLo_i = [nuLo[1]; nuLo; nuLo[end]]
         nuUp_i = [nuUp[1]; nuUp; nuUp[end]]
@@ -411,10 +389,7 @@ function set_bc_vectors!(setup, t)
         ybc = kron(Anu_vy_bc.ybc1, nuLo) + kron(Anu_vy_bc.ybc2, nuUp)
         yAnu_vy = Anu_vy_bc.Bbc * ybc
 
-        setup.discretization.yAnu_ux = yAnu_ux
-        setup.discretization.yAnu_uy = yAnu_uy
-        setup.discretization.yAnu_vx = yAnu_vx
-        setup.discretization.yAnu_vy = yAnu_vy
+        @pack! setup.discretization = yAnu_ux, yAnu_uy, yAnu_vx, yAnu_vy
 
         # Set BC for getting du/dx, du/dy, dv/dx, dv/dy at cell centers
 
@@ -442,12 +417,8 @@ function set_bc_vectors!(setup, t)
         ybc = kron(Cvy_k_bc.ybc1, vLo_i) + kron(Cvy_k_bc.ybc2, vUp_i)
         yCvy_k = Cvy_k_bc.Bbc * ybc
 
-        setup.discretization.yCux_k = yCux_k
-        setup.discretization.yCuy_k = yCuy_k
-        setup.discretization.yCvx_k = yCvx_k
-        setup.discretization.yCvy_k = yCvy_k
-        setup.discretization.yAuy_k = yAuy_k
-        setup.discretization.yAvx_k = yAvx_k
+        @pack! setup.discretization = yCux_k
+        yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k
     end
 
     setup

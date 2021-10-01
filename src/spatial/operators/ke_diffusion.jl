@@ -12,19 +12,19 @@ function ke_diffusion!(setup)
 
 
     ## Averaging from centers to faces
-    diag2 = 0.5 * ones(Npx + 1)
+    diag2 = fill(1 / 2, Npx + 1)
     A1D = spdiagm(Npx + 1, Npx + 2, 0 => diag2, 1 => diag2)
 
     # BCs for k
     # Ak_kx is already constructed in ke_convection
-    [B1Dk, Btempk, ybcl, ybcr] =
+    B1Dk, Btempk, ybcl, ybcr =
         bc_general_stag(Npx + 2, Npx, 2, bck.left, bck.right, hx[1], hx[end])
     ybck = kron(kLe, ybcl) + kron(kRi, ybcr)
     yAk_kx = kron(sparse(I, Npy, Npy), A1D * Btempk) * ybck
     Ak_kx = kron(sparse(I, Npy, Npy), A1D * B1Dk)
 
     # BCs for e
-    [B1De, Btempe, ybcl, ybcr] =
+    B1De, Btempe, ybcl, ybcr =
         bc_general_stag(Npx + 2, Npx, 2, bce.left, bce.right, hx[1], hx[end])
     ybce = kron(eLe, ybcl) + kron(eRi, ybcr)
     yAe_ex = kron(sparse(I, Npy, Npy), A1D * Btempe) * ybce
@@ -54,7 +54,7 @@ function ke_diffusion!(setup)
 
 
     ## Averaging
-    diag2 = 0.5 * ones(Npy + 1)
+    diag2 = fill(1 / 2, Npy + 1)
     A1D = spdiagm(Npy + 1, Npy + 2, 0 => diag2, 1 => diag2)
 
     # BCs for k:

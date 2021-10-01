@@ -1,9 +1,9 @@
 "Incompressible Navier-Stokes solvers"
 module IncompressibleNavierStokes
 
-using LinearAlgebra: Factorization, I, cholesky, factorize, ldiv!, mul!
+using LinearAlgebra: Diagonal, Factorization, I, cholesky, factorize, ldiv!, mul!
 using SparseArrays: SparseMatrixCSC, blockdiag, sparse, spdiagm, spzeros
-using UnPack: @unpack
+using UnPack: @pack!, @unpack
 # Using Plots: contour, contourf, title!
 using Makie:
     Axis, Colorbar, DataAspect, Figure, Node, contourf, contourf!, limits!, lines!, record
@@ -75,6 +75,7 @@ include("utils/filter_convection.jl")
 
 # Postprocess
 include("postprocess/postprocess.jl")
+include("postprocess/get_velocity.jl")
 include("postprocess/get_vorticity.jl")
 include("postprocess/get_streamfunction.jl")
 include("postprocess/plot_vorticity.jl")

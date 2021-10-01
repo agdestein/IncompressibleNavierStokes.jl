@@ -6,14 +6,14 @@ Main solver file for unsteady calculations
 function solve_unsteady!(solution, setup)
     # Setup
     @unpack is_steady, visc = setup.case
-    @unpack Nu, Nv, NV, Np, Nx, Ny, x, y = setup.grid
+    @unpack Nu, Nv, NV, Np, Nx, Ny, x, y, xp, yp = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
         setup.solver_settings
     @unpack use_rom = setup.rom
     @unpack isadaptive, method, method_startup, rk_method = setup.time
     @unpack save_unsteady = setup.output
-    @unpack do_rtp, rtp_n = setup.visualization
+    @unpack do_rtp, rtp_n, rtp_type = setup.visualization
 
     # Solution
     @unpack V, p, t, Δt, n, nt, maxres, maxdiv, k, vmom, nonlinear_its, time, umom =
