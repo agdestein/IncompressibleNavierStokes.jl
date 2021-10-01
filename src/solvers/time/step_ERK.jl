@@ -22,7 +22,10 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup,
     # Vector with time instances (1 is the time level of final step)
     c = [c[2:end]; 1]
 
-    ## Preprocessing
+    # Reset RK arrays
+    kV .= 0
+    kp .= 0
+
     # Store variables at start of time step
     V .= Vₙ
     p .= pₙ
