@@ -1,4 +1,4 @@
-## regularization matrices
+## Regularization matrices
 function operator_regularization!(setup)
     # TODO: Identify correct references
     @unpack indu, indv = setup.grid
@@ -8,7 +8,7 @@ function operator_regularization!(setup)
     Ωu⁻¹ = 1 ./ Ω[indu]
     Ωv⁻¹ = 1 ./ Ω[indv]
 
-    # diffusive matrices in finite-difference setting, without viscosity
+    # Diffusive matrices in finite-difference setting, without viscosity
     Diffu_f = spdiagm(Ωu⁻¹) * (Dux * Su_ux + Duy * Su_uy)
     Diffv_f = spdiagm(Ωv⁻¹) * (Dux * Sv_vx + Dvy * Sv_vy)
 

@@ -56,11 +56,11 @@ function momentum!(
     # Body force
     bodyforce!(b, ∇b, V, t, setup, getJacobian)
 
-    # residual in Finite Volume form, including the pressure contribution
+    # Residual in Finite Volume form, including the pressure contribution
     @. F = -c + d + b
 
-    # nopressure = false is the most common situation, in which we return the entire
-    # right-hand side vector
+    # Nopressure = false is the most common situation, in which we return the entire
+    # Right-hand side vector
     if !nopressure
         mul!(Gpx, Gx, p)
         mul!(Gpy, Gy, p)
@@ -70,7 +70,7 @@ function momentum!(
 
     if getJacobian
         # Jacobian requested
-        # we return only the Jacobian with respect to V (not p)
+        # We return only the Jacobian with respect to V (not p)
         @. ∇F = -∇c + ∇d + ∇b
     end
 

@@ -23,11 +23,11 @@ function step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup
     momentum!(F_rhs, nothing, V_int, V_int, p_int, t_int, setup, cache)
 
     # Take a time step with this right-hand side, this gives an
-    # intermediate velocity field (not divergence free)
+    # Intermediate velocity field (not divergence free)
     Vtemp = (2 * β * Vₙ - (β - 0.5) * Vₙ₋₁ + Δt * Ω⁻¹ .* F_rhs) / (β + 0.5)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need
-    # the boundary conditions at tₙ₊₁
+    # The boundary conditions at tₙ₊₁
     if setup.BC.BC_unsteady
         set_bc_vectors!(setup, tₙ + Δt)
     end

@@ -3,9 +3,9 @@ Base.@kwdef mutable struct Case
     name::String = "example"                 # Case name
     is_steady::Bool = false                  # Is steady steate (not unsteady)
     visc::String = "laminar"                 # "laminar", "keps", "ML", "LES, "qr"
-    regularization::String = "no"            # convective term regularization: "no", "leray", "C2", "C4"
+    regularization::String = "no"            # Convective term regularization: "no", "leray", "C2", "C4"
     ibm::Bool = false                        # Use immersed boundary method
-    force_unsteady::Bool = false             # false: steady forcing or no forcing; true: unsteady forcing
+    force_unsteady::Bool = false             # False: steady forcing or no forcing; true: unsteady forcing
     initial_velocity_u::Function = () -> error("initial_velocity_u not implemented")
     initial_velocity_v::Function = () -> error("initial_velocity_v not implemented")
     initial_pressure::Function = () -> error("initial_pressure not implemented")
@@ -14,14 +14,14 @@ end
 # Physical properties
 Base.@kwdef mutable struct Fluid{T}
     Re::T = 1                                # Reynolds number
-    U1::T = 1                                # velocity scales
-    U2::T = 1                                # velocity scales
-    d_layer::T = 1                           # thickness of layer
+    U1::T = 1                                # Velocity scales
+    U2::T = 1                                # Velocity scales
+    d_layer::T = 1                           # Thickness of layer
 end
 
 # Turbulent flow settings
 Base.@kwdef mutable struct Visc{T}
-    lm::T = 1                                # mixing length
+    lm::T = 1                                # Mixing length
     Cs::T = 0.17                             # Smagorinsky constant
 end
 
@@ -129,8 +129,8 @@ end
 # Discretization parameters
 Base.@kwdef mutable struct Discretization{T}
     order4::Bool = false                     # Use 4th order in space (otherwise 2nd order)
-    α::T = 81                                # richardson extrapolation factor = 3^4
-    β::T = 9 // 8                            # interpolation factor
+    α::T = 81                                # Richardson extrapolation factor = 3^4
+    β::T = 9 // 8                            # Interpolation factor
 
     # Filled in by function
     Au_ux::SparseMatrixCSC{T,Int} = spzeros(0, 0)
@@ -253,42 +253,42 @@ end
 
 # Forcing parameters
 Base.@kwdef mutable struct Force{T}
-    x_c::T = 0                               # x-coordinate of body
-    y_c::T = 0                               # y-coordinate of body
-    Ct::T = 0                                # thrust coefficient for actuator disk computations
+    x_c::T = 0                               # X-coordinate of body
+    y_c::T = 0                               # Y-coordinate of body
+    Ct::T = 0                                # Thrust coefficient for actuator disk computations
     D::T = 1                                 # Actuator disk diameter
     Fx::Vector{T} = T[]                      # For storing constant body force
     Fy::Vector{T} = T[]                      # For storing constant body force
-    isforce::Bool = false                    # presence of a force file
-    force_unsteady::Bool = false             # is_steady (false) or unsteady (true) force
+    isforce::Bool = false                    # Presence of a force file
+    force_unsteady::Bool = false             # Is_steady (false) or unsteady (true) force
     bodyforce_x::Function = () -> error("bodyforce_x not implemented")
     bodyforce_y::Function = () -> error("bodyforce_y not implemented")
 end
 
 # Rom parameters
 Base.@kwdef mutable struct ROM
-    use_rom::Bool = false                    # use reduced order model
+    use_rom::Bool = false                    # Use reduced order model
     rom_type::String = "POD"                 # "POD",  "Fourier"
-    M::Int = 10                              # number of velocity modes for reduced order model
-    Mp::Int = 10                             # number of pressure modes for reduced order model
-    precompute_convection::Bool = true       # precomputed convection matrices
-    precompute_diffusion::Bool = true        # precomputed diffusion matrices
-    precompute_force::Bool = true            # precomputed forcing term
-    t_snapshots::Int = 0                     # snapshots
+    M::Int = 10                              # Number of velocity modes for reduced order model
+    Mp::Int = 10                             # Number of pressure modes for reduced order model
+    precompute_convection::Bool = true       # Precomputed convection matrices
+    precompute_diffusion::Bool = true        # Precomputed diffusion matrices
+    precompute_force::Bool = true            # Precomputed forcing term
+    t_snapshots::Int = 0                     # Snapshots
     Δt_snapshots::Bool = false
-    mom_cons::Bool = false                   # momentum conserving SVD
+    mom_cons::Bool = false                   # Momentum conserving SVD
     rom_bc::Int = 0                          # 0: homogeneous (no-slip = periodic) 1: non-homogeneous = time-independent 2: non-homogeneous = time-dependent
     weighted_norm::Bool = true               # Use weighted norm (using finite volumes as weights)
-    pressure_recovery::Bool = false          # false: no pressure computation, true: compute pressure with PPE-ROM
-    pressure_precompute::Int = 0             # in case of pressure_recovery: compute RHS Poisson equation based on FOM (0) or ROM (1)
+    pressure_recovery::Bool = false          # False: no pressure computation, true: compute pressure with PPE-ROM
+    pressure_precompute::Int = 0             # In case of pressure_recovery: compute RHS Poisson equation based on FOM (0) or ROM (1)
     subtract_pressure_mean::Bool = false     # Subtract pressure mean from snapshots
-    process_iteration_FOM::Bool = true       # compute divergence = residuals = kinetic energy etc. on FOM level
+    process_iteration_FOM::Bool = true       # Compute divergence = residuals = kinetic energy etc. on FOM level
     basis_type::String = "default"           # "default" (code chooses), "svd", "direct", "snapshot"
 end
 
 # Immersed boundary method
 Base.@kwdef mutable struct IBM
-    ibm::Bool = false                        # use immersed boundary method
+    ibm::Bool = false                        # Use immersed boundary method
 end
 
 # Time stepping
@@ -299,18 +299,18 @@ Base.@kwdef mutable struct Time{T}
     rk_method::RungeKuttaMethod = RK44()     # Runge Kutta method
     method::Int = 0                          # Method number
     method_startup::Int = 0                  # Startup method for methods that are not self-starting
-    method_startup_number::Int = 0           # number of velocity fields necessary for start-up = equal to order of method
+    method_startup_number::Int = 0           # Number of velocity fields necessary for start-up = equal to order of method
     isadaptive::Bool = false                 # Adapt timestep every n_adapt_Δt iterations
     n_adapt_Δt::Int = 1                      # Number of iterations between timestep adjustment
-    θ::T = 1 // 2                            # θ value for implicit θ method
-    β::T = 1 // 2                            # β value for oneleg β method
+    θ::T = 1 // 2                            # Θ value for implicit θ method
+    β::T = 1 // 2                            # Β value for oneleg β method
     CFL::T = 1 // 2                          # CFL number for adaptive methods
 end
 
 # Solver settings
 Base.@kwdef mutable struct SolverSettings{T}
-    p_initial::Bool = true                   # calculate compatible IC for the pressure
-    p_add_solve::Bool = true                 # additional pressure solve to make it same order as velocity
+    p_initial::Bool = true                   # Calculate compatible IC for the pressure
+    p_add_solve::Bool = true                 # Additional pressure solve to make it same order as velocity
 
     # Accuracy for non-linear solves (method 62 = 72 = 9)
     nonlinear_acc::T = 1e-14                 # Absolute accuracy
@@ -325,7 +325,7 @@ Base.@kwdef mutable struct SolverSettings{T}
     Jacobian_type::String = "picard"         # "picard": Picard linearization, "newton": Newton linearization
     Newton_factor::Bool = false              # Newton factor
     nonlinear_startingvalues::Bool = false   # Extrapolate values from last time step to get accurate initial guess (for unsteady problems only)
-    nPicard::Int = 5                         # number of Picard steps before switching to Newton when linearization is Newton (for is_steady problems only)
+    nPicard::Int = 5                         # Number of Picard steps before switching to Newton when linearization is Newton (for is_steady problems only)
 end
 
 # Output files

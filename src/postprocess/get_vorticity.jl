@@ -1,6 +1,6 @@
 function get_vorticity(V, t, setup)
-    # vorticity values at pressure midpoints
-    # this should be consistent with operator_postprocessing
+    # Vorticity values at pressure midpoints
+    # This should be consistent with operator_postprocessing
     @unpack Nu, Nv, Nux_in, Nvy_in, Nx, Ny = setup.grid
     @unpack Wv_vx, Wu_uy = setup.discretization
 
@@ -11,13 +11,13 @@ function get_vorticity(V, t, setup)
         uₕ_in = uₕ
         vₕ_in = vₕ
     else
-        # velocity at inner points
+        # Velocity at inner points
         diagpos = 0
         if setup.bc.u.left == "pres"
             diagpos = 1
         end
         if setup.bc.u.right == "per" && setup.bc.u.left == "per"
-            # like pressure left
+            # Like pressure left
             diagpos = 1
         end
 
@@ -31,7 +31,7 @@ function get_vorticity(V, t, setup)
             diagpos = 1
         end
         if setup.bc.v.low == "per" && setup.bc.v.up == "per"
-            # like pressure low
+            # Like pressure low
             diagpos = 1
         end
 

@@ -33,19 +33,19 @@ function build_operators!(setup)
         # Averaging viscosity to cell faces of u- and v- volumes
         ke_viscosity!(setup)
 
-        # k-e operators
+        # K-e operators
         ke_convection!(setup)
         ke_diffusion!(setup)
         ke_production!(setup)
     elseif visc ∈ ["qr", "LES", "ML"]
         operator_turbulent_diffusion!(setup)
     elseif visc == "laminar"
-        # do nothing, these are constructed in operator_convection_diffusion
+        # Do nothing, these are constructed in operator_convection_diffusion
     else
         error("Wrong value for visc parameter")
     end
 
-    # post-processing
+    # Post-processing
     operator_postprocessing!(setup)
 
     setup

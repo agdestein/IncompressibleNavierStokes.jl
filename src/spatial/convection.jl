@@ -34,7 +34,7 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian)
     ϕv = @view ϕ[indv]
 
     if regularization == "no"
-        # no regularization
+        # No regularization
         convection_components!(c, ∇c, V, ϕ, setup, cache, getJacobian, false)
 
         if order4
@@ -45,27 +45,27 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian)
     elseif regularization == "leray"
         # TODO: needs finishing
 
-        # filter the convecting field
-        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        # Filter the convecting field
+        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α) # uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
         ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
 
         ϕ̄ = [ϕ̄u; ϕ̄v]
 
-        # divergence of filtered velocity field; should be zero!
+        # Divergence of filtered velocity field; should be zero!
         maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
         convection_components!(c, ∇c, V, ϕ̄, setup, cache, getJacobian)
     elseif regularization == "C2"
-        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α) # uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
         ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
 
-        ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α) # uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
         v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
 
         ϕ̄ = [ϕ̄u; ϕ̄v]
         V̄ = [ūₕ; v̄ₕ]
 
-        # divergence of filtered velocity field; should be zero!
+        # Divergence of filtered velocity field; should be zero!
         maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
         convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian)
@@ -76,22 +76,22 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian)
         # C4 consists of 3 terms:
         # C4 = conv(filter(u), filter(u)) + filter(conv(filter(u), u') +
         #      filter(conv(u', filter(u)))
-        # where u' = u - filter(u)
+        # Where u' = u - filter(u)
 
-        # filter both convecting and convected velocity
-        ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        # Filter both convecting and convected velocity
+        ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α) # uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
         v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
 
         V̄ = [ūₕ; v̄ₕ]
         ΔV = V - V̄
 
-        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α) #uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α) # uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
         ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
 
         ϕ̄ = [ϕ̄u; ϕ̄v]
         Δϕ = ϕ - ϕ̄
 
-        # divergence of filtered velocity field; should be zero!
+        # Divergence of filtered velocity field; should be zero!
         maxdiv_f[n] = maximum(abs.(M * V̄ + yM))
 
         convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian)
@@ -191,28 +191,28 @@ function convection_components!(c, ∇c, V, ϕ, setup, cache, getJacobian, order
     mul!(∂vū∂x, Cvx, vū_vx)
     mul!(∂vv̄∂y, Cvy, vv̄_vy)
 
-    # u_ux = Au_ux * uₕ + yAu_ux                # u at ux
-    # ū_ux = Iu_ux * ϕu + yIu_ux                # ū at ux
+    # U_ux = Au_ux * uₕ + yAu_ux                # U at ux
+    # Ū_ux = Iu_ux * ϕu + yIu_ux                # Ū at ux
     # ∂uū∂x = Cux * (u_ux .* ū_ux)
 
-    # u_uy = Au_uy * uₕ + yAu_uy                # u at uy
-    # v̄_uy = Iv_uy * ϕv + yIv_uy                # ū at uy
+    # U_uy = Au_uy * uₕ + yAu_uy                # U at uy
+    # V̄_uy = Iv_uy * ϕv + yIv_uy                # Ū at uy
     # ∂uv̄∂y = Cuy * (u_uy .* v̄_uy)
 
-    # v_vx = Av_vx * vₕ + yAv_vx                # v at vx
-    # ū_vx = Iu_vx * ϕu + yIu_vx                # ū at vx
+    # V_vx = Av_vx * vₕ + yAv_vx                # V at vx
+    # Ū_vx = Iu_vx * ϕu + yIu_vx                # Ū at vx
     # ∂vū∂x = Cvx * (v_vx .* ū_vx)
 
-    # v_vy = Av_vy * vₕ + yAv_vy                # v at vy
-    # v̄_vy = Iv_vy * ϕv + yIv_vy                # ū at vy
+    # V_vy = Av_vy * vₕ + yAv_vy                # V at vy
+    # V̄_vy = Iv_vy * ϕv + yIv_vy                # Ū at vy
     # ∂vv̄∂y = Cvy * (v_vy .* v̄_vy)
 
     @. cu = ∂uū∂x + ∂uv̄∂y
     @. cv = ∂vū∂x + ∂vv̄∂y
 
     if getJacobian
-        ## convective terms, u-component
-        # c^n * u^(n+1), c = u
+        ## Convective terms, u-component
+        # C^n * u^(n+1), c = u
         C1 = Cux * spdiagm(ū_ux)
         C2 = Cux * spdiagm(u_ux) * Newton_factor
         Conv_ux_11 = C1 * Au_ux + C2 * Iu_ux
@@ -224,7 +224,7 @@ function convection_components!(c, ∇c, V, ϕ, setup, cache, getJacobian, order
 
         Jacu .= [(Conv_ux_11 + Conv_uy_11) Conv_uy_12]
 
-        ## convective terms, v-component
+        ## Convective terms, v-component
         C1 = Cvx * spdiagm(ū_vx)
         C2 = Cvx * spdiagm(v_vx) * Newton_factor
         Conv_vx_21 = C2 * Iu_vx

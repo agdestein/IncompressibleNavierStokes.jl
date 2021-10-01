@@ -18,41 +18,41 @@ function diffusion!(d, ∇d, V, t, setup, getJacobian)
     dv = @view d[indv]
 
     if visc == "laminar"
-        # d2u = Diffu * uₕ + yDiffu
+        # D2u = Diffu * uₕ + yDiffu
         mul!(du, Diffu, uₕ)
         du .+= yDiffu
 
-        # d2v = Diffv * vₕ + yDiffv
+        # D2v = Diffv * vₕ + yDiffv
         mul!(dv, Diffv, vₕ)
         dv .+= yDiffv
 
         getJacobian && (∇d .= blockdiag(Diffu, Diffv))
     elseif visc ∈ ["qr", "LES", "ML"]
         # Get components of strain tensor and its magnitude;
-        # the magnitude S_abs is evaluated at pressure points
+        # The magnitude S_abs is evaluated at pressure points
         S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v =
             strain_tensor(V, t, setup, getJacobian)
 
         # Turbulent viscosity at all pressure points
         ν_t = turbulent_viscosity(S_abs, setup)
 
-        # to compute the diffusion, we need ν_t at ux, uy, vx and vy locations
-        # this means we have to reverse the process of strain_tensor.m: go
-        # from pressure points back to the ux, uy, vx, vy locations
+        # To compute the diffusion, we need ν_t at ux, uy, vx and vy locations
+        # This means we have to reverse the process of strain_tensor.m: go
+        # From pressure points back to the ux, uy, vx, vy locations
         ν_t_ux, ν_t_uy, ν_t_vx, ν_t_vy = interpolate_ν(ν_t, setup)
 
-        # now the total diffusive terms (laminar + turbulent) is as follows
-        # note that the factor 2 is because
-        # tau = 2*(ν+ν_t)*S(u), with S(u) = 0.5*(∇u + (∇u)^T)
+        # Now the total diffusive terms (laminar + turbulent) is as follows
+        # Note that the factor 2 is because
+        # Tau = 2*(ν+ν_t)*S(u), with S(u) = 0.5*(∇u + (∇u)^T)
 
-        ν = 1 / setup.fluid.Re # molecular viscosity
+        ν = 1 / setup.fluid.Re # Molecular viscosity
 
         du .= Dux * (2 .* (ν .+ ν_t_ux) .* S11[:]) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12[:])
         dv .= Dvx * (2 .* (ν .+ ν_t_vx) .* S21[:]) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22[:])
 
         if getJacobian
-            # freeze ν_t, i.e. we skip the derivative of ν_t wrt V in
-            # the Jacobian
+            # Freeze ν_t, i.e. we skip the derivative of ν_t wrt V in
+            # The Jacobian
             Jacu1 =
                 Dux * 2 * spdiagm(ν .+ ν_t_ux) * Su_ux +
                 Duy * 2 * spdiagm(ν .+ ν_t_uy) * 1 / 2 * Su_uy
@@ -72,8 +72,8 @@ function diffusion!(d, ∇d, V, t, setup, getJacobian)
             elseif visc == "qr"
                 C_d = deltax^2 / 8
                 K = C_d * 0.5 * (1 - α / C_d)^2
-            elseif visc == "ML" # mixing-length
-                lm = setup.visc.lm # mixing length
+            elseif visc == "ML" # Mixing-length
+                lm = setup.visc.lm # Mixing length
                 K = (lm^2)
             else
                 error("wrong value for visc parameter")

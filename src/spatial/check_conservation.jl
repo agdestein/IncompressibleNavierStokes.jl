@@ -23,14 +23,14 @@ function check_conservation(V, t, setup)
     vLo_i = v_bc.(xp, y[1], t, [setup])
     vUp_i = v_bc.(xp, y[end], t, [setup])
 
-    # check if new velocity field is divergence free (mass conservation)
+    # Check if new velocity field is divergence free (mass conservation)
     maxdiv = maximum(abs.(M * V + yM))
 
-    # calculate total momentum
+    # Calculate total momentum
     umom = sum(Ωu .* uₕ)
     vmom = sum(Ωv .* vₕ)
 
-    # add boundary contributions in case of Dirichlet BC
+    # Add boundary contributions in case of Dirichlet BC
     if setup.bc.u.left == "dir"
         umom += sum(uLe_i .* hy) * gx[1]
     end

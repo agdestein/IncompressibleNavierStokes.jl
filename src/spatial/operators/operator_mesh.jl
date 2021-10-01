@@ -3,29 +3,29 @@ function operator_mesh!(setup)
     order4 = setup.discretization.order4
     α = setup.discretization.α
 
-    ## pressure volumes
+    ## Pressure volumes
     @unpack Nx, Ny, x, y, hx, hy, gx, gy, xp, yp = setup.grid
     # @unpack gx, gy = setup.grid
 
-    # number of pressure points
+    # Number of pressure points
     Npx = Nx
     Npy = Ny
     Np = Npx * Npy
 
-    ## u-volumes
-    # x[1]   x[2]   x[3] ....      x[Nx]   x[Nx+1]
+    ## U-volumes
+    # X[1]   x[2]   x[3] ....      x[Nx]   x[Nx+1]
     # |      |      |              |       |
     # |      |      |              |       |
     # Dirichlet BC:
-    # uLe    u[1]   u[2] ....      u(Nx-1) uRi
-    # periodic BC:
-    # u[1]   u[2]   u[3] ....      u[Nx]   u[1]
-    # pressure BC:
-    # u[1]   u[2]   u[3] ....      u[Nx]   u[Nx+1]
+    # ULe    u[1]   u[2] ....      u(Nx-1) uRi
+    # Periodic BC:
+    # U[1]   u[2]   u[3] ....      u[Nx]   u[1]
+    # Pressure BC:
+    # U[1]   u[2]   u[3] ....      u[Nx]   u[Nx+1]
 
-    # x-dir
-    Nux_b = 2               # boundary points
-    Nux_in = Nx + 1            # inner points
+    # X-dir
+    Nux_b = 2               # Boundary points
+    Nux_in = Nx + 1            # Inner points
     if bc.u.left ∈ ["dir", "sym"]
         Nux_in -= 1
     end
@@ -35,27 +35,27 @@ function operator_mesh!(setup)
     if bc.u.left == "per" && bc.u.right == "per"
         Nux_in -= 1
     end
-    Nux_t = Nux_in + Nux_b  # total number
+    Nux_t = Nux_in + Nux_b  # Total number
 
-    # y-dir
-    Nuy_b = 2               # boundary points
-    Nuy_in = Ny              # inner points
-    Nuy_t = Nuy_in + Nuy_b  # total number
+    # Y-dir
+    Nuy_b = 2               # Boundary points
+    Nuy_in = Ny              # Inner points
+    Nuy_t = Nuy_in + Nuy_b  # Total number
 
-    # total number
+    # Total number
     Nu = Nux_in * Nuy_in
 
 
-    ## v-volumes
+    ## V-volumes
 
-    # x-dir
-    Nvx_b = 2               # boundary points
-    Nvx_in = Nx              # inner points
-    Nvx_t = Nvx_in + Nvx_b  # total number
+    # X-dir
+    Nvx_b = 2               # Boundary points
+    Nvx_in = Nx              # Inner points
+    Nvx_t = Nvx_in + Nvx_b  # Total number
 
-    # y-dir
-    Nvy_b = 2               # boundary points
-    Nvy_in = Ny + 1            # inner points
+    # Y-dir
+    Nvy_b = 2               # Boundary points
+    Nvy_in = Ny + 1            # Inner points
     if bc.v.low == "dir" || bc.v.low == "sym"
         Nvy_in = Nvy_in - 1
     end
@@ -65,25 +65,25 @@ function operator_mesh!(setup)
     if bc.v.low == "per" && bc.v.up == "per"
         Nvy_in = Nvy_in - 1
     end
-    Nvy_t = Nvy_in + Nvy_b  # total number
+    Nvy_t = Nvy_in + Nvy_b  # Total number
 
-    # total number
+    # Total number
     Nv = Nvx_in * Nvy_in
 
-    # total number of velocity points
+    # Total number of velocity points
     NV = Nu + Nv
 
-    # total number of unknowns
+    # Total number of unknowns
     Ntot = NV + Np
 
-    ## extra variables
-    N1 = (Nux_in + 1) * Nuy_in #size(Iu_ux, 1);
-    N2 = Nux_in * (Nuy_in + 1) #size(Iv_uy, 1);
-    N3 = (Nvx_in + 1) * Nvy_in # size(Iu_vx, 1);
-    N4 = Nvx_in * (Nvy_in + 1) # size(Iv_vy, 1);
+    ## Extra variables
+    N1 = (Nux_in + 1) * Nuy_in # size(Iu_ux, 1);
+    N2 = Nux_in * (Nuy_in + 1) # size(Iv_uy, 1);
+    N3 = (Nvx_in + 1) * Nvy_in # Size(Iu_vx, 1);
+    N4 = Nvx_in * (Nvy_in + 1) # Size(Iv_vy, 1);
 
 
-    ## for a grid with three times larger volumes:
+    ## For a grid with three times larger volumes:
     if order4
         hx3 = zeros(Nx, 1)
         hx3[2:end-1] = hx[1:end-2] + hx[2:end-1] + hx[3:end]
@@ -109,7 +109,7 @@ function operator_mesh!(setup)
         hyi3 = hy3
 
 
-        # distance between pressure points
+        # Distance between pressure points
         gx3 = zeros(Nx + 1, 1)
         gx3[3:Nx-1] = gx[2:end-3] + gx[3:end-2] + gx[4:end-1]
         if bc.u.left == "per" && bc.u.right == "per"
@@ -124,7 +124,7 @@ function operator_mesh!(setup)
             gx3[end] = 2 * gx[end] + 2 * gx[end-1]
         end
 
-        # distance between pressure points
+        # Distance between pressure points
         gy3 = zeros(Ny + 1, 1)
         gy3[3:Ny-1] = gy[2:end-3] + gy[3:end-2] + gy[4:end-1]
         if bc.v.low == "per" && bc.v.up == "per"
@@ -140,20 +140,20 @@ function operator_mesh!(setup)
         end
     end
 
-    ## adapt mesh metrics depending on number of volumes
+    ## Adapt mesh metrics depending on number of volumes
 
-    ## x-direction
+    ## X-direction
 
-    # gxd: differentiation
+    # Gxd: differentiation
     gxd = gx
     gxd[1] = hx[1]
     gxd[end] = hx[end]
 
-    # hxi: integration and hxd: differentiation
-    # map to find suitable size
+    # Hxi: integration and hxd: differentiation
+    # Map to find suitable size
     hxi = hx
 
-    # restrict Nx+2 to Nux_in+1 points
+    # Restrict Nx+2 to Nux_in+1 points
     if bc.u.left == "dir" && bc.u.right == "dir"
         xin = x[2:end-1]
         hxd = hx
@@ -209,26 +209,26 @@ function operator_mesh!(setup)
 
     Bmap = spdiagm(Nux_in + 1, Nx + 2, diagpos => ones(Nux_in + 1))
 
-    # matrix to map from Nvx_t-1 to Nux_in points
+    # Matrix to map from Nvx_t-1 to Nux_in points
     # (used in interpolation, convection_diffusion, viscosity)
     Bvux = spdiagm(Nux_in, Nvx_t - 1, diagpos => ones(Nux_in))
-    # map from Npx+2 points to Nux_t-1 points (ux faces)
+    # Map from Npx+2 points to Nux_t-1 points (ux faces)
     Bkux = Bmap
 
 
-    ## y-direction
+    ## Y-direction
 
-    # gyi: integration and gyd: differentiation
+    # Gyi: integration and gyd: differentiation
     gyd = gy
     gyd[1] = hy[1]
     gyd[end] = hy[end]
 
-    # hyi: integration and hyd: differentiation
-    # map to find suitable size
+    # Hyi: integration and hyd: differentiation
+    # Map to find suitable size
     hyi = hy
 
 
-    # restrict Ny+2 to Nvy_in+1 points
+    # Restrict Ny+2 to Nvy_in+1 points
     if bc.v.low == "dir" && bc.v.up == "dir"
         yin = y[2:end-1]
         hyd = hy
@@ -284,31 +284,31 @@ function operator_mesh!(setup)
 
     Bmap = spdiagm(Nvy_in + 1, Ny + 2, diagpos => ones(Nvy_in + 1))
 
-    # matrix to map from Nuy_t-1 to Nvy_in points
+    # Matrix to map from Nuy_t-1 to Nvy_in points
     # (used in interpolation, convection_diffusion)
     Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(Nvy_in))
-    # map from Npy+2 points to Nvy_t-1 points (vy faces)
+    # Map from Npy+2 points to Nvy_t-1 points (vy faces)
     Bkvy = Bmap
 
     ##
-    # volume (area) of pressure control volumes
+    # Volume (area) of pressure control volumes
     Ωp = kron(hyi, hxi)
     Ωp⁻¹ = 1 ./ Ωp
-    # volume (area) of u control volumes
+    # Volume (area) of u control volumes
     Ωu = kron(hyi, gxi)
     Ωu⁻¹ = 1 ./ Ωu
-    # volume of ux volumes
+    # Volume of ux volumes
     Ωux = kron(hyi, hxd)
-    # volume of uy volumes
+    # Volume of uy volumes
     Ωuy = kron(gyd, gxi)
-    # volume (area) of v control volumes
+    # Volume (area) of v control volumes
     Ωv = kron(gyi, hxi)
     Ωv⁻¹ = 1 ./ Ωv
-    # volume of vx volumes
+    # Volume of vx volumes
     Ωvx = kron(gyi, gxd)
-    # volume of vy volumes
+    # Volume of vy volumes
     Ωvy = kron(hyd, hxi)
-    # volume (area) of vorticity control volumes
+    # Volume (area) of vorticity control volumes
     Ωvort = kron(gyi, gxi)
     Ωvort⁻¹ = 1 ./ Ωvort
 \
@@ -316,25 +316,25 @@ function operator_mesh!(setup)
     Ω⁻¹ = [Ωu⁻¹; Ωv⁻¹]
 
     if setup.discretization.order4
-        # differencing for second order operators on the fourth order mesh
+        # Differencing for second order operators on the fourth order mesh
         Ωux1 = kron(hyi, hxd13)
         Ωuy1 = kron(gyd13, gxi)
         Ωvx1 = kron(gyi, gxd13)
         Ωvy1 = kron(hyd13, hxi)
 
-        # volume (area) of pressure control volumes
+        # Volume (area) of pressure control volumes
         Ωp3 = kron(hyi3, hxi3)
-        # volume (area) of u-vel control volumes
+        # Volume (area) of u-vel control volumes
         Ωu3 = kron(hyi3, gxi3)
-        # volume (area) of v-vel control volumes
+        # Volume (area) of v-vel control volumes
         Ωv3 = kron(gyi3, hxi3)
-        # volume (area) of dudx control volumes
+        # Volume (area) of dudx control volumes
         Ωux3 = kron(hyi3, hxd3)
-        # volume (area) of dudy control volumes
+        # Volume (area) of dudy control volumes
         Ωuy3 = kron(gyd3, gxi3)
-        # volume (area) of dvdx control volumes
+        # Volume (area) of dvdx control volumes
         Ωvx3 = kron(gyi3, gxd3)
-        # volume (area) of dvdy control volumes
+        # Volume (area) of dvdy control volumes
         Ωvy3 = kron(hyd3, hxi3)
 
         Ωu1 = Ωu
@@ -357,7 +357,7 @@ function operator_mesh!(setup)
         # Ωvort = α*Ωvort - Ωvort3;
     end
 
-    # metrics that can be useful for initialization:
+    # Metrics that can be useful for initialization:
     xu = kron(ones(1, Nuy_in), xin)
     yu = kron(yp, ones(Nux_in))
     xu = reshape(xu, Nux_in, Nuy_in)
@@ -373,13 +373,13 @@ function operator_mesh!(setup)
     xpp = reshape(xpp, Nx, Ny)
     ypp = reshape(ypp, Nx, Ny)
 
-    # indices of unknowns in velocity vector
+    # Indices of unknowns in velocity vector
     indu = 1:Nu
     indv = Nu+1:Nu+Nv
     indV = 1:NV
     indp = NV+1:NV+Np
 
-    ## store quantities in the structure
+    ## Store quantities in the structure
     setup.grid.Npx = Npx
     setup.grid.Npy = Npy
     setup.grid.Np = Np
@@ -480,7 +480,7 @@ function operator_mesh!(setup)
         setup.grid.Ωvort3 = Ωvort3
     end
 
-    # plot the grid: velocity points and pressure points
+    # Plot the grid: velocity points and pressure points
     if setup.visualization.plotgrid
         plot_staggered(x, y)
     end

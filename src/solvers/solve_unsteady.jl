@@ -19,7 +19,7 @@ function solve_unsteady!(solution, setup)
     @unpack V, p, t, Δt, n, nt, maxres, maxdiv, k, vmom, nonlinear_its, time, umom =
         solution
 
-    # for methods that need convection from previous time step
+    # For methods that need convection from previous time step
     if method == 2
         if setup.bc.bc_unsteady
             set_bc_vectors!(setup, t)
@@ -39,7 +39,7 @@ function solve_unsteady!(solution, setup)
     kV = zeros(NV, nstage(rk_method))
     kp = zeros(Np, nstage(rk_method))
 
-    # for methods that need uₙ₋₁
+    # For methods that need uₙ₋₁
     Vₙ₋₁ = copy(V)
     pₙ₋₁ = copy(p)
 
@@ -48,7 +48,7 @@ function solve_unsteady!(solution, setup)
     pₙ = copy(p)
     tₙ = t
 
-    # for methods that need extrapolation of convective terms
+    # For methods that need extrapolation of convective terms
     if method ∈ [62, 92, 142, 172, 182, 192]
         V_ep = zeros(NV, method_startup_no)
         V_ep[:, 1] .= V
@@ -75,7 +75,7 @@ function solve_unsteady!(solution, setup)
         fps = 60
     end
 
-    # record(fig, "output/vorticity.mp4", 2:nt; framerate = 60) do n
+    # Record(fig, "output/vorticity.mp4", 2:nt; framerate = 60) do n
     while n ≤ nt
         # Advance one time step
         n += 1
@@ -89,7 +89,7 @@ function solve_unsteady!(solution, setup)
 
         # @show t
 
-        # for methods that need a velocity field at n-1 the first time step
+        # For methods that need a velocity field at n-1 the first time step
         # (e.g. AB-CN, oneleg beta) use ERK or IRK
         if method_temp ∈ [2, 5] && n ≤ method_startup_no
             println("Starting up with method $method_startup")
@@ -112,27 +112,27 @@ function solve_unsteady!(solution, setup)
             error("time integration method unknown")
         end
 
-        # the velocities and pressure that are just computed are at
-        # the new time level t+Δt:
+        # The velocities and pressure that are just computed are at
+        # The new time level t+Δt:
         t = tₙ + Δt
         time[n] = t
 
         ## Process data from this iteration
-        # check residuals, conservation, set timestep, write output files
+        # Check residuals, conservation, set timestep, write output files
 
-        # calculate mass, momentum and energy
+        # Calculate mass, momentum and energy
         maxdiv[n], umom[n], vmom[n], k[n] = check_conservation(V, t, setup)
 
-        # residual (in Finite Volume form)
-        # for ke model residual also contains k and e terms and is computed
-        # in solver_unsteady_ke
+        # Residual (in Finite Volume form)
+        # For ke model residual also contains k and e terms and is computed
+        # In solver_unsteady_ke
         if use_rom
-            # get ROM residual
+            # Get ROM residual
             F, = momentum_rom(R, 0, t, setup, false)
             maxres[n] = maximum(abs.(F))
         else
             if visc != "keps"
-                # norm of residual
+                # Norm of residual
                 momentum!(F, ∇F, V, V, p, t, setup, cache, false)
                 maxres[n] = maximum(abs.(F))
             end
@@ -150,7 +150,7 @@ function solve_unsteady!(solution, setup)
             p_total[n, :] = p
         end
 
-        if do_rtp #&& mod(n, rtp_n) == 0
+        if do_rtp # && mod(n, rtp_n) == 0
             ω[] = reshape(get_vorticity(V, t, setup), Nx - 1, Ny - 1)
             sleep(1 / fps)
         end

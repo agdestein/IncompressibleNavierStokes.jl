@@ -4,7 +4,7 @@ module IncompressibleNavierStokes
 using LinearAlgebra: Factorization, I, cholesky, factorize, ldiv!, mul!
 using SparseArrays: SparseMatrixCSC, blockdiag, sparse, spdiagm, spzeros
 using UnPack: @unpack
-# using Plots: contour, contourf, title!
+# Using Plots: contour, contourf, title!
 using Makie:
     Axis, Colorbar, DataAspect, Figure, Node, contourf, contourf!, limits!, lines!, record
 

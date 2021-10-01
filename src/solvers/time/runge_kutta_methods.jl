@@ -8,7 +8,7 @@ Extended by Benjamin Sanderse
 """
 abstract type RungeKuttaMethod end
 
-##================SSP Methods=========================
+## ================SSP Methods=========================
 
 # Explicit Methods
 struct FE11 <: RungeKuttaMethod end
@@ -89,9 +89,9 @@ For families of methods, optional input `s` is the number of stages.
 """
 function tableau end
 
-##================Explicit Methods=========================
+## ================Explicit Methods=========================
 function tableau(::FE11)
-    #Forward Euler
+    # Forward Euler
     s = 1
     r = 1
     A = fill(0, 1, 1)
@@ -145,7 +145,7 @@ function tableau(::SSP104)
     A, b, c, r
 end
 function tableau(::rSSPs2, s = 1)
-    #Rational (optimal, low-storage) s-stage 2nd order SSP
+    # Rational (optimal, low-storage) s-stage 2nd order SSP
     s ≥ 2 || error("Explicit second order SSP family requires s ≥ 2")
     r = s - 1
     α = [zeros(1, s); I(s)]
@@ -159,7 +159,7 @@ function tableau(::rSSPs2, s = 1)
     A, b, c, r
 end
 function tableau(::rSSPs3, s = 1)
-    #Rational (optimal, low-storage) s^2-stage 3rd order SSP
+    # Rational (optimal, low-storage) s^2-stage 3rd order SSP
     if !(round(sqrt(s)) ≈ sqrt(s)) || s < 4
         error("Explicit third order SSP family requires s = n^2, n > 1")
     end
@@ -211,13 +211,13 @@ function tableau(::DOPRI6)
     ]
     b = [35 // 384, 0, 500 // 1113, 125 // 192, -2187 // 6784, 11 // 84]
     c = sum(A; dims = 2)
-    r = 0 #?
+    r = 0 # ?
     A, b, c, r
 end
 
-##================Implicit Methods=========================
+## ================Implicit Methods=========================
 function tableau(::BE11)
-    #Backward Euler
+    # Backward Euler
     s = 1
     r = 1.e10
     A = fill(1, 1, 1)
@@ -226,7 +226,7 @@ function tableau(::BE11)
     A, b, c, r
 end
 function tableau(::SDIRK34)
-    #3-stage, 4th order singly diagonally implicit (SSP)
+    # 3-stage, 4th order singly diagonally implicit (SSP)
     s = 3
     r = 1.7588
     g = 0.5 * (1 - cos(π / 18) / sqrt(3) - sin(π / 18))
@@ -241,8 +241,8 @@ function tableau(::SDIRK34)
     A, b, c, r
 end
 function tableau(::ISSPm2, s = 1)
-    #Optimal DIRK SSP schemes of order 2
-    # r = 2 * s
+    # Optimal DIRK SSP schemes of order 2
+    # R = 2 * s
     i = repmat(1:s, 1, s)
     j = repmat(1:s, s, 1)
     A = 1 // s * (j < i) + 1 // (2 * s) * (i == j)
@@ -251,7 +251,7 @@ function tableau(::ISSPm2, s = 1)
     A, b, c, r
 end
 function tableau(::ISSPs3, s = 1)
-    #Optimal DIRK SSP schemes of order 3
+    # Optimal DIRK SSP schemes of order 3
     if s < 2
         error("Implicit third order SSP schemes require s>=2")
     end
@@ -264,7 +264,7 @@ function tableau(::ISSPs3, s = 1)
     A, b, c, r
 end
 
-##===================Half explicit methods========================
+## ===================Half explicit methods========================
 function tableau(::HEM3)
     # Brasey and Hairer
     A = [0 0 0; 1//3 0 0; -1 2 0]
@@ -292,9 +292,9 @@ function tableau(::HEM5)
     A, b, c, r
 end
 
-##================Classical Methods=========================
+## ================Classical Methods=========================
 
-#Gauss-Legendre methods -- order 2s
+# Gauss-Legendre methods -- order 2s
 function tableau(::GL1)
     r = 2
     A = fill(1 // 2, 1, 1)
@@ -324,9 +324,9 @@ function tableau(::GL3)
     A, b, c, r
 end
 
-#Radau IA methods -- order 2s-1
+# Radau IA methods -- order 2s-1
 function tableau(::RIA1)
-    # this is implicit Euler
+    # This is implicit Euler
     r = 1
     A = fill(1, 1, 1)
     b = [1]
@@ -355,7 +355,7 @@ function tableau(::RIA3)
     A, b, c, r
 end
 
-#Radau IIA methods -- order 2s-1
+# Radau IIA methods -- order 2s-1
 function tableau(::RIIA1)
     r = 1
     A = 1
@@ -435,7 +435,7 @@ function tableau(::CHCONS3)
 end
 function tableau(::CHC3)
     # Chebyshev quadrature and C(3) satisfied
-    # note this equals Lobatto IIIA
+    # Note this equals Lobatto IIIA
     A = [
         0 0 0
         5//24 1//3 -1//24
@@ -458,9 +458,9 @@ function tableau(::CHC5)
     A, b, c, r
 end
 
-##==================Miscellaneous Methods================
+## ==================Miscellaneous Methods================
 function tableau(::Mid22)
-    #Midpoint 22 method
+    # Midpoint 22 method
     s = 2
     r = 0.5
     A = [
@@ -472,7 +472,7 @@ function tableau(::Mid22)
     A, b, c, r
 end
 function tableau(::MTE22)
-    #Minimal truncation error 22 method (Heun)
+    # Minimal truncation error 22 method (Heun)
     s = 2
     r = 0.5
     A = [
@@ -484,7 +484,7 @@ function tableau(::MTE22)
     A, b, c, r
 end
 function tableau(::CN22)
-    #Crank-Nicholson
+    # Crank-Nicholson
     s = 2
     r = 2
     A = [
@@ -542,16 +542,16 @@ function tableau(::RK44C23)
 end
 function tableau(::RK44P2)
     # RK4 satisfying the second order condition for the pressure (but not third
-    # order)
+    # Order)
     A = [0 0 0 0; 1 0 0 0; 3//8 1//8 0 0; -1//8 -3//8 3//2 0]
     b = [1 // 6, -1 // 18, 2 // 3, 2 // 9]
     c = [0, 1, 1 // 2, 1]
     A, b, c, r
 end
 
-##===================DSRK Methods========================
+## ===================DSRK Methods========================
 function tableau(::DSso2)
-    #CBM"s DSRKso2
+    # CBM"s DSRKso2
     s = 2
     isdsrk = 1
     A = [
@@ -567,7 +567,7 @@ function tableau(::DSso2)
     A, b, c, r
 end
 function tableau(::DSRK2)
-    #CBM"s DSRK2
+    # CBM"s DSRK2
     s = 2
     A = [
         1//2 -1//2
@@ -582,7 +582,7 @@ function tableau(::DSRK2)
     A, b, c, r
 end
 function tableau(::DSRK3)
-    #Zennaro"s DSRK3
+    # Zennaro"s DSRK3
     s = 3
     isdsrk = 1
     A = [
@@ -600,7 +600,7 @@ function tableau(::DSRK3)
     A, b, c, r
 end
 
-##==================="Non-SSP" Methods of Wong & Sπteri========================
+## ==================="Non-SSP" Methods of Wong & Sπteri========================
 function tableau(::NSSP21)
     s = 2
     r = 0

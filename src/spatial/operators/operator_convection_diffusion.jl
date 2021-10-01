@@ -1,10 +1,10 @@
 function operator_convection_diffusion!(setup)
     # Construct convection and diffusion operators
 
-    # boundary conditions
+    # Boundary conditions
     bc = setup.bc
 
-    # number of interior points and boundary points
+    # Number of interior points and boundary points
     @unpack Nx, Ny = setup.grid
     @unpack Nu, Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t = setup.grid
     @unpack Nv, Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t = setup.grid
@@ -28,7 +28,7 @@ function operator_convection_diffusion!(setup)
 
     ## Convection (differencing) operator Cu
 
-    # calculates difference from pressure points to velocity points
+    # Calculates difference from pressure points to velocity points
     diag1 = ones(Nux_t - 2)
     D1D = spdiagm(Nux_t - 2, Nux_t - 1, 0 => -diag1, 1 => diag1)
     Cux = kron(sparse(I, Nuy_in, Nuy_in), D1D)
@@ -36,7 +36,7 @@ function operator_convection_diffusion!(setup)
         Dux = kron(Diagonal(hyi), D1D)
     end
 
-    # calculates difference from corner points to velocity points
+    # Calculates difference from corner points to velocity points
     diag1 = ones(Nuy_t - 2)
     D1D = spdiagm(Nuy_t - 2, Nuy_t - 1, 0 => -diag1, 1 => diag1)
     Cuy = kron(D1D, sparse(I, Nux_in, Nux_in))
@@ -49,7 +49,7 @@ function operator_convection_diffusion!(setup)
 
     ## Convection (differencing) operator Cv
 
-    # calculates difference from pressure points to velocity points
+    # Calculates difference from pressure points to velocity points
     diag1 = ones(Nvx_t - 2)
     D1D = spdiagm(Nvx_t - 2, Nvx_t - 1, 0 => -diag1, 1 => diag1)
     Cvx = kron(sparse(I, Nvy_in, Nvy_in), D1D)
@@ -57,7 +57,7 @@ function operator_convection_diffusion!(setup)
         Dvx = kron(Diagonal(gyi), D1D)
     end
 
-    # calculates difference from corner points to velocity points
+    # Calculates difference from corner points to velocity points
     diag1 = ones(Nvy_t - 2)
     D1D = spdiagm(Nvy_t - 2, Nvy_t - 1, 0 => -diag1, 1 => diag1)
     Cvy = kron(D1D, sparse(I, Nvx_in, Nvx_in))
@@ -69,35 +69,35 @@ function operator_convection_diffusion!(setup)
     # Dv = [Dvx Dvy]
 
     if order4
-        ## fourth order operators
+        ## Fourth order operators
         ## Convection (differencing) operator Cu
 
-        # calculates difference from pressure points to velocity points
+        # Calculates difference from pressure points to velocity points
         diag1 = ones(Nux_t)
         D1D = spdiagm(Nux_t - 2, Nux_t + 1, 1 => -diag1, 2 => diag1)
         Dux = kron(Diagonal(hyi), D1D)
 
-        # the "second order" Cux is unchanged
-        # the "second order" Dux changes, because we also use the "second
-        # order" flux at "fourth order" ghost points (Dux should have the same
-        # size as Dux3)
+        # The "second order" Cux is unchanged
+        # The "second order" Dux changes, because we also use the "second
+        # Order" flux at "fourth order" ghost points (Dux should have the same
+        # Size as Dux3)
 
-        # calculates difference from pressure points to velocity points
+        # Calculates difference from pressure points to velocity points
         diag1 = ones(Nux_t)
         D1D3 = spdiagm(Nux_t - 2, Nux_t + 1, 0 => -diag1, 3 => diag1)
         Cux3 = kron(sparse(I, Ny, Ny), D1D3)
         Dux3 = kron(Diagonal(hyi3), D1D3)
 
-        # calculates difference from corner points to velocity points
+        # Calculates difference from corner points to velocity points
         diag1 = ones(Nuy_t)
         D1D = spdiagm(Nuy_t - 2, Nuy_t + 1, 1 => -diag1, 2 => diag1)
         Duy = kron(D1D, Diagonal(gxi))
 
-        # calculates difference from corner points to velocity points
+        # Calculates difference from corner points to velocity points
         diag1 = ones(Nuy_t)
         D1D3 = spdiagm(Nuy_t - 2, Nuy_t + 1, 0 => -diag1, 3 => diag1)
 
-        # uncomment for new BC (functions/new)
+        # Uncomment for new BC (functions/new)
         if bc.u.low == "dir"
             D1D3[1, 1] = 1
             D1D3[1, 2] = -2
@@ -111,16 +111,16 @@ function operator_convection_diffusion!(setup)
 
         ## Convection (differencing) operator Cv
 
-        # calculates difference from pressure points to velocity points
+        # Calculates difference from pressure points to velocity points
         diag1 = ones(Nvx_t)
         D1D = spdiagm(Nvx_t - 2, Nvx_t + 1, 1 => -diag1, 2 => diag1)
         Dvx = kron(Diagonal(gyi), D1D)
 
-        # calculates difference from pressure points to velocity points
+        # Calculates difference from pressure points to velocity points
         diag1 = ones(Nvx_t)
         D1D3 = spdiagm(Nvx_t - 2, Nvx_t + 1, 0 => -diag1, 3 => diag1)
 
-        # uncomment for new BC (functions/new)
+        # Uncomment for new BC (functions/new)
         if bc.v.left == "dir"
             D1D3[1, 1] = 1
             D1D3[1, 2] = -2
@@ -132,12 +132,12 @@ function operator_convection_diffusion!(setup)
         Cvx3 = kron(sparse(I, Nvy_in, Nvy_in), D1D3)
         Dvx3 = kron(Diagonal(gyi3), D1D3)
 
-        # calculates difference from corner points to velocity points
+        # Calculates difference from corner points to velocity points
         diag1 = ones(Nvy_t, 1)
         D1D = spdiagm(Nvy_t - 2, Nvy_t + 1, 1 => -diag1, 2 => diag1)
         Dvy = kron(D1D, Diagonal(hxi))
 
-        # calculates difference from corner points to velocity points
+        # Calculates difference from corner points to velocity points
         diag1 = ones(Nvy_t, 1)
         D1D3 = spdiagm(Nvy_t - 2, Nvy_t + 1, 0 => -diag1, 3 => diag1)
         Cvy3 = kron(D1D3, sparse(I, Nvx_in, Nvx_in))
@@ -147,7 +147,7 @@ function operator_convection_diffusion!(setup)
         diag1 = 1 ./ hxd13
         S1D = spdiagm(Nux_in + 3, Nux_t + 4, 1 => -diag1, 2 => diag1)
 
-        # boundary conditions
+        # Boundary conditions
         Su_ux_bc = bc_diff3(
             Nux_t + 4,
             Nux_in,
@@ -158,7 +158,7 @@ function operator_convection_diffusion!(setup)
             hx[end],
         )
 
-        # extend to 2D
+        # Extend to 2D
         Su_ux = Diagonal(Ωux1) * kron(sparse(I, Ny, Ny), S1D * Su_ux_bc.B1D)
         Su_ux_bc = (;
             Su_ux_bc...,
@@ -168,7 +168,7 @@ function operator_convection_diffusion!(setup)
         diag1 = 1 ./ hxd3
         S1D3 = spdiagm(Nux_in + 3, Nux_t + 4, 0 => -diag1, 3 => diag1)
 
-        # boundary conditions
+        # Boundary conditions
         Su_ux_bc3 = bc_diff3(
             Nux_t + 4,
             Nux_in,
@@ -179,7 +179,7 @@ function operator_convection_diffusion!(setup)
             hx[end],
         )
 
-        # extend to 2D
+        # Extend to 2D
         Su_ux3 = Diagonal(Ωux3) * kron(sparse(I, Nuy_in, Nuy_in), S1D3 * Su_ux_bc3.B1D)
         Su_ux_bc3.Bbc =
             Diagonal(Ωux3) * kron(sparse(I, Nuy_in, Nuy_in), S1D3 * Su_ux_bc3.Btemp)
@@ -188,7 +188,7 @@ function operator_convection_diffusion!(setup)
         diag1 = 1 ./ gyd13
         S1D = spdiagm(Nuy_in + 3, Nuy_t + 4, 1 => -diag1, 2 => diag1)
 
-        # boundary conditions
+        # Boundary conditions
         Su_uy_bc = bc_diff_stag3(
             Nuy_t + 4,
             Nuy_in,
@@ -199,7 +199,7 @@ function operator_convection_diffusion!(setup)
             hy[end],
         )
 
-        # extend to 2D
+        # Extend to 2D
         Su_uy = Diagonal(Ωuy1) * kron(S1D * Su_uy_bc.B1D, sparse(I, Nux_in, Nux_in))
         Su_uy_bc.Bbc =
             Diagonal(Ωuy1) * kron(S1D * Su_uy_bc.Btemp, sparse(I, Nux_in, Nux_in))
@@ -207,7 +207,7 @@ function operator_convection_diffusion!(setup)
         diag1 = 1 ./ gyd3
         S1D3 = spdiagm(Nuy_in + 3, Nuy_t + 4, 0 => -diag1, 3 => diag1)
 
-        # boundary conditions
+        # Boundary conditions
         Su_uy_bc3 = bc_diff_stag3(
             Nuy_t + 4,
             Nuy_in,
@@ -218,7 +218,7 @@ function operator_convection_diffusion!(setup)
             hy[end],
         )
 
-        # extend to 2D
+        # Extend to 2D
         Su_uy3 = Diagonal(Ωuy3) * kron(S1D3 * Su_uy_bc3.B1D, sparse(I, Nux_in, Nux_in))
         Su_uy_bc3.Bbc =
             Diagonal(Ωuy3) * kron(S1D3 * Su_uy_bc3.Btemp, sparse(I, Nux_in, Nux_in))
@@ -227,7 +227,7 @@ function operator_convection_diffusion!(setup)
         diag1 = 1 ./ gxd13
         S1D = spdiagm(Nvx_in + 3, Nvx_t + 4, 1 => -diag1, 2 => diag1)
 
-        # boundary conditions
+        # Boundary conditions
         Sv_vx_bc = bc_diff_stag3(
             Nvx_t + 4,
             Nvx_in,
@@ -238,7 +238,7 @@ function operator_convection_diffusion!(setup)
             hx[end],
         )
 
-        # extend to 2D
+        # Extend to 2D
         Sv_vx = Diagonal(Ωvx1) * kron(sparse(I, Nvy_in, Nvy_in), S1D * Sv_vx_bc.B1D)
         Sv_vx_bc.Bbc =
             Diagonal(Ωvx1) * kron(sparse(I, Nvy_in, Nvy_in), S1D * Sv_vx_bc.Btemp)
@@ -246,7 +246,7 @@ function operator_convection_diffusion!(setup)
         diag1 = 1 ./ gxd3
         S1D3 = spdiagm(Nvx_in + 3, Nvx_t + 4, 0 => -diag1, 3 => diag1)
 
-        # boundary conditions
+        # Boundary conditions
         Sv_vx_bc3 = bc_diff_stag3(
             Nvx_t + 4,
             Nvx_in,
@@ -256,7 +256,7 @@ function operator_convection_diffusion!(setup)
             hx[1],
             hx[end],
         )
-        # extend to 2D
+        # Extend to 2D
         Sv_vx3 = Diagonal(Ωvx3) * kron(sparse(I, Nvy_in, Nvy_in), S1D3 * Sv_vx_bc3.B1D)
         Sv_vx_bc3.Bbc =
             Diagonal(Ωvx3) * kron(sparse(I, Nvy_in, Nvy_in), S1D3 * Sv_vx_bc3.Btemp)
@@ -265,7 +265,7 @@ function operator_convection_diffusion!(setup)
         diag1 = 1 ./ hyd13
         S1D = spdiagm(Nvy_in + 3, Nvy_t + 4, 1 => -diag1, 2 => diag1)
 
-        # boundary conditions
+        # Boundary conditions
         Sv_vy_bc = bc_diff3(
             Nvy_t + 4,
             Nvy_in,
@@ -276,7 +276,7 @@ function operator_convection_diffusion!(setup)
             hy[end],
         )
 
-        # extend to 2D
+        # Extend to 2D
         Sv_vy = Diagonal(Ωvy1) * kron(S1D * Sv_vy_bc.B1D, sparse(I, Nvx_in, Nvx_in))
         Sv_vy_bc.Bbc =
             Diagonal(Ωvy1) * kron(S1D * Sv_vy_bc.Btemp, sparse(I, Nvx_in, Nvx_in))
@@ -284,7 +284,7 @@ function operator_convection_diffusion!(setup)
         diag1 = 1 ./ hyd3
         S1D3 = spdiagm(Nvy_in + 3, Nvy_t + 4, 0 => -diag1, 3 => diag1)
 
-        # boundary conditions
+        # Boundary conditions
         Sv_vy_bc3 = bc_diff3(
             Nvy_t + 4,
             Nvy_in,
@@ -294,7 +294,7 @@ function operator_convection_diffusion!(setup)
             hy[1],
             hy[end],
         )
-        # extend to 2D
+        # Extend to 2D
         Sv_vy3 = Diagonal(Ωvy3) * kron(S1D3 * Sv_vy_bc3.B1D, sparse(I, Nvx_in, Nvx_in))
         Sv_vy_bc3.Bbc =
             Diagonal(Ωvy3) * kron(S1D3 * Sv_vy_bc3.Btemp, sparse(I, Nvx_in, Nvx_in))
@@ -305,10 +305,10 @@ function operator_convection_diffusion!(setup)
         diag1 = 1 ./ hxd
         S1D = spdiagm(Nux_t - 1, Nux_t, 0 => -diag1, 1 => diag1)
 
-        # boundary conditions
+        # Boundary conditions
         Su_ux_bc = bc_general(Nux_t, Nux_in, Nux_b, bc.u.left, bc.u.right, hx[1], hx[end])
 
-        # extend to 2D
+        # Extend to 2D
         Su_ux = kron(sparse(I, Ny, Ny), S1D * Su_ux_bc.B1D)
         Su_ux_bc = (; Su_ux_bc..., Bbc = kron(sparse(I, Ny, Ny), S1D * Su_ux_bc.Btemp))
 
@@ -316,10 +316,10 @@ function operator_convection_diffusion!(setup)
         diag1 = 1 ./ gyd
         S1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => -diag1, 1 => diag1)
 
-        # boundary conditions
+        # Boundary conditions
         Su_uy_bc = bc_diff_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.low, bc.u.up, hy[1], hy[end])
 
-        # extend to 2D
+        # Extend to 2D
         Su_uy = kron(S1D * Su_uy_bc.B1D, sparse(I, Nux_in, Nux_in))
         Su_uy_bc =
             (; Su_uy_bc..., Bbc = kron(S1D * Su_uy_bc.Btemp, sparse(I, Nux_in, Nux_in)))
@@ -328,11 +328,11 @@ function operator_convection_diffusion!(setup)
         diag1 = 1 ./ gxd
         S1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => -diag1, 1 => diag1)
 
-        # the restriction is essentially 1D so it can be directly applied to I1D
+        # The restriction is essentially 1D so it can be directly applied to I1D
         S1D = Bvux * S1D
         S2D = kron(sparse(I, Nuy_t - 1, Nuy_t - 1), S1D)
 
-        # boundary conditions low/up
+        # Boundary conditions low/up
         Nb = Nuy_in + 1 - Nvy_in
         Sv_uy_bc_lu = bc_general(Nuy_in + 1, Nvy_in, Nb, bc.v.low, bc.v.up, hy[1], hy[end])
         Sv_uy_bc_lu =
@@ -340,11 +340,11 @@ function operator_convection_diffusion!(setup)
         Sv_uy_bc_lu =
             (; Sv_uy_bc_lu..., Bbc = kron(Sv_uy_bc_lu.Btemp, sparse(I, Nvx_in, Nvx_in)))
 
-        # boundary conditions left/right
+        # Boundary conditions left/right
         Sv_uy_bc_lr =
             bc_general_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.left, bc.v.right, hx[1], hx[end])
 
-        # take I2D into left/right operators for convenience
+        # Take I2D into left/right operators for convenience
         Sv_uy_bc_lr = (;
             Sv_uy_bc_lr...,
             B2D = S2D * kron(sparse(I, Nuy_t - 1, Nuy_t - 1), Sv_uy_bc_lr.B1D),
@@ -354,7 +354,7 @@ function operator_convection_diffusion!(setup)
             Bbc = S2D * kron(sparse(I, Nuy_t - 1, Nuy_t - 1), Sv_uy_bc_lr.Btemp),
         )
 
-        # resulting operator:
+        # Resulting operator:
         Sv_uy = Sv_uy_bc_lr.B2D * Sv_uy_bc_lu.B2D
 
         ## Diffusion operator (stress tensor), v-component: similar to averaging!
@@ -365,7 +365,7 @@ function operator_convection_diffusion!(setup)
         S1D = Buvy * S1D
         S2D = kron(S1D, sparse(I, Nvx_t - 1, Nvx_t - 1))
 
-        # boundary conditions low/up
+        # Boundary conditions low/up
         Su_vx_bc_lu =
             bc_general_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.low, bc.u.up, hy[1], hy[end])
         Su_vx_bc_lu = (;
@@ -377,7 +377,7 @@ function operator_convection_diffusion!(setup)
             Bbc = S2D * kron(Su_vx_bc_lu.Btemp, sparse(I, Nvx_t - 1, Nvx_t - 1)),
         )
 
-        # boundary conditions left/right
+        # Boundary conditions left/right
         Nb = Nvx_in + 1 - Nux_in
         Su_vx_bc_lr =
             bc_general(Nvx_in + 1, Nux_in, Nb, bc.u.left, bc.u.right, hx[1], hx[end])
@@ -387,17 +387,17 @@ function operator_convection_diffusion!(setup)
         Su_vx_bc_lr =
             (; Su_vx_bc_lr..., Bbc = kron(sparse(I, Nuy_in, Nuy_in), Su_vx_bc_lr.Btemp))
 
-        # resulting operator:
+        # Resulting operator:
         Su_vx = Su_vx_bc_lu.B2D * Su_vx_bc_lr.B2D
 
         ## Sv_vx: evaluate vx
         diag1 = 1 ./ gxd
         S1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => -diag1, 1 => diag1)
 
-        # boundary conditions
+        # Boundary conditions
         Sv_vx_bc = bc_diff_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.left, bc.v.right, hx[1], hx[end])
 
-        # extend to 2D
+        # Extend to 2D
         Sv_vx = kron(sparse(I, Nvy_in, Nvy_in), S1D * Sv_vx_bc.B1D)
 
         Sv_vx_bc =
@@ -407,15 +407,15 @@ function operator_convection_diffusion!(setup)
         diag1 = 1 ./ hyd
         S1D = spdiagm(Nvy_t - 1, Nvy_t, 0 => -diag1, 1 => diag1)
 
-        # boundary conditions
+        # Boundary conditions
         Sv_vy_bc = bc_general(Nvy_t, Nvy_in, Nvy_b, bc.v.low, bc.v.up, hy[1], hy[end])
 
-        # extend to 2D
+        # Extend to 2D
         Sv_vy = kron(S1D * Sv_vy_bc.B1D, sparse(I, Nx, Nx))
         Sv_vy_bc = (; Sv_vy_bc..., Bbc = kron(S1D * Sv_vy_bc.Btemp, sparse(I, Nx, Nx)))
     end
 
-    ## assemble operators
+    ## Assemble operators
     if visc == "laminar"
         if order4
             Diffux_div = (α * Dux - Dux3) * Diagonal(1 ./ Ωux)
@@ -433,7 +433,7 @@ function operator_convection_diffusion!(setup)
             Diffv = Dvx * 1 / Re * Sv_vx + Dvy * 1 / Re * Sv_vy
         end
     elseif visc ∈ ["keps", "LES", "qr", "ML"]
-        # only implemented for 2nd order
+        # Only implemented for 2nd order
     else
         error("wrong visc parameter")
     end
@@ -460,13 +460,13 @@ function operator_convection_diffusion!(setup)
         @pack! setup.discretization = Su_vx_bc_lr, Su_vx_bc_lu, Sv_uy_bc_lr, Sv_uy_bc_lu
     end
 
-    ## additional for implicit time stepping diffusion
+    ## Additional for implicit time stepping diffusion
     if setup.time.method == 2 && visc == "laminar"
         θ = setup.time.θ
         Δt = setup.time.Δt
 
-        # implicit time-stepping for diffusion
-        # solving (I-Δt*Diffu)*uₕ* =
+        # Implicit time-stepping for diffusion
+        # Solving (I-Δt*Diffu)*uₕ* =
         Diffu_impl = sparse(I, Nu, Nu) - θ * Δt * Diagonal(Ωu⁻¹) * Diffu
         Diffv_impl = sparse(I, Nv, Nv) - θ * Δt * Diagonal(Ωv⁻¹) * Diffv
 

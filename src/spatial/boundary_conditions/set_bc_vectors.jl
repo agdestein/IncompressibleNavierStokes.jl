@@ -32,7 +32,7 @@ function set_bc_vectors!(setup, t)
         @unpack Mx_bc3, My_bc3 = setup.discretization
     end
 
-    ## get BC values
+    ## Get BC values
     uLo = u_bc.(x, y[1], t, [setup])
     uUp = u_bc.(x, y[end], t, [setup])
 
@@ -56,7 +56,7 @@ function set_bc_vectors!(setup, t)
         dvdtUp_i = dvdt_bc.(setup.grid.xp, y[end], t, [setup])
     end
 
-    ## boundary conditions for divergence
+    ## Boundary conditions for divergence
 
     # Mx
     ybc = kron(uLe_i, Mx_bc.ybc1) + kron(uRi_i, Mx_bc.ybc2)
@@ -79,7 +79,7 @@ function set_bc_vectors!(setup, t)
     yM = yMx + yMy
     setup.discretization.yM = yM
 
-    # time derivative of divergence
+    # Time derivative of divergence
     if !is_steady
         if setup.bc.bc_unsteady
             ybc = kron(dudtLe_i, Mx_bc.ybc1) + kron(dudtRi_i, Mx_bc.ybc2)
@@ -106,9 +106,9 @@ function set_bc_vectors!(setup, t)
         setup.discretization.ydM = ydM
     end
 
-    ## boundary conditions for pressure
+    ## Boundary conditions for pressure
 
-    # left and right side
+    # Left and right side
     y1D_le = zeros(Nux_in)
     y1D_ri = zeros(Nux_in)
     if setup.bc.u.left == "pres"
@@ -119,7 +119,7 @@ function set_bc_vectors!(setup, t)
     end
     y_px = kron(hy .* pLe, y1D_le) + kron(hy .* pRi, y1D_ri)
 
-    # lower and upper side
+    # Lower and upper side
     y1D_lo = zeros(Nvy_in)
     y1D_up = zeros(Nvy_in)
     if setup.bc.v.low == "pres"
@@ -133,7 +133,7 @@ function set_bc_vectors!(setup, t)
     setup.discretization.y_px = y_px
     setup.discretization.y_py = y_py
 
-    ## boundary conditions for averaging
+    ## Boundary conditions for averaging
     # Au_ux
     ybc = kron(uLe_i, Au_ux_bc.ybc1) + kron(uRi_i, Au_ux_bc.ybc2)
     yAu_ux = Au_ux_bc.Bbc * ybc
@@ -178,7 +178,7 @@ function set_bc_vectors!(setup, t)
         setup.discretization.yAv_vy3 = yAv_vy3
     end
 
-    ## boundary conditions for diffusion
+    ## Boundary conditions for diffusion
     if order4
         ybc1 = kron(uLe_i, Su_ux_bc.ybc1) + kron(uRi_i, Su_ux_bc.ybc2)
         ybc3 = kron(uLe_i, Su_ux_bc3.ybc1) + kron(uRi_i, Su_ux_bc3.ybc2)
@@ -246,7 +246,7 @@ function set_bc_vectors!(setup, t)
             setup.discretization.yDiffu = yDiffu
             setup.discretization.yDiffv = yDiffv
         elseif visc ∈ ["keps", "LES", "qr", "ML"]
-            # instead, we will use the following values directly (see diffusion.jl and strain_tensor.jl)
+            # Instead, we will use the following values directly (see diffusion.jl and strain_tensor.jl)
             setup.discretization.ySu_ux = ySu_ux
             setup.discretization.ySu_uy = ySu_uy
             setup.discretization.ySu_vx = ySu_vx
@@ -256,7 +256,7 @@ function set_bc_vectors!(setup, t)
         end
     end
 
-    ## boundary conditions for interpolation
+    ## Boundary conditions for interpolation
 
     # Iu_ux
     ybc = kron(uLe_i, Iu_ux_bc.ybc1) + kron(uRi_i, Iu_ux_bc.ybc2)
@@ -361,53 +361,53 @@ function set_bc_vectors!(setup, t)
     end
 
     if visc ∈ ["qr", "LES", "ML"]
-        # set BC for turbulent viscosity nu_t
-        # in the periodic case, the value of nu_t is not needed
-        # in all other cases, homogeneous (zero) Neumann conditions are used
+        # Set BC for turbulent viscosity nu_t
+        # In the periodic case, the value of nu_t is not needed
+        # In all other cases, homogeneous (zero) Neumann conditions are used
 
         nuLe = zeros(Npy)
         nuRi = zeros(Npy)
         nuLo = zeros(Npx)
         nuUp = zeros(Npx)
 
-        ## nu_ux
+        ## Nu_ux
         Anu_ux_bc = setup.discretization.Anu_ux_bc
         ybc = kron(nuLe, Anu_ux_bc.ybc1) + kron(nuRi, Anu_ux_bc.ybc2)
         yAnu_ux = Anu_ux_bc.Bbc * ybc
 
-        ## nu_uy
+        ## Nu_uy
         Anu_uy_bc_lr = setup.discretization.Anu_uy_bc_lr
         Anu_uy_bc_lu = setup.discretization.Anu_uy_bc_lu
 
         nuLe_i = [nuLe[1]; nuLe; nuLe[end]]
         nuRi_i = [nuRi[1]; nuRi; nuRi[end]]
-        # in x-direction
+        # In x-direction
         ybc = kron(nuLe_i, Anu_uy_bc_lr.ybc1) + kron(nuRi_i, Anu_uy_bc_lr.ybc2)
         yAnu_uy_lr = Anu_uy_bc_lr.B2D * ybc
 
-        # in y-direction
+        # In y-direction
         ybc = kron(Anu_uy_bc_lu.ybc1, nuLo) + kron(Anu_uy_bc_lu.ybc2, nuUp)
         yAnu_uy_lu = Anu_uy_bc_lu.B2D * ybc
 
         yAnu_uy = yAnu_uy_lu + yAnu_uy_lr
 
-        ## nu_vx
+        ## Nu_vx
         Anu_vx_bc_lr = setup.discretization.Anu_vx_bc_lr
         Anu_vx_bc_lu = setup.discretization.Anu_vx_bc_lu
 
         nuLo_i = [nuLo[1]; nuLo; nuLo[end]]
         nuUp_i = [nuUp[1]; nuUp; nuUp[end]]
 
-        # in y-direction
+        # In y-direction
         ybc = kron(Anu_vx_bc_lu.ybc1, nuLo_i) + kron(Anu_vx_bc_lu.ybc2, nuUp_i)
         yAnu_vx_lu = Anu_vx_bc_lu.B2D * ybc
-        # in x-direction
+        # In x-direction
         ybc = kron(nuLe, Anu_vx_bc_lr.ybc1) + kron(nuRi, Anu_vx_bc_lr.ybc2)
         yAnu_vx_lr = Anu_vx_bc_lr.B2D * ybc
 
         yAnu_vx = yAnu_vx_lu + yAnu_vx_lr
 
-        ## nu_vy
+        ## Nu_vy
         ybc = kron(Anu_vy_bc.ybc1, nuLo) + kron(Anu_vy_bc.ybc2, nuUp)
         yAnu_vy = Anu_vy_bc.Bbc * ybc
 
@@ -416,7 +416,7 @@ function set_bc_vectors!(setup, t)
         setup.discretization.yAnu_vx = yAnu_vx
         setup.discretization.yAnu_vy = yAnu_vy
 
-        # set BC for getting du/dx, du/dy, dv/dx, dv/dy at cell centers
+        # Set BC for getting du/dx, du/dy, dv/dx, dv/dy at cell centers
 
         uLo_p = u_bc.(xp, y[1], t, [setup])
         uUp_p = u_bc.(xp, y[end], t, [setup])

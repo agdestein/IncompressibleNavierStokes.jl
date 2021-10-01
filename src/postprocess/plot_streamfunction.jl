@@ -48,7 +48,7 @@ function plot_streamfunction(solution, setup)
         x[2:(end-1)],
         y[2:(end-1)],
         ψ;
-        # levels,
+        # Levels,
     )
     display(f)
 end

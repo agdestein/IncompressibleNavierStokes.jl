@@ -45,7 +45,7 @@ function solve_steady!(solution, setup)
         V .+= ΔV
         p .+= Δp
 
-        # calculate mass, momentum and energy
+        # Calculate mass, momentum and energy
         maxdiv[n], umom[n], vmom[n], k[n] = check_conservation(V, t, setup)
 
         if visc != "keps"

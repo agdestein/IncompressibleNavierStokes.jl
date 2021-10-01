@@ -43,7 +43,7 @@ function plot_pressure(solution, setup)
         xp,
         yp,
         Δpres;
-        # levels,
+        # Levels,
     )
     display(f)
 end

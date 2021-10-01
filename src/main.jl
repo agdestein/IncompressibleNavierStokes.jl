@@ -24,7 +24,7 @@ function main(setup)
     # Boundary conditions
     create_boundary_conditions!(setup)
 
-    # construct operators (matrices) which are time-independent
+    # Construct operators (matrices) which are time-independent
     build_operators!(setup)
 
     # Initialization of solution vectors
@@ -48,7 +48,7 @@ function main(setup)
                 V, p = solve_steady!(solution, setup)
             else
                 if setup.ibm.ibm
-                    #Steady flow with laminar viscosity model and immersed boundary method, 2nd order
+                    # Steady flow with laminar viscosity model and immersed boundary method, 2nd order
                     V, p = solve_steady_ibm!(solution, setup)
                 else
                     # Steady flow with laminar viscosity model, 2nd order
@@ -81,7 +81,7 @@ function main(setup)
     totaltime = Base.time() - starttime
 
     # Post-processing
-    # postprocess(solution, setup)
+    # Postprocess(solution, setup)
 
     (; V, p, setup, totaltime, solution)
 end

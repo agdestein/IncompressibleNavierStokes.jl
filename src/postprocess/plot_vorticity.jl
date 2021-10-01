@@ -24,7 +24,7 @@ function plot_vorticity(solution, setup)
         ylabel = "y",
     )
     contourf!(ax, x[2:(end-1)], y[2:(end-1)], ω;
-        # levels
+        # Levels
     )
     display(f)
 end

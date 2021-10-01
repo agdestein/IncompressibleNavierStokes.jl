@@ -1,12 +1,12 @@
-# differencing velocity to k-points
+# Differencing velocity to k-points
 function ke_production!(setup)
-    ## du/dx
+    ## Du/dx
 
-    #differencing matrix
+    # Differencing matrix
     diag1 = 1 ./ hx
     C1D = spdiagm(Npx, Npx + 1, 0 => -diag1, 1 => diag1)
 
-    # boundary conditions
+    # Boundary conditions
     B1D, Btemp, ybcl, ybcr =
         bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.left, bc.u.right, hx[1], hx[end])
 
@@ -19,14 +19,14 @@ function ke_production!(setup)
     # Cux_k*uₕ+yCux_k;
 
 
-    ## du/dy
+    ## Du/dy
 
-    # average to k-positions (in x-dir)
+    # Average to k-positions (in x-dir)
     weight = 1 / 2
     diag1 = weight * ones(Npx)
     A1D = spdiagm(Npx, Npx + 1, 0 => diag1, 1 => diag1)
 
-    # boundary conditions
+    # Boundary conditions
     B1D, Btemp, ybcl, ybcr =
         bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.left, bc.u.right, hx[1], hx[end])
     uLe_i = interp1(y, uLe, yp)
@@ -36,8 +36,8 @@ function ke_production!(setup)
     Auy_k = kron(sparse(I, Ny, Ny), A1D * B1D)
     yAuy_k = kron(sparse(I, Ny, Ny), A1D * Btemp) * ybc
 
-    # take differences
-    gydnew = gyd[1:end-1] + gyd[2:end] # differencing over 2*deltay
+    # Take differences
+    gydnew = gyd[1:end-1] + gyd[2:end] # Differencing over 2*deltay
     diag2 = 1 ./ gydnew
     C1D = spdiagm(Npy, Npy + 2, 0 => -diag2, 1 => diag2)
 
@@ -53,14 +53,14 @@ function ke_production!(setup)
     # Cuy_k*(Auy_k*uₕ+yAuy_k) + yCuy_k;
 
 
-    ## dv/dx
+    ## Dv/dx
 
-    # average to k-positions (in y-dir)
+    # Average to k-positions (in y-dir)
     weight = 1 / 2
     diag1 = weight * ones(Npy, 1)
     A1D = spdiagm(Npy, Npy + 1, 0 => diag1, 1 => diag1)
 
-    # boundary conditions
+    # Boundary conditions
     B1D, Btemp, ybcl, ybcu =
         bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.low, bc.v.up, hy[1], hy[end])
     vLo_i = interp1(x, vLo, xp)
@@ -69,8 +69,8 @@ function ke_production!(setup)
     Avx_k = kron(A1D * B1D, sparse(I, Nx, Nx))
     yAvx_k = kron(A1D * Btemp, sparse(I, Nx, Nx)) * ybc
 
-    # take differences
-    gxdnew = gxd[1:end-1] + gxd[2:end] # differencing over 2*deltax
+    # Take differences
+    gxdnew = gxd[1:end-1] + gxd[2:end] # Differencing over 2*deltax
     diag2 = 1 ./ gxdnew
     C1D = spdiagm(Npx, Npx + 2, 0 => -diag2, 1 => diag2)
 
@@ -86,13 +86,13 @@ function ke_production!(setup)
     # Cvx_k*(Avx_k*vₕ+yAvx_k) + yCvx_k;
 
 
-    ## dv/dy
+    ## Dv/dy
 
-    # differencing matrix
+    # Differencing matrix
     diag1 = 1 ./ hy
     C1D = spdiagm(Npy, Npy + 1, 0 => -diag1, 1 => diag1)
 
-    # boundary conditions
+    # Boundary conditions
     B1D, Btemp, ybcl, ybcu =
         bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.low, bc.v.up, hy[1], hy[end])
 

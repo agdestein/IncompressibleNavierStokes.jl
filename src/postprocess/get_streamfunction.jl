@@ -1,5 +1,5 @@
 function get_streamfunction(V, t, setup)
-    # compute streamfunction from a Poisson equation nabla^2 ψ = -ω
+    # Compute streamfunction from a Poisson equation nabla^2 ψ = -ω
 
     @unpack u_bc, v_bc = setup.bc
     @unpack indu, indv, Nux_in, Nvx_in, Nx, Ny = setup.grid
@@ -9,10 +9,10 @@ function get_streamfunction(V, t, setup)
     uₕ = @view V[indu]
     vₕ = @view V[indv]
 
-    # boundary values by integrating around domain
-    # start with ψ = 0 at lower left corner
+    # Boundary values by integrating around domain
+    # Start with ψ = 0 at lower left corner
 
-    # u = d ψ / dy; integrate low->up
+    # U = d ψ / dy; integrate low->up
     if setup.bc.u.left == "dir"
         #     u1 = interp1(y, uLe, yp);
         u1 = u_bc.(x[1], yp, t, [setup])
@@ -23,7 +23,7 @@ function get_streamfunction(V, t, setup)
     ψUpLe = ψLe[end]
     ψLe = ψLe[1:end-1]
 
-    # v = -d ψ / dx; integrate left->right
+    # V = -d ψ / dx; integrate left->right
     if setup.bc.v.up == "dir"
         v1 = v_bc.(xp, y[end], t, [setup])
     elseif setup.bc.v.up == "pres"
@@ -35,7 +35,7 @@ function get_streamfunction(V, t, setup)
     ψUpRi = ψUp[end]
     ψUp = ψUp[1:end-1]
 
-    # u = d ψ / dy; integrate up->lo
+    # U = d ψ / dy; integrate up->lo
     if setup.bc.u.right == "dir"
         u2 = u_bc.(x[end], yp, t, [setup])
     elseif setup.bc.u.right == "pres"
@@ -47,7 +47,7 @@ function get_streamfunction(V, t, setup)
     ψLoRi = ψRi[end]
     ψRi = ψRi[end-1:-1:1]
 
-    # v = -d ψ / dx; integrate right->left
+    # V = -d ψ / dx; integrate right->left
     if setup.bc.v.low == "dir"
         v2 = v_bc.(xp, y[1], t, [setup])
     elseif setup.bc.v.low ∈ ["pres", "per"]
@@ -61,25 +61,25 @@ function get_streamfunction(V, t, setup)
         @warn "Contour integration of ψ not consistent: $(abs(ψLoLe))"
     end
 
-    # solve del^2 ψ = -ω
-    # only dirichlet boundary conditions because we calculate streamfunction at
-    # inner points only
+    # Solve del^2 ψ = -ω
+    # Only dirichlet boundary conditions because we calculate streamfunction at
+    # Inner points only
 
-    # x-direction
+    # X-direction
     diag1 = 1 ./ hx .* ones(Nx)
     Q1D = spdiagm(Nx, Nx + 1, 0 => -diag1, 1 => diag1)
     Qx_bc = bc_general(Nx + 1, Nx - 1, 2, "dir", "dir", hx[1], hx[end])
-    # extend to 2D
+    # Extend to 2D
     Q2Dx = kron(sparse(I, Ny - 1, Ny - 1), Q1D * Qx_bc.B1D)
     yQx =
         kron(sparse(I, Ny - 1, Ny - 1), Q1D * Qx_bc.Btemp) *
         (kron(ψLe .* ones(Ny - 1), Qx_bc.ybc1) + kron(ψRi .* ones(Ny - 1), Qx_bc.ybc2))
 
-    # y-direction
+    # Y-direction
     diag1 = 1 ./ hy .* ones(Ny)
     Q1D = spdiagm(Ny, Ny + 1, 0 => -diag1, 1 => diag1)
     Qy_bc = bc_general(Ny + 1, Ny - 1, 2, "dir", "dir", hy[1], hy[end])
-    # extend to 2D
+    # Extend to 2D
     Q2Dy = kron(Q1D * Qy_bc.B1D, sparse(I, Nx - 1, Nx - 1))
     yQy =
         kron(Q1D * Qy_bc.Btemp, sparse(I, Nx - 1, Nx - 1)) *
@@ -90,6 +90,6 @@ function get_streamfunction(V, t, setup)
 
     ω = get_vorticity(V, t, setup)
 
-    # solve streamfunction from Poisson equaton
+    # Solve streamfunction from Poisson equaton
     -Aψ \ (ω + yAψ)
 end

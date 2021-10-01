@@ -1,52 +1,52 @@
 function bc_diff_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
-    # total solution u is written as u = Bb*ub + Bin*uin
-    # the boundary conditions can be written as Bbc*u = ybc
-    # then u can be written entirely in terms of uin and ybc as:
-    # u = (Bin-Btemp*Bbc*Bin)*uin + Btemp*ybc, where
+    # Total solution u is written as u = Bb*ub + Bin*uin
+    # The boundary conditions can be written as Bbc*u = ybc
+    # Then u can be written entirely in terms of uin and ybc as:
+    # U = (Bin-Btemp*Bbc*Bin)*uin + Btemp*ybc, where
     # Btemp = Bb*(Bbc*Bb)^(-1)
     # Bb, Bin and Bbc depend on type of bc (Neumann/Dirichlet/periodic)
 
 
-    # val1 and val2 can be scalars or vectors with either the value or the
-    # derivative
+    # Val1 and val2 can be scalars or vectors with either the value or the
+    # Derivative
     # (ghost) points on staggered locations (pressure lines)
 
-    # some input checking:
+    # Some input checking:
     if Nt != Nin + Nb
         error("Number of inner points plus boundary points is not equal to total points")
     end
 
-    # boundary conditions
+    # Boundary conditions
     Bbc = spzeros(Nb, Nt)
     ybc1_1D = zeros(Nb)
     ybc2_1D = zeros(Nb)
 
     if Nb == 0
-        # no boundary points, so simply diagonal matrix without boundary contribution
+        # No boundary points, so simply diagonal matrix without boundary contribution
         B1D = sparse(I, Nt, Nt)
         Btemp = spzeros(Nt, 2)
         ybc1 = zeros(2, 1)
         ybc2 = zeros(2, 1)
     elseif Nb == 1
-        # one boundary point (should not be unnecessary)
+        # One boundary point (should not be unnecessary)
     elseif Nb == 2
-        # normal situation, 2 boundary points
+        # Normal situation, 2 boundary points
 
-        # boundary matrices
+        # Boundary matrices
         Bin = spdiagm(Nt, Nin, -1 => ones(Nin))
         Bb = spzeros(Nt, Nb)
         Bb[1, 1] = 1
         Bb[end, Nb] = 1
 
         if bc1 == "dir"
-            # zeroth order (standard mirror conditions)
+            # Zeroth order (standard mirror conditions)
             Bbc[1, 1] = 1 / 2
             Bbc[1, 2] = 1 / 2
-            ybc1_1D[1] = 1        # uLo
+            ybc1_1D[1] = 1        # ULo
         elseif "sym"
             Bbc[1, 1] = -1
             Bbc[1, 2] = 1
-            ybc1_1D[1] = h1   # duLo
+            ybc1_1D[1] = h1   # DuLo
         elseif "per"
             Bbc[1, 1] = -1
             Bbc[1, end-1] = 1
@@ -57,14 +57,14 @@ function bc_diff_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
         end
 
         if bc2 == "dir"
-            # zeroth order (standard mirror conditions)
+            # Zeroth order (standard mirror conditions)
             Bbc[end, end-1] = 1 / 2
             Bbc[end, end] = 1 / 2
-            ybc2_1D[2] = 1     # uUp
+            ybc2_1D[2] = 1     # UUp
         elseif bc2 == "sym"
             Bbc[2, end-1] = -1
             Bbc[2, end] = 1
-            ybc2_1D[2] = h2     # duUp
+            ybc2_1D[2] = h2     # DuUp
         elseif bc2 == "per"
             Bbc[1, 1] = -1
             Bbc[1, end-1] = 1

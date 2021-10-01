@@ -42,7 +42,7 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
     uₕ = @view Vₙ[indu]
     vₕ = @view Vₙ[indv]
 
-    # convection from previous time step
+    # Convection from previous time step
     convuₙ₋₁ = @view convₙ₋₁[indu]
     convvₙ₋₁ = @view convₙ₋₁[indv]
 
@@ -51,10 +51,10 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
     yDiffuₙ₊₁ = yDiffu
     yDiffvₙ₊₁ = yDiffv
 
-    # evaluate bc and force at starting point
+    # Evaluate bc and force at starting point
     Fxₙ, Fyₙ = bodyforce(Vₙ, tₙ, setup, false)
 
-    # unsteady bc at current time
+    # Unsteady bc at current time
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ)
     end
@@ -76,7 +76,7 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
     yDiffu = (1 - θ) * yDiffuₙ + θ * yDiffuₙ₊₁
     yDiffv = (1 - θ) * yDiffvₙ + θ * yDiffvₙ₊₁
 
-    # right hand side of the momentum equation update
+    # Right hand side of the momentum equation update
     Rur =
         uₕ +
         Ωu⁻¹ * Δt .* (
@@ -91,20 +91,20 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
         )
 
     # LU decomposition of diffusion part has been calculated already in
-    # operator_convection_diffusion
+    # Operator_convection_diffusion
     Ru = lu_diffu \ Rur
     Rv = lu_diffv \ Rvr
 
     Vtemp = [Ru; Rv]
 
     # To make the velocity field u(n+1) at t(n+1) divergence-free we need
-    # the boundary conditions at t(n+1)
+    # The boundary conditions at t(n+1)
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ + Δt)
     end
 
     # Boundary condition for the difference in pressure between time
-    # steps; only non-zero in case of fluctuating outlet pressure
+    # Steps; only non-zero in case of fluctuating outlet pressure
     y_Δp = zeros(Nu + Nv)
 
     # Divergence of Ru and Rv is directly calculated with M
@@ -123,7 +123,7 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
         pressure_additional_solve!(V, p, tₙ + Δt, setup)
     end
 
-    # output convection at tₙ, to be used in next time step
+    # Output convection at tₙ, to be used in next time step
     conv = [convuₙ; convvₙ]
 
     V, p, conv

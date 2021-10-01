@@ -23,11 +23,11 @@ function check_input!(setup, V_start, p_start, t)
         end
     end
 
-    # initialize solution vectors
-    # loop index
+    # Initialize solution vectors
+    # Loop index
     n = 1
 
-    # initial velocity field
+    # Initial velocity field
     V = copy(V_start) # [uₕ; vₕ]
 
     if visc == "keps"
@@ -35,9 +35,9 @@ function check_input!(setup, V_start, p_start, t)
         eh = e[:]
     end
 
-    # for unsteady problems allocate k, umom and vmom, maxdiv and time
-    # for steady problems the time for allocating during running is negligible,
-    # since normally only a few iterations are required
+    # For unsteady problems allocate k, umom and vmom, maxdiv and time
+    # For steady problems the time for allocating during running is negligible,
+    # Since normally only a few iterations are required
     if !is_steady
         t = t_start
         if isadaptive
@@ -61,7 +61,7 @@ function check_input!(setup, V_start, p_start, t)
     end
 
 
-    # allocate variables, including initial condition
+    # Allocate variables, including initial condition
     maxres = zeros(nt + 1)
     maxdiv = zeros(nt + 1)
     k = zeros(nt + 1)
@@ -70,65 +70,65 @@ function check_input!(setup, V_start, p_start, t)
     time = zeros(nt + 1)
     nonlinear_its = zeros(nt + 1)
 
-    # kinetic energy and momentum of initial velocity field
-    # iteration 1 corresponds to t = 0 (for unsteady simulations)
+    # Kinetic energy and momentum of initial velocity field
+    # Iteration 1 corresponds to t = 0 (for unsteady simulations)
     maxdiv[1], umom[1], vmom[1], k[1] = check_conservation(V, t, setup)
 
     if maxdiv[1] > 1e-12 && !is_steady
         @warn "Initial velocity field not (discretely) divergence free: $(maxdiv[1])"
         println("Additional projection to make initial velocity field divergence free")
 
-        # make velocity field divergence free
+        # Make velocity field divergence free
         f = M * V + yM
         Δp = pressure_poisson(f, t, setup)
         V .-= Ω⁻¹ .* (G * Δp)
 
-        # repeat conservation with updated velocity field
+        # Repeat conservation with updated velocity field
         maxdiv[1], umom[1], vmom[1], k[1] = check_conservation(V, t, setup)
     end
 
     symmetry_flag, symmetry_error = check_symmetry(V, t, setup)
 
-    # initialize pressure
+    # Initialize pressure
     p = p_start[:]
     if setup.rom.use_rom
         # ROM: uses the IC for the pressure; note that in solver_unsteady the pressure will be
-        # computed from the ROM PPE, after the ROM basis has been set-up
+        # Computed from the ROM PPE, after the ROM basis has been set-up
         if setup.case.is_steady
             error("ROM not implemented for steady flow")
         end
     else
         if setup.case.is_steady
-            # for steady state computations, the initial guess is the provided initial condition
+            # For steady state computations, the initial guess is the provided initial condition
         else
             if setup.solver_settings.p_initial
-                # calculate initial pressure from a Poisson equation
+                # Calculate initial pressure from a Poisson equation
                 pressure_additional_solve!(V, p, t, setup)
             else
-                # use provided initial condition (not recommended)
+                # Use provided initial condition (not recommended)
             end
         end
     end
 
-    # for steady problems, with Newton linearization and full Jacobian, first start with nPicard Picard iterations
+    # For steady problems, with Newton linearization and full Jacobian, first start with nPicard Picard iterations
     if setup.case.is_steady
         setup.solver_settings.Newton_factor = false
     elseif method == 21 || method_startup == 21
-        # implicit RK time integration
+        # Implicit RK time integration
         setup.solver_settings.Newton_factor = true
     end
 
-    # residual of momentum equations at start
+    # Residual of momentum equations at start
     F, = momentum(V, V, p, t, setup, false)
     maxres[1] = maximum(abs.(F))
 
     if !is_steady && save_unsteady
-        # allocate space for variables
+        # Allocate space for variables
         uₕ_total = zeros(nt, setup.grid.Nu)
         vₕ_total = zeros(nt, setup.grid.Nv)
         p_total = zeros(nt, setup.grid.Np)
 
-        # store initial solution
+        # Store initial solution
         uₕ_total[1, :] = u_start[:]
         vₕ_total[1, :] = v_start[:]
         p_total[1, :] = p_start[:]

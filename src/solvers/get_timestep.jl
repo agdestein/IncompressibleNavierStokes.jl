@@ -9,7 +9,7 @@ function get_timestep(setup)
     Au_ux, Au_uy, Av_vx, Av_vy = setup.discretization
     @unpack CFL, β = setup.time
 
-    # for explicit methods only
+    # For explicit methods only
     if method ∈ [1, 2, 5, 81, 82]
         ## Convective part
         Cu =
@@ -25,14 +25,14 @@ function get_timestep(setup)
         sum_conv_v = abs.(test) * ones(Nv) - Diagonal(abs.(test)) - Diagonal(test)
         λ_conv = max([max(sum_conv_u) max(sum_conv_v)])
 
-        ## diffusive part
+        ## Diffusive part
         test = spdiagm(Ωu⁻¹) * Diffu
         sum_diff_u = abs.(test) * ones(Nu) - Diagonal(abs.(test)) - Diagonal(test)
         test = spdiagm(Ωv⁻¹) * Diffv
         sum_diff_v = abs.(test) * ones(Nv) - Diagonal(abs.(test)) - Diagonal(test)
         λ_diff = max(maximum(sum_diff_u), maximum(sum_diff_v))
 
-        # based on max. value of stability region
+        # Based on max. value of stability region
         if method == 5
             λ_diff_max = 4 * β / (2 * β + 1)
         elseif method == 1
@@ -45,8 +45,8 @@ function get_timestep(setup)
 
         Δt_diff = λ_diff_max / λ_diff
 
-        # based on max. value of stability region (not a very good indication
-        # for the methods that do not include the imaginary axis)
+        # Based on max. value of stability region (not a very good indication
+        # For the methods that do not include the imaginary axis)
         if method ∈ [81, 82]
             λ_conv_max = 2 * sqrt(2)
         elseif method == 11

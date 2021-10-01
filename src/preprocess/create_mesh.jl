@@ -1,21 +1,21 @@
-## generation of a (non-)uniform mesh
+## Generation of a (non-)uniform mesh
 function create_mesh!(setup)
     x, y = setup.grid.create_mesh(setup)
 
-    ## derived mesh quantities
+    ## Derived mesh quantities
 
-    # pressure positions
+    # Pressure positions
     xp = (x[1:end-1] + x[2:end]) / 2
     yp = (y[1:end-1] + y[2:end]) / 2
 
-    # distance between velocity points
+    # Distance between velocity points
     hx = diff(x)
     hy = diff(y)
 
     Nx = length(hx)
     Ny = length(hy)
 
-    # distance between pressure points
+    # Distance between pressure points
     gx = zeros(Nx + 1)
     gx[1] = hx[1] / 2
     gx[2:Nx] = (hx[1:Nx-1] + hx[2:Nx]) / 2

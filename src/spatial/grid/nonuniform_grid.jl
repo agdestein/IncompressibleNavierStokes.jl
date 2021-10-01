@@ -14,16 +14,16 @@ function nonuniform_grid(deltaz, z_low, z_up, sz, ϵ = 1e-12)
         i = 1
         z[i] = z_low
 
-        # first check the number of grid points by using the specified sz
+        # First check the number of grid points by using the specified sz
         while z[i] + deltaz * sz^i ≤ z_up
             i = i + 1
             z[i] = z[i-1] + deltaz * (sz^(i - 2))
         end
 
-        # adapt sz such that the upper boundary is exactly satisfied
-        # sum of powerseries should be z_up-z_low
-        S = z_up - z[1]           # sum wanted
-        n = length(z) - 1         # number of intervals
+        # Adapt sz such that the upper boundary is exactly satisfied
+        # Sum of powerseries should be z_up-z_low
+        S = z_up - z[1]           # Sum wanted
+        n = length(z) - 1         # Number of intervals
 
         # Secant method for nonlinear iteration
         s[1] = sz
@@ -41,7 +41,7 @@ function nonuniform_grid(deltaz, z_low, z_up, sz, ϵ = 1e-12)
         end
         sz = s[end]
 
-        # update z now based on the new sz
+        # Update z now based on the new sz
         z = zeros(n)
         i = 1
         z[i] = z_low

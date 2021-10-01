@@ -2,7 +2,7 @@ using IncompressibleNavierStokes
 using GLMakie
 
 ## Load input parameters and constants
-# case_name = "LDC"
+# Case_name = "LDC"
 case_name = "BFS_unsteady"
 include("case_files/$case_name.jl")
 setup = eval(:($(Symbol(case_name))()))
@@ -25,7 +25,7 @@ create_mesh!(setup)
 # Boundary conditions
 create_boundary_conditions!(setup)
 
-# construct operators (matrices) which are time-independent
+# Construct operators (matrices) which are time-independent
 build_operators!(setup)
 
 # Initialization of solution vectors
@@ -49,7 +49,7 @@ if setup.case.is_steady
             V, p = solve_steady!(solution, setup)
         else
             if setup.ibm.ibm
-                #Steady flow with laminar viscosity model and immersed boundary method, 2nd order
+                # Steady flow with laminar viscosity model and immersed boundary method, 2nd order
                 V, p = solve_steady_ibm!(solution, setup)
             else
                 # Steady flow with laminar viscosity model, 2nd order

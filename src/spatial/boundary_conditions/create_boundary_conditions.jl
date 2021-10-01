@@ -18,17 +18,17 @@ function create_boundary_conditions!(setup)
     setup.bc.v.low ∈ ["dir", "per", "pres"] || error("Wrong BC for v-low")
     setup.bc.v.up ∈ ["dir", "per", "pres"] || error("Wrong BC for v-up")
 
-    # values set below can be either Dirichlet or Neumann value,
-    # depending on BC set above. in case of Neumann (symmetry, pressure)
-    # one uses normally zero gradient
+    # Values set below can be either Dirichlet or Neumann value,
+    # Depending on BC set above. in case of Neumann (symmetry, pressure)
+    # One uses normally zero gradient
 
-    # values should either be scalars or vectors
+    # Values should either be scalars or vectors
     # ALL VALUES (u, v, p, k, e) are defined at x, y locations,
-    # i.e. the corners of pressure volumes, so they cover the entire domain
-    # including corners
+    # I.e. the corners of pressure volumes, so they cover the entire domain
+    # Including corners
 
-    ## pressure
-    # pressure BC is only used when at the corresponding boundary
+    ## Pressure
+    # Pressure BC is only used when at the corresponding boundary
     # "pres" is specified
     p_inf = 0
     pLe = p_inf
@@ -41,7 +41,7 @@ function create_boundary_conditions!(setup)
     setup.bc.pLo = pLo
     setup.bc.pUp = pUp
 
-    ## k-eps values
+    ## K-eps values
     if setup.case.visc == "keps"
         kLo = 0
         kUp = 0
