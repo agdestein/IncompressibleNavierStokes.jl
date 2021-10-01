@@ -1,11 +1,20 @@
 function get_vorticity(V, t, setup)
-    # Vorticity values at pressure midpoints
-    # This should be consistent with operator_postprocessing
-    @unpack Nu, Nv, Nux_in, Nvy_in, Nx, Ny = setup.grid
+    @unpack Nx, Ny = setup.grid
+    ω = zeros(Nx - 1, Ny - 1)
+    vorticity!(ω, V, t, setup)
+end
+
+"""
+Vorticity values at pressure midpoints
+This should be consistent with operator_postprocessing
+"""
+function vorticity!(ω, V, t, setup)
+    @unpack indu, indv, Nux_in, Nvy_in, Nx, Ny = setup.grid
     @unpack Wv_vx, Wu_uy = setup.discretization
 
-    uₕ = @view V[1:Nu]
-    vₕ = @view V[Nu+1:Nu+Nv]
+    uₕ = @view V[indu]
+    vₕ = @view V[indv]
+    ω_flat = reshape(ω, length(ω))
 
     if setup.bc.u.left == "per" && setup.bc.v.low == "per"
         uₕ_in = uₕ
@@ -41,5 +50,9 @@ function get_vorticity(V, t, setup)
         vₕ_in = B2D * vₕ
     end
 
-    Wv_vx * vₕ_in - Wu_uy * uₕ_in
+    # ω_flat .= Wv_vx * vₕ_in - Wu_uy * uₕ_in
+    mul!(ω_flat, Wv_vx, vₕ_in) # a = b * c
+    mul!(ω_flat, Wu_uy, uₕ_in, -1, 1) # a = -b * c + a
+
+    ω
 end

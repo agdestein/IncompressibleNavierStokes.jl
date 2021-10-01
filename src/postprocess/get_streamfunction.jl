@@ -89,6 +89,7 @@ function get_streamfunction(V, t, setup)
     yAψ = Wv_vx * yQx + Wu_uy * yQy
 
     ω = get_vorticity(V, t, setup)
+    ω = reshape(ω, length(ω))
 
     # Solve streamfunction from Poisson equaton
     -Aψ \ (ω + yAψ)

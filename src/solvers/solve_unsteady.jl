@@ -59,9 +59,7 @@ function solve_unsteady!(solution, setup)
     method_temp = method
 
     if do_rtp
-        ω = get_vorticity(V, t, setup)
-        ω = reshape(ω, Nx - 1, Ny - 1)
-        ω = Node(ω)
+        ω = Node(get_vorticity(V, t, setup))
         fig = Figure(resolution = (2000, 300))
         ax, hm = contourf(fig[1, 1], x[2:(end-1)], y[2:(end-1)], ω; levels = -10:2:10)
         ax.aspect = DataAspect()
@@ -151,7 +149,7 @@ function solve_unsteady!(solution, setup)
         end
 
         if do_rtp # && mod(n, rtp_n) == 0
-            ω[] = reshape(get_vorticity(V, t, setup), Nx - 1, Ny - 1)
+            ω[] = vorticity!(ω[], V, t, setup)
             sleep(1 / fps)
         end
     end
