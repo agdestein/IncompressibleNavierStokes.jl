@@ -59,11 +59,20 @@ function solve_unsteady!(solution, setup)
     method_temp = method
 
     if do_rtp
-        ω = Node(get_vorticity(V, t, setup))
         fig = Figure(resolution = (2000, 300))
-        ax, hm = contourf(fig[1, 1], x[2:(end-1)], y[2:(end-1)], ω; levels = -10:2:10)
+        if rtp_type == "velocity"
+            up, vp, qp = get_velocity(V, t, setup)
+            vel = Node(qp)
+            ax, hm = contourf(fig[1, 1], xp, yp, vel)
+        elseif rtp_type == "vorticity"
+            ω = Node(get_vorticity(V, t, setup))
+            ax, hm = contourf(fig[1, 1], x[2:end-1], y[2:end-1], ω; levels = -10:2:10)
+        elseif rtp_type == "streamfunction"
+            ψ = Node(reshape(get_streamfunction(V, t, setup), Nx - 1, Ny - 1))
+            ax, hm = contourf(fig[1, 1], x[2:end-1], y[2:end-1], ψ)
+        end
+        ax.title = titlecase(rtp_type)
         ax.aspect = DataAspect()
-        ax.title = "Vorticity"
         ax.xlabel = "x"
         ax.ylabel = "y"
         limits!(ax, 0, 10, -0.5, 0.5)
@@ -73,7 +82,7 @@ function solve_unsteady!(solution, setup)
         fps = 60
     end
 
-    # Record(fig, "output/vorticity.mp4", 2:nt; framerate = 60) do n
+    # record(fig, "output/vorticity.mp4", 2:nt; framerate = 60) do n
     while n ≤ nt
         # Advance one time step
         n += 1
@@ -149,8 +158,15 @@ function solve_unsteady!(solution, setup)
         end
 
         if do_rtp # && mod(n, rtp_n) == 0
-            ω[] = vorticity!(ω[], V, t, setup)
-            sleep(1 / fps)
+            if rtp_type == "velocity"
+                 up, vp, qp = get_velocity(V, t, setup)
+                 vel[] = qp
+            elseif rtp_type == "vorticity"
+                ω[] = vorticity!(ω[], V, t, setup)
+            elseif rtp_type == "streamfunction"
+                ψ[] = reshape(get_streamfunction(V, t, setup), Nx - 1, Ny - 1)
+            end
+            # sleep(1 / fps)
         end
     end
 
