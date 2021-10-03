@@ -15,42 +15,44 @@ include("parameters.jl")
 # Preprocess
 include("preprocess/check_input.jl")
 include("preprocess/create_mesh.jl")
+include("preprocess/create_initial_conditions.jl")
 
-# Spatial
-include("spatial/momentumcache.jl")
-include("spatial/check_conservation.jl")
-include("spatial/check_symmetry.jl")
-include("spatial/convection.jl")
-include("spatial/create_initial_conditions.jl")
-include("spatial/diffusion.jl")
-include("spatial/momentum.jl")
-include("spatial/strain_tensor.jl")
-include("spatial/turbulent_viscosity.jl")
+# Momentum equation
+include("momentum/momentumcache.jl")
+include("momentum/check_conservation.jl")
+include("momentum/check_symmetry.jl")
+include("momentum/convection.jl")
+include("momentum/diffusion.jl")
+include("momentum/momentum.jl")
+include("momentum/strain_tensor.jl")
+include("momentum/turbulent_viscosity.jl")
 
-include("spatial/boundary_conditions/bc_diff_stag.jl")
-include("spatial/boundary_conditions/bc_diff_stag3.jl")
-include("spatial/boundary_conditions/bc_general.jl")
-include("spatial/boundary_conditions/bc_general_stag.jl")
-include("spatial/boundary_conditions/create_boundary_conditions.jl")
-include("spatial/boundary_conditions/set_bc_vectors.jl")
-
-include("spatial/grid/nonuniform_grid.jl")
-
-include("spatial/operators/build_operators.jl")
-include("spatial/operators/interpolate_nu.jl")
-include("spatial/operators/operator_averaging.jl")
-include("spatial/operators/operator_convection_diffusion.jl")
-include("spatial/operators/operator_divergence.jl")
-include("spatial/operators/operator_interpolation.jl")
-include("spatial/operators/operator_mesh.jl")
-include("spatial/operators/operator_postprocessing.jl")
-include("spatial/operators/operator_regularization.jl")
-include("spatial/operators/operator_turbulent_diffusion.jl")
-
-include("spatial/rom/momentum_rom.jl")
-
-# Bodyforce
+# Boundary condtions
+include("boundary_conditions/bc_diff_stag.jl")
+include("boundary_conditions/bc_diff_stag3.jl")
+include("boundary_conditions/bc_general.jl")
+include("boundary_conditions/bc_general_stag.jl")
 include("spatial/bodyforce.jl")
+include("boundary_conditions/create_boundary_conditions.jl")
+include("boundary_conditions/set_bc_vectors.jl")
+
+# Grid
+include("grid/nonuniform_grid.jl")
+
+# Operators
+include("operators/build_operators.jl")
+include("operators/interpolate_nu.jl")
+include("operators/operator_averaging.jl")
+include("operators/operator_convection_diffusion.jl")
+include("operators/operator_divergence.jl")
+include("operators/operator_interpolation.jl")
+include("operators/operator_mesh.jl")
+include("operators/operator_postprocessing.jl")
+include("operators/operator_regularization.jl")
+include("operators/operator_turbulent_diffusion.jl")
+
+# Reduced Order Model
+include("spatial/rom/momentum_rom.jl")
 
 # Solvers
 include("solvers/get_timestep.jl")
