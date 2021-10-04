@@ -19,6 +19,7 @@ include("preprocess/create_initial_conditions.jl")
 
 # Momentum equation
 include("momentum/momentumcache.jl")
+include("momentum/bodyforce.jl")
 include("momentum/check_conservation.jl")
 include("momentum/check_symmetry.jl")
 include("momentum/convection.jl")
@@ -32,7 +33,6 @@ include("boundary_conditions/bc_diff_stag.jl")
 include("boundary_conditions/bc_diff_stag3.jl")
 include("boundary_conditions/bc_general.jl")
 include("boundary_conditions/bc_general_stag.jl")
-include("spatial/bodyforce.jl")
 include("boundary_conditions/create_boundary_conditions.jl")
 include("boundary_conditions/set_bc_vectors.jl")
 
@@ -52,7 +52,7 @@ include("operators/operator_regularization.jl")
 include("operators/operator_turbulent_diffusion.jl")
 
 # Reduced Order Model
-include("spatial/rom/momentum_rom.jl")
+include("rom/momentum_rom.jl")
 
 # Solvers
 include("solvers/get_timestep.jl")
