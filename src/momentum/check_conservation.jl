@@ -1,7 +1,7 @@
 """
     check_conservation(V, t, setup)
 
-Check mass, momentum and energy conservation properties of velocity field
+Check mass, momentum and energy conservation properties of velocity field.
 """
 function check_conservation(V, t, setup)
     @unpack M, yM = setup.discretization

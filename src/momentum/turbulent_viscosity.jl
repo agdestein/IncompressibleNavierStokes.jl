@@ -1,7 +1,7 @@
 """
-    nu_t = turbulent_viscosity(S_abs, setup)
+    turbulent_viscosity(S_abs, setup)
 
-Compute turbulent viscosity based on S_abs
+Compute turbulent viscosity based on `S_abs`.
 """
 function turbulent_viscosity(S_abs, setup)
     visc = setup.case.visc

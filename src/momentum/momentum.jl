@@ -1,3 +1,8 @@
+"""
+    momentum(V, ϕ, p, t, setup, getJacobian = false, nopressure = false)
+
+Convenience function for initializing arrays `F` and `∇F` before filling in momentum terms.
+"""
 function momentum(V, ϕ, p, t, setup, getJacobian = false, nopressure = false)
     @unpack NV = setup.grid
 
@@ -11,13 +16,13 @@ end
 """
     momentum!(F, ∇F, V, ϕ, p, t, setup, cache = MomentumCache(setup), getJacobian = false, nopressure = false)
 
-Calculate rhs of momentum equations and, optionally, Jacobian with respect to velocity field
-V: velocity field
-ϕ: "convection" field: e.g. d(c_x u)/dx + d(c_y u)/dy; usually c_x = u,
-c_y = v, so ϕ = V
-p: pressure
-getJacobian = true: return ∇FdV
-nopressure = true: exclude pressure gradient; in this case input argument p is not used
+Calculate rhs of momentum equations and, optionally, Jacobian with respect to velocity field.
+
+`V`: velocity field
+`ϕ`: "convection" field: e.g. `∂(ϕx V)/∂x + ∂(ϕy V)/∂y`; usually `ϕ = V` (so `ϕx = u`, `ϕy = v`)
+`p`: pressure
+`getJacobian`: return `∇F = ∂F/∂V`
+`nopressure`: exclude pressure gradient; in this case input argument `p` is not used
 """
 function momentum!(
     F,

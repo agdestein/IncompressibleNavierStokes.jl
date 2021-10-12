@@ -1,3 +1,8 @@
+"""
+    MomentumCache
+
+Preallocation structure for terms in the momentum equations.
+"""
 struct MomentumCache{T}
     Gp::Vector{T}
     c::Vector{T}

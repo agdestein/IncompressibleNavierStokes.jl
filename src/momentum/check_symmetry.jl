@@ -1,7 +1,10 @@
 """
-Check symmetry of convection operator
-flag = 0: no symmetry error
-flag = 1: symmetry error
+    check_symmetry(V, t, setup, ϵ = 1e-14)
+
+Check symmetry of convection operator.
+
+`flag = 0`: no symmetry error
+`flag = 1`: symmetry error
 """
 function check_symmetry(V, t, setup, ϵ = 1e-14)
     @unpack indu, indv = setup.grid

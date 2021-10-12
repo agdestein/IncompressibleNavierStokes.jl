@@ -1,3 +1,8 @@
+"""
+    convection(V, ϕ, t, setup, getJacobian = false)
+
+Convenience function for initializing arrays `c` and `∇c` before filling in convection terms.
+"""
 function convection(V, ϕ, t, setup, getJacobian = false)
     @unpack NV = setup.grid
 
@@ -11,9 +16,7 @@ end
 """
     convection!(c, ∇c, V, ϕ, t, cache, setup, getJacobian = false) -> c, ∇c
 
-evaluate convective terms and, optionally, Jacobians
-V: velocity field
-ϕ: "convection" field: e.g. d(ϕ_x u)/dx + d(ϕ_y u)/dy; usually ϕ_x = u, ϕ_y = v
+evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`.
 """
 function convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian = false)
     @unpack order4 = setup.discretization
@@ -104,6 +107,11 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian = false)
     c, ∇c
 end
 
+"""
+    convection_components!(c, ∇c, V, ϕ, setup, cache, getJacobian, order4 = false)
+
+Compute convection components.
+"""
 function convection_components!(c, ∇c, V, ϕ, setup, cache, getJacobian, order4 = false)
     if order4
         Cux = setup.discretization.Cux3

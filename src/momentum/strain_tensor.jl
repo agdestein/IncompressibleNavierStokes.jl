@@ -1,9 +1,9 @@
 """
-    S11, S12, S21, S22, S_abs, Jacu, Jacv = strain_tensor(V, t, setup, getJacobian)
+    strain_tensor(V, t, setup, getJacobian = false)
 
-Evaluate rate of strain tensor S(u) and its magnitude
+Evaluate rate of strain tensor `S(V)` and its magnitude.
 """
-function strain_tensor(V, t, setup, getJacobian)
+function strain_tensor(V, t, setup, getJacobian = false)
     @unpack Nx, Ny, Nu, Nv, Np, indu, indv = setup.grid
     @unpack Nux_in, Nuy_in, Nvx_in, Nvy_in, = setup.grid
     @unpack x, y, xp, yp = setup.grid

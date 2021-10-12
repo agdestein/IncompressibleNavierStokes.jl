@@ -2,9 +2,7 @@
     bodyforce!(F, ∇F V, t, setup, getJacobian)
 
 Compute body force `F` in momentum equations at velocity points.
-If `getJacobian`, also compute `∇F = dF/dV`.
-
-If
+If `getJacobian`, also compute `∇F = ∂F/∂V`.
 """
 function bodyforce!(F, ∇F, V, t, setup, getJacobian = false)
     @unpack indu, indv = setup.grid
@@ -33,8 +31,9 @@ function bodyforce!(F, ∇F, V, t, setup, getJacobian = false)
 end
 
 """
-Fx, Fy, dFx, dFy = force(V, t, setup, getJacobian)
-Body force in momentum equations in Finite Volume setting, so integrated dFx, dFy are the Jacobians dFx/dV and dFy/dV
+    force(V, t, setup, getJacobian = false)
+
+Body force in momentum equations in Finite Volume setting, so integrated `dFx`, `dFy` are the Jacobians `∂Fx/∂V` and `∂Fy/∂V`.
 """
 function bodyforce(V, t, setup, getJacobian = false)
     # Fx, dFx = setup.force.bodyforce_x.(xu, yu, t, [setup], getJacobian)

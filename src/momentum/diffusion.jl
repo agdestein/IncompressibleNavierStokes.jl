@@ -1,7 +1,7 @@
 """
-    diffusion!(d, Jac, V, t, setup, getJacobian)
+    diffusion!(d, ∇d, V, t, setup, getJacobian)
 
-Evaluate diffusive terms and optionally Jacobian. Fill result in `d`. Return `Jac`.
+Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V`.
 """
 function diffusion!(d, ∇d, V, t, setup, getJacobian)
     @unpack visc = setup.case
