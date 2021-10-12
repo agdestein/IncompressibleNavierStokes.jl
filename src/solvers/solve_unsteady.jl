@@ -6,7 +6,7 @@ Main solver file for unsteady calculations
 function solve_unsteady!(solution, setup)
     # Setup
     @unpack is_steady, visc = setup.case
-    @unpack Nu, Nv, NV, Np, Nx, Ny, x, y, xp, yp = setup.grid
+    @unpack x1, x2, y1, y2, Nu, Nv, NV, Np, Nx, Ny, x, y, xp, yp = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
         setup.solver_settings
@@ -59,7 +59,10 @@ function solve_unsteady!(solution, setup)
     method_temp = method
 
     if do_rtp
-        fig = Figure(resolution = (2000, 300))
+        Lx = x2 - x1
+        Ly = y2 - y1
+
+        fig = Figure(resolution = (2000 * Lx / (Lx + Ly), 2000 * Ly / (Lx + Ly)))
         if rtp_type == "velocity"
             up, vp, qp = get_velocity(V, t, setup)
             vel = Node(qp)
@@ -75,8 +78,7 @@ function solve_unsteady!(solution, setup)
         ax.aspect = DataAspect()
         ax.xlabel = "x"
         ax.ylabel = "y"
-        limits!(ax, 0, 10, -0.5, 0.5)
-        lines!(ax, [0, 0], [-0.5, 0]; color = :red)
+        limits!(ax, x1, x2, y1, y2)
         Colorbar(fig[1, 2], hm)
         display(fig)
         fps = 60

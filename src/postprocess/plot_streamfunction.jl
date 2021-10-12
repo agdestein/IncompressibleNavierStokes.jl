@@ -2,7 +2,7 @@
 Plot streamfunction.
 """
 function plot_streamfunction(solution, setup)
-    @unpack Nx, Ny, x, y = setup.grid
+    @unpack Nx, Ny, x, y, x1, x2, y1, y2 = setup.grid
     @unpack V, p, t = solution
 
     # Get fields
@@ -43,12 +43,14 @@ function plot_streamfunction(solution, setup)
         xlabel = "x",
         ylabel = "y",
     )
+    limits!(ax, x1, x2, y1, y2)
     contourf!(
         ax,
         x[2:(end-1)],
         y[2:(end-1)],
         ψ;
-        # Levels,
+        # levels,
     )
     display(f)
+    save("output/streamfunction.png", f, pt_per_unit = 2)
 end

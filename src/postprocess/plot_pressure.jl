@@ -2,7 +2,7 @@
 Plot pressure.
 """
 function plot_pressure(solution, setup)
-    @unpack Nx, Ny, Npx, Npy, xp, yp = setup.grid
+    @unpack Nx, Ny, Npx, Npy, xp, yp, x1, x2, y1, y2 = setup.grid
     @unpack p = solution
 
     # Reshape
@@ -17,7 +17,7 @@ function plot_pressure(solution, setup)
 
     # Plot pressure
     levels = [
-        minimum(Δpres) - 0.1
+        # minimum(Δpres) - 0.1
         -0.002
         0.0
         0.02
@@ -28,7 +28,7 @@ function plot_pressure(solution, setup)
         0.12
         0.17
         0.3
-        maximum(Δpres) + 0.1
+        # maximum(Δpres) + 0.1
     ]
     f = Figure()
     ax = Axis(
@@ -38,12 +38,14 @@ function plot_pressure(solution, setup)
         xlabel = "x",
         ylabel = "y",
     )
+    limits!(ax, x1, x2, y1, y2)
     contourf!(
         ax,
         xp,
         yp,
         Δpres;
-        # Levels,
+        levels,
     )
     display(f)
+    save("output/pressure.png", f, pt_per_unit = 2)
 end

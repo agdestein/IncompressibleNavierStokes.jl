@@ -2,21 +2,21 @@ using IncompressibleNavierStokes
 using GLMakie
 
 ## Load input parameters and constants
-# Case_name = "LDC"
-case_name = "BFS_unsteady"
+case_name = "LDC"
+# case_name = "BFS_unsteady"
 include("case_files/$case_name.jl")
 setup = eval(:($(Symbol(case_name))()));
 
 ##
-V, p, setup, totaltime, solution = main(setup);
+@time V, p, setup, totaltime, solution = main(setup);
 
 ##
 @profview main(setup)
 
 ##
 # Turbulence constants
- if setup.case.visc == "keps"
-    constants_ke()
+if setup.case.visc == "keps"
+    constants_ke!(setup)
 end
 
 # Construct mesh

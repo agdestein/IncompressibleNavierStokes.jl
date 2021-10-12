@@ -1,4 +1,4 @@
-function convection(V, ϕ, t, setup, getJacobian)
+function convection(V, ϕ, t, setup, getJacobian = false)
     @unpack NV = setup.grid
 
     cache = MomentumCache(setup)
@@ -8,15 +8,14 @@ function convection(V, ϕ, t, setup, getJacobian)
     convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian)
 end
 
-
 """
-    convection!(c, ∇c, V, ϕ, t, cache, setup, getJacobian) -> c, ∇c
+    convection!(c, ∇c, V, ϕ, t, cache, setup, getJacobian = false) -> c, ∇c
 
 evaluate convective terms and, optionally, Jacobians
 V: velocity field
 ϕ: "convection" field: e.g. d(ϕ_x u)/dx + d(ϕ_y u)/dy; usually ϕ_x = u, ϕ_y = v
 """
-function convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian)
+function convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian = false)
     @unpack order4 = setup.discretization
     @unpack regularization = setup.case
     @unpack α = setup.discretization

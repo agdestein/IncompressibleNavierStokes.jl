@@ -15,7 +15,7 @@ function main(setup)
 
     # Turbulence constants
     if setup.case.visc == "keps"
-        constants_ke()
+        constants_ke!(setup)
     end
 
     # Construct mesh
