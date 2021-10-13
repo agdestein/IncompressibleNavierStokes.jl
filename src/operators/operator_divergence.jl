@@ -160,23 +160,11 @@ function operator_divergence!(setup)
     G = [Gx; Gy]
 
     ## Store in setup structure
-    setup.discretization.M = M
-    setup.discretization.Mx = Mx
-    setup.discretization.My = My
-    setup.discretization.Mx_bc = Mx_bc
-    setup.discretization.My_bc = My_bc
-    setup.discretization.G = G
-    setup.discretization.Gx = Gx
-    setup.discretization.Gy = Gy
-
-    setup.discretization.Bup = Bup
-    setup.discretization.Bvp = Bvp
+    @pack! setup.discretization = M, Mx, My, Mx_bc, My_bc, G, Gx, Gy
+    @pack! setup.discretization = Bup, Bvp
 
     if order4
-        setup.discretization.Mx3 = Mx3
-        setup.discretization.My3 = My3
-        setup.discretization.Mx_bc3 = Mx_bc3
-        setup.discretization.My_bc3 = My_bc3
+        @pack! setup.discretization = Mx3, My3, Mx_bc3, My_bc3
     end
 
     ## Pressure matrix for pressure correction method;
@@ -188,7 +176,7 @@ function operator_divergence!(setup)
 
         # Laplace = div grad
         A = M * spdiagm(Ω⁻¹) * G
-        setup.discretization.A = A
+        @pack! setup.discretization = A
 
         # ROM does not require Poisson solve for simple BC
         # For rom_bc > 0, we need Poisson solve to determine the V_bc field
@@ -204,11 +192,8 @@ function operator_divergence!(setup)
 
         # Check if all the row sums of the pressure matrix are zero, which
         # Should be the case if there are no pressure boundary conditions
-        if bc.v.low != "pres" &&
-           bc.v.up != "pres" &&
-           bc.u.right != "pres" &&
-           bc.u.left != "pres"
-            if maximum(abs.(A * ones(Np))) > 1e-10
+        if any(!isequal(pres), [bc.v.low, bc.v.up, bc.u.right, bc.u.left])
+            if any(!isapprox(0; atol = 1e-10), abs.(sum(A; dims = 2)))
                 @warn "Pressure matrix: not all rowsums are zero!"
             end
         end

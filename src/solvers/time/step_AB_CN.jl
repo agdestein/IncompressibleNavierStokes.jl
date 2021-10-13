@@ -63,7 +63,7 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
     end
 
     # Convection of current solution
-    convection!(c, ∇c Vₙ, Vₙ, tₙ, setup, cache)
+    convection!(c, ∇c, Vₙ, Vₙ, tₙ, setup, cache)
 
     cuₙ = @view c[indu]
     cvₙ = @view c[indv]

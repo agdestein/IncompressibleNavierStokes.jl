@@ -51,8 +51,7 @@ function diffusion!(d, ∇d, V, t, setup, getJacobian)
         dv .= Dvx * (2 .* (ν .+ ν_t_vx) .* S21[:]) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22[:])
 
         if getJacobian
-            # Freeze ν_t, i.e. we skip the derivative of ν_t wrt V in
-            # The Jacobian
+            # Freeze ν_t, i.e. we skip the derivative of ν_t wrt V in the Jacobian
             Jacu1 =
                 Dux * 2 * spdiagm(ν .+ ν_t_ux) * Su_ux +
                 Duy * 2 * spdiagm(ν .+ ν_t_uy) * 1 / 2 * Su_uy
@@ -72,8 +71,9 @@ function diffusion!(d, ∇d, V, t, setup, getJacobian)
             elseif visc == "qr"
                 C_d = deltax^2 / 8
                 K = C_d * 0.5 * (1 - α / C_d)^2
-            elseif visc == "ML" # Mixing-length
-                lm = setup.visc.lm # Mixing length
+            elseif visc == "ML"
+                # Mixing-length
+                lm = setup.visc.lm
                 K = (lm^2)
             else
                 error("wrong value for visc parameter")
@@ -94,7 +94,7 @@ function diffusion!(d, ∇d, V, t, setup, getJacobian)
     elseif visc == "keps"
         error("k-e implementation in diffusion.m not finished")
     else
-        error("wrong specification of viscosity model")
+        error("Wrong specification of viscosity model")
     end
 
     d, ∇d

@@ -6,7 +6,18 @@ using SparseArrays: SparseMatrixCSC, blockdiag, sparse, spdiagm, spzeros
 using UnPack: @pack!, @unpack
 # Using Plots: contour, contourf, title!
 using Makie:
-    Axis, Colorbar, DataAspect, Figure, Node, contour!, contourf, contourf!, limits!, lines!, record, save
+    Axis,
+    Colorbar,
+    DataAspect,
+    Figure,
+    Node,
+    contour!,
+    contourf,
+    contourf!,
+    limits!,
+    lines!,
+    record,
+    save
 
 # Setup
 include("solvers/time/runge_kutta_methods.jl")
