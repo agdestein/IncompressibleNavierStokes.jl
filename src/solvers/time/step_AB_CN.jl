@@ -39,6 +39,7 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
     @unpack Diffu, Diffv = setup.discretization
     @unpack lu_diffu, lu_diffv = setup.discretization
     @unpack θ = setup.time
+    @unpack pressure_solver = setup.solver_settings
 
     @unpack c, ∇c = cache
 
@@ -118,7 +119,7 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
     f = (M * Vtemp + yM) / Δt - M * y_Δp
 
     # Solve the Poisson equation for the pressure
-    Δp = pressure_poisson(f, tₙ + Δt, setup)
+    Δp = pressure_poisson(pressure_solver, f, tₙ + Δt, setup)
 
     # Update velocity field
     V .= Vtemp .- Δt .* Ω⁻¹ .* (G * Δp .+ y_Δp)

@@ -214,7 +214,7 @@ function operator_divergence!(setup)
 
         # Check if all the row sums of the pressure matrix are zero, which
         # Should be the case if there are no pressure boundary conditions
-        if any(!isequal(pres), [bc.v.low, bc.v.up, bc.u.right, bc.u.left])
+        if any(!isequal(:pressure), [bc.v.low, bc.v.up, bc.u.right, bc.u.left])
             if any(!isapprox(0; atol = 1e-10), abs.(sum(A; dims = 2)))
                 @warn "Pressure matrix: not all rowsums are zero!"
             end

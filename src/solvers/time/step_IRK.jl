@@ -5,6 +5,7 @@
 function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
     @unpack Nu, Nv, NV, Np, Ω, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
+    @unpack pressure_solver = setup.solver_settings
 
     yMn = yM
 
@@ -163,7 +164,7 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ + Δt)
         f = 1 / Δt * (M * V + yM)
-        Δp = pressure_poisson(f, tₙ + Δt, setup)
+        Δp = pressure_poisson(pressure_solver, f, tₙ + Δt, setup)
         V .-= Δt .* Ω⁻¹ .* (G * Δp)
         if setup.solversettings.p_add_solve
             pressure_additional_solve!(V, p, tₙ + Δt, setup, cache, F)

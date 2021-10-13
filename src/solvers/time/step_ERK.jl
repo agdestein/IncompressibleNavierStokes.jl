@@ -8,6 +8,7 @@ Dirichlet boundary points are not part of solution vector but are prescribed in 
 function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup, cache, F, ∇F)
     @unpack Nu, Nv, Np, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
+    @unpack pressure_solver = setup.solver_settings
 
     ## Get coefficients of RK method
     A, b, c, = tableau(setup.time.rk_method)
@@ -76,7 +77,7 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup,
         # Solve the Poisson equation, but not for the first step if the boundary conditions are steady
         if setup.bc.bc_unsteady || i > 1
             # The time tᵢ below is only for output writing
-            Δp = pressure_poisson(f, tᵢ, setup)
+            Δp = pressure_poisson(pressure_solver, f, tᵢ, setup)
         else
             # Bc steady AND i = 1
             Δp = pₙ

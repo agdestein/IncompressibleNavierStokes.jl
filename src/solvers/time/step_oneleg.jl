@@ -10,6 +10,7 @@ formulation:
 """
 function step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup, cache)
     @unpack G, M, yM = setup.discretization
+    @unpack pressure_solver = setup.solver_settings
 
     Ω⁻¹ = setup.grid.Ω⁻¹
     β = setup.time.β
@@ -39,7 +40,7 @@ function step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup
     f = (M * Vtemp + yM) / Δtᵦ
 
     # Solve the Poisson equation for the pressure
-    Δp = pressure_poisson(f, tₙ + Δt, setup)
+    Δp = pressure_poisson(pressure_solver, f, tₙ + Δt, setup)
 
     # Update velocity field
     V .= Vtemp .- Δtᵦ .* Ω⁻¹ .* G * Δp

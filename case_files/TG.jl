@@ -168,7 +168,7 @@ function TG()
 
     Compute boundary conditions for `dudt` at point `(x, y)` at time `t`.
     """
-    setup.bc.dudt_bc = function u_bc(x, y, t, setup, tol = 1e-10)
+    setup.bc.dudt_bc = function dudt_bc(x, y, t, setup, tol = 1e-10)
         zero(x)
     end
 
@@ -177,7 +177,7 @@ function TG()
 
     Compute boundary conditions for `dvdt` at point `(x, y)` at time `t`.
     """
-    setup.bc.dvdt_bc = function v_bc(x, y, t, setup)
+    setup.bc.dvdt_bc = function dvdt_bc(x, y, t, setup)
         zero(x)
     end
 
