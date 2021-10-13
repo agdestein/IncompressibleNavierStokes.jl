@@ -63,6 +63,7 @@ include("solvers/solve_unsteady.jl")
 include("solvers/solve_unsteady_ke.jl")
 include("solvers/solve_unsteady_rom.jl")
 
+include("solvers/pressure/pressure_solvers.jl")
 include("solvers/pressure/pressure_poisson.jl")
 include("solvers/pressure/pressure_additional_solve.jl")
 
@@ -107,6 +108,9 @@ export Case,
 
 # Spatial
 export nonuniform_grid
+
+# Pressure solvers
+export DirectPressureSolver
 
 # Main driver
 export main

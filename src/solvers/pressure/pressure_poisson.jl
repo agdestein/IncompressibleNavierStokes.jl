@@ -1,11 +1,14 @@
 """
-Solve the Poisson equation for the pressure.
-compute pressure from pressure poisson_solver problem with right-hand side f
-assume the Laplace matrix is known (A) and is possibly factorized (LU);
-right hand side is given by f
-we should have sum(f) = 0 for periodic and no-slip BC
+    pressure_poisson(solver, f, t, setup, tol = 1e-14)
+
+Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
+
+We should have `sum(f) = 0` for periodic and no-slip BC.
 """
-function pressure_poisson(f, t, setup, tol = 1e-14)
+function pressure_poisson end
+
+function pressure_poisson(::DirectPressureSolver, f, t, setup, tol = 1e-14)
+    # Assume the Laplace matrix is known (A) and is possibly factorized
     @unpack A_fact = setup.discretization
 
     # Use pre-determined decomposition

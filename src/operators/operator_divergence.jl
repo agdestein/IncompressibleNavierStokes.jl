@@ -7,6 +7,7 @@ function operator_divergence!(setup)
     bc = setup.bc
 
     # Number of interior points and boundary points
+    @unpack pressure_solver = setup.solver_settings
     @unpack Nx, Ny, Npx, Npy = setup.grid
     @unpack Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t = setup.grid
     @unpack Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t = setup.grid
@@ -195,8 +196,11 @@ function operator_divergence!(setup)
             return setup
         end
 
-        # LU decomposition
-        setup.discretization.A_fact = factorize(A)
+        if pressure_solver isa DirectPressureSolver
+            # LU decomposition
+            A_fact = factorize(A)
+            @pack! setup.discretization = A_fact
+        end
 
         # Check if all the row sums of the pressure matrix are zero, which
         # Should be the case if there are no pressure boundary conditions
