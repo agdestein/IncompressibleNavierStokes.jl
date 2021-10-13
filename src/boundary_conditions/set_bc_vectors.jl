@@ -111,10 +111,10 @@ function set_bc_vectors!(setup, t)
     # Left and right side
     y1D_le = zeros(Nux_in)
     y1D_ri = zeros(Nux_in)
-    if setup.bc.u.left == "pres"
+    if setup.bc.u.left == :pressure
         y1D_le[1] = -1
     end
-    if setup.bc.u.right == "pres"
+    if setup.bc.u.right == :pressure
         y1D_ri[end] = 1
     end
     y_px = kron(hy .* pLe, y1D_le) + kron(hy .* pRi, y1D_ri)
@@ -122,10 +122,10 @@ function set_bc_vectors!(setup, t)
     # Lower and upper side
     y1D_lo = zeros(Nvy_in)
     y1D_up = zeros(Nvy_in)
-    if setup.bc.v.low == "pres"
+    if setup.bc.v.low == :pressure
         y1D_lo[1] = -1
     end
-    if setup.bc.v.up == "pres"
+    if setup.bc.v.up == :pressure
         y1D_up[end] = 1
     end
     y_py = kron(y1D_lo, hx .* pLo) + kron(y1D_up, hx .* pUp)
@@ -261,23 +261,23 @@ function set_bc_vectors!(setup, t)
     yIv_uy = yIv_uy_lr + yIv_uy_lu
 
     if order4
-        if setup.bc.v.low == "dir"
+        if setup.bc.v.low == :dirichlet
             vLe_ext = [2 * vLe[1] - vLe[2]; vLe]
             vRi_ext = [2 * vRi[1] - vRi[2]; vRi]
-        elseif setup.bc.v.low == "per"
+        elseif setup.bc.v.low == :periodic
             vLe_ext = [0; vLe]
             vRi_ext = [0; vRi]
-        elseif setup.bc.v.low == "pres"
+        elseif setup.bc.v.low == :pressure
             vLe_ext = [vLe[2]; vLe]
             vRi_ext = [vRi[2]; vRi]
         end
-        if setup.bc.v.up == "dir"
+        if setup.bc.v.up == :dirichlet
             vLe_ext = [vLe_ext; 2 * vLe[end] - vLe[end-1]]
             vRi_ext = [vRi_ext; 2 * vRi[1] - vRi[2]]
-        elseif setup.bc.v.up == "per"
+        elseif setup.bc.v.up == :periodic
             vLe_ext = [vLe_ext; 0]
             vRi_ext = [vRi_ext; 0]
-        elseif setup.bc.v.up == "pres"
+        elseif setup.bc.v.up == :pressure
             vLe_ext = [vLe_ext; vLe[end-1]]
             vRi_ext = [vRi_ext; vRi[end-1]]
         end
@@ -298,23 +298,23 @@ function set_bc_vectors!(setup, t)
     yIu_vx = yIu_vx_lr + yIu_vx_lu
 
     if order4
-        if setup.bc.u.left == "dir"
+        if setup.bc.u.left == :dirichlet
             uLo_ext = [2 * uLo[1] - uLo[2]; uLo]
             uUp_ext = [2 * uUp[1] - uUp[2]; uUp]
-        elseif setup.bc.u.left == "per"
+        elseif setup.bc.u.left == :periodic
             uLo_ext = [0; uLo]
             uUp_ext = [0; uUp]
-        elseif setup.bc.u.left == "pres"
+        elseif setup.bc.u.left == :pressure
             uLo_ext = [uLo[2]; uLo]
             uUp_ext = [uUp[2]; uUp]
         end
-        if setup.bc.u.right == "dir"
+        if setup.bc.u.right == :dirichlet
             uLo_ext = [uLo_ext; 2 * uLo[end] - uLo[end-1]]
             uUp_ext = [uUp_ext; 2 * uUp[1] - uUp[2]]
-        elseif setup.bc.u.right == "per"
+        elseif setup.bc.u.right == :periodic
             uLo_ext = [uLo_ext; 0]
             uUp_ext = [uUp_ext; 0]
-        elseif setup.bc.u.right == "pres"
+        elseif setup.bc.u.right == :pressure
             uLo_ext = [uLo_ext; uLo[end-1]]
             uUp_ext = [uUp_ext; uUp[end-1]]
         end

@@ -31,10 +31,10 @@ function check_symmetry(V, t, setup, ϵ = 1e-14)
 
     flag = 0
     if symmetry_error > ϵ
-        if setup.bc.u.right != "pres" && setup.bc.u.left != "pres"
+        if setup.bc.u.right != :pressure && setup.bc.u.left != :pressure
             flag = 1
         end
-        if setup.bc.v.low != "pres" && setup.bc.v.up != "pres"
+        if setup.bc.v.low != :pressure && setup.bc.v.up != :pressure
             flag = 1
         end
     end

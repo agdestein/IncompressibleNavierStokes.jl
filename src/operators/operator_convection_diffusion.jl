@@ -99,11 +99,11 @@ function operator_convection_diffusion!(setup)
         D1D3 = spdiagm(Nuy_t - 2, Nuy_t + 1, 0 => -diag1, 3 => diag1)
 
         # Uncomment for new BC (functions/new)
-        if bc.u.low == "dir"
+        if bc.u.low == :dirichlet
             D1D3[1, 1] = 1
             D1D3[1, 2] = -2
         end
-        if bc.u.up == "dir"
+        if bc.u.up == :dirichlet
             D1D3[end, end-1] = 2
             D1D3[end, end] = -1
         end
@@ -122,11 +122,11 @@ function operator_convection_diffusion!(setup)
         D1D3 = spdiagm(Nvx_t - 2, Nvx_t + 1, 0 => -diag1, 3 => diag1)
 
         # Uncomment for new BC (functions/new)
-        if bc.v.left == "dir"
+        if bc.v.left == :dirichlet
             D1D3[1, 1] = 1
             D1D3[1, 2] = -2
         end
-        if bc.v.right == "dir"
+        if bc.v.right == :dirichlet
             D1D3[end, end-1] = 2
             D1D3[end, end] = -1
         end

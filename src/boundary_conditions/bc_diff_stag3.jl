@@ -35,7 +35,7 @@ function bc_diff_stag3(Nt, Nin, Nb, bc1, bc2, h1, h2)
         Bb[1:3, 1:3] = sparse(I, 3, 3)
         Bb[end-2:end, end-2:end] = sparse(I, 3, 3)
 
-        if bc1 == "dir"
+        if bc1 == :dirichlet
             Bbc[1, 1] = 1 / 2      # Dirichlet
             Bbc[1, 6] = 1 / 2
             Bbc[2, 2] = 1 / 2      # Dirichlet uLo
@@ -45,9 +45,9 @@ function bc_diff_stag3(Nt, Nin, Nb, bc1, bc2, h1, h2)
             ybc1_1D[1] = 1
             ybc1_1D[2] = 1
             ybc1_1D[3] = 1
-        elseif bc1 == "sym"
+        elseif bc1 == :symmetric
             error("not implemented")
-        elseif bc1 == "per"
+        elseif bc1 == :periodic
             Bbc[1:3, 1:3] = -sparse(I, 3, 3)
             Bbc[1:3, end-5:end-3] = sparse(I, 3, 3)
             Bbc[end-2:end, 4:6] = -sparse(I, 3, 3)
@@ -56,7 +56,7 @@ function bc_diff_stag3(Nt, Nin, Nb, bc1, bc2, h1, h2)
             error("not implemented")
         end
 
-        if bc2 == "dir"
+        if bc2 == :dirichlet
             Bbc[end, end] = 1 / 2
             Bbc[end, end-5] = 1 / 2
             Bbc[end-1, end-1] = 1 / 2
@@ -66,9 +66,9 @@ function bc_diff_stag3(Nt, Nin, Nb, bc1, bc2, h1, h2)
             ybc2_1D[end-2] = 1
             ybc2_1D[end-1] = 1
             ybc2_1D[end] = 1
-        elseif bc2 == "sym"
+        elseif bc2 == :symmetric
             error("not implemented")
-        elseif bc2 == "per"
+        elseif bc2 == :periodic
             # Actually redundant
             Bbc[1:3, 1:3] = -sparse(I, 3, 3)
             Bbc[1:3, end-5:end-3] = sparse(I, 3, 3)

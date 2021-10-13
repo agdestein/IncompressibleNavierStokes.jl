@@ -30,16 +30,16 @@ function bc_general_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
         Bb = spzeros(Nt, Nb)
 
         diagpos = -1
-        if bc1 == "dir"
+        if bc1 == :dirichlet
             Bbc[1, 1] = 1 / 2
             Bbc[1, 2] = 1 / 2
             ybc1_1D[1] = 1 # ULe
             Bb[1, 1] = 1
-        elseif bc1 == "sym"
+        elseif bc1 == :symmetric
             Bbc[1, 1] = -1
             Bbc[1, 2] = 1
             ybc1_1D[1] = h1 # DuLo
-        elseif bc1 == "per"
+        elseif bc1 == :periodic
             Bbc[1, 1] = -1
             Bbc[1, end] = 1
             Bb[1, 1] = 1
@@ -47,16 +47,16 @@ function bc_general_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
             error("not implemented")
         end
 
-        if bc2 == "dir"
+        if bc2 == :dirichlet
             Bbc[Nb, end-1] = 1 / 2
             Bbc[Nb, end] = 1 / 2
             ybc2_1D[1] = 1 # URi
             Bb[end, Nb] = 1
-        elseif bc2 == "sym"
+        elseif bc2 == :symmetric
             Bbc[Nb, end-1] = -1
             Bbc[Nb, end] = 1
             ybc2_1D[1] = h2 # DuUp
-        elseif bc2 == "per"
+        elseif bc2 == :periodic
             Bbc[1, 1] = -1
             Bbc[1, end] = 1
             Bb[1, 1] = 1
@@ -74,15 +74,15 @@ function bc_general_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
         Bb[1, 1] = 1
         Bb[end, Nb] = 1
 
-        if bc1 == "dir"
+        if bc1 == :dirichlet
             Bbc[1, 1] = 1 / 2
             Bbc[1, 2] = 1 / 2
             ybc1_1D[1] = 1 # ULo
-        elseif bc1 == "sym"
+        elseif bc1 == :symmetric
             Bbc[1, 1] = -1
             Bbc[1, 2] = 1
             ybc1_1D[1] = h1 # DuLo
-        elseif bc1 == "per"
+        elseif bc1 == :periodic
             Bbc[1, 1] = -1
             Bbc[1, end-1] = 1
             Bbc[2, 2] = -1
@@ -91,15 +91,15 @@ function bc_general_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
             error("not implemented")
         end
 
-        if bc2 == "dir"
+        if bc2 == :dirichlet
             Bbc[end, end-1] = 1 / 2
             Bbc[end, end] = 1 / 2
             ybc2_1D[2] = 1 # UUp
-        elseif bc2 == "sym"
+        elseif bc2 == :symmetric
             Bbc[2, end-1] = -1
             Bbc[2, end] = 1
             ybc2_1D[2] = h2 # DuUp
-        elseif bc2 == "per"
+        elseif bc2 == :periodic
             Bbc[1, 1] = -1
             Bbc[1, end-1] = 1
             Bbc[2, 2] = -1

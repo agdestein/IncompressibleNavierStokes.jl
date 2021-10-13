@@ -26,13 +26,13 @@ function operator_mesh!(setup)
     # X-dir
     Nux_b = 2               # Boundary points
     Nux_in = Nx + 1            # Inner points
-    if bc.u.left ∈ ["dir", "sym"]
+    if bc.u.left ∈ [:dirichlet, :symmetric]
         Nux_in -= 1
     end
-    if bc.u.right ∈ ["dir", "sym"]
+    if bc.u.right ∈ [:dirichlet, :symmetric]
         Nux_in -= 1
     end
-    if bc.u.left == "per" && bc.u.right == "per"
+    if bc.u.left == :periodic && bc.u.right == :periodic
         Nux_in -= 1
     end
     Nux_t = Nux_in + Nux_b  # Total number
@@ -56,13 +56,13 @@ function operator_mesh!(setup)
     # Y-dir
     Nvy_b = 2               # Boundary points
     Nvy_in = Ny + 1            # Inner points
-    if bc.v.low == "dir" || bc.v.low == "sym"
+    if bc.v.low == :dirichlet || bc.v.low == :symmetric
         Nvy_in = Nvy_in - 1
     end
-    if bc.v.up == "dir" || bc.v.up == "sym"
+    if bc.v.up == :dirichlet || bc.v.up == :symmetric
         Nvy_in = Nvy_in - 1
     end
-    if bc.v.low == "per" && bc.v.up == "per"
+    if bc.v.low == :periodic && bc.v.up == :periodic
         Nvy_in = Nvy_in - 1
     end
     Nvy_t = Nvy_in + Nvy_b  # Total number
@@ -87,7 +87,7 @@ function operator_mesh!(setup)
     if order4
         hx3 = zeros(Nx, 1)
         hx3[2:end-1] = hx[1:end-2] + hx[2:end-1] + hx[3:end]
-        if bc.u.left == "per" && bc.u.right == "per"
+        if bc.u.left == :periodic && bc.u.right == :periodic
             hx3[1] = hx[end] + hx[1] + hx[2]
             hx3[end] = hx[end-1] + hx[end] + hx[1]
         else
@@ -97,7 +97,7 @@ function operator_mesh!(setup)
 
         hy3 = zeros(Ny, 1)
         hy3[2:end-1] = hy[1:end-2] + hy[2:end-1] + hy[3:end]
-        if bc.v.low == "per" && bc.v.up == "per"
+        if bc.v.low == :periodic && bc.v.up == :periodic
             hy3[1] = hy[end] + hy[1] + hy[2]
             hy3[end] = hy[end-1] + hy[end] + hy[1]
         else
@@ -112,7 +112,7 @@ function operator_mesh!(setup)
         # Distance between pressure points
         gx3 = zeros(Nx + 1, 1)
         gx3[3:Nx-1] = gx[2:end-3] + gx[3:end-2] + gx[4:end-1]
-        if bc.u.left == "per" && bc.u.right == "per"
+        if bc.u.left == :periodic && bc.u.right == :periodic
             gx3[1] = gx[end-1] + gx[end] + gx[1] + gx[2]
             gx3[2] = gx[end] + gx[1] + gx[2] + gx[3]
             gx3[end-1] = gx[end-2] + gx[end-1] + gx[end] + gx[1]
@@ -127,7 +127,7 @@ function operator_mesh!(setup)
         # Distance between pressure points
         gy3 = zeros(Ny + 1, 1)
         gy3[3:Ny-1] = gy[2:end-3] + gy[3:end-2] + gy[4:end-1]
-        if bc.v.low == "per" && bc.v.up == "per"
+        if bc.v.low == :periodic && bc.v.up == :periodic
             gy3[1] = gy[end-1] + gy[end] + gy[1] + gy[2]
             gy3[2] = gy[end] + gy[1] + gy[2] + gy[3]
             gy3[end-1] = gy[end-2] + gy[end-1] + gy[end] + gy[1]
@@ -154,7 +154,7 @@ function operator_mesh!(setup)
     hxi = hx
 
     # Restrict Nx+2 to Nux_in+1 points
-    if bc.u.left == "dir" && bc.u.right == "dir"
+    if bc.u.left == :dirichlet && bc.u.right == :dirichlet
         xin = x[2:end-1]
         hxd = hx
         gxi = gx[2:end-1]
@@ -169,28 +169,28 @@ function operator_mesh!(setup)
         end
     end
 
-    if bc.u.left == "dir" && bc.u.right == "pres"
+    if bc.u.left == :dirichlet && bc.u.right == :pressure
         xin = x[2:end]
         hxd = [hx; hx[end]]
         gxi = gx[2:end]
         diagpos = 1
     end
 
-    if bc.u.left == "pres" && bc.u.right == "dir"
+    if bc.u.left == :pressure && bc.u.right == :dirichlet
         xin = x[1:end-1]
         hxd = [hx[1]; hx]
         gxi = gx[1:end-1]
         diagpos = 0
     end
 
-    if bc.u.left == "pres" && bc.u.right == "pres"
+    if bc.u.left == :pressure && bc.u.right == :pressure
         xin = x[1:end]
         hxd = [hx[1]; hx; hx[end]]
         gxi = gx
         diagpos = 0
     end
 
-    if bc.u.left == "per" && bc.u.right == "per"
+    if bc.u.left == :periodic && bc.u.right == :periodic
         xin = x[1:end-1]
         hxd = [hx[end]; hx]
         gxi = [gx[1] + gx[end]; gx[2:end-1]]
@@ -229,7 +229,7 @@ function operator_mesh!(setup)
 
 
     # Restrict Ny+2 to Nvy_in+1 points
-    if bc.v.low == "dir" && bc.v.up == "dir"
+    if bc.v.low == :dirichlet && bc.v.up == :dirichlet
         yin = y[2:end-1]
         hyd = hy
         gyi = gy[2:end-1]
@@ -244,28 +244,28 @@ function operator_mesh!(setup)
         end
     end
 
-    if bc.v.low == "dir" && bc.v.up == "pres"
+    if bc.v.low == :dirichlet && bc.v.up == :pressure
         yin = y[2:end]
         hyd = [hy; hy[end]]
         gyi = gy[2:end]
         diagpos = 1
     end
 
-    if bc.v.low == "pres" && bc.v.up == "dir"
+    if bc.v.low == :pressure && bc.v.up == :dirichlet
         yin = y[1:end-1]
         hyd = [hy[1]; hy]
         gyi = gy[1:end-1]
         diagpos = 0
     end
 
-    if bc.v.low == "pres" && bc.v.up == "pres"
+    if bc.v.low == :pressure && bc.v.up == :pressure
         yin = y[1:end]
         hyd = [hy[1]; hy; hy[end]]
         gyi = gy
         diagpos = 0
     end
 
-    if bc.v.low == "per" && bc.v.up == "per"
+    if bc.v.low == :periodic && bc.v.up == :periodic
         yin = y[1:end-1]
         hyd = [hy[end]; hy]
         gyi = [gy[1] + gy[end]; gy[2:end-1]]

@@ -9,14 +9,14 @@ function create_boundary_conditions!(setup)
     for (key, value) ∈ zip(keys(bc_type), bc_type)
         setfield!(setup.bc, key, value)
     end
-    setup.bc.u.left ∈ ["dir", "per", "pres"] || error("Wrong BC for u-left")
-    setup.bc.u.right ∈ ["dir", "per", "pres"] || error("Wrong BC for u-right")
-    setup.bc.u.low ∈ ["dir", "per", "sym"] || error("Wrong BC for u-low")
-    setup.bc.u.up ∈ ["dir", "per", "sym"] || error("Wrong BC for u-up")
-    setup.bc.v.left ∈ ["dir", "per", "sym"] || error("Wrong BC for v-left")
-    setup.bc.v.right ∈ ["dir", "per", "sym"] || error("Wrong BC for v-right")
-    setup.bc.v.low ∈ ["dir", "per", "pres"] || error("Wrong BC for v-low")
-    setup.bc.v.up ∈ ["dir", "per", "pres"] || error("Wrong BC for v-up")
+    setup.bc.u.left ∈ [:dirichlet, :periodic, :pressure] || error("Wrong BC for u-left")
+    setup.bc.u.right ∈ [:dirichlet, :periodic, :pressure] || error("Wrong BC for u-right")
+    setup.bc.u.low ∈ [:dirichlet, :periodic, :symmetric] || error("Wrong BC for u-low")
+    setup.bc.u.up ∈ [:dirichlet, :periodic, :symmetric] || error("Wrong BC for u-up")
+    setup.bc.v.left ∈ [:dirichlet, :periodic, :symmetric] || error("Wrong BC for v-left")
+    setup.bc.v.right ∈ [:dirichlet, :periodic, :symmetric] || error("Wrong BC for v-right")
+    setup.bc.v.low ∈ [:dirichlet, :periodic, :pressure] || error("Wrong BC for v-low")
+    setup.bc.v.up ∈ [:dirichlet, :periodic, :pressure] || error("Wrong BC for v-up")
 
     # Values set below can be either Dirichlet or Neumann value,
     # Depending on BC set above. in case of Neumann (symmetry, pressure)
@@ -29,7 +29,7 @@ function create_boundary_conditions!(setup)
 
     ## Pressure
     # Pressure BC is only used when at the corresponding boundary
-    # "pres" is specified
+    # :pressure is specified
     p_inf = 0
     pLe = p_inf
     pRi = p_inf

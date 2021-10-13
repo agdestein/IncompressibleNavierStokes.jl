@@ -16,16 +16,16 @@ function vorticity!(ω, V, t, setup)
     vₕ = @view V[indv]
     ω_flat = reshape(ω, length(ω))
 
-    if setup.bc.u.left == "per" && setup.bc.v.low == "per"
+    if setup.bc.u.left == :periodic && setup.bc.v.low == :periodic
         uₕ_in = uₕ
         vₕ_in = vₕ
     else
         # Velocity at inner points
         diagpos = 0
-        if setup.bc.u.left == "pres"
+        if setup.bc.u.left == :pressure
             diagpos = 1
         end
-        if setup.bc.u.right == "per" && setup.bc.u.left == "per"
+        if setup.bc.u.right == :periodic && setup.bc.u.left == :periodic
             # Like pressure left
             diagpos = 1
         end
@@ -36,10 +36,10 @@ function vorticity!(ω, V, t, setup)
         uₕ_in = B2D * uₕ
 
         diagpos = 0
-        if setup.bc.v.low == "pres"
+        if setup.bc.v.low == :pressure
             diagpos = 1
         end
-        if setup.bc.v.low == "per" && setup.bc.v.up == "per"
+        if setup.bc.v.low == :periodic && setup.bc.v.up == :periodic
             # Like pressure low
             diagpos = 1
         end

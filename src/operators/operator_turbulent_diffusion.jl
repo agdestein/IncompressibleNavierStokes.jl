@@ -21,20 +21,20 @@ function operator_turbulent_diffusion!(setup)
     # In the periodic case, the value of nu is not needed
     # In all other cases, homogeneous (zero) Neumann conditions are used
 
-    if bc.u.left == "per" && bc.u.right == "per"
-        bcnu.left = "per"
-        bcnu.right = "per"
+    if bc.u.left == :periodic && bc.u.right == :periodic
+        bcnu.left = :periodic
+        bcnu.right = :periodic
     else
-        bcnu.left = "sym"
-        bcnu.right = "sym"
+        bcnu.left = :symmetric
+        bcnu.right = :symmetric
     end
 
-    if bc.v.low == "per" && bc.v.up == "per"
-        bcnu.low = "per"
-        bcnu.up = "per"
+    if bc.v.low == :periodic && bc.v.up == :periodic
+        bcnu.low = :periodic
+        bcnu.up = :periodic
     else
-        bcnu.low = "sym"
-        bcnu.up = "sym"
+        bcnu.low = :symmetric
+        bcnu.up = :symmetric
     end
 
 

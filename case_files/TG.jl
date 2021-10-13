@@ -116,35 +116,30 @@ function TG()
     """
         bc_type()
 
-    "dir" : inflow, wall
-    "sym" : symmetry
-    "pres": pressure (outflow)
-    "per" : periodic
-
     left/right: x-direction
     low/up: y-direction
     """
     setup.bc.bc_type = function bc_type()
         bc_unsteady = false
 
-        u = (; left = "per", right = "per", low = "per", up = "per")
-        v = (; left = "per", right = "per", low = "per", up = "per")
+        u = (; left = :periodic, right = :periodic, low = :periodic, up = :periodic)
+        v = (; left = :periodic, right = :periodic, low = :periodic, up = :periodic)
 
-        k = (; left = "dir", right = "dir", low = "dir", up = "dir")
-        e = (; left = "dir", right = "dir", low = "dir", up = "dir")
+        k = (; left = :dirichlet, right = :dirichlet, low = :dirichlet, up = :dirichlet)
+        e = (; left = :dirichlet, right = :dirichlet, low = :dirichlet, up = :dirichlet)
 
         # Values set below can be either Dirichlet or Neumann value,
         # Depending on B.C. set above. in case of Neumann (symmetry, pressure)
         # One uses normally zero gradient
         # Neumann B.C. used to extrapolate values to the boundary
-        # Change only in case of periodic to "per", otherwise leave at "sym"
+        # Change only in case of periodic to :periodic, otherwise leave at :symmetric
         ν = (;
-            left = "sym",
-            right = "sym",
-            low = "sym",
-            up = "sym",
-            back = "sym",
-            front = "sym",
+            left = :symmetric,
+            right = :symmetric,
+            low = :symmetric,
+            up = :symmetric,
+            back = :symmetric,
+            front = :symmetric,
         )
 
         (; bc_unsteady, u, v, k, e, ν)

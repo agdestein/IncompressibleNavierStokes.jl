@@ -36,7 +36,7 @@ function operator_postprocessing!(setup)
 
 
     ## For periodic BC, covering entire mesh
-    if bc.u.left == "per" && bc.v.low == "per"
+    if bc.u.left == :periodic && bc.v.low == :periodic
 
         # Du/dy, like Su_uy
         diag1 = 1 ./ gyd

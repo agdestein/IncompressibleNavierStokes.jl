@@ -44,16 +44,16 @@ function operator_divergence!(setup)
     # We only need derivative at inner pressure points, so we map the resulting
     # Boundary matrix (restrict)
     diagpos = 0
-    if bc.u.right == "pres" && bc.u.left == "pres"
+    if bc.u.right == :pressure && bc.u.left == :pressure
         diagpos = 1
     end
-    if bc.u.right != "pres" && bc.u.left == "pres"
+    if bc.u.right != :pressure && bc.u.left == :pressure
         diagpos = 1
     end
-    if bc.u.right == "pres" && bc.u.left != "pres"
+    if bc.u.right == :pressure && bc.u.left != :pressure
         diagpos = 0
     end
-    if bc.u.right == "per" && bc.u.left == "per"
+    if bc.u.right == :periodic && bc.u.left == :periodic
         # Like pressure left
         diagpos = 1
     end
@@ -97,16 +97,16 @@ function operator_divergence!(setup)
     # We only need derivative at inner pressure points, so we map the resulting
     # Boundary matrix (restriction)
     diagpos = 0
-    if bc.v.up == "pres" && bc.v.low == "pres"
+    if bc.v.up == :pressure && bc.v.low == :pressure
         diagpos = 1
     end
-    if bc.v.up != "pres" && bc.v.low == "pres"
+    if bc.v.up != :pressure && bc.v.low == :pressure
         diagpos = 1
     end
-    if bc.v.up == "pres" && bc.v.low != "pres"
+    if bc.v.up == :pressure && bc.v.low != :pressure
         diagpos = 0
     end
-    if bc.v.up == "per" && bc.v.low == "per"
+    if bc.v.up == :periodic && bc.v.low == :periodic
         # Like pressure low
         diagpos = 1
     end
@@ -189,7 +189,7 @@ function operator_divergence!(setup)
             A_fact = factorize(A)
             @pack! setup.discretization = A_fact
         elseif poisson_solver isa FFTPressureSolver
-            if any(!isequal("per"), [bc.v.low, bc.v.up, bc.u.left, bc.u.left])
+            if any(!isequal(:periodic), [bc.v.low, bc.v.up, bc.u.left, bc.u.left])
                 error("FFTPressureSolver only implemented for periodic boundary conditions")
             end
             if maximum(abs.(diff(hx))) > 1e-14 || maximum(abs.(diff(hy))) > 1e-14

@@ -28,13 +28,13 @@ function operator_interpolation!(setup)
     mat_hy = spdiagm(Ny, Ny, hyi)
 
     # Periodic boundary conditions
-    if bc.u.left == "per" && bc.u.right == "per"
+    if bc.u.left == :periodic && bc.u.right == :periodic
         mat_hx2 = spdiagm(Nx + 2, Nx + 2, [hx[end]; hx; hx[1]])
     else
         mat_hx2 = spdiagm(Nx + 2, Nx + 2, [hx[1]; hx; hx[end]])
     end
 
-    if bc.v.low == "per" && bc.v.up == "per"
+    if bc.v.low == :periodic && bc.v.up == :periodic
         mat_hy2 = spdiagm(Ny + 2, Ny + 2, [hy[end]; hy; hy[1]])
     else
         mat_hy2 = spdiagm(Ny + 2, Ny + 2, [hy[1]; hy; hy[end]])
@@ -49,7 +49,7 @@ function operator_interpolation!(setup)
         weight2 = 1 / 2 * (1 - β)
 
         # Periodic boundary conditions
-        if bc.u.left == "per" && bc.u.right == "per"
+        if bc.u.left == :periodic && bc.u.right == :periodic
             mat_hx2 = spdiagm(Nx + 4, Nx + 4, [hx[end-1]; hx[end]; hx; hx[1]; hx[2]])
             mat_hx4 = spdiagm(Nx + 4, Nx + 4, [hx3[end-1]; hx3[end]; hxi3; hx3[1]; hx3[2]])
         else
@@ -67,7 +67,7 @@ function operator_interpolation!(setup)
             )
         end
 
-        if bc.v.low == "per" && bc.v.up == "per"
+        if bc.v.low == :periodic && bc.v.up == :periodic
             mat_hy2 = spdiagm(Ny + 4, Ny + 4, [hy[end-1]; hy[end]; hy; hy[1]; hy[2]])
             mat_hy4 = spdiagm(Ny + 4, Ny + 4, [hy3[end-1]; hy3[end]; hyi3; hy3[1]; hy3[2]])
         else
