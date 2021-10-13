@@ -1,6 +1,7 @@
 "Incompressible Navier-Stokes solvers"
 module IncompressibleNavierStokes
 
+using FFTW: fft, ifft
 using IterativeSolvers: cg!
 using LinearAlgebra: Diagonal, Factorization, I, cholesky, factorize, ldiv!, mul!
 using SparseArrays: SparseMatrixCSC, blockdiag, sparse, spdiagm, spzeros
@@ -122,7 +123,7 @@ export Case,
 export nonuniform_grid
 
 # Pressure solvers
-export DirectPressureSolver, CGPressureSolver
+export DirectPressureSolver, CGPressureSolver, FFTPressureSolver
 
 # Main driver
 export main

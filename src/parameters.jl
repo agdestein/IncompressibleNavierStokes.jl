@@ -312,6 +312,7 @@ Base.@kwdef mutable struct SolverSettings{T,PS}
     pressure_solver::PS = DirectPressureSolver() # PressureSolver
     p_initial::Bool = true                       # Calculate compatible IC for the pressure
     p_add_solve::Bool = true                     # Additional pressure solve to make it same order as velocity
+    Â::Matrix{T} = zeros(T, 0, 0)                # Fourier transform of `A`
 
     # Accuracy for non-linear solves (method 62 = 72 = 9)
     nonlinear_acc::T = 1e-14                 # Absolute accuracy

@@ -21,3 +21,19 @@ function pressure_poisson(::CGPressureSolver, f, t, setup, tol = 1e-14)
     cg!(Δp, A, f)
 end
 
+function pressure_poisson(::FFTPressureSolver,f,t, setup, tol = 1e-14)
+    @unpack Npx, Npy = setup.grid
+    @unpack Â = setup.solver_settings
+
+    # Fourier transform of right hand side
+    f̂ = fft(reshape(f, Npx, Npy));
+
+    # Solve for coefficients in Fourier space
+    p̂ = -f̂ ./ Â;
+
+    # Transform back
+    Δp = real.(ifft(p̂));
+
+    # Convert 2D field to 1D column vector
+    Δp = reshape(Δp, length(Δp));
+end

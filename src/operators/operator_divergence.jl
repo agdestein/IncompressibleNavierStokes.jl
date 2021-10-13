@@ -188,6 +188,28 @@ function operator_divergence!(setup)
             # LU decomposition
             A_fact = factorize(A)
             @pack! setup.discretization = A_fact
+        elseif poisson_solver isa FFTPressureSolver
+            if any(!isequal("per"), [bc.v.low, bc.v.up, bc.u.left, bc.u.left])
+                error("FFTPressureSolver only implemented for periodic boundary conditions")
+            end
+            if maximum(abs.(diff(hx))) > 1e-14 || maximum(abs.(diff(hy))) > 1e-14
+                error("FFTPressureSolver requires uniform grid in each dimension")
+            end
+            Δx = hx[1]
+            Δy = hy[1]
+
+            # Fourier transform of the discretization
+            # Assuming uniform grid, although Δx, Δy and Δz do not need to be the same
+            I = 0:(Npx-1)
+            J = 0:(Npy-1)
+
+            # Scale with Δx*Δy*Δz, since we solve the PPE in integrated form
+            Â = @. 4 * Δx * Δy * (sin(I * π / Npx)^2 / Δx^2 + sin(J' * π / Npy)^2 / Δy^2)
+
+            # Pressure is determined up to constant, fix at 0
+            Â[1, 1] = 1
+
+            @pack! options.solver_settings = Â
         end
 
         # Check if all the row sums of the pressure matrix are zero, which
