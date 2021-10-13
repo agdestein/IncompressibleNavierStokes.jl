@@ -43,11 +43,11 @@ function bc_diff_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
             Bbc[1, 1] = 1 / 2
             Bbc[1, 2] = 1 / 2
             ybc1_1D[1] = 1        # ULo
-        elseif :symmetric
+        elseif bc1 == :symmetric
             Bbc[1, 1] = -1
             Bbc[1, 2] = 1
             ybc1_1D[1] = h1   # DuLo
-        elseif :periodic
+        elseif bc1 == :periodic
             Bbc[1, 1] = -1
             Bbc[1, end-1] = 1
             Bbc[2, 2] = -1
