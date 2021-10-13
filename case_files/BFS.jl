@@ -1,9 +1,9 @@
 """
-    setup = BFS_unsteady()
+    setup = BFS()
 
 Setup for unsteady Backward Facing Step case (BFS).
 """
-function BFS_unsteady()
+function BFS()
     # Construct Setup object, containing substructures with default values
     setup = Setup{Float64}()
 
