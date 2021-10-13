@@ -14,3 +14,10 @@ function pressure_poisson(::DirectPressureSolver, f, t, setup, tol = 1e-14)
     # Use pre-determined decomposition
     Δp = A_fact \ f
 end
+
+function pressure_poisson(::CGPressureSolver, f, t, setup, tol = 1e-14)
+    @unpack A = setup.discretization
+    Δp = zeros(size(A, 1))
+    cg!(Δp, A, f)
+end
+
