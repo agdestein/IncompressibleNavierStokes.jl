@@ -200,11 +200,11 @@ function operator_divergence!(setup)
 
             # Fourier transform of the discretization
             # Assuming uniform grid, although Δx, Δy and Δz do not need to be the same
-            I = 0:(Npx-1)
-            J = 0:(Npy-1)
+            i = 0:(Npx-1)
+            j = 0:(Npy-1)
 
             # Scale with Δx*Δy*Δz, since we solve the PPE in integrated form
-            Â = @. 4 * Δx * Δy * (sin(I * π / Npx)^2 / Δx^2 + sin(J' * π / Npy)^2 / Δy^2)
+            Â = @. 4 * Δx * Δy * (sin(i * π / Npx)^2 / Δx^2 + sin(j' * π / Npy)^2 / Δy^2)
 
             # Pressure is determined up to constant, fix at 0
             Â[1, 1] = 1

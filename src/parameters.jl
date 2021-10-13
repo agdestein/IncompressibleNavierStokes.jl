@@ -308,8 +308,8 @@ Base.@kwdef mutable struct Time{T}
 end
 
 # Solver settings
-Base.@kwdef mutable struct SolverSettings{T,PS}
-    pressure_solver::PS = DirectPressureSolver() # PressureSolver
+Base.@kwdef mutable struct SolverSettings{T}
+    pressure_solver::PressureSolver = DirectPressureSolver() # PressureSolver
     p_initial::Bool = true                       # Calculate compatible IC for the pressure
     p_add_solve::Bool = true                     # Additional pressure solve to make it same order as velocity
     Â::Matrix{T} = zeros(T, 0, 0)                # Fourier transform of `A`

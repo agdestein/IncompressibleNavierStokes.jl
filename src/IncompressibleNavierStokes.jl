@@ -23,6 +23,8 @@ using Makie:
 
 # Setup
 include("solvers/time/runge_kutta_methods.jl")
+include("solvers/pressure/pressure_solvers.jl")
+
 include("parameters.jl")
 
 # Preprocess
@@ -76,7 +78,6 @@ include("solvers/solve_unsteady.jl")
 include("solvers/solve_unsteady_ke.jl")
 include("solvers/solve_unsteady_rom.jl")
 
-include("solvers/pressure/pressure_solvers.jl")
 include("solvers/pressure/pressure_poisson.jl")
 include("solvers/pressure/pressure_additional_solve.jl")
 
