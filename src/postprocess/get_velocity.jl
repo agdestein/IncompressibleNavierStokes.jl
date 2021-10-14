@@ -1,5 +1,5 @@
 """
-    get_velocity(V, t, options)
+    get_velocity(V, t, setup)
 
 Get velocity values at pressure points. Interpolate velocities to pressure positions using BMx and BMy (constructed in operator_divergence.jl).
 """

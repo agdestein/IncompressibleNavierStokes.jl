@@ -188,7 +188,7 @@ function operator_divergence!(setup)
             # LU decomposition
             A_fact = factorize(A)
             @pack! setup.discretization = A_fact
-        elseif poisson_solver isa FFTPressureSolver
+        elseif pressure_solver isa FFTPressureSolver
             if any(!isequal(:periodic), [bc.v.low, bc.v.up, bc.u.left, bc.u.left])
                 error("FFTPressureSolver only implemented for periodic boundary conditions")
             end
@@ -209,7 +209,7 @@ function operator_divergence!(setup)
             # Pressure is determined up to constant, fix at 0
             Â[1, 1] = 1
 
-            @pack! options.solver_settings = Â
+            @pack! setup.solver_settings = Â
         end
 
         # Check if all the row sums of the pressure matrix are zero, which
