@@ -36,8 +36,5 @@ function create_mesh!(setup)
     setup.grid.gx = gx
     setup.grid.gy = gy
 
-    println("Nx = $Nx, minimum(hx) = $(minimum(hx))")
-    println("Ny = $Ny, minimum(hy) = $(minimum(hy))")
-
     setup
 end
