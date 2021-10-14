@@ -50,6 +50,7 @@ function vorticity!(ω, V, t, setup)
         vₕ_in = B2D * vₕ
     end
 
+    @show size(ω_flat) size(ω) size(Wv_vx) size(vₕ_in)
     # ω_flat .= Wv_vx * vₕ_in - Wu_uy * uₕ_in
     mul!(ω_flat, Wv_vx, vₕ_in) # a = b * c
     mul!(ω_flat, Wu_uy, uₕ_in, -1, 1) # a = -b * c + a

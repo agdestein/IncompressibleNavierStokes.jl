@@ -131,5 +131,5 @@ function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
         pressure_additional_solve!(V, p, tₙ + Δt, setup)
     end
 
-    V, p, c
+    c
 end

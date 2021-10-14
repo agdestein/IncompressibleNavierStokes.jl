@@ -3,7 +3,7 @@
 
 Solve the entire saddlepoint system arising from the steady Navier-Stokes equations with linearization of the convective terms
 """
-function solve_steady!(solution, setup)
+function solve_steady(setup, V₀, p₀)
     # Setup
     @unpack is_steady, visc = setup.case
     @unpack Nu, Nv, NV, Np = setup.grid
@@ -11,9 +11,9 @@ function solve_steady!(solution, setup)
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
         setup.solver_settings
     @unpack use_rom = setup.rom
+    @unpack do_rtp, rtp_n = setup.visualization
+    @unpack t_start = setup.time
 
-    # Solution
-    @unpack V, p, t, Δt, n, maxres, maxdiv, k, vmom, nonlinear_its, time, umom = solution
 
     # Temporary variables
     cache = MomentumCache(setup)
@@ -22,15 +22,38 @@ function solve_steady!(solution, setup)
     ∇F = spzeros(NV, NV)
     Z2 = spzeros(Np, Np)
 
-    maxres[2] = maxres[1]
+    # Initialize solution vectors
+    # Loop index
+    n = 1
 
-    while maxres[n] > nonlinear_acc
+    # Initial velocity field
+    V = copy(V₀)
+    p = copy(p₀)
+    t = t_start
+
+    # Residual of momentum equations at start
+    momentum!(F, ∇F, V, V, p, t, setup, cache)
+    maxres = maximum(abs.(F))
+    println("Initial momentum residual = $maxres")
+
+
+    if do_rtp
+        rtp = initialize_rtp(setup, V, p, t)
+    end
+
+    # record(fig, "output/vorticity.mp4", 2:rtp.nt; framerate = 60) do n
+    while maxres > nonlinear_acc
+        if n > nonlinear_maxit
+            @warn "Newton not converged in $nonlinear_maxit iterations, showing results anyway"
+            break
+        end
+
+        print("Iteration $n")
+
         if Jacobian_type == "newton" && nPicard < n
             # Switch to Newton
             setup.solver_settings.Newton_factor = true
         end
-
-        n += 1
 
         momentum!(F, ∇F, V, V, p, t, setup, cache, true)
 
@@ -46,19 +69,20 @@ function solve_steady!(solution, setup)
         p .+= Δp
 
         # Calculate mass, momentum and energy
-        maxdiv[n], umom[n], vmom[n], k[n] = check_conservation(V, t, setup)
+        maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
         if visc != "keps"
             momentum!(F, ∇F, V, V, p, t, setup, cache, false)
-            maxres[n] = maximum(abs.(F))
+            maxres = maximum(abs.(F))
         end
 
-        println("Iteration $n: momentum residual = $(maxres[n])")
+        println(": momentum residual = $maxres")
 
-        if n > nonlinear_maxit
-            @warn "Newton not converged in $nonlinear_maxit iterations, showing results anyway"
-            break
+        if do_rtp # && mod(n, rtp_n) == 0
+            update_rtp!(rtp, setup, V, p, t)
         end
+
+        n += 1
     end
 
     V, p

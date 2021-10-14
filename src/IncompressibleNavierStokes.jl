@@ -35,7 +35,7 @@ include("preprocess/create_initial_conditions.jl")
 # Momentum equation
 include("momentum/momentumcache.jl")
 include("momentum/bodyforce.jl")
-include("momentum/check_conservation.jl")
+include("momentum/compute_conservation.jl")
 include("momentum/check_symmetry.jl")
 include("momentum/convection.jl")
 include("momentum/diffusion.jl")
@@ -70,6 +70,8 @@ include("operators/operator_turbulent_diffusion.jl")
 include("rom/momentum_rom.jl")
 
 # Solvers
+include("solvers/real_time_plot/initialize_rtp.jl")
+include("solvers/real_time_plot/update_rtp.jl")
 include("solvers/get_timestep.jl")
 include("solvers/solve_steady.jl")
 include("solvers/solve_steady_ke.jl")

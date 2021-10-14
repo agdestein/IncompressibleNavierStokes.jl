@@ -3,29 +3,25 @@
 
 Main solver file for unsteady calculations
 """
-function solve_unsteady!(solution, setup)
+function solve_unsteady(setup, V₀, p₀)
     # Setup
     @unpack is_steady, visc = setup.case
-    @unpack x1, x2, y1, y2, Nu, Nv, NV, Np, Nx, Ny, x, y, xp, yp = setup.grid
+    @unpack Nu, Nv, NV, Np, Nx, Ny = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
         setup.solver_settings
     @unpack use_rom = setup.rom
-    @unpack isadaptive, method, method_startup, rk_method = setup.time
+    @unpack t_start, t_end, Δt, isadaptive, method, method_startup, rk_method = setup.time
     @unpack save_unsteady = setup.output
-    @unpack do_rtp, rtp_n, rtp_type = setup.visualization
+    @unpack do_rtp, rtp_n = setup.visualization
 
-    # Solution
-    @unpack V, p, t, Δt, n, nt, maxres, maxdiv, k, vmom, nonlinear_its, time, umom =
-        solution
+    # Initialize solution vectors
+    # Loop index
+    n = 1
+    V = copy(V₀)
+    p = copy(p₀)
 
-    # For methods that need convection from previous time step
-    if method == 2
-        if setup.bc.bc_unsteady
-            set_bc_vectors!(setup, t)
-        end
-        convₙ₋₁ = convection(V, V, t, setup, false)
-    end
+    t = t_start
 
     # Temporary variables
     cache = MomentumCache(setup)
@@ -39,7 +35,7 @@ function solve_unsteady!(solution, setup)
     kV = zeros(NV, nstage(rk_method))
     kp = zeros(Np, nstage(rk_method))
 
-    # For methods that need uₙ₋₁
+    # For methods that need previous solution
     Vₙ₋₁ = copy(V)
     pₙ₋₁ = copy(p)
 
@@ -47,6 +43,15 @@ function solve_unsteady!(solution, setup)
     Vₙ = copy(V)
     pₙ = copy(p)
     tₙ = t
+    Δtₙ = Δt
+
+    # For methods that need convection from previous time step
+    if method == 2
+        if setup.bc.bc_unsteady
+            set_bc_vectors!(setup, t)
+        end
+        cₙ₋₁ = convection(V, V, t, setup, false)
+    end
 
     # For methods that need extrapolation of convective terms
     if method ∈ [62, 92, 142, 172, 182, 192]
@@ -54,38 +59,20 @@ function solve_unsteady!(solution, setup)
         V_ep[:, 1] .= V
     end
 
-    Δtₙ = Δt
-
     method_temp = method
 
     if do_rtp
-        Lx = x2 - x1
-        Ly = y2 - y1
-
-        fig = Figure(resolution = (2000 * Lx / (Lx + Ly), 2000 * Ly / (Lx + Ly)))
-        if rtp_type == "velocity"
-            up, vp, qp = get_velocity(V, t, setup)
-            vel = Node(qp)
-            ax, hm = contourf(fig[1, 1], xp, yp, vel)
-        elseif rtp_type == "vorticity"
-            ω = Node(get_vorticity(V, t, setup))
-            ax, hm = contourf(fig[1, 1], x[2:end-1], y[2:end-1], ω; levels = -10:2:10)
-        elseif rtp_type == "streamfunction"
-            ψ = Node(reshape(get_streamfunction(V, t, setup), Nx - 1, Ny - 1))
-            ax, hm = contourf(fig[1, 1], x[2:end-1], y[2:end-1], ψ)
-        end
-        ax.title = titlecase(rtp_type)
-        ax.aspect = DataAspect()
-        ax.xlabel = "x"
-        ax.ylabel = "y"
-        limits!(ax, x1, x2, y1, y2)
-        Colorbar(fig[1, 2], hm)
-        display(fig)
-        fps = 60
+        rtp = initialize_rtp(setup, V, p, t)
     end
 
+    # Estimate number of time steps that will be taken
+    nt = ceil(Int, (t_end - t_start) / Δt)
+
+    momentum!(F, ∇F, V, V, p, t, setup, cache)
+    maxres = maximum(abs.(F))
+
     # record(fig, "output/vorticity.mp4", 2:nt; framerate = 60) do n
-    while n ≤ nt
+    while t < t_end
         # Advance one time step
         n += 1
         Vₙ₋₁ .= Vₙ
@@ -94,9 +81,13 @@ function solve_unsteady!(solution, setup)
         pₙ .= p
         tₙ = t
 
-        println("t = $t, maxres = $(maxres[n-1])")
+        # Change timestep based on operators
+        if isadaptive && rem(n, n_adapt_Δt) == 0
+            Δtₙ = get_timestep(setup)
+        end
+        t = tₙ + Δtₙ
 
-        # @show t
+        println("tₙ = $tₙ, maxres = $maxres")
 
         # For methods that need a velocity field at n-1 the first time step
         # (e.g. AB-CN, oneleg beta) use ERK or IRK
@@ -109,66 +100,37 @@ function solve_unsteady!(solution, setup)
 
         # Perform a single time step with the time integration method
         if method == 2
-            V, p, conv = step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
-            convₙ₋₁ = conv
+            c = step_AB_CN!(V, p, Vₙ, pₙ, cₙ₋₁, tₙ, Δtₙ, setup, cache)
+            cₙ₋₁ .= c
         elseif method == 5
-            step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup, cache)
+            step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, cache)
         elseif method == 20
-            step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup, cache, F, ∇F)
+            step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δtₙ, setup, cache, F, ∇F)
         elseif method == 21
-            V, p, nonlinear_its[n] = step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
+            nonlinear_its = step_IRK!(V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, cache)
         else
             error("time integration method unknown")
         end
 
-        # The velocities and pressure that are just computed are at
-        # The new time level t+Δt:
-        t = tₙ + Δt
-        time[n] = t
-
-        ## Process data from this iteration
-        # Check residuals, conservation, set timestep, write output files
-
         # Calculate mass, momentum and energy
-        maxdiv[n], umom[n], vmom[n], k[n] = check_conservation(V, t, setup)
+        maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
         # Residual (in Finite Volume form)
-        # For ke model residual also contains k and e terms and is computed
-        # In solver_unsteady_ke
+        # For ke model residual also contains k and e terms and is computed in solver_unsteady_ke
         if use_rom
             # Get ROM residual
-            F, = momentum_rom(R, 0, t, setup, false)
-            maxres[n] = maximum(abs.(F))
+            F, = momentum_rom(R, 0, t, setup)
+            maxres = maximum(abs.(F))
         else
             if visc != "keps"
                 # Norm of residual
-                momentum!(F, ∇F, V, V, p, t, setup, cache, false)
-                maxres[n] = maximum(abs.(F))
+                momentum!(F, ∇F, V, V, p, t, setup, cache)
+                maxres = maximum(abs.(F))
             end
-        end
-
-        # Change timestep based on operators
-        if !is_steady && isadaptive && rem(n, n_adapt_Δt) == 0
-            Δt = get_timestep(setup)
-        end
-
-        # Store unsteady data in an array
-        if !is_steady && save_unsteady
-            uₕ_total[n, :] = V[indu]
-            vₕ_total[n, :] = V[indv]
-            p_total[n, :] = p
         end
 
         if do_rtp # && mod(n, rtp_n) == 0
-            if rtp_type == "velocity"
-                 up, vp, qp = get_velocity(V, t, setup)
-                 vel[] = qp
-            elseif rtp_type == "vorticity"
-                ω[] = vorticity!(ω[], V, t, setup)
-            elseif rtp_type == "streamfunction"
-                ψ[] = reshape(get_streamfunction(V, t, setup), Nx - 1, Ny - 1)
-            end
-            # sleep(1 / fps)
+            update_rtp!(rtp, setup, V, p, t)
         end
     end
 

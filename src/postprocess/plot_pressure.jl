@@ -1,9 +1,8 @@
 """
 Plot pressure.
 """
-function plot_pressure(solution, setup)
+function plot_pressure(setup, p)
     @unpack Nx, Ny, Npx, Npy, xp, yp, x1, x2, y1, y2 = setup.grid
-    @unpack p = solution
 
     # Reshape
     pres = reshape(p, Npx, Npy)

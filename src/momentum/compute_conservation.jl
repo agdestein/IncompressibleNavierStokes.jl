@@ -1,9 +1,9 @@
 """
-    check_conservation(V, t, setup)
+    compute_conservation(V, t, setup)
 
-Check mass, momentum and energy conservation properties of velocity field.
+Compute mass, momentum and energy conservation properties of velocity field.
 """
-function check_conservation(V, t, setup)
+function compute_conservation(V, t, setup)
     @unpack M, yM = setup.discretization
     @unpack indu, indv, Ω, x, y, xp, yp, hx, hy, gx, gy = setup.grid
     @unpack u_bc, v_bc = setup.bc

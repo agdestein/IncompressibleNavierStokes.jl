@@ -1,8 +1,8 @@
 """
 Postprocess.
 """
-function postprocess(solution, setup)
-    plot_vorticity(solution, setup)
-    plot_pressure(solution, setup)
-    plot_streamfunction(solution, setup)
+function postprocess(setup, V, p, t)
+    plot_pressure(setup, p)
+    plot_vorticity(setup, V, t)
+    plot_streamfunction(setup, V, t)
 end

@@ -1,9 +1,8 @@
 """
 plot_vorticity.
 """
-function plot_vorticity(solution, setup)
+function plot_vorticity(setup, V, t)
     @unpack Nx, Ny, Nu, Nv, x, y, x1, x2, y1, y2 = setup.grid
-    @unpack V, p, t = solution
 
     # Reshape
     uₕ = @view V[1:Nu]

@@ -1,9 +1,8 @@
 """
 Plot streamfunction.
 """
-function plot_streamfunction(solution, setup)
+function plot_streamfunction(setup, V, t)
     @unpack Nx, Ny, x, y, x1, x2, y1, y2 = setup.grid
-    @unpack V, p, t = solution
 
     # Get fields
     ψ_flat = get_streamfunction(V, t, setup)

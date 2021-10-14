@@ -1,8 +1,12 @@
-## General implicit Runge-Kutta method
+"""
+    step_IRK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache)
 
-# (unsteady) Dirichlet boundary points are not part of solution vector but
-# Are prescribed in a "strong" manner via the ubc and vbc functions
-function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
+General implicit Runge-Kutta method.
+
+Unsteady Dirichlet boundary points are not part of solution vector but
+are prescribed in a "strong" manner via the u_bc and v_bc functions.
+"""
+function step_IRK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache)
     @unpack Nu, Nv, NV, Np, Ω, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver = setup.solver_settings
@@ -180,5 +184,5 @@ function step_IRK(Vₙ, pₙ, tₙ, Δt, setup, cache)
         p = pⱼ[end-Np+1:end]
     end
 
-    V, p, iterations
+    iterations
 end
