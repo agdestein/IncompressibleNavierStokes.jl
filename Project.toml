@@ -18,6 +18,7 @@ UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 [compat]
 BenchmarkTools = "1"
 CairoMakie = "0.6"
+FFTW = "1"
 GLMakie = "0.4"
 Makie = "0.15"
 Plots = "1"
