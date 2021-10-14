@@ -2,11 +2,22 @@
 Plot streamfunction.
 """
 function plot_streamfunction(setup, V, t)
+    @unpack bc = setup
     @unpack Nx, Ny, x, y, x1, x2, y1, y2 = setup.grid
 
+    if bc.u.left == :periodic
+        xψ = x
+    else
+        xψ = x[2:end-1]
+    end
+    if bc.v.low == :periodic
+        yψ = y
+    else
+        yψ = y[2:end-1]
+    end
+
     # Get fields
-    ψ_flat = get_streamfunction(V, t, setup)
-    ψ = reshape(ψ_flat, Nx - 1, Ny - 1)
+    ψ = get_streamfunction(V, t, setup)
 
     # Plot stream function
     levels = [
@@ -45,8 +56,8 @@ function plot_streamfunction(setup, V, t)
     limits!(ax, x1, x2, y1, y2)
     contourf!(
         ax,
-        x[2:(end-1)],
-        y[2:(end-1)],
+        xψ,
+        yψ,
         ψ;
         # levels,
     )

@@ -14,7 +14,7 @@ function get_streamfunction(V, t, setup)
 
     # U = d ψ / dy; integrate low->up
     if setup.bc.u.left == :dirichlet
-        #     u1 = interp1(y, uLe, yp);
+        # u1 = interp1(y, uLe, yp);
         u1 = u_bc.(x[1], yp, t, [setup])
     elseif setup.bc.u.left ∈ [:pressure, :periodic]
         u1 = uₕ[1:Nux_in:end]
@@ -89,8 +89,10 @@ function get_streamfunction(V, t, setup)
     yAψ = Wv_vx * yQx + Wu_uy * yQy
 
     ω = get_vorticity(V, t, setup)
-    ω = reshape(ω, length(ω))
+    ω_flat = reshape(ω, length(ω))
 
     # Solve streamfunction from Poisson equaton
-    -Aψ \ (ω + yAψ)
+    ψ = -Aψ \ (ω_flat + yAψ)
+
+    reshape(ψ, size(ω)...)
 end

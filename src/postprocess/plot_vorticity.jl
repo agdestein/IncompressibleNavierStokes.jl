@@ -2,19 +2,30 @@
 plot_vorticity.
 """
 function plot_vorticity(setup, V, t)
+    @unpack bc = setup
     @unpack Nx, Ny, Nu, Nv, x, y, x1, x2, y1, y2 = setup.grid
 
     # Reshape
     uₕ = @view V[1:Nu]
     vₕ = @view V[Nu+1:Nu+Nv]
 
+    if bc.u.left == :periodic
+        xω = x
+    else
+        xω = x[2:end-1]
+    end
+    if bc.v.low == :periodic
+        yω = y
+    else
+        yω = y[2:end-1]
+    end
+
     # Get fields
-    ω_flat = get_vorticity(V, t, setup)
-    ω = reshape(ω_flat, Nx - 1, Ny - 1)
+    ω = get_vorticity(V, t, setup)
 
     # Plot vorticity
     # levels = [minimum(ω), -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, maximum(ω)]
-    levels = [- 7, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 7]
+    levels = [-7, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 7]
     f = Figure()
     ax = Axis(
         f[1, 1];
@@ -24,9 +35,7 @@ function plot_vorticity(setup, V, t)
         ylabel = "y",
     )
     limits!(ax, x1, x2, y1, y2)
-    contourf!(ax, x[2:(end-1)], y[2:(end-1)], ω;
-        levels
-    )
+    contourf!(ax, xω, yω, ω; levels)
     display(f)
     save("output/vorticity.png", f, pt_per_unit = 2)
 end

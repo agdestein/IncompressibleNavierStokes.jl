@@ -129,7 +129,7 @@ function solve_unsteady(setup, V₀, p₀)
             end
         end
 
-        if do_rtp # && mod(n, rtp_n) == 0
+        if do_rtp && mod(n, rtp_n) == 0
             update_rtp!(rtp, setup, V, p, t)
         end
     end

@@ -81,7 +81,7 @@ end
 totaltime = Base.time() - starttime
 
 ## Post-processing
-postprocess(setup, V, p, t)
+postprocess(setup, V, p, setup.time.t_end)
 plot_pressure(setup, p)
-plot_vorticity(setup, V, t)
-plot_streamfunction(setup, V, t)
+plot_vorticity(setup, V, setup.time.t_end)
+plot_streamfunction(setup, V, setup.time.t_end)

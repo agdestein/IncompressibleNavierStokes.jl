@@ -109,7 +109,7 @@ function TG()
     # Visualization settings
     setup.visualization.plotgrid = false                   # Plot gridlines and pressure points
     setup.visualization.do_rtp = true                      # Real time plotting
-    setup.visualization.rtp_type = "velocity"             # "velocity", "quiver", "vorticity", "pressure", or "streamfunction"
+    setup.visualization.rtp_type = "vorticity"             # "velocity", "quiver", "vorticity", "pressure", or "streamfunction"
     setup.visualization.rtp_n = 10                         # Number of iterations between real time plots
 
 

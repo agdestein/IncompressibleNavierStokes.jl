@@ -1,12 +1,26 @@
+"""
+    get_vorticity(V, t, setup)
+
+Get vorticity from velocity field.
+"""
 function get_vorticity(V, t, setup)
+    @unpack bc = setup
     @unpack Nx, Ny = setup.grid
-    ω = zeros(Nx - 1, Ny - 1)
+    @unpack Wv_vx, Wu_uy = setup.discretization
+    Wv_vx, Wu_uy
+
+    Nωx = bc.u.left == :periodic ? Nx + 1 : Nx - 1
+    Nωy = bc.v.low == :periodic ? Ny + 1 : Ny - 1
+    ω = zeros(Nωx, Nωy)
+
     vorticity!(ω, V, t, setup)
 end
 
 """
-Vorticity values at pressure midpoints
-This should be consistent with operator_postprocessing
+    vorticity!(ω, V, t, setup)
+
+Compute vorticity values at pressure midpoints.
+This should be consistent with `operator_postprocessing.jl`.
 """
 function vorticity!(ω, V, t, setup)
     @unpack indu, indv, Nux_in, Nvy_in, Nx, Ny = setup.grid
@@ -50,7 +64,6 @@ function vorticity!(ω, V, t, setup)
         vₕ_in = B2D * vₕ
     end
 
-    @show size(ω_flat) size(ω) size(Wv_vx) size(vₕ_in)
     # ω_flat .= Wv_vx * vₕ_in - Wu_uy * uₕ_in
     mul!(ω_flat, Wv_vx, vₕ_in) # a = b * c
     mul!(ω_flat, Wu_uy, uₕ_in, -1, 1) # a = -b * c + a

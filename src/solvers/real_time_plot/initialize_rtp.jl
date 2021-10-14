@@ -4,6 +4,7 @@
 Initialize real time plot (RTP).
 """
 function initialize_rtp(setup, V, p, t)
+    @unpack bc = setup
     @unpack x1, x2, y1, y2, Nx, Ny, x, y, xp, yp = setup.grid
     @unpack rtp_type = setup.visualization
 
@@ -15,17 +16,39 @@ function initialize_rtp(setup, V, p, t)
     ψ = nothing
     pres = nothing
 
-    fig = Figure(resolution = (2000 * Lx / (Lx + Ly), 2000 * Ly / (Lx + Ly)))
+    refsize = 2000
+
+    fig = Figure(resolution = (refsize * Lx / (Lx + Ly), refsize * Ly / (Lx + Ly) + 100))
     if rtp_type == "velocity"
         up, vp, qp = get_velocity(V, t, setup)
         vel = Node(qp)
         ax, hm = contourf(fig[1, 1], xp, yp, vel)
     elseif rtp_type == "vorticity"
+        if bc.u.left == :periodic
+            xω = x
+        else
+            xω = x[2:end-1]
+        end
+        if bc.v.low == :periodic
+            yω = y
+        else
+            yω = y[2:end-1]
+        end
         ω = Node(get_vorticity(V, t, setup))
-        ax, hm = contourf(fig[1, 1], x[2:end-1], y[2:end-1], ω; levels = -10:2:10)
+        ax, hm = contourf(fig[1, 1], xω, yω, ω; levels = -10:2:10)
     elseif rtp_type == "streamfunction"
-        ψ = Node(reshape(get_streamfunction(V, t, setup), Nx - 1, Ny - 1))
-        ax, hm = contourf(fig[1, 1], x[2:end-1], y[2:end-1], ψ)
+        if bc.u.left == :periodic
+            xψ = x
+        else
+            xψ = x[2:end-1]
+        end
+        if bc.v.low == :periodic
+            yψ = y
+        else
+            yψ = y[2:end-1]
+        end
+        ψ = Node(get_streamfunction(V, t, setup))
+        ax, hm = contourf(fig[1, 1], xψ, yψ, ψ)
     end
     ax.title = titlecase(rtp_type)
     ax.aspect = DataAspect()
