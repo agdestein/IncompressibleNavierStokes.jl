@@ -1,27 +1,19 @@
 """
-    step_ERK()
+    step!(erk_stepper::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
 
 Perform one time step for the general explicit Runge-Kutta method (ERK).
 
 Dirichlet boundary points are not part of solution vector but are prescribed in a strong manner via the `ubc` and `vbc` functions.
 """
-function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup, cache, F, ∇F)
+function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
     @unpack Nu, Nv, Np, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver = setup.solver_settings
-
-    ## Get coefficients of RK method
-    A, b, c, = tableau(setup.time.rk_method)
+    @unpack time_stepper = setup.time
+    @unpack kV, kp, Vtemp, Vtemp2, F, ∇F, f, A, b, c = stepper_cache
 
     # Number of stages
     nstage = length(b)
-
-    # We work with the following "shifted" Butcher tableau, because A[1, :]
-    # Is always zero for explicit methods
-    A = [A[2:end, :]; b']
-
-    # Vector with time instances (1 is the time level of final step)
-    c = [c[2:end]; 1]
 
     # Reset RK arrays
     kV .= 0
@@ -48,7 +40,7 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup,
         # Boundary conditions will be set through set_bc_vectors! inside momentum
         # The pressure p is not important here, it will be removed again in the
         # Next step
-        momentum!(F, ∇F, V, V, p, tᵢ, setup, cache)
+        momentum!(F, ∇F, V, V, p, tᵢ, setup, momentum_cache)
 
         # Store right-hand side of stage i
         # By adding G*p we effectively REMOVE the pressure contribution Gx*p and Gy*p (but not the vectors y_px and y_py)
@@ -63,16 +55,16 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup,
         mul!(Vtemp, kV, A[i, :])
 
         # Boundary conditions at tᵢ₊₁
-        tᵢ = tₙ + c[i] * Δt
+        tᵢ = tₙ + c[i] * Δtₙ
         if setup.bc.bc_unsteady
             set_bc_vectors!(setup, tᵢ)
         end
 
         # Divergence of intermediate velocity field
-        @. Vtemp2 = Vₙ / Δt + Vtemp
+        @. Vtemp2 = Vₙ / Δtₙ + Vtemp
         mul!(f, M, Vtemp2)
-        @. f = (f + yM / Δt) / c[i]
-        # F = (M * (Vₙ / Δt + Vtemp) + yM / Δt) / c[i]
+        @. f = (f + yM / Δtₙ) / c[i]
+        # F = (M * (Vₙ / Δtₙ + Vtemp) + yM / Δtₙ) / c[i]
 
         # Solve the Poisson equation, but not for the first step if the boundary conditions are steady
         if setup.bc.bc_unsteady || i > 1
@@ -89,12 +81,12 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup,
         mul!(Vtemp2, G, Δp)
 
         # Update velocity current stage, which is now divergence free
-        @. V = Vₙ + Δt * (Vtemp - c[i] * Ω⁻¹ * Vtemp2)
+        @. V = Vₙ + Δtₙ * (Vtemp - c[i] * Ω⁻¹ * Vtemp2)
     end
 
     if setup.bc.bc_unsteady
         if setup.solversettings.p_add_solve
-            pressure_additional_solve!(V, p, tₙ + Δt, setup, cache, F)
+            pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
         else
             # Standard method
             p .= kp[:, end]
@@ -102,7 +94,7 @@ function step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δt, setup,
     else
         # For steady bc we do an additional pressure solve
         # That saves a pressure solve for i = 1 in the next time step
-        pressure_additional_solve!(V, p, tₙ + Δt, setup, cache, F)
+        pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
     end
 
     V, p

@@ -1,91 +1,13 @@
-"""
-    RungeKuttaMethod
-
-Abstract Runge Kutta method.
-
-Original by David Ketcheson
-Extended by Benjamin Sanderse
-"""
-abstract type RungeKuttaMethod end
-
-## ================SSP Methods=========================
-
-# Explicit Methods
-struct FE11 <: RungeKuttaMethod end
-struct SSP22 <: RungeKuttaMethod end
-struct SSP42 <: RungeKuttaMethod end
-struct SSP33 <: RungeKuttaMethod end
-struct SSP43 <: RungeKuttaMethod end
-struct SSP104 <: RungeKuttaMethod end
-struct rSSPs2 <: RungeKuttaMethod end
-struct rSSPs3 <: RungeKuttaMethod end
-struct Wray3 <: RungeKuttaMethod end
-struct RK56 <: RungeKuttaMethod end
-struct DOPRI6 <: RungeKuttaMethod end
-
-# Implicit Methods
-struct BE11 <: RungeKuttaMethod end
-struct SDIRK34 <: RungeKuttaMethod end
-struct ISSPm2 <: RungeKuttaMethod end
-struct ISSPs3 <: RungeKuttaMethod end
-
-# Half explicit methods
-struct HEM3 <: RungeKuttaMethod end
-struct HEM3BS <: RungeKuttaMethod end
-struct HEM5 <: RungeKuttaMethod end
-
-# Classical Methods
-struct GL1 <: RungeKuttaMethod end
-struct GL2 <: RungeKuttaMethod end
-struct GL3 <: RungeKuttaMethod end
-struct RIA1 <: RungeKuttaMethod end
-struct RIA2 <: RungeKuttaMethod end
-struct RIA3 <: RungeKuttaMethod end
-struct RIIA1 <: RungeKuttaMethod end
-struct RIIA2 <: RungeKuttaMethod end
-struct RIIA3 <: RungeKuttaMethod end
-struct LIIIA2 <: RungeKuttaMethod end
-struct LIIIA3 <: RungeKuttaMethod end
-
-# Chebyshev methods
-struct CHDIRK3 <: RungeKuttaMethod end
-struct CHCONS3 <: RungeKuttaMethod end
-struct CHC3 <: RungeKuttaMethod end
-struct CHC5 <: RungeKuttaMethod end
-
-# Miscellaneous Methods
-struct Mid22 <: RungeKuttaMethod end
-struct MTE22 <: RungeKuttaMethod end
-struct CN22 <: RungeKuttaMethod end
-struct Heun33 <: RungeKuttaMethod end
-struct RK33C2 <: RungeKuttaMethod end
-struct RK33P2 <: RungeKuttaMethod end
-struct RK44 <: RungeKuttaMethod end
-struct RK44C2 <: RungeKuttaMethod end
-struct RK44C23 <: RungeKuttaMethod end
-struct RK44P2 <: RungeKuttaMethod end
-
-# DSRK Methods
-struct DSso2 <: RungeKuttaMethod end
-struct DSRK2 <: RungeKuttaMethod end
-struct DSRK3 <: RungeKuttaMethod end
-
-# "Non-SSP" Methods of Wong & Sπteri
-struct NSSP21 <: RungeKuttaMethod end
-struct NSSP32 <: RungeKuttaMethod end
-struct NSSP33 <: RungeKuttaMethod end
-struct NSSP53 <: RungeKuttaMethod end
-
-nstage(rkm::RungeKuttaMethod) = length(tableau(rkm)[2])
-
 r = 0
 
 """
-    A, b, c, r = tableau(rk_method, s = 1)
+    A, b, c, r = tableau(rk_stepper, s = 1)
 
-Set up Butcher arrays `A`, `b`, and `c` for the given `rk_method`.
+Set up Butcher arrays `A`, `b`, and `c` for the given `rk_stepper`.
 Also return SSP coefficient `r`.
 For families of methods, optional input `s` is the number of stages.
+
+Original (MATLAB) by David Ketcheson, extended by Benjamin Sanderse.
 """
 function tableau end
 
@@ -104,7 +26,7 @@ function tableau(::SSP22)
     r = 1
     A = [0 0; 1 0]
     b = [1 // 2, 1 // 2]
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::SSP42)
@@ -112,7 +34,7 @@ function tableau(::SSP42)
     r = 3
     A = [0 0 0 0; 1//3 0 0 0; 1//3 1//3 0 0; 1//3 1//3 1//3 0]
     b = fill(1 // 4, s)
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::SSP33)
@@ -120,7 +42,7 @@ function tableau(::SSP33)
     r = 1
     A = [0 0 0; 1 0 0; 1//4 1//4 0]
     b = [1 // 6, 1 // 6, 2 // 3]
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::SSP43)
@@ -128,7 +50,7 @@ function tableau(::SSP43)
     r = 2
     A = [0 0 0 0; 1//2 0 0 0; 1//2 1//2 0 0; 1//6 1//6 1//6 0]
     b = [1 // 6, 1 // 6, 1 // 6, 1 // 2]
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::SSP104)
@@ -141,7 +63,7 @@ function tableau(::SSP104)
     β0[6, 5] = 1 // 15
     A = (I(s) - α0) \ β0
     b = fill(1 // 10, s)
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::rSSPs2, s = 1)
@@ -155,7 +77,7 @@ function tableau(::rSSPs2, s = 1)
     A = (I(s) - α[1:s, :]) \ β[1:s, :]
     b = β[s+1, :] + α[s+1, :] * A
     b = b'
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::rSSPs3, s = 1)
@@ -172,7 +94,7 @@ function tableau(::rSSPs3, s = 1)
     A = (I(n) - α[1:n, :]) \ β[1:n, :]
     b = β[n+1, :] + α[n+1, :] * A
     b = b'
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::Wray3)
@@ -210,7 +132,7 @@ function tableau(::DOPRI6)
         9017//3168 -355//33 46732//5247 49//176 -5103//18656 0
     ]
     b = [35 // 384, 0, 500 // 1113, 125 // 192, -2187 // 6784, 11 // 84]
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     r = 0 # ?
     A, b, c, r
 end
@@ -237,7 +159,7 @@ function tableau(::SDIRK34)
         2g (1-4g) g
     ]
     b = [1 / 24q, 1 - 1 / 12q, 1 / 24q]
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::ISSPm2, s = 1)
@@ -247,7 +169,7 @@ function tableau(::ISSPm2, s = 1)
     j = repmat(1:s, s, 1)
     A = 1 // s * (j < i) + 1 // (2 * s) * (i == j)
     b = fill(1 // s, s)
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::ISSPs3, s = 1)
@@ -260,7 +182,7 @@ function tableau(::ISSPs3, s = 1)
     j = repeat(1:s, s, 1)
     A = 1 / sqrt(s^2 - 1) * (j < i) + 0.5 * (1 - sqrt((s - 1) / (s + 1))) * (i == j)
     b = fill(1 / s, s)
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 
@@ -269,13 +191,13 @@ function tableau(::HEM3)
     # Brasey and Hairer
     A = [0 0 0; 1//3 0 0; -1 2 0]
     b = [0, 3 // 4, 1 // 4]
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::HEM3BS)
     A = [0 0 0; 1//2 0 0; -1 2 0]
     b = [1 // 6, 2 // 3, 1 // 6]
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::HEM5)
@@ -288,7 +210,7 @@ function tableau(::HEM5)
         (14+5*sqrt(6))/6 (-8+7*sqrt(6))/6 (-9-7*sqrt(6))/4 (9-sqrt(6))/4 0
     ]
     b = [0, 0, (16 - sqrt(6)) / 36, (16 + sqrt(6)) / 36, 1 / 9]
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 
@@ -500,7 +422,7 @@ function tableau(::Heun33)
     r = 0
     A = [0 0 0; 1//3 0 0; 0 2//3 0]
     b = [1 // 4, 0, 3 // 4]
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::RK33C2)
@@ -523,7 +445,7 @@ function tableau(::RK44)
     r = 0
     A = [0 0 0 0; 1//2 0 0 0; 0 1//2 0 0; 0 0 1 0]
     b = [1 // 6, 1 // 3, 1 // 3, 1 // 6]
-    c = sum(A; dims = 2)
+    c = sum(eachrow(A))
     A, b, c, r
 end
 function tableau(::RK44C2)

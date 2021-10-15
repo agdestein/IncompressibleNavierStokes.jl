@@ -1,4 +1,6 @@
 """
+    step!(ab_cn_stepper::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
+
 Perform one time step with Adams-Bashforth for convection and Crank-Nicolson for diffusion.
 
 `convₙ₋₁` are the convection terms of `tₙ₋₁`. Output includes convection terms at `tₙ`, which will be used in next time step in
@@ -26,7 +28,7 @@ The LU decomposition of the first matrix is precomputed in `operator_convection_
 note that, in constrast to explicit methods, the pressure from previous
 time steps has an influence on the accuracy of the velocity
 """
-function step_AB_CN!(V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
+function step!(::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
     # Adams-Bashforth coefficients
     α₁ = 3 // 2
     α₂ = -1 // 2

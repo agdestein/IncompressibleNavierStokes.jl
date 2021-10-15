@@ -296,7 +296,7 @@ Base.@kwdef mutable struct Time{T}
     t_start::T = 0                           # Start time
     t_end::T = 1                             # End time
     Δt::T = (t_end - t_start) / 100          # Timestep
-    rk_method::RungeKuttaMethod = RK44()     # Runge Kutta method
+    time_stepper::TimeStepper = RK44()       # Time stepper
     method::Int = 0                          # Method number
     method_startup::Int = 0                  # Startup method for methods that are not self-starting
     method_startup_number::Int = 0           # Number of velocity fields necessary for start-up = equal to order of method

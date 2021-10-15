@@ -21,8 +21,18 @@ using Makie:
     record,
     save
 
-# Setup
-include("solvers/time/runge_kutta_methods.jl")
+# Types
+include("time_steppers/time_steppers.jl")
+include("time_steppers/tableaus.jl")
+include("time_steppers/nstage.jl")
+include("time_steppers/time_stepper_caches.jl")
+include("time_steppers/step.jl")
+include("time_steppers/step_ab_cn.jl")
+include("time_steppers/step_erk.jl")
+include("time_steppers/step_erk_rom.jl")
+include("time_steppers/step_irk.jl")
+include("time_steppers/step_irk_rom.jl")
+include("time_steppers/step_one_leg.jl")
 include("solvers/pressure/pressure_solvers.jl")
 
 include("parameters.jl")
@@ -83,12 +93,6 @@ include("solvers/solve_unsteady_rom.jl")
 include("solvers/pressure/pressure_poisson.jl")
 include("solvers/pressure/pressure_additional_solve.jl")
 
-include("solvers/time/step_AB_CN.jl")
-include("solvers/time/step_ERK.jl")
-include("solvers/time/step_ERK_ROM.jl")
-include("solvers/time/step_IRK.jl")
-include("solvers/time/step_IRK_ROM.jl")
-
 # Utils
 include("utils/filter_convection.jl")
 
@@ -137,12 +141,12 @@ export create_mesh!,
     set_bc_vectors!,
     force,
     check_input!,
-    solve_steady_ke!,
-    solve_steady!,
-    solve_steady_ibm!,
-    solve_unsteady_ke!,
-    solve_unsteady_rom!,
-    solve_unsteady!
+    solve_steady_ke,
+    solve_steady,
+    solve_steady_ibm,
+    solve_unsteady_ke,
+    solve_unsteady_rom,
+    solve_unsteady
 
 export postprocess, plot_pressure, plot_streamfunction, plot_vorticity
 

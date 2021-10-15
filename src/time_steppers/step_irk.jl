@@ -1,12 +1,12 @@
 """
-    step_IRK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache)
+    step!(irk_stepper::ImplicitRungeKuttaStepper, V, p, Vₙ, pₙ, tₙ, Δt, setup, cache)
 
-General implicit Runge-Kutta method.
+Do one time step for implicit Runge-Kutta method.
 
 Unsteady Dirichlet boundary points are not part of solution vector but
 are prescribed in a "strong" manner via the u_bc and v_bc functions.
 """
-function step_IRK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache)
+function step!(::ImplicitRungeKuttaStepper, V, p, Vₙ, pₙ, tₙ, Δt, setup, cache)
     @unpack Nu, Nv, NV, Np, Ω, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver = setup.solver_settings
@@ -14,7 +14,7 @@ function step_IRK!(V, p, Vₙ, pₙ, tₙ, Δt, setup, cache)
     yMn = yM
 
     # Get coefficients of RK method
-    A, b, c, = tableau(setup.time.rk_method)
+    A, b, c, = tableau(setup.time.time_stepper)
 
     # Number of stages
     nstage = length(b)

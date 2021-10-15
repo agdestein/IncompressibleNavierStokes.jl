@@ -6,7 +6,7 @@ function step_IRK_ROM(Vₙ, pₙ, tₙ, Δt, setup)
 
     ## Get coefficients of RK method
     if t ≈ setup.time.t_start
-        A_RK, b_RK, c_RK, = tableau(setup.time.rk_method)
+        A_RK, b_RK, c_RK, = tableau(setup.time.time_stepper)
         # RK_order = check_orderconditions(A_RK, b_RK, c_RK);
         # Number of stages
         nstage = length(b_RK)

@@ -11,29 +11,23 @@ function solve_unsteady(setup, V₀, p₀)
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
         setup.solver_settings
     @unpack use_rom = setup.rom
-    @unpack t_start, t_end, Δt, isadaptive, method, method_startup, rk_method = setup.time
+    @unpack t_start, t_end, Δt, isadaptive, method, method_startup, time_stepper = setup.time
     @unpack save_unsteady = setup.output
     @unpack do_rtp, rtp_n = setup.visualization
 
     # Initialize solution vectors
     # Loop index
     n = 1
+    t = t_start
     V = copy(V₀)
     p = copy(p₀)
 
-    t = t_start
-
     # Temporary variables
-    cache = MomentumCache(setup)
-    F = zeros(NV)
-    ∇F = spzeros(NV, NV)
-    Vtemp = zeros(NV)
-    Vtemp2 = zeros(NV)
-    f = zeros(Np)
+    momentum_cache = MomentumCache(setup)
 
     # Runge Kutta intermediate stages
-    kV = zeros(NV, nstage(rk_method))
-    kp = zeros(Np, nstage(rk_method))
+    stepper_cache = time_stepper_cache(time_stepper, setup)
+    @unpack F, ∇F = stepper_cache
 
     # For methods that need previous solution
     Vₙ₋₁ = copy(V)
@@ -68,7 +62,7 @@ function solve_unsteady(setup, V₀, p₀)
     # Estimate number of time steps that will be taken
     nt = ceil(Int, (t_end - t_start) / Δt)
 
-    momentum!(F, ∇F, V, V, p, t, setup, cache)
+    momentum!(F, ∇F, V, V, p, t, setup, momentum_cache)
     maxres = maximum(abs.(F))
 
     # record(fig, "output/vorticity.mp4", 2:nt; framerate = 60) do n
@@ -100,14 +94,14 @@ function solve_unsteady(setup, V₀, p₀)
 
         # Perform a single time step with the time integration method
         if method == 2
-            c = step_AB_CN!(V, p, Vₙ, pₙ, cₙ₋₁, tₙ, Δtₙ, setup, cache)
+            c = step!(time_stepper, V, p, Vₙ, pₙ, cₙ₋₁, tₙ, Δtₙ, setup, momentum_cache)
             cₙ₋₁ .= c
         elseif method == 5
-            step_oneleg!(V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, cache)
+            step!(time_stepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, momentum_cache)
         elseif method == 20
-            step_ERK!(V, p, Vₙ, pₙ, tₙ, f, kV, kp, Vtemp, Vtemp2, Δtₙ, setup, cache, F, ∇F)
+            step!(time_stepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
         elseif method == 21
-            nonlinear_its = step_IRK!(V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, cache)
+            nonlinear_its = step!(time_stepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, momentum_cache)
         else
             error("time integration method unknown")
         end
@@ -124,7 +118,7 @@ function solve_unsteady(setup, V₀, p₀)
         else
             if visc != "keps"
                 # Norm of residual
-                momentum!(F, ∇F, V, V, p, t, setup, cache)
+                momentum!(F, ∇F, V, V, p, t, setup, momentum_cache)
                 maxres = maximum(abs.(F))
             end
         end

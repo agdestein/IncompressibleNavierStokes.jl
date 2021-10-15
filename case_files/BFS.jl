@@ -70,9 +70,9 @@ function BFS()
 
     # Time stepping
     setup.time.t_start = 0                        # Start time
-    setup.time.t_end = 4                          # End time
+    setup.time.t_end = 15                         # End time
     setup.time.Δt = 0.02                          # Timestep
-    setup.time.rk_method = RK44()                 # Runge Kutta method
+    setup.time.time_stepper = RK44()              # Time stepper
     setup.time.isadaptive = false                 # Adapt timestep every n_adapt_Δt iterations
     setup.time.n_adapt_Δt = 1                     # Number of iterations between timestep adjustment
     setup.time.method = 20                        # Method number
@@ -108,8 +108,8 @@ function BFS()
 
     # Visualization settings
     setup.visualization.plotgrid = false                   # Plot gridlines and pressure points
-    setup.visualization.do_rtp = false                     # Real time plotting
-    setup.visualization.rtp_type = "velocity"              # "velocity", "quiver", "vorticity", "pressure", or "streamfunction"
+    setup.visualization.do_rtp = true                      # Real time plotting
+    setup.visualization.rtp_type = "vorticity"             # "velocity", "quiver", "vorticity", "pressure", or "streamfunction"
     setup.visualization.rtp_n = 10                         # Number of iterations between real time plots
 
 
@@ -124,6 +124,10 @@ function BFS()
 
         u = (; left = :dirichlet, right = :pressure, low = :dirichlet, up = :dirichlet)
         v = (; left = :dirichlet, right = :symmetric, low = :dirichlet, up = :dirichlet)
+
+        # u = (; left = :periodic, right = :periodic, low = :periodic, up = :periodic)
+        # v = (; left = :periodic, right = :periodic, low = :periodic, up = :periodic)
+
         k = (; left = :dirichlet, right = :dirichlet, low = :dirichlet, up = :dirichlet)
         e = (; left = :dirichlet, right = :dirichlet, low = :dirichlet, up = :dirichlet)
 

@@ -72,7 +72,7 @@ function LDC()
     setup.time.t_start = 0                         # Start time
     setup.time.t_end = 10                          # End time
     setup.time.Δt = 0.01                           # Timestep
-    setup.time.rk_method = RK44()                  # Runge Kutta method
+    setup.time.time_stepper = RK44()               # Time stepper
     setup.time.isadaptive = false                  # Adapt timestep every n_adapt_Δt iterations
     setup.time.n_adapt_Δt = 1                      # Number of iterations between timestep adjustment
     setup.time.method = 20                         # Method number

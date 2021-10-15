@@ -1,6 +1,7 @@
 """
-estimate time step based on eigenvalues of operators,
-using Gershgorin
+    get_timestep(setup)
+
+Estimate time step based on eigenvalues of operators, using Gershgorin.
 """
 function get_timestep(setup)
     @unpack Nu, Nv = setup.grid
