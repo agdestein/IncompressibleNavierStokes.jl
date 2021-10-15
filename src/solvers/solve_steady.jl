@@ -14,7 +14,6 @@ function solve_steady(setup, V₀, p₀)
     @unpack do_rtp, rtp_n = setup.visualization
     @unpack t_start = setup.time
 
-
     # Temporary variables
     cache = MomentumCache(setup)
     F = zeros(NV)
@@ -31,11 +30,14 @@ function solve_steady(setup, V₀, p₀)
     p = copy(p₀)
     t = t_start
 
+    # Initialize BC arrays
+    set_bc_vectors!(setup, t)
+
     # Residual of momentum equations at start
     momentum!(F, ∇F, V, V, p, t, setup, cache)
     maxres = maximum(abs.(F))
-    println("Initial momentum residual = $maxres")
 
+    println("Initial momentum residual = $maxres")
 
     if do_rtp
         rtp = initialize_rtp(setup, V, p, t)
