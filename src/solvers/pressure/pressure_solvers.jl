@@ -16,10 +16,10 @@ Initialize pressure solver.
 """
 function initialize! end
 
-initialize!(:DirectPressureSolver, setup, A) = (setup.discretization.A_fact = factorize(A))
-initialize!(:CGPressureSolver, setup, A) = nothing
+initialize!(::DirectPressureSolver, setup, A) = (setup.discretization.A_fact = factorize(A))
+initialize!(::CGPressureSolver, setup, A) = nothing
 
-function initialize!(:FourierPressureSolver, setup, A)
+function initialize!(::FourierPressureSolver, setup, A)
     @unpack bc = setup
     @unpack hx, hy, Npx, Npy = setup.grid
     if any(!isequal(:periodic), [bc.v.low, bc.v.up, bc.u.left, bc.u.left])
