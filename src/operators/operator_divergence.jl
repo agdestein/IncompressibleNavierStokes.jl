@@ -8,10 +8,9 @@ function operator_divergence!(setup)
 
     # Number of interior points and boundary points
     @unpack pressure_solver = setup.solver_settings
-    @unpack Nx, Ny, Npx, Npy = setup.grid
-    @unpack Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t = setup.grid
-    @unpack Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t = setup.grid
-    @unpack Nu, Nv, Np = setup.grid
+    @unpack Nx, Npx, Npy = setup.grid
+    @unpack Nux_in, Nux_b, Nux_t, Nuy_in = setup.grid
+    @unpack Nvx_in, Nvy_in, Nvy_b, Nvy_t = setup.grid
     @unpack hx, hy = setup.grid
     @unpack Ω⁻¹ = setup.grid
 
@@ -184,33 +183,7 @@ function operator_divergence!(setup)
             return setup
         end
 
-        if pressure_solver isa DirectPressureSolver
-            # LU decomposition
-            A_fact = factorize(A)
-            @pack! setup.discretization = A_fact
-        elseif pressure_solver isa FFTPressureSolver
-            if any(!isequal(:periodic), [bc.v.low, bc.v.up, bc.u.left, bc.u.left])
-                error("FFTPressureSolver only implemented for periodic boundary conditions")
-            end
-            if maximum(abs.(diff(hx))) > 1e-14 || maximum(abs.(diff(hy))) > 1e-14
-                error("FFTPressureSolver requires uniform grid in each dimension")
-            end
-            Δx = hx[1]
-            Δy = hy[1]
-
-            # Fourier transform of the discretization
-            # Assuming uniform grid, although Δx, Δy and Δz do not need to be the same
-            i = 0:(Npx-1)
-            j = 0:(Npy-1)
-
-            # Scale with Δx*Δy*Δz, since we solve the PPE in integrated form
-            Â = @. 4 * Δx * Δy * (sin(i * π / Npx)^2 / Δx^2 + sin(j' * π / Npy)^2 / Δy^2)
-
-            # Pressure is determined up to constant, fix at 0
-            Â[1, 1] = 1
-
-            @pack! setup.solver_settings = Â
-        end
+        initialize!(pressure_solver, setup, A)
 
         # Check if all the row sums of the pressure matrix are zero, which
         # should be the case if there are no pressure boundary conditions

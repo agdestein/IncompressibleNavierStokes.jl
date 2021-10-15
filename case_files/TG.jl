@@ -83,7 +83,7 @@ function TG()
     setup.time.CFL = 0.5                          # CFL number for adaptive methods
 
     # Solver settings
-    setup.solver_settings.pressure_solver = FFTPressureSolver() # Pressure solver
+    setup.solver_settings.pressure_solver = FourierPressureSolver() # Pressure solver
     setup.solver_settings.p_initial = true                 # Calculate compatible IC for the pressure
     setup.solver_settings.p_add_solve = true               # Additional pressure solve to make it same order as velocity
 

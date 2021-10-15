@@ -130,7 +130,7 @@ export Case,
 export nonuniform_grid
 
 # Pressure solvers
-export DirectPressureSolver, CGPressureSolver, FFTPressureSolver
+export DirectPressureSolver, CGPressureSolver, FourierPressureSolver
 
 # Main driver
 export main

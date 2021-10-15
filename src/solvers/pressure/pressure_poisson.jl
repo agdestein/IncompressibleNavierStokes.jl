@@ -21,7 +21,7 @@ function pressure_poisson(::CGPressureSolver, f, t, setup, tol = 1e-14)
     cg!(Δp, A, f)
 end
 
-function pressure_poisson(::FFTPressureSolver,f,t, setup, tol = 1e-14)
+function pressure_poisson(::FourierPressureSolver,f,t, setup, tol = 1e-14)
     @unpack Npx, Npy = setup.grid
     @unpack Â = setup.solver_settings
 
