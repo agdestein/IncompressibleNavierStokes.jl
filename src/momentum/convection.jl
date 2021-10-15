@@ -100,6 +100,13 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian = false)
         convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache, getJacobian)
         convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache, getJacobian)
 
+        # TODO: consider inner loop parallelization
+        # @sync begin
+        #     @spawn convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian)
+        #     @spawn convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache, getJacobian)
+        #     @spawn convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache, getJacobian)
+        # end
+
         cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
         cv .+= filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α)
     end
