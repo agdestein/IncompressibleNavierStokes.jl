@@ -39,11 +39,11 @@ function solve_unsteady(setup, V₀, p₀)
     tₙ = t
     Δtₙ = Δt
 
+    # Initialize BC arrays
+    set_bc_vectors!(setup, t)
+
     # For methods that need convection from previous time step
     if method == 2
-        if setup.bc.bc_unsteady
-            set_bc_vectors!(setup, t)
-        end
         cₙ₋₁ = convection(V, V, t, setup, false)
     end
 
