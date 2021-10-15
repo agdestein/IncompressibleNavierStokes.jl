@@ -26,7 +26,7 @@ function tableau(::SSP22)
     r = 1
     A = [0 0; 1 0]
     b = [1 // 2, 1 // 2]
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::SSP42)
@@ -34,7 +34,7 @@ function tableau(::SSP42)
     r = 3
     A = [0 0 0 0; 1//3 0 0 0; 1//3 1//3 0 0; 1//3 1//3 1//3 0]
     b = fill(1 // 4, s)
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::SSP33)
@@ -42,7 +42,7 @@ function tableau(::SSP33)
     r = 1
     A = [0 0 0; 1 0 0; 1//4 1//4 0]
     b = [1 // 6, 1 // 6, 2 // 3]
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::SSP43)
@@ -50,7 +50,7 @@ function tableau(::SSP43)
     r = 2
     A = [0 0 0 0; 1//2 0 0 0; 1//2 1//2 0 0; 1//6 1//6 1//6 0]
     b = [1 // 6, 1 // 6, 1 // 6, 1 // 2]
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::SSP104)
@@ -63,7 +63,7 @@ function tableau(::SSP104)
     β0[6, 5] = 1 // 15
     A = (I(s) - α0) \ β0
     b = fill(1 // 10, s)
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::rSSPs2, s = 1)
@@ -77,7 +77,7 @@ function tableau(::rSSPs2, s = 1)
     A = (I(s) - α[1:s, :]) \ β[1:s, :]
     b = β[s+1, :] + α[s+1, :] * A
     b = b'
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::rSSPs3, s = 1)
@@ -94,7 +94,7 @@ function tableau(::rSSPs3, s = 1)
     A = (I(n) - α[1:n, :]) \ β[1:n, :]
     b = β[n+1, :] + α[n+1, :] * A
     b = b'
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::Wray3)
@@ -132,7 +132,7 @@ function tableau(::DOPRI6)
         9017//3168 -355//33 46732//5247 49//176 -5103//18656 0
     ]
     b = [35 // 384, 0, 500 // 1113, 125 // 192, -2187 // 6784, 11 // 84]
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     r = 0 # ?
     A, b, c, r
 end
@@ -159,7 +159,7 @@ function tableau(::SDIRK34)
         2g (1-4g) g
     ]
     b = [1 / 24q, 1 - 1 / 12q, 1 / 24q]
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::ISSPm2, s = 1)
@@ -169,7 +169,7 @@ function tableau(::ISSPm2, s = 1)
     j = repmat(1:s, s, 1)
     A = 1 // s * (j < i) + 1 // (2 * s) * (i == j)
     b = fill(1 // s, s)
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::ISSPs3, s = 1)
@@ -182,7 +182,7 @@ function tableau(::ISSPs3, s = 1)
     j = repeat(1:s, s, 1)
     A = 1 / sqrt(s^2 - 1) * (j < i) + 0.5 * (1 - sqrt((s - 1) / (s + 1))) * (i == j)
     b = fill(1 / s, s)
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 
@@ -191,13 +191,13 @@ function tableau(::HEM3)
     # Brasey and Hairer
     A = [0 0 0; 1//3 0 0; -1 2 0]
     b = [0, 3 // 4, 1 // 4]
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::HEM3BS)
     A = [0 0 0; 1//2 0 0; -1 2 0]
     b = [1 // 6, 2 // 3, 1 // 6]
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::HEM5)
@@ -210,7 +210,7 @@ function tableau(::HEM5)
         (14+5*sqrt(6))/6 (-8+7*sqrt(6))/6 (-9-7*sqrt(6))/4 (9-sqrt(6))/4 0
     ]
     b = [0, 0, (16 - sqrt(6)) / 36, (16 + sqrt(6)) / 36, 1 / 9]
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 
@@ -422,7 +422,7 @@ function tableau(::Heun33)
     r = 0
     A = [0 0 0; 1//3 0 0; 0 2//3 0]
     b = [1 // 4, 0, 3 // 4]
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::RK33C2)
@@ -445,7 +445,7 @@ function tableau(::RK44)
     r = 0
     A = [0 0 0 0; 1//2 0 0 0; 0 1//2 0 0; 0 0 1 0]
     b = [1 // 6, 1 // 3, 1 // 3, 1 // 6]
-    c = sum(eachrow(A))
+    c = sum(eachcol(A))
     A, b, c, r
 end
 function tableau(::RK44C2)
