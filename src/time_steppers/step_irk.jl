@@ -21,7 +21,7 @@ function step!(
     @unpack Nu, Nv, NV, Np, Ω, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver, nonlinear_maxit = setup.solver_settings
-    @unpack Vtotₙ, ptotₙ, Vⱼ, pⱼ, Qⱼ, Fⱼ, ∇Fⱼ, f = stepper_cache
+    @unpack Vtotₙ, ptotₙ, Vⱼ, pⱼ, Qⱼ, Fⱼ, ∇Fⱼ, f, Δp = stepper_cache
     @unpack A, b, c, s, Is, Ω_sNV, A_ext, b_ext, c_ext = stepper_cache
 
     yMn = yM
@@ -164,7 +164,7 @@ function step!(
         set_bc_vectors!(setup, tₙ + Δtₙ)
 
         f = 1 / Δtₙ * (M * V + yM)
-        Δp = pressure_poisson(pressure_solver, f, tₙ + Δtₙ, setup)
+        pressure_poisson!(pressure_solver, Δp, f, tₙ + Δtₙ, setup)
 
         V .-= Δtₙ .* Ω⁻¹ .* (G * Δp)
 

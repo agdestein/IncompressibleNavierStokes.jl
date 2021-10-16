@@ -37,8 +37,10 @@ struct ImplicitRungeKuttaStepperCache{T} <: TimeStepperCache
     b_ext
     c_ext
 end
-struct AdamsBashforthCrankNicolsonStepperCache <: TimeStepperCache end
-struct OneLegStepperCache <: TimeStepperCache end
+
+struct AdamsBashforthCrankNicolsonStepperCache{T} <: TimeStepperCache
+    Δp::Vector{T}
+end
 
 """
     time_stepper_cache(stepper, args...; kwargs...)
@@ -61,6 +63,7 @@ function time_stepper_cache(stepper::ExplicitRungeKuttaStepper, setup)
     F = zeros(T, NV)
     ∇F = spzeros(T, NV, NV)
     f = zeros(T, Np)
+    Δp = zeros(T, Np)
 
     # Get coefficients of RK method
     A, b, c, = tableau(stepper)
@@ -71,7 +74,7 @@ function time_stepper_cache(stepper::ExplicitRungeKuttaStepper, setup)
     # Vector with time instances (1 is the time level of final step)
     c = [c[2:end]; 1]
 
-    ExplicitRungeKuttaStepperCache{T}(kV, kp, Vtemp, Vtemp2, F, ∇F, f, T.(A), T.(b), T.(c))
+    ExplicitRungeKuttaStepperCache{T}(kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp, T.(A), T.(b), T.(c))
 end
 
 function time_stepper_cache(stepper::ImplicitRungeKuttaStepper, setup)
@@ -124,6 +127,9 @@ function time_stepper_cache(stepper::ImplicitRungeKuttaStepper, setup)
         c_ext,
     )
 end
-time_stepper_cache(::AdamsBashforthCrankNicolsonStepper) =
-    AdamsBashforthCrankNicolsonStepperCache()
-time_stepper_cache(::OneLegStepper) = OneLegStepperCache()
+
+function time_stepper_cache(::AdamsBashforthCrankNicolsonStepper, setup)
+    @unpack Np = setup.grid
+    Δp = zeros(T, Np)
+    AdamsBashforthCrankNicolsonStepperCache{T}(Δp)
+end

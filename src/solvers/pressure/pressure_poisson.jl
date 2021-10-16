@@ -1,27 +1,32 @@
+function pressure_poisson(pressure_solver, f, t, setup)
+    @unpack Np = setup.grid
+    p = zeros(Np)
+    pressure_poisson!(pressure_solver, p, f, t, setup)
+end
+
 """
-    pressure_poisson(solver, f, t, setup, tol = 1e-14)
+    pressure_poisson!(solver, p, f, t, setup, tol = 1e-14)
 
 Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
 
 We should have `sum(f) = 0` for periodic and no-slip BC.
 """
-function pressure_poisson end
+function pressure_poisson! end
 
-function pressure_poisson(::DirectPressureSolver, f, t, setup, tol = 1e-14)
+function pressure_poisson!(::DirectPressureSolver, p, f, t, setup, tol = 1e-14)
     # Assume the Laplace matrix is known (A) and is possibly factorized
     @unpack A_fact = setup.discretization
 
     # Use pre-determined decomposition
-    Δp = A_fact \ f
+    p .= A_fact \ f
 end
 
-function pressure_poisson(::CGPressureSolver, f, t, setup, tol = 1e-14)
+function pressure_poisson!(::CGPressureSolver, p, f, t, setup)
     @unpack A = setup.discretization
-    Δp = zeros(size(A, 1))
-    cg!(Δp, A, f)
+    cg!(p, A, f)
 end
 
-function pressure_poisson(::FourierPressureSolver,f,t, setup, tol = 1e-14)
+function pressure_poisson!(::FourierPressureSolver, p, f, t, setup)
     @unpack Npx, Npy = setup.grid
     @unpack Â = setup.solver_settings
 
@@ -32,8 +37,5 @@ function pressure_poisson(::FourierPressureSolver,f,t, setup, tol = 1e-14)
     p̂ = -f̂ ./ Â;
 
     # Transform back
-    Δp = real.(ifft(p̂));
-
-    # Convert 2D field to 1D column vector
-    Δp = reshape(Δp, length(Δp));
+    p .= real.(reshape(ifft(p̂), length(p)))
 end

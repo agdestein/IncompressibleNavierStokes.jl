@@ -10,7 +10,7 @@ function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setu
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver = setup.solver_settings
     @unpack time_stepper = setup.time
-    @unpack kV, kp, Vtemp, Vtemp2, F, ∇F, f, A, b, c = stepper_cache
+    @unpack kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f, A, b, c = stepper_cache
 
     # Number of stages
     nstage = length(b)
@@ -69,10 +69,10 @@ function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setu
         # Solve the Poisson equation, but not for the first step if the boundary conditions are steady
         if setup.bc.bc_unsteady || i > 1
             # The time tᵢ below is only for output writing
-            Δp = pressure_poisson(pressure_solver, f, tᵢ, setup)
+            pressure_poisson!(pressure_solver, Δp, f, tᵢ, setup)
         else
             # Bc steady AND i = 1
-            Δp = pₙ
+            Δp .= pₙ
         end
 
         # Store pressure

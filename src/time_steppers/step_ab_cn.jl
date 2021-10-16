@@ -1,5 +1,5 @@
 """
-    step!(ab_cn_stepper::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
+    step!(ab_cn_stepper::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, momentum_cache)
 
 Perform one time step with Adams-Bashforth for convection and Crank-Nicolson for diffusion.
 
@@ -28,7 +28,7 @@ The LU decomposition of the first matrix is precomputed in `operator_convection_
 note that, in constrast to explicit methods, the pressure from previous
 time steps has an influence on the accuracy of the velocity
 """
-function step!(::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, cache)
+function step!(::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, stepper_cache, momentum_cache)
     # Adams-Bashforth coefficients
     α₁ = 3 // 2
     α₂ = -1 // 2
@@ -42,8 +42,9 @@ function step!(::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ�
     @unpack lu_diffu, lu_diffv = setup.discretization
     @unpack θ = setup.time
     @unpack pressure_solver = setup.solver_settings
+    @unpack Δp = stepper_cache
 
-    @unpack c, ∇c = cache
+    @unpack c, ∇c = momentum_cache
 
     uₕ = @view Vₙ[indu]
     vₕ = @view Vₙ[indv]
@@ -66,7 +67,7 @@ function step!(::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ�
     end
 
     # Convection of current solution
-    convection!(c, ∇c, Vₙ, Vₙ, tₙ, setup, cache)
+    convection!(c, ∇c, Vₙ, Vₙ, tₙ, setup, momentum_cache)
 
     cuₙ = @view c[indu]
     cvₙ = @view c[indv]
@@ -121,7 +122,7 @@ function step!(::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ�
     f = (M * Vtemp + yM) / Δt - M * y_Δp
 
     # Solve the Poisson equation for the pressure
-    Δp = pressure_poisson(pressure_solver, f, tₙ + Δt, setup)
+    pressure_poisson!(pressure_solver, Δp, f, tₙ + Δt, setup)
 
     # Update velocity field
     V .= Vtemp .- Δt .* Ω⁻¹ .* (G * Δp .+ y_Δp)
