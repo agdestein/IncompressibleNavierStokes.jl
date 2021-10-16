@@ -20,7 +20,8 @@ function step!(
 )
     @unpack Nu, Nv, NV, Np, Ω, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
-    @unpack pressure_solver = setup.solver_settings
+    @unpack pressure_solver, nonlinear_maxit = setup.solver_settings
+    @unpack Vtotₙ, ptotₙ, Vⱼ, pⱼ, Qⱼ, Fⱼ, ∇Fⱼ, f = stepper_cache
     @unpack A, b, c, s, Is, Ω_sNV, A_ext, b_ext, c_ext = stepper_cache
 
     yMn = yM
@@ -60,33 +61,25 @@ function step!(
         yMtot = kron(ones(s), yMn)
     end
 
-    # Zero block in iteration matrix
-    Z2 = spzeros(s * Np, s * Np)
-
     # Iteration counter
     iter = 0
 
-    # Iteration error
-    nonlinear_maxit = setup.solversettings.nonlinear_maxit
-    error_nonlinear = zeros(nonlinear_maxit)
+    # Index in global solution vector
+    ind_Vⱼ = 1:NV*s
+    ind_pⱼ = (NV*s+1):(NV+Np)*s
+
+    # Zero block in iteration matrix
+    Z2 = spzeros(s * Np, s * Np)
 
     # Vtot contains all stages and is ordered as [u₁; v₁; u₂; v₂; ...; uₛ; vₛ];
     # Initialize with the solution at tₙ
     Vtotₙ = kron(ones(s), Vₙ)
     ptotₙ = kron(ones(s), pₙ)
 
-    # Index in global solution vector
-    ind_Vⱼ = 1:NV*s
-    ind_pⱼ = (NV*s+1):(NV+Np)*s
-
     # Starting guess for intermediate stages => this can be improved, see e.g. the Radau, Gauss4, or Lobatto scripts
-    Vⱼ = Vtotₙ
-    pⱼ = ptotₙ
+    Vⱼ .= Vtotₙ
+    pⱼ .= ptotₙ
     Qⱼ = [Vⱼ; pⱼ]
-
-    # Momentum RHS and Jacobian for all stages
-    Fⱼ = zeros(s * NV)
-    ∇Fⱼ = spzeros(s * NV, s * NV)
 
     # Initialize right-hand side for all stages
     momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, stepper_cache, momentum_cache)
@@ -119,7 +112,18 @@ function step!(
             ΔQⱼ = Z_fact \ f
         elseif setup.solversettings.nonlinear_Newton == "full"
             # Full Newton
-            momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, stepper_cache, momentum_cache; getJacobian = true)
+            momentum_allstage!(
+                Fⱼ,
+                ∇Fⱼ,
+                Vⱼ,
+                Vⱼ,
+                pⱼ,
+                tⱼ,
+                setup,
+                stepper_cache,
+                momentum_cache;
+                getJacobian = true,
+            )
 
             # Form iteration matrix
             dfmom = Ω_sNV / Δtₙ - A_ext * ∇Fⱼ
@@ -137,8 +141,7 @@ function step!(
         # Update iteration counter
         iter += 1
 
-        # Evaluate rhs for next iteration and check residual based on
-        # Computed Vⱼ, pⱼ
+        # Evaluate RHS for next iteration and check residual based on computed Vⱼ, pⱼ
         momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, stepper_cache, momentum_cache)
         fmom = -(Ωtot .* Vⱼ - Ωtot .* Vtotₙ) / Δtₙ + A_ext * Fⱼ
         fmass = -(Mtot * Vⱼ + yMtot)
@@ -188,7 +191,18 @@ end
 
 Call momentum for multiple `(V, p)` pairs, as required in implicit RK methods.
 """
-function momentum_allstage!(F, ∇F, V, C, p, t, setup, stepper_cache, momentum_cache; getJacobian = false)
+function momentum_allstage!(
+    F,
+    ∇F,
+    V,
+    C,
+    p,
+    t,
+    setup,
+    stepper_cache,
+    momentum_cache;
+    getJacobian = false,
+)
     @unpack Nu, Nv, NV, Np = setup.grid
     @unpack s, c = stepper_cache
 

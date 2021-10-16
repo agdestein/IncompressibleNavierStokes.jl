@@ -19,15 +19,23 @@ struct ExplicitRungeKuttaStepperCache{T} <: TimeStepperCache
 end
 
 struct ImplicitRungeKuttaStepperCache{T} <: TimeStepperCache
-    A::Any
-    b::Any
-    c::Any
-    s::Any
-    Is::Any
-    Ω_sNV::Any
-    A_ext::Any
-    b_ext::Any
-    c_ext::Any
+    Vtotₙ
+    ptotₙ
+    Vⱼ
+    pⱼ
+    Qⱼ
+    Fⱼ
+    ∇Fⱼ
+    f
+    A
+    b
+    c
+    s
+    Is
+    Ω_sNV
+    A_ext
+    b_ext
+    c_ext
 end
 struct AdamsBashforthCrankNicolsonStepperCache <: TimeStepperCache end
 struct OneLegStepperCache <: TimeStepperCache end
@@ -66,9 +74,11 @@ function time_stepper_cache(stepper::ExplicitRungeKuttaStepper, setup)
     ExplicitRungeKuttaStepperCache{T}(kV, kp, Vtemp, Vtemp2, F, ∇F, f, T.(A), T.(b), T.(c))
 end
 
-function time_stepper_cache(stepper::ImplicitRungeKuttaStepper)
+function time_stepper_cache(stepper::ImplicitRungeKuttaStepper, setup)
     # TODO: Decide where `T` is to be passed
     T = Float64
+
+    @unpack Np, Ω = setup.grid
 
     # Get coefficients of RK method
     A, b, c, = tableau(stepper)
@@ -83,7 +93,36 @@ function time_stepper_cache(stepper::ImplicitRungeKuttaStepper)
     b_ext = kron(b', sparse(I, NV, NV))
     c_ext = spdiagm(c)
 
-    ImplicitRungeKuttaStepperCache{T}(A, b, c, s, Is, Ω_sNV, A_ext, b_ext, c_ext)
+    Vtotₙ = zeros(s * NV)
+    ptotₙ = zeros(s * Np)
+    Vⱼ = zeros(s * NV)
+    pⱼ = zeros(s * Np)
+    Qⱼ = zeros(s * (NV + Np))
+
+    Fⱼ = zeros(s * NV)
+    ∇Fⱼ = spzeros(s * NV, s * NV)
+
+    f = zeros(s * (NV + Np))
+
+    ImplicitRungeKuttaStepperCache{T}(
+        Vtotₙ,
+        ptotₙ,
+        Vⱼ,
+        pⱼ,
+        Qⱼ,
+        Fⱼ,
+        ∇Fⱼ,
+        f,
+        A,
+        b,
+        c,
+        s,
+        Is,
+        Ω_sNV,
+        A_ext,
+        b_ext,
+        c_ext,
+    )
 end
 time_stepper_cache(::AdamsBashforthCrankNicolsonStepper) =
     AdamsBashforthCrankNicolsonStepperCache()
