@@ -11,7 +11,7 @@ function solve_unsteady(setup, V₀, p₀)
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
         setup.solver_settings
     @unpack use_rom = setup.rom
-    @unpack t_start, t_end, Δt, isadaptive, time_stepper, time_stepper_startup = setup.time
+    @unpack t_start, t_end, Δt, isadaptive, time_stepper, time_stepper_startup, nstartup = setup.time
     @unpack save_unsteady = setup.output
     @unpack do_rtp, rtp_n = setup.visualization
 
@@ -43,7 +43,8 @@ function solve_unsteady(setup, V₀, p₀)
     # For methods that need previous solution
     Vₙ₋₁ = copy(V)
     pₙ₋₁ = copy(p)
-    cₙ₋₁ = convection(V, V, t, setup, momentum_cache)
+    cₙ₋₁ = copy(V)
+    convection!(cₙ₋₁, nothing, V, V, t, setup, momentum_cache)
 
     # Current solution
     Vₙ = copy(V)
@@ -61,16 +62,17 @@ function solve_unsteady(setup, V₀, p₀)
     # Estimate number of time steps that will be taken
     nt = ceil(Int, (t_end - t_start) / Δt)
 
-    momentum!(F, ∇F, V, V, p, t, setup, momentum_cache)
+    momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
     maxres = maximum(abs.(F))
 
     # record(fig, "output/vorticity.mp4", 2:nt; framerate = 60) do n
     while t < t_end
         # Advance one time step
         n += 1
-        if n == method_startup_no + 1
+        if n == nstartup + 1 && needs_startup_stepper(time_stepper)
+            println("n = $n: switching to primary time stepper ($time_stepper)")
             ts = time_stepper
-            ts_cache = time_stepper_cache
+            ts_cache = stepper_cache
         end
         Vₙ₋₁ .= Vₙ
         pₙ₋₁ .= pₙ

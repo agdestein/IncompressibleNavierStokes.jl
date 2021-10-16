@@ -22,7 +22,7 @@ function step!(
 )
     @unpack Nu, Nv, NV, Np, Ω, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
-    @unpack pressure_solver, nonlinear_maxit = setup.solver_settings
+    @unpack pressure_solver, nonlinear_maxit, nonlinear_acc, nonlinear_Newton, p_add_solve = setup.solver_settings
     @unpack Vtotₙ, ptotₙ, Vⱼ, pⱼ, Qⱼ, Fⱼ, ∇Fⱼ, f, Δp = stepper_cache
     @unpack A, b, c, s, Is, Ω_sNV, A_ext, b_ext, c_ext = stepper_cache
 
@@ -93,7 +93,7 @@ function step!(
     fmass = -(Mtot * Vⱼ + yMtot)
     f = [fmom; fmass]
 
-    if setup.solversettings.nonlinear_Newton == "approximate"
+    if nonlinear_Newton == "approximate"
         # Approximate Newton (Jacobian is based on current solution Vₙ)
         momentum!(Fₙ, ∇Fₙ, Vₙ, Vₙ, pₙ, tₙ, setup, momentum_cache; getJacobian = true)
 
@@ -105,14 +105,14 @@ function step!(
         Z_fact = factorize(Z)
     end
 
-    while maximum(abs.(f)) > setup.solversettings.nonlinear_acc
-        if setup.solversettings.nonlinear_Newton == "approximate"
+    while maximum(abs.(f)) > nonlinear_acc
+        if nonlinear_Newton == "approximate"
             # Approximate Newton
             # ΔQⱼ = Z \ f
 
             # Re-use the decomposition
             ΔQⱼ = Z_fact \ f
-        elseif setup.solversettings.nonlinear_Newton == "full"
+        elseif nonlinear_Newton == "full"
             # Full Newton
             momentum_allstage!(
                 Fⱼ,
@@ -170,7 +170,7 @@ function step!(
 
         V .-= Δtₙ .* Ω⁻¹ .* (G * Δp)
 
-        if setup.solversettings.p_add_solve
+        if p_add_solve
             pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
         else
             # Standard method; take last pressure

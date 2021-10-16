@@ -57,7 +57,7 @@ function step_irk_rom(Vₙ, pₙ, tₙ, Δt, setup)
     # Initialize residual
     f = fmom
 
-    if setup.solversettings.nonlinear_Newton == "approximate"
+    if setup.solver_settings.nonlinear_Newton == "approximate"
         # Approximate Newton
         # Jacobian based on current solution un
         _, _, Jn = F_ROM(Rₙ, [], tₙ, setup, true)
@@ -66,12 +66,12 @@ function step_irk_rom(Vₙ, pₙ, tₙ, Δt, setup)
         Z = dfmom
     end
 
-    while maximum(abs.(f)) > setup.solversettings.nonlinear_acc
-        if setup.solversettings.nonlinear_Newton == "approximate"
+    while maximum(abs.(f)) > setup.solver_settings.nonlinear_acc
+        if setup.solver_settings.nonlinear_Newton == "approximate"
             # Approximate Newton
             # Do not rebuild Z
             ΔQⱼ = Z \ f
-        elseif setup.solversettings.nonlinear_Newton == "full"
+        elseif setup.solver_settings.nonlinear_Newton == "full"
             # Full Newton
             _, _, J = F_multiple_ROM(Rⱼ, [], tⱼ, setup, true)
             # Form iteration matrix

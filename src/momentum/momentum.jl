@@ -53,13 +53,13 @@ function momentum!(
     end
 
     # Convection
-    convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian)
+    convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian)
 
     # Diffusion
-    diffusion!(d, ∇d, V, t, setup, getJacobian)
+    diffusion!(d, ∇d, V, t, setup; getJacobian)
 
     # Body force
-    bodyforce!(b, ∇b, V, t, setup, getJacobian)
+    bodyforce!(b, ∇b, V, t, setup; getJacobian)
 
     # Residual in Finite Volume form, including the pressure contribution
     @. F = -c + d + b

@@ -13,6 +13,7 @@ struct ExplicitRungeKuttaStepperCache{T} <: TimeStepperCache
     F::Vector{T}
     ∇F::SparseMatrixCSC{T,Int}
     f::Vector{T}
+    Δp::Vector{T}
     A::Matrix{T}
     b::Vector{T}
     c::Vector{T}
@@ -39,6 +40,7 @@ struct ImplicitRungeKuttaStepperCache{T} <: TimeStepperCache
 end
 
 struct AdamsBashforthCrankNicolsonStepperCache{T} <: TimeStepperCache
+    F::Vector{T}
     Δp::Vector{T}
 end
 
@@ -53,6 +55,22 @@ end
 Get time stepper cache for the given time stepper.
 """
 function time_stepper_cache end
+
+function time_stepper_cache(::AdamsBashforthCrankNicolsonStepper, setup)
+    T = Float64
+    @unpack NV, Np = setup.grid
+    F = zeros(NV)
+    Δp = zeros(T, Np)
+    AdamsBashforthCrankNicolsonStepperCache{T}(F, Δp)
+end
+
+function time_stepper_cache(::OneLegStepper, setup)
+    T = Float64
+    @unpack NV = setup.grid
+    F = zeros(T, NV)
+    GΔp = zeros(T, NV)
+    OneLegStepperCache{T}(F, GΔp)
+end
 
 function time_stepper_cache(stepper::ExplicitRungeKuttaStepper, setup)
     # TODO: Decide where `T` is to be passed
@@ -131,18 +149,4 @@ function time_stepper_cache(stepper::ImplicitRungeKuttaStepper, setup)
         b_ext,
         c_ext,
     )
-end
-
-function time_stepper_cache(::AdamsBashforthCrankNicolsonStepper, setup)
-    @unpack Np = setup.grid
-    Δp = zeros(T, Np)
-    AdamsBashforthCrankNicolsonStepperCache{T}(Δp)
-end
-
-function time_stepper_cache(::OneLegStepper, setup)
-    T = Float64
-    @unpack NV = setup.grid
-    F = zeros(T, NV)
-    GΔp = zeros(T, NV)
-    OneLegStepperCache{T}(F, GΔp)
 end

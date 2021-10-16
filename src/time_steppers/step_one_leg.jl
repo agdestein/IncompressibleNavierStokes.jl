@@ -6,11 +6,11 @@ See [Verstappen and Veldman (JCP 2003)] for details,
 or [Direct numerical simulation of turbulence at lower costs (Journal of Engineering Mathematics 1997)].
 
 Formulation:
-``\frac{(\beta + 1/2) u^{n+1} - 2 \beta u^{n} + (\beta - 1/2) u^{n-1}}{\Delta t} = F((1 + \beta) u^n - \beta u^{n-1})``
+``\\frac{(\\beta + 1/2) u^{n+1} - 2 \\beta u^{n} + (\\beta - 1/2) u^{n-1}}{\\Delta t} = F((1 + \\beta) u^n - \\beta u^{n-1})``
 """
 function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache,  momentum_cache)
     @unpack G, M, yM = setup.discretization
-    @unpack pressure_solver = setup.solver_settings
+    @unpack pressure_solver, p_add_solve = setup.solver_settings
     @unpack Ω⁻¹ = setup.grid
     @unpack β = ts
     @unpack F, GΔp = stepper_cache
@@ -27,7 +27,7 @@ function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ
     @. V = (2β * Vₙ - (β - 1/2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1/2)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary conditions at tₙ₊₁
-    if setup.BC.BC_unsteady
+    if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ + Δtₙ)
     end
 
@@ -48,7 +48,7 @@ function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ
     @. p = 2pₙ - pₙ₋₁ + 4 / 3 * Δp
 
     # Alternatively, do an additional Poisson solve:
-    if setup.solversettings.p_add_solve
+    if p_add_solve
         pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
     end
 

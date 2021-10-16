@@ -1,9 +1,9 @@
 """
-    diffusion!(d, ∇d, V, t, setup, getJacobian)
+    diffusion!(d, ∇d, V, t, setup; getJacobian = false)
 
 Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V`.
 """
-function diffusion!(d, ∇d, V, t, setup, getJacobian)
+function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
     @unpack visc = setup.case
     @unpack Nu, Nv, indu, indv = setup.grid
     @unpack N1, N2, N3, N4 = setup.grid

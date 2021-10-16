@@ -15,11 +15,7 @@ function operator_postprocessing!(setup)
     @unpack order4 = setup.discretization
 
     if order4
-        @unpack α,
-        β,
-        gxi3,
-        gyi3,
-        Ωvort3 = setup.grid
+        @unpack α, β, gxi3, gyi3, Ωvort3 = setup.grid
     end
 
     ## Vorticity
@@ -42,14 +38,28 @@ function operator_postprocessing!(setup)
     if bc.u.left == :periodic && bc.v.low == :periodic
         # Du/dy, like Su_uy
         diag1 = 1 ./ gyd
-        W1D = spdiagm(Ny + 1, Ny, -Ny => diag1[[1]], -1 => -diag1[1:end-1], 0 => diag1[1:end-1], Ny - 1 => -diag1[[end-1]])
+        W1D = spdiagm(
+            Ny + 1,
+            Ny,
+            -Ny => diag1[[1]],
+            -1 => -diag1[1:end-1],
+            0 => diag1[1:end-1],
+            Ny - 1 => -diag1[[end - 1]],
+        )
         # Extend to 2D
         diag2 = ones(Nx)
         Wu_uy = kron(W1D, spdiagm(Nx + 1, Nx, -Nx => diag2[[1]], 0 => diag2))
 
         # Dv/dx, like Sv_vx
         diag1 = 1 ./ gxd
-        W1D = spdiagm(Nx + 1, Nx, -Nx => diag1[[1]], -1 => -diag1[1:end-1], 0 => diag1[1:end-1], Nx - 1 => -diag1[[end-1]])
+        W1D = spdiagm(
+            Nx + 1,
+            Nx,
+            -Nx => diag1[[1]],
+            -1 => -diag1[1:end-1],
+            0 => diag1[1:end-1],
+            Nx - 1 => -diag1[[end - 1]],
+        )
         # Extend to 2D
         diag2 = ones(Ny)
         Wv_vx = kron(spdiagm(Ny + 1, Ny, -Ny => diag2[[1]], 0 => diag2), W1D)

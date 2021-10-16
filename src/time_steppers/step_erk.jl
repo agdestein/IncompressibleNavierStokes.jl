@@ -85,7 +85,7 @@ function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ�
     end
 
     if setup.bc.bc_unsteady
-        if setup.solversettings.p_add_solve
+        if setup.solver_settings.p_add_solve
             pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
         else
             # Standard method

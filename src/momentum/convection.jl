@@ -3,14 +3,14 @@
 
 Convenience function for initializing arrays `c` and `∇c` before filling in convection terms.
 """
-function convection(V, ϕ, t, setup, getJacobian = false)
+function convection(V, ϕ, t, setup; getJacobian = false)
     @unpack NV = setup.grid
 
     cache = MomentumCache(setup)
     c = zeros(NV)
     ∇c = spzeros(NV, NV)
 
-    convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian)
+    convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian)
 end
 
 """
@@ -18,7 +18,7 @@ end
 
 evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`.
 """
-function convection!(c, ∇c, V, ϕ, t, setup, cache, getJacobian = false)
+function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
     @unpack order4 = setup.discretization
     @unpack regularization = setup.case
     @unpack α = setup.discretization

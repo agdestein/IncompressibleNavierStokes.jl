@@ -3,7 +3,7 @@ module IncompressibleNavierStokes
 
 using FFTW: fft, ifft
 using IterativeSolvers: cg!
-using LinearAlgebra: Diagonal, Factorization, I, cholesky, factorize, ldiv!, mul!
+using LinearAlgebra: Diagonal, Factorization, I, cholesky, factorize, ldiv!, lu, mul!
 using SparseArrays: SparseMatrixCSC, blockdiag, sparse, spdiagm, spzeros
 using UnPack: @pack!, @unpack
 # Using Plots: contour, contourf, title!
@@ -152,6 +152,8 @@ export create_mesh!,
     solve_unsteady
 
 export postprocess, plot_pressure, plot_streamfunction, plot_vorticity
+
+export AdamsBashforthCrankNicolsonStepper, OneLegStepper
 
 # Runge Kutta methods
 

@@ -28,8 +28,22 @@ The LU decomposition of the first matrix is precomputed in `operator_convection_
 note that, in constrast to explicit methods, the pressure from previous
 time steps has an influence on the accuracy of the velocity
 """
-function step!(ts::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, cₙ₋₁, tₙ, Δt, setup, stepper_cache, momentum_cache)
-    @unpack Nu, Nv, indu, indv = setup.grid.Nv
+function step!(
+    ts::AdamsBashforthCrankNicolsonStepper,
+    V,
+    p,
+    Vₙ,
+    pₙ,
+    Vₙ₋₁,
+    pₙ₋₁,
+    cₙ₋₁,
+    tₙ,
+    Δt,
+    setup,
+    stepper_cache,
+    momentum_cache,
+)
+    @unpack Nu, Nv, indu, indv = setup.grid
     @unpack Ωu⁻¹, Ωv⁻¹, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Gx, Gy, y_px, y_py = setup.discretization
@@ -85,19 +99,14 @@ function step!(ts::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, Vₙ₋
     Gxpₙ = Gx * pₙ
     Gypₙ = Gy * pₙ
 
+    Du = Diffu * uₕ
+    Dv = Diffv * vₕ
+
     # Right hand side of the momentum equation update
-    Rur =
-        uₕ +
-        Ωu⁻¹ * Δt * (
-            -(α₁ * cuₙ + α₂ * cuₙ₋₁) + (1 - θ) * Diffu * uₕ + yDiffu + Fx - Gxpₙ -
-            y_px
-        )
-    Rvr =
-        vₕ +
-        Ωv⁻¹ * Δt .* (
-            -(α₁ * cvₙ + α₂ * cvₙ₋₁) + (1 - θ) * Diffv * vₕ + yDiffv + Fy - Gypₙ -
-            y_py
-        )
+    Rur = @. uₕ +
+       Ωu⁻¹ * Δt * (-(α₁ * cuₙ + α₂ * cuₙ₋₁) + (1 - θ) * Du + yDiffu + Fx - Gxpₙ - y_px)
+    Rvr = @. vₕ +
+       Ωv⁻¹ * Δt * (-(α₁ * cvₙ + α₂ * cvₙ₋₁) + (1 - θ) * Dv + yDiffv + Fy - Gypₙ - y_py)
 
     # LU decomposition of diffusion part has been calculated already in `operator_convection_diffusion.jl`
     Ru = lu_diffu \ Rur
@@ -126,7 +135,7 @@ function step!(ts::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, Vₙ₋
     # First order pressure:
     p .= pₙ .+ Δp
 
-    if setup.solversettings.p_add_solve
+    if setup.solver_settings.p_add_solve
         pressure_additional_solve!(V, p, tₙ + Δt, setup)
     end
 
