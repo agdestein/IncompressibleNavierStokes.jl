@@ -1,39 +1,28 @@
 """
     step_ERK_ROM()
 
-General explicit Runge-Kutta method for ROM
-Perform one tᵢme step for the general explicit Runge-Kutta method (ERK) with Reduced Order Model (ROM).
+Perform one time step for the general explicit Runge-Kutta method (ERK) with Reduced Order Model (ROM).
 """
-function step_ERK_ROM(Vₙ, pₙ, tₙ, Δt, setup)
+function step_erk_rom(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
+# function step_ERK_ROM(Vₙ, pₙ, tₙ, Δt, setup)
     # Number of unknowns (modes) in ROM
     M = setup.rom.M
 
-    ## Get coefficients of RK method
-    # Need to do this only once, as long as the RK method does not change in
-    # Tᵢme
-    if t ≈ setup.tᵢme.t_start
+    @unpack kV, kp, Vtemp, Vtemp2, F, ∇F, f, A, b, c = stepper_cache
 
-        A_RK, b_RK, c_RK, = tableau(setup.tᵢme.rk)
-        # RK_order = check_orderconditᵢons(A_RK, b_RK, c_RK);
+    # Number of stages
+    nstage = length(b)
 
-        # Number of stages
-        nstage = length(b_RK)
-
-        # We work with the following "shifted" Butcher tableau, because A_RK[1, 1]
-        # Is always zero for explicit methods
-        A_RK = [A_RK[2:end, :]; b_RK']
-
-        # Vector with tᵢme instances
-        c_RK = [c_RK[2:end]; 1] # 1 is the tᵢme level of final step
-
-    end
+    # Reset RK arrays
+    kV .= 0
+    kp .= 0
 
     ## Preprocessing
-    # Store variables at start of tᵢme step
+    # Store variables at start of time step
     tₙ = t
     Rₙ = R
 
-    # Right hand side evaluatᵢons, initᵢalized at zero
+    # Right hand side evaluations, initialized at zero
     kR = zeros(M, nstage)
 
     # Array for the pressure
@@ -42,34 +31,33 @@ function step_ERK_ROM(Vₙ, pₙ, tₙ, Δt, setup)
     tᵢ = tₙ
 
     for i_RK = 1:nstage
-        # At i=1 we calculate F_1, p_2 and u_2
+        # At i=1 we calculate F₁, p₂ and u₂
         # ...
-        # At i=s we calculate F_s, p_(n+1) and u_(n+1)
+        # At i=s we calculate Fₛ, pₙ₊₁ and uₙ₊₁
 
-        # Right-hand side for tᵢ based on current field R at
-        # Level i (this includes force evaluatᵢon at tᵢ)
+        # Right-hand side for tᵢ based on current field R at level i (this includes force evaluation at tᵢ)
         # Note that input p is not used in F_ROM
         _, F_rhs = F_ROM(R, p, tᵢ, setup)
 
-        # Store right-hand side of stage i
+        # Store right-hand side of stage `i`
         kR[:, i_RK] = F_rhs
 
-        # Update coefficients R of current stage by sum of F_i's untᵢl this stage,
+        # Update coefficients R of current stage by sum of Fᵢ's until this stage,
         # Weighted with the Butcher tableau coefficients
-        # This gives R_(i+1), and for i=s gives R_(n+1)
-        Rtemp = kR * A_RK[i_RK, :]
+        # This gives Rᵢ₊₁, and for `i = s` gives Rₙ₊₁
+        Rtemp = kR * A[i_RK, :]
 
-        # Tᵢme level of the computed stage
-        tᵢ = tₙ + c_RK[i_RK] * Δt
+        # Time level of the computed stage
+        tᵢ = tₙ + c[i_RK] * Δt
 
         # Update ROM coefficients current stage
         R = Rₙ + Δt * Rtemp
     end
 
     if setup.rom.pressure_recovery
-        q = pressure_additᵢonal_solve_ROM(R, tₙ + Δt, setup)
+        q = pressure_additional_solve_ROM(R, tₙ + Δt, setup)
         p = get_FOM_pressure(q, t, setup)
     end
 
-    V_new, p_new
+    V, p
 end

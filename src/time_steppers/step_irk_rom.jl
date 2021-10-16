@@ -1,4 +1,4 @@
-function step_IRK_ROM(Vₙ, pₙ, tₙ, Δt, setup)
+function step_irk_rom(Vₙ, pₙ, tₙ, Δt, setup)
     ## General implicit Runge-Kutta method for ROM
 
     # Number of unknowns (modes) in ROM
