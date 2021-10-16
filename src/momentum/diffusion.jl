@@ -5,33 +5,27 @@ Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V`.
 """
 function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
     @unpack visc = setup.case
-    @unpack Nu, Nv, indu, indv = setup.grid
+    @unpack indu, indv = setup.grid
     @unpack N1, N2, N3, N4 = setup.grid
     @unpack Dux, Duy, Dvx, Dvy = setup.discretization
-    @unpack Diffu, Diffv, yDiffu, yDiffv = setup.discretization
+    @unpack Diff, yDiff = setup.discretization
     @unpack Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy = setup.discretization
     @unpack Aν_ux, Aν_uy, Aν_vx, Aν_vy = setup.discretization
 
-    uₕ = @view V[indu]
-    vₕ = @view V[indv]
     du = @view d[indu]
     dv = @view d[indv]
 
     if visc == "laminar"
-        # D2u = Diffu * uₕ + yDiffu
-        mul!(du, Diffu, uₕ)
-        du .+= yDiffu
+        # d = Diff * V + yDiff
+        mul!(d, Diff, V)
+        d .+= yDiff
 
-        # D2v = Diffv * vₕ + yDiffv
-        mul!(dv, Diffv, vₕ)
-        dv .+= yDiffv
-
-        getJacobian && (∇d .= blockdiag(Diffu, Diffv))
+        getJacobian && (∇d .= D)
     elseif visc ∈ ["qr", "LES", "ML"]
         # Get components of strain tensor and its magnitude;
         # The magnitude S_abs is evaluated at pressure points
         S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v =
-            strain_tensor(V, t, setup, getJacobian)
+            strain_tensor(V, t, setup; getJacobian)
 
         # Turbulent viscosity at all pressure points
         ν_t = turbulent_viscosity(S_abs, setup)

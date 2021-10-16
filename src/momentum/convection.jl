@@ -22,7 +22,7 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
     @unpack order4 = setup.discretization
     @unpack regularization = setup.case
     @unpack α = setup.discretization
-    @unpack Nu, Nv, NV, indu, indv = setup.grid
+    @unpack indu, indv = setup.grid
     @unpack Newton_factor = setup.solver_settings
     @unpack c2, ∇c2, c3, ∇c3 = cache
 
@@ -48,7 +48,7 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
         # TODO: needs finishing
 
         # Filter the convecting field
-        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α) # uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
         ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
 
         ϕ̄ = [ϕ̄u; ϕ̄v]
@@ -58,10 +58,10 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
 
         convection_components!(c, ∇c, V, ϕ̄, setup, cache, getJacobian)
     elseif regularization == "C2"
-        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α) # uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
         ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
 
-        ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α) # uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
         v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
 
         ϕ̄ = [ϕ̄u; ϕ̄v]
@@ -81,13 +81,13 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
         # Where u' = u - filter(u)
 
         # Filter both convecting and convected velocity
-        ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α) # uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
         v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
 
         V̄ = [ūₕ; v̄ₕ]
         ΔV = V - V̄
 
-        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α) # uₕ + (α^2)*Re*(Diffu*uₕ + yDiffu);
+        ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
         ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
 
         ϕ̄ = [ϕ̄u; ϕ̄v]
@@ -153,7 +153,7 @@ function convection_components!(c, ∇c, V, ϕ, setup, cache, getJacobian, order
         @unpack yIu_ux, yIv_uy, yIu_vx, yIv_vy = setup.discretization
     end
 
-    @unpack Nu, Nv, NV, indu, indv = setup.grid
+    @unpack indu, indv = setup.grid
     @unpack Newton_factor = setup.solver_settings
 
     @unpack u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy = cache

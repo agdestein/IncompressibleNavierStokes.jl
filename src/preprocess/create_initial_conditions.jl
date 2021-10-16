@@ -17,10 +17,11 @@ function create_initial_conditions(setup)
     # The body force is called in the residual routines e.g. momentum.jl
     # Steady force can be precomputed once:
     if setup.force.isforce
-        setup.force.Fx, setup.force.Fy, _ = bodyforce(V, t, setup)
+        Fx, Fy, _ = bodyforce(V, t, setup)
+        F = [Fx; Fy]
     else
-        setup.force.Fx = zeros(NV)
-        setup.force.Fy = zeros(NV)
+        F = zeros(NV)
+        @pack! setup.force = F
     end
 
     # Allocate velocity and pressure

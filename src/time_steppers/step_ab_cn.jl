@@ -43,33 +43,19 @@ function step!(
     stepper_cache,
     momentum_cache,
 )
-    @unpack Nu, Nv, indu, indv = setup.grid
-    @unpack Ωu⁻¹, Ωv⁻¹, Ω⁻¹ = setup.grid
-    @unpack G, M, yM = setup.discretization
-    @unpack Gx, Gy, y_px, y_py = setup.discretization
-    @unpack yDiffu, yDiffv = setup.discretization
-    @unpack Diffu, Diffv = setup.discretization
-    @unpack lu_diffu, lu_diffv = setup.discretization
+    @unpack NV, Ω⁻¹ = setup.grid
+    @unpack G, y_p, M, yM = setup.discretization
+    @unpack Diff, yDiff = setup.discretization
     @unpack pressure_solver = setup.solver_settings
     @unpack α₁, α₂, θ = ts
-    @unpack Δp = stepper_cache
-    @unpack c, ∇c = momentum_cache
+    @unpack F, Δp, Diff_fact = stepper_cache
+    @unpack c, ∇c, d, ∇d = momentum_cache
 
-
-    uₕ = @view Vₙ[indu]
-    vₕ = @view Vₙ[indv]
-
-    # Convection from previous time step
-    cuₙ₋₁ = @view cₙ₋₁[indu]
-    cvₙ₋₁ = @view cₙ₋₁[indv]
-
-    yDiffuₙ = copy(yDiffu)
-    yDiffvₙ = copy(yDiffv)
-    yDiffuₙ₊₁ = copy(yDiffu)
-    yDiffvₙ₊₁ = copy(yDiffv)
+    yDiffₙ = copy(yDiff)
+    yDiffₙ₊₁ = copy(yDiff)
 
     # Evaluate boundary conditions and force at starting point
-    Fxₙ, Fyₙ, = bodyforce(Vₙ, tₙ, setup)
+    bodyforce!(F, nothing, Vₙ, tₙ, setup)
 
     # Unsteady BC at current time
     if setup.bc.bc_unsteady
@@ -79,40 +65,28 @@ function step!(
     # Convection of current solution
     convection!(c, ∇c, Vₙ, Vₙ, tₙ, setup, momentum_cache)
 
-    cuₙ = @view c[indu]
-    cvₙ = @view c[indv]
-
     # Evaluate BC and force at end of time step
 
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
-    Fxₙ₊₁, Fyₙ₊₁, = bodyforce(Vₙ, tₙ + Δt, setup)
+    bodyforce!(F, nothing, Vₙ, tₙ + Δt, setup)
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ + Δt)
     end
 
     # Crank-Nicolson weighting for force and diffusion boundary conditions
-    Fx = @. (1 - θ) * Fxₙ + θ * Fxₙ₊₁
-    Fy = @. (1 - θ) * Fyₙ + θ * Fyₙ₊₁
-    yDiffu = @. (1 - θ) * yDiffuₙ + θ * yDiffuₙ₊₁
-    yDiffv = @. (1 - θ) * yDiffvₙ + θ * yDiffvₙ₊₁
+    F = @. (1 - θ) * Fₙ + θ * Fₙ₊₁
+    yDiff = @. (1 - θ) * yDiffₙ + θ * yDiffₙ₊₁
 
-    Gxpₙ = Gx * pₙ
-    Gypₙ = Gy * pₙ
+    Gpₙ = G * pₙ
 
-    Du = Diffu * uₕ
-    Dv = Diffv * vₕ
+    mul!(d, Diff, V)
+    d .+ yDiff
 
     # Right hand side of the momentum equation update
-    Rur = @. uₕ +
-       Ωu⁻¹ * Δt * (-(α₁ * cuₙ + α₂ * cuₙ₋₁) + (1 - θ) * Du + yDiffu + Fx - Gxpₙ - y_px)
-    Rvr = @. vₕ +
-       Ωv⁻¹ * Δt * (-(α₁ * cvₙ + α₂ * cvₙ₋₁) + (1 - θ) * Dv + yDiffv + Fy - Gypₙ - y_py)
+    Rr = @. Vₙ + Ω⁻¹ * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + F - Gpₙ - y_p)
 
     # LU decomposition of diffusion part has been calculated already in `operator_convection_diffusion.jl`
-    Ru = lu_diffu \ Rur
-    Rv = lu_diffv \ Rvr
-
-    Vtemp = [Ru; Rv]
+    Vtemp = Diff_fact \ Rr
 
     # To make the velocity field `uₙ₊₁` at `tₙ₊₁` divergence-free we need  boundary conditions at `tₙ₊₁`
     if setup.bc.bc_unsteady
@@ -121,7 +95,7 @@ function step!(
 
     # Boundary condition for the difference in pressure between time
     # steps; only non-zero in case of fluctuating outlet pressure
-    y_Δp = zeros(Nu + Nv)
+    y_Δp = zeros(NV)
 
     # Divergence of `Ru` and `Rv` is directly calculated with `M`
     f = (M * Vtemp + yM) / Δt - M * y_Δp

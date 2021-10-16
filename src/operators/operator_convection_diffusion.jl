@@ -12,7 +12,7 @@ function operator_convection_diffusion!(setup)
     @unpack hx, hy, hxi, hyi, hxd, hyd = setup.grid
     @unpack gxi, gyi, gxd, gyd = setup.grid
     @unpack Buvy, Bvux = setup.grid
-    @unpack Ωu⁻¹, Ωv⁻¹ = setup.grid
+    @unpack Ω⁻¹ = setup.grid
     @unpack time_stepper, Δt = setup.time
 
     @unpack order4 = setup.discretization
@@ -431,9 +431,10 @@ function operator_convection_diffusion!(setup)
                 1 / Re * Diffvx_div * (α * Sv_vx - Sv_vx3) +
                 1 / Re * Diffvy_div * (α * Sv_vy - Sv_vy3)
         else
-            Diffu = Dux * 1 / Re * Su_ux + Duy * 1 / Re * Su_uy
-            Diffv = Dvx * 1 / Re * Sv_vx + Dvy * 1 / Re * Sv_vy
+            Diffu = 1 / Re * (Dux * Su_ux + Duy * Su_uy)
+            Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy)
         end
+        Diff = blockdiag(Diffu, Diffv)
     elseif visc ∈ ["keps", "LES", "qr", "ML"]
         # Only implemented for 2nd order
     else
@@ -447,11 +448,9 @@ function operator_convection_diffusion!(setup)
     @pack! setup.discretization = Dux, Duy, Dvx, Dvy
 
     if visc == "laminar"
-        @pack! setup.discretization = Diffu
-        setup.discretization.Diffv = Diffv
+        @pack! setup.discretization = Diff
     elseif visc ∈ ["keps", "LES", "qr", "ML"]
-        @pack! setup.discretization = Sv_uy
-        setup.discretization.Su_vx = Su_vx
+        @pack! setup.discretization = Sv_uy, Su_vx
     end
 
     if order4
@@ -460,21 +459,6 @@ function operator_convection_diffusion!(setup)
         @pack! setup.discretization = Diffux_div, Diffuy_div, Diffvx_div, Diffvy_div
     else
         @pack! setup.discretization = Su_vx_bc_lr, Su_vx_bc_lu, Sv_uy_bc_lr, Sv_uy_bc_lu
-    end
-
-    ## Additional for implicit time stepping diffusion
-    if time_stepper isa AdamsBashforthCrankNicolsonStepper && visc == "laminar"
-        θ = time_stepper.θ
-
-        # Implicit time-stepping for diffusion
-        # Solving (I-Δt*Diffu)*uₕ* =
-        Diffu_impl = sparse(I, Nu, Nu) - θ * Δt * Diagonal(Ωu⁻¹) * Diffu
-        Diffv_impl = sparse(I, Nv, Nv) - θ * Δt * Diagonal(Ωv⁻¹) * Diffv
-
-        # LU decomposition
-        lu_diffu = lu(Diffu_impl)
-        lu_diffv = lu(Diffv_impl)
-        @pack! setup.discretization = lu_diffu, lu_diffv
     end
 
     setup

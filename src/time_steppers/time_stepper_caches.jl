@@ -47,6 +47,7 @@ end
 struct OneLegStepperCache{T} <: TimeStepperCache
     F::Vector{T}
     GΔp::Vector{T}
+    Diff_fact::Factorization{T}
 end
 
 """
@@ -56,12 +57,28 @@ Get time stepper cache for the given time stepper.
 """
 function time_stepper_cache end
 
-function time_stepper_cache(::AdamsBashforthCrankNicolsonStepper, setup)
+function time_stepper_cache(ts::AdamsBashforthCrankNicolsonStepper, setup)
     T = Float64
-    @unpack NV, Np = setup.grid
+    @unpack visc = setup.case
+    @unpack NV, Np, Ω⁻¹ = setup.grid
+    @unpack Diff = setup.discretization
+    @unpack Δt = setup.Δt
+    @unpack θ = ts
+
     F = zeros(NV)
     Δp = zeros(T, Np)
-    AdamsBashforthCrankNicolsonStepperCache{T}(F, Δp)
+
+    ## Additional for implicit time stepping diffusion
+    if visc == "laminar"
+        # Implicit time-stepping for diffusion
+        # FIXME: This only works if Δt is constant
+        # LU decomposition
+        Diff_fact = lu(sparse(I, NV, NV) - θ * Δt *  Diagonal(Ω⁻¹) * Diff)
+    else
+        Diff_fact = cholesky(spzeros(0, 0))
+    end
+
+    AdamsBashforthCrankNicolsonStepperCache{T}(F, Δp, Diff_fact)
 end
 
 function time_stepper_cache(::OneLegStepper, setup)

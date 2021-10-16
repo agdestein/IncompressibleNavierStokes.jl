@@ -21,9 +21,7 @@ function bodyforce!(F, ∇F, V, t, setup; getJacobian = false)
             ∇F[indv, :] = ∇Fy
         end
     else
-        Fx = setup.force.Fx
-        Fy = setup.force.Fy
-
+        F .= setup.force.F
         getJacobian && (∇F .= 0)
     end
 
@@ -31,7 +29,7 @@ function bodyforce!(F, ∇F, V, t, setup; getJacobian = false)
 end
 
 """
-    force(V, t, setup; getJacobian = false)
+    bodyforce(V, t, setup; getJacobian = false)
 
 Body force in momentum equations in Finite Volume setting, so integrated `dFx`, `dFy` are the Jacobians `∂Fx/∂V` and `∂Fy/∂V`.
 """
@@ -42,12 +40,10 @@ function bodyforce(V, t, setup; getJacobian = false)
     # # this works for both 2nd and 4th order method
     # Fy = -Ωv .* Fy[:]
 
-    @unpack Nu, Nv = setup.grid
+    @unpack NV = setup.grid
 
-    Fx = zeros(Nu)
-    Fy = zeros(Nv)
-    dFx = spzeros(Nu, Nu + Nv)
-    dFy = spzeros(Nv, Nu + Nv)
+    F = zeros(NV)
+    ∇F = spzeros(NV, NV)
 
-    Fx, Fy, dFx, dFy
+    bodyforce!(F, ∇F, V, t, setup; getJacobian)
 end

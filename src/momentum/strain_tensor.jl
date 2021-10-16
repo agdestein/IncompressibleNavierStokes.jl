@@ -1,9 +1,9 @@
 """
-    strain_tensor(V, t, setup, getJacobian = false)
+    strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
 
 Evaluate rate of strain tensor `S(V)` and its magnitude.
 """
-function strain_tensor(V, t, setup, getJacobian = false)
+function strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
     @unpack Nx, Ny, Nu, Nv, Np, indu, indv = setup.grid
     @unpack Nux_in, Nuy_in, Nvx_in, Nvy_in, = setup.grid
     @unpack x, y, xp, yp = setup.grid
@@ -38,8 +38,6 @@ function strain_tensor(V, t, setup, getJacobian = false)
     # Directly the operators that map from velocity field to the S locations,
     # As used for example in ke_production (option 2b).
 
-    get_S_abs = false
-
     if get_S_abs
         # Option 2b
         bc = setup.bc
@@ -66,7 +64,7 @@ function strain_tensor(V, t, setup, getJacobian = false)
             S12_temp[2:Nx+1, :] = reshape(S12, Nx, Ny + 1)
             S12_temp[1, :] = S12_temp[2, :] # Copy from x[2] to x[1]; one could do this more accurately in principle by using the BC
         else
-            error("BC not implemented in strain_tensor.m")
+            error("BC not implemented in strain_tensor.jl")
         end
 
         if bc.v.low == :periodic && bc.v.up == :periodic
@@ -85,7 +83,7 @@ function strain_tensor(V, t, setup, getJacobian = false)
             # This is nicely defined on all corners
             S21_temp = reshape(S21, Nx + 1, Ny + 1)
         else
-            error("BC not implemented in strain_tensor.m")
+            error("BC not implemented in strain_tensor.jl")
         end
 
         # Now interpolate S12 and S21 to pressure points

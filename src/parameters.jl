@@ -198,21 +198,18 @@ Base.@kwdef mutable struct Discretization{T}
     Dvx::SparseMatrixCSC{T,Int} = spzeros(0, 0)
     Dvy::SparseMatrixCSC{T,Int} = spzeros(0, 0)
 
-    Diffu::SparseMatrixCSC{T,Int} = spzeros(0, 0)
-    Diffv::SparseMatrixCSC{T,Int} = spzeros(0, 0)
+    Diff::SparseMatrixCSC{T,Int} = spzeros(0, 0)
 
     Wv_vx::SparseMatrixCSC{T,Int} = spzeros(0, 0)
     Wu_uy::SparseMatrixCSC{T,Int} = spzeros(0, 0)
 
     yM::Vector{T} = T[]
-    y_px::Vector{T} = T[]
-    y_py::Vector{T} = T[]
+    y_p::Vector{T} = T[]
     yAu_ux::Vector{T} = T[]
     yAu_uy::Vector{T} = T[]
     yAv_vx::Vector{T} = T[]
     yAv_vy::Vector{T} = T[]
-    yDiffu::Vector{T} = T[]
-    yDiffv::Vector{T} = T[]
+    yDiff::Vector{T} = T[]
     yIu_ux::Vector{T} = T[]
     yIv_uy::Vector{T} = T[]
     yIu_vx::Vector{T} = T[]
@@ -225,7 +222,7 @@ Base.@kwdef mutable struct Discretization{T}
     ySv_vy::Vector{T} = T[] # TODO: Vectors or matrices?
     ySv_uy::Vector{T} = T[] # TODO: Vectors or matrices?
 
-    Anu_vy_bc::NamedTuple = (;)
+    Aν_vy_bc::NamedTuple = (;)
 
     Cux_k_bc::NamedTuple = (;)
     Cuy_k_bc::NamedTuple = (;)
@@ -237,9 +234,6 @@ Base.@kwdef mutable struct Discretization{T}
 
     A::SparseMatrixCSC{T,Int} = spzeros(0, 0)
     A_fact::Factorization{T} = cholesky(spzeros(0, 0))
-
-    lu_diffu::Factorization{T} = cholesky(spzeros(0, 0))
-    lu_diffv::Factorization{T} = cholesky(spzeros(0, 0))
 
     ydM::Vector{T} = T[]
     ypx::Vector{T} = T[]
@@ -257,8 +251,7 @@ Base.@kwdef mutable struct Force{T}
     y_c::T = 0                                               # Y-coordinate of body
     Ct::T = 0                                                # Thrust coefficient for actuator disk computations
     D::T = 1                                                 # Actuator disk diameter
-    Fx::Vector{T} = T[]                                      # For storing constant body force
-    Fy::Vector{T} = T[]                                      # For storing constant body force
+    F::Vector{T} = T[]                                       # For storing constant body force
     isforce::Bool = false                                    # Presence of a force file
     force_unsteady::Bool = false                             # Is_steady (false) or unsteady (true) force
     bodyforce_x::Function = () -> error("bodyforce_x not implemented")

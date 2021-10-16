@@ -10,7 +10,7 @@ function momentum(V, ϕ, p, t, setup; getJacobian = false, nopressure = false)
     F = zeros(NV)
     ∇F = spzeros(NV, NV)
 
-    momentum!(F, ∇F, V, ϕ, p, t, setup, cache; getJacobian)
+    momentum!(F, ∇F, V, ϕ, p, t, setup, cache; getJacobian, nopressure)
 end
 
 """
@@ -36,16 +36,11 @@ function momentum!(
     getJacobian = false,
     nopressure = false,
 )
-    @unpack Nu, Nv, NV, indu, indv = setup.grid
-    @unpack Gx, Gy, y_px, y_py = setup.discretization
+    @unpack NV = setup.grid
+    @unpack G, y_p = setup.discretization
 
     # Store intermediate results in temporary variables
     @unpack c, ∇c, d, ∇d, b, ∇b, Gp = cache
-
-    Gpx = @view Gp[indu]
-    Gpy = @view Gp[indv]
-    Fx = @view F[indu]
-    Fy = @view F[indv]
 
     # Unsteady BC
     if setup.bc.bc_unsteady
@@ -67,10 +62,9 @@ function momentum!(
     # Nopressure = false is the most common situation, in which we return the entire
     # Right-hand side vector
     if !nopressure
-        mul!(Gpx, Gx, p)
-        mul!(Gpy, Gy, p)
-        @. Fx -= Gpx + y_px
-        @. Fy -= Gpy + y_py
+        mul!(Gp, G, p)
+        Gp .+= y_p
+        @. F -= Gp
     end
 
     if getJacobian
