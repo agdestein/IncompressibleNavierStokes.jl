@@ -170,8 +170,7 @@ function operator_divergence!(setup)
     # Also used to make initial data divergence free or compute additional poisson solve
     if !is_steady && visc != "keps"
         # Note that the matrix for the pressure is constant in time.
-        # Only the right hand side vector changes, so the pressure matrix
-        # Can be set up outside the time-stepping-loop.
+        # Only the right hand side vector changes, so the pressure matrix can be set up outside the time-stepping-loop.
 
         # Laplace = div grad
         A = M * spdiagm(Ω⁻¹) * G

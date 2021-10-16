@@ -1,5 +1,5 @@
 """
-    step!(ol_stepper::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup, cache)
+    step!(ol_stepper::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup, momentum_cache)
 
 Do one time step using One-leg β-method following symmetry-preserving discretization of turbulent flow.
 See [Verstappen and Veldman (JCP 2003)] for details,
@@ -8,7 +8,7 @@ or [Direct numerical simulation of turbulence at lower costs (Journal of Enginee
 Formulation:
 ((β+1/2) * u^{n+1} - 2*β*u^{n} + (β-1/2)*u^{n-1}) / Δt = F((1+β) * u^n - β*u^{n-1})
 """
-function step!(::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup, cache)
+function step!(::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup, momentum_cache)
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver = setup.solver_settings
 
@@ -21,7 +21,7 @@ function step!(::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, 
     p_int = (1 + β) * pₙ - β * pₙ₋₁
 
     # Right-hand side of the momentum equation
-    momentum!(F_rhs, nothing, V_int, V_int, p_int, t_int, setup, cache)
+    momentum!(F_rhs, nothing, V_int, V_int, p_int, t_int, setup, momentum_cache)
 
     # Take a time step with this right-hand side, this gives an
     # Intermediate velocity field (not divergence free)
@@ -50,7 +50,7 @@ function step!(::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, 
 
     # Alternatively, do an additional Poisson solve:
     if setup.solversettings.p_add_solve
-        pressure_additional_solve!(V, p, tₙ + Δt, setup, cache, F)
+        pressure_additional_solve!(V, p, tₙ + Δt, setup, momentum_cache, F)
     end
 
     V, p

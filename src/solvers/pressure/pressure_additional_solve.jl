@@ -1,10 +1,10 @@
 function pressure_additional_solve!(V, p, t, setup)
     @unpack NV = setup.grid
 
-    cache = MomentumCache(setup)
+    momentum_cache = MomentumCache(setup)
     F = zeros(NV)
 
-    pressure_additional_solve!(V, p, t, setup, cache, F)
+    pressure_additional_solve!(V, p, t, setup, momentum_cache, F)
 end
 
 """
@@ -12,7 +12,7 @@ Additional pressure solve.
 make the pressure compatible with the velocity field. this should
 also result in same order pressure as velocity
 """
-function pressure_additional_solve!(V, p, t, setup, cache, F)
+function pressure_additional_solve!(V, p, t, setup, momentum_cache, F)
     # Note: time derivative of BC in ydM
     @unpack pressure_solver = setup.solver_settings
     @unpack M, ydM = setup.discretization
@@ -24,7 +24,7 @@ function pressure_additional_solve!(V, p, t, setup, cache, F)
     end
 
     # Momentum already contains G*p with the current p, we therefore effectively solve for the pressure difference
-    momentum!(F, nothing, V, V, p, t, setup, cache)
+    momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
     f = M * (Ω⁻¹ .* F) + ydM
     Δp = pressure_poisson(pressure_solver, f, t, setup)
 

@@ -15,7 +15,7 @@ function solve_steady(setup, V₀, p₀)
     @unpack t_start = setup.time
 
     # Temporary variables
-    cache = MomentumCache(setup)
+    momentum_cache = MomentumCache(setup)
     F = zeros(NV)
     f = zeros(NV + Np)
     ∇F = spzeros(NV, NV)
@@ -34,7 +34,7 @@ function solve_steady(setup, V₀, p₀)
     set_bc_vectors!(setup, t)
 
     # Residual of momentum equations at start
-    momentum!(F, ∇F, V, V, p, t, setup, cache)
+    momentum!(F, ∇F, V, V, p, t, setup, momentum_cache)
     maxres = maximum(abs.(F))
 
     println("Initial momentum residual = $maxres")
@@ -57,7 +57,7 @@ function solve_steady(setup, V₀, p₀)
             setup.solver_settings.Newton_factor = true
         end
 
-        momentum!(F, ∇F, V, V, p, t, setup, cache, true)
+        momentum!(F, ∇F, V, V, p, t, setup, momentum_cache; getJacobian = true)
 
         fmass = M * V + yM
         f = [-F; fmass]
@@ -74,7 +74,7 @@ function solve_steady(setup, V₀, p₀)
         maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
         if visc != "keps"
-            momentum!(F, ∇F, V, V, p, t, setup, cache, false)
+            momentum!(F, ∇F, V, V, p, t, setup, momentum_cache)
             maxres = maximum(abs.(F))
         end
 

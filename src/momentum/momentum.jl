@@ -1,20 +1,20 @@
 """
-    momentum(V, ϕ, p, t, setup, getJacobian = false, nopressure = false)
+    momentum(V, ϕ, p, t, setup; getJacobian = false, nopressure = false)
 
 Convenience function for initializing arrays `F` and `∇F` before filling in momentum terms.
 """
-function momentum(V, ϕ, p, t, setup, getJacobian = false, nopressure = false)
+function momentum(V, ϕ, p, t, setup; getJacobian = false, nopressure = false)
     @unpack NV = setup.grid
 
     cache = MomentumCache(setup)
     F = zeros(NV)
     ∇F = spzeros(NV, NV)
 
-    momentum!(F, ∇F, V, ϕ, p, t, setup, cache, getJacobian)
+    momentum!(F, ∇F, V, ϕ, p, t, setup, cache; getJacobian)
 end
 
 """
-    momentum!(F, ∇F, V, ϕ, p, t, setup, cache = MomentumCache(setup), getJacobian = false, nopressure = false)
+    momentum!(F, ∇F, V, ϕ, p, t, setup, cache; getJacobian = false, nopressure = false)
 
 Calculate rhs of momentum equations and, optionally, Jacobian with respect to velocity field.
 
@@ -32,7 +32,7 @@ function momentum!(
     p,
     t,
     setup,
-    cache = MomentumCache(setup),
+    cache;
     getJacobian = false,
     nopressure = false,
 )

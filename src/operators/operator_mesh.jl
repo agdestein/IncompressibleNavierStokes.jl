@@ -311,7 +311,7 @@ function operator_mesh!(setup)
     # Volume (area) of vorticity control volumes
     Ωvort = kron(gyi, gxi)
     Ωvort⁻¹ = 1 ./ Ωvort
-\
+
     Ω = [Ωu; Ωv]
     Ω⁻¹ = [Ωu⁻¹; Ωv⁻¹]
 
