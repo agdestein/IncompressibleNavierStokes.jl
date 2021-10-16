@@ -11,14 +11,24 @@ struct ExplicitRungeKuttaStepperCache{T} <: TimeStepperCache
     Vtemp::Vector{T}
     Vtemp2::Vector{T}
     F::Vector{T}
-    ∇F::SparseMatrixCSC{T, Int}
+    ∇F::SparseMatrixCSC{T,Int}
     f::Vector{T}
     A::Matrix{T}
     b::Vector{T}
     c::Vector{T}
 end
 
-struct ImplicitRungeKuttaStepperCache <: TimeStepperCache end
+struct ImplicitRungeKuttaStepperCache{T} <: TimeStepperCache
+    A::Any
+    b::Any
+    c::Any
+    s::Any
+    Is::Any
+    Ω_sNV::Any
+    A_ext::Any
+    b_ext::Any
+    c_ext::Any
+end
 struct AdamsBashforthCrankNicolsonStepperCache <: TimeStepperCache end
 struct OneLegStepperCache <: TimeStepperCache end
 
@@ -30,9 +40,11 @@ Get time stepper cache for the given time stepper.
 function time_stepper_cache end
 
 function time_stepper_cache(stepper::ExplicitRungeKuttaStepper, setup)
+    # TODO: Decide where `T` is to be passed
+    T = Float64
+
     @unpack NV, Np = setup.grid
 
-    T = Float64
     ns = nstage(stepper)
     kV = zeros(T, NV, ns)
     kp = zeros(T, Np, ns)
@@ -54,7 +66,25 @@ function time_stepper_cache(stepper::ExplicitRungeKuttaStepper, setup)
     ExplicitRungeKuttaStepperCache{T}(kV, kp, Vtemp, Vtemp2, F, ∇F, f, T.(A), T.(b), T.(c))
 end
 
-time_stepper_cache(::ImplicitRungeKuttaStepper) = ImplicitRungeKuttaStepperCache()
+function time_stepper_cache(stepper::ImplicitRungeKuttaStepper)
+    # TODO: Decide where `T` is to be passed
+    T = Float64
+
+    # Get coefficients of RK method
+    A, b, c, = tableau(stepper)
+
+    # Number of stages
+    s = length(b)
+
+    # Extend the Butcher tableau
+    Is = sparse(I, s, s)
+    Ω_sNV = kron(Is, spdiagm(Ω))
+    A_ext = kron(A, sparse(I, NV, NV))
+    b_ext = kron(b', sparse(I, NV, NV))
+    c_ext = spdiagm(c)
+
+    ImplicitRungeKuttaStepperCache{T}(A, b, c, s, Is, Ω_sNV, A_ext, b_ext, c_ext)
+end
 time_stepper_cache(::AdamsBashforthCrankNicolsonStepper) =
     AdamsBashforthCrankNicolsonStepperCache()
 time_stepper_cache(::OneLegStepper) = OneLegStepperCache()
