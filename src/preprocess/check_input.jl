@@ -4,7 +4,7 @@ Check input.
 function check_input!(setup, V₀, p₀, t₀)
     @unpack is_steady, visc = setup.case
     @unpack order4 = setup.discretization
-    @unpack t_start, t_end, Δt, isadaptive, method, method_startup = setup.time
+    @unpack t_start, t_end, Δt, isadaptive, time_stepper, time_stepper_startup = setup.time
     @unpack save_unsteady = setup.output
 
     if order4
@@ -26,7 +26,7 @@ function check_input!(setup, V₀, p₀, t₀)
     # For steady problems, with Newton linearization and full Jacobian, first start with nPicard Picard iterations
     if setup.case.is_steady
         setup.solver_settings.Newton_factor = false
-    elseif method == 21 || method_startup == 21
+    elseif time_stepper isa ImplicitRungeKuttaStepper || time_stepper_startup isa ImplicitRungeKuttaStepper
         # Implicit RK time integration
         setup.solver_settings.Newton_factor = true
     end

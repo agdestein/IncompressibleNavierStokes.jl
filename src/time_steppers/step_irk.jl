@@ -1,5 +1,5 @@
 """
-    step!(irk_stepper::ImplicitRungeKuttaStepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, momentum_cache)
+    step!(irk_stepper::ImplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, momentum_cache)
 
 Do one time step for implicit Runge-Kutta method.
 
@@ -12,6 +12,8 @@ function step!(
     p,
     Vₙ,
     pₙ,
+    Vₙ₋₁,
+    pₙ₋₁,
     tₙ,
     Δtₙ,
     setup,

@@ -3,7 +3,7 @@
 
 Perform one time step for the general explicit Runge-Kutta method (ERK) with Reduced Order Model (ROM).
 """
-function step_erk_rom(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
+function step_erk_rom(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
 # function step_ERK_ROM(Vₙ, pₙ, tₙ, Δt, setup)
     # Number of unknowns (modes) in ROM
     M = setup.rom.M

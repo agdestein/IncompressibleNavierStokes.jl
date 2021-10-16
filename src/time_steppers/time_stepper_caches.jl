@@ -42,6 +42,11 @@ struct AdamsBashforthCrankNicolsonStepperCache{T} <: TimeStepperCache
     Δp::Vector{T}
 end
 
+struct OneLegStepperCache{T} <: TimeStepperCache
+    F::Vector{T}
+    GΔp::Vector{T}
+end
+
 """
     time_stepper_cache(stepper, args...; kwargs...)
 
@@ -132,4 +137,12 @@ function time_stepper_cache(::AdamsBashforthCrankNicolsonStepper, setup)
     @unpack Np = setup.grid
     Δp = zeros(T, Np)
     AdamsBashforthCrankNicolsonStepperCache{T}(Δp)
+end
+
+function time_stepper_cache(::OneLegStepper, setup)
+    T = Float64
+    @unpack NV = setup.grid
+    F = zeros(T, NV)
+    GΔp = zeros(T, NV)
+    OneLegStepperCache{T}(F, GΔp)
 end

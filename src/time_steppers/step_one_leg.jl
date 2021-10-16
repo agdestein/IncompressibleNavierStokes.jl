@@ -1,56 +1,55 @@
 """
-    step!(ol_stepper::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup, momentum_cache)
+    step!(ol_stepper::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, momentum_cache)
 
 Do one time step using One-leg β-method following symmetry-preserving discretization of turbulent flow.
 See [Verstappen and Veldman (JCP 2003)] for details,
 or [Direct numerical simulation of turbulence at lower costs (Journal of Engineering Mathematics 1997)].
 
 Formulation:
-((β+1/2) * u^{n+1} - 2*β*u^{n} + (β-1/2)*u^{n-1}) / Δt = F((1+β) * u^n - β*u^{n-1})
+``\frac{(\beta + 1/2) u^{n+1} - 2 \beta u^{n} + (\beta - 1/2) u^{n-1}}{\Delta t} = F((1 + \beta) u^n - \beta u^{n-1})``
 """
-function step!(::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δt, setup, momentum_cache)
+function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache,  momentum_cache)
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver = setup.solver_settings
-
-    Ω⁻¹ = setup.grid.Ω⁻¹
-    β = setup.time.β
+    @unpack Ω⁻¹ = setup.grid
+    @unpack β = ts
+    @unpack F, GΔp = stepper_cache
 
     # Intermediate ("offstep") velocities (see paper: "DNS at lower cost")
-    t_int = tₙ + β * Δt
-    V_int = (1 + β) * Vₙ - β * Vₙ₋₁
-    p_int = (1 + β) * pₙ - β * pₙ₋₁
+    t = tₙ + β * Δtₙ
+    @. V = (1 + β) * Vₙ - β * Vₙ₋₁
+    @. p = (1 + β) * pₙ - β * pₙ₋₁
 
     # Right-hand side of the momentum equation
-    momentum!(F_rhs, nothing, V_int, V_int, p_int, t_int, setup, momentum_cache)
+    momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
 
-    # Take a time step with this right-hand side, this gives an
-    # Intermediate velocity field (not divergence free)
-    Vtemp = (2 * β * Vₙ - (β - 0.5) * Vₙ₋₁ + Δt * Ω⁻¹ .* F_rhs) / (β + 0.5)
+    # Take a time step with this right-hand side, this gives an intermediate velocity field (not divergence free)
+    @. V = (2β * Vₙ - (β - 1/2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1/2)
 
-    # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need
-    # The boundary conditions at tₙ₊₁
+    # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary conditions at tₙ₊₁
     if setup.BC.BC_unsteady
-        set_bc_vectors!(setup, tₙ + Δt)
+        set_bc_vectors!(setup, tₙ + Δtₙ)
     end
 
     # Define an adapted time step; this is only influencing the pressure calculation
-    Δtᵦ = Δt / (β + 0.5)
+    Δtᵦ = Δtₙ / (β + 0.5)
 
     # Divergence of intermediate velocity field is directly calculated with M
-    f = (M * Vtemp + yM) / Δtᵦ
+    f = (M * V + yM) / Δtᵦ
 
     # Solve the Poisson equation for the pressure
-    Δp = pressure_poisson(pressure_solver, f, tₙ + Δt, setup)
+    Δp = pressure_poisson(pressure_solver, f, tₙ + Δtₙ, setup)
+    mul!(GΔp, G, Δp)
 
     # Update velocity field
-    V .= Vtemp .- Δtᵦ .* Ω⁻¹ .* G * Δp
+    @. V -= Δtᵦ * Ω⁻¹ * GΔp
 
     # Update pressure (second order)
     @. p = 2pₙ - pₙ₋₁ + 4 / 3 * Δp
 
     # Alternatively, do an additional Poisson solve:
     if setup.solversettings.p_add_solve
-        pressure_additional_solve!(V, p, tₙ + Δt, setup, momentum_cache, F)
+        pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
     end
 
     V, p

@@ -1,9 +1,9 @@
 """
-    step!(ab_cn_stepper::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, momentum_cache)
+    step!(ab_cn_stepper::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, cₙ₋₁, tₙ, Δt, setup, momentum_cache)
 
 Perform one time step with Adams-Bashforth for convection and Crank-Nicolson for diffusion.
 
-`convₙ₋₁` are the convection terms of `tₙ₋₁`. Output includes convection terms at `tₙ`, which will be used in next time step in
+`cₙ₋₁` are the convection terms of `tₙ₋₁`. Output includes convection terms at `tₙ`, which will be used in next time step in
 the Adams-Bashforth part of the method
 
 Adams-Bashforth for convection and Crank-Nicolson for diffusion
@@ -28,11 +28,7 @@ The LU decomposition of the first matrix is precomputed in `operator_convection_
 note that, in constrast to explicit methods, the pressure from previous
 time steps has an influence on the accuracy of the velocity
 """
-function step!(::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ₋₁, tₙ, Δt, setup, stepper_cache, momentum_cache)
-    # Adams-Bashforth coefficients
-    α₁ = 3 // 2
-    α₂ = -1 // 2
-
+function step!(ts::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, cₙ₋₁, tₙ, Δt, setup, stepper_cache, momentum_cache)
     @unpack Nu, Nv, indu, indv = setup.grid.Nv
     @unpack Ωu⁻¹, Ωv⁻¹, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
@@ -40,18 +36,18 @@ function step!(::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ�
     @unpack yDiffu, yDiffv = setup.discretization
     @unpack Diffu, Diffv = setup.discretization
     @unpack lu_diffu, lu_diffv = setup.discretization
-    @unpack θ = setup.time
     @unpack pressure_solver = setup.solver_settings
+    @unpack α₁, α₂, θ = ts
     @unpack Δp = stepper_cache
-
     @unpack c, ∇c = momentum_cache
+
 
     uₕ = @view Vₙ[indu]
     vₕ = @view Vₙ[indv]
 
     # Convection from previous time step
-    cuₙ₋₁ = @view convₙ₋₁[indu]
-    cvₙ₋₁ = @view convₙ₋₁[indv]
+    cuₙ₋₁ = @view cₙ₋₁[indu]
+    cvₙ₋₁ = @view cₙ₋₁[indv]
 
     yDiffuₙ = copy(yDiffu)
     yDiffvₙ = copy(yDiffv)
@@ -86,8 +82,8 @@ function step!(::AdamsBashforthCrankNicolsonStepper, V, p, Vₙ, pₙ, convₙ�
     yDiffu = @. (1 - θ) * yDiffuₙ + θ * yDiffuₙ₊₁
     yDiffv = @. (1 - θ) * yDiffvₙ + θ * yDiffvₙ₊₁
 
-    gxpₙ = Gx * pₙ
-    gypₙ = Gy * pₙ
+    Gxpₙ = Gx * pₙ
+    Gypₙ = Gy * pₙ
 
     # Right hand side of the momentum equation update
     Rur =

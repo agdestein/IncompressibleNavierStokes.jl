@@ -1,11 +1,11 @@
 """
-    step!(erk_stepper::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
+    step!(erk_stepper::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
 
 Perform one time step for the general explicit Runge-Kutta method (ERK).
 
 Dirichlet boundary points are not part of solution vector but are prescribed in a strong manner via the `ubc` and `vbc` functions.
 """
-function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
+function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
     @unpack Nu, Nv, Np, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver = setup.solver_settings

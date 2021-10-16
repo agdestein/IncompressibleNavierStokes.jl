@@ -13,6 +13,7 @@ function operator_convection_diffusion!(setup)
     @unpack gxi, gyi, gxd, gyd = setup.grid
     @unpack Buvy, Bvux = setup.grid
     @unpack Ωu⁻¹, Ωv⁻¹ = setup.grid
+    @unpack time_stepper, Δt = setup.time
 
     @unpack order4 = setup.discretization
 
@@ -462,9 +463,8 @@ function operator_convection_diffusion!(setup)
     end
 
     ## Additional for implicit time stepping diffusion
-    if setup.time.method == 2 && visc == "laminar"
-        θ = setup.time.θ
-        Δt = setup.time.Δt
+    if time_stepper isa AdamsBashforthCrankNicolsonStepper && visc == "laminar"
+        θ = time_stepper.θ
 
         # Implicit time-stepping for diffusion
         # Solving (I-Δt*Diffu)*uₕ* =

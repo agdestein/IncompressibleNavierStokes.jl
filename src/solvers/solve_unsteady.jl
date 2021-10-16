@@ -11,13 +11,13 @@ function solve_unsteady(setup, V₀, p₀)
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
         setup.solver_settings
     @unpack use_rom = setup.rom
-    @unpack t_start, t_end, Δt, isadaptive, method, method_startup, time_stepper = setup.time
+    @unpack t_start, t_end, Δt, isadaptive, time_stepper, time_stepper_startup = setup.time
     @unpack save_unsteady = setup.output
     @unpack do_rtp, rtp_n = setup.visualization
 
     # Initialize solution vectors
     # Loop index
-    n = 1
+    n = 0
     t = t_start
     V = copy(V₀)
     p = copy(p₀)
@@ -27,11 +27,23 @@ function solve_unsteady(setup, V₀, p₀)
 
     # Runge Kutta intermediate stages
     stepper_cache = time_stepper_cache(time_stepper, setup)
-    @unpack F, ∇F = stepper_cache
+    @unpack F = stepper_cache
+
+    # For methods that need a velocity field at n-1 the first time step
+    # (e.g. AB-CN, oneleg beta) use ERK or IRK
+    if needs_startup_stepper(time_stepper)
+        println("Starting up with method $(time_stepper_startup)")
+        ts = time_stepper_startup
+        ts_cache = time_stepper_cache(time_stepper_startup, setup)
+    else
+        ts = time_stepper
+        ts_cache = stepper_cache
+    end
 
     # For methods that need previous solution
     Vₙ₋₁ = copy(V)
     pₙ₋₁ = copy(p)
+    cₙ₋₁ = convection(V, V, t, setup, momentum_cache)
 
     # Current solution
     Vₙ = copy(V)
@@ -41,19 +53,6 @@ function solve_unsteady(setup, V₀, p₀)
 
     # Initialize BC arrays
     set_bc_vectors!(setup, t)
-
-    # For methods that need convection from previous time step
-    if method == 2
-        cₙ₋₁ = convection(V, V, t, setup, false)
-    end
-
-    # For methods that need extrapolation of convective terms
-    if method ∈ [62, 92, 142, 172, 182, 192]
-        V_ep = zeros(NV, method_startup_no)
-        V_ep[:, 1] .= V
-    end
-
-    method_temp = method
 
     if do_rtp
         rtp = initialize_rtp(setup, V, p, t)
@@ -69,6 +68,10 @@ function solve_unsteady(setup, V₀, p₀)
     while t < t_end
         # Advance one time step
         n += 1
+        if n == method_startup_no + 1
+            ts = time_stepper
+            ts_cache = time_stepper_cache
+        end
         Vₙ₋₁ .= Vₙ
         pₙ₋₁ .= pₙ
         Vₙ .= V
@@ -77,33 +80,21 @@ function solve_unsteady(setup, V₀, p₀)
 
         # Change timestep based on operators
         if isadaptive && rem(n, n_adapt_Δt) == 0
-            Δtₙ = get_timestep(setup)
+            Δtₙ = get_timestep(setup, ts)
         end
         t = tₙ + Δtₙ
 
         println("tₙ = $tₙ, maxres = $maxres")
 
-        # For methods that need a velocity field at n-1 the first time step
-        # (e.g. AB-CN, oneleg beta) use ERK or IRK
-        if method_temp ∈ [2, 5] && n ≤ method_startup_no
-            println("Starting up with method $method_startup")
-            method = method_startup
-        else
-            method = method_temp
-        end
-
         # Perform a single time step with the time integration method
-        if method == 2
-            c = step!(time_stepper, V, p, Vₙ, pₙ, cₙ₋₁, tₙ, Δtₙ, setup, momentum_cache)
-            cₙ₋₁ .= c
-        elseif method == 5
-            step!(time_stepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, momentum_cache)
-        elseif method == 20
-            step!(time_stepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
-        elseif method == 21
-            nonlinear_its = step!(time_stepper, V, p, Vₙ, pₙ, tₙ, Δtₙ, setup, momentum_cache)
+        if ts isa AdamsBashforthCrankNicolsonStepper
+            # Get current convection and next (V, p)
+            cₙ = step!(ts, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, cₙ₋₁, tₙ, Δtₙ, setup, ts_cache, momentum_cache)
+
+            # Update previous convection
+            cₙ₋₁ .= cₙ
         else
-            error("time integration method unknown")
+            step!(ts, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, ts_cache, momentum_cache)
         end
 
         # Calculate mass, momentum and energy
@@ -118,7 +109,7 @@ function solve_unsteady(setup, V₀, p₀)
         else
             if visc != "keps"
                 # Norm of residual
-                momentum!(F, ∇F, V, V, p, t, setup, momentum_cache)
+                momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
                 maxres = maximum(abs.(F))
             end
         end

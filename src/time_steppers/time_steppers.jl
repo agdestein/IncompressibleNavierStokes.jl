@@ -6,14 +6,33 @@ Abstract time stepper.
 abstract type TimeStepper end
 
 """
-    ExplicitRungeKuttaStepper
+    AdamsBashforthCrankNicolsonStepper(; α₁ = 3 // 2, α₂ = -1 // 2, θ = 1 // 2)
+
+Adams-Bashforth for velocity and Crank-Nicolson for pressure (with implicitness `θ`).
+"""
+Base.@kwdef struct AdamsBashforthCrankNicolsonStepper{T} <: TimeStepper
+    α₁::T = 3 // 2
+    α₂::T = -1 // 2
+    θ::T = 1 // 2
+end
+
+"""
+    OneLegStepper(β = 1 // 2)
+
+One-leg β-method.
+"""
+Base.@kwdef struct OneLegStepper{T} <: TimeStepper
+    β::T = 1 // 2
+end
+
+"""
+    RungeKuttaStepper
 
 Abstract Runge Kutta time stepper.
 """
-abstract type ExplicitRungeKuttaStepper <: TimeStepper end
-abstract type ImplicitRungeKuttaStepper <: TimeStepper end
-abstract type AdamsBashforthCrankNicolsonStepper <: TimeStepper end
-abstract type OneLegStepper <: TimeStepper end
+abstract type RungeKuttaStepper <: TimeStepper end
+abstract type ExplicitRungeKuttaStepper <: RungeKuttaStepper end
+abstract type ImplicitRungeKuttaStepper <: RungeKuttaStepper end
 
 
 ## ================SSP Methods=========================
@@ -32,15 +51,15 @@ struct RK56 <: ExplicitRungeKuttaStepper end
 struct DOPRI6 <: ExplicitRungeKuttaStepper end
 
 # Implicit Methods
-struct BE11 <: ExplicitRungeKuttaStepper end
-struct SDIRK34 <: ExplicitRungeKuttaStepper end
-struct ISSPm2 <: ExplicitRungeKuttaStepper end
-struct ISSPs3 <: ExplicitRungeKuttaStepper end
+struct BE11 <: ImplicitRungeKuttaStepper end
+struct SDIRK34 <: ImplicitRungeKuttaStepper end
+struct ISSPm2 <: ImplicitRungeKuttaStepper end
+struct ISSPs3 <: ImplicitRungeKuttaStepper end
 
 # Half explicit methods
-struct HEM3 <: ExplicitRungeKuttaStepper end
-struct HEM3BS <: ExplicitRungeKuttaStepper end
-struct HEM5 <: ExplicitRungeKuttaStepper end
+struct HEM3 <: ImplicitRungeKuttaStepper end
+struct HEM3BS <: ImplicitRungeKuttaStepper end
+struct HEM5 <: ImplicitRungeKuttaStepper end
 
 # Classical Methods
 struct GL1 <: ExplicitRungeKuttaStepper end
@@ -78,7 +97,7 @@ struct DSso2 <: ExplicitRungeKuttaStepper end
 struct DSRK2 <: ExplicitRungeKuttaStepper end
 struct DSRK3 <: ExplicitRungeKuttaStepper end
 
-# "Non-SSP" Methods of Wong & Sπteri
+# "Non-SSP" Methods of Wong & Spiteri
 struct NSSP21 <: ExplicitRungeKuttaStepper end
 struct NSSP32 <: ExplicitRungeKuttaStepper end
 struct NSSP33 <: ExplicitRungeKuttaStepper end
