@@ -10,7 +10,6 @@ function BFS()
     # Case information
     setup.case.name = "BFS"
     setup.case.problem = UnsteadyProblem()
-    setup.case.visc = "laminar"
     setup.case.regularization = "no"
 
     # Physical properties
@@ -19,9 +18,8 @@ function BFS()
     setup.fluid.U2 = 1                            # Velocity scales
     setup.fluid.d_layer = 1                       # Thickness of layer
 
-    # Turbulent flow settings
-    setup.visc.lm = 1                             # Mixing length
-    setup.visc.Cs = 0.17                          # Smagorinsky constant
+    # Viscosity model
+    setup.model = LaminarModel()
 
     # Grid parameters
     setup.grid.Nx = 400                           # Number of volumes in the x-direction

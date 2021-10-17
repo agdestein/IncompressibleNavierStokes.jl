@@ -21,6 +21,9 @@ using Makie:
     record,
     save
 
+# Models
+include("models/models.jl")
+
 # Problems
 include("problems/problems.jl")
 include("problems/is_steady.jl")

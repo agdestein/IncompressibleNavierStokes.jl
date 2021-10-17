@@ -10,7 +10,6 @@ function LDC()
     # Case information
     setup.case.name = "LDC"
     setup.case.problem = SteadyStateProblem()
-    setup.case.visc = "laminar"
     setup.case.regularization = "no"
 
     # Physical properties
@@ -19,9 +18,8 @@ function LDC()
     setup.fluid.U2 = 1                             # Velocity scales
     setup.fluid.d_layer = 1                        # Thickness of layer
 
-    # Turbulent flow settings
-    setup.visc.lm = 1                              # Mixing length
-    setup.visc.Cs = 0.17                           # Smagorinsky constant
+    # Viscosity model
+    setup.model = LaminarModel()
 
     # Grid parameters
     setup.grid.Nx = 80                             # Number of volumes in the x-direction

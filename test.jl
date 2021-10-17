@@ -15,35 +15,21 @@ setup = eval(:($(Symbol(case_name))()));
 @profview main(setup)
 
 ##
+# Construct mesh and discrete operators
+create_mesh!(setup)
+create_boundary_conditions!(setup)
+build_operators!(setup)
 
-# Turbulence constants
-if setup.case.visc == "keps"
-    constants_ke!(setup)
-end
+# Initialize solution vectors
+V₀, p₀, t₀ = create_initial_conditions(setup)
 
-# Construct mesh
-create_mesh!(setup);
-
-# Boundary conditions
-create_boundary_conditions!(setup);
-
-# Construct operators (matrices) which are time-independent
-build_operators!(setup);
-
-# Initialization of solution vectors
-V₀, p₀, t₀ = create_initial_conditions(setup);
-
-# Input checking
 check_input!(setup, V₀, p₀, t₀)
 
 # Solve problem
 problem = setup.case.problem
-@time V, p = solve(problem, setup, V₀, p₀);
+V, p = solve(problem, setup, V₀, p₀)
 
-# Measure total time
-totaltime = Base.time() - starttime
-
-## Post-processing
+# Post-process
 postprocess(setup, V, p, setup.time.t_end);
 plot_pressure(setup, p);
 plot_vorticity(setup, V, setup.time.t_end);

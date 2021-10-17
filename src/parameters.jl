@@ -2,7 +2,6 @@
 Base.@kwdef mutable struct Case
     name::String = "example"                 # Case name
     problem::Problem = UnsteadyProblem()     # Problem type
-    visc::String = "laminar"                 # "laminar", "keps", "ML", "LES, "qr"
     regularization::String = "no"            # Convective term regularization: "no", "leray", "C2", "C4"
     ibm::Bool = false                        # Use immersed boundary method
     force_unsteady::Bool = false             # False: steady forcing or no forcing; true: unsteady forcing
@@ -17,12 +16,6 @@ Base.@kwdef mutable struct Fluid{T}
     U1::T = 1                                # Velocity scales
     U2::T = 1                                # Velocity scales
     d_layer::T = 1                           # Thickness of layer
-end
-
-# Turbulent flow settings
-Base.@kwdef mutable struct Visc{T}
-    lm::T = 1                                # Mixing length
-    Cs::T = 0.17                             # Smagorinsky constant
 end
 
 # Grid parameters
@@ -357,7 +350,7 @@ end
 Base.@kwdef struct Setup{T}
     case::Case = Case()
     fluid::Fluid{T} = Fluid{T}()
-    visc::Visc{T} = Visc{T}()
+    model::ViscosityModel{T} = LaminarModel{T}()
     grid::Grid{T} = Grid{T}()
     discretization::Discretization{T} = Discretization{T}()
     force::Force{T} = Force{T}()
