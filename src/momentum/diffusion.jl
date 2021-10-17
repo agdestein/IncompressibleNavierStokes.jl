@@ -20,7 +20,7 @@ function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
         mul!(d, Diff, V)
         d .+= yDiff
 
-        getJacobian && (∇d .= D)
+        getJacobian && (∇d .= Diff)
     elseif visc ∈ ["qr", "LES", "ML"]
         # Get components of strain tensor and its magnitude;
         # The magnitude S_abs is evaluated at pressure points

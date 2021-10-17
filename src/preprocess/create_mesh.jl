@@ -26,15 +26,7 @@ function create_mesh!(setup)
     gy[2:Ny] = (hy[1:Ny-1] + hy[2:Ny]) / 2
     gy[Ny+1] = hy[end] / 2
 
-
-    setup.grid.x = x
-    setup.grid.y = y
-    setup.grid.xp = xp
-    setup.grid.yp = yp
-    setup.grid.hx = hx
-    setup.grid.hy = hy
-    setup.grid.gx = gx
-    setup.grid.gy = gy
+    @pack! setup.grid = x, y, xp, yp, hx, hy, gx, gy
 
     setup
 end

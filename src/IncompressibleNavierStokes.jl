@@ -4,7 +4,7 @@ module IncompressibleNavierStokes
 using FFTW: fft, ifft
 using IterativeSolvers: cg!
 using LinearAlgebra: Diagonal, Factorization, I, cholesky, factorize, ldiv!, lu, mul!
-using SparseArrays: SparseMatrixCSC, blockdiag, sparse, spdiagm, spzeros
+using SparseArrays: SparseMatrixCSC, blockdiag, nnz, sparse, spdiagm, spzeros
 using UnPack: @pack!, @unpack
 # Using Plots: contour, contourf, title!
 using Makie:

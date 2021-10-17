@@ -36,6 +36,13 @@ struct MomentumCache{T}
     ∂uv̄∂y::Vector{T}
     ∂vū∂x::Vector{T}
     ∂vv̄∂y::Vector{T}
+
+    Conv_ux_11::SparseMatrixCSC{T, Int}
+    Conv_uy_11::SparseMatrixCSC{T, Int}
+    Conv_uy_12::SparseMatrixCSC{T, Int}
+    Conv_vx_21::SparseMatrixCSC{T, Int}
+    Conv_vx_22::SparseMatrixCSC{T, Int}
+    Conv_vy_22::SparseMatrixCSC{T, Int}
 end
 function MomentumCache(setup::Setup{T}) where {T}
     @unpack Nu, Nv, NV = setup.grid
@@ -72,6 +79,17 @@ function MomentumCache(setup::Setup{T}) where {T}
     ∂uv̄∂y = zeros(T, Nu)
     ∂vū∂x = zeros(T, Nv)
     ∂vv̄∂y = zeros(T, Nv)
+
+    Conv_ux_11  = spzeros(T, Nu, Nu)
+
+    Conv_uy_11 = spzeros(T, Nu, Nv)
+    Conv_uy_12 = spzeros(T, Nu, Nv)
+
+    Conv_vx_21 = spzeros(T, Nv, Nu)
+    Conv_vx_22 = spzeros(T, Nv, Nu)
+
+    Conv_vy_22 = spzeros(T, Nv, Nv)
+
     MomentumCache{T}(
         Gp,
         c,
@@ -100,5 +118,11 @@ function MomentumCache(setup::Setup{T}) where {T}
         ∂uv̄∂y,
         ∂vū∂x,
         ∂vv̄∂y,
+        Conv_ux_11,
+Conv_uy_11,
+Conv_uy_12,
+Conv_vx_21,
+Conv_vx_22,
+Conv_vy_22
     )
 end

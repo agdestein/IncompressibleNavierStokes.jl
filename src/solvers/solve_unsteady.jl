@@ -86,7 +86,7 @@ function solve_unsteady(setup, V₀, p₀)
         end
         t = tₙ + Δtₙ
 
-        println("tₙ = $tₙ, maxres = $maxres")
+        # println("tₙ = $tₙ, maxres = $maxres")
 
         # Perform a single time step with the time integration method
         if ts isa AdamsBashforthCrankNicolsonStepper
