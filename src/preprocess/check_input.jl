@@ -6,7 +6,6 @@ function check_input!(setup, V₀, p₀, t₀)
     @unpack problem = setup.case
     @unpack order4 = setup.discretization
     @unpack t_start, t_end, Δt, isadaptive, time_stepper, time_stepper_startup = setup.time
-    @unpack save_unsteady = setup.output
 
     if order4
         if !isa(model, LaminarModel)

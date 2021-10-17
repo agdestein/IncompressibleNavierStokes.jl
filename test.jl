@@ -16,18 +16,18 @@ setup = eval(:($(Symbol(case_name))()));
 
 ##
 # Construct mesh and discrete operators
-create_mesh!(setup)
-create_boundary_conditions!(setup)
-build_operators!(setup)
+create_mesh!(setup);
+create_boundary_conditions!(setup);
+build_operators!(setup);
 
 # Initialize solution vectors
-V₀, p₀, t₀ = create_initial_conditions(setup)
+V₀, p₀, t₀ = create_initial_conditions(setup);
 
-check_input!(setup, V₀, p₀, t₀)
+check_input!(setup, V₀, p₀, t₀);
 
 # Solve problem
-problem = setup.case.problem
-V, p = solve(problem, setup, V₀, p₀)
+problem = setup.case.problem;
+@time V, p = solve(problem, setup, V₀, p₀);
 
 # Post-process
 postprocess(setup, V, p, setup.time.t_end);
