@@ -85,6 +85,7 @@ include("operators/operator_mesh.jl")
 include("operators/operator_postprocessing.jl")
 include("operators/operator_regularization.jl")
 include("operators/operator_turbulent_diffusion.jl")
+include("operators/operator_viscosity.jl")
 
 # Reduced Order Model
 include("rom/momentum_rom.jl")
@@ -115,6 +116,9 @@ include("main.jl")
 
 # Reexport
 export @unpack
+
+# Models
+export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
 
 # Problems
 export SteadyStateProblem, UnsteadyProblem, is_steady

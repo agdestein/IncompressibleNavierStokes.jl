@@ -59,7 +59,7 @@ function time_stepper_cache end
 
 function time_stepper_cache(ts::AdamsBashforthCrankNicolsonStepper, setup)
     T = Float64
-    @unpack visc = setup.case
+    @unpack model = setup
     @unpack NV, Np, Ω⁻¹ = setup.grid
     @unpack Diff = setup.discretization
     @unpack Δt = setup.Δt
@@ -69,7 +69,7 @@ function time_stepper_cache(ts::AdamsBashforthCrankNicolsonStepper, setup)
     Δp = zeros(T, Np)
 
     ## Additional for implicit time stepping diffusion
-    if visc == "laminar"
+    if model isa LaminarModel
         # Implicit time-stepping for diffusion
         # FIXME: This only works if Δt is constant
         # LU decomposition

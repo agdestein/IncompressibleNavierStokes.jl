@@ -4,7 +4,7 @@
 Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V`.
 """
 function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
-    @unpack visc = setup.case
+    @unpack model = setup
     @unpack indu, indv = setup.grid
     @unpack N1, N2, N3, N4 = setup.grid
     @unpack Dux, Duy, Dvx, Dvy = setup.discretization
@@ -15,20 +15,20 @@ function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
     du = @view d[indu]
     dv = @view d[indv]
 
-    if visc == "laminar"
+    if model isa LaminarModel
         # d = Diff * V + yDiff
         mul!(d, Diff, V)
         d .+= yDiff
 
         getJacobian && (∇d .= Diff)
-    elseif visc ∈ ["qr", "LES", "ML"]
+    elseif model isa Union{QRModel, SmagorinskyModel, MixingLengthModel}
         # Get components of strain tensor and its magnitude;
         # The magnitude S_abs is evaluated at pressure points
         S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v =
             strain_tensor(V, t, setup; getJacobian)
 
         # Turbulent viscosity at all pressure points
-        ν_t = turbulent_viscosity(S_abs, setup)
+        ν_t = turbulent_viscosity(model, S_abs)
 
         # To compute the diffusion, we need ν_t at ux, uy, vx and vy locations
         # This means we have to reverse the process of strain_tensor.m: go
@@ -57,20 +57,20 @@ function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
             Jacu = [Jacu1 Jacu2]
             Jacv = [Jacv1 Jacv2]
 
-            if visc == "LES"
+            if model isa SmagorinskyModel
                 # Smagorinsky
-                C_S = setup.visc.Cs
+                C_S = model.Cs
                 filter_length = deltax
                 K = C_S^2 * filter_length^2
-            elseif visc == "qr"
+            elseif model isa QRModel
                 C_d = deltax^2 / 8
                 K = C_d * 0.5 * (1 - α / C_d)^2
-            elseif visc == "ML"
+            elseif model isa MixingLengthModel
                 # Mixing-length
-                lm = setup.visc.lm
+                lm = model.lm
                 K = (lm^2)
             else
-                error("wrong value for visc parameter")
+                error("wrong viscosity model")
             end
             tmpu1 =
                 2 * Dux * spdiagm(S11) * Aν_ux * S_abs_u +
@@ -85,8 +85,8 @@ function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
 
             ∇d .= [Jacu; Jacv]
         end
-    elseif visc == "keps"
-        error("k-e implementation in diffusion.m not finished")
+    elseif model isa KEpsilonModel
+        error("k-e implementation in diffusion.jl not finished")
     else
         error("Wrong specification of viscosity model")
     end

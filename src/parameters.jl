@@ -274,7 +274,7 @@ end
 
 # Immersed boundary method
 Base.@kwdef mutable struct IBM
-    ibm::Bool = false                                        # Use immersed boundary method
+    use_ibm::Bool = false                                    # Use immersed boundary method
 end
 
 # Time stepping
@@ -311,13 +311,6 @@ Base.@kwdef mutable struct SolverSettings{T}
     Newton_factor::Bool = false                              # Newton factor
     nonlinear_startingvalues::Bool = false                   # Extrapolate values from last time step to get accurate initial guess (for `UnsteadyProblem`s only)
     nPicard::Int = 5                                         # Number of Picard steps before switching to Newton when linearization is Newton (for `SteadyStateProblem`s only)
-end
-
-# Output files
-Base.@kwdef mutable struct Output
-    save_results::Bool = false                               # Save results
-    savepath::String = "results"                             # Path for saving
-    save_unsteady::Bool = false                              # Save intermediate time steps
 end
 
 # Visualization settings
@@ -358,7 +351,6 @@ Base.@kwdef struct Setup{T}
     ibm::IBM = IBM()
     time::Time{T} = Time{T}()
     solver_settings::SolverSettings{T} = SolverSettings{T}()
-    output::Output = Output()
     visualization::Visualization = Visualization()
     bc::BC{T} = BC{T}()
 end

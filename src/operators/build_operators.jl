@@ -4,7 +4,8 @@
 Build discrete operators.
 """
 function build_operators!(setup)
-    @unpack regularization, visc = setup.case
+    @unpack model = setup
+    @unpack regularization = setup.case
 
     # Mesh
     operator_mesh!(setup)
@@ -29,21 +30,7 @@ function build_operators!(setup)
     end
 
     # Classical turbulence modelling via the diffusive term
-    if visc == "keps"
-        # Averaging viscosity to cell faces of u- and v- volumes
-        ke_viscosity!(setup)
-
-        # K-e operators
-        ke_convection!(setup)
-        ke_diffusion!(setup)
-        ke_production!(setup)
-    elseif visc ∈ ["qr", "LES", "ML"]
-        operator_turbulent_diffusion!(setup)
-    elseif visc == "laminar"
-        # Do nothing, these are constructed in operator_convection_diffusion
-    else
-        error("Wrong value for visc parameter")
-    end
+    operator_viscosity!(model, setup)
 
     # Post-processing
     operator_postprocessing!(setup)

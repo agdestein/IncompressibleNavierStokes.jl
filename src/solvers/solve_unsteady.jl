@@ -5,7 +5,7 @@ Solve `unsteady_problem`.
 """
 function solve(::UnsteadyProblem, setup, V₀, p₀)
     # Setup
-    @unpack visc = setup.case
+    @unpack model = setup
     @unpack use_rom = setup.rom
     @unpack t_start, t_end, Δt, isadaptive, time_stepper, time_stepper_startup, nstartup = setup.time
     @unpack do_rtp, rtp_n = setup.visualization
@@ -104,7 +104,7 @@ function solve(::UnsteadyProblem, setup, V₀, p₀)
             F, = momentum_rom(R, 0, t, setup)
             maxres = maximum(abs.(F))
         else
-            if visc != "keps"
+            if !isa(model, KEpsilonModel)
                 # Norm of residual
                 momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
                 maxres = maximum(abs.(F))

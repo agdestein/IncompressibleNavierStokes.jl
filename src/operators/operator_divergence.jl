@@ -7,6 +7,7 @@ function operator_divergence!(setup)
     bc = setup.bc
 
     # Number of interior points and boundary points
+    @unpack model = setup
     @unpack problem = setup.case
     @unpack pressure_solver = setup.solver_settings
     @unpack Nx, Npx, Npy = setup.grid
@@ -22,8 +23,6 @@ function operator_divergence!(setup)
         hxi3 = setup.grid.hxi3
         hyi3 = setup.grid.hyi3
     end
-
-    visc = setup.case.visc
 
     ## Divergence operator M
 
@@ -168,7 +167,7 @@ function operator_divergence!(setup)
 
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
-    if !is_steady(problem) && visc != "keps"
+    if !is_steady(problem) && !isa(model, KEpsilonModel)
         # Note that the matrix for the pressure is constant in time.
         # Only the right hand side vector changes, so the pressure matrix can be set up outside the time-stepping-loop.
 

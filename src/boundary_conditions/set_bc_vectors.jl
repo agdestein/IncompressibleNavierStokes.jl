@@ -4,7 +4,8 @@
 Construct boundary conditions.
 """
 function set_bc_vectors!(setup, t)
-    @unpack problem, visc = setup.case
+    @unpack problem = setup.case
+    @unpack model = setup
     @unpack Re = setup.fluid
     @unpack u_bc, v_bc, dudt_bc, dvdt_bc = setup.bc
     @unpack pLe, pRi, pLo, pUp, bc_unsteady = setup.bc
@@ -190,12 +191,12 @@ function set_bc_vectors!(setup, t)
         ybc3 = kron(Sv_vy_bc3.ybc1, vLo_i) + kron(Sv_vy_bc3.ybc2, vUp_i)
         ySv_vy = α * Sv_vy_bc.Bbc * ybc1 - Sv_vy_bc3.Bbc * ybc3
 
-        if visc == "laminar"
+        if model isa LaminarModel
             yDiffu = 1 / Re * (Diffux_div * ySu_ux + Diffuy_div * ySu_uy)
             yDiffv = 1 / Re * (Diffvx_div * ySv_vx + Diffvy_div * ySv_vy)
             yDiff = [yDiffu; yDiffv]
             @pack! setup.discretization = yDiff
-        elseif visc ∈ ["keps", "LES", "qr", "ML"]
+        else
             error("fourth order turbulent diffusion not implemented")
         end
     else
@@ -234,12 +235,12 @@ function set_bc_vectors!(setup, t)
         ybc = kron(Sv_vy_bc.ybc1, vLo_i) + kron(Sv_vy_bc.ybc2, vUp_i)
         ySv_vy = Sv_vy_bc.Bbc * ybc
 
-        if visc == "laminar"
+        if model isa LaminarModel
             yDiffu = 1 / Re * (Dux * ySu_ux + Duy * ySu_uy)
             yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy)
             yDiff = [yDiffu; yDiffv]
             @pack! setup.discretization = yDiff
-        elseif visc ∈ ["keps", "LES", "qr", "ML"]
+        else
             # Instead, we will use the following values directly (see diffusion.jl and strain_tensor.jl)
             @pack! setup.discretization = ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy
         end
@@ -343,7 +344,7 @@ function set_bc_vectors!(setup, t)
         @pack! setup.discretization = yIu_ux3, yIv_uy3, yIu_vx3, yIv_vy3
     end
 
-    if visc ∈ ["qr", "LES", "ML"]
+    if model isa Union{QRModel, SmagorinskyModel, MixingLengthModel}
         # Set BC for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
         # In all other cases, homogeneous (zero) Neumann conditions are used

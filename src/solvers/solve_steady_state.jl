@@ -6,7 +6,8 @@ This saddlepoint system arises from linearization of the convective terms.
 """
 function solve(::SteadyStateProblem, setup, V₀, p₀)
     # Setup
-    @unpack problem, visc = setup.case
+    @unpack model = setup
+    @unpack problem = setup.case
     @unpack Nu, Nv, NV, Np = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
@@ -74,7 +75,7 @@ function solve(::SteadyStateProblem, setup, V₀, p₀)
         # Calculate mass, momentum and energy
         maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
-        if visc != "keps"
+        if !isa(model, KEpsilonModel)
             momentum!(F, ∇F, V, V, p, t, setup, momentum_cache)
             maxres = maximum(abs.(F))
         end

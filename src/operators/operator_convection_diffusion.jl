@@ -25,7 +25,7 @@ function operator_convection_diffusion!(setup)
         @unpack Ωux1, Ωux3, Ωuy1, Ωuy3, Ωvx1, Ωvx3, Ωvy1, Ωvy3 = setup.grid
     end
 
-    @unpack visc = setup.case
+    @unpack model = setup
     @unpack Re = setup.fluid
 
     ## Convection (differencing) operator Cu
@@ -418,7 +418,7 @@ function operator_convection_diffusion!(setup)
     end
 
     ## Assemble operators
-    if visc == "laminar"
+    if model isa LaminarModel
         if order4
             Diffux_div = (α * Dux - Dux3) * Diagonal(1 ./ Ωux)
             Diffuy_div = (α * Duy - Duy3) * Diagonal(1 ./ Ωuy)
@@ -435,10 +435,6 @@ function operator_convection_diffusion!(setup)
             Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy)
         end
         Diff = blockdiag(Diffu, Diffv)
-    elseif visc ∈ ["keps", "LES", "qr", "ML"]
-        # Only implemented for 2nd order
-    else
-        error("wrong visc parameter")
     end
 
     @pack! setup.discretization = Cux, Cuy, Cvx, Cvy
@@ -447,9 +443,9 @@ function operator_convection_diffusion!(setup)
     @pack! setup.discretization = Su_ux_bc, Su_uy_bc, Sv_vx_bc, Sv_vy_bc
     @pack! setup.discretization = Dux, Duy, Dvx, Dvy
 
-    if visc == "laminar"
+    if model isa LaminarModel
         @pack! setup.discretization = Diff
-    elseif visc ∈ ["keps", "LES", "qr", "ML"]
+    else
         @pack! setup.discretization = Sv_uy, Su_vx
     end
 

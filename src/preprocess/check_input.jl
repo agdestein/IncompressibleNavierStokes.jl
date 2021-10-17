@@ -2,13 +2,14 @@
 Check input.
 """
 function check_input!(setup, V₀, p₀, t₀)
-    @unpack problem, visc = setup.case
+    @unpack model = setup
+    @unpack problem = setup.case
     @unpack order4 = setup.discretization
     @unpack t_start, t_end, Δt, isadaptive, time_stepper, time_stepper_startup = setup.time
     @unpack save_unsteady = setup.output
 
     if order4
-        if visc != "laminar"
+        if !isa(model, LaminarModel)
             error(
                 "order 4 only implemented for laminar flow; need to add Su_vx and Sv_uy for 4th order method",
             )

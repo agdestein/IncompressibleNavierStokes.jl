@@ -7,6 +7,7 @@ Values should either be scalars or vectors. All values `(u, v, p, k, e)` are def
 i.e. the corners of pressure volumes, so they cover the entire domain, including corners.
 """
 function create_boundary_conditions!(setup)
+    @unpack model = setup
     # Get BC type
     bc_type = setup.bc.bc_type()
     for (key, value) ∈ zip(keys(bc_type), bc_type)
@@ -32,7 +33,7 @@ function create_boundary_conditions!(setup)
     @pack! setup.bc = pLe, pRi, pLo, pUp
 
     ## K-eps values
-    if setup.case.visc == "keps"
+    if model isa KEpsilonModel
         kLo = 0
         kUp = 0
         kLe = 0
