@@ -2,7 +2,7 @@
 Check input.
 """
 function check_input!(setup, V₀, p₀, t₀)
-    @unpack is_steady, visc = setup.case
+    @unpack problem, visc = setup.case
     @unpack order4 = setup.discretization
     @unpack t_start, t_end, Δt, isadaptive, time_stepper, time_stepper_startup = setup.time
     @unpack save_unsteady = setup.output
@@ -24,7 +24,7 @@ function check_input!(setup, V₀, p₀, t₀)
     symmetry_flag, symmetry_error = check_symmetry(V₀, t₀, setup)
 
     # For steady problems, with Newton linearization and full Jacobian, first start with nPicard Picard iterations
-    if setup.case.is_steady
+    if is_steady(problem)
         setup.solver_settings.Newton_factor = false
     elseif time_stepper isa ImplicitRungeKuttaStepper || time_stepper_startup isa ImplicitRungeKuttaStepper
         # Implicit RK time integration

@@ -1,11 +1,12 @@
 """
-    solve_steady!(solution, setup)
+    solve(steady_state_problem, setup, V₀, p₀)
 
-Solve the entire saddlepoint system arising from the steady Navier-Stokes equations with linearization of the convective terms
+Solve steady state problem of the Navier-Stokes equations.
+This saddlepoint system arises from linearization of the convective terms.
 """
-function solve_steady(setup, V₀, p₀)
+function solve(::SteadyStateProblem, setup, V₀, p₀)
     # Setup
-    @unpack is_steady, visc = setup.case
+    @unpack problem, visc = setup.case
     @unpack Nu, Nv, NV, Np = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =

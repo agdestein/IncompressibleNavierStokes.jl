@@ -7,6 +7,7 @@ function operator_divergence!(setup)
     bc = setup.bc
 
     # Number of interior points and boundary points
+    @unpack problem = setup.case
     @unpack pressure_solver = setup.solver_settings
     @unpack Nx, Npx, Npy = setup.grid
     @unpack Nux_in, Nux_b, Nux_t, Nuy_in = setup.grid
@@ -22,7 +23,6 @@ function operator_divergence!(setup)
         hyi3 = setup.grid.hyi3
     end
 
-    is_steady = setup.case.is_steady
     visc = setup.case.visc
 
     ## Divergence operator M
@@ -168,7 +168,7 @@ function operator_divergence!(setup)
 
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
-    if !is_steady && visc != "keps"
+    if !is_steady(problem) && visc != "keps"
         # Note that the matrix for the pressure is constant in time.
         # Only the right hand side vector changes, so the pressure matrix can be set up outside the time-stepping-loop.
 

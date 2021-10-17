@@ -1,7 +1,7 @@
 # Case information
 Base.@kwdef mutable struct Case
     name::String = "example"                 # Case name
-    is_steady::Bool = false                  # Is steady steate (not unsteady)
+    problem::Problem = UnsteadyProblem()     # Problem type
     visc::String = "laminar"                 # "laminar", "keps", "ML", "LES, "qr"
     regularization::String = "no"            # Convective term regularization: "no", "leray", "C2", "C4"
     ibm::Bool = false                        # Use immersed boundary method
@@ -316,8 +316,8 @@ Base.@kwdef mutable struct SolverSettings{T}
 
     Jacobian_type::String = "picard"                         # "picard": Picard linearization, "newton": Newton linearization
     Newton_factor::Bool = false                              # Newton factor
-    nonlinear_startingvalues::Bool = false                   # Extrapolate values from last time step to get accurate initial guess (for unsteady problems only)
-    nPicard::Int = 5                                         # Number of Picard steps before switching to Newton when linearization is Newton (for is_steady problems only)
+    nonlinear_startingvalues::Bool = false                   # Extrapolate values from last time step to get accurate initial guess (for `UnsteadyProblem`s only)
+    nPicard::Int = 5                                         # Number of Picard steps before switching to Newton when linearization is Newton (for `SteadyStateProblem`s only)
 end
 
 # Output files

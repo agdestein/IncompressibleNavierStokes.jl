@@ -9,7 +9,7 @@ function LDC()
 
     # Case information
     setup.case.name = "LDC"
-    setup.case.is_steady = true
+    setup.case.problem = SteadyStateProblem()
     setup.case.visc = "laminar"
     setup.case.regularization = "no"
 

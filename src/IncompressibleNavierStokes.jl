@@ -21,6 +21,10 @@ using Makie:
     record,
     save
 
+# Problems
+include("problems/problems.jl")
+include("problems/is_steady.jl")
+
 # Types
 include("time_steppers/time_steppers.jl")
 include("time_steppers/tableaus.jl")
@@ -86,12 +90,7 @@ include("rom/momentum_rom.jl")
 include("solvers/real_time_plot/initialize_rtp.jl")
 include("solvers/real_time_plot/update_rtp.jl")
 include("solvers/get_timestep.jl")
-include("solvers/solve_steady.jl")
-include("solvers/solve_steady_ke.jl")
-include("solvers/solve_steady_ibm.jl")
-include("solvers/solve_unsteady.jl")
-include("solvers/solve_unsteady_ke.jl")
-include("solvers/solve_unsteady_rom.jl")
+include("solvers/solve.jl")
 
 include("solvers/pressure/pressure_poisson.jl")
 include("solvers/pressure/pressure_additional_solve.jl")
@@ -113,6 +112,9 @@ include("main.jl")
 
 # Reexport
 export @unpack
+
+# Problems
+export SteadyStateProblem, UnsteadyProblem, is_steady
 
 # Setup
 export Case,
@@ -144,12 +146,7 @@ export create_mesh!,
     set_bc_vectors!,
     force,
     check_input!,
-    solve_steady_ke,
-    solve_steady,
-    solve_steady_ibm,
-    solve_unsteady_ke,
-    solve_unsteady_rom,
-    solve_unsteady
+    solve
 
 export postprocess, plot_pressure, plot_streamfunction, plot_vorticity
 

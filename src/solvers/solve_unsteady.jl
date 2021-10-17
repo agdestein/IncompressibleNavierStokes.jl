@@ -1,18 +1,13 @@
 """
-    solve_unsteady!(solution, setup)
+    solve(unsteady_problem, setup, V₀, p₀)
 
-Main solver file for unsteady calculations
+Solve `unsteady_problem`.
 """
-function solve_unsteady(setup, V₀, p₀)
+function solve(::UnsteadyProblem, setup, V₀, p₀)
     # Setup
-    @unpack is_steady, visc = setup.case
-    @unpack Nu, Nv, NV, Np, Nx, Ny = setup.grid
-    @unpack G, M, yM = setup.discretization
-    @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
-        setup.solver_settings
+    @unpack visc = setup.case
     @unpack use_rom = setup.rom
     @unpack t_start, t_end, Δt, isadaptive, time_stepper, time_stepper_startup, nstartup = setup.time
-    @unpack save_unsteady = setup.output
     @unpack do_rtp, rtp_n = setup.visualization
 
     # Initialize solution vectors
@@ -86,7 +81,7 @@ function solve_unsteady(setup, V₀, p₀)
         end
         t = tₙ + Δtₙ
 
-        # println("tₙ = $tₙ, maxres = $maxres")
+        println("tₙ = $tₙ, maxres = $maxres")
 
         # Perform a single time step with the time integration method
         if ts isa AdamsBashforthCrankNicolsonStepper

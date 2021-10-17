@@ -9,7 +9,7 @@ function TG()
 
     # Case information
     setup.case.name = "TG"
-    setup.case.is_steady = false
+    setup.case.problem = UnsteadyProblem()
     setup.case.visc = "laminar"
     setup.case.regularization = "no"
 

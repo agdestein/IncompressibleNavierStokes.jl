@@ -4,7 +4,7 @@
 Construct boundary conditions.
 """
 function set_bc_vectors!(setup, t)
-    @unpack is_steady, visc = setup.case
+    @unpack problem, visc = setup.case
     @unpack Re = setup.fluid
     @unpack u_bc, v_bc, dudt_bc, dvdt_bc = setup.bc
     @unpack pLe, pRi, pLo, pUp, bc_unsteady = setup.bc
@@ -49,7 +49,7 @@ function set_bc_vectors!(setup, t)
     vLe_i = v_bc.(x[1], yin, t, [setup])
     vRi_i = v_bc.(x[end], yin, t, [setup])
 
-    if !is_steady && bc_unsteady
+    if !is_steady(problem) && bc_unsteady
         dudtLe_i = dudt_bc.(x[1], yp, t, [setup])
         dudtRi_i = dudt_bc.(x[end], yp, t, [setup])
         dvdtLo_i = dvdt_bc.(xp, y[1], t, [setup])
@@ -80,7 +80,7 @@ function set_bc_vectors!(setup, t)
     @pack! setup.discretization = yM
 
     # Time derivative of divergence
-    if !is_steady
+    if !is_steady(problem)
         if bc_unsteady
             ybc = kron(dudtLe_i, Mx_bc.ybc1) + kron(dudtRi_i, Mx_bc.ybc2)
             ydMx = Mx_bc.Bbc * ybc

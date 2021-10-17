@@ -4,6 +4,7 @@
 Create initial vectors.
 """
 function create_initial_conditions(setup)
+    @unpack problem = setup.case
     @unpack xu, yu, xv, yv, xpp, ypp = setup.grid
     @unpack Ω⁻¹, NV = setup.grid
     @unpack G, M, yM = setup.discretization
@@ -38,7 +39,7 @@ function create_initial_conditions(setup)
     # Iteration 1 corresponds to t₀ = 0 (for unsteady simulations)
     maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
-    if maxdiv > 1e-12 && !is_steady
+    if maxdiv > 1e-12 && !is_steady(problem)
         @warn "Initial velocity field not (discretely) divergence free: $maxdiv. Performing additional projection."
 
         # Make velocity field divergence free
@@ -53,7 +54,7 @@ function create_initial_conditions(setup)
     # Initial pressure: should in principle NOT be prescribed (will be calculated if p_initial)
     p .= setup.case.initial_pressure.(xpp, ypp, [setup])
     p = p[:]
-    if setup.case.is_steady
+    if is_steady(problem)
         # For steady state computations, the initial guess is the provided initial condition
     else
         if setup.solver_settings.p_initial

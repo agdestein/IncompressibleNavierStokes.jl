@@ -9,7 +9,7 @@ function BFS()
 
     # Case information
     setup.case.name = "BFS"
-    setup.case.is_steady = false
+    setup.case.problem = UnsteadyProblem()
     setup.case.visc = "laminar"
     setup.case.regularization = "no"
 
