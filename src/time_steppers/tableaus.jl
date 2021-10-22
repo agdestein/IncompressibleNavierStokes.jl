@@ -151,11 +151,11 @@ function tableau(::SDIRK34)
     # 3-stage, 4th order singly diagonally implicit (SSP)
     s = 3
     r = 1.7588
-    g = 0.5 * (1 - cos(π / 18) / sqrt(3) - sin(π / 18))
-    q = (0.5 - g)^2
+    g = 1//2 * (1 - cos(π / 18) / sqrt(3) - sin(π / 18))
+    q = (1//2 - g)^2
     A = [
         g 0 0
-        (0.5-g) g 0
+        (1//2-g) g 0
         2g (1-4g) g
     ]
     b = [1 / 24q, 1 - 1 / 12q, 1 / 24q]
@@ -180,7 +180,7 @@ function tableau(::ISSPs3, s = 1)
     r = s - 1 + sqrt(s^2 - 1)
     i = repeat(1:s, 1, s)
     j = repeat(1:s, s, 1)
-    A = 1 / sqrt(s^2 - 1) * (j < i) + 0.5 * (1 - sqrt((s - 1) / (s + 1))) * (i == j)
+    A = 1 / sqrt(s^2 - 1) * (j < i) + 1//2 * (1 - sqrt((s - 1) / (s + 1))) * (i == j)
     b = fill(1 / s, s)
     c = sum(eachcol(A))
     A, b, c, r
@@ -384,7 +384,7 @@ end
 function tableau(::Mid22)
     # Midpoint 22 method
     s = 2
-    r = 0.5
+    r = 1//2
     A = [
         0 0
         1//2 0
@@ -396,7 +396,7 @@ end
 function tableau(::MTE22)
     # Minimal truncation error 22 method (Heun)
     s = 2
-    r = 0.5
+    r = 1//2
     A = [
         0 0
         2//3 0

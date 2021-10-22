@@ -3,9 +3,9 @@
 
 Time stepper cache.
 """
-abstract type TimeStepperCache end
+abstract type TimeStepperCache{T} end
 
-struct ExplicitRungeKuttaStepperCache{T} <: TimeStepperCache
+struct ExplicitRungeKuttaStepperCache{T} <: TimeStepperCache{T}
     kV::Matrix{T}
     kp::Matrix{T}
     Vtemp::Vector{T}
@@ -19,7 +19,7 @@ struct ExplicitRungeKuttaStepperCache{T} <: TimeStepperCache
     c::Vector{T}
 end
 
-struct ImplicitRungeKuttaStepperCache{T} <: TimeStepperCache
+struct ImplicitRungeKuttaStepperCache{T} <: TimeStepperCache{T}
     Vtotₙ
     ptotₙ
     Vⱼ
@@ -39,12 +39,12 @@ struct ImplicitRungeKuttaStepperCache{T} <: TimeStepperCache
     c_ext
 end
 
-struct AdamsBashforthCrankNicolsonStepperCache{T} <: TimeStepperCache
+struct AdamsBashforthCrankNicolsonStepperCache{T} <: TimeStepperCache{T}
     F::Vector{T}
     Δp::Vector{T}
 end
 
-struct OneLegStepperCache{T} <: TimeStepperCache
+struct OneLegStepperCache{T} <: TimeStepperCache{T}
     F::Vector{T}
     GΔp::Vector{T}
     Diff_fact::Factorization{T}
@@ -58,14 +58,15 @@ Get time stepper cache for the given time stepper.
 function time_stepper_cache end
 
 function time_stepper_cache(ts::AdamsBashforthCrankNicolsonStepper, setup)
-    T = Float64
     @unpack model = setup
     @unpack NV, Np, Ω⁻¹ = setup.grid
     @unpack Diff = setup.discretization
     @unpack Δt = setup.Δt
     @unpack θ = ts
 
-    F = zeros(NV)
+    T = typeof(Δt)
+
+    F = zeros(T, NV)
     Δp = zeros(T, Np)
 
     ## Additional for implicit time stepping diffusion
@@ -82,8 +83,8 @@ function time_stepper_cache(ts::AdamsBashforthCrankNicolsonStepper, setup)
 end
 
 function time_stepper_cache(::OneLegStepper, setup)
-    T = Float64
     @unpack NV = setup.grid
+    T = typeof(setup.time.Δt)
     F = zeros(T, NV)
     GΔp = zeros(T, NV)
     OneLegStepperCache{T}(F, GΔp)
@@ -91,7 +92,7 @@ end
 
 function time_stepper_cache(stepper::ExplicitRungeKuttaStepper, setup)
     # TODO: Decide where `T` is to be passed
-    T = Float64
+    T = typeof(setup.time.Δt)
 
     @unpack NV, Np = setup.grid
 
@@ -119,7 +120,7 @@ end
 
 function time_stepper_cache(stepper::ImplicitRungeKuttaStepper, setup)
     # TODO: Decide where `T` is to be passed
-    T = Float64
+    T = typeof(setup.time.Δt)
 
     @unpack Np, Ω = setup.grid
 
@@ -136,16 +137,16 @@ function time_stepper_cache(stepper::ImplicitRungeKuttaStepper, setup)
     b_ext = kron(b', sparse(I, NV, NV))
     c_ext = spdiagm(c)
 
-    Vtotₙ = zeros(s * NV)
-    ptotₙ = zeros(s * Np)
-    Vⱼ = zeros(s * NV)
-    pⱼ = zeros(s * Np)
-    Qⱼ = zeros(s * (NV + Np))
+    Vtotₙ = zeros(T, s * NV)
+    ptotₙ = zeros(T, s * Np)
+    Vⱼ = zeros(T, s * NV)
+    pⱼ = zeros(T, s * Np)
+    Qⱼ = zeros(T, s * (NV + Np))
 
-    Fⱼ = zeros(s * NV)
-    ∇Fⱼ = spzeros(s * NV, s * NV)
+    Fⱼ = zeros(T, s * NV)
+    ∇Fⱼ = spzeros(T, s * NV, s * NV)
 
-    f = zeros(s * (NV + Np))
+    f = zeros(T, s * (NV + Np))
 
     ImplicitRungeKuttaStepperCache{T}(
         Vtotₙ,
