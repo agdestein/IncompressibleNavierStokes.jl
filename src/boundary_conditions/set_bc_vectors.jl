@@ -32,6 +32,8 @@ function set_bc_vectors!(setup, t)
         @unpack Diffux_div, Diffuy_div, Diffvx_div, Diffvy_div = setup.discretization
         @unpack Mx_bc3, My_bc3 = setup.discretization
     end
+     
+    # TODO: Split up function into allocating part (constructor?) and mutating `update!`
 
     ## Get BC values
     uLo = u_bc.(x, y[1], t, [setup])
@@ -241,7 +243,7 @@ function set_bc_vectors!(setup, t)
             yDiff = [yDiffu; yDiffv]
             @pack! setup.discretization = yDiff
         else
-            # Instead, we will use the following values directly (see diffusion.jl and strain_tensor.jl)
+            # Use values directly (see diffusion.jl and strain_tensor.jl)
             @pack! setup.discretization = ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy
         end
     end
@@ -259,6 +261,7 @@ function set_bc_vectors!(setup, t)
     # Iv_uy (left/right)
     ybc = kron(vLe, Iv_uy_bc_lr.ybc1) + kron(vRi, Iv_uy_bc_lr.ybc2)
     yIv_uy_lr = Iv_uy_bc_lr.Bbc * ybc
+
     # Iv_uy (low/up)
     ybc = kron(Iv_uy_bc_lu.ybc1, vLo_i) + kron(Iv_uy_bc_lu.ybc2, vUp_i)
     yIv_uy_lu = Iv_uy_bc_lr.B2D * Iv_uy_bc_lu.Bbc * ybc
@@ -296,6 +299,7 @@ function set_bc_vectors!(setup, t)
     # Iu_vx (low/up)
     ybc = kron(Iu_vx_bc_lu.ybc1, uLo) + kron(Iu_vx_bc_lu.ybc2, uUp)
     yIu_vx_lu = Iu_vx_bc_lu.Bbc * ybc
+    
     # Iu_vx (left/right)
     ybc = kron(uLe_i, Iu_vx_bc_lr.ybc1) + kron(uRi_i, Iu_vx_bc_lr.ybc2)
     yIu_vx_lr = Iu_vx_bc_lu.B2D * Iu_vx_bc_lr.Bbc * ybc
@@ -348,7 +352,6 @@ function set_bc_vectors!(setup, t)
         # Set BC for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
         # In all other cases, homogeneous (zero) Neumann conditions are used
-
         nuLe = zeros(Npy)
         nuRi = zeros(Npy)
         nuLo = zeros(Npx)
@@ -364,6 +367,7 @@ function set_bc_vectors!(setup, t)
 
         nuLe_i = [nuLe[1]; nuLe; nuLe[end]]
         nuRi_i = [nuRi[1]; nuRi; nuRi[end]]
+        
         # In x-direction
         ybc = kron(nuLe_i, Aν_uy_bc_lr.ybc1) + kron(nuRi_i, Aν_uy_bc_lr.ybc2)
         yAν_uy_lr = Aν_uy_bc_lr.B2D * ybc
@@ -383,6 +387,7 @@ function set_bc_vectors!(setup, t)
         # In y-direction
         ybc = kron(Aν_vx_bc_lu.ybc1, nuLo_i) + kron(Aν_vx_bc_lu.ybc2, nuUp_i)
         yAν_vx_lu = Aν_vx_bc_lu.B2D * ybc
+        
         # In x-direction
         ybc = kron(nuLe, Aν_vx_bc_lr.ybc1) + kron(nuRi, Aν_vx_bc_lr.ybc2)
         yAν_vx_lr = Aν_vx_bc_lr.B2D * ybc
@@ -421,8 +426,7 @@ function set_bc_vectors!(setup, t)
         ybc = kron(Cvy_k_bc.ybc1, vLo_i) + kron(Cvy_k_bc.ybc2, vUp_i)
         yCvy_k = Cvy_k_bc.Bbc * ybc
 
-        @pack! setup.discretization = yCux_k
-        yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k
+        @pack! setup.discretization = yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k
     end
 
     setup

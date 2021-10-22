@@ -1,9 +1,9 @@
 """
-    step!(erk_stepper::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
+    step!(ts::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
 
 Perform one time step for the general explicit Runge-Kutta method (ERK).
 
-Dirichlet boundary points are not part of solution vector but are prescribed in a strong manner via the `ubc` and `vbc` functions.
+Dirichlet boundary points are not part of solution vector but are prescribed in a strong manner via the `u_bc` and `v_bc` functions.
 """
 function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
     @unpack Nu, Nv, Np, Ω⁻¹ = setup.grid
@@ -22,10 +22,6 @@ function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ�
     # Store variables at start of time step
     V .= Vₙ
     p .= pₙ
-
-    if setup.bc.bc_unsteady
-        set_bc_vectors!(setup, tₙ)
-    end
 
     tᵢ = tₙ
 
@@ -58,6 +54,7 @@ function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ�
         tᵢ = tₙ + c[i] * Δtₙ
         if setup.bc.bc_unsteady
             set_bc_vectors!(setup, tᵢ)
+            @unpack yM = setup.discretization
         end
 
         # Divergence of intermediate velocity field

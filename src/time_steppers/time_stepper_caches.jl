@@ -42,12 +42,19 @@ end
 struct AdamsBashforthCrankNicolsonStepperCache{T} <: TimeStepperCache{T}
     F::Vector{T}
     Δp::Vector{T}
+    Rr::Vector{T}
+    b::Vector{T}
+    bₙ::Vector{T}
+    bₙ₊₁::Vector{T}
+    yDiffₙ::Vector{T}
+    yDiffₙ₊₁::Vector{T}
+    Gpₙ::Vector{T}
+    Diff_fact::Factorization{T}
 end
 
 struct OneLegStepperCache{T} <: TimeStepperCache{T}
     F::Vector{T}
     GΔp::Vector{T}
-    Diff_fact::Factorization{T}
 end
 
 """
@@ -61,13 +68,20 @@ function time_stepper_cache(ts::AdamsBashforthCrankNicolsonStepper, setup)
     @unpack model = setup
     @unpack NV, Np, Ω⁻¹ = setup.grid
     @unpack Diff = setup.discretization
-    @unpack Δt = setup.Δt
+    @unpack Δt = setup.time
     @unpack θ = ts
 
     T = typeof(Δt)
 
     F = zeros(T, NV)
     Δp = zeros(T, Np)
+    Rr = zeros(T, NV)
+    b = zeros(T, NV)
+    bₙ = zeros(T, NV)
+    bₙ₊₁ = zeros(T, NV)
+    yDiffₙ = zeros(T, NV)
+    yDiffₙ₊₁ = zeros(T, NV)
+    Gpₙ = zeros(T, NV)
 
     ## Additional for implicit time stepping diffusion
     if model isa LaminarModel
@@ -79,7 +93,7 @@ function time_stepper_cache(ts::AdamsBashforthCrankNicolsonStepper, setup)
         Diff_fact = cholesky(spzeros(0, 0))
     end
 
-    AdamsBashforthCrankNicolsonStepperCache{T}(F, Δp, Diff_fact)
+    AdamsBashforthCrankNicolsonStepperCache{T}(F, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact)
 end
 
 function time_stepper_cache(::OneLegStepper, setup)

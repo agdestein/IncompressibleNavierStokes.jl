@@ -1,10 +1,10 @@
 """
-    step!(irk_stepper::ImplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, momentum_cache)
+    step!(ts::ImplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, momentum_cache)
 
 Do one time step for implicit Runge-Kutta method.
 
 Unsteady Dirichlet boundary points are not part of solution vector but
-are prescribed in a "strong" manner via the u_bc and v_bc functions.
+are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
 """
 function step!(
     ::ImplicitRungeKuttaStepper,
@@ -21,19 +21,15 @@ function step!(
     momentum_cache,
 )
     @unpack Nu, Nv, NV, Np, Ω, Ω⁻¹ = setup.grid
-    @unpack G, M, yM = setup.discretization
+    @unpack G, M = setup.discretization
     @unpack pressure_solver, nonlinear_maxit, nonlinear_acc, nonlinear_Newton, p_add_solve = setup.solver_settings
     @unpack Vtotₙ, ptotₙ, Vⱼ, pⱼ, Qⱼ, Fⱼ, ∇Fⱼ, f, Δp = stepper_cache
     @unpack A, b, c, s, Is, Ω_sNV, A_ext, b_ext, c_ext = stepper_cache
 
-    yMn = yM
-
-    ## Preprocessing
-
     # Store variables at start of time step
     p .= pₙ
 
-    # The vector `tⱼ` contains the time instances at all stages, tⱼ = [t₁, t₂, ..., tₛ]
+    # Time instances at all stages, tⱼ = [t₁, t₂, ..., tₛ]
     tⱼ = tₙ + c * Δtₙ
 
     # Gradient operator (could also use 1 instead of c and later scale the pressure)
@@ -47,20 +43,24 @@ function step!(
 
     # Boundary condition for divergence operator
     if setup.bc.bc_unsteady
-        set_bc_vectors!(setup, tₙ)
     end
 
-    # To make the velocity field uᵢ₊₁ at tᵢ₊₁ divergence-free we need he boundary conditions at tᵢ₊₁
+    # Make the velocity field uᵢ₊₁ at tᵢ₊₁ divergence-free (BC at tᵢ₊₁ needed)
     if setup.bc.bc_unsteady
         yMtot = zeros(Np, s)
         for i = 1:s
             tᵢ = tⱼ[i]
+
+            # Modifies `yM`!
             set_bc_vectors!(setup, tᵢ)
-            yMtot[:, i] = setup.discretization.yM
+            @unpack yM = setup.discretization
+            yMtot[:, i] = yM
         end
         yMtot = yMtot[:]
     else
-        yMtot = kron(ones(s), yMn)
+        set_bc_vectors!(setup, tₙ)
+        @unpack yM = setup.discretization
+        yMtot = kron(ones(s), yM)
     end
 
     # Iteration counter
@@ -78,7 +78,8 @@ function step!(
     Vtotₙ = kron(ones(s), Vₙ)
     ptotₙ = kron(ones(s), pₙ)
 
-    # Starting guess for intermediate stages => this can be improved, see e.g. the Radau, Gauss4, or Lobatto scripts
+    # Starting guess for intermediate stages
+    # This can be improved, see e.g. the Radau, Gauss4, or Lobatto scripts
     Vⱼ .= Vtotₙ
     pⱼ .= ptotₙ
     Qⱼ = [Vⱼ; pⱼ]
@@ -163,8 +164,9 @@ function step!(
     # For stiffly accurate methods, this can also be skipped (e.g. Radau IIA) -
     # This still needs to be implemented
     if setup.bc.bc_unsteady
+        # Allocates new yM
         set_bc_vectors!(setup, tₙ + Δtₙ)
-
+        @unpack yM = setup.discretization
         f = 1 / Δtₙ * (M * V + yM)
         pressure_poisson!(pressure_solver, Δp, f, tₙ + Δtₙ, setup)
 
@@ -210,8 +212,8 @@ function momentum_allstage!(
 
     for i = 1:s
         # Indices for current stage
-        ind_Vᵢ = (1:NV) + NV * (i - 1)
-        ind_pᵢ = (1:Np) + Np * (i - 1)
+        ind_Vᵢ = (1:NV) .+ NV * (i - 1)
+        ind_pᵢ = (1:Np) .+ Np * (i - 1)
 
         # Quantities at current stage
         Fᵢ = @view F[ind_Vᵢ]

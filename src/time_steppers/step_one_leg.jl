@@ -1,21 +1,21 @@
 """
-    step!(ol_stepper::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, momentum_cache)
+    step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, momentum_cache)
 
-Do one time step using One-leg β-method following symmetry-preserving discretization of turbulent flow.
+Do one time step using one-leg-β-method following symmetry-preserving discretization of turbulent flow.
 See [Verstappen and Veldman (JCP 2003)] for details,
 or [Direct numerical simulation of turbulence at lower costs (Journal of Engineering Mathematics 1997)].
 
 Formulation:
 ``\\frac{(\\beta + 1/2) u^{n+1} - 2 \\beta u^{n} + (\\beta - 1/2) u^{n-1}}{\\Delta t} = F((1 + \\beta) u^n - \\beta u^{n-1})``
 """
-function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache,  momentum_cache)
+function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver, p_add_solve = setup.solver_settings
     @unpack Ω⁻¹ = setup.grid
     @unpack β = ts
     @unpack F, GΔp = stepper_cache
 
-    # Intermediate ("offstep") velocities (see paper: "DNS at lower cost")
+    # Intermediate ("offstep") velocities
     t = tₙ + β * Δtₙ
     @. V = (1 + β) * Vₙ - β * Vₙ₋₁
     @. p = (1 + β) * pₙ - β * pₙ₋₁
@@ -31,10 +31,10 @@ function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ
         set_bc_vectors!(setup, tₙ + Δtₙ)
     end
 
-    # Define an adapted time step; this is only influencing the pressure calculation
+    # Adapt time step for pressure calculation
     Δtᵦ = Δtₙ / (β + 1//2)
 
-    # Divergence of intermediate velocity field is directly calculated with M
+    # Divergence of intermediate velocity field
     f = (M * V + yM) / Δtᵦ
 
     # Solve the Poisson equation for the pressure
@@ -47,7 +47,7 @@ function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ
     # Update pressure (second order)
     @. p = 2pₙ - pₙ₋₁ + 4 // 3 * Δp
 
-    # Alternatively, do an additional Poisson solve:
+    # Alternatively, do an additional Poisson solve
     if p_add_solve
         pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
     end

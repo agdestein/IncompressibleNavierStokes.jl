@@ -25,14 +25,7 @@ Calculate rhs of momentum equations and, optionally, Jacobian with respect to ve
 `nopressure`: exclude pressure gradient; in this case input argument `p` is not used
 """
 function momentum!(
-    F,
-    ∇F,
-    V,
-    ϕ,
-    p,
-    t,
-    setup,
-    cache;
+    F, ∇F, V, ϕ, p, t, setup, cache;
     getJacobian = false,
     nopressure = false,
 )

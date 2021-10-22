@@ -113,8 +113,8 @@ function BFS()
         CFL,
     )
 
-    # Solver settings
-    pressure_solver = DirectPressureSolver() # Pressure solver: DirectPressureSolver(), CGPressureSolver(), FourierPressureSolver()
+    # Pressure solver: DirectPressureSolver(), CGPressureSolver(), FourierPressureSolver()
+    pressure_solver = DirectPressureSolver() 
     p_initial = true                 # Calculate compatible IC for the pressure
     p_add_solve = true               # Additional pressure solve to make it same order as velocity
     # Accuracy for non-linear solves (method 62 = 72 = 9)
@@ -125,7 +125,7 @@ function BFS()
     # "approximate": Build Jacobian once before iterations only
     # "full": Build Jacobian at each iteration
     nonlinear_Newton = "full"
-    Jacobian_type = "newton"         # "picard": Picard linearization, "newton": Newton linearization
+    Jacobian_type = "newton"         # Linearization: "picard", "newton"
     nonlinear_startingvalues = false # Extrapolate values from last time step to get accurate initial guess (for unsteady problems only)
     nPicard = 2                      # Number of Picard steps before switching to Newton when linearization is Newton (for steady problems only)
 
