@@ -13,6 +13,7 @@ using Makie:
     DataAspect,
     Figure,
     Node,
+    contour,
     contour!,
     contourf,
     contourf!,

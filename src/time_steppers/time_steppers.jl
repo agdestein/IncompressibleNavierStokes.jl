@@ -8,7 +8,7 @@ abstract type TimeStepper end
 """
     AdamsBashforthCrankNicolsonStepper(; α₁ = 3 // 2, α₂ = -1 // 2, θ = 1 // 2)
 
-Adams-Bashforth for velocity and Crank-Nicolson for pressure (with implicitness `θ`).
+Adams-Bashforth for velocity (parameters `α₁` and `α₂`) and Crank-Nicolson for pressure (with implicitness `θ`).
 """
 Base.@kwdef struct AdamsBashforthCrankNicolsonStepper{T} <: TimeStepper
     α₁::T = 3 // 2

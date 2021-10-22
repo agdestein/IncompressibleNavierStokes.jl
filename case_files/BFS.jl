@@ -114,16 +114,16 @@ function BFS()
     )
 
     # Solver settings
-    pressure_solver = DirectPressureSolver() # Pressure solver
+    pressure_solver = DirectPressureSolver() # Pressure solver: DirectPressureSolver(), CGPressureSolver(), FourierPressureSolver()
     p_initial = true                 # Calculate compatible IC for the pressure
     p_add_solve = true               # Additional pressure solve to make it same order as velocity
     # Accuracy for non-linear solves (method 62 = 72 = 9)
     nonlinear_acc = 1e-10            # Absolute accuracy
     nonlinear_relacc = 1e-14         # Relative accuracy
     nonlinear_maxit = 10             # Maximum number of iterations
-    # "no": do not compute Jacobian, but approximate iteration matrix with I/Δt
-    # "approximate: approximate Newton build Jacobian once at beginning of nonlinear iterations
-    # "full": full Newton build Jacobian at each iteration
+    # "no": Replace iteration matrix with I/Δt (no Jacobian)
+    # "approximate": Build Jacobian once before iterations only
+    # "full": Build Jacobian at each iteration
     nonlinear_Newton = "full"
     Jacobian_type = "newton"         # "picard": Picard linearization, "newton": Newton linearization
     nonlinear_startingvalues = false # Extrapolate values from last time step to get accurate initial guess (for unsteady problems only)

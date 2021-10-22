@@ -37,7 +37,7 @@ function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
 
         # Now the total diffusive terms (laminar + turbulent) is as follows
         # Note that the factor 2 is because
-        # Tau = 2*(ν+ν_t)*S(u), with S(u) = 0.5*(∇u + (∇u)^T)
+        # Tau = 2*(ν+ν_t)*S(u), with S(u) = 1/2*(∇u + (∇u)^T)
 
         ν = 1 / setup.fluid.Re # Molecular viscosity
 
@@ -64,7 +64,7 @@ function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
                 K = C_S^2 * filter_length^2
             elseif model isa QRModel
                 C_d = deltax^2 / 8
-                K = C_d * 0.5 * (1 - α / C_d)^2
+                K = C_d * 1//2 * (1 - α / C_d)^2
             elseif model isa MixingLengthModel
                 # Mixing-length
                 lm = model.lm

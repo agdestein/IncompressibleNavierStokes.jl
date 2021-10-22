@@ -302,9 +302,9 @@ Base.@kwdef mutable struct SolverSettings{T}
     nonlinear_relacc::T = 1e-14                              # Relative accuracy
     nonlinear_maxit::Int = 10                                # Maximum number of iterations
 
-    # "no": do not compute Jacobian, but approximate iteration matrix with I/Δt
-    # "approximate: approximate Newton build Jacobian once at beginning of nonlinear iterations
-    # "full": full Newton build Jacobian at each iteration
+    # "no": Replace iteration matrix with I/Δt (no Jacobian)
+    # "approximate": Build Jacobian once before iterations only
+    # "full": Build Jacobian at each iteration
     nonlinear_Newton::String = "approximate"
 
     Jacobian_type::String = "picard"                         # "picard": Picard linearization, "newton": Newton linearization

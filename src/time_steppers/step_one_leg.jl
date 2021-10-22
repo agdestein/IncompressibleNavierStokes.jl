@@ -24,7 +24,7 @@ function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ
     momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
 
     # Take a time step with this right-hand side, this gives an intermediate velocity field (not divergence free)
-    @. V = (2β * Vₙ - (β - 1/2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1/2)
+    @. V = (2β * Vₙ - (β - 1//2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1//2)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary conditions at tₙ₊₁
     if setup.bc.bc_unsteady
@@ -32,7 +32,7 @@ function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ
     end
 
     # Define an adapted time step; this is only influencing the pressure calculation
-    Δtᵦ = Δtₙ / (β + 0.5)
+    Δtᵦ = Δtₙ / (β + 1//2)
 
     # Divergence of intermediate velocity field is directly calculated with M
     f = (M * V + yM) / Δtᵦ
@@ -45,7 +45,7 @@ function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ
     @. V -= Δtᵦ * Ω⁻¹ * GΔp
 
     # Update pressure (second order)
-    @. p = 2pₙ - pₙ₋₁ + 4 / 3 * Δp
+    @. p = 2pₙ - pₙ₋₁ + 4 // 3 * Δp
 
     # Alternatively, do an additional Poisson solve:
     if p_add_solve

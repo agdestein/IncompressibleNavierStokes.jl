@@ -60,7 +60,7 @@ function solve(::UnsteadyProblem, setup, V₀, p₀)
     momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
     maxres = maximum(abs.(F))
 
-    # record(fig, "output/vorticity.mp4", 2:nt; framerate = 60) do n
+    # record(fig, "output/vorticity.mp4", 1:nt; framerate = 60) do n
     while t < t_end
         # Advance one time step
         n += 1
@@ -81,7 +81,8 @@ function solve(::UnsteadyProblem, setup, V₀, p₀)
         end
         t = tₙ + Δtₙ
 
-        println("tₙ = $tₙ, maxres = $maxres")
+        # println("tₙ = $tₙ, maxres = $maxres")
+        println("tₙ = $tₙ")
 
         # Perform a single time step with the time integration method
         if ts isa AdamsBashforthCrankNicolsonStepper
@@ -95,7 +96,7 @@ function solve(::UnsteadyProblem, setup, V₀, p₀)
         end
 
         # Calculate mass, momentum and energy
-        maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
+        # maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
         # Residual (in Finite Volume form)
         # For ke model residual also contains k and e terms and is computed in solver_unsteady_ke
@@ -104,11 +105,11 @@ function solve(::UnsteadyProblem, setup, V₀, p₀)
             F, = momentum_rom(R, 0, t, setup)
             maxres = maximum(abs.(F))
         else
-            if !isa(model, KEpsilonModel)
-                # Norm of residual
-                momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
-                maxres = maximum(abs.(F))
-            end
+            # if !isa(model, KEpsilonModel)
+            #     # Norm of residual
+            #     momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
+            #     maxres = maximum(abs.(F))
+            # end
         end
 
         if do_rtp && mod(n, rtp_n) == 0

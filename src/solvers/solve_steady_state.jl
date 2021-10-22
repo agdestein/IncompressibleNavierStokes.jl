@@ -45,7 +45,7 @@ function solve(::SteadyStateProblem, setup, V₀, p₀)
         rtp = initialize_rtp(setup, V, p, t)
     end
 
-    # record(fig, "output/vorticity.mp4", 2:rtp.nt; framerate = 60) do n
+    # record(fig, "output/vorticity.mp4", 1:rtp.nt; framerate = 60) do n
     while maxres > nonlinear_acc
         if n > nonlinear_maxit
             @warn "Newton not converged in $nonlinear_maxit iterations, showing results anyway"

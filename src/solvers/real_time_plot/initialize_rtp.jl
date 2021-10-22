@@ -35,7 +35,8 @@ function initialize_rtp(setup, V, p, t)
             yω = y[2:end-1]
         end
         ω = Node(get_vorticity(V, t, setup))
-        ax, hm = contourf(fig[1, 1], xω, yω, ω; levels = -10:2:10)
+        ax, hm = contour(fig[1, 1], xω, yω, ω; levels = -10:2:10)
+        # ax, hm = contourf(fig[1, 1], xω, yω, ω; levels = -10:2:10)
     elseif rtp_type == "streamfunction"
         if bc.u.left == :periodic
             xψ = x

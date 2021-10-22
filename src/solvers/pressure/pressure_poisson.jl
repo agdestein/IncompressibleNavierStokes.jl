@@ -23,6 +23,8 @@ end
 
 function pressure_poisson!(::CGPressureSolver, p, f, t, setup)
     @unpack A = setup.discretization
+    # TODO: Pass `abstol`, `reltol` and `maxiter`
+    # TODO: Preconditioner
     cg!(p, A, f)
 end
 

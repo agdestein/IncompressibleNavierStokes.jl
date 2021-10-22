@@ -1,6 +1,6 @@
 """
-Cenerate a non-uniform grid, from z_low to z_up, starting deltaz and having stretch factor close to sz
-v2.0: includes check for uniform grid and, in that case, adapts deltaz if necessary
+Cenerate a non-uniform grid, from `z_low` to `z_up`, starting deltaz and having stretch factor close to `sz`
+Includes check for uniform grid and, in that case, adapts deltaz if necessary.
 """
 function nonuniform_grid(deltaz, z_low, z_up, sz, ϵ = 1e-12)
     if sz == 1

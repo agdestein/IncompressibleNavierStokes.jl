@@ -45,7 +45,7 @@ function strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
             # "cut-off" the double points in case of periodic BC
             # For periodic boundary conditions S11(Npx+1, :) = S11(1, :)
             # So S11 has size (Npx+1)*Npy; the last row are "ghost" points equal to the
-            # First points. we have S11 at positions ([xp[1]-0.5*(hx[1]+hx[end]); xp], yp)
+            # First points. we have S11 at positions ([xp[1] - 1/2*(hx[1]+hx[end]); xp], yp)
             S11_p = reshape(S11, Nux_in + 1, Nuy_in)
             S11_p = S11_p(2:Nux_in+1, :) # B
 
@@ -97,7 +97,7 @@ function strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
         q = @. 1 / 2 * (S11_p[:] ^ 2 + S12_p[:] ^ 2 + S21_p[:] ^ 2 + S22_p[:] ^ 2)
 
         # Absolute value of strain tensor
-        # With S as defined above, i.e. 0.5*(grad u + grad u^T)
+        # With S as defined above, i.e. 1/2*(grad u + grad u^T)
         # S_abs = sqrt(2*tr(S^2)) = sqrt(4*q)
         S_abs = sqrt(4q)
     else

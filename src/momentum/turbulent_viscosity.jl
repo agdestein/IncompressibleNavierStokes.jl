@@ -14,7 +14,7 @@ end
 
 function turbulent_viscosity(model::QRModel, S_abs)
     C_d = deltax^2 / 8
-    C_d * 0.5 * S_abs * (1 - α / C_d)^2
+    C_d * 1//2 * S_abs * (1 - α / C_d)^2
 end
 
 function turbulent_viscosity(model::MixingLengthModel, S_abs)
