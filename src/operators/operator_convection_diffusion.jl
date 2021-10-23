@@ -13,7 +13,7 @@ function operator_convection_diffusion!(setup)
     @unpack gxi, gyi, gxd, gyd = setup.grid
     @unpack Buvy, Bvux = setup.grid
     @unpack Ω⁻¹ = setup.grid
-    @unpack time_stepper, Δt = setup.time
+    @unpack Δt = setup.time
 
     @unpack order4 = setup.discretization
 

@@ -6,22 +6,22 @@ function step_irk_rom(Vₙ, pₙ, tₙ, Δt, setup)
 
     ## Get coefficients of RK method
     if t ≈ setup.time.t_start
-        A_RK, b_RK, c_RK, = tableau(setup.time.time_stepper)
-        # RK_order = check_orderconditions(A_RK, b_RK, c_RK);
+        @unpack A, b, c, = setup.time.method
+        # RK_order = check_orderconditions(A, b, c);
         # Number of stages
-        nstage = length(b_RK)
+        nstage = length(b)
 
-        setup.time.A_RK = A_RK
-        setup.time.b_RK = b_RK
-        setup.time.c_RK = c_RK
+        setup.time.A = A
+        setup.time.b = b
+        setup.time.c = c
         setup.time.nstage = nstage
 
         # Extend the Butcher tableau
         Is = sparse(I, nstage, nstage)
         Ω_sM = kron(Is, sparse(I, M, M))
-        A_RK_ext = kron(A_RK, sparse(I, M, M))
-        b_RK_ext = kron(b_RK', sparse(I, M, M))
-        c_RK_ext = spdiagm(c_RK)
+        A_ext = kron(A, sparse(I, M, M))
+        b_ext = kron(b', sparse(I, M, M))
+        c_ext = spdiagm(c)
     end
 
     ## Preprocessing
@@ -31,7 +31,7 @@ function step_irk_rom(Vₙ, pₙ, tₙ, Δt, setup)
     Rₙ = R
 
     # Tⱼ contains the time instances at all stages, tⱼ = [t1;t2;...;ts]
-    tⱼ = tₙ + c_RK * Δt
+    tⱼ = tₙ + c * Δt
 
     # Iteration counter
     i = 0
@@ -53,7 +53,7 @@ function step_irk_rom(Vₙ, pₙ, tₙ, Δt, setup)
     # Initialize right-hand side for all stages
     _, F_rhs, = F_multiple_ROM(Rⱼ, [], tⱼ, setup, false)
     # Initialize momentum residual
-    fmom = -(Rⱼ - Rtotₙ) / Δt + A_RK_ext * F_rhs
+    fmom = -(Rⱼ - Rtotₙ) / Δt + A_ext * F_rhs
     # Initialize residual
     f = fmom
 
@@ -62,7 +62,7 @@ function step_irk_rom(Vₙ, pₙ, tₙ, Δt, setup)
         # Jacobian based on current solution un
         _, _, Jn = F_ROM(Rₙ, [], tₙ, setup, true)
         # Form iteration matrix, which is now fixed during iterations
-        dfmom = Ω_sM / Δt - kron(A_RK, Jn)
+        dfmom = Ω_sM / Δt - kron(A, Jn)
         Z = dfmom
     end
 
@@ -75,7 +75,7 @@ function step_irk_rom(Vₙ, pₙ, tₙ, Δt, setup)
             # Full Newton
             _, _, J = F_multiple_ROM(Rⱼ, [], tⱼ, setup, true)
             # Form iteration matrix
-            dfmom = Ω_sM / Δt - A_RK_ext * J
+            dfmom = Ω_sM / Δt - A_ext * J
 
             Z = dfmom
 
@@ -93,7 +93,7 @@ function step_irk_rom(Vₙ, pₙ, tₙ, Δt, setup)
         # Evaluate rhs for next iteration and check residual based on
         # Computed Rⱼ
         _, F_rhs, = F_multiple_ROM(Rⱼ, [], tⱼ, setup, 0)
-        fmom = -(Rⱼ - Rtotₙ) / Δt + A_RK_ext * F_rhs
+        fmom = -(Rⱼ - Rtotₙ) / Δt + A_ext * F_rhs
 
         f = fmom
 
@@ -106,7 +106,7 @@ function step_irk_rom(Vₙ, pₙ, tₙ, Δt, setup)
     nonlinear_its[n] = i
 
     # Solution at new time step with b-coefficients of RK method
-    R = Rₙ + Δt * (b_RK_ext * F_rhs)
+    R = Rₙ + Δt * (b_ext * F_rhs)
 
     if setup.rom.pressure_recovery
         q = pressure_additional_solve_ROM(R, tₙ + Δt, setup)

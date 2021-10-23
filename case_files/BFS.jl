@@ -10,6 +10,7 @@ function BFS()
     # Case information
     name = "BFS"
     problem = UnsteadyProblem()
+    # problem = SteadyStateProblem()
     regularization = "no"
     case = Case(; name, problem, regularization)
 
@@ -88,15 +89,15 @@ function BFS()
     )
 
     # Immersed boundary method
-    use_ibm = false                         # Use immersed boundary method
+    use_ibm = false                    # Use immersed boundary method
     ibm = IBM(; use_ibm)
 
     # Time stepping
     t_start = 0                        # Start time
-    t_end = 15                         # End time
+    t_end = 4                          # End time
     Δt = 0.02                          # Timestep
-    time_stepper = RK44()              # Time stepper
-    time_stepper_startup = RK44()      # Startup method for methods that are not self-starting
+    method = RK44()                    # ODE method
+    method_startup = RK44()            # Startup method for methods that are not self-starting
     nstartup = 2                       # Number of velocity fields necessary for start-up = equal to order of method
     isadaptive = false                 # Adapt timestep every n_adapt_Δt iterations
     n_adapt_Δt = 1                     # Number of iterations between timestep adjustment
@@ -105,8 +106,8 @@ function BFS()
         t_start,
         t_end,
         Δt,
-        time_stepper,
-        time_stepper_startup,
+        method,
+        method_startup,
         nstartup,
         isadaptive,
         n_adapt_Δt,
@@ -114,7 +115,7 @@ function BFS()
     )
 
     # Pressure solver: DirectPressureSolver(), CGPressureSolver(), FourierPressureSolver()
-    pressure_solver = DirectPressureSolver() 
+    pressure_solver = DirectPressureSolver()
     p_initial = true                 # Calculate compatible IC for the pressure
     p_add_solve = true               # Additional pressure solve to make it same order as velocity
     # Accuracy for non-linear solves (method 62 = 72 = 9)
@@ -149,6 +150,49 @@ function BFS()
     rtp_n = 10                         # Number of iterations between real time plots
     visualization = Visualization(; plotgrid, do_rtp, rtp_type, rtp_n)
 
+    function initialize_processor(stepper)
+        @unpack V, p, t, setup = stepper
+        if setup.visualization.do_rtp
+            rtp = initialize_rtp(setup, V, p, t)
+        else
+            rtp = nothing
+        end
+        # Estimate number of time steps that will be taken
+        nt = ceil(Int, (t_end - t_start) / Δt)
+
+        momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
+        maxres = maximum(abs.(F))
+
+        
+        println("n), t = $t, maxres = $maxres")
+        # println("t = $t")
+
+        (; rtp, nt)
+    end
+
+    function process!(processor, stepper)
+
+        @unpack do_rtp, rtp_n = setup.visualization
+        
+        # Calculate mass, momentum and energy
+        # maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
+
+        # Residual (in Finite Volume form)
+        # For k-ϵ model residual also contains k and ϵ terms
+        if !isa(model, KEpsilonModel)
+            # Norm of residual
+            momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
+            maxres = maximum(abs.(F))
+        end
+        
+        println("n = $(stepper.n), t = $t, maxres = $maxres")
+        # println("t = $t")
+
+        if do_rtp && mod(n, rtp_n) == 0
+            @unpack setup, V, p, t = stepper
+            update_rtp!(rtp, setup, V, p, t)
+        end
+    end
 
     """
         bc_type()

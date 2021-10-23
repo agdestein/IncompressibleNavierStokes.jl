@@ -1,11 +1,11 @@
 """
-    TimeStepperCache
+    AbstractODEMethodCache
 
 Time stepper cache.
 """
-abstract type TimeStepperCache{T} end
+abstract type AbstractODEMethodCache{T} end
 
-struct ExplicitRungeKuttaStepperCache{T} <: TimeStepperCache{T}
+Base.@kwdef struct ExplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
     kV::Matrix{T}
     kp::Matrix{T}
     Vtemp::Vector{T}
@@ -19,27 +19,29 @@ struct ExplicitRungeKuttaStepperCache{T} <: TimeStepperCache{T}
     c::Vector{T}
 end
 
-struct ImplicitRungeKuttaStepperCache{T} <: TimeStepperCache{T}
-    Vtotₙ
-    ptotₙ
-    Vⱼ
-    pⱼ
-    Qⱼ
-    Fⱼ
-    ∇Fⱼ
-    f
-    A
-    b
-    c
-    s
-    Is
-    Ω_sNV
-    A_ext
-    b_ext
-    c_ext
+Base.@kwdef struct ImplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
+    Vtotₙ::Vector{T}
+    ptotₙ::Vector{T}
+    Vⱼ::Vector{T}
+    pⱼ::Vector{T}
+    Qⱼ::Vector{T}
+    Fⱼ::Vector{T}
+    ∇Fⱼ::SparseMatrixCSC{T,Int}
+    f::Vector{T}
+    A::Matrix{T}
+    b::Vector{T}
+    c::Vector{T}
+    s::Vector{T}
+    Is::Vector{T}
+    Ω_sNV::Vector{T}
+    A_ext::Matrix{T}
+    b_ext::Vector{T}
+    c_ext::Vector{T}
 end
 
-struct AdamsBashforthCrankNicolsonStepperCache{T} <: TimeStepperCache{T}
+Base.@kwdef struct AdamsBashforthCrankNicolsonCache{T} <: AbstractODEMethodCache{T}
+    cₙ::Vector{T} 
+    cₙ₋₁::Vector{T} 
     F::Vector{T}
     Δp::Vector{T}
     Rr::Vector{T}
@@ -52,27 +54,31 @@ struct AdamsBashforthCrankNicolsonStepperCache{T} <: TimeStepperCache{T}
     Diff_fact::Factorization{T}
 end
 
-struct OneLegStepperCache{T} <: TimeStepperCache{T}
+Base.@kwdef struct OneLegCache{T} <: AbstractODEMethodCache{T}
+    Vₙ₋₁::Vector{T} 
+    pₙ₋₁::Vector{T} 
     F::Vector{T}
     GΔp::Vector{T}
 end
 
 """
-    time_stepper_cache(stepper, args...; kwargs...)
+    ode_method_cache(method, args...; kwargs...)
 
-Get time stepper cache for the given time stepper.
+Get time stepper cache for the given ODE method.
 """
-function time_stepper_cache end
+function ode_method_cache end
 
-function time_stepper_cache(ts::AdamsBashforthCrankNicolsonStepper, setup)
+function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod, setup)
     @unpack model = setup
     @unpack NV, Np, Ω⁻¹ = setup.grid
     @unpack Diff = setup.discretization
     @unpack Δt = setup.time
-    @unpack θ = ts
+    @unpack θ = method
 
     T = typeof(Δt)
 
+    cₙ = zeros(T, NV)
+    cₙ₋₁ = zeros(T, NV)
     F = zeros(T, NV)
     Δp = zeros(T, Np)
     Rr = zeros(T, NV)
@@ -93,24 +99,26 @@ function time_stepper_cache(ts::AdamsBashforthCrankNicolsonStepper, setup)
         Diff_fact = cholesky(spzeros(0, 0))
     end
 
-    AdamsBashforthCrankNicolsonStepperCache{T}(F, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact)
+    AdamsBashforthCrankNicolsonCache{T}(; cₙ, cₙ₋₁, F, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact)
 end
 
-function time_stepper_cache(::OneLegStepper, setup)
-    @unpack NV = setup.grid
+function ode_method_cache(::OneLegMethod, setup)
+    @unpack NV, Np = setup.grid
     T = typeof(setup.time.Δt)
+    Vₙ₋₁ = zeros(T, NV)
+    pₙ₋₁ = zeros(T, Np)
     F = zeros(T, NV)
     GΔp = zeros(T, NV)
-    OneLegStepperCache{T}(F, GΔp)
+    OneLegCache{T}(; Vₙ₋₁, pₙ₋₁, F, GΔp)
 end
 
-function time_stepper_cache(stepper::ExplicitRungeKuttaStepper, setup)
+function ode_method_cache(method::ExplicitRungeKuttaMethod, setup)
     # TODO: Decide where `T` is to be passed
     T = typeof(setup.time.Δt)
 
     @unpack NV, Np = setup.grid
 
-    ns = nstage(stepper)
+    ns = nstage(method)
     kV = zeros(T, NV, ns)
     kp = zeros(T, Np, ns)
     Vtemp = zeros(T, NV)
@@ -121,7 +129,7 @@ function time_stepper_cache(stepper::ExplicitRungeKuttaStepper, setup)
     Δp = zeros(T, Np)
 
     # Get coefficients of RK method
-    A, b, c, = tableau(stepper)
+    @unpack A, b, c = method
 
     # Shift Butcher tableau, as A[1, :] is always zero for explicit methods
     A = [A[2:end, :]; b']
@@ -129,17 +137,17 @@ function time_stepper_cache(stepper::ExplicitRungeKuttaStepper, setup)
     # Vector with time instances (1 is the time level of final step)
     c = [c[2:end]; 1]
 
-    ExplicitRungeKuttaStepperCache{T}(kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp, T.(A), T.(b), T.(c))
+    ExplicitRungeKuttaCache{T}(; kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp, A = T.(A), b = T.(b), c = T.(c))
 end
 
-function time_stepper_cache(stepper::ImplicitRungeKuttaStepper, setup)
+function ode_method_cache(method::ImplicitRungeKuttaMethod, setup)
     # TODO: Decide where `T` is to be passed
     T = typeof(setup.time.Δt)
 
     @unpack Np, Ω = setup.grid
 
     # Get coefficients of RK method
-    A, b, c, = tableau(stepper)
+    @unpack A, b, c = method
 
     # Number of stages
     s = length(b)
@@ -162,7 +170,7 @@ function time_stepper_cache(stepper::ImplicitRungeKuttaStepper, setup)
 
     f = zeros(T, s * (NV + Np))
 
-    ImplicitRungeKuttaStepperCache{T}(
+    ImplicitRungeKuttaCache{T}(;
         Vtotₙ,
         ptotₙ,
         Vⱼ,

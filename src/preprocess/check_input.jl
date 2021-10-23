@@ -5,7 +5,7 @@ function check_input!(setup, V₀, p₀, t₀)
     @unpack model = setup
     @unpack problem = setup.case
     @unpack order4 = setup.discretization
-    @unpack t_start, t_end, Δt, isadaptive, time_stepper, time_stepper_startup = setup.time
+    @unpack t_start, t_end, Δt, isadaptive, method, method_startup = setup.time
 
     if order4
         if !isa(model, LaminarModel)
@@ -26,7 +26,7 @@ function check_input!(setup, V₀, p₀, t₀)
     # For steady problems, with Newton linearization and full Jacobian, first start with nPicard Picard iterations
     if is_steady(problem)
         setup.solver_settings.Newton_factor = false
-    elseif time_stepper isa ImplicitRungeKuttaStepper || time_stepper_startup isa ImplicitRungeKuttaStepper
+    elseif method isa ImplicitRungeKuttaMethod || method_startup isa ImplicitRungeKuttaMethod
         # Implicit RK time integration
         setup.solver_settings.Newton_factor = true
     end

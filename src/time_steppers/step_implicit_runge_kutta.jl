@@ -1,33 +1,26 @@
 """
-    step!(ts::ImplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, momentum_cache)
+    step!(stepper::ImplicitRungeKuttaStepper, Δt)
 
 Do one time step for implicit Runge-Kutta method.
 
 Unsteady Dirichlet boundary points are not part of solution vector but
 are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
 """
-function step!(
-    ::ImplicitRungeKuttaStepper,
-    V,
-    p,
-    Vₙ,
-    pₙ,
-    Vₙ₋₁,
-    pₙ₋₁,
-    tₙ,
-    Δtₙ,
-    setup,
-    stepper_cache,
-    momentum_cache,
-)
+function step!(stepper::ImplicitRungeKuttaStepper, Δt)
+    @unpack V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache =
+        stepper
     @unpack Nu, Nv, NV, Np, Ω, Ω⁻¹ = setup.grid
     @unpack G, M = setup.discretization
-    @unpack pressure_solver, nonlinear_maxit, nonlinear_acc, nonlinear_Newton, p_add_solve = setup.solver_settings
-    @unpack Vtotₙ, ptotₙ, Vⱼ, pⱼ, Qⱼ, Fⱼ, ∇Fⱼ, f, Δp = stepper_cache
-    @unpack A, b, c, s, Is, Ω_sNV, A_ext, b_ext, c_ext = stepper_cache
-
-    # Store variables at start of time step
-    p .= pₙ
+    @unpack pressure_solver, nonlinear_maxit, nonlinear_acc, nonlinear_Newton, p_add_solve =
+        setup.solver_settings
+    @unpack Vtotₙ, ptotₙ, Vⱼ, pⱼ, Qⱼ, Fⱼ, ∇Fⱼ, f, Δp = cache
+    @unpack A, b, c, s, Is, Ω_sNV, A_ext, b_ext, c_ext = cache
+   
+    # Update current solution (does not depend on previous step size)
+    Vₙ .= V
+    pₙ .= p
+    tₙ = t
+    Δtₙ = Δt
 
     # Time instances at all stages, tⱼ = [t₁, t₂, ..., tₛ]
     tⱼ = tₙ + c * Δtₙ
@@ -67,8 +60,8 @@ function step!(
     iter = 0
 
     # Index in global solution vector
-    ind_Vⱼ = 1:NV*s
-    ind_pⱼ = (NV*s+1):(NV+Np)*s
+    ind_Vⱼ = 1:(NV * s)
+    ind_pⱼ = (NV * s + 1):((NV + Np) * s)
 
     # Zero block in iteration matrix
     Z2 = spzeros(s * Np, s * Np)
@@ -85,7 +78,7 @@ function step!(
     Qⱼ = [Vⱼ; pⱼ]
 
     # Initialize right-hand side for all stages
-    momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, stepper_cache, momentum_cache)
+    momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, cache, momentum_cache)
 
     # Initialize momentum residual
     fmom = -(Ωtot .* Vⱼ - Ωtot .* Vtotₙ) / Δtₙ + A_ext * Fⱼ
@@ -123,7 +116,7 @@ function step!(
                 pⱼ,
                 tⱼ,
                 setup,
-                stepper_cache,
+                cache,
                 momentum_cache;
                 getJacobian = true,
             )
@@ -145,7 +138,7 @@ function step!(
         iter += 1
 
         # Evaluate RHS for next iteration and check residual based on computed Vⱼ, pⱼ
-        momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, stepper_cache, momentum_cache)
+        momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, cache, momentum_cache)
         fmom = -(Ωtot .* Vⱼ - Ωtot .* Vtotₙ) / Δtₙ + A_ext * Fⱼ
         fmass = -(Mtot * Vⱼ + yMtot)
 
@@ -176,7 +169,7 @@ function step!(
             pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
         else
             # Standard method; take last pressure
-            p .= pⱼ[end-Np+1:end]
+            p .= pⱼ[(end - Np + 1):end]
         end
     else
         # For steady bc we do an additional pressure solve
@@ -184,14 +177,17 @@ function step!(
         # pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
 
         # Standard method; take pressure of last stage
-        p = pⱼ[end-Np+1:end]
+        p = pⱼ[(end - Np + 1):end]
     end
 
-    iter
+    t = tₙ + Δtₙ
+    @pack! stepper = t, tₙ, Δtₙ, iter 
+
+    stepper
 end
 
 """
-    momentum_allstage!(F, ∇F, V, C, p, t, setup, stepper_cache, momentum_cache; getJacobian = false)
+    momentum_allstage!(F, ∇F, V, C, p, t, setup, cache, momentum_cache; getJacobian = false)
 
 Call momentum for multiple `(V, p)` pairs, as required in implicit RK methods.
 """
@@ -203,12 +199,12 @@ function momentum_allstage!(
     p,
     t,
     setup,
-    stepper_cache,
+    cache,
     momentum_cache;
     getJacobian = false,
 )
     @unpack Nu, Nv, NV, Np = setup.grid
-    @unpack s, c = stepper_cache
+    @unpack s, c = cache
 
     for i = 1:s
         # Indices for current stage

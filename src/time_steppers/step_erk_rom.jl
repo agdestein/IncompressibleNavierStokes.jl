@@ -1,14 +1,23 @@
 """
-    step_ERK_ROM()
+    step_erk_rom!(stepper::ExplicitRungeKuttaStepper, Δt)
 
 Perform one time step for the general explicit Runge-Kutta method (ERK) with Reduced Order Model (ROM).
 """
-function step_erk_rom(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
+function step_erk_rom!(stepper::ExplicitRungeKuttaStepper, Δt)
 # function step_ERK_ROM(Vₙ, pₙ, tₙ, Δt, setup)
     # Number of unknowns (modes) in ROM
-    M = setup.rom.M
+    @unpack M = setup.rom
 
-    @unpack kV, kp, Vtemp, Vtemp2, F, ∇F, f, A, b, c = stepper_cache
+    @unpack V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper 
+    @unpack V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ = stepper
+    @unpack kV, kp, Vtemp, Vtemp2, F, ∇F, f, A, b, c = cache
+
+    # Update current solution (does not depend on previous step size)
+    stepper.n += 1
+    Vₙ .= V
+    pₙ .= p
+    tₙ = t
+    Δtₙ = Δt
 
     # Number of stages
     nstage = length(b)
@@ -59,5 +68,8 @@ function step_erk_rom(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁,
         p = get_FOM_pressure(q, t, setup)
     end
 
-    V, p
+    t = tₙ + Δtₙ
+    @pack! stepper = t, tₙ, Δtₙ   
+
+    stepper
 end

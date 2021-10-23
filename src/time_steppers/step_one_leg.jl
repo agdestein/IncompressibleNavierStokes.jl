@@ -1,5 +1,5 @@
 """
-    step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, momentum_cache)
+    step!(stepper::OneLegStepper, Δt)
 
 Do one time step using one-leg-β-method following symmetry-preserving discretization of turbulent flow.
 See [Verstappen and Veldman (JCP 2003)] for details,
@@ -8,12 +8,23 @@ or [Direct numerical simulation of turbulence at lower costs (Journal of Enginee
 Formulation:
 ``\\frac{(\\beta + 1/2) u^{n+1} - 2 \\beta u^{n} + (\\beta - 1/2) u^{n-1}}{\\Delta t} = F((1 + \\beta) u^n - \\beta u^{n-1})``
 """
-function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
+function step!(stepper::OneLegStepper, Δt)
+    @unpack method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper
+    @unpack β = method 
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver, p_add_solve = setup.solver_settings
     @unpack Ω⁻¹ = setup.grid
-    @unpack β = ts
-    @unpack F, GΔp = stepper_cache
+    @unpack Vₙ₋₁, pₙ₋₁, F, GΔp = cache
+
+    Δt ≈ Δtₙ || error("One-leg-β-method requires constant time step")
+
+    # Update current solution (does not depend on previous step size)
+    Vₙ₋₁ .= Vₙ
+    pₙ₋₁ .= pₙ 
+    Vₙ .= V
+    pₙ .= p
+    tₙ = t
+    Δtₙ = Δt
 
     # Intermediate ("offstep") velocities
     t = tₙ + β * Δtₙ
@@ -52,5 +63,8 @@ function step!(ts::OneLegStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ
         pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
     end
 
-    V, p
+    t = tₙ + Δtₙ
+    @pack! stepper = t, tₙ, Δtₙ
+
+    stepper 
 end

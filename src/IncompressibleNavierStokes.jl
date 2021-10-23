@@ -3,7 +3,7 @@ module IncompressibleNavierStokes
 
 using FFTW: fft, ifft
 using IterativeSolvers: cg!
-using LinearAlgebra: Diagonal, Factorization, I, cholesky, factorize, ldiv!, lu, mul!
+using LinearAlgebra: Diagonal, Factorization, UpperTriangular, I, cholesky, factorize, ldiv!, lu, mul!
 using SparseArrays: SparseMatrixCSC, blockdiag, nnz, sparse, spdiagm, spzeros
 using UnPack: @pack!, @unpack
 # Using Plots: contour, contourf, title!
@@ -30,23 +30,21 @@ include("problems/problems.jl")
 include("problems/is_steady.jl")
 
 # Types
-include("time_steppers/time_steppers.jl")
+include("time_steppers/methods.jl")
 include("time_steppers/tableaus.jl")
 include("time_steppers/nstage.jl")
 include("time_steppers/time_stepper_caches.jl")
-include("time_steppers/step.jl")
-include("time_steppers/step_ab_cn.jl")
-include("time_steppers/step_erk.jl")
-include("time_steppers/step_erk_rom.jl")
-include("time_steppers/step_irk.jl")
-include("time_steppers/step_irk_rom.jl")
-include("time_steppers/step_one_leg.jl")
-include("time_steppers/isexplicit.jl")
-include("time_steppers/needs_startup_stepper.jl")
-include("time_steppers/lambda_max.jl")
 include("solvers/pressure/pressure_solvers.jl")
-
 include("parameters.jl")
+include("momentum/momentumcache.jl")
+
+# Time steppers
+include("time_steppers/time_steppers.jl")
+include("time_steppers/change_time_stepper.jl")
+include("time_steppers/step.jl")
+include("time_steppers/isexplicit.jl")
+include("time_steppers/needs_startup_method.jl")
+include("time_steppers/lambda_max.jl")
 
 # Preprocess
 include("preprocess/check_input.jl")
@@ -54,7 +52,6 @@ include("preprocess/create_mesh.jl")
 include("preprocess/create_initial_conditions.jl")
 
 # Momentum equation
-include("momentum/momentumcache.jl")
 include("momentum/bodyforce.jl")
 include("momentum/compute_conservation.jl")
 include("momentum/check_symmetry.jl")
@@ -116,7 +113,7 @@ include("postprocess/plot_streamfunction.jl")
 include("main.jl")
 
 # Reexport
-export @unpack
+export @pack!, @unpack
 
 # Models
 export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
@@ -154,11 +151,17 @@ export create_mesh!,
     set_bc_vectors!,
     force,
     check_input!,
-    solve
+    solve,
+    initialize_rtp,
+    update_rtp!
+
+export momentum!
 
 export postprocess, plot_pressure, plot_streamfunction, plot_vorticity
 
-export AdamsBashforthCrankNicolsonStepper, OneLegStepper
+# ODE methods
+
+export AdamsBashforthCrankNicolsonMethod, OneLegMethod
 
 # Runge Kutta methods
 

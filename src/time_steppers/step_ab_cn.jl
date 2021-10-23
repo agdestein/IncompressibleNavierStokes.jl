@@ -1,19 +1,5 @@
 """
-    step!(
-        ts::AdamsBashforthCrankNicolsonStepper,
-        V,
-        p,
-        Vₙ,
-        pₙ,
-        Vₙ₋₁,
-        pₙ₋₁,
-        cₙ₋₁,
-        tₙ,
-        Δt,
-        setup,
-        stepper_cache,
-        momentum_cache,
-    )
+    step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt) 
 
 Perform one time step with Adams-Bashforth for convection and Crank-Nicolson for diffusion.
 
@@ -42,28 +28,29 @@ The LU decomposition of the LHS matrix is precomputed in `operator_convection_di
 Note that, in constrast to explicit methods, the pressure from previous time steps has an
 influence on the accuracy of the velocity.
 """
-function step!(
-    ts::AdamsBashforthCrankNicolsonStepper,
-    V,
-    p,
-    Vₙ,
-    pₙ,
-    Vₙ₋₁,
-    pₙ₋₁,
-    cₙ₋₁,
-    tₙ,
-    Δt,
-    setup,
-    stepper_cache,
-    momentum_cache,
-)
+function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
+
+    @unpack method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper
     @unpack NV, Ω⁻¹ = setup.grid
     @unpack G, y_p, M, yM = setup.discretization
     @unpack Diff, yDiff, y_p = setup.discretization
     @unpack pressure_solver = setup.solver_settings
-    @unpack α₁, α₂, θ = ts
-    @unpack F, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact = stepper_cache
-    @unpack c, ∇c, d, ∇d = momentum_cache
+    @unpack α₁, α₂, θ = method
+    @unpack cₙ, cₙ₋₁, F, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact = cache
+    @unpack d = momentum_cache
+
+    Δt ≈ Δtₙ || error("Adams-Bashforth requires constant time step")
+
+    # For the first time step, this might be necessary
+    convection!(cₙ, nothing, Vₙ, Vₙ, tₙ, setup, momentum_cache)
+
+    # Advance one step 
+    stepper.n += 1
+    Vₙ .= V
+    pₙ .= p
+    tₙ = t
+    Δtₙ = Δt
+    cₙ₋₁ .= cₙ
 
     # Unsteady BC at current time
     if setup.bc.bc_unsteady
@@ -73,13 +60,12 @@ function step!(
 
     yDiffₙ .= yDiff
     yDiffₙ₊₁ .= yDiff
-    
+
     # Evaluate boundary conditions and force at starting point
     bodyforce!(bₙ, nothing, Vₙ, tₙ, setup)
 
     # Convection of current solution
-    convection!(c, ∇c, Vₙ, Vₙ, tₙ, setup, momentum_cache)
-    cₙ = c
+    convection!(cₙ, nothing, Vₙ, Vₙ, tₙ, setup, momentum_cache)
 
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
     if setup.bc.bc_unsteady
@@ -94,12 +80,11 @@ function step!(
 
     mul!(Gpₙ, G, pₙ)
     Gpₙ .+= y_p
-   
+
     mul!(d, Diff, V)
-    d .+= yDiff
 
     # Right hand side of the momentum equation update
-    @. Rr = Vₙ + Ω⁻¹ * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + b - Gpₙ)
+    @. Rr = Vₙ + Ω⁻¹ * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + yDiff + b - Gpₙ)
 
     # Use precomputed LU decomposition
     ldiv!(V, Diff_fact, Rr)
@@ -129,5 +114,8 @@ function step!(
         pressure_additional_solve!(V, p, tₙ + Δt, setup)
     end
 
-    c
+    t = tₙ + Δtₙ
+    @pack! stepper = t, tₙ, Δtₙ
+
+    stepper
 end

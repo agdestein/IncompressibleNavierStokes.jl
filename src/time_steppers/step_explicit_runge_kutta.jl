@@ -1,16 +1,23 @@
 """
-    step!(ts::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
+    step!(stepper::ExplicitRungeKuttaStepper, Δt)
 
 Perform one time step for the general explicit Runge-Kutta method (ERK).
 
 Dirichlet boundary points are not part of solution vector but are prescribed in a strong manner via the `u_bc` and `v_bc` functions.
 """
-function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ, setup, stepper_cache, momentum_cache)
+function step!(stepper::ExplicitRungeKuttaStepper, Δt)
+    @unpack V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper
     @unpack Nu, Nv, Np, Ω⁻¹ = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver = setup.solver_settings
-    @unpack time_stepper = setup.time
-    @unpack kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f, A, b, c = stepper_cache
+    @unpack kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f, A, b, c = cache
+
+    # Update current solution (does not depend on previous step size)
+    stepper.n += 1
+    Vₙ .= V
+    pₙ .= p
+    tₙ = t
+    Δtₙ = Δt
 
     # Number of stages
     nstage = length(b)
@@ -18,10 +25,6 @@ function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ�
     # Reset RK arrays
     kV .= 0
     kp .= 0
-
-    # Store variables at start of time step
-    V .= Vₙ
-    p .= pₙ
 
     tᵢ = tₙ
 
@@ -39,7 +42,7 @@ function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ�
         momentum!(F, ∇F, V, V, p, tᵢ, setup, momentum_cache)
 
         # Store right-hand side of stage i
-        # By adding G*p we effectively REMOVE the pressure contribution Gx*p and Gy*p (but not the vectors y_px and y_py)
+        # Remove the -G*p contribution (but not y_p)
         kVi = @view kV[:, i]
         mul!(kVi, G, p)
         @. kVi = Ω⁻¹ * (F + kVi)
@@ -94,5 +97,8 @@ function step!(::ExplicitRungeKuttaStepper, V, p, Vₙ, pₙ, Vₙ₋₁, pₙ�
         pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
     end
 
-    V, p
+    t = tₙ + Δtₙ
+    @pack! stepper = t, tₙ, Δtₙ
+
+    stepper
 end

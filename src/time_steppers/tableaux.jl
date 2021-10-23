@@ -1,59 +1,63 @@
-r = 0
-
 """
-    A, b, c, r = tableau(rk_stepper, s = 1)
-
-Set up Butcher arrays `A`, `b`, and `c` for the given `rk_stepper`.
-Also return SSP coefficient `r`.
+Set up Butcher arrays `A`, `b`, and `c`, as well as and SSP coefficient `r`.
 For families of methods, optional input `s` is the number of stages.
 
 Original (MATLAB) by David Ketcheson, extended by Benjamin Sanderse.
 """
-function tableau end
+
+# Default SSP coefficient 
+r = 0
+
 
 ## ================Explicit Methods=========================
-function tableau(::FE11)
+
+function FE11()
     # Forward Euler
     s = 1
     r = 1
     A = fill(0, 1, 1)
     b = [1]
     c = [0]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::SSP22)
+
+function SSP22()
     s = 2
     r = 1
     A = [0 0; 1 0]
     b = [1 // 2, 1 // 2]
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::SSP42)
+
+function SSP42()
     s = 4
     r = 3
     A = [0 0 0 0; 1//3 0 0 0; 1//3 1//3 0 0; 1//3 1//3 1//3 0]
     b = fill(1 // 4, s)
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::SSP33)
+
+function SSP33()
     s = 3
     r = 1
     A = [0 0 0; 1 0 0; 1//4 1//4 0]
     b = [1 // 6, 1 // 6, 2 // 3]
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::SSP43)
+
+function SSP43()
     s = 4
     r = 2
     A = [0 0 0 0; 1//2 0 0 0; 1//2 1//2 0 0; 1//6 1//6 1//6 0]
     b = [1 // 6, 1 // 6, 1 // 6, 1 // 2]
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::SSP104)
+
+function SSP104()
     s = 10
     r = 6
     α0 = diag(-1 => ones(1, s - 1))
@@ -64,41 +68,44 @@ function tableau(::SSP104)
     A = (I(s) - α0) \ β0
     b = fill(1 // 10, s)
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::rSSPs2, s = 1)
-    # Rational (optimal, low-storage) s-stage 2nd order SSP
+
+"Rational (optimal, low-storage) s-stage 2nd order SSP"
+function rSSPs2(s = 1)
     s ≥ 2 || error("Explicit second order SSP family requires s ≥ 2")
     r = s - 1
     α = [zeros(1, s); I(s)]
-    α[s+1, s] = (s - 1) // s
+    α[s + 1, s] = (s - 1) // s
     β = α .// r
-    α[s+1, 1] = 1 // s
+    α[s + 1, 1] = 1 // s
     A = (I(s) - α[1:s, :]) \ β[1:s, :]
-    b = β[s+1, :] + α[s+1, :] * A
+    b = β[s + 1, :] + α[s + 1, :] * A
     b = b'
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::rSSPs3, s = 1)
-    # Rational (optimal, low-storage) s^2-stage 3rd order SSP
+
+"Rational (optimal, low-storage) s^2-stage 3rd order SSP"
+function rSSPs3(s = 1)
     if !(round(sqrt(s)) ≈ sqrt(s)) || s < 4
         error("Explicit third order SSP family requires s = n^2, n > 1")
     end
     n = s^2
     r = n - s
     α = [zeros(1, n); I(n)]
-    α[s*(s+1)//2+1, s*(s+1)//2] = (s - 1) // (2s - 1)
+    α[s * (s + 1) // 2 + 1, s * (s + 1) // 2] = (s - 1) // (2s - 1)
     β = α // r
-    α[s*(s+1)//2+1, (s-1)*(s-2)//2+1] = s // (2s - 1)
+    α[s * (s + 1) // 2 + 1, (s - 1) * (s - 2) // 2 + 1] = s // (2s - 1)
     A = (I(n) - α[1:n, :]) \ β[1:n, :]
-    b = β[n+1, :] + α[n+1, :] * A
+    b = β[n + 1, :] + α[n + 1, :] * A
     b = b'
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::Wray3)
-    # Wray"s RK3
+
+"Wray's RK3"
+function Wray3()
     A = zeros(Rational, 3, 3)
     A[2, 1] = 8 // 15
     A[3, 1] = (8 // 15) - (17 // 60)
@@ -106,9 +113,10 @@ function tableau(::Wray3)
     b = [(8 // 15) - (17 // 60), 0, 3 // 4]
     c = [0, A[2, 1], A[3, 1] + A[3, 2]]
     r = 0 # ?
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::RK56)
+
+function RK56()
     A = [
         0 0 0 0 0 0
         1//4 0 0 0 0 0
@@ -119,10 +127,11 @@ function tableau(::RK56)
     ]
     b = [7 // 90, 0, 16 // 45, 2 // 15, 16 // 45, 7 // 90]
     c = [0, 1 // 4, 1 // 4, 1 // 2, 3 // 4, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::DOPRI6)
-    # Dormand-Price pair
+
+"Dormand-Price pair"
+function DOPRI6()
     A = [
         0 0 0 0 0 0
         1//5 0 0 0 0 0
@@ -134,128 +143,143 @@ function tableau(::DOPRI6)
     b = [35 // 384, 0, 500 // 1113, 125 // 192, -2187 // 6784, 11 // 84]
     c = sum(eachcol(A))
     r = 0 # ?
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
 
+
 ## ================Implicit Methods=========================
-function tableau(::BE11)
-    # Backward Euler
+
+"Backward Euler"
+function BE11()
     s = 1
-    r = 1.e10
+    r = 1.0e10
     A = fill(1, 1, 1)
     b = [1]
     c = [1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::SDIRK34)
-    # 3-stage, 4th order singly diagonally implicit (SSP)
+
+"3-stage, 4th order singly diagonally implicit (SSP)"
+function SDIRK34()
     s = 3
     r = 1.7588
-    g = 1//2 * (1 - cos(π / 18) / sqrt(3) - sin(π / 18))
-    q = (1//2 - g)^2
+    g = 1 // 2 * (1 - cos(π / 18) / sqrt(3) - sin(π / 18))
+    q = (1 // 2 - g)^2
     A = [
         g 0 0
-        (1//2-g) g 0
+        (1 // 2-g) g 0
         2g (1-4g) g
     ]
     b = [1 / 24q, 1 - 1 / 12q, 1 / 24q]
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::ISSPm2, s = 1)
-    # Optimal DIRK SSP schemes of order 2
+
+"Optimal DIRK SSP schemes of order 2"
+function ISSPm2(s = 1)
     # R = 2 * s
     i = repmat(1:s, 1, s)
     j = repmat(1:s, s, 1)
     A = 1 // s * (j < i) + 1 // (2 * s) * (i == j)
     b = fill(1 // s, s)
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::ISSPs3, s = 1)
-    # Optimal DIRK SSP schemes of order 3
+
+"Optimal DIRK SSP schemes of order 3"
+function ISSPs3(s = 1)
     if s < 2
         error("Implicit third order SSP schemes require s>=2")
     end
     r = s - 1 + sqrt(s^2 - 1)
     i = repeat(1:s, 1, s)
     j = repeat(1:s, s, 1)
-    A = 1 / sqrt(s^2 - 1) * (j < i) + 1//2 * (1 - sqrt((s - 1) / (s + 1))) * (i == j)
+    A = 1 / sqrt(s^2 - 1) * (j < i) + 1 // 2 * (1 - sqrt((s - 1) / (s + 1))) * (i == j)
     b = fill(1 / s, s)
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
 
+
 ## ===================Half explicit methods========================
-function tableau(::HEM3)
-    # Brasey and Hairer
+
+"Brasey and Hairer"
+function HEM3()
     A = [0 0 0; 1//3 0 0; -1 2 0]
     b = [0, 3 // 4, 1 // 4]
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::HEM3BS)
+
+function HEM3BS()
     A = [0 0 0; 1//2 0 0; -1 2 0]
     b = [1 // 6, 2 // 3, 1 // 6]
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::HEM5)
-    # Brasey and Hairer, 5 stage, 4th order
+
+"Brasey and Hairer, 5 stage, 4th order"
+function HEM5()
     A = [
         0 0 0 0 0
         3//10 0 0 0 0
-        (1+sqrt(6))/30 (11-4*sqrt(6))/30 0 0 0
-        (-79-31*sqrt(6))/150 (-1-4*sqrt(6))/30 (24+11*sqrt(6))/25 0 0
-        (14+5*sqrt(6))/6 (-8+7*sqrt(6))/6 (-9-7*sqrt(6))/4 (9-sqrt(6))/4 0
+        (1 + sqrt(6))/30 (11 - 4 * sqrt(6))/30 0 0 0
+        (-79 - 31 * sqrt(6))/150 (-1 - 4 * sqrt(6))/30 (24 + 11 * sqrt(6))/25 0 0
+        (14 + 5 * sqrt(6))/6 (-8 + 7 * sqrt(6))/6 (-9 - 7 * sqrt(6))/4 (9 - sqrt(6))/4 0
     ]
     b = [0, 0, (16 - sqrt(6)) / 36, (16 + sqrt(6)) / 36, 1 / 9]
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
+
 
 ## ================Classical Methods=========================
 
 # Gauss-Legendre methods -- order 2s
-function tableau(::GL1)
+
+function GL1()
     r = 2
     A = fill(1 // 2, 1, 1)
     b = [1]
     c = [1 // 2]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::GL2)
+
+function GL2()
     r = 0
     A = [
-        1/4 1/4-sqrt(3)/6
-        1/4+sqrt(3)/6 1/4
+        1/4 1 / 4-sqrt(3) / 6
+        1 / 4+sqrt(3) / 6 1/4
     ]
     b = [1 / 2, 1 / 2]
     c = [1 / 2 - sqrt(3) / 6, 1 / 2 + sqrt(3) / 6]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::GL3)
+
+function GL3()
     r = 0
     A = [
-        5/36 (80-24*sqrt(15))/360 (50-12*sqrt(15))/360
-        (50+15*sqrt(15))/360 2/9 (50-15*sqrt(15))/360
-        (50+12*sqrt(15))/360 (80+24*sqrt(15))/360 5/36
+        5/36 (80 - 24 * sqrt(15))/360 (50 - 12 * sqrt(15))/360
+        (50 + 15 * sqrt(15))/360 2/9 (50 - 15 * sqrt(15))/360
+        (50 + 12 * sqrt(15))/360 (80 + 24 * sqrt(15))/360 5/36
     ]
     b = [5 / 18, 4 / 9, 5 / 18]
     c = [(5 - sqrt(15)) / 10, 1 / 2, (5 + sqrt(15)) / 10]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
 
 # Radau IA methods -- order 2s-1
-function tableau(::RIA1)
-    # This is implicit Euler
+
+"This is implicit Euler"
+function RIA1()
     r = 1
     A = fill(1, 1, 1)
     b = [1]
     c = [0]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::RIA2)
+
+function RIA2()
     r = 0
     A = [
         1//4 -1//4
@@ -263,29 +287,32 @@ function tableau(::RIA2)
     ]
     b = [1 // 4, 3 // 4]
     c = [0, 2 // 3]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::RIA3)
+
+function RIA3()
     r = 0
     A = [
-        1/9 (-1-sqrt(6))/18 (-1+sqrt(6))/18
-        1/9 (88+7*sqrt(6))/360 (88-43*sqrt(6))/360
-        1/9 (88+43*sqrt(6))/360 (88-7*sqrt(6))/360
+        1/9 (-1 - sqrt(6))/18 (-1 + sqrt(6))/18
+        1/9 (88 + 7 * sqrt(6))/360 (88 - 43 * sqrt(6))/360
+        1/9 (88 + 43 * sqrt(6))/360 (88 - 7 * sqrt(6))/360
     ]
     b = [1 // 9, (16 + sqrt(6)) / 36, (16 - sqrt(6)) / 36]
     c = [0, (6 - sqrt(6)) / 10, (6 + sqrt(6)) / 10]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
 
 # Radau IIA methods -- order 2s-1
-function tableau(::RIIA1)
+
+function RIIA1()
     r = 1
     A = 1
     b = 1
     c = 1
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::RIIA2)
+
+function RIIA2()
     r = 0
     A = [
         5//12 -1//12
@@ -293,23 +320,25 @@ function tableau(::RIIA2)
     ]
     b = [3 // 4, 1 // 4]
     c = [1 // 3, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::RIIA3)
+
+function RIIA3()
     r = 0
     A = [
-        (88-7*sqrt(6))/360 (296-169*sqrt(6))/1800 (-2+3*sqrt(6))/225
-        (296+169*sqrt(6))/1800 (88+7*sqrt(6))/360 (-2-3*sqrt(6))/225
-        (16-sqrt(6))/36 (16+sqrt(6))/36 1/9
+        (88 - 7 * sqrt(6))/360 (296 - 169 * sqrt(6))/1800 (-2 + 3 * sqrt(6))/225
+        (296 + 169 * sqrt(6))/1800 (88 + 7 * sqrt(6))/360 (-2 - 3 * sqrt(6))/225
+        (16 - sqrt(6))/36 (16 + sqrt(6))/36 1/9
     ]
     b = [(16 - sqrt(6)) / 36, (16 + sqrt(6)) / 36, 1 / 9]
     c = [(4 - sqrt(6)) / 10, (4 + sqrt(6)) / 10, 1]
 
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
 
 # Lobatto IIIA methods -- order 2s-2
-function tableau(::LIIIA2)
+
+function LIIIA2()
     r = 0
     A = [
         0 0
@@ -317,9 +346,10 @@ function tableau(::LIIIA2)
     ]
     b = [1 // 2, 1 // 2]
     c = [0, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::LIIIA3)
+
+function LIIIA3()
     r = 0
     A = [
         0 0 0
@@ -328,12 +358,13 @@ function tableau(::LIIIA3)
     ]
     b = [1 // 6, 2 // 3, 1 // 6]
     c = [0, 1 // 2, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
 
 # Chebyshev methods
-function tableau(::CHDIRK3)
-    # Chebyshev based DIRK (not algebraically stable)
+
+"Chebyshev based DIRK (not algebraically stable)"
+function CHDIRK3()
     A = [
         0 0 0
         1//4 1//4 0
@@ -342,9 +373,10 @@ function tableau(::CHDIRK3)
     b = [1 // 6, 2 // 3, 1 // 6]
     c = [0, 1 // 2, 1]
     r = 0
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::CHCONS3)
+
+function CHCONS3()
     A = [
         1//12 -1//6 1//12
         5//24 1//3 -1//24
@@ -353,11 +385,11 @@ function tableau(::CHCONS3)
     b = [1 // 6, 2 // 3, 1 // 6]
     c = [0, 1 // 2, 1]
     r = 0
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::CHC3)
-    # Chebyshev quadrature and C(3) satisfied
-    # Note this equals Lobatto IIIA
+
+"Chebyshev quadrature and C(3) satisfied. Note this equals Lobatto IIIA"
+function CHC3()
     A = [
         0 0 0
         5//24 1//3 -1//24
@@ -365,9 +397,10 @@ function tableau(::CHC3)
     ]
     b = [1 // 6, 2 // 3, 1 // 6]
     c = [0, 1 // 2, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::CHC5)
+
+function CHC5()
     A = [
         0 0 0 0 0
         0.059701779686442 0.095031716019062 -0.012132034355964 0.006643368370744 -0.002798220313558
@@ -377,36 +410,40 @@ function tableau(::CHC5)
     ]
     b = [1 // 30, 4 // 15, 2 // 5, 4 // 15, 1 // 30]
     c = [0, 0.146446609406726, 0.500000000000000, 0.853553390593274, 1.000000000000000]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
 
+
 ## ==================Miscellaneous Methods================
-function tableau(::Mid22)
-    # Midpoint 22 method
+
+"Midpoint 22 method"
+function Mid22()
     s = 2
-    r = 1//2
+    r = 1 // 2
     A = [
         0 0
         1//2 0
     ]
     b = [0, 1]
     c = [0, 1 // 2]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::MTE22)
-    # Minimal truncation error 22 method (Heun)
+
+"Minimal truncation error 22 method (Heun)"
+function MTE22()
     s = 2
-    r = 1//2
+    r = 1 // 2
     A = [
         0 0
         2//3 0
     ]
     b = [1 // 4, 3 // 4]
     c = [0, 2 // 3]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::CN22)
-    # Crank-Nicholson
+
+"Crank-Nicholson"
+function CN22()
     s = 2
     r = 2
     A = [
@@ -415,65 +452,73 @@ function tableau(::CN22)
     ]
     b = [1 // 2, 1 // 2]
     c = [0, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::Heun33)
+
+function Heun33()
     s = 3
     r = 0
     A = [0 0 0; 1//3 0 0; 0 2//3 0]
     b = [1 // 4, 0, 3 // 4]
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::RK33C2)
-    # RK3 satisfying C(2) for i=3
+
+"RK3 satisfying C(2) for i=3"
+function RK33C2()
     A = [0 0 0; 2//3 0 0; 1//3 1//3 0]
     b = [1 // 4, 0, 3 // 4]
     c = [0, 2 // 3, 2 // 3]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::RK33P2)
-    # RK3 satisfying the second order condition for the pressure
+
+"RK3 satisfying the second order condition for the pressure"
+function RK33P2()
     A = [0 0 0; 1//3 0 0; -1 2 0]
     b = [0, 3 // 4, 1 // 4]
     c = [0, 1 // 3, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::RK44)
-    # Classical fourth order
+
+"Classical fourth order"
+function RK44()
     s = 4
     r = 0
     A = [0 0 0 0; 1//2 0 0 0; 0 1//2 0 0; 0 0 1 0]
     b = [1 // 6, 1 // 3, 1 // 3, 1 // 6]
     c = sum(eachcol(A))
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::RK44C2)
-    # RK4 satisfying C(2) for i=3
+
+"RK4 satisfying C(2) for i=3"
+function RK44C2()
     A = [0 0 0 0; 1//4 0 0 0; 0 1//2 0 0; 1 -2 2 0]
     b = [1 // 6, 0, 2 // 3, 1 // 6]
     c = [0, 1 // 4, 1 // 2, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::RK44C23)
-    # RK4 satisfying C(2) for i=3 and c2=c3
+
+"RK4 satisfying C(2) for i=3 and c2=c3"
+function RK44C23()
     A = [0 0 0 0; 1//2 0 0 0; 1//4 1//4 0 0; 0 -1 2 0]
     b = [1 // 6, 0, 2 // 3, 1 // 6]
     c = [0, 1 // 2, 1 // 2, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::RK44P2)
-    # RK4 satisfying the second order condition for the pressure (but not third
-    # Order)
+
+"RK4 satisfying the second order condition for the pressure (but not third order)"
+function RK44P2()
     A = [0 0 0 0; 1 0 0 0; 3//8 1//8 0 0; -1//8 -3//8 3//2 0]
     b = [1 // 6, -1 // 18, 2 // 3, 2 // 9]
     c = [0, 1, 1 // 2, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
 
+
 ## ===================DSRK Methods========================
-function tableau(::DSso2)
-    # CBM"s DSRKso2
+
+"CBM's DSRKso2"
+function DSso2()
     s = 2
     isdsrk = 1
     A = [
@@ -486,10 +531,11 @@ function tableau(::DSso2)
     ]
     b = [1, 0]
     c = [1 // 2, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::DSRK2)
-    # CBM"s DSRK2
+
+"CBM's DSRK2"
+function DSRK2()
     s = 2
     A = [
         1//2 -1//2
@@ -501,10 +547,11 @@ function tableau(::DSRK2)
     ]
     b = [1 // 2, 1 // 2]
     c = [0, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::DSRK3)
-    # Zennaro"s DSRK3
+
+"Zennaro's DSRK3"
+function DSRK3()
     s = 3
     isdsrk = 1
     A = [
@@ -519,11 +566,13 @@ function tableau(::DSRK3)
     ]
     b = [1 // 6, 2 // 3, 1 // 6]
     c = [0, 1 // 2, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
 
-## ==================="Non-SSP" Methods of Wong & Sπteri========================
-function tableau(::NSSP21)
+
+## ==================="Non-SSP" Methods of Wong & Spiteri========================
+
+function NSSP21()
     s = 2
     r = 0
     A = [
@@ -532,9 +581,10 @@ function tableau(::NSSP21)
     ]
     b = [0, 1]
     c = [0, 3 // 4]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::NSSP32)
+
+function NSSP32()
     s = 3
     r = 0
     A = [
@@ -544,9 +594,10 @@ function tableau(::NSSP32)
     ]
     b = [1 // 2, 0, 1 // 2]
     c = [0, 1 // 3, 1]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::NSSP33)
+
+function NSSP33()
     s = 3
     r = 0
     A = [
@@ -556,9 +607,10 @@ function tableau(::NSSP33)
     ]
     b = [1 // 4, 0, 3 // 4]
     c = [0, -4 // 9, 2 // 3]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end
-function tableau(::NSSP53)
+
+function NSSP53()
     s = 5
     r = 0
     A = [
@@ -570,5 +622,5 @@ function tableau(::NSSP53)
     ]
     b = [1 // 4, 0, 0, 0, 3 // 4]
     c = [0, 1 // 7, 3 // 16, 1 // 3, 2 // 3]
-    A, b, c, r
+    runge_kutta_method(A, b, c, r)
 end

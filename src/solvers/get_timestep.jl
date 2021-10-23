@@ -3,7 +3,7 @@
 
 Estimate time step based on eigenvalues of operators, using Gershgorin.
 """
-function get_timestep(setup, time_stepper)
+function get_timestep(setup, method)
     @unpack NV, Ω⁻¹= setup.grid
     @unpack Iu_ux, Iu_vx, Iv_uy, Iv_vy = setup.discretization
     @unpack yIu_ux, yIu_vx, yIv_uy, yIv_vy = setup.discretization
@@ -11,7 +11,7 @@ function get_timestep(setup, time_stepper)
     @unpack CFL = setup.time
 
     # For explicit methods only
-    if isexplicit(time_stepper)
+    if isexplicit(method)
         ## Convective part
         Cu =
             Cux * spdiagm(Iu_ux * uₕ + yIu_ux) * Au_ux +
@@ -32,7 +32,7 @@ function get_timestep(setup, time_stepper)
         λ_diff = maximum(sum_diff)
 
         # Based on max. value of stability region
-        Δt_diff = λ_diff_max(time_stepper, setup) / λ_diff
+        Δt_diff = λ_diff_max(method, setup) / λ_diff
 
         # Based on max. value of stability region (not a very good indication
         # For the methods that do not include the imaginary axis)

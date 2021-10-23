@@ -282,8 +282,8 @@ Base.@kwdef mutable struct Time{T}
     t_start::T = 0                                           # Start time
     t_end::T = 1                                             # End time
     Δt::T = (t_end - t_start) / 100                          # Timestep
-    time_stepper::TimeStepper = RK44()                       # Time stepper
-    time_stepper_startup::TimeStepper = RK44()               # Time stepper for methods that are not self starting
+    method::AbstractODEMethod = RK44()                       # ODE method
+    method_startup::AbstractODEMethod = RK44()               # Startup method for methods that are not self starting
     nstartup::Int = 0                                        # Number of velocity fields necessary for start-up = equal to order of method
     isadaptive::Bool = false                                 # Adapt timestep every n_adapt_Δt iterations
     n_adapt_Δt::Int = 1                                      # Number of iterations between timestep adjustment
@@ -319,6 +319,8 @@ Base.@kwdef mutable struct Visualization
     do_rtp::Bool = true                                      # Do real time plotting
     rtp_type::String = "velocity"                            # "velocity", "quiver", "vorticity" or "pressure"
     rtp_n::Int = 10                                          # Number of iterations between real time plots
+    initialize_processor::Function = (args...; kwargs...) -> nothing
+    process!::Function = (args...; kwargs...) -> nothing
 end
 
 # Boundary conditions

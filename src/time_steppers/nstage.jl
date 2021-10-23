@@ -1,6 +1,6 @@
 """
-    nstage(rk_stepper)
+    nstage(rk_method)
 
-Get number of stages of the Runge-Kutta time stepper `rk_stepper`.
+Get number of stages of the Runge-Kutta method.
 """
-nstage(rkm::ExplicitRungeKuttaStepper) = length(tableau(rkm)[2])
+nstage(rkm::AbstractRungeKuttaMethod) = length(rkm.b)

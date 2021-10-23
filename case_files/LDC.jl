@@ -4,8 +4,9 @@
 Setup for Lid-Driven Cavity case (LDC).
 """
 function LDC()
+    T = Float64
     # Construct Setup object, containing substructures with default values
-    setup = Setup{Float64}()
+    setup = Setup{T}()
 
     # Case information
     setup.case.name = "LDC"
@@ -19,7 +20,7 @@ function LDC()
     setup.fluid.d_layer = 1                        # Thickness of layer
 
     # Viscosity model
-    setup.model = LaminarModel()
+    setup.model = LaminarModel{T}()
 
     # Grid parameters
     setup.grid.Nx = 80                             # Number of volumes in the x-direction
@@ -70,8 +71,8 @@ function LDC()
     setup.time.t_start = 0                         # Start time
     setup.time.t_end = 10                          # End time
     setup.time.Δt = 0.01                           # Timestep
-    setup.time.time_stepper = RK44()               # Time stepper
-    setup.time.time_stepper_startup = RK44()       # Startup method for methods that are not self-starting
+    setup.time.method = RK44()               # ODE method
+    setup.time.method_startup = RK44()       # Startup method for methods that are not self-starting
     setup.time.nstartup = 2                        # Number of velocity fields necessary for start-up = equal to order of method
     setup.time.isadaptive = false                  # Adapt timestep every n_adapt_Δt iterations
     setup.time.n_adapt_Δt = 1                      # Number of iterations between timestep adjustment
