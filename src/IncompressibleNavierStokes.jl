@@ -31,7 +31,7 @@ include("problems/is_steady.jl")
 
 # Types
 include("time_steppers/methods.jl")
-include("time_steppers/tableaus.jl")
+include("time_steppers/tableaux.jl")
 include("time_steppers/nstage.jl")
 include("time_steppers/time_stepper_caches.jl")
 include("solvers/pressure/pressure_solvers.jl")
