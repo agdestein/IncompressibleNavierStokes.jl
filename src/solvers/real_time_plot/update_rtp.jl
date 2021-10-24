@@ -1,5 +1,7 @@
 """
     update_rtp!(rtp, setup, V, p, t)
+
+Update real time plot.
 """
 function update_rtp!(rtp, setup, V, p, t)
     @unpack Nx, Ny, Npx, Npy = setup.grid

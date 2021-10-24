@@ -24,7 +24,7 @@ end
 Build associated time stepper from method.
 """
 function TimeStepper(method::M, setup, V₀, p₀) where M
-    @unpack t_start, Δt = setup.time        
+    @unpack t_start, Δt = setup.time
 
     T = typeof(Δt)
 
@@ -38,13 +38,12 @@ function TimeStepper(method::M, setup, V₀, p₀) where M
     Vₙ = copy(V)
     pₙ = copy(p)
     tₙ = t
-
     Δtₙ = Δt
 
     # Temporary variables
     cache = ode_method_cache(method, setup)
     momentum_cache = MomentumCache(setup)
-    
+
     TimeStepper{M, T}(; method, n, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache)
 end
 

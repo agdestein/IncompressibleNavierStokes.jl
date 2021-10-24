@@ -8,6 +8,7 @@ i.e. the corners of pressure volumes, so they cover the entire domain, including
 """
 function create_boundary_conditions!(setup)
     @unpack model = setup
+
     # Get BC type
     bc_type = setup.bc.bc_type()
     for (key, value) ∈ zip(keys(bc_type), bc_type)

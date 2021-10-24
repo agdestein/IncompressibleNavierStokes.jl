@@ -2,20 +2,15 @@
 Construct averaging operators.
 """
 function operator_interpolation!(setup)
-
-    # Boundary conditions
-    bc = setup.bc
-
-    Nx = setup.grid.Nx
-    Ny = setup.grid.Ny
+    @unpack bc = setup
+    @unpack Nx, Ny = setup.grid
 
     # Number of interior points and boundary points
     @unpack Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t = setup.grid
     @unpack Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t = setup.grid
     @unpack hx, hy, hxi, hyi = setup.grid
     @unpack Buvy, Bvux = setup.grid
-
-    order4 = setup.discretization.order4
+    @unpack order4 = setup.discretization
 
     if order4
         β = setup.discretization.β
@@ -402,30 +397,12 @@ function operator_interpolation!(setup)
     end
 
     ## Store in setup structure
-    setup.discretization.Iu_ux = Iu_ux
-    setup.discretization.Iv_uy = Iv_uy
-    setup.discretization.Iu_vx = Iu_vx
-    setup.discretization.Iv_vy = Iv_vy
-
-    setup.discretization.Iu_ux_bc = Iu_ux_bc
-    setup.discretization.Iv_vy_bc = Iv_vy_bc
-
-    setup.discretization.Iv_uy_bc_lr = Iv_uy_bc_lr
-    setup.discretization.Iv_uy_bc_lu = Iv_uy_bc_lu
-    setup.discretization.Iu_vx_bc_lr = Iu_vx_bc_lr
-    setup.discretization.Iu_vx_bc_lu = Iu_vx_bc_lu
-
+    @pack! setup.discretization = Iu_ux, Iv_uy, Iu_vx, Iv_vy
+    @pack! setup.discretization = Iu_ux_bc, Iv_vy_bc
+    @pack! setup.discretization = Iv_uy_bc_lr, Iv_uy_bc_lu, Iu_vx_bc_lr, Iu_vx_bc_lu
     if order4
-        setup.discretization.Iu_ux3 = Iu_ux3
-        setup.discretization.Iv_uy3 = Iv_uy3
-        setup.discretization.Iu_vx3 = Iu_vx3
-        setup.discretization.Iv_vy3 = Iv_vy3
-        setup.discretization.Iu_ux_bc3 = Iu_ux_bc3
-        setup.discretization.Iv_uy_bc_lr3 = Iv_uy_bc_lr3
-        setup.discretization.Iv_uy_bc_lu3 = Iv_uy_bc_lu3
-        setup.discretization.Iu_vx_bc_lr3 = Iu_vx_bc_lr3
-        setup.discretization.Iu_vx_bc_lu3 = Iu_vx_bc_lu3
-        setup.discretization.Iv_vy_bc3 = Iv_vy_bc3
+        @pack! setup.discretization = Iu_ux3, Iv_uy3, Iu_vx3, Iv_vy3
+        @pack! setup.discretization = Iu_ux_bc3, Iv_uy_bc_lr3, Iv_uy_bc_lu3, Iu_vx_bc_lr3, Iu_vx_bc_lu3, Iv_vy_bc3
     end
 
     setup

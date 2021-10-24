@@ -10,7 +10,7 @@ Formulation:
 """
 function step!(stepper::OneLegStepper, Δt)
     @unpack method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper
-    @unpack β = method 
+    @unpack β = method
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver, p_add_solve = setup.solver_settings
     @unpack Ω⁻¹ = setup.grid
@@ -21,7 +21,7 @@ function step!(stepper::OneLegStepper, Δt)
     # Update current solution (does not depend on previous step size)
     stepper.n += 1
     Vₙ₋₁ .= Vₙ
-    pₙ₋₁ .= pₙ 
+    pₙ₋₁ .= pₙ
     Vₙ .= V
     pₙ .= p
     tₙ = t
@@ -67,5 +67,5 @@ function step!(stepper::OneLegStepper, Δt)
     t = tₙ + Δtₙ
     @pack! stepper = t, tₙ, Δtₙ
 
-    stepper 
+    stepper
 end

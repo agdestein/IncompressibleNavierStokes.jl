@@ -6,12 +6,10 @@ Construct postprocessing operators such as vorticity.
 function operator_postprocessing!(setup)
 
     # Boundary conditions
-    bc = setup.bc
-
+    @unpack bc = setup
     @unpack Nx, Ny = setup.grid
     @unpack hx, hy, gx, gy = setup.grid
     @unpack gxi, gyi, gxd, gyd = setup.grid
-
     @unpack order4 = setup.discretization
 
     if order4

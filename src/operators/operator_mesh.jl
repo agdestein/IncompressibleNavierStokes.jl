@@ -1,11 +1,9 @@
 function operator_mesh!(setup)
-    bc = setup.bc
-    order4 = setup.discretization.order4
-    α = setup.discretization.α
+    @unpack bc = setup
+    @unpack order4, α = setup.discretization
 
-    ## Pressure volumes
+    # Pressure volumes
     @unpack Nx, Ny, x, y, hx, hy, gx, gy, xp, yp = setup.grid
-    # @unpack gx, gy = setup.grid
 
     # Number of pressure points
     Npx = Nx
@@ -380,104 +378,28 @@ function operator_mesh!(setup)
     indp = NV+1:NV+Np
 
     ## Store quantities in the structure
-    setup.grid.Npx = Npx
-    setup.grid.Npy = Npy
-    setup.grid.Np = Np
-
-    setup.grid.Nux_in = Nux_in
-    setup.grid.Nux_b = Nux_b
-    setup.grid.Nux_t = Nux_t
-
-    setup.grid.Nuy_in = Nuy_in
-    setup.grid.Nuy_b = Nuy_b
-    setup.grid.Nuy_t = Nuy_t
-
-    setup.grid.Nvx_in = Nvx_in
-    setup.grid.Nvx_b = Nvx_b
-    setup.grid.Nvx_t = Nvx_t
-
-    setup.grid.Nvy_in = Nvy_in
-    setup.grid.Nvy_b = Nvy_b
-    setup.grid.Nvy_t = Nvy_t
-
-    setup.grid.Nu = Nu
-    setup.grid.Nv = Nv
-    setup.grid.NV = NV
-    setup.grid.Ntot = Ntot
-
-    setup.grid.N1 = N1
-    setup.grid.N2 = N2
-    setup.grid.N3 = N3
-    setup.grid.N4 = N4
-
-    setup.grid.Ωp = Ωp
-    setup.grid.Ωp⁻¹ = Ωp⁻¹
-    setup.grid.Ω = Ω
-    setup.grid.Ωu = Ωu
-    setup.grid.Ωv = Ωv
-    setup.grid.Ω⁻¹ = Ω⁻¹
-    setup.grid.Ωu⁻¹ = Ωu⁻¹
-    setup.grid.Ωv⁻¹ = Ωv⁻¹
-    setup.grid.Ωux = Ωux
-    setup.grid.Ωvx = Ωvx
-    setup.grid.Ωuy = Ωuy
-    setup.grid.Ωvy = Ωvy
-    setup.grid.Ωvort = Ωvort
-
-    setup.grid.hxi = hxi
-    setup.grid.hyi = hyi
-    setup.grid.hxd = hxd
-    setup.grid.hyd = hyd
-
-    setup.grid.gxi = gxi
-    setup.grid.gyi = gyi
-    setup.grid.gxd = gxd
-    setup.grid.gyd = gyd
-
-    setup.grid.Buvy = Buvy
-    setup.grid.Bvux = Bvux
-    setup.grid.Bkux = Bkux
-    setup.grid.Bkvy = Bkvy
-
-    setup.grid.xin = xin
-    setup.grid.yin = yin
-
-    setup.grid.xu = xu
-    setup.grid.yu = yu
-    setup.grid.xv = xv
-    setup.grid.yv = yv
-    setup.grid.xpp = xpp
-    setup.grid.ypp = ypp
-
-    setup.grid.indu = indu
-    setup.grid.indv = indv
-    setup.grid.indV = indV
-    setup.grid.indp = indp
+    @pack! setup.grid = Npx, Npy, Np
+    @pack! setup.grid = Nux_in, Nux_b, Nux_t
+    @pack! setup.grid = Nuy_in, Nuy_b, Nuy_t
+    @pack! setup.grid = Nvx_in, Nvx_b, Nvx_t
+    @pack! setup.grid = Nvy_in, Nvy_b, Nvy_t
+    @pack! setup.grid = Nu, Nv, NV, Ntot
+    @pack! setup.grid = N1, N2, N3, N4
+    @pack! setup.grid = Ωp, Ωp⁻¹, Ω, Ωu
+    @pack! setup.grid = Ωv, Ω⁻¹, Ωu⁻¹, Ωv⁻¹
+    @pack! setup.grid = Ωux, Ωvx, Ωuy, Ωvy, Ωvort
+    @pack! setup.grid = hxi, hyi, hxd, hyd
+    @pack! setup.grid = gxi, gyi, gxd, gyd
+    @pack! setup.grid = Buvy, Bvux, Bkux, Bkvy
+    @pack! setup.grid.xin = xin, yin
+    @pack! setup.grid = xu, yu, xv
+    @pack! setup.grid = yv, xpp, ypp
+    @pack! setup.grid = indu, indv, indV, indp
 
     if order4
-        setup.grid.hx3 = hx3
-        setup.grid.hy3 = hy3
-        setup.grid.hxi3 = hxi3
-        setup.grid.hyi3 = hyi3
-        setup.grid.gxi3 = gxi3
-        setup.grid.gyi3 = gyi3
-        setup.grid.hxd13 = hxd13
-        setup.grid.hxd3 = hxd3
-        setup.grid.hyd13 = hyd13
-        setup.grid.hyd3 = hyd3
-        setup.grid.gxd13 = gxd13
-        setup.grid.gxd3 = gxd3
-        setup.grid.gyd13 = gyd13
-        setup.grid.gyd3 = gyd3
-        setup.grid.Ωux1 = Ωux1
-        setup.grid.Ωux3 = Ωux3
-        setup.grid.Ωuy1 = Ωuy1
-        setup.grid.Ωuy3 = Ωuy3
-        setup.grid.Ωvx1 = Ωvx1
-        setup.grid.Ωvx3 = Ωvx3
-        setup.grid.Ωvy1 = Ωvy1
-        setup.grid.Ωvy3 = Ωvy3
-        setup.grid.Ωvort3 = Ωvort3
+        @pack! setup.grid = hx3, hy3, hxi3, hyi3, gxi3, gyi3
+        @pack! setup.grid = hxd13, hxd3, hyd13, hyd3, gxd13, gxd3, gyd13, gyd3
+        @pack! setup.grid = Ωux1, Ωux3, Ωuy1, Ωuy3, Ωvx1, Ωvx3, Ωvy1, Ωvy3, Ωvort3
     end
 
     # Plot the grid: velocity points and pressure points

@@ -7,7 +7,7 @@ function change_time_stepper end
 
 function change_time_stepper(stepper, method)
     @unpack n, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup = stepper
-    new = TimeStepper(method, setup, V, p) 
-    @pack! new = n, V, p, t, Vₙ, pₙ, tₙ, Δtₙ
-    new
+    new_stepper = TimeStepper(method, setup, V, p)
+    @pack! new_stepper = n, V, p, t, Vₙ, pₙ, tₙ, Δtₙ
+    new_stepper
 end

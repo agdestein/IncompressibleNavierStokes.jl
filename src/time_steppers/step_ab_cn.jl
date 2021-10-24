@@ -1,5 +1,5 @@
 """
-    step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt) 
+    step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
 
 Perform one time step with Adams-Bashforth for convection and Crank-Nicolson for diffusion.
 
@@ -44,7 +44,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     # For the first time step, this might be necessary
     convection!(cₙ, nothing, Vₙ, Vₙ, tₙ, setup, momentum_cache)
 
-    # Advance one step 
+    # Advance one step
     stepper.n += 1
     Vₙ .= V
     pₙ .= p

@@ -8,8 +8,7 @@ function step_erk_rom!(stepper::ExplicitRungeKuttaStepper, Δt)
     # Number of unknowns (modes) in ROM
     @unpack M = setup.rom
 
-    @unpack V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper 
-    @unpack V, p, Vₙ, pₙ, Vₙ₋₁, pₙ₋₁, tₙ, Δtₙ = stepper
+    @unpack V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper
     @unpack kV, kp, Vtemp, Vtemp2, F, ∇F, f, A, b, c = cache
 
     # Update current solution (does not depend on previous step size)
@@ -69,7 +68,7 @@ function step_erk_rom!(stepper::ExplicitRungeKuttaStepper, Δt)
     end
 
     t = tₙ + Δtₙ
-    @pack! stepper = t, tₙ, Δtₙ   
+    @pack! stepper = t, tₙ, Δtₙ
 
     stepper
 end

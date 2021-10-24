@@ -7,15 +7,14 @@ Unsteady Dirichlet boundary points are not part of solution vector but
 are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
 """
 function step!(stepper::ImplicitRungeKuttaStepper, Δt)
-    @unpack V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache =
-        stepper
+    @unpack V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper
     @unpack Nu, Nv, NV, Np, Ω, Ω⁻¹ = setup.grid
     @unpack G, M = setup.discretization
     @unpack pressure_solver, nonlinear_maxit, nonlinear_acc, nonlinear_Newton, p_add_solve =
         setup.solver_settings
     @unpack Vtotₙ, ptotₙ, Vⱼ, pⱼ, Qⱼ, Fⱼ, ∇Fⱼ, f, Δp = cache
     @unpack A, b, c, s, Is, Ω_sNV, A_ext, b_ext, c_ext = cache
-   
+
     # Update current solution (does not depend on previous step size)
     stepper.n += 1
     Vₙ .= V
@@ -34,10 +33,6 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
 
     # Finite volumes
     Ωtot = kron(ones(s), Ω)
-
-    # Boundary condition for divergence operator
-    if setup.bc.bc_unsteady
-    end
 
     # Make the velocity field uᵢ₊₁ at tᵢ₊₁ divergence-free (BC at tᵢ₊₁ needed)
     if setup.bc.bc_unsteady
@@ -61,8 +56,8 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     iter = 0
 
     # Index in global solution vector
-    ind_Vⱼ = 1:(NV * s)
-    ind_pⱼ = (NV * s + 1):((NV + Np) * s)
+    ind_Vⱼ = 1:(NV*s)
+    ind_pⱼ = (NV*s+1):((NV+Np)*s)
 
     # Zero block in iteration matrix
     Z2 = spzeros(s * Np, s * Np)
@@ -170,7 +165,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
             pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
         else
             # Standard method; take last pressure
-            p .= pⱼ[(end - Np + 1):end]
+            p .= pⱼ[(end-Np+1):end]
         end
     else
         # For steady bc we do an additional pressure solve
@@ -178,11 +173,11 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
         # pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
 
         # Standard method; take pressure of last stage
-        p = pⱼ[(end - Np + 1):end]
+        p = pⱼ[(end-Np+1):end]
     end
 
     t = tₙ + Δtₙ
-    @pack! stepper = t, tₙ, Δtₙ, iter 
+    @pack! stepper = t, tₙ, Δtₙ, iter
 
     stepper
 end
