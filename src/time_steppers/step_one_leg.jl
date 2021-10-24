@@ -19,6 +19,7 @@ function step!(stepper::OneLegStepper, Δt)
     Δt ≈ Δtₙ || error("One-leg-β-method requires constant time step")
 
     # Update current solution (does not depend on previous step size)
+    stepper.n += 1
     Vₙ₋₁ .= Vₙ
     pₙ₋₁ .= pₙ 
     Vₙ .= V

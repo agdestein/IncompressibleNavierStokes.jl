@@ -17,6 +17,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     @unpack A, b, c, s, Is, Ω_sNV, A_ext, b_ext, c_ext = cache
    
     # Update current solution (does not depend on previous step size)
+    stepper.n += 1
     Vₙ .= V
     pₙ .= p
     tₙ = t
