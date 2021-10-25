@@ -1,8 +1,8 @@
-
 """
     operator_turbulent_diffusion!(setup)
 
-Average (turbulent) viscosity to cell faces: from `ν` at `xp`, `yp` to `ν` at `ux`, `uy`, `vx`, `vy` locations
+Average (turbulent) viscosity to cell faces: from `ν` at `xp`, `yp` to `ν` at `ux`, `uy`,
+`vx`, `vy` locations.
 
 See also `ke_viscosity.jl`.
 """
@@ -27,7 +27,7 @@ function operator_turbulent_diffusion!(setup)
 
     # Extend to 2D
     Aν_ux = kron(sparse(I, Nuy_in, Nuy_in), A1D * Aν_ux_bc.B1D)
-    Aν_ux_bc.Bbc = kron(sparse(I, Nuy_in, Nuy_in), A1D * Aν_ux_bc.Btemp)
+    Aν_ux_bc = (;Aν_ux_bc..., Bbc = kron(sparse(I, Nuy_in, Nuy_in), A1D * Aν_ux_bc.Btemp))
 
 
     ## Nu to uy positions
@@ -57,9 +57,8 @@ function operator_turbulent_diffusion!(setup)
 
     Aν_uy = A2Dy * A2Dx
 
-    Aν_uy_bc_lr.B2D = A2Dy * kron(sparse(I, Npy + 2, Npy + 2), A1D * Aν_uy_bc_lr.Btemp)
-
-    Aν_uy_bc_lu.B2D = A2Dy * A2D * kron(Aν_uy_bc_lu.Btemp, sparse(I, Npx, Npx))
+    Aν_uy_bc_lr =(;Aν_uy_bc_lr..., B2D = A2Dy * kron(sparse(I, Npy + 2, Npy + 2), A1D * Aν_uy_bc_lr.Btemp))
+    Aν_uy_bc_lu = (; Aν_uy_bc_lu..., B2D = A2Dy * A2D * kron(Aν_uy_bc_lu.Btemp, sparse(I, Npx, Npx)))
 
     ## Nu to vx positions
     diag1 = weight * ones(Npy + 1)
@@ -89,8 +88,8 @@ function operator_turbulent_diffusion!(setup)
 
     Aν_vx = A2Dx * A2Dy
 
-    Aν_vx_bc_lu.B2D = A2Dx * kron(A1D * Aν_vx_bc_lu.Btemp, sparse(I, Npx + 2, Npx + 2))
-    Aν_vx_bc_lr.B2D = A2Dx * A2D * kron(sparse(I, Npy, Npy), Aν_vx_bc_lr.Btemp)
+    Aν_vx_bc_lu = (;Aν_vx_bc_lu..., B2D = A2Dx * kron(A1D * Aν_vx_bc_lu.Btemp, sparse(I, Npx + 2, Npx + 2)))
+    Aν_vx_bc_lr = (;Aν_vx_bc_lr..., B2D = A2Dx * A2D * kron(sparse(I, Npy, Npy), Aν_vx_bc_lr.Btemp))
 
 
     ## Nu to vy positions
@@ -103,7 +102,7 @@ function operator_turbulent_diffusion!(setup)
 
     # Extend to 2D
     Aν_vy = kron(A1D * Aν_vy_bc.B1D, sparse(I, Nvx_in, Nvx_in))
-    Aν_vy_bc.Bbc = kron(A1D * Aν_vy_bc.Btemp, sparse(I, Nvx_in, Nvx_in))
+    Aν_vy_bc = (; Aν_vy_bc..., Bbc = kron(A1D * Aν_vy_bc.Btemp, sparse(I, Nvx_in, Nvx_in)))
 
 
     # So ν at vy is given by:
@@ -129,7 +128,7 @@ function operator_turbulent_diffusion!(setup)
         bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
 
     Cux_k = kron(sparse(I, Npy, Npy), C1D * Cux_k_bc.B1D)
-    Cux_k_bc.Bbc = kron(sparse(I, Npy, Npy), C1D * Cux_k_bc.Btemp)
+    Cux_k_bc = (; Cux_k_bc..., Bbc = kron(sparse(I, Npy, Npy), C1D * Cux_k_bc.Btemp))
 
     # Cux_k*uₕ+yCux_k;
 
@@ -146,17 +145,17 @@ function operator_turbulent_diffusion!(setup)
         bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
 
     Auy_k = kron(sparse(I, Npy, Npy), A1D * Auy_k_bc.B1D)
-    Auy_k_bc.Bbc = kron(sparse(I, Npy, Npy), A1D * Auy_k_bc.Btemp)
+    Auy_k_bc = (; Auy_k_bc..., Bbc = kron(sparse(I, Npy, Npy), A1D * Auy_k_bc.Btemp))
 
     # Take differences
-    gydnew = gyd[1:end-1] + gyd[2:end] # Differencing over 2*deltay
+    gydnew = gyd[1:end-1] + gyd[2:end] # Differencing over 2*Δy
     diag2 = 1 ./ gydnew
     C1D = spdiagm(Npy, Npy + 2, 0 => -diag2, 2 => diag2)
 
     Cuy_k_bc = bc_general_stag(Npy + 2, Npy, 2, bc.u.y[1], bc.u.y[2], hy[1], hy[end])
 
     Cuy_k = kron(C1D * Cuy_k_bc.B1D, sparse(I, Npx, Npx))
-    Cuy_k_bc.Bbc = kron(C1D * Cuy_k_bc.Btemp, sparse(I, Npx, Npx))
+    Cuy_k_bc = (; Cuy_k_bc..., Bbc = kron(C1D * Cuy_k_bc.Btemp, sparse(I, Npx, Npx)))
 
     ## Dv/dx
 
@@ -169,10 +168,10 @@ function operator_turbulent_diffusion!(setup)
     Avx_k_bc =
         bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
     Avx_k = kron(A1D * Avx_k_bc.B1D, sparse(I, Npx, Npx))
-    Avx_k_bc.Bbc = kron(A1D * Avx_k_bc.Btemp, sparse(I, Npx, Npx))
+    Avx_k_bc = (; Avx_k_bc..., Bbc = kron(A1D * Avx_k_bc.Btemp, sparse(I, Npx, Npx)))
 
     # Take differences
-    gxdnew = gxd[1:end-1] + gxd[2:end] # Differencing over 2*deltax
+    gxdnew = gxd[1:end-1] + gxd[2:end] # Differencing over 2*Δx
     diag2 = 1 ./ gxdnew
     C1D = spdiagm(Npx, Npx + 2, 0 => -diag2, 2 => diag2)
 
@@ -180,7 +179,7 @@ function operator_turbulent_diffusion!(setup)
         bc_general_stag(Npx + 2, Npx, Npx + 2 - Npx, bc.v.x[1], bc.v.x[2], hx[1], hx[end])
 
     Cvx_k = kron(sparse(I, Npy, Npy), C1D * Cvx_k_bc.B1D)
-    Cvx_k_bc.Bbc = kron(sparse(I, Npy, Npy), C1D * Cvx_k_bc.Btemp)
+    Cvx_k_bc = (; Cvx_k_bc..., Bbc = kron(sparse(I, Npy, Npy), C1D * Cvx_k_bc.Btemp))
 
     ## Dv/dy
 
@@ -193,7 +192,7 @@ function operator_turbulent_diffusion!(setup)
         bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
 
     Cvy_k = kron(C1D * Cvy_k_bc.B1D, sparse(I, Npx, Npx))
-    Cvy_k_bc.Bbc = kron(C1D * Cvy_k_bc.Btemp, sparse(I, Npx, Npx))
+    Cvy_k_bc = (;Cvy_k_bc..., Bbc = kron(C1D * Cvy_k_bc.Btemp, sparse(I, Npx, Npx)))
 
 
     ## Store in struct

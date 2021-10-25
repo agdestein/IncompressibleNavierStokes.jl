@@ -2,27 +2,11 @@
 Construct averaging operators.
 """
 function operator_averaging!(setup)
-    # Boundary conditions
-    bc = setup.bc
-
-    # Number of interior points and boundary points
-    Nux_in = setup.grid.Nux_in
-    Nux_b = setup.grid.Nux_b
-    Nux_t = setup.grid.Nux_t
-    Nuy_in = setup.grid.Nuy_in
-    Nuy_b = setup.grid.Nuy_b
-    Nuy_t = setup.grid.Nuy_t
-    Nvx_in = setup.grid.Nvx_in
-    Nvx_b = setup.grid.Nvx_b
-    Nvx_t = setup.grid.Nvx_t
-    Nvy_in = setup.grid.Nvy_in
-    Nvy_b = setup.grid.Nvy_b
-    Nvy_t = setup.grid.Nvy_t
-
-    hx = setup.grid.hx
-    hy = setup.grid.hy
-
-    order4 = setup.discretization.order4
+    @unpack bc = setup
+    @unpack Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t = setup.grid
+    @unpack Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t = setup.grid
+    @unpack hx, hy = setup.grid
+    @unpack order4 = setup.discretization
 
     # Averaging weight:
     weight = 1 / 2
@@ -141,8 +125,15 @@ function operator_averaging!(setup)
         A1D3 = spdiagm(Nvy_in + 3, Nvy_t + 4, 0 => diag1, 3 => diag1)
 
         # Boundary conditions
-        Av_vy_bc3 =
-            bc_av3(Nvy_t + 4, Nvy_in, Nvy_t + 4 - Nvy_in, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
+        Av_vy_bc3 = bc_av3(
+            Nvy_t + 4,
+            Nvy_in,
+            Nvy_t + 4 - Nvy_in,
+            bc.v.y[1],
+            bc.v.y[2],
+            hy[1],
+            hy[end],
+        )
         # Extend to 2D
         Av_vy3 = kron(A1D3 * Av_vy_bc3.B1D, sparse(I, Nvx_in, Nvx_in))
         Av_vy_bc3 =
@@ -150,23 +141,11 @@ function operator_averaging!(setup)
     end
 
     ## Store in setup structure
-    setup.discretization.Au_ux = Au_ux
-    setup.discretization.Au_uy = Au_uy
-    setup.discretization.Av_vx = Av_vx
-    setup.discretization.Av_vy = Av_vy
-    setup.discretization.Au_ux_bc = Au_ux_bc
-    setup.discretization.Au_uy_bc = Au_uy_bc
-    setup.discretization.Av_vx_bc = Av_vx_bc
-    setup.discretization.Av_vy_bc = Av_vy_bc
+    @pack! setup.discretization =
+        Au_ux, Au_uy, Av_vx, Av_vy, Au_ux_bc, Au_uy_bc, Av_vx_bc, Av_vy_bc
 
     if order4
-        setup.discretization.Au_ux3 = Au_ux3
-        setup.discretization.Au_uy3 = Au_uy3
-        setup.discretization.Av_vx3 = Av_vx3
-        setup.discretization.Av_vy3 = Av_vy3
-        setup.discretization.Au_ux_bc3 = Au_ux_bc3
-        setup.discretization.Au_uy_bc3 = Au_uy_bc3
-        setup.discretization.Av_vx_bc3 = Av_vx_bc3
-        setup.discretization.Av_vy_bc3 = Av_vy_bc3
+        setup.discretization =
+            Au_ux3, Au_uy3, Av_vx3, Av_vy3, Au_ux_bc3, Au_uy_bc3, Av_vx_bc3, Av_vy_bc3
     end
 end

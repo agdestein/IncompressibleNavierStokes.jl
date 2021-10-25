@@ -28,7 +28,7 @@ function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
             strain_tensor(V, t, setup; getJacobian)
 
         # Turbulent viscosity at all pressure points
-        ν_t = turbulent_viscosity(model, S_abs)
+        ν_t = turbulent_viscosity(model, setup, S_abs)
 
         # To compute the diffusion, we need ν_t at ux, uy, vx and vy locations
         # This means we have to reverse the process of strain_tensor.m: go
@@ -60,10 +60,10 @@ function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
             if model isa SmagorinskyModel
                 # Smagorinsky
                 C_S = model.Cs
-                filter_length = deltax
+                filter_length = Δx
                 K = C_S^2 * filter_length^2
             elseif model isa QRModel
-                C_d = deltax^2 / 8
+                C_d = Δx^2 / 8
                 K = C_d * 1//2 * (1 - α / C_d)^2
             elseif model isa MixingLengthModel
                 # Mixing-length

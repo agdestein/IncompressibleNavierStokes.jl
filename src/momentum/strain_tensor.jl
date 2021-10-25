@@ -124,8 +124,8 @@ function strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
             Jacv =
                 Sabs_inv * (4 * spdiagm(S12_p) * Cvx_k * Avx_k + 4 * spdiagm(S22_p) * Cvy_k)
         else
-            Jacu = sparse(Np, Nu)
-            Jacv = sparse(Np, Nv)
+            Jacu = spzeros(Np, Nu)
+            Jacv = spzeros(Np, Nv)
         end
     end
 

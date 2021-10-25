@@ -234,15 +234,15 @@ function TG()
         # Uniform mesh size x-direction
         @unpack Nx, sx, x1, x2 = setup.grid
         L_x = x2 - x1
-        deltax = L_x / Nx
+        Δx = L_x / Nx
 
         # Uniform mesh size y-direction
         @unpack Ny, sy, y1, y2 = setup.grid
         L_y = y2 - y1
-        deltay = L_y / Ny
+        Δy = L_y / Ny
 
-        x, _ = nonuniform_grid(deltax, x1, x2, sx)
-        y, _ = nonuniform_grid(deltay, y1, y2, sy)
+        x, _ = nonuniform_grid(Δx, x1, x2, sx)
+        y, _ = nonuniform_grid(Δy, y1, y2, sy)
 
         x, y
     end

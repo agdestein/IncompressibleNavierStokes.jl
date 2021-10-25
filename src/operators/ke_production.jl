@@ -37,7 +37,7 @@ function ke_production!(setup)
     yAuy_k = kron(sparse(I, Ny, Ny), A1D * Btemp) * ybc
 
     # Take differences
-    gydnew = gyd[1:end-1] + gyd[2:end] # Differencing over 2*deltay
+    gydnew = gyd[1:end-1] + gyd[2:end] # Differencing over 2*Δy
     diag2 = 1 ./ gydnew
     C1D = spdiagm(Npy, Npy + 2, 0 => -diag2, 1 => diag2)
 
@@ -70,7 +70,7 @@ function ke_production!(setup)
     yAvx_k = kron(A1D * Btemp, sparse(I, Nx, Nx)) * ybc
 
     # Take differences
-    gxdnew = gxd[1:end-1] + gxd[2:end] # Differencing over 2*deltax
+    gxdnew = gxd[1:end-1] + gxd[2:end] # Differencing over 2*Δx
     diag2 = 1 ./ gxdnew
     C1D = spdiagm(Npx, Npx + 2, 0 => -diag2, 1 => diag2)
 

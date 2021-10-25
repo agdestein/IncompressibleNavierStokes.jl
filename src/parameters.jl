@@ -26,8 +26,8 @@ Base.@kwdef mutable struct Grid{T}
     x2::T = 1                                # Right
     y1::T = 0                                # Bottom
     y2::T = 1                                # Top
-    deltax::T = 0.1                          # Mesh sizee in x-direction
-    deltay::T = 0.1                          # Mesh sizee in y-direction
+    Δx::T = 0.1                              # Mesh sizee in x-direction
+    Δy::T = 0.1                              # Mesh sizee in y-direction
     sx::T = 1                                # Stretch factor in x-direction
     sy::T = 1                                # Stretch factor in y-direction
     create_mesh::Function = () -> error("mesh not implemented")
@@ -215,12 +215,18 @@ Base.@kwdef mutable struct Discretization{T}
     ySv_vy::Vector{T} = T[] # TODO: Vectors or matrices?
     ySv_uy::Vector{T} = T[] # TODO: Vectors or matrices?
 
-    Aν_vy_bc::NamedTuple = (;)
+    Cux_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Cuy_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Cvx_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Cvy_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
     Cux_k_bc::NamedTuple = (;)
     Cuy_k_bc::NamedTuple = (;)
     Cvx_k_bc::NamedTuple = (;)
     Cvy_k_bc::NamedTuple = (;)
+
+    Auy_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Avx_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
     Auy_k_bc::NamedTuple = (;)
     Avx_k_bc::NamedTuple = (;)
@@ -236,6 +242,24 @@ Base.@kwdef mutable struct Discretization{T}
     Aν_uy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Aν_vx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Aν_vy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aν_ux_bc::NamedTuple = (;)
+    Aν_vy_bc::NamedTuple = (;)
+    Aν_uy_bc_lr::NamedTuple = (;)
+    Aν_uy_bc_lu::NamedTuple = (;)
+    Aν_vx_bc_lr::NamedTuple = (;)
+    Aν_vx_bc_lu::NamedTuple = (;)
+
+    yAν_ux::Vector{T} = T[]
+    yAν_uy::Vector{T} = T[]
+    yAν_vx::Vector{T} = T[]
+    yAν_vy::Vector{T} = T[]
+    
+    yCux_k::Vector{T} = T[]
+    yCuy_k::Vector{T} = T[]
+    yCvx_k::Vector{T} = T[]
+    yCvy_k::Vector{T} = T[]
+    yAuy_k::Vector{T} = T[]
+    yAvx_k::Vector{T} = T[]
 end
 
 # Forcing parameters

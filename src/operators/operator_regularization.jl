@@ -3,7 +3,7 @@ function operator_regularization!(setup)
     # TODO: Identify correct references
     @unpack indu, indv = setup.grid
     @unpack Ω, Dux, Duy, Dvx, Dvy, Su_ux, Su_uy, Sv_vx, Sv_vy, ySu_ux, ySu_uy, ySv_vx, ySv_vy = setup.discretization
-    α = 1 / 16 * deltax^2
+    α = 1 / 16 * Δx^2
 
     Ωu⁻¹ = 1 ./ Ω[indu]
     Ωv⁻¹ = 1 ./ Ω[indv]
