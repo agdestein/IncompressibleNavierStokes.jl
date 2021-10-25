@@ -23,6 +23,10 @@ function BFS()
 
     # Viscosity model
     model = LaminarModel{T}()
+    # model = KEpsilonModel{T}()
+    # model = MixingLengthModel{T}()
+    # model = SmagorinskyModel{T}()
+    # model = QRModel{T}()
 
     # Grid parameters
     Nx = 400                           # Number of volumes in the x-direction
@@ -61,13 +65,17 @@ function BFS()
     t_snapshots = 0                     # Snapshots
     Δt_snapshots = false
     mom_cons = false                    # Momentum conserving SVD
-    rom_bc = 0                          # 0: homogeneous (no-slip = periodic) 1: non-homogeneous = time-independent 2: non-homogeneous = time-dependent
-    weighted_norm = true                # Use weighted norm (using finite volumes as weights)
-    pressure_recovery = false           # False: no pressure computation, true: compute pressure with PPE-ROM
-    pressure_precompute = 0             # In case of pressure_recovery: compute RHS Poisson equation based on FOM (0) or ROM (1)
+    # ROM boundary constitions:
+    # 0: homogeneous (no-slip = periodic)
+    # 1: non-homogeneous = time-independent
+    # 2: non-homogeneous = time-dependent
+    rom_bc = 0                          
+    weighted_norm = true                # Using finite volumes as weights
+    pressure_recovery = false           # Compute pressure with PPE-ROM
+    pressure_precompute = 0             # Recover pressure with FOM (0) or ROM (1)
     subtract_pressure_mean = false      # Subtract pressure mean from snapshots
-    process_iteration_FOM = true        # Compute divergence = residuals = kinetic energy etc. on FOM level
-    basis_type = "default"              # "default" (code chooses), "svd", "direct", "snapshot"
+    process_iteration_FOM = true        # FOM divergence, residuals, and kinetic energy
+    basis_type = "default"              # "default", "svd", "direct", "snapshot"
     rom = ROM(;
         use_rom,
         rom_type,
@@ -151,7 +159,8 @@ function BFS()
     visualization = Visualization(; plotgrid, do_rtp, rtp_type, rtp_n)
 
     function initialize_processor(stepper)
-        @unpack V, p, t, setup = stepper
+        @unpack V, p, t, setup, cache, momentum_cache = stepper
+        @unpack F = cache
         if setup.visualization.do_rtp
             rtp = initialize_rtp(setup, V, p, t)
         else
@@ -171,8 +180,10 @@ function BFS()
     end
 
     function process!(processor, stepper)
-
+        @unpack V, p, t, setup, cache, momentum_cache = stepper
+        @unpack F = cache
         @unpack do_rtp, rtp_n = setup.visualization
+        @unpack rtp = processor
         
         # Calculate mass, momentum and energy
         # maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
@@ -188,11 +199,12 @@ function BFS()
         println("n = $(stepper.n), t = $t, maxres = $maxres")
         # println("t = $t")
 
-        if do_rtp && mod(n, rtp_n) == 0
-            @unpack setup, V, p, t = stepper
+        if do_rtp && mod(stepper.n, rtp_n) == 0
             update_rtp!(rtp, setup, V, p, t)
         end
     end
+
+    @pack! visualization = initialize_processor, process!
 
     """
         bc_type()

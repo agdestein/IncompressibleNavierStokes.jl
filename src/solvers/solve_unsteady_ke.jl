@@ -3,4 +3,4 @@
 
 Solve ke.
 """
-function solve_ubsteady_ke!(solution, setup) end
+function solve_unsteady_ke!(solution, setup) end

@@ -8,8 +8,9 @@ abstract type AbstractODEMethod{T} end
 """
     AdamsBashforthCrankNicolsonMethod(; α₁ = 3 // 2, α₂ = -1 // 2, θ = 1 // 2)
 
-Adams-Bashforth for velocity (parameters `α₁` and `α₂`) and Crank-Nicolson for
-pressure (with implicitness `θ`).
+IMEX AB-CN: Adams-Bashforth for explicit convection (parameters `α₁` and `α₂`) and
+Crank-Nicolson for implicit diffusion (implicitness `θ`).
+The method is second order for `θ = 1/2`.
 """
 Base.@kwdef struct AdamsBashforthCrankNicolsonMethod{T} <: AbstractODEMethod{T}
     α₁::T = 3 // 2
@@ -20,7 +21,7 @@ end
 """
     OneLegMethod(β = 1 // 2)
 
-One-leg β-method.
+Explicit one-leg β-method.
 """
 Base.@kwdef struct OneLegMethod{T} <: AbstractODEMethod{T}
     β::T = 1 // 2

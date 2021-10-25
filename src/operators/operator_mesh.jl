@@ -391,7 +391,7 @@ function operator_mesh!(setup)
     @pack! setup.grid = hxi, hyi, hxd, hyd
     @pack! setup.grid = gxi, gyi, gxd, gyd
     @pack! setup.grid = Buvy, Bvux, Bkux, Bkvy
-    @pack! setup.grid.xin = xin, yin
+    @pack! setup.grid = xin, yin
     @pack! setup.grid = xu, yu, xv
     @pack! setup.grid = yv, xpp, ypp
     @pack! setup.grid = indu, indv, indV, indp
