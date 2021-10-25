@@ -9,8 +9,8 @@ function get_vorticity(V, t, setup)
     @unpack Wv_vx, Wu_uy = setup.discretization
     Wv_vx, Wu_uy
 
-    Nωx = bc.u.left == :periodic ? Nx + 1 : Nx - 1
-    Nωy = bc.v.low == :periodic ? Ny + 1 : Ny - 1
+    Nωx = bc.u.x[1] == :periodic ? Nx + 1 : Nx - 1
+    Nωy = bc.v.y[1] == :periodic ? Ny + 1 : Ny - 1
     ω = zeros(Nωx, Nωy)
 
     vorticity!(ω, V, t, setup)
@@ -30,16 +30,16 @@ function vorticity!(ω, V, t, setup)
     vₕ = @view V[indv]
     ω_flat = reshape(ω, length(ω))
 
-    if setup.bc.u.left == :periodic && setup.bc.v.low == :periodic
+    if setup.bc.u.x[1] == :periodic && setup.bc.v.y[1] == :periodic
         uₕ_in = uₕ
         vₕ_in = vₕ
     else
         # Velocity at inner points
         diagpos = 0
-        if setup.bc.u.left == :pressure
+        if setup.bc.u.x[1] == :pressure
             diagpos = 1
         end
-        if setup.bc.u.right == :periodic && setup.bc.u.left == :periodic
+        if setup.bc.u.x[2] == :periodic && setup.bc.u.x[1] == :periodic
             # Like pressure left
             diagpos = 1
         end
@@ -50,10 +50,10 @@ function vorticity!(ω, V, t, setup)
         uₕ_in = B2D * uₕ
 
         diagpos = 0
-        if setup.bc.v.low == :pressure
+        if setup.bc.v.y[1] == :pressure
             diagpos = 1
         end
-        if setup.bc.v.low == :periodic && setup.bc.v.up == :periodic
+        if setup.bc.v.y[1] == :periodic && setup.bc.v.y[2] == :periodic
             # Like pressure low
             diagpos = 1
         end

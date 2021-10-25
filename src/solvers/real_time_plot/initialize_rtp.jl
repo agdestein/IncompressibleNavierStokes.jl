@@ -24,12 +24,12 @@ function initialize_rtp(setup, V, p, t)
         vel = Node(qp)
         ax, hm = contourf(fig[1, 1], xp, yp, vel)
     elseif rtp_type == "vorticity"
-        if bc.u.left == :periodic
+        if bc.u.x[1] == :periodic
             xω = x
         else
             xω = x[2:end-1]
         end
-        if bc.v.low == :periodic
+        if bc.v.y[1] == :periodic
             yω = y
         else
             yω = y[2:end-1]
@@ -38,12 +38,12 @@ function initialize_rtp(setup, V, p, t)
         ax, hm = contour(fig[1, 1], xω, yω, ω; levels = -10:2:10)
         # ax, hm = contourf(fig[1, 1], xω, yω, ω; levels = -10:2:10)
     elseif rtp_type == "streamfunction"
-        if bc.u.left == :periodic
+        if bc.u.x[1] == :periodic
             xψ = x
         else
             xψ = x[2:end-1]
         end
-        if bc.v.low == :periodic
+        if bc.v.y[1] == :periodic
             yψ = y
         else
             yψ = y[2:end-1]

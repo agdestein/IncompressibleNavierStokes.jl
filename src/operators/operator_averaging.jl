@@ -34,7 +34,7 @@ function operator_averaging!(setup)
     A1D = spdiagm(Nux_t - 1, Nux_t, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    Au_ux_bc = bc_general(Nux_t, Nux_in, Nux_b, bc.u.left, bc.u.right, hx[1], hx[end])
+    Au_ux_bc = bc_general(Nux_t, Nux_in, Nux_b, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
 
     # Extend to 2D
     Au_ux = kron(sparse(I, Nuy_in, Nuy_in), A1D * Au_ux_bc.B1D)
@@ -46,7 +46,7 @@ function operator_averaging!(setup)
     A1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    Au_uy_bc = bc_general_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.low, bc.u.up, hy[1], hy[end])
+    Au_uy_bc = bc_general_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.y[1], bc.u.y[2], hy[1], hy[end])
 
     # Extend to 2D
     Au_uy = kron(A1D * Au_uy_bc.B1D, sparse(I, Nux_in, Nux_in))
@@ -59,7 +59,7 @@ function operator_averaging!(setup)
     A1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    Av_vx_bc = bc_general_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.left, bc.v.right, hx[1], hx[end])
+    Av_vx_bc = bc_general_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.x[1], bc.v.x[2], hx[1], hx[end])
 
     # Extend to 2D
     Av_vx = kron(sparse(I, Nvy_in, Nvy_in), A1D * Av_vx_bc.B1D)
@@ -71,7 +71,7 @@ function operator_averaging!(setup)
     A1D = spdiagm(Nvy_t - 1, Nvy_t, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    Av_vy_bc = bc_general(Nvy_t, Nvy_in, Nvy_b, bc.v.low, bc.v.up, hy[1], hy[end])
+    Av_vy_bc = bc_general(Nvy_t, Nvy_in, Nvy_b, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
 
     # Extend to 2D
     Av_vy = kron(A1D * Av_vy_bc.B1D, sparse(I, Nvx_in, Nvx_in))
@@ -88,8 +88,8 @@ function operator_averaging!(setup)
             Nux_t + 4,
             Nux_in,
             Nux_t + 4 - Nux_in,
-            bc.u.left,
-            bc.u.right,
+            bc.u.x[1],
+            bc.u.x[2],
             hx[1],
             hx[end],
         )
@@ -107,8 +107,8 @@ function operator_averaging!(setup)
             Nuy_t + 4,
             Nuy_in,
             Nuy_t + 4 - Nuy_in,
-            bc.u.low,
-            bc.u.up,
+            bc.u.y[1],
+            bc.u.y[2],
             hy[1],
             hy[end],
         )
@@ -126,8 +126,8 @@ function operator_averaging!(setup)
             Nvx_t + 4,
             Nvx_in,
             Nvx_t + 4 - Nvx_in,
-            bc.v.left,
-            bc.v.right,
+            bc.v.x[1],
+            bc.v.x[2],
             hx[1],
             hx[end],
         )
@@ -142,7 +142,7 @@ function operator_averaging!(setup)
 
         # Boundary conditions
         Av_vy_bc3 =
-            bc_av3(Nvy_t + 4, Nvy_in, Nvy_t + 4 - Nvy_in, bc.v.low, bc.v.up, hy[1], hy[end])
+            bc_av3(Nvy_t + 4, Nvy_in, Nvy_t + 4 - Nvy_in, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
         # Extend to 2D
         Av_vy3 = kron(A1D3 * Av_vy_bc3.B1D, sparse(I, Nvx_in, Nvx_in))
         Av_vy_bc3 =

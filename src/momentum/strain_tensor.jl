@@ -41,7 +41,7 @@ function strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
     if get_S_abs
         # Option 2b
         bc = setup.bc
-        if bc.u.left == :periodic && bc.u.right == :periodic
+        if bc.u.x == (:periodic, :periodic)
             # "cut-off" the double points in case of periodic BC
             # For periodic boundary conditions S11(Npx+1, :) = S11(1, :)
             # So S11 has size (Npx+1)*Npy; the last row are "ghost" points equal to the
@@ -54,7 +54,7 @@ function strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
             S12_temp = zeros(Nx + 1, Ny + 1)
             S12_temp[1:Nx, :] = reshape(S12, Nx, Ny + 1)
             S12_temp[Nx+1, :] = S12_temp[1, :]
-        elseif bc.u.left == :dirichlet && bc.u.right == :pressure
+        elseif bc.u.x[1] == :dirichlet && bc.u.x[2] == :pressure
             S11_p = reshape(S11, Nux_in + 1, Nuy_in)
             S11_p = S11_p[1:Nux_in, :] # Cut off last point
 
@@ -67,7 +67,7 @@ function strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
             error("BC not implemented in strain_tensor.jl")
         end
 
-        if bc.v.low == :periodic && bc.v.up == :periodic
+        if bc.v.y[1] == :periodic && bc.v.y[2] == :periodic
             # Similarly, S22(:, Npy+1) = S22(:, 1). positions (xp, [yp;yp[1]])
             S22_p = reshape(S22, Nvx_in, Nvy_in + 1)
             S22_p = S22_p(:, 2:Nvy_in+1) # Why not 1:Nvy_in?
@@ -76,7 +76,7 @@ function strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
             S21_temp = zeros(Nx + 1, Ny + 1)
             S21_temp[:, 1:Ny] = reshape(S21, Nx + 1, Ny)
             S21_temp[:, Ny+1] = S21_temp[:, 1]
-        elseif bc.v.low == :pressure && bc.v.up == :pressure
+        elseif bc.v.y[1] == :pressure && bc.v.y[2] == :pressure
             S22_p = reshape(S22, Nvx_in, Nvy_in + 1)
             S22_p = S22_p(:, 2:Nvy_in)
 

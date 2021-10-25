@@ -5,12 +5,12 @@ function plot_streamfunction(setup, V, t)
     @unpack bc = setup
     @unpack Nx, Ny, x, y, x1, x2, y1, y2 = setup.grid
 
-    if bc.u.left == :periodic
+    if bc.u.x[1] == :periodic
         xψ = x
     else
         xψ = x[2:end-1]
     end
-    if bc.v.low == :periodic
+    if bc.v.y[1] == :periodic
         yψ = y
     else
         yψ = y[2:end-1]

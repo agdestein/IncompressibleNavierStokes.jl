@@ -9,12 +9,12 @@ function plot_vorticity(setup, V, t)
     uₕ = @view V[1:Nu]
     vₕ = @view V[Nu+1:Nu+Nv]
 
-    if bc.u.left == :periodic
+    if bc.u.x[1] == :periodic
         xω = x
     else
         xω = x[2:end-1]
     end
-    if bc.v.low == :periodic
+    if bc.v.y[1] == :periodic
         yω = y
     else
         yω = y[2:end-1]

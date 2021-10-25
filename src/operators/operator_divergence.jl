@@ -42,16 +42,16 @@ function operator_divergence!(setup)
     # We only need derivative at inner pressure points, so we map the resulting
     # Boundary matrix (restrict)
     diagpos = 0
-    if bc.u.right == :pressure && bc.u.left == :pressure
+    if bc.u.x[2] == :pressure && bc.u.x[1] == :pressure
         diagpos = 1
     end
-    if bc.u.right != :pressure && bc.u.left == :pressure
+    if bc.u.x[2] != :pressure && bc.u.x[1] == :pressure
         diagpos = 1
     end
-    if bc.u.right == :pressure && bc.u.left != :pressure
+    if bc.u.x[2] == :pressure && bc.u.x[1] != :pressure
         diagpos = 0
     end
-    if bc.u.right == :periodic && bc.u.left == :periodic
+    if bc.u.x[2] == :periodic && bc.u.x[1] == :periodic
         # Like pressure left
         diagpos = 1
     end
@@ -63,7 +63,7 @@ function operator_divergence!(setup)
     Bup = kron(sparse(I, Nuy_in, Nuy_in), BMx)
 
     # Boundary conditions
-    Mx_bc = bc_general(Nux_t, Nux_in, Nux_b, bc.u.left, bc.u.right, hx[1], hx[end])
+    Mx_bc = bc_general(Nux_t, Nux_in, Nux_b, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
     Mx_bc = (; Mx_bc..., Bbc = kron(mat_hy, M1D * Mx_bc.Btemp))
 
     # Extend to 2D
@@ -78,8 +78,8 @@ function operator_divergence!(setup)
             Nux_t + 2,
             Nux_in,
             Nux_t + 2 - Nux_in,
-            bc.u.left,
-            bc.u.right,
+            bc.u.x[1],
+            bc.u.x[2],
             hx[1],
             hx[end],
         )
@@ -95,16 +95,16 @@ function operator_divergence!(setup)
     # We only need derivative at inner pressure points, so we map the resulting
     # Boundary matrix (restriction)
     diagpos = 0
-    if bc.v.up == :pressure && bc.v.low == :pressure
+    if bc.v.y[2] == :pressure && bc.v.y[1] == :pressure
         diagpos = 1
     end
-    if bc.v.up != :pressure && bc.v.low == :pressure
+    if bc.v.y[2] != :pressure && bc.v.y[1] == :pressure
         diagpos = 1
     end
-    if bc.v.up == :pressure && bc.v.low != :pressure
+    if bc.v.y[2] == :pressure && bc.v.y[1] != :pressure
         diagpos = 0
     end
-    if bc.v.up == :periodic && bc.v.low == :periodic
+    if bc.v.y[2] == :periodic && bc.v.y[1] == :periodic
         # Like pressure low
         diagpos = 1
     end
@@ -115,7 +115,7 @@ function operator_divergence!(setup)
     Bvp = kron(BMy, sparse(I, Nvx_in, Nvx_in))
 
     # Boundary conditions
-    My_bc = bc_general(Nvy_t, Nvy_in, Nvy_b, bc.v.low, bc.v.up, hy[1], hy[end])
+    My_bc = bc_general(Nvy_t, Nvy_in, Nvy_b, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
     My_bc = (; My_bc..., Bbc = kron(M1D * My_bc.Btemp, mat_hx))
 
     # Extend to 2D
@@ -130,8 +130,8 @@ function operator_divergence!(setup)
             Nvy_t + 2,
             Nvy_in,
             Nvy_t + 2 - Nvy_in,
-            bc.v.low,
-            bc.v.up,
+            bc.v.y[1],
+            bc.v.y[2],
             hy[1],
             hy[end],
         )
@@ -185,7 +185,7 @@ function operator_divergence!(setup)
 
         # Check if all the row sums of the pressure matrix are zero, which
         # should be the case if there are no pressure boundary conditions
-        if any(isequal(:pressure), [bc.v.low, bc.v.up, bc.u.right, bc.u.left])
+        if any(isequal(:pressure), [bc.v.y[1], bc.v.y[2], bc.u.x[2], bc.u.x[1]])
             if any(!isapprox(0; atol = 1e-10), abs.(sum(A; dims = 2)))
                 @warn "Pressure matrix: not all rowsums are zero!"
             end

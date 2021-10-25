@@ -23,13 +23,13 @@ function operator_interpolation!(setup)
     mat_hy = spdiagm(Ny, Ny, hyi)
 
     # Periodic boundary conditions
-    if bc.u.left == :periodic && bc.u.right == :periodic
+    if bc.u.x[1] == :periodic && bc.u.x[2] == :periodic
         mat_hx2 = spdiagm(Nx + 2, Nx + 2, [hx[end]; hx; hx[1]])
     else
         mat_hx2 = spdiagm(Nx + 2, Nx + 2, [hx[1]; hx; hx[end]])
     end
 
-    if bc.v.low == :periodic && bc.v.up == :periodic
+    if bc.v.y[1] == :periodic && bc.v.y[2] == :periodic
         mat_hy2 = spdiagm(Ny + 2, Ny + 2, [hy[end]; hy; hy[1]])
     else
         mat_hy2 = spdiagm(Ny + 2, Ny + 2, [hy[1]; hy; hy[end]])
@@ -44,7 +44,7 @@ function operator_interpolation!(setup)
         weight2 = 1 / 2 * (1 - β)
 
         # Periodic boundary conditions
-        if bc.u.left == :periodic && bc.u.right == :periodic
+        if bc.u.x[1] == :periodic && bc.u.x[2] == :periodic
             mat_hx2 = spdiagm(Nx + 4, Nx + 4, [hx[end-1]; hx[end]; hx; hx[1]; hx[2]])
             mat_hx4 = spdiagm(Nx + 4, Nx + 4, [hx3[end-1]; hx3[end]; hxi3; hx3[1]; hx3[2]])
         else
@@ -62,7 +62,7 @@ function operator_interpolation!(setup)
             )
         end
 
-        if bc.v.low == :periodic && bc.v.up == :periodic
+        if bc.v.y[1] == :periodic && bc.v.y[2] == :periodic
             mat_hy2 = spdiagm(Ny + 4, Ny + 4, [hy[end-1]; hy[end]; hy; hy[1]; hy[2]])
             mat_hy4 = spdiagm(Ny + 4, Ny + 4, [hy3[end-1]; hy3[end]; hyi3; hy3[1]; hy3[2]])
         else
@@ -89,8 +89,8 @@ function operator_interpolation!(setup)
             Nux_t + 2,
             Nux_in,
             Nux_t + 2 - Nux_in,
-            bc.u.left,
-            bc.u.right,
+            bc.u.x[1],
+            bc.u.x[2],
             hx[1],
             hx[end],
         )
@@ -109,8 +109,8 @@ function operator_interpolation!(setup)
             Nux_t + 4,
             Nux_in,
             Nux_t + 4 - Nux_in,
-            bc.u.left,
-            bc.u.right,
+            bc.u.x[1],
+            bc.u.x[2],
             hx[1],
             hx[end],
         )
@@ -128,7 +128,7 @@ function operator_interpolation!(setup)
         I2D = kron(sparse(I, Nuy_t - 1, Nuy_t - 1), I1D)
         # Boundary conditions low/up
         Nb = Nuy_in + 1 - Nvy_in
-        Iv_uy_bc_lu = bc_general(Nuy_in + 1, Nvy_in, Nb, bc.v.low, bc.v.up, hy[1], hy[end])
+        Iv_uy_bc_lu = bc_general(Nuy_in + 1, Nvy_in, Nb, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
         Iv_uy_bc_lu =
             (; Iv_uy_bc_lu..., B2D = kron(Iv_uy_bc_lu.B1D, sparse(I, Nvx_in, Nvx_in)))
         Iv_uy_bc_lu =
@@ -138,8 +138,8 @@ function operator_interpolation!(setup)
             Nvx_t + 2,
             Nvx_in,
             Nvx_t + 2 - Nvx_in,
-            bc.v.left,
-            bc.v.right,
+            bc.v.x[1],
+            bc.v.x[2],
             hx[1],
             hx[end],
         )
@@ -166,7 +166,7 @@ function operator_interpolation!(setup)
         # Boundary conditions low/up
         Nb = Nuy_in + 3 - Nvy_in
         Iv_uy_bc_lu3 =
-            bc_int_mixed2(Nuy_in + 3, Nvy_in, Nb, bc.v.low, bc.v.up, hy[1], hy[end])
+            bc_int_mixed2(Nuy_in + 3, Nvy_in, Nb, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
         Iv_uy_bc_lu3 =
             (; Iv_uy_bc_lu3..., B2D = kron(Iv_uy_bc_lu3.B1D, sparse(I, Nvx_in, Nvx_in)))
         Iv_uy_bc_lu3 =
@@ -176,8 +176,8 @@ function operator_interpolation!(setup)
             Nvx_t + 2,
             Nvx_in,
             Nvx_t + 2 - Nvx_in,
-            bc.v.left,
-            bc.v.right,
+            bc.v.x[1],
+            bc.v.x[2],
             hx[1],
             hx[end],
         )
@@ -205,8 +205,8 @@ function operator_interpolation!(setup)
             Nuy_t + 2,
             Nuy_in,
             Nuy_t + 2 - Nuy_in,
-            bc.u.low,
-            bc.u.up,
+            bc.u.y[1],
+            bc.u.y[2],
             hy[1],
             hy[end],
         )
@@ -222,7 +222,7 @@ function operator_interpolation!(setup)
         # Boundary conditions left/right
         Nb = Nvx_in + 1 - Nux_in
         Iu_vx_bc_lr =
-            bc_general(Nvx_in + 1, Nux_in, Nb, bc.u.left, bc.u.right, hx[1], hx[end])
+            bc_general(Nvx_in + 1, Nux_in, Nb, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
 
         Iu_vx_bc_lr =
             (; Iu_vx_bc_lr..., B2D = kron(sparse(I, Nuy_in, Nuy_in), Iu_vx_bc_lr.B1D))
@@ -244,8 +244,8 @@ function operator_interpolation!(setup)
             Nuy_t + 2,
             Nuy_in,
             Nuy_t + 2 - Nuy_in,
-            bc.u.low,
-            bc.u.up,
+            bc.u.y[1],
+            bc.u.y[2],
             hy[1],
             hy[end],
         )
@@ -261,7 +261,7 @@ function operator_interpolation!(setup)
         # Boundary conditions left/right
         Nb = Nvx_in + 3 - Nux_in
         Iu_vx_bc_lr3 =
-            bc_int_mixed2(Nvx_in + 3, Nux_in, Nb, bc.u.left, bc.u.right, hx[1], hx[end])
+            bc_int_mixed2(Nvx_in + 3, Nux_in, Nb, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
 
         Iu_vx_bc_lr3 =
             (; Iu_vx_bc_lr3..., B2D = kron(sparse(I, Nuy_in, Nuy_in), Iu_vx_bc_lr3.B1D))
@@ -281,8 +281,8 @@ function operator_interpolation!(setup)
             Nvy_t + 2,
             Nvy_in,
             Nvy_t + 2 - Nvy_in,
-            bc.v.low,
-            bc.v.up,
+            bc.v.y[1],
+            bc.v.y[2],
             hy[1],
             hy[end],
         )
@@ -301,8 +301,8 @@ function operator_interpolation!(setup)
             Nvy_t + 4,
             Nvy_in,
             Nvy_t + 4 - Nvy_in,
-            bc.v.low,
-            bc.v.up,
+            bc.v.y[1],
+            bc.v.y[2],
             hy[1],
             hy[end],
         )
@@ -314,7 +314,7 @@ function operator_interpolation!(setup)
         diag1 = fill(weight, Nux_t - 1)
         I1D = spdiagm(Nux_t - 1, Nux_t, 0 => diag1, 1 => diag1)
         # Boundary conditions
-        Iu_ux_bc = bc_general(Nux_t, Nux_in, Nux_b, bc.u.left, bc.u.right, hx[1], hx[end])
+        Iu_ux_bc = bc_general(Nux_t, Nux_in, Nux_b, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
 
         # Extend to 2D
         Iu_ux = kron(mat_hy, I1D * Iu_ux_bc.B1D)
@@ -330,7 +330,7 @@ function operator_interpolation!(setup)
 
         # Boundary conditions low/up
         Nb = Nuy_in + 1 - Nvy_in
-        Iv_uy_bc_lu = bc_general(Nuy_in + 1, Nvy_in, Nb, bc.v.low, bc.v.up, hy[1], hy[end])
+        Iv_uy_bc_lu = bc_general(Nuy_in + 1, Nvy_in, Nb, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
         Iv_uy_bc_lu =
             (; Iv_uy_bc_lu..., B2D = kron(Iv_uy_bc_lu.B1D, sparse(I, Nvx_in, Nvx_in)))
         Iv_uy_bc_lu =
@@ -338,7 +338,7 @@ function operator_interpolation!(setup)
 
         # Boundary conditions left/right
         Iv_uy_bc_lr =
-            bc_general_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.left, bc.v.right, hx[1], hx[end])
+            bc_general_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.x[1], bc.v.x[2], hx[1], hx[end])
         # Take I2D into left/right operators for convenience
         Iv_uy_bc_lr = (;
             Iv_uy_bc_lr...,
@@ -362,7 +362,7 @@ function operator_interpolation!(setup)
 
         # Boundary conditions low/up
         Iu_vx_bc_lu =
-            bc_general_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.low, bc.u.up, hy[1], hy[end])
+            bc_general_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.y[1], bc.u.y[2], hy[1], hy[end])
         Iu_vx_bc_lu = (;
             Iu_vx_bc_lu...,
             B2D = I2D * kron(Iu_vx_bc_lu.B1D, sparse(I, Nvx_t - 1, Nvx_t - 1)),
@@ -375,7 +375,7 @@ function operator_interpolation!(setup)
         # Boundary conditions left/right
         Nb = Nvx_in + 1 - Nux_in
         Iu_vx_bc_lr =
-            bc_general(Nvx_in + 1, Nux_in, Nb, bc.u.left, bc.u.right, hx[1], hx[end])
+            bc_general(Nvx_in + 1, Nux_in, Nb, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
 
         Iu_vx_bc_lr =
             (; Iu_vx_bc_lr..., B2D = kron(sparse(I, Nuy_in, Nuy_in), Iu_vx_bc_lr.B1D))
@@ -389,7 +389,7 @@ function operator_interpolation!(setup)
         diag1 = fill(weight, Nvy_t - 1)
         I1D = spdiagm(Nvy_t - 1, Nvy_t, 0 => diag1, 1 => diag1)
         # Boundary conditions
-        Iv_vy_bc = bc_general(Nvy_t, Nvy_in, Nvy_b, bc.v.low, bc.v.up, hy[1], hy[end])
+        Iv_vy_bc = bc_general(Nvy_t, Nvy_in, Nvy_b, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
 
         # Extend to 2D
         Iv_vy = kron(I1D * Iv_vy_bc.B1D, mat_hx)

@@ -33,7 +33,7 @@ function operator_postprocessing!(setup)
     Wv_vx = kron(sparse(I, Ny - 1, Ny - 1), W1D)
 
     ## For periodic BC, covering entire mesh
-    if bc.u.left == :periodic && bc.v.low == :periodic
+    if bc.u.x[1] == :periodic && bc.v.y[1] == :periodic
         # Du/dy, like Su_uy
         diag1 = 1 ./ gyd
         W1D = spdiagm(

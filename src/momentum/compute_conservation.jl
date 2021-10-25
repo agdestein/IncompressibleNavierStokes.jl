@@ -31,16 +31,16 @@ function compute_conservation(V, t, setup)
     vmom = sum(Ωv .* vₕ)
 
     # Add boundary contributions in case of Dirichlet BC
-    if setup.bc.u.left == :dirichlet
+    if setup.bc.u.x[1] == :dirichlet
         umom += sum(uLe_i .* hy) * gx[1]
     end
-    if setup.bc.u.right == :dirichlet
+    if setup.bc.u.x[2] == :dirichlet
         umom += sum(uRi_i .* hy) * gx[end]
     end
-    if setup.bc.v.low == :dirichlet
+    if setup.bc.v.y[1] == :dirichlet
         vmom += sum(vLo_i .* hx) * gy[1]
     end
-    if setup.bc.v.up == :dirichlet
+    if setup.bc.v.y[2] == :dirichlet
         vmom += sum(vUp_i .* hx) * gy[end]
     end
 
@@ -48,16 +48,16 @@ function compute_conservation(V, t, setup)
     k = 1 / 2 * sum(Ω .* V .^ 2)
 
     # Add boundary contributions in case of Dirichlet BC
-    if setup.bc.u.left == :dirichlet
+    if setup.bc.u.x[1] == :dirichlet
         k += 1 / 2 * sum(uLe_i .^ 2 .* hy) * gx[1]
     end
-    if setup.bc.u.right == :dirichlet
+    if setup.bc.u.x[2] == :dirichlet
         k += 1 / 2 * sum(uRi_i .^ 2 .* hy) * gx[end]
     end
-    if setup.bc.v.low == :dirichlet
+    if setup.bc.v.y[1] == :dirichlet
         k += 1 / 2 * sum(vLo_i .^ 2 .* hx) * gy[1]
     end
-    if setup.bc.v.up == :dirichlet
+    if setup.bc.v.y[2] == :dirichlet
         k += 1 / 2 * sum(vUp_i .^ 2 .* hx) * gy[end]
     end
 

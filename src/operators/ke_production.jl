@@ -8,7 +8,7 @@ function ke_production!(setup)
 
     # Boundary conditions
     B1D, Btemp, ybcl, ybcr =
-        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.left, bc.u.right, hx[1], hx[end])
+        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
 
     Cux_k = kron(sparse(I, Npy, Npy), C1D * B1D)
     uLe_i = interp1(y, uLe, yp)
@@ -28,7 +28,7 @@ function ke_production!(setup)
 
     # Boundary conditions
     B1D, Btemp, ybcl, ybcr =
-        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.left, bc.u.right, hx[1], hx[end])
+        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
     uLe_i = interp1(y, uLe, yp)
     uRi_i = interp1(y, uRi, yp)
     ybc = kron(uLe_i, ybcl) + kron(uRi_i, ybcr)
@@ -42,7 +42,7 @@ function ke_production!(setup)
     C1D = spdiagm(Npy, Npy + 2, 0 => -diag2, 1 => diag2)
 
     B1D, Btemp, ybcl, ybcu =
-        bc_general_stag(Npy + 2, Npy, 2, bc.u.low, bc.u.up, hy[1], hy[end])
+        bc_general_stag(Npy + 2, Npy, 2, bc.u.y[1], bc.u.y[2], hy[1], hy[end])
 
     Cuy_k = kron(C1D * B1D, sparse(I, Npx, Npx))
     uLo_i = interp1(x, uLo, xp)
@@ -62,7 +62,7 @@ function ke_production!(setup)
 
     # Boundary conditions
     B1D, Btemp, ybcl, ybcu =
-        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.low, bc.v.up, hy[1], hy[end])
+        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
     vLo_i = interp1(x, vLo, xp)
     vUp_i = interp1(x, vUp, xp)
     ybc = kron(ybcl, vLo_i) + kron(ybcu, vUp_i)
@@ -75,7 +75,7 @@ function ke_production!(setup)
     C1D = spdiagm(Npx, Npx + 2, 0 => -diag2, 1 => diag2)
 
     B1D, Btemp, ybcl, ybcr =
-        bc_general_stag(Npx + 2, Npx, Npx + 2 - Npx, bc.v.left, bc.v.right, hx[1], hx[end])
+        bc_general_stag(Npx + 2, Npx, Npx + 2 - Npx, bc.v.x[1], bc.v.x[2], hx[1], hx[end])
 
     Cvx_k = kron(sparse(I, Npy, Npy), C1D * B1D)
     vLe_i = interp1(y, vLe, yp)
@@ -94,7 +94,7 @@ function ke_production!(setup)
 
     # Boundary conditions
     B1D, Btemp, ybcl, ybcu =
-        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.low, bc.v.up, hy[1], hy[end])
+        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
 
     Cvy_k = kron(C1D * B1D, sparse(I, Npx, Npx))
     vLo_i = interp1(x, vLo, xp)

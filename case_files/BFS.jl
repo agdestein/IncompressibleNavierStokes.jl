@@ -22,9 +22,9 @@ function BFS()
     fluid = Fluid{T}(; Re, U1, U2, d_layer)
 
     # Viscosity model
-    model = LaminarModel{T}()
+    # model = LaminarModel{T}()
     # model = KEpsilonModel{T}()
-    # model = MixingLengthModel{T}()
+    model = MixingLengthModel{T}()
     # model = SmagorinskyModel{T}()
     # model = QRModel{T}()
 
@@ -69,7 +69,7 @@ function BFS()
     # 0: homogeneous (no-slip = periodic)
     # 1: non-homogeneous = time-independent
     # 2: non-homogeneous = time-dependent
-    rom_bc = 0                          
+    rom_bc = 0
     weighted_norm = true                # Using finite volumes as weights
     pressure_recovery = false           # Compute pressure with PPE-ROM
     pressure_precompute = 0             # Recover pressure with FOM (0) or ROM (1)
@@ -172,7 +172,7 @@ function BFS()
         momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
         maxres = maximum(abs.(F))
 
-        
+
         println("n), t = $t, maxres = $maxres")
         # println("t = $t")
 
@@ -184,7 +184,7 @@ function BFS()
         @unpack F = cache
         @unpack do_rtp, rtp_n = setup.visualization
         @unpack rtp = processor
-        
+
         # Calculate mass, momentum and energy
         # maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
@@ -195,7 +195,7 @@ function BFS()
             momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
             maxres = maximum(abs.(F))
         end
-        
+
         println("n = $(stepper.n), t = $t, maxres = $maxres")
         # println("t = $t")
 
@@ -215,27 +215,19 @@ function BFS()
     function bc_type()
         bc_unsteady = false
 
-        u = (; left = :dirichlet, right = :pressure, low = :dirichlet, up = :dirichlet)
-        v = (; left = :dirichlet, right = :symmetric, low = :dirichlet, up = :dirichlet)
-
-        # u = (; left = :periodic, right = :periodic, low = :periodic, up = :periodic)
-        # v = (; left = :periodic, right = :periodic, low = :periodic, up = :periodic)
-
-        k = (; left = :dirichlet, right = :dirichlet, low = :dirichlet, up = :dirichlet)
-        e = (; left = :dirichlet, right = :dirichlet, low = :dirichlet, up = :dirichlet)
+        u = (; x = (:dirichlet, :pressure), y = (:dirichlet, :dirichlet))
+        v = (; x = (:dirichlet, :symmetric), y = (:dirichlet, :dirichlet))
+        k = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet))
+        e = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet))
 
         # Values set below can be either Dirichlet or Neumann value,
-        # Depending on B.C. set above. in case of Neumann (symmetry, pressure)
-        # One uses normally zero gradient
-        # Neumann B.C. used to extrapolate values to the boundary
+        # depending on B.C. set above. In case of Neumann (symmetry, pressure)
+        # one uses normally zero gradient to extrapolate values to the boundary
         # Change only in case of periodic to :periodic, otherwise leave at :symmetric
         ν = (;
-            left = :symmetric,
-            right = :symmetric,
-            low = :symmetric,
-            up = :symmetric,
-            back = :symmetric,
-            front = :symmetric,
+            x = (:symmetric, :symmetric),
+            y = (:symmetric, :symmetric),
+            z = (:symmetric, :symmetric),
         )
 
         (; bc_unsteady, u, v, k, e, ν)

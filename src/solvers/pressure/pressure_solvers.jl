@@ -22,7 +22,7 @@ initialize!(::CGPressureSolver, setup, A) = nothing
 function initialize!(::FourierPressureSolver, setup, A)
     @unpack bc = setup
     @unpack hx, hy, Npx, Npy = setup.grid
-    if any(!isequal(:periodic), [bc.v.low, bc.v.up, bc.u.left, bc.u.left])
+    if any(!isequal(:periodic), [bc.v.y[1], bc.v.y[2], bc.u.x[1], bc.u.x[1]])
         error("FourierPressureSolver only implemented for periodic boundary conditions")
     end
     if maximum(abs.(diff(hx))) > 1e-14 || maximum(abs.(diff(hy))) > 1e-14

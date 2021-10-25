@@ -7,38 +7,14 @@ Average (turbulent) viscosity to cell faces: from `ν` at `xp`, `yp` to `ν` at 
 See also `ke_viscosity.jl`.
 """
 function operator_turbulent_diffusion!(setup)
-    # Averaging weight:
-    weight = 1 / 2
-
-    bc = setup.bc
-
-    # Number of interior points and boundary points
+    @unpack bc = setup
     @unpack Npx, Npy = setup.grid
     @unpack Nux_in, Nuy_in, Nvx_in, Nvy_in = setup.grid
     @unpack hx, hy, gx, gy, gxd, gyd = setup.grid
     @unpack Buvy, Bvux, Bkux, Bkvy = setup.grid
 
-
-    # Set BC for ν
-    # In the periodic case, the value of ν is not needed
-    # In all other cases, homogeneous (zero) Neumann conditions are used
-
-    if bc.u.left == :periodic && bc.u.right == :periodic
-        bc_ν.left = :periodic
-        bc_ν.right = :periodic
-    else
-        bc_ν.left = :symmetric
-        bc_ν.right = :symmetric
-    end
-
-    if bc.v.low == :periodic && bc.v.up == :periodic
-        bc_ν.low = :periodic
-        bc_ν.up = :periodic
-    else
-        bc_ν.low = :symmetric
-        bc_ν.up = :symmetric
-    end
-
+    # Averaging weight:
+    weight = 1 / 2
 
     ## Nu to ux positions
 
@@ -46,7 +22,7 @@ function operator_turbulent_diffusion!(setup)
     A1D = Bkux * A1D
 
     # Boundary conditions for ν; mapping from Npx (k) points to Npx+2 points
-    Aν_ux_bc = bc_general_stag(Npx + 2, Npx, 2, bc_ν.left, bc_ν.right, hx[1], hx[end])
+    Aν_ux_bc = bc_general_stag(Npx + 2, Npx, 2, bc.ν.x[1], bc.ν.x[2], hx[1], hx[end])
     # Then map back to Nux_in+1 points (ux-faces) with Bkux
 
     # Extend to 2D
@@ -69,13 +45,13 @@ function operator_turbulent_diffusion!(setup)
 
     # Boundary conditions for ν in x-direction;
     # Mapping from Npx (ν) points to Npx+2 points
-    Aν_uy_bc_lr = bc_general_stag(Npx + 2, Npx, 2, bc_ν.left, bc_ν.right, hx[1], hx[end])
+    Aν_uy_bc_lr = bc_general_stag(Npx + 2, Npx, 2, bc.ν.x[1], bc.ν.x[2], hx[1], hx[end])
 
     # Extend BC to 2D
     A2D = kron(sparse(I, Npy + 2, Npy + 2), A1D * Aν_uy_bc_lr.B1D)
 
     # Apply bc in y-direction
-    Aν_uy_bc_lu = bc_general_stag(Npy + 2, Npy, 2, bc_ν.low, bc_ν.up, hy[1], hy[end])
+    Aν_uy_bc_lu = bc_general_stag(Npy + 2, Npy, 2, bc.ν.y[1], bc.ν.y[2], hy[1], hy[end])
 
     A2Dx = A2D * kron(Aν_uy_bc_lu.B1D, sparse(I, Npx, Npx))
 
@@ -100,14 +76,14 @@ function operator_turbulent_diffusion!(setup)
 
     # Boundary conditions for ν in y-direction;
     # Mapping from Npy (ν) points to Npy+2 points
-    Aν_vx_bc_lu = bc_general_stag(Npy + 2, Npy, 2, bc_ν.low, bc_ν.up, hy[1], hy[end])
+    Aν_vx_bc_lu = bc_general_stag(Npy + 2, Npy, 2, bc.ν.y[1], bc.ν.y[2], hy[1], hy[end])
 
     # Extend BC to 2D
     A2D = kron(A1D * Aν_vx_bc_lu.B1D, sparse(I, Npx + 2, Npx + 2))
 
 
     # Apply boundary conditions also in x-direction:
-    Aν_vx_bc_lr = bc_general_stag(Npx + 2, Npx, 2, bc_ν.left, bc_ν.right, hx[1], hx[end])
+    Aν_vx_bc_lr = bc_general_stag(Npx + 2, Npx, 2, bc.ν.x[1], bc.ν.x[2], hx[1], hx[end])
 
     A2Dy = A2D * kron(sparse(I, Npy, Npy), Aν_vx_bc_lr.B1D)
 
@@ -123,7 +99,7 @@ function operator_turbulent_diffusion!(setup)
     A1D = Bkvy * A1D
 
     # Boundary conditions for ν; mapping from Npy (ν) points to Npy+2 (vy faces) points
-    Aν_vy_bc = bc_general_stag(Npy + 2, Npy, 2, bc_ν.low, bc_ν.up, hy[1], hy[end])
+    Aν_vy_bc = bc_general_stag(Npy + 2, Npy, 2, bc.ν.y[1], bc.ν.y[2], hy[1], hy[end])
 
     # Extend to 2D
     Aν_vy = kron(A1D * Aν_vy_bc.B1D, sparse(I, Nvx_in, Nvx_in))
@@ -150,7 +126,7 @@ function operator_turbulent_diffusion!(setup)
 
     # Boundary conditions
     Cux_k_bc =
-        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.left, bc.u.right, hx[1], hx[end])
+        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
 
     Cux_k = kron(sparse(I, Npy, Npy), C1D * Cux_k_bc.B1D)
     Cux_k_bc.Bbc = kron(sparse(I, Npy, Npy), C1D * Cux_k_bc.Btemp)
@@ -167,7 +143,7 @@ function operator_turbulent_diffusion!(setup)
 
     # Boundary conditions
     Auy_k_bc =
-        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.left, bc.u.right, hx[1], hx[end])
+        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
 
     Auy_k = kron(sparse(I, Npy, Npy), A1D * Auy_k_bc.B1D)
     Auy_k_bc.Bbc = kron(sparse(I, Npy, Npy), A1D * Auy_k_bc.Btemp)
@@ -177,7 +153,7 @@ function operator_turbulent_diffusion!(setup)
     diag2 = 1 ./ gydnew
     C1D = spdiagm(Npy, Npy + 2, 0 => -diag2, 2 => diag2)
 
-    Cuy_k_bc = bc_general_stag(Npy + 2, Npy, 2, bc.u.low, bc.u.up, hy[1], hy[end])
+    Cuy_k_bc = bc_general_stag(Npy + 2, Npy, 2, bc.u.y[1], bc.u.y[2], hy[1], hy[end])
 
     Cuy_k = kron(C1D * Cuy_k_bc.B1D, sparse(I, Npx, Npx))
     Cuy_k_bc.Bbc = kron(C1D * Cuy_k_bc.Btemp, sparse(I, Npx, Npx))
@@ -191,7 +167,7 @@ function operator_turbulent_diffusion!(setup)
 
     # Boundary conditions
     Avx_k_bc =
-        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.low, bc.v.up, hy[1], hy[end])
+        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
     Avx_k = kron(A1D * Avx_k_bc.B1D, sparse(I, Npx, Npx))
     Avx_k_bc.Bbc = kron(A1D * Avx_k_bc.Btemp, sparse(I, Npx, Npx))
 
@@ -201,7 +177,7 @@ function operator_turbulent_diffusion!(setup)
     C1D = spdiagm(Npx, Npx + 2, 0 => -diag2, 2 => diag2)
 
     Cvx_k_bc =
-        bc_general_stag(Npx + 2, Npx, Npx + 2 - Npx, bc.v.left, bc.v.right, hx[1], hx[end])
+        bc_general_stag(Npx + 2, Npx, Npx + 2 - Npx, bc.v.x[1], bc.v.x[2], hx[1], hx[end])
 
     Cvx_k = kron(sparse(I, Npy, Npy), C1D * Cvx_k_bc.B1D)
     Cvx_k_bc.Bbc = kron(sparse(I, Npy, Npy), C1D * Cvx_k_bc.Btemp)
@@ -214,7 +190,7 @@ function operator_turbulent_diffusion!(setup)
 
     # Boundary conditions
     Cvy_k_bc =
-        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.low, bc.v.up, hy[1], hy[end])
+        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
 
     Cvy_k = kron(C1D * Cvy_k_bc.B1D, sparse(I, Npx, Npx))
     Cvy_k_bc.Bbc = kron(C1D * Cvy_k_bc.Btemp, sparse(I, Npx, Npx))
