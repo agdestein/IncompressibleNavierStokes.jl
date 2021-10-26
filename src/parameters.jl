@@ -253,7 +253,7 @@ Base.@kwdef mutable struct Discretization{T}
     yAν_uy::Vector{T} = T[]
     yAν_vx::Vector{T} = T[]
     yAν_vy::Vector{T} = T[]
-    
+
     yCux_k::Vector{T} = T[]
     yCuy_k::Vector{T} = T[]
     yCvx_k::Vector{T} = T[]

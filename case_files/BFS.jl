@@ -29,8 +29,8 @@ function BFS()
     # model = QRModel{T}()
 
     # Grid parameters
-    Nx = 400                           # Number of volumes in the x-direction
-    Ny = 40                            # Number of volumes in the y-direction
+    Nx = 400                           # Number of x-volumes
+    Ny = 40                            # Number of y-volumes
     x1 = 0                             # Left
     x2 = 10                            # Right
     y1 = -0.5                          # Bottom
@@ -48,7 +48,7 @@ function BFS()
     # Forcing parameters
     x_c = 0                           # X-coordinate of body
     y_c = 0                           # Y-coordinate of body
-    Ct = 0                            # Thrust coefficient for actuator disk computations
+    Ct = 0                            # Actuator thrust coefficient
     D = 1                             # Actuator disk diameter
     isforce = false                   # Presence of a body force
     force_unsteady = false            # Steady (0) or unsteady (1) force
@@ -57,13 +57,13 @@ function BFS()
     # Rom parameters
     use_rom = false                     # Use reduced order model
     rom_type = "POD"                    # "POD", "Fourier"
-    M = 10                              # Number of velocity modes for reduced order model
-    Mp = 10                             # Number of pressure modes for reduced order model
+    M = 10                              # Number of ROM velocity modes
+    Mp = 10                             # Number of ROM pressure modes
     precompute_convection = true        # Precomputed convection matrices
     precompute_diffusion = true         # Precomputed diffusion matrices
     precompute_force = true             # Precomputed forcing term
     t_snapshots = 0                     # Snapshots
-    Δt_snapshots = false
+    Δt_snapshots = false                # Gap between snapshots
     mom_cons = false                    # Momentum conserving SVD
     # ROM boundary constitions:
     # 0: homogeneous (no-slip = periodic)
