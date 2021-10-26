@@ -3,7 +3,7 @@ plot_vorticity.
 """
 function plot_vorticity(setup, V, t)
     @unpack bc = setup
-    @unpack Nx, Ny, Nu, Nv, x, y, x1, x2, y1, y2 = setup.grid
+    @unpack Nx, Ny, Nu, Nv, x, y, xlims, ylims = setup.grid
 
     # Reshape
     uₕ = @view V[1:Nu]
@@ -34,7 +34,7 @@ function plot_vorticity(setup, V, t)
         xlabel = "x",
         ylabel = "y",
     )
-    limits!(ax, x1, x2, y1, y2)
+    limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
     contourf!(ax, xω, yω, ω; levels)
     display(f)
     save("output/vorticity.png", f, pt_per_unit = 2)

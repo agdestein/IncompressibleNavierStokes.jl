@@ -2,7 +2,7 @@
 Plot pressure.
 """
 function plot_pressure(setup, p)
-    @unpack Nx, Ny, Npx, Npy, xp, yp, x1, x2, y1, y2 = setup.grid
+    @unpack Nx, Ny, Npx, Npy, xp, yp, xlims, ylims = setup.grid
 
     # Reshape
     pres = reshape(p, Npx, Npy)
@@ -37,7 +37,7 @@ function plot_pressure(setup, p)
         xlabel = "x",
         ylabel = "y",
     )
-    limits!(ax, x1, x2, y1, y2)
+    limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
     contourf!(
         ax,
         xp,

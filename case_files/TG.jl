@@ -22,14 +22,11 @@ function TG()
     setup.model = LaminarModel()
 
     # Grid parameters
-    setup.grid.Nx = 100                           # Number of volumes in the x-direction
-    setup.grid.Ny = 100                           # Number of volumes in the y-direction
-    setup.grid.x1 = 0                             # Left
-    setup.grid.x2 = 2                             # Right
-    setup.grid.y1 = 0                             # Bottom
-    setup.grid.y2 = 2                             # Top
-    setup.grid.sx = 1                             # Stretch factor in x-direction
-    setup.grid.sy = 1                             # Stretch factor in y-direction
+    setup.grid.Nx = 100                           # Number of x-volumes
+    setup.grid.Ny = 100                           # Number of y-volumes
+    setup.grid.xlims = (0, 2)                     # Horizontal limits (left, right)
+    setup.grid.ylims = (0, 2)                     # Vertical limits (bottom, top)
+    setup.grid.stretch = (1, 1)                   # Stretch factor (sx, sy)
 
     # Discretization parameters
     setup.discretization.order4 = false           # Use 4th order in space (otherwise 2nd order)
@@ -231,18 +228,18 @@ function TG()
     Build mesh points `x` and `y`.
     """
     setup.grid.create_mesh = function create_mesh(setup)
+        @unpack Nx, Ny, xlims, ylims, stretch = setup.grid
+
         # Uniform mesh size x-direction
-        @unpack Nx, sx, x1, x2 = setup.grid
-        L_x = x2 - x1
+        L_x = xlims[2] - xlims[1]
         Δx = L_x / Nx
 
         # Uniform mesh size y-direction
-        @unpack Ny, sy, y1, y2 = setup.grid
-        L_y = y2 - y1
+        L_y = ylims[2] - ylims[1]
         Δy = L_y / Ny
 
-        x, _ = nonuniform_grid(Δx, x1, x2, sx)
-        y, _ = nonuniform_grid(Δy, y1, y2, sy)
+        x, _ = nonuniform_grid(Δx, xlims[1], xlims[2], stretch[1])
+        y, _ = nonuniform_grid(Δy, ylims[1], ylims[2], stretch[2])
 
         x, y
     end

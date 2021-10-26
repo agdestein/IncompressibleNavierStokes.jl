@@ -5,11 +5,11 @@ Initialize real time plot (RTP).
 """
 function initialize_rtp(setup, V, p, t)
     @unpack bc = setup
-    @unpack x1, x2, y1, y2, Nx, Ny, x, y, xp, yp = setup.grid
+    @unpack xlims, ylims, Nx, Ny, x, y, xp, yp = setup.grid
     @unpack rtp_type = setup.visualization
 
-    Lx = x2 - x1
-    Ly = y2 - y1
+    Lx = xlims[2] - xlims[1]
+    Ly = ylims[2] - ylims[1]
 
     vel = nothing
     ω = nothing
@@ -55,7 +55,7 @@ function initialize_rtp(setup, V, p, t)
     ax.aspect = DataAspect()
     ax.xlabel = "x"
     ax.ylabel = "y"
-    limits!(ax, x1, x2, y1, y2)
+    limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
     Colorbar(fig[1, 2], hm)
     display(fig)
     fps = 60

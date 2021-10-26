@@ -3,7 +3,7 @@ Plot streamfunction.
 """
 function plot_streamfunction(setup, V, t)
     @unpack bc = setup
-    @unpack Nx, Ny, x, y, x1, x2, y1, y2 = setup.grid
+    @unpack Nx, Ny, x, y, xlims, ylims = setup.grid
 
     if bc.u.x[1] == :periodic
         xψ = x
@@ -53,7 +53,7 @@ function plot_streamfunction(setup, V, t)
         xlabel = "x",
         ylabel = "y",
     )
-    limits!(ax, x1, x2, y1, y2)
+    limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
     contourf!(
         ax,
         xψ,

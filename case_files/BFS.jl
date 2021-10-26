@@ -31,13 +31,10 @@ function BFS()
     # Grid parameters
     Nx = 400                           # Number of x-volumes
     Ny = 40                            # Number of y-volumes
-    x1 = 0                             # Left
-    x2 = 10                            # Right
-    y1 = -0.5                          # Bottom
-    y2 = 0.5                           # Top
-    sx = 1                             # Stretch factor in x-direction
-    sy = 1                             # Stretch factor in y-direction
-    grid = Grid{T}(; Nx, Ny, x1, x2, y1, y2, sx, sy)
+    xlims = (0, 10)                    # Horizontal limits (left, right)
+    ylims = (-0.5, 0.5)                # Vertical limits (bottom, top)
+    stretch = (1, 1)                   # Stretch factor (sx, sy)
+    grid = Grid{T}(; Nx, Ny, xlims, ylims, stretch)
 
     # Discretization parameters
     order4 = false           # Use 4th order in space (otherwise 2nd order)
@@ -239,7 +236,7 @@ function BFS()
     Compute boundary conditions for `u` at point `(x, y)` at time `t`.
     """
     function u_bc(x, y, t, setup, tol = 1e-10)
-        if ≈(x, setup.grid.x1; rtol = tol) && y ≥ 0
+        if ≈(x, setup.grid.xlims[1]; rtol = tol) && y ≥ 0
             24y * (1 // 2 - y)
         else
             zero(y)
@@ -321,18 +318,18 @@ function BFS()
     Build mesh points `x` and `y`.
     """
     function create_mesh(setup)
+        @unpack Nx, Ny, xlims, ylims, stretch = setup.grid
+
         # Uniform mesh size x-direction
-        @unpack Nx, sx, x1, x2 = setup.grid
-        L_x = x2 - x1
+        L_x = xlims[2] - xlims[1]
         Δx = L_x / Nx
 
         # Uniform mesh size y-direction
-        @unpack Ny, sy, y1, y2 = setup.grid
-        L_y = y2 - y1
+        L_y = ylims[2] - ylims[1]
         Δy = L_y / Ny
 
-        x, _ = nonuniform_grid(Δx, x1, x2, sx)
-        y, _ = nonuniform_grid(Δy, y1, y2, sy)
+        x, _ = nonuniform_grid(Δx, xlims[1], xlims[2], stretch[1])
+        y, _ = nonuniform_grid(Δy, ylims[1], ylims[2], stretch[2])
 
         x, y
     end

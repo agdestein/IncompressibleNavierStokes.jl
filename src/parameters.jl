@@ -22,14 +22,13 @@ end
 Base.@kwdef mutable struct Grid{T}
     Nx::Int = 10                             # Number of volumes in the x-direction
     Ny::Int = 10                             # Number of volumes in the y-direction
-    x1::T = 0                                # Left
-    x2::T = 1                                # Right
-    y1::T = 0                                # Bottom
-    y2::T = 1                                # Top
+    xlims::Tuple{T,T} = (0, 1)               # Horizontal limits (left, right)
+    ylims::Tuple{T,T} = (0, 1)               # Vertical limits (bottom, top)
+    stretch::Tuple{T,T} = (1, 1)             # Stretch factor (sx, sy)
     Δx::T = 0.1                              # Mesh sizee in x-direction
     Δy::T = 0.1                              # Mesh sizee in y-direction
-    sx::T = 1                                # Stretch factor in x-direction
-    sy::T = 1                                # Stretch factor in y-direction
+    Nx::Int = 400                            # Number of x-volumes
+    Ny::Int = 40                             # Number of y-volumes
     create_mesh::Function = () -> error("mesh not implemented")
 
     # Fill in later

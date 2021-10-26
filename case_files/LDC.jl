@@ -23,14 +23,11 @@ function LDC()
     setup.model = LaminarModel{T}()
 
     # Grid parameters
-    setup.grid.Nx = 80                             # Number of volumes in the x-direction
-    setup.grid.Ny = 80                             # Number of volumes in the y-direction
-    setup.grid.x1 = 0                              # Left
-    setup.grid.x2 = 1                              # Right
-    setup.grid.y1 = 0                              # Bottom
-    setup.grid.y2 = 1                              # Top
-    setup.grid.sx = 1                              # Stretch factor in x-direction
-    setup.grid.sy = 1                              # Stretch factor in y-direction
+    setup.grid.Nx = 80                             # Number of x-volumes
+    setup.grid.Ny = 80                             # Number of y-volumes
+    setup.grid.xlims = (0, 1)                      # Horizontal limits (left, right)
+    setup.grid.ylims = (0, 1)                      # Vertical limits (bottom, top)
+    setup.grid.stretch = (1, 1)                    # Stretch factor (sx, sy)
 
     # Discretization parameters
     setup.discretization.order4 = false            # Use 4th order in space (otherwise 2nd order)
@@ -146,7 +143,7 @@ function LDC()
     Compute boundary conditions for `u` at point `(x, y)` at time `t`.
     """
     setup.bc.u_bc = function u_bc(x, y, t, setup, tol = 1e-10)
-        u = ≈(y, setup.grid.y2; rtol = tol) ? 1 : 0
+        u = ≈(y, setup.grid.ylims[2]; rtol = tol) ? 1 : 0
     end
 
     """
@@ -250,22 +247,18 @@ function LDC()
     Build mesh points `x` and `y`.
     """
     setup.grid.create_mesh = function create_mesh(setup)
+        @unpack Nx, Ny, xlims, ylims, stretch = setup.grid
+
         # Uniform mesh size x-direction
-        @unpack Nx, sx, x1, x2 = setup.grid
-        L_x = x2 - x1
+        L_x = xlims[2] - xlims[1]
         Δx = L_x / Nx
 
         # Uniform mesh size y-direction
-        @unpack Ny, sy, y1, y2 = setup.grid
-        L_y = y2 - y1
+        L_y = ylims[2] - ylims[1]
         Δy = L_y / Ny
 
-        x, _ = nonuniform_grid(Δx, x1, x2, sx)
-        y, _ = nonuniform_grid(Δy, y1, y2, sy)
-
-        # Transform uniform grid to non-uniform cosine grid
-        @. x = L_x / 2 * (1 - cos(π * x / L_x))
-        @. y = L_y / 2 * (1 - cos(π * y / L_y))
+        x, _ = nonuniform_grid(Δx, xlims[1], xlims[2], stretch[1])
+        y, _ = nonuniform_grid(Δy, ylims[1], ylims[2], stretch[2])
 
         x, y
     end
