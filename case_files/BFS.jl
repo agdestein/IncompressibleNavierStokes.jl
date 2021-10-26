@@ -206,8 +206,7 @@ function BFS()
     """
         bc_type()
 
-    left/right: x-direction
-    low/up: y-direction
+    The BC type for each spatial direction is represented by a `(left, right)` tuple.
     """
     function bc_type()
         bc_unsteady = false

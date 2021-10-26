@@ -205,12 +205,12 @@ Base.@kwdef mutable struct Discretization{T}
     yIu_vx::Vector{T} = T[]
     yIv_vy::Vector{T} = T[]
 
-    ySu_ux::Vector{T} = T[] # TODO: Vectors or matrices?
-    ySu_uy::Vector{T} = T[] # TODO: Vectors or matrices?
-    ySu_vx::Vector{T} = T[] # TODO: Vectors or matrices?
-    ySv_vx::Vector{T} = T[] # TODO: Vectors or matrices?
-    ySv_vy::Vector{T} = T[] # TODO: Vectors or matrices?
-    ySv_uy::Vector{T} = T[] # TODO: Vectors or matrices?
+    ySu_ux::Vector{T} = T[]
+    ySu_uy::Vector{T} = T[]
+    ySu_vx::Vector{T} = T[]
+    ySv_vx::Vector{T} = T[]
+    ySv_vy::Vector{T} = T[]
+    ySv_uy::Vector{T} = T[]
 
     Cux_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Cuy_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
