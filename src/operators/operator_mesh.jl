@@ -11,19 +11,19 @@ function operator_mesh!(setup)
     Np = Npx * Npy
 
     ## U-volumes
-    # X[1]   x[2]   x[3] ....      x[Nx]   x[Nx+1]
+    # x[1]   x[2]   x[3] ....      x[Nx]   x[Nx+1]
     # |      |      |              |       |
     # |      |      |              |       |
     # Dirichlet BC:
     # ULe    u[1]   u[2] ....      u(Nx-1) uRi
     # Periodic BC:
-    # U[1]   u[2]   u[3] ....      u[Nx]   u[1]
+    # u[1]   u[2]   u[3] ....      u[Nx]   u[1]
     # Pressure BC:
-    # U[1]   u[2]   u[3] ....      u[Nx]   u[Nx+1]
+    # u[1]   u[2]   u[3] ....      u[Nx]   u[Nx+1]
 
-    # X-dir
+    # x-dir
     Nux_b = 2               # Boundary points
-    Nux_in = Nx + 1            # Inner points
+    Nux_in = Nx + 1         # Inner points
     if bc.u.x[1] ∈ [:dirichlet, :symmetric]
         Nux_in -= 1
     end
@@ -37,7 +37,7 @@ function operator_mesh!(setup)
 
     # Y-dir
     Nuy_b = 2               # Boundary points
-    Nuy_in = Ny              # Inner points
+    Nuy_in = Ny             # Inner points
     Nuy_t = Nuy_in + Nuy_b  # Total number
 
     # Total number
@@ -48,12 +48,12 @@ function operator_mesh!(setup)
 
     # X-dir
     Nvx_b = 2               # Boundary points
-    Nvx_in = Nx              # Inner points
+    Nvx_in = Nx             # Inner points
     Nvx_t = Nvx_in + Nvx_b  # Total number
 
     # Y-dir
     Nvy_b = 2               # Boundary points
-    Nvy_in = Ny + 1            # Inner points
+    Nvy_in = Ny + 1         # Inner points
     if bc.v.y[1] == :dirichlet || bc.v.y[1] == :symmetric
         Nvy_in = Nvy_in - 1
     end
@@ -103,9 +103,8 @@ function operator_mesh!(setup)
             hy3[end] = hy[end-1] + 2 * hy[end]
         end
 
-        hxi3 = hx3
-        hyi3 = hy3
-
+        hxi3 = copy(hx3)
+        hyi3 = copy(hy3)
 
         # Distance between pressure points
         gx3 = zeros(Nx + 1, 1)
@@ -142,19 +141,19 @@ function operator_mesh!(setup)
 
     ## X-direction
 
-    # Gxd: differentiation
-    gxd = gx
+    # gxd: differentiation
+    gxd = copy(gx)
     gxd[1] = hx[1]
     gxd[end] = hx[end]
 
-    # Hxi: integration and hxd: differentiation
+    # hxi: integration and hxd: differentiation
     # Map to find suitable size
-    hxi = hx
+    hxi = copy(hx)
 
     # Restrict Nx+2 to Nux_in+1 points
     if bc.u.x[1] == :dirichlet && bc.u.x[2] == :dirichlet
         xin = x[2:end-1]
-        hxd = hx
+        hxd = copy(hx)
         gxi = gx[2:end-1]
         diagpos = 1
 
@@ -184,7 +183,7 @@ function operator_mesh!(setup)
     if bc.u.x[1] == :pressure && bc.u.x[2] == :pressure
         xin = x[1:end]
         hxd = [hx[1]; hx; hx[end]]
-        gxi = gx
+        gxi = copy(gx)
         diagpos = 0
     end
 
@@ -211,25 +210,25 @@ function operator_mesh!(setup)
     # (used in interpolation, convection_diffusion, viscosity)
     Bvux = spdiagm(Nux_in, Nvx_t - 1, diagpos => ones(Nux_in))
     # Map from Npx+2 points to Nux_t-1 points (ux faces)
-    Bkux = Bmap
+    Bkux = copy(Bmap)
 
 
     ## Y-direction
 
     # Gyi: integration and gyd: differentiation
-    gyd = gy
+    gyd = copy(gy)
     gyd[1] = hy[1]
     gyd[end] = hy[end]
 
     # Hyi: integration and hyd: differentiation
     # Map to find suitable size
-    hyi = hy
+    hyi = copy(hy)
 
 
     # Restrict Ny+2 to Nvy_in+1 points
     if bc.v.y[1] == :dirichlet && bc.v.y[2] == :dirichlet
         yin = y[2:end-1]
-        hyd = hy
+        hyd = copy(hy)
         gyi = gy[2:end-1]
         diagpos = 1
 
@@ -259,7 +258,7 @@ function operator_mesh!(setup)
     if bc.v.y[1] == :pressure && bc.v.y[2] == :pressure
         yin = y[1:end]
         hyd = [hy[1]; hy; hy[end]]
-        gyi = gy
+        gyi = copy(gy)
         diagpos = 0
     end
 
@@ -286,7 +285,7 @@ function operator_mesh!(setup)
     # (used in interpolation, convection_diffusion)
     Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(Nvy_in))
     # Map from Npy+2 points to Nvy_t-1 points (vy faces)
-    Bkvy = Bmap
+    Bkvy = copy(Bmap)
 
     ##
     # Volume (area) of pressure control volumes
@@ -335,8 +334,8 @@ function operator_mesh!(setup)
         # Volume (area) of dvdy control volumes
         Ωvy3 = kron(hyd3, hxi3)
 
-        Ωu1 = Ωu
-        Ωv1 = Ωv
+        Ωu1 = copy(Ωu)
+        Ωv1 = copy(Ωv)
 
         Ωu = α * Ωu1 - Ωu3
         Ωv = α * Ωv1 - Ωv3
@@ -350,7 +349,7 @@ function operator_mesh!(setup)
         Ωvx = @. α * Ωvx1 - Ωvx3
         Ωvy = @. α * Ωvy1 - Ωvy3
 
-        Ωvort1 = Ωvort
+        Ωvort1 = copy(Ωvort)
         Ωvort3 = kron(gyi3, gxi3)
         # Ωvort = α*Ωvort - Ωvort3;
     end
@@ -400,11 +399,6 @@ function operator_mesh!(setup)
         @pack! setup.grid = hx3, hy3, hxi3, hyi3, gxi3, gyi3
         @pack! setup.grid = hxd13, hxd3, hyd13, hyd3, gxd13, gxd3, gyd13, gyd3
         @pack! setup.grid = Ωux1, Ωux3, Ωuy1, Ωuy3, Ωvx1, Ωvx3, Ωvy1, Ωvy3, Ωvort3
-    end
-
-    # Plot the grid: velocity points and pressure points
-    if setup.visualization.plotgrid
-        plot_staggered(x, y)
     end
 
     setup
