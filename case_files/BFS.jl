@@ -7,6 +7,9 @@ function BFS()
     # Floating point type for simulations
     T = Float64
 
+    # Spatial dimension
+    N = 2
+
     # Case information
     name = "BFS"
     problem = UnsteadyProblem()
@@ -34,7 +37,7 @@ function BFS()
     xlims = (0, 10)                    # Horizontal limits (left, right)
     ylims = (-0.5, 0.5)                # Vertical limits (bottom, top)
     stretch = (1, 1)                   # Stretch factor (sx, sy)
-    grid = Grid{T}(; Nx, Ny, xlims, ylims, stretch)
+    grid = Grid{T, N}(; Nx, Ny, xlims, ylims, stretch)
 
     # Discretization parameters
     order4 = false           # Use 4th order in space (otherwise 2nd order)
@@ -335,7 +338,7 @@ function BFS()
 
     grid.create_mesh = create_mesh
 
-    Setup{T}(;
+    Setup{T,N}(;
         case,
         fluid,
         model,

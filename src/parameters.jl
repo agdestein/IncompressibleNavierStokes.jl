@@ -19,12 +19,12 @@ Base.@kwdef mutable struct Fluid{T}
 end
 
 # Grid parameters
-Base.@kwdef mutable struct Grid{T}
+Base.@kwdef mutable struct Grid{T, N}
     Nx::Int = 10                             # Number of x-volumes
     Ny::Int = 10                             # Number of y-volumes
     xlims::Tuple{T,T} = (0, 1)               # Horizontal limits (left, right)
     ylims::Tuple{T,T} = (0, 1)               # Vertical limits (bottom, top)
-    stretch::Tuple{T,T} = (1, 1)             # Stretch factor (sx, sy)
+    stretch::NTuple{N,T} = (1, 1)            # Stretch factor (sx, sy[, sz])
     Δx::T = 0.1                              # Mesh sizee in x-direction
     Δy::T = 0.1                              # Mesh sizee in y-direction
     create_mesh::Function = () -> error("mesh not implemented")
@@ -363,11 +363,11 @@ Base.@kwdef mutable struct BC{T}
     bc_type::Function = () -> error("bc_type not implemented")
 end
 
-Base.@kwdef struct Setup{T}
+Base.@kwdef struct Setup{T, N}
     case::Case = Case()
     fluid::Fluid{T} = Fluid{T}()
     model::ViscosityModel{T} = LaminarModel{T}()
-    grid::Grid{T} = Grid{T}()
+    grid::Grid{T, N} = Grid{T, N}()
     discretization::Discretization{T} = Discretization{T}()
     force::Force{T} = Force{T}()
     rom::ROM = ROM()
