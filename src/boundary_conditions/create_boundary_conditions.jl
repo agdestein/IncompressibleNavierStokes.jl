@@ -1,5 +1,5 @@
 """
-    reate_boundary_conditions!(setup)
+    create_boundary_conditions!(setup)
 
 Create discrete boundary condtions.
 
