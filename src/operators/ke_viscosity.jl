@@ -39,7 +39,7 @@ function ke_viscosity!(setup)
 
     ## K
     # Boundary conditions for k; mapping from Npx (k) points to Npx+2 points
-    [B1D, Btemp, ybcl, ybcr] =
+    B1D, Btemp, ybcl, ybcr =
         bc_general_stag(Npx + 2, Npx, 2, bc.k.x[1], bc.k.x[2], hx[1], hx[end])
 
     # Then map to Nux_in points (like Iv_uy) with Bvux

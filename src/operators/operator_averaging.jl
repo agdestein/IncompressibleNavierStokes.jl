@@ -24,7 +24,6 @@ function operator_averaging!(setup)
     Au_ux = kron(sparse(I, Nuy_in, Nuy_in), A1D * Au_ux_bc.B1D)
     Au_ux_bc = (; Au_ux_bc..., Bbc = kron(sparse(I, Nuy_in, Nuy_in), A1D * Au_ux_bc.Btemp))
 
-
     ## Au_uy: evaluate u at uy location
     diag1 = weight * ones(Nuy_t - 1)
     A1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => diag1, 1 => diag1)
@@ -48,7 +47,6 @@ function operator_averaging!(setup)
     # Extend to 2D
     Av_vx = kron(sparse(I, Nvy_in, Nvy_in), A1D * Av_vx_bc.B1D)
     Av_vx_bc = (; Av_vx_bc..., Bbc = kron(sparse(I, Nvy_in, Nvy_in), A1D * Av_vx_bc.Btemp))
-
 
     ## Av_vy: evaluate v at vy location
     diag1 = weight * ones(Nvy_t - 1)
@@ -145,7 +143,7 @@ function operator_averaging!(setup)
         Au_ux, Au_uy, Av_vx, Av_vy, Au_ux_bc, Au_uy_bc, Av_vx_bc, Av_vy_bc
 
     if order4
-        setup.discretization =
+        @pack! setup.discretization =
             Au_ux3, Au_uy3, Av_vx3, Av_vy3, Au_ux_bc3, Au_uy_bc3, Av_vx_bc3, Av_vy_bc3
     end
 end

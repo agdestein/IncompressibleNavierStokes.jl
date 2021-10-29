@@ -18,7 +18,6 @@ function ke_production!(setup)
 
     # Cux_k*uₕ+yCux_k;
 
-
     ## Du/dy
 
     # Average to k-positions (in x-dir)

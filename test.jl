@@ -22,7 +22,6 @@ build_operators!(setup);
 
 # Initialize solution vectors
 V₀, p₀, t₀ = create_initial_conditions(setup);
-
 check_input!(setup, V₀, p₀, t₀);
 
 # Solve problem

@@ -2,12 +2,7 @@
 Construct divergence and gradient operator
 """
 function operator_divergence!(setup)
-
-    # Boundary conditions
-    bc = setup.bc
-
-    # Number of interior points and boundary points
-    @unpack model = setup
+    @unpack bc, model = setup
     @unpack problem = setup.case
     @unpack pressure_solver = setup.solver_settings
     @unpack Nx, Npx, Npy = setup.grid
@@ -15,13 +10,11 @@ function operator_divergence!(setup)
     @unpack Nvx_in, Nvy_in, Nvy_b, Nvy_t = setup.grid
     @unpack hx, hy = setup.grid
     @unpack Ω⁻¹ = setup.grid
-
-    order4 = setup.discretization.order4
+    @unpack order4 = setup.discretization
 
     if order4
-        α = setup.discretization.α
-        hxi3 = setup.grid.hxi3
-        hyi3 = setup.grid.hyi3
+        @unpack α = setup.discretization
+        @unpack hxi3, hyi3 = setup.grid
     end
 
     ## Divergence operator M
@@ -150,8 +143,8 @@ function operator_divergence!(setup)
 
     # Like in the continuous case, grad = -div^T
     # Note that this also holds for outflow boundary conditions, if the stress
-    # On the ouflow boundary is properly taken into account in y_p (often this
-    # Stress will be zero)
+    # on the ouflow boundary is properly taken into account in y_p (often this
+    # stress will be zero)
     Gx = -Mx'
     Gy = -My'
 

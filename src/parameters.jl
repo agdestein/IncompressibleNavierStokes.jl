@@ -7,6 +7,7 @@ Base.@kwdef mutable struct Case
     force_unsteady::Bool = false             # False: steady forcing or no forcing; true: unsteady forcing
     initial_velocity_u::Function = () -> error("initial_velocity_u not implemented")
     initial_velocity_v::Function = () -> error("initial_velocity_v not implemented")
+    initial_velocity_w::Function = () -> error("initial_velocity_w not implemented")
     initial_pressure::Function = () -> error("initial_pressure not implemented")
 end
 
@@ -22,26 +23,27 @@ end
 Base.@kwdef mutable struct Grid{T, N}
     Nx::Int = 10                             # Number of x-volumes
     Ny::Int = 10                             # Number of y-volumes
+    Nz::Int = 0                              # Number of z-volumes (if any)
     xlims::Tuple{T,T} = (0, 1)               # Horizontal limits (left, right)
     ylims::Tuple{T,T} = (0, 1)               # Vertical limits (bottom, top)
     stretch::NTuple{N,T} = (1, 1)            # Stretch factor (sx, sy[, sz])
-    Δx::T = 0.1                              # Mesh sizee in x-direction
-    Δy::T = 0.1                              # Mesh sizee in y-direction
     create_mesh::Function = () -> error("mesh not implemented")
 
     # Fill in later
+    Δx::T = 0                                # Mesh size in x-direction
+    Δy::T = 0                                # Mesh size in y-direction
+    Δz::T = 0                                # Mesh size in z-direction
     x::Vector{T} = T[]                       # Vector of x-points
     y::Vector{T} = T[]                       # Vector of y-points
+    z::Vector{T} = T[]                       # Vector of z-points
     xp::Vector{T} = T[]
     yp::Vector{T} = T[]
-    hx::Vector{T} = T[]
-    hy::Vector{T} = T[]
-    gx::Vector{T} = T[]
-    gy::Vector{T} = T[]
+    zp::Vector{T} = T[]
 
     # Number of pressure points in each dimension
     Npx::Int = 0
     Npy::Int = 0
+    Npz::Int = 0
 
     Nux_in::Int = 0
     Nux_b::Int = 0
@@ -49,19 +51,36 @@ Base.@kwdef mutable struct Grid{T, N}
     Nuy_in::Int = 0
     Nuy_b::Int = 0
     Nuy_t::Int = 0
+    Nuz_in::Int = 0
+    Nuz_b::Int = 0
+    Nuz_t::Int = 0
+    
     Nvx_in::Int = 0
     Nvx_b::Int = 0
     Nvx_t::Int = 0
     Nvy_in::Int = 0
     Nvy_b::Int = 0
     Nvy_t::Int = 0
+    Nvz_in::Int = 0
+    Nvz_b::Int = 0
+    Nvz_t::Int = 0
+
+    Nwx_in::Int = 0
+    Nwx_b::Int = 0
+    Nwx_t::Int = 0
+    Nwy_in::Int = 0
+    Nwy_b::Int = 0
+    Nwy_t::Int = 0
+    Nwz_in::Int = 0
+    Nwz_b::Int = 0
+    Nwz_t::Int = 0
 
     # Number of points in solution vector
     Nu::Int = 0
     Nv::Int = 0
+    Nw::Int = 0
     NV::Int = 0
     Np::Int = 0
-    Ntot::Int = 0
 
     N1::Int = 0
     N2::Int = 0
@@ -74,23 +93,40 @@ Base.@kwdef mutable struct Grid{T, N}
     Ω::Vector{T} = T[]
     Ωu::Vector{T} = T[]
     Ωv::Vector{T} = T[]
+    Ωw::Vector{T} = T[]
     Ω⁻¹::Vector{T} = T[]
     Ωu⁻¹::Vector{T} = T[]
     Ωv⁻¹::Vector{T} = T[]
+    Ωw⁻¹::Vector{T} = T[]
     Ωux::Vector{T} = T[]
-    Ωvx::Vector{T} = T[]
     Ωuy::Vector{T} = T[]
+    Ωuz::Vector{T} = T[]
+    Ωvx::Vector{T} = T[]
     Ωvy::Vector{T} = T[]
+    Ωvz::Vector{T} = T[]
+    Ωwx::Vector{T} = T[]
+    Ωwy::Vector{T} = T[]
+    Ωwz::Vector{T} = T[]
     Ωvort::Vector{T} = T[]
 
+    hx::Vector{T} = T[]
+    hy::Vector{T} = T[]
+    hz::Vector{T} = T[]
     hxi::Vector{T} = T[]
     hyi::Vector{T} = T[]
+    hzi::Vector{T} = T[]
     hxd::Vector{T} = T[]
     hyd::Vector{T} = T[]
+    hzd::Vector{T} = T[]
+    gx::Vector{T} = T[]
+    gy::Vector{T} = T[]
+    gz::Vector{T} = T[]
     gxi::Vector{T} = T[]
     gyi::Vector{T} = T[]
+    gzi::Vector{T} = T[]
     gxd::Vector{T} = T[]
     gyd::Vector{T} = T[]
+    gzd::Vector{T} = T[]
 
     Buvy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Bvux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
@@ -99,20 +135,28 @@ Base.@kwdef mutable struct Grid{T, N}
 
     xin::Vector{T} = T[]
     yin::Vector{T} = T[]
+    zin::Vector{T} = T[]
 
     # Separate grids for u, v, and p
     xu::Matrix{T} = zeros(T, 0, 0)
-    yu::Matrix{T} = zeros(T, 0, 0)
     xv::Matrix{T} = zeros(T, 0, 0)
+    xw::Matrix{T} = zeros(T, 0, 0)
+    yu::Matrix{T} = zeros(T, 0, 0)
     yv::Matrix{T} = zeros(T, 0, 0)
+    yw::Matrix{T} = zeros(T, 0, 0)
+    zu::Matrix{T} = zeros(T, 0, 0)
+    zv::Matrix{T} = zeros(T, 0, 0)
+    zw::Matrix{T} = zeros(T, 0, 0)
     xpp::Matrix{T} = zeros(T, 0, 0)
     ypp::Matrix{T} = zeros(T, 0, 0)
+    zpp::Matrix{T} = zeros(T, 0, 0)
 
     # Ranges
-    indu::UnitRange{Int} = 1:0
-    indv::UnitRange{Int} = 1:0
-    indV::UnitRange{Int} = 1:0
-    indp::UnitRange{Int} = 1:0
+    indu::UnitRange{Int} = 0:0
+    indv::UnitRange{Int} = 0:0
+    indw::UnitRange{Int} = 0:0
+    indV::UnitRange{Int} = 0:0
+    indp::UnitRange{Int} = 0:0
 end
 
 
@@ -125,13 +169,23 @@ Base.@kwdef mutable struct Discretization{T}
     # Filled in by function
     Au_ux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Au_uy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Au_uz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Av_vx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Av_vy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Av_vz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aw_wx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aw_wy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aw_wz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
     Au_ux_bc::NamedTuple = (;)
     Au_uy_bc::NamedTuple = (;)
+    Au_uz_bc::NamedTuple = (;)
     Av_vx_bc::NamedTuple = (;)
     Av_vy_bc::NamedTuple = (;)
+    Av_vz_bc::NamedTuple = (;)
+    Aw_wx_bc::NamedTuple = (;)
+    Aw_wy_bc::NamedTuple = (;)
+    Aw_wz_bc::NamedTuple = (;)
 
     Iu_ux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Iv_uy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)

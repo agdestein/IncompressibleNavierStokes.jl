@@ -16,7 +16,8 @@ end
 """
     convection!(c, ∇c, V, ϕ, t, cache, setup, getJacobian = false) -> c, ∇c
 
-evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`.
+Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`.
+The convected quantity is `ϕ` (usually `ϕ = V`).
 """
 function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
     @unpack order4 = setup.discretization

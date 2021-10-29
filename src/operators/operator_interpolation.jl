@@ -4,8 +4,6 @@ Construct averaging operators.
 function operator_interpolation!(setup)
     @unpack bc = setup
     @unpack Nx, Ny = setup.grid
-
-    # Number of interior points and boundary points
     @unpack Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t = setup.grid
     @unpack Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t = setup.grid
     @unpack hx, hy, hxi, hyi = setup.grid
@@ -13,7 +11,7 @@ function operator_interpolation!(setup)
     @unpack order4 = setup.discretization
 
     if order4
-        β = setup.discretization.β
+        @unpack β = setup.discretization
         @unpack hxi3, hyi3, hx3, hy3 = setup.grid
     end
 
