@@ -1,8 +1,36 @@
-# Average (turbulent) viscosity to cell faces
+"""
+    ke_viscosity!(setup)
+
+Average (turbulent) viscosity to cell faces
+"""
 function ke_viscosity!(setup)
+    @unpack bc = setup
+	@unpack x, y, xp, yp, hx, hy = setup.grid
+    @unpack Nx, Ny, Npx, Npy, Nux_in, Nuy_in, Nvx_in, Nvy_in, Bvux, Buvy, Bkux, Bkvy = setup.grid
+    @unpack k, e, k_bc, e_bc = bc
+
+    kLe = fill(k_bc.x[1], Ny + 1)
+    kRi = fill(k_bc.x[2], Ny + 1)
+    kLo = fill(k_bc.y[1], Nx + 1)
+    kUp = fill(k_bc.y[2], Nx + 1)
+
+    eLe = fill(e_bc.x[1], Ny + 1)
+    eRi = fill(e_bc.x[2], Ny + 1)
+    eLo = fill(e_bc.y[1], Nx + 1)
+    eUp = fill(e_bc.y[2], Nx + 1)
+
+	kLe = LinearInterpolation(y,kLe)(yp)
+	kRi = LinearInterpolation(y,kRi)(yp)
+	kLo = LinearInterpolation(x,kLo)(xp)
+	kUp = LinearInterpolation(x,kUp)(xp)
+
+	eLe = LinearInterpolation(y,eLe)(yp)
+	eRi = LinearInterpolation(y,eRi)(yp)
+	eLo = LinearInterpolation(x,eLo)(xp)
+	eUp = LinearInterpolation(x,eUp)(xp)
+
     # Averaging weight:
     weight = 1 / 2
-
 
     ## Nu to ux positions
 
@@ -198,6 +226,26 @@ function ke_viscosity!(setup)
 
     # So nu at vy is given by:
     # Cmu * (Ak_vy * k + yAk_vy).^2 / (Ae_vy * e + yAe_vy)
+
+    # TODO: @pack! correct parameters
+    Ak_ux
+    Ak_uy
+    Ak_vx
+    Ak_vy
+    yAk_ux
+    yAk_uy
+    yAk_vx
+    yAk_vy
+
+    Ae_ux
+    Ae_uy
+    Ae_vx
+    Ae_vy
+    yAe_ux
+    yAe_uy
+    yAe_vx
+    yAe_vy
+
 
     setup
 end

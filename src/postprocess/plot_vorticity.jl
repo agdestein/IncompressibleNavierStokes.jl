@@ -1,5 +1,7 @@
 """
-plot_vorticity.
+    plot_vorticity(setup, V, t)
+
+Plot vorticity field.
 """
 function plot_vorticity(setup, V, t)
     @unpack bc = setup
@@ -37,5 +39,6 @@ function plot_vorticity(setup, V, t)
     limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
     contourf!(ax, xω, yω, ω; levels)
     display(f)
-    save("output/vorticity.png", f, pt_per_unit = 2)
+    #save("output/vorticity.png", f, pt_per_unit = 2)
+    #f
 end

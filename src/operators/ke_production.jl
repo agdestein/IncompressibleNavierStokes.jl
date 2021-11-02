@@ -101,6 +101,8 @@ function ke_production!(setup)
     ybc = kron(ybcl, vLo_i) + kron(ybcu, vUp_i)
     yCvy_k = kron(C1D * Btemp, sparse(I, Npx, Npx)) * ybc
 
-    # Cvy_k*vₕ+yCvy_k;
+    # Cvy_k * vₕ + yCvy_k
+
+
     setup
 end

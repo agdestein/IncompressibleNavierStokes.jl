@@ -1,6 +1,21 @@
 
 function ke_convection!(setup)
-    ## X-direction
+    bc = setup
+	Nx, Ny, x, y, xp, yp, hx, hy = setup.grid
+    Npx, Npy, Nux_in, Nvy_in = setup.grid
+    k_bc = bc
+
+    kLe = fill(k_bc.x[1], Ny + 1)
+    kRi = fill(k_bc.x[2], Ny + 1)
+    kLo = fill(k_bc.y[1], Nx + 1)
+    kUp = fill(k_bc.y[2], Nx + 1)
+
+	kLe = LinearInterpolation(y,kLe)(yp)
+	kRi = LinearInterpolation(y,kRi)(yp)
+	kLo = LinearInterpolation(x,kLo)(xp)
+	kUp = LinearInterpolation(x,kUp)(xp)
+
+    ## X-directionk
 
     # Differencing matrix
     diag1 = ones(Npx)
@@ -64,5 +79,18 @@ function ke_convection!(setup)
     yAk_ky = kron(A1D * Btemp, sparse(I, Npx, Npx)) * ybc
     Ak_ky = kron(A1D * B1D, sparse(I, Npx, Npx))
 
+
+    Ckx
+    yIu_kx
+    Iu_kx
+    yAk_kx
+    Ak_kx
+    Cky
+    yIv_ky
+    Iv_ky
+    yAk_ky
+    Ak_ky
+
     # TODO: @pack! results
+    setup
 end

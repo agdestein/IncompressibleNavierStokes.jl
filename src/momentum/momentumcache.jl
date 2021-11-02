@@ -44,9 +44,12 @@ struct MomentumCache{T}
     Conv_vx_22::SparseMatrixCSC{T, Int}
     Conv_vy_22::SparseMatrixCSC{T, Int}
 end
-function MomentumCache(setup::Setup{T}) where {T}
+function MomentumCache(setup)
     @unpack Nu, Nv, NV = setup.grid
     @unpack yIu_ux, yIv_uy, yIu_vx, yIv_vy = setup.discretization
+
+    T = eltype(yIu_ux)
+
     Gp = zeros(T, NV)
     c = zeros(T, NV)
     c2 = zeros(T, NV)

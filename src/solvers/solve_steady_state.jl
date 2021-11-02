@@ -10,8 +10,7 @@ function solve(::SteadyStateProblem, setup, V₀, p₀)
     @unpack problem = setup.case
     @unpack Nu, Nv, NV, Np = setup.grid
     @unpack G, M, yM = setup.discretization
-    @unpack Jacobian_type, nPicard, Newton_factor, nonlinear_acc, nonlinear_maxit =
-        setup.solver_settings
+    @unpack Jacobian_type, nPicard, nonlinear_acc, nonlinear_maxit = setup.solver_settings
     @unpack use_rom = setup.rom
     @unpack do_rtp, rtp_n = setup.visualization
     @unpack t_start = setup.time

@@ -16,7 +16,11 @@ function pressure_additional_solve!(V, p, t, setup, momentum_cache, F)
     # Note: time derivative of BC in ydM
     @unpack pressure_solver = setup.solver_settings
     @unpack M, ydM = setup.discretization
-    @unpack Ω⁻¹ = setup.grid
+    @unpack Np, Ω⁻¹ = setup.grid
+
+    # TODO: Preallocate
+    Δp = zeros(Np)
+    f = zeros(Np)
 
     # Get updated BC for ydM
     if setup.bc.bc_unsteady
@@ -25,8 +29,13 @@ function pressure_additional_solve!(V, p, t, setup, momentum_cache, F)
 
     # Momentum already contains G*p with the current p, we therefore effectively solve for the pressure difference
     momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
-    f = M * (Ω⁻¹ .* F) + ydM
-    Δp = pressure_poisson(pressure_solver, f, t, setup)
+
+    # f = M * (Ω⁻¹ .* F) + ydM
+    @. F = Ω⁻¹ .* F
+    mul!(f, M, F)
+    @. f = f + ydM
+
+    pressure_poisson!(pressure_solver, Δp, f, t, setup)
 
     p .+= Δp
 end

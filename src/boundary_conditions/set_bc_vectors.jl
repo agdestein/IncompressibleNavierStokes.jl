@@ -8,7 +8,7 @@ function set_bc_vectors!(setup, t)
     @unpack model = setup
     @unpack Re = setup.fluid
     @unpack u_bc, v_bc, dudt_bc, dvdt_bc = setup.bc
-    @unpack pLe, pRi, pLo, pUp, bc_unsteady = setup.bc
+    @unpack p_bc, bc_unsteady = setup.bc
     @unpack Nux_in, Nvy_in, Np, Npx, Npy = setup.grid
     @unpack xin, yin, x, y, hx, hy, xp, yp = setup.grid
     @unpack order4 = setup.discretization
@@ -120,7 +120,7 @@ function set_bc_vectors!(setup, t)
     if setup.bc.u.x[2] == :pressure
         y1D_ri[end] = 1
     end
-    y_px = kron(hy .* pLe, y1D_le) + kron(hy .* pRi, y1D_ri)
+    y_px = kron(hy .* p_bc.x[1], y1D_le) + kron(hy .* p_bc.x[2], y1D_ri)
 
     # Lower and upper side
     y1D_lo = zeros(Nvy_in)
@@ -131,7 +131,7 @@ function set_bc_vectors!(setup, t)
     if setup.bc.v.y[2] == :pressure
         y1D_up[end] = 1
     end
-    y_py = kron(y1D_lo, hx .* pLo) + kron(y1D_up, hx .* pUp)
+    y_py = kron(y1D_lo, hx .* p_bc.y[1]) + kron(y1D_up, hx .* p_bc.y[2])
 
     y_p = [y_px; y_py]
     @pack! setup.discretization = y_p

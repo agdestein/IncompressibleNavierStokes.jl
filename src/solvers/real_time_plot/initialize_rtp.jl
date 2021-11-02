@@ -35,8 +35,9 @@ function initialize_rtp(setup, V, p, t)
             yω = y[2:end-1]
         end
         ω = Node(get_vorticity(V, t, setup))
-        ax, hm = contourf(fig[1, 1], xω, yω, ω; levels = -10:2:10)
-        # ax, hm = contourf(fig[1, 1], xω, yω, ω; levels = -10:2:10)
+        # ax, hm = contour(fig[1, 1], xω, yω, ω; levels = -10:2:10)
+        # ax, hm = contourf(fig[1, 1], xω, yω, ω; levels = -10:2:10, extendlow = :auto, extendhigh = :auto)
+        ax, hm = heatmap(fig[1, 1], xω, yω, ω) #; colorrange = (-20, 20))#, colormap = :vangogh)
     elseif rtp_type == "streamfunction"
         if bc.u.x[1] == :periodic
             xψ = x

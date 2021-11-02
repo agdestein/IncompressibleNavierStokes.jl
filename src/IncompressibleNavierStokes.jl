@@ -1,7 +1,8 @@
-"Incompressible Navier-Stokes solvers"
+"Energy-conserving solvers for the incompressible Navier-Stokes equations."
 module IncompressibleNavierStokes
 
 using FFTW: fft, ifft
+using Interpolations: LinearInterpolation
 using IterativeSolvers: cg!
 using LinearAlgebra: Diagonal, Factorization, UpperTriangular, I, cholesky, factorize, ldiv!, lu, mul!
 using SparseArrays: SparseMatrixCSC, blockdiag, nnz, sparse, spdiagm, spzeros
@@ -17,10 +18,19 @@ using Makie:
     contour!,
     contourf,
     contourf!,
+    heatmap,
     limits!,
     lines!,
     record,
     save
+
+# Grid
+include("grid/grid.jl")
+include("grid/nonuniform_grid.jl")
+include("grid/create_grid.jl")
+
+# Force
+include("force/force.jl")
 
 # Models
 include("models/models.jl")
@@ -29,50 +39,17 @@ include("models/models.jl")
 include("problems/problems.jl")
 include("problems/is_steady.jl")
 
-# Types
-include("time_steppers/methods.jl")
-include("time_steppers/tableaux.jl")
-include("time_steppers/nstage.jl")
-include("time_steppers/time_stepper_caches.jl")
-include("solvers/pressure/pressure_solvers.jl")
-include("parameters.jl")
-include("momentum/momentumcache.jl")
-
-# Time steppers
-include("time_steppers/time_steppers.jl")
-include("time_steppers/change_time_stepper.jl")
-include("time_steppers/step.jl")
-include("time_steppers/isexplicit.jl")
-include("time_steppers/needs_startup_method.jl")
-include("time_steppers/lambda_max.jl")
-
-# Preprocess
-include("preprocess/check_input.jl")
-include("preprocess/create_mesh.jl")
-include("preprocess/create_initial_conditions.jl")
-
-# Momentum equation
-include("momentum/bodyforce.jl")
-include("momentum/compute_conservation.jl")
-include("momentum/check_symmetry.jl")
-include("momentum/convection.jl")
-include("momentum/diffusion.jl")
-include("momentum/momentum.jl")
-include("momentum/strain_tensor.jl")
-include("momentum/turbulent_viscosity.jl")
-
 # Boundary condtions
+include("boundary_conditions/boundary_conditions.jl")
+include("boundary_conditions/create_boundary_conditions.jl")
 include("boundary_conditions/bc_diff_stag.jl")
 include("boundary_conditions/bc_diff_stag3.jl")
 include("boundary_conditions/bc_general.jl")
 include("boundary_conditions/bc_general_stag.jl")
-include("boundary_conditions/create_boundary_conditions.jl")
 include("boundary_conditions/set_bc_vectors.jl")
 
-# Grid
-include("grid/nonuniform_grid.jl")
-
 # Operators
+include("operators/operators.jl")
 include("operators/build_operators.jl")
 include("operators/interpolate_nu.jl")
 include("operators/operator_averaging.jl")
@@ -83,7 +60,41 @@ include("operators/operator_mesh.jl")
 include("operators/operator_postprocessing.jl")
 include("operators/operator_regularization.jl")
 include("operators/operator_turbulent_diffusion.jl")
+include("operators/ke_production.jl")
+include("operators/ke_convection.jl")
+include("operators/ke_diffusion.jl")
+include("operators/ke_viscosity.jl")
 include("operators/operator_viscosity.jl")
+
+# Preprocess
+include("preprocess/create_initial_conditions.jl")
+
+# Types
+include("time_steppers/methods.jl")
+include("time_steppers/tableaux.jl")
+include("time_steppers/nstage.jl")
+include("time_steppers/time_stepper_caches.jl")
+include("solvers/pressure/pressure_solvers.jl")
+include("momentum/momentumcache.jl")
+include("parameters.jl")
+
+# Time steppers
+include("time_steppers/time_steppers.jl")
+include("time_steppers/change_time_stepper.jl")
+include("time_steppers/step.jl")
+include("time_steppers/isexplicit.jl")
+include("time_steppers/needs_startup_method.jl")
+include("time_steppers/lambda_max.jl")
+
+# Momentum equation
+include("momentum/bodyforce.jl")
+include("momentum/compute_conservation.jl")
+include("momentum/check_symmetry.jl")
+include("momentum/convection.jl")
+include("momentum/diffusion.jl")
+include("momentum/momentum.jl")
+include("momentum/strain_tensor.jl")
+include("momentum/turbulent_viscosity.jl")
 
 # Reduced Order Model
 include("rom/momentum_rom.jl")
@@ -101,7 +112,6 @@ include("solvers/pressure/pressure_additional_solve.jl")
 include("utils/filter_convection.jl")
 
 # Postprocess
-include("postprocess/postprocess.jl")
 include("postprocess/get_velocity.jl")
 include("postprocess/get_vorticity.jl")
 include("postprocess/get_streamfunction.jl")
@@ -109,11 +119,11 @@ include("postprocess/plot_vorticity.jl")
 include("postprocess/plot_pressure.jl")
 include("postprocess/plot_streamfunction.jl")
 
-# Main driver
-include("main.jl")
-
 # Reexport
 export @pack!, @unpack
+
+# Grid
+export create_grid
 
 # Models
 export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
@@ -126,7 +136,7 @@ export Case,
     Fluid,
     Visc,
     Grid,
-    Discretization,
+    Operators,
     Force,
     ROM,
     IBM,
@@ -143,9 +153,7 @@ export nonuniform_grid
 export DirectPressureSolver, CGPressureSolver, FourierPressureSolver
 
 # Main driver
-export main
-export create_mesh!,
-    create_boundary_conditions!,
+export create_boundary_conditions,
     build_operators!,
     create_initial_conditions,
     set_bc_vectors!,
