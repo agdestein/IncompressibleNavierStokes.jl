@@ -32,7 +32,7 @@ function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
 
         # To compute the diffusion, we need ν_t at ux, uy, vx and vy locations
         # This means we have to reverse the process of strain_tensor.m: go
-        # From pressure points back to the ux, uy, vx, vy locations
+        # from pressure points back to the ux, uy, vx, vy locations
         ν_t_ux, ν_t_uy, ν_t_vx, ν_t_vy = interpolate_ν(ν_t, setup)
 
         # Now the total diffusive terms (laminar + turbulent) is as follows
@@ -57,21 +57,8 @@ function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
             Jacu = [Jacu1 Jacu2]
             Jacv = [Jacv1 Jacv2]
 
-            if model isa SmagorinskyModel
-                # Smagorinsky
-                C_S = model.Cs
-                filter_length = Δx
-                K = C_S^2 * filter_length^2
-            elseif model isa QRModel
-                C_d = Δx^2 / 8
-                K = C_d * 1//2 * (1 - α / C_d)^2
-            elseif model isa MixingLengthModel
-                # Mixing-length
-                lm = model.lm
-                K = (lm^2)
-            else
-                error("wrong viscosity model")
-            end
+            K = turbulent_K(model, setup)
+
             tmpu1 =
                 2 * Dux * spdiagm(S11) * Aν_ux * S_abs_u +
                 2 * Duy * spdiagm(S12) * Aν_uy * S_abs_u

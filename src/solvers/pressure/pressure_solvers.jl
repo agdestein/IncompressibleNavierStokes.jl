@@ -30,6 +30,9 @@ function initialize!(::FourierPressureSolver, setup, A)
     end
     Δx = hx[1]
     Δy = hy[1]
+    if any(!≈(Δx), hx) || any(!≈(Δy), hy)
+        error("FourierPressureSolver requires uniform grid along each dimension")
+    end 
 
     # Fourier transform of the discretization
     # Assuming uniform grid, although Δx, Δy and Δz do not need to be the same

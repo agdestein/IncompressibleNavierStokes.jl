@@ -9,12 +9,8 @@ Base.@kwdef mutable struct Grid{T, N}
     Nz::Int = 0                              # Number of z-volumes (if any)
     xlims::Tuple{T,T} = (0, 1)               # Horizontal limits (left, right)
     ylims::Tuple{T,T} = (0, 1)               # Vertical limits (bottom, top)
-    stretch::NTuple{N,T} = (1, 1)            # Stretch factor (sx, sy[, sz])
+    zlims::Tuple{T,T} = (0, 1)               # Depth limits (back, front)
 
-    # Fill in later
-    Δx::T = 0                                # Mesh size in x-direction
-    Δy::T = 0                                # Mesh size in y-direction
-    Δz::T = 0                                # Mesh size in z-direction
     x::Vector{T} = T[]                       # Vector of x-points
     y::Vector{T} = T[]                       # Vector of y-points
     z::Vector{T} = T[]                       # Vector of z-points

@@ -18,12 +18,12 @@ function create_initial_conditions(setup)
     # The body force is called in the residual routines e.g. momentum.jl
     # Steady force can be precomputed once:
     if setup.force.isforce
-        Fx, Fy, _ = bodyforce(V, t, setup)
+        Fx, Fy, = bodyforce(V, t, setup)
         F = [Fx; Fy]
     else
         F = zeros(NV)
-        @pack! setup.force = F
     end
+    @pack! setup.force = F
 
     # Allocate velocity and pressure
     u = zero(xu)
@@ -46,9 +46,6 @@ function create_initial_conditions(setup)
         f = M * V + yM
         Δp = pressure_poisson(pressure_solver, f, t, setup)
         V .-= Ω⁻¹ .* (G * Δp)
-
-        # Repeat conservation with updated velocity field
-        maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
     end
 
     # Initial pressure: should in principle NOT be prescribed (will be calculated if p_initial)

@@ -17,7 +17,6 @@ problem = setup.case.problem;
 @time V, p = solve(problem, setup, V₀, p₀);
 
 ## Post-process
-postprocess(setup, V, p, setup.time.t_end);
 plot_pressure(setup, p);
 plot_vorticity(setup, V, setup.time.t_end);
 plot_streamfunction(setup, V, setup.time.t_end);

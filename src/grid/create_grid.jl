@@ -36,5 +36,5 @@ function create_grid(T = Float64, N = 2; Nx, Ny, xlims, ylims, stretch)
         gz[Nz+1] = hz[end] / 2
     end
 
-    Grid{T, N}(; Nx, Ny, xlims, ylims, stretch, x, y, xp, yp, hx, hy, gx, gy)
+    Grid{T, N}(; Nx, Ny, xlims, ylims, x, y, xp, yp, hx, hy, gx, gy)
 end

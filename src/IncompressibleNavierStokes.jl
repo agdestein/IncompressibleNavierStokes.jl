@@ -94,6 +94,7 @@ include("momentum/convection.jl")
 include("momentum/diffusion.jl")
 include("momentum/momentum.jl")
 include("momentum/strain_tensor.jl")
+include("momentum/turbulent_K.jl")
 include("momentum/turbulent_viscosity.jl")
 
 # Reduced Order Model
