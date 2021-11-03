@@ -22,15 +22,9 @@ function operator_mesh!(setup)
     # x-dir
     Nux_b = 2               # Boundary points
     Nux_in = Nx + 1         # Inner points
-    if bc.u.x[1] ∈ [:dirichlet, :symmetric]
-        Nux_in -= 1
-    end
-    if bc.u.x[2] ∈ [:dirichlet, :symmetric]
-        Nux_in -= 1
-    end
-    if bc.u.x == (:periodic, :periodic)
-        Nux_in -= 1
-    end
+    Nux_in -= bc.u.x[1] ∈ [:dirichlet, :symmetric]
+    Nux_in -= bc.u.x[2] ∈ [:dirichlet, :symmetric]
+    Nux_in -= bc.u.x == (:periodic, :periodic)
     Nux_t = Nux_in + Nux_b  # Total number
 
     # Y-dir
@@ -52,15 +46,9 @@ function operator_mesh!(setup)
     # Y-dir
     Nvy_b = 2               # Boundary points
     Nvy_in = Ny + 1         # Inner points
-    if bc.v.y[1] ∈ [:dirichlet, :symmetric]
-        Nvy_in = Nvy_in - 1
-    end
-    if bc.v.y[2] ∈ [:dirichlet, :symmetric]
-        Nvy_in = Nvy_in - 1
-    end
-    if bc.v.y == (:periodic, :periodic)
-        Nvy_in = Nvy_in - 1
-    end
+    Nvy_in -= bc.v.y[1] ∈ [:dirichlet, :symmetric]
+    Nvy_in -= bc.v.y[2] ∈ [:dirichlet, :symmetric]
+    Nvy_in -= bc.v.y == (:periodic, :periodic)
     Nvy_t = Nvy_in + Nvy_b # Total number
 
     # Total number
@@ -68,13 +56,6 @@ function operator_mesh!(setup)
 
     # Total number of velocity points
     NV = Nu + Nv + Nw
-
-    ## Extra variables
-    N1 = (Nux_in + 1) * Nuy_in # size(Iu_ux, 1);
-    N2 = Nux_in * (Nuy_in + 1) # size(Iv_uy, 1);
-    N3 = (Nvx_in + 1) * Nvy_in # Size(Iu_vx, 1);
-    N4 = Nvx_in * (Nvy_in + 1) # Size(Iv_vy, 1);
-
 
     ## For a grid with three times larger volumes:
     if order4
@@ -146,7 +127,7 @@ function operator_mesh!(setup)
     hxi = copy(hx)
 
     # Restrict Nx+2 to Nux_in+1 points
-    if bc.u.x[1] == :dirichlet && bc.u.x[2] == :dirichlet
+    if bc.u.x == (:dirichlet, :dirichlet)
         xin = x[2:end-1]
         hxd = copy(hx)
         gxi = gx[2:end-1]
@@ -161,28 +142,28 @@ function operator_mesh!(setup)
         end
     end
 
-    if bc.u.x[1] == :dirichlet && bc.u.x[2] == :pressure
+    if bc.u.x == (:dirichlet, :pressure)
         xin = x[2:end]
         hxd = [hx; hx[end]]
         gxi = gx[2:end]
         diagpos = 1
     end
 
-    if bc.u.x[1] == :pressure && bc.u.x[2] == :dirichlet
+    if bc.u.x == (:pressure, :dirichlet)
         xin = x[1:end-1]
         hxd = [hx[1]; hx]
         gxi = gx[1:end-1]
         diagpos = 0
     end
 
-    if bc.u.x[1] == :pressure && bc.u.x[2] == :pressure
+    if bc.u.x == (:pressure, :pressure)
         xin = x[1:end]
         hxd = [hx[1]; hx; hx[end]]
         gxi = copy(gx)
         diagpos = 0
     end
 
-    if bc.u.x[1] == :periodic && bc.u.x[2] == :periodic
+    if bc.u.x == (:periodic, :periodic)
         xin = x[1:end-1]
         hxd = [hx[end]; hx]
         gxi = [gx[1] + gx[end]; gx[2:end-1]]
@@ -221,7 +202,7 @@ function operator_mesh!(setup)
 
 
     # Restrict Ny+2 to Nvy_in+1 points
-    if bc.v.y[1] == :dirichlet && bc.v.y[2] == :dirichlet
+    if bc.v.y == (:dirichlet, :dirichlet)
         yin = y[2:end-1]
         hyd = copy(hy)
         gyi = gy[2:end-1]
@@ -236,28 +217,28 @@ function operator_mesh!(setup)
         end
     end
 
-    if bc.v.y[1] == :dirichlet && bc.v.y[2] == :pressure
+    if bc.v.y == (:dirichlet, :pressure)
         yin = y[2:end]
         hyd = [hy; hy[end]]
         gyi = gy[2:end]
         diagpos = 1
     end
 
-    if bc.v.y[1] == :pressure && bc.v.y[2] == :dirichlet
+    if bc.v.y == (:pressure, :dirichlet)
         yin = y[1:end-1]
         hyd = [hy[1]; hy]
         gyi = gy[1:end-1]
         diagpos = 0
     end
 
-    if bc.v.y[1] == :pressure && bc.v.y[2] == :pressure
+    if bc.v.y == (:pressure, :pressure)
         yin = y[1:end]
         hyd = [hy[1]; hy; hy[end]]
         gyi = copy(gy)
         diagpos = 0
     end
 
-    if bc.v.y[1] == :periodic && bc.v.y[2] == :periodic
+    if bc.v.y == (:periodic, :periodic)
         yin = y[1:end-1]
         hyd = [hy[end]; hy]
         gyi = [gy[1] + gy[end]; gy[2:end-1]]
@@ -378,7 +359,6 @@ function operator_mesh!(setup)
     @pack! setup.grid = Nvx_in, Nvx_b, Nvx_t
     @pack! setup.grid = Nvy_in, Nvy_b, Nvy_t
     @pack! setup.grid = Nu, Nv, Nw, NV
-    @pack! setup.grid = N1, N2, N3, N4
     @pack! setup.grid = Ωp, Ωp⁻¹, Ω, Ωu
     @pack! setup.grid = Ωv, Ω⁻¹, Ωu⁻¹, Ωv⁻¹
     @pack! setup.grid = Ωux, Ωvx, Ωuy, Ωvy, Ωvort

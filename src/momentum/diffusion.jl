@@ -6,7 +6,6 @@ Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V`.
 function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
     @unpack model = setup
     @unpack indu, indv = setup.grid
-    @unpack N1, N2, N3, N4 = setup.grid
     @unpack Dux, Duy, Dvx, Dvy = setup.discretization
     @unpack Diff, yDiff = setup.discretization
     @unpack Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy = setup.discretization

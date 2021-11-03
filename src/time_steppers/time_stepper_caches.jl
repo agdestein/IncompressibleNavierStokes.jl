@@ -40,8 +40,8 @@ Base.@kwdef struct ImplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
 end
 
 Base.@kwdef struct AdamsBashforthCrankNicolsonCache{T} <: AbstractODEMethodCache{T}
-    cₙ::Vector{T} 
-    cₙ₋₁::Vector{T} 
+    cₙ::Vector{T}
+    cₙ₋₁::Vector{T}
     F::Vector{T}
     Δp::Vector{T}
     Rr::Vector{T}
@@ -55,8 +55,8 @@ Base.@kwdef struct AdamsBashforthCrankNicolsonCache{T} <: AbstractODEMethodCache
 end
 
 Base.@kwdef struct OneLegCache{T} <: AbstractODEMethodCache{T}
-    Vₙ₋₁::Vector{T} 
-    pₙ₋₁::Vector{T} 
+    Vₙ₋₁::Vector{T}
+    pₙ₋₁::Vector{T}
     F::Vector{T}
     GΔp::Vector{T}
 end
@@ -94,7 +94,7 @@ function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod, setup)
         # Implicit time-stepping for diffusion
         # FIXME: This only works if Δt is constant
         # LU decomposition
-        Diff_fact = lu(sparse(I, NV, NV) - θ * Δt *  Diagonal(Ω⁻¹) * Diff)
+        Diff_fact = lu(sparse(I, NV, NV) - θ * Δt * Diagonal(Ω⁻¹) * Diff)
     else
         Diff_fact = cholesky(spzeros(0, 0))
     end

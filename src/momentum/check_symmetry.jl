@@ -12,7 +12,6 @@ function check_symmetry(V, t, setup, ϵ = 1e-14)
     @unpack Au_ux, Au_uy, Av_vx, Av_vy = setup.discretization
     @unpack Iu_ux, Iv_uy, Iu_vx, Iv_vy = setup.discretization
     @unpack yIu_ux, yIv_uy, yIu_vx, yIv_vy = setup.discretization
-    @unpack N1, N2, N3, N4 = setup.grid
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]

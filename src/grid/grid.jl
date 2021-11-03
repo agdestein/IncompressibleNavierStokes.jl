@@ -60,11 +60,6 @@ Base.@kwdef mutable struct Grid{T, N}
     NV::Int = 0
     Np::Int = 0
 
-    N1::Int = 0
-    N2::Int = 0
-    N3::Int = 0
-    N4::Int = 0
-
     # Operator mesh?
     Ωp::Vector{T} = T[]
     Ωp⁻¹::Vector{T} = T[]
