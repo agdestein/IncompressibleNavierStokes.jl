@@ -12,8 +12,8 @@ function LDC()
 
     # Case information
     name = "LDC"
-    problem = SteadyStateProblem()
-    # problem = UnsteadyProblem()
+    # problem = SteadyStateProblem()
+    problem = UnsteadyProblem()
     regularization = "no"
     case = Case(; name, problem, regularization)
 
@@ -93,11 +93,14 @@ function LDC()
 
     # Time stepping
     t_start = 0                        # Start time
-    t_end = 10                         # End time
-    Δt = 0.01                          # Timestep
-    method = RK44()                    # ODE method
+    t_end = 0.1                        # End time
+    Δt = 0.005                         # Timestep
+    # method = RK44()                    # ODE method
+    method = RIA2()                    # ODE method
+    # method = AdamsBashforthCrankNicolsonMethod() # ODE method
+    # method = OneLegMethod()            # ODE method
     method_startup = RK44()            # Startup method for methods that are not self-starting
-    nstartup = 2                       # Number of velocity fields necessary for start-up = equal to order of method
+    nstartup = 2                       # Number of necessary Vₙ₋ᵢ (= method order)
     isadaptive = false                 # Adapt timestep every n_adapt_Δt iterations
     n_adapt_Δt = 1                     # Number of iterations between timestep adjustment
     CFL = 0.5                          # CFL number for adaptive methods
@@ -216,12 +219,12 @@ function LDC()
 
     # Visualization settings
     plotgrid = false                   # Plot gridlines and pressure points
-    do_rtp = true                      # Real time plotting
-    rtp_type = "vorticity"             # Quantity for real time plotting 
-    # rtp_type = "quiver"                # Quantity for real time plotting 
-    # rtp_type = "vorticity"             # Quantity for real time plotting 
-    # rtp_type = "pressure"              # Quantity for real time plotting 
-    # rtp_type = "streamfunction"        # Quantity for real time plotting 
+    do_rtp = false                      # Real time plotting
+    rtp_type = "vorticity"             # Quantity for real time plotting
+    # rtp_type = "quiver"                # Quantity for real time plotting
+    # rtp_type = "vorticity"             # Quantity for real time plotting
+    # rtp_type = "pressure"              # Quantity for real time plotting
+    # rtp_type = "streamfunction"        # Quantity for real time plotting
     rtp_n = 10                         # Number of iterations between real time plots
 
     function initialize_processor(stepper)

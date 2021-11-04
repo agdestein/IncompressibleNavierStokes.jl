@@ -36,7 +36,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     @unpack Diff, yDiff, y_p = setup.discretization
     @unpack pressure_solver = setup.solver_settings
     @unpack α₁, α₂, θ = method
-    @unpack cₙ, cₙ₋₁, F, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact = cache
+    @unpack cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact = cache
     @unpack d = momentum_cache
 
     Δt ≈ Δtₙ || error("Adams-Bashforth requires constant time step")

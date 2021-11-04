@@ -22,27 +22,36 @@ end
 Base.@kwdef struct ImplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
     Vtotₙ::Vector{T}
     ptotₙ::Vector{T}
-    Vⱼ::Vector{T}
-    pⱼ::Vector{T}
     Qⱼ::Vector{T}
     Fⱼ::Vector{T}
     ∇Fⱼ::SparseMatrixCSC{T,Int}
+    fⱼ::Vector{T}
+    F::Vector{T}
+    ∇F::SparseMatrixCSC{T,Int}
     f::Vector{T}
+    Δp::Vector{T}
+    Gp::Vector{T}
     A::Matrix{T}
     b::Vector{T}
     c::Vector{T}
-    s::Vector{T}
-    Is::Vector{T}
-    Ω_sNV::Vector{T}
-    A_ext::Matrix{T}
-    b_ext::Vector{T}
-    c_ext::Vector{T}
+    Is::SparseMatrixCSC{T,Int}
+    Ω_sNV::SparseMatrixCSC{T,Int}
+    A_ext::SparseMatrixCSC{T,Int}
+    b_ext::SparseMatrixCSC{T,Int}
+    c_ext::SparseMatrixCSC{T,Int}
+    Gtot::SparseMatrixCSC{T,Int}
+    Mtot::SparseMatrixCSC{T,Int}
+    yMtot::Vector{T}
+    Ωtot::Vector{T}
+    dfmom::SparseMatrixCSC{T,Int}
+    Z::SparseMatrixCSC{T,Int}
 end
 
 Base.@kwdef struct AdamsBashforthCrankNicolsonCache{T} <: AbstractODEMethodCache{T}
     cₙ::Vector{T}
     cₙ₋₁::Vector{T}
     F::Vector{T}
+    f::Vector{T}
     Δp::Vector{T}
     Rr::Vector{T}
     b::Vector{T}
@@ -58,6 +67,8 @@ Base.@kwdef struct OneLegCache{T} <: AbstractODEMethodCache{T}
     Vₙ₋₁::Vector{T}
     pₙ₋₁::Vector{T}
     F::Vector{T}
+    f::Vector{T}
+    Δp::Vector{T}
     GΔp::Vector{T}
 end
 
@@ -80,6 +91,7 @@ function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod, setup)
     cₙ = zeros(T, NV)
     cₙ₋₁ = zeros(T, NV)
     F = zeros(T, NV)
+    f = zeros(T, Np)
     Δp = zeros(T, Np)
     Rr = zeros(T, NV)
     b = zeros(T, NV)
@@ -99,7 +111,7 @@ function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod, setup)
         Diff_fact = cholesky(spzeros(0, 0))
     end
 
-    AdamsBashforthCrankNicolsonCache{T}(; cₙ, cₙ₋₁, F, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact)
+    AdamsBashforthCrankNicolsonCache{T}(; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact)
 end
 
 function ode_method_cache(::OneLegMethod, setup)
@@ -108,8 +120,10 @@ function ode_method_cache(::OneLegMethod, setup)
     Vₙ₋₁ = zeros(T, NV)
     pₙ₋₁ = zeros(T, Np)
     F = zeros(T, NV)
+    f = zeros(T, Np)
+    Δp = zeros(T, Np)
     GΔp = zeros(T, NV)
-    OneLegCache{T}(; Vₙ₋₁, pₙ₋₁, F, GΔp)
+    OneLegCache{T}(; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp)
 end
 
 function ode_method_cache(method::ExplicitRungeKuttaMethod, setup)
@@ -141,13 +155,12 @@ function ode_method_cache(method::ExplicitRungeKuttaMethod, setup)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod, setup)
+    @unpack NV, Np, Ω = setup.grid
+    @unpack G, M = setup.discretization
+    @unpack A, b, c = method
+
     # TODO: Decide where `T` is to be passed
     T = typeof(setup.time.Δt)
-
-    @unpack Np, Ω = setup.grid
-
-    # Get coefficients of RK method
-    @unpack A, b, c = method
 
     # Number of stages
     s = length(b)
@@ -161,32 +174,53 @@ function ode_method_cache(method::ImplicitRungeKuttaMethod, setup)
 
     Vtotₙ = zeros(T, s * NV)
     ptotₙ = zeros(T, s * Np)
-    Vⱼ = zeros(T, s * NV)
-    pⱼ = zeros(T, s * Np)
     Qⱼ = zeros(T, s * (NV + Np))
 
     Fⱼ = zeros(T, s * NV)
     ∇Fⱼ = spzeros(T, s * NV, s * NV)
 
-    f = zeros(T, s * (NV + Np))
+    fⱼ = zeros(T, s * (NV + Np))
+
+    F = zeros(T, NV)
+    ∇F = spzeros(T, NV, NV)
+    f = zeros(T, Np)
+    Δp = zeros(T, Np)
+    Gp = zeros(T, NV)
+
+    # Gradient operator (could also use 1 instead of c and later scale the pressure)
+    Gtot = kron(A, G)
+
+    # Divergence operator
+    Mtot = kron(Is, M)
+    yMtot = zeros(T, Np * s)
+
+    # Finite volumes
+    Ωtot = kron(ones(s), Ω)
+
+    # Iteration matrix
+    dfmom = spzeros(T, s * NV, s * NV)
+    Z2 = spzeros(T, s * Np, s * Np)
+    Z = [dfmom Gtot; Mtot Z2]
 
     ImplicitRungeKuttaCache{T}(;
         Vtotₙ,
         ptotₙ,
-        Vⱼ,
-        pⱼ,
         Qⱼ,
         Fⱼ,
         ∇Fⱼ,
+        fⱼ,
+        F,
+        ∇F,
         f,
+        Δp,
+        Gp,
         A,
         b,
         c,
-        s,
         Is,
         Ω_sNV,
-        A_ext,
-        b_ext,
-        c_ext,
+        A_ext, b_ext, c_ext,
+        Gtot, Mtot, yMtot, Ωtot,
+        dfmom, Z
     )
 end

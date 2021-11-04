@@ -222,11 +222,6 @@ function convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian = fals
     @. cv = ∂vū∂x + ∂vv̄∂y
 
     if getJacobian
-        Jux = @view ∇c[indu, indu]
-        Juy = @view ∇c[indu, indv]
-        Jvx = @view ∇c[indv, indu]
-        Jvy = @view ∇c[indv, indv]
-
         ## Convective terms, u-component
         C1 = Cux * Diagonal(ū_ux)
         C2 = Cux * Diagonal(u_ux) * Newton_factor
@@ -240,9 +235,6 @@ function convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian = fals
         # mul!(Conv_uy_12, C2, Iv_uy)
         Conv_uy_11 .= C1 * Au_uy
         Conv_uy_12 .= C2 * Iv_uy
-
-        @. Jux = Conv_ux_11 + Conv_uy_11
-        @. Juy = Conv_uy_12
 
         ## Convective terms, v-component
         C1 = Cvx * Diagonal(ū_vx)
@@ -258,8 +250,10 @@ function convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian = fals
         # mul!(Conv_vy_22, C1, Av_vy)
         # mul!(Conv_vy_22, C2, Iv_vy, 1, 1)
 
-        @. Jvx = Conv_vx_21
-        @. Jvy = Conv_vx_22 + Conv_vy_22
+        ∇c[indu, indu] = Conv_ux_11 + Conv_uy_11
+        ∇c[indu, indv] = Conv_uy_12
+        ∇c[indv, indu] = Conv_vx_21
+        ∇c[indv, indv] = Conv_vx_22 + Conv_vy_22
     end
 
     c, ∇c

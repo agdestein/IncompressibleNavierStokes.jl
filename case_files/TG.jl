@@ -97,7 +97,7 @@ function TG()
     Δt = 0.01                          # Timestep
     method = RK44()                    # ODE method
     method_startup = RK44()            # Startup method for methods that are not self-starting
-    nstartup = 2                       # Number of velocity fields necessary for start-up = equal to order of method
+    nstartup = 2                       # Number of necessary Vₙ₋ᵢ (= method order)
     isadaptive = false                 # Adapt timestep every n_adapt_Δt iterations
     n_adapt_Δt = 1                     # Number of iterations between timestep adjustment
     CFL = 0.5                          # CFL number for adaptive methods
@@ -149,17 +149,14 @@ function TG()
         v = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
         k = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
         e = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
-        ν = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-        )
+        ν = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
     )
     u_bc(x, y, t, setup) = zero(x)
     v_bc(x, y, t, setup) = zero(x)
     dudt_bc(x, y, t, setup) = zero(x)
     dvdt_bc(x, y, t, setup) = zero(x)
     bc = create_boundary_conditions(T; bc_unsteady, bc_type, u_bc, v_bc, dudt_bc, dvdt_bc)
-    
+
     # Initial conditions
     initial_velocity_u(x, y, setup) = -sin(π * x) * cos(π * y)
     initial_velocity_v(x, y, setup) = cos(π * x) * sin(π * y)
@@ -177,16 +174,17 @@ function TG()
     bodyforce_x(x, y, t, setup, getJacobian = false) = 0
     bodyforce_y(x, y, t, setup, getJacobian = false) = 0
     Fp(x, y, t, setup, getJacobian = false) = 0
-    force = Force{T}(; x_c, y_c, Ct, D, isforce, force_unsteady, bodyforce_x, bodyforce_y, Fp)
+    force =
+        Force{T}(; x_c, y_c, Ct, D, isforce, force_unsteady, bodyforce_x, bodyforce_y, Fp)
 
     # Visualization settings
     plotgrid = false                   # Plot gridlines and pressure points
-    do_rtp = true                      # Real time plotting
-    rtp_type = "vorticity"             # Quantity for real time plotting 
-    # rtp_type = "quiver"                # Quantity for real time plotting 
-    # rtp_type = "vorticity"             # Quantity for real time plotting 
-    # rtp_type = "pressure"              # Quantity for real time plotting 
-    # rtp_type = "streamfunction"        # Quantity for real time plotting 
+    do_rtp = false                     # Real time plotting
+    rtp_type = "vorticity"             # Quantity for real time plotting
+    # rtp_type = "quiver"                # Quantity for real time plotting
+    # rtp_type = "vorticity"             # Quantity for real time plotting
+    # rtp_type = "pressure"              # Quantity for real time plotting
+    # rtp_type = "streamfunction"        # Quantity for real time plotting
     rtp_n = 10                         # Number of iterations between real time plots
 
     function initialize_processor(stepper)
@@ -235,7 +233,8 @@ function TG()
         end
     end
 
-    visualization = Visualization(; plotgrid, do_rtp, rtp_type, rtp_n, initialize_processor, process!)
+    visualization =
+        Visualization(; plotgrid, do_rtp, rtp_type, rtp_n, initialize_processor, process!)
 
     # Final setup
     Setup{T,N}(;

@@ -53,11 +53,12 @@ function momentum!(
     @. F = -c + d + b
 
     # Nopressure = false is the most common situation, in which we return the entire
-    # Right-hand side vector
+    # right-hand side vector
     if !nopressure
         mul!(Gp, G, p)
         Gp .+= y_p
         @. F -= Gp
+        # F .= F .- (G * p .+ y_p)
     end
 
     if getJacobian

@@ -47,7 +47,9 @@ function step!(stepper::OneLegStepper, Δt)
     Δtᵦ = Δtₙ / (β + 1//2)
 
     # Divergence of intermediate velocity field
-    f = (M * V + yM) / Δtᵦ
+    f .= yM
+    mul!(f, M, V, 1 / Δtᵦ, 1 / Δtᵦ)
+    # f .= (M * V + yM) / Δtᵦ
 
     # Solve the Poisson equation for the pressure
     pressure_poisson!(pressure_solver, Δp, f, tₙ + Δtₙ, setup)

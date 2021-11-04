@@ -97,7 +97,7 @@ function BFS()
     Δt = 0.01                          # Timestep
     method = RK44()                    # ODE method
     method_startup = RK44()            # Startup method for methods that are not self-starting
-    nstartup = 2                       # Number of velocity fields necessary for start-up = equal to order of method
+    nstartup = 2                       # Number of necessary Vₙ₋ᵢ (= method order)
     isadaptive = false                 # Adapt timestep every n_adapt_Δt iterations
     n_adapt_Δt = 1                     # Number of iterations between timestep adjustment
     CFL = 0.5                          # CFL number for adaptive methods
@@ -127,8 +127,8 @@ function BFS()
     # "full": Build Jacobian at each iteration
     nonlinear_Newton = "full"
     Jacobian_type = "newton"         # Linearization: "picard", "newton"
-    nonlinear_startingvalues = false # Extrapolate values from last time step to get accurate initial guess (for unsteady problems only)
-    nPicard = 2                      # Number of Picard steps before switching to Newton when linearization is Newton (for steady problems only)
+    nonlinear_startingvalues = false # Extrapolate values from last time step
+    nPicard = 2                      # Number of Picard steps before Newton
     solver_settings = SolverSettings{T}(;
         pressure_solver,
         p_initial,

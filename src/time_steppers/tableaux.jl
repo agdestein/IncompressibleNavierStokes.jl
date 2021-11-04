@@ -306,9 +306,9 @@ end
 
 function RIIA1()
     r = 1
-    A = 1
-    b = 1
-    c = 1
+    A = fill(1, 1, 1)
+    b = [1]
+    c = [1]
     runge_kutta_method(A, b, c, r)
 end
 
@@ -340,10 +340,7 @@ end
 
 function LIIIA2()
     r = 0
-    A = [
-        0 0
-        1//2 1//2
-    ]
+    A = [0 0; 1//2 1//2]
     b = [1 // 2, 1 // 2]
     c = [0, 1]
     runge_kutta_method(A, b, c, r)
@@ -420,10 +417,7 @@ end
 function Mid22()
     s = 2
     r = 1 // 2
-    A = [
-        0 0
-        1//2 0
-    ]
+    A = [0 0; 1//2 0]
     b = [0, 1]
     c = [0, 1 // 2]
     runge_kutta_method(A, b, c, r)
@@ -433,10 +427,7 @@ end
 function MTE22()
     s = 2
     r = 1 // 2
-    A = [
-        0 0
-        2//3 0
-    ]
+    A = [0 0; 2//3 0]
     b = [1 // 4, 3 // 4]
     c = [0, 2 // 3]
     runge_kutta_method(A, b, c, r)
@@ -446,10 +437,7 @@ end
 function CN22()
     s = 2
     r = 2
-    A = [
-        0 0
-        1//2 1//2
-    ]
+    A = [0 0; 1//2 1//2]
     b = [1 // 2, 1 // 2]
     c = [0, 1]
     runge_kutta_method(A, b, c, r)
@@ -521,14 +509,8 @@ end
 function DSso2()
     s = 2
     isdsrk = 1
-    A = [
-        3//4 -1//4
-        1 0
-    ]
-    W = [
-        1//2 0
-        1 0
-    ]
+    A = [3//4 -1//4; 1 0]
+    W = [1//2 0; 1 0]
     b = [1, 0]
     c = [1 // 2, 1]
     runge_kutta_method(A, b, c, r)
