@@ -1,43 +1,52 @@
-function pressure_poisson(pressure_solver, f, t, setup)
+"""
+    pressure_poisson(solver, f, t, setup)
+
+Convenience function for initializing the pressure vector `p` before
+calling `pressure_poisson!`.
+"""
+function pressure_poisson(solver, f, t, setup)
     @unpack Np = setup.grid
     p = zeros(Np)
-    pressure_poisson!(pressure_solver, p, f, t, setup)
+    pressure_poisson!(solver, p, f, t, setup)
 end
 
 """
     pressure_poisson!(solver, p, f, t, setup, tol = 1e-14)
 
 Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
-
-We should have `sum(f) = 0` for periodic and no-slip BC.
+For periodic and no-slip BC, the sum of `f` should be zero. 
 """
 function pressure_poisson! end
 
-function pressure_poisson!(::DirectPressureSolver, p, f, t, setup, tol = 1e-14)
+function pressure_poisson!(solver::DirectPressureSolver, p, f, t, setup, tol = 1e-14)
     # Assume the Laplace matrix is known (A) and is possibly factorized
-    @unpack A_fact = setup.discretization
-
+    
     # Use pre-determined decomposition
-    p .= A_fact \ f
+    p .= solver.A_fact \ f
 end
 
-function pressure_poisson!(::CGPressureSolver, p, f, t, setup)
-    @unpack A = setup.discretization
-    # TODO: Pass `abstol`, `reltol` and `maxiter`
+function pressure_poisson!(solver::CGPressureSolver, p, f, t, setup)
     # TODO: Preconditioner
-    cg!(p, A, f)
+    @unpack A = setup.discretization
+    @unpack abstol, reltol, maxiter = solver
+    cg!(p, A, f; abstol, reltol, maxiter)
 end
 
-function pressure_poisson!(::FourierPressureSolver, p, f, t, setup)
+function pressure_poisson!(solver::FourierPressureSolver, p, f, t, setup)
     @unpack Npx, Npy = setup.grid
-    @unpack Â = setup.solver_settings
+    @unpack Â, f̂, p̂ = solver
+
+    f̂[:] = f
 
     # Fourier transform of right hand side
-    f̂ = fft(reshape(f, Npx, Npy));
+    fft!(f̂);
 
     # Solve for coefficients in Fourier space
-    p̂ = -f̂ ./ Â;
-
+    @. p̂ = -f̂ / Â;
+    
     # Transform back
-    p .= real.(reshape(ifft(p̂), length(p)))
+    ifft!(p̂) 
+    @. p[:] = real(@view p̂[:])
+
+    p
 end

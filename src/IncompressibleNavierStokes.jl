@@ -1,7 +1,7 @@
 "Energy-conserving solvers for the incompressible Navier-Stokes equations."
 module IncompressibleNavierStokes
 
-using FFTW: fft, ifft
+using FFTW: fft!, ifft!
 using Interpolations: LinearInterpolation
 using IterativeSolvers: cg!
 using LinearAlgebra: Diagonal, Factorization, UpperTriangular, I, cholesky, factorize, ldiv!, lu, mul!

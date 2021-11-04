@@ -14,7 +14,7 @@ function step!(stepper::OneLegStepper, Δt)
     @unpack G, M, yM = setup.discretization
     @unpack pressure_solver, p_add_solve = setup.solver_settings
     @unpack Ω⁻¹ = setup.grid
-    @unpack Vₙ₋₁, pₙ₋₁, F, GΔp = cache
+    @unpack Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp = cache
 
     Δt ≈ Δtₙ || error("One-leg-β-method requires constant time step")
 
@@ -50,7 +50,7 @@ function step!(stepper::OneLegStepper, Δt)
     f = (M * V + yM) / Δtᵦ
 
     # Solve the Poisson equation for the pressure
-    Δp = pressure_poisson(pressure_solver, f, tₙ + Δtₙ, setup)
+    pressure_poisson!(pressure_solver, Δp, f, tₙ + Δtₙ, setup)
     mul!(GΔp, G, Δp)
 
     # Update velocity field
@@ -61,7 +61,7 @@ function step!(stepper::OneLegStepper, Δt)
 
     # Alternatively, do an additional Poisson solve
     if p_add_solve
-        pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F)
+        pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
     end
 
     t = tₙ + Δtₙ

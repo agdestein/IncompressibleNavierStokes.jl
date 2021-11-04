@@ -1,13 +1,23 @@
 """
     PressureSolver
 
-Lineare pressure solver for the Poisson equation.
+Pressure solver for the Poisson equation.
 """
-abstract type PressureSolver end
+abstract type PressureSolver{T} end
 
-struct DirectPressureSolver <: PressureSolver end
-struct CGPressureSolver <: PressureSolver end
-struct FourierPressureSolver <: PressureSolver end
+Base.@kwdef mutable struct DirectPressureSolver{T} <: PressureSolver{T}
+    A_fact::Factorization{T} = cholesky(spzeros(T, 0, 0))
+end
+Base.@kwdef mutable struct CGPressureSolver{T} <: PressureSolver{T}
+    abstol::T = 0
+    reltol::T = √eps(T)
+    maxiter::Int = 0 
+end
+Base.@kwdef mutable struct FourierPressureSolver{T} <: PressureSolver{T}
+    Â = zeros(Complex{T}, 0, 0)
+    p̂ = zeros(Complex{T}, 0, 0)
+    f̂ = zeros(Complex{T}, 0, 0)
+end
 
 """
     initialize(pressure_solver)
@@ -16,10 +26,13 @@ Initialize pressure solver.
 """
 function initialize! end
 
-initialize!(::DirectPressureSolver, setup, A) = (setup.discretization.A_fact = factorize(A))
-initialize!(::CGPressureSolver, setup, A) = nothing
+initialize!(solver::DirectPressureSolver, setup, A) = (solver.A_fact = factorize(A))
 
-function initialize!(::FourierPressureSolver, setup, A)
+function initialize!(solver::CGPressureSolver, setup, A)
+    solver.maxiter == 0 && (solver.maxiter = size(A, 2))
+end
+
+function initialize!(solver::FourierPressureSolver, setup, A)
     @unpack bc = setup
     @unpack hx, hy, Npx, Npy = setup.grid
     if any(!isequal(:periodic), [bc.v.y[1], bc.v.y[2], bc.u.x[1], bc.u.x[1]])
@@ -45,5 +58,9 @@ function initialize!(::FourierPressureSolver, setup, A)
     # Pressure is determined up to constant, fix at 0
     Â[1, 1] = 1
 
-    @pack! setup.solver_settings = Â
+    Â = complex(Â)
+    p̂ = similar(Â)
+    f̂ = similar(Â)
+
+    @pack! solver = Â, p̂, f̂
 end

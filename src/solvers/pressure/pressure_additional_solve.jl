@@ -1,33 +1,39 @@
+"""
+    pressure_additional_solve!(V, p, t, setup)
+
+Convenience function for allocating momentum cache, `F`, `Δp`, and `f` before doing
+additional pressure solve.
+"""
 function pressure_additional_solve!(V, p, t, setup)
-    @unpack NV = setup.grid
+    @unpack NV, Np = setup.grid
 
     momentum_cache = MomentumCache(setup)
     F = zeros(NV)
+    Δp = zeros(Np)
+    f = zeros(Np)
 
-    pressure_additional_solve!(V, p, t, setup, momentum_cache, F)
+    pressure_additional_solve!(V, p, t, setup, momentum_cache, F, f, Δp)
 end
 
 """
-Additional pressure solve.
-make the pressure compatible with the velocity field. this should
-also result in same order pressure as velocity
+    pressure_additional_solve!(V, p, t, setup, momentum_cache, F, f)
+
+Do additional pressure solve. This makes the pressure compatible with the velocity
+field, resulting in same order pressure as velocity.
 """
-function pressure_additional_solve!(V, p, t, setup, momentum_cache, F)
+function pressure_additional_solve!(V, p, t, setup, momentum_cache, F, f, Δp)
     # Note: time derivative of BC in ydM
     @unpack pressure_solver = setup.solver_settings
     @unpack M, ydM = setup.discretization
-    @unpack Np, Ω⁻¹ = setup.grid
-
-    # TODO: Preallocate
-    Δp = zeros(Np)
-    f = zeros(Np)
+    @unpack Ω⁻¹ = setup.grid
 
     # Get updated BC for ydM
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, t)
     end
 
-    # Momentum already contains G*p with the current p, we therefore effectively solve for the pressure difference
+    # Momentum already contains G*p with the current p, we therefore effectively solve for
+    # the pressure difference
     momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
 
     # f = M * (Ω⁻¹ .* F) + ydM

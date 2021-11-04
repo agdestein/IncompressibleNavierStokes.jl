@@ -114,9 +114,9 @@ function BFS()
     )
 
     # Solver settings
-    pressure_solver = DirectPressureSolver()    # Pressure solver
-    # pressure_solver = CGPressureSolver()      # Pressure solver
-    # pressure_solver = FourierPressureSolver() # Pressure solver
+    pressure_solver = DirectPressureSolver{T}()    # Pressure solver
+    # pressure_solver = CGPressureSolver{T}()      # Pressure solver
+    # pressure_solver = FourierPressureSolver{T}() # Pressure solver
     p_initial = true                 # Calculate compatible IC for the pressure
     p_add_solve = true               # Additional pressure solve to make it same order as velocity
     nonlinear_acc = 1e-10            # Absolute accuracy

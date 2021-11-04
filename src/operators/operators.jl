@@ -123,7 +123,6 @@ Base.@kwdef mutable struct Operators{T}
     Avx_k_bc::NamedTuple = (;)
 
     A::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    A_fact::Factorization{T} = cholesky(spzeros(T, 0, 0))
 
     ydM::Vector{T} = T[]
     ypx::Vector{T} = T[]

@@ -111,7 +111,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     p .= pₙ .+ Δp
 
     if setup.solver_settings.p_add_solve
-        pressure_additional_solve!(V, p, tₙ + Δt, setup)
+        pressure_additional_solve!(V, p, tₙ + Δt, setup, momentum_cache, F, f, Δp)
     end
 
     t = tₙ + Δtₙ

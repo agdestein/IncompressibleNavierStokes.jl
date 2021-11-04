@@ -114,11 +114,11 @@ function LDC()
     )
 
     # Solver settings
-    pressure_solver = DirectPressureSolver()    # Pressure solver
-    # pressure_solver = CGPressureSolver()      # Pressure solver
-    # pressure_solver = FourierPressureSolver() # Pressure solver
+    pressure_solver = DirectPressureSolver{T}()    # Pressure solver
+    # pressure_solver = CGPressureSolver{T}()      # Pressure solver
+    # pressure_solver = FourierPressureSolver{T}() # Pressure solver
     p_initial = true                 # Calculate compatible IC for the pressure
-    p_add_solve = true               # Additional pressure solve to make it same order as velocity
+    p_add_solve = true               # Additional pressure solve for second order pressure
     nonlinear_acc = 1e-10            # Absolute accuracy
     nonlinear_relacc = 1e-14         # Relative accuracy
     nonlinear_maxit = 10             # Maximum number of iterations
