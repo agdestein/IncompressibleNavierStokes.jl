@@ -22,6 +22,9 @@ function build_operators!(setup)
     # Convection operators on u- and v- centered volumes
     operator_convection_diffusion!(setup)
 
+    # Body force
+    build_force!(setup.force, setup.grid)
+
     # Turbulence
 
     # Regularization modelling - this changes the convective term

@@ -1,7 +1,7 @@
 """
-    setup = TG()
+    TG()
 
-Setup for Taylor-Green vortex case (TG).
+Create setup for Taylor-Green vortex case (TG).
 """
 function TG()
     # Floating point type for simulations
@@ -158,24 +158,16 @@ function TG()
     bc = create_boundary_conditions(T; bc_unsteady, bc_type, u_bc, v_bc, dudt_bc, dvdt_bc)
 
     # Initial conditions
-    initial_velocity_u(x, y, setup) = -sin(π * x) * cos(π * y)
-    initial_velocity_v(x, y, setup) = cos(π * x) * sin(π * y)
-    initial_pressure(x, y, setup) = 1 / 4 * (cos(2π * x) + cos(2π * y))
+    initial_velocity_u(x, y) = -sin(π * x) * cos(π * y)
+    initial_velocity_v(x, y) = cos(π * x) * sin(π * y)
+    initial_pressure(x, y) = 1 / 4 * (cos(2π * x) + cos(2π * y))
 
     @pack! case = initial_velocity_u, initial_velocity_v, initial_pressure
 
     # Forcing parameters
-    x_c = 0                           # X-coordinate of body
-    y_c = 0                           # Y-coordinate of body
-    Ct = 0                            # Actuator thrust coefficient
-    D = 1                             # Actuator disk diameter
-    isforce = false                   # Presence of a body force
-    force_unsteady = false            # Steady (0) or unsteady (1) force
-    bodyforce_x(x, y, t, setup, getJacobian = false) = 0
-    bodyforce_y(x, y, t, setup, getJacobian = false) = 0
-    Fp(x, y, t, setup, getJacobian = false) = 0
-    force =
-        Force{T}(; x_c, y_c, Ct, D, isforce, force_unsteady, bodyforce_x, bodyforce_y, Fp)
+    bodyforce_u(x, y) = 0
+    bodyforce_v(x, y) = 0
+    force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
     # Visualization settings
     plotgrid = false                   # Plot gridlines and pressure points

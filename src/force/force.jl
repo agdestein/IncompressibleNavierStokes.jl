@@ -1,17 +1,26 @@
+abstract type AbstractBodyForce{T} end
+
 """
-    Force{T}
+    SteadyBodyForce{T}
+
+Steady (constant) body force.
+"""
+Base.@kwdef mutable struct SteadyBodyForce{T} <: AbstractBodyForce{T}
+    bodyforce_u::Function = (x, y) -> 0
+    bodyforce_v::Function = (x, y) -> 0
+    F::Vector{T} = T[] # For storing constant body force
+end
+
+"""
+    UnsteadyBodyForce{T}
 
 Forcing parameters with floating point type `T`.
 """
-Base.@kwdef mutable struct Force{T}
-    x_c::T = 0                                               # X-coordinate of body
-    y_c::T = 0                                               # Y-coordinate of body
-    Ct::T = 0                                                # Thrust coefficient for actuator disk computations
-    D::T = 1                                                 # Actuator disk diameter
-    F::Vector{T} = T[]                                       # For storing constant body force
-    isforce::Bool = false                                    # Presence of a force file
-    force_unsteady::Bool = false                             # Unsteady forcing 
-    bodyforce_x::Function = () -> error("bodyforce_x not implemented")
-    bodyforce_y::Function = () -> error("bodyforce_y not implemented")
-    Fp::Function = () -> error("Fp not implemented")
+Base.@kwdef mutable struct UnsteadyBodyForce{T} <: AbstractBodyForce{T}
+    F::Vector{T} = T[] # For storing constant body force
+    bodyforce_u::Function = () -> error("bodyforce_x not implemented")
+    bodyforce_v::Function = () -> error("bodyforce_y not implemented")
 end
+
+
+

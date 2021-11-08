@@ -7,7 +7,7 @@ If `getJacobian`, also compute `∇F = ∂F/∂V`.
 function bodyforce!(F, ∇F, V, t, setup; getJacobian = false)
     @unpack indu, indv, xu, xv, yu, yv = setup.grid
 
-    if setup.force.force_unsteady
+    if setup.force isa UnsteadyBodyForce
         Fx, ∇Fx = setup.force.bodyforce_x.(xu, yu, t, [setup]; getJacobian)
         Fy, ∇Fy = setup.force.bodyforce_y.(xv, yv, t, [setup]; getJacobian)
 

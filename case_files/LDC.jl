@@ -1,7 +1,7 @@
 """
-    setup = LDC()
+    LDC()
 
-Setup for Lid-Driven Cavity case (LDC).
+Create setup for Lid-Driven Cavity case (LDC).
 """
 function LDC()
     # Floating point type for simulations
@@ -93,10 +93,10 @@ function LDC()
 
     # Time stepping
     t_start = 0                        # Start time
-    t_end = 0.1                        # End time
-    Δt = 0.005                         # Timestep
-    # method = RK44()                    # ODE method
-    method = RIA2()                    # ODE method
+    t_end = 10.0                       # End time
+    Δt = 0.02                          # Timestep
+    method = RK44()                    # ODE method
+    # method = RIA2()                    # ODE method
     # method = AdamsBashforthCrankNicolsonMethod() # ODE method
     # method = OneLegMethod()            # ODE method
     method_startup = RK44()            # Startup method for methods that are not self-starting
@@ -159,63 +159,16 @@ function LDC()
     bc = create_boundary_conditions(T; bc_unsteady, bc_type, u_bc, v_bc)
 
     # Initial conditions
-    initial_velocity_u(x, y, setup) = 0
-    initial_velocity_v(x, y, setup) = 0
-    initial_pressure(x, y, setup) = 0
+    initial_velocity_u(x, y) = 0
+    initial_velocity_v(x, y) = 0
+    initial_pressure(x, y) = 0
     @pack! case = initial_velocity_u, initial_velocity_v, initial_pressure
 
     # Forcing parameters
-    x_c = 0                           # X-coordinate of body
-    y_c = 0                           # Y-coordinate of body
-    Ct = 0                            # Actuator thrust coefficient
-    D = 1                             # Actuator disk diameter
-    isforce = false                   # Presence of a body force
-    force_unsteady = false            # Steady (0) or unsteady (1) force
+    bodyforce_u(x, y) = 0
+    bodyforce_v(x, y) = 0
+    force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
-    bodyforce_x(x, y, t, setup, getJacobian = false) = 0
-
-    function bodyforce_y(x, y, t, setup, getJacobian = false)
-        getJacobian && error("Jacobian not available")
-
-        # Point force
-        Shih_f = x^4 - 2x^3 + x^2
-        Shih_f1 = 4x^3 - 6x^2 + 2x
-        Shih_f2 = 12x^2 - 12x + 2
-        Shih_f3 = 24x - 12
-        Shih_g = y^4 - y^2
-        Shih_g1 = 4y^3 - 2y
-        Shih_g2 = 12y^2 - 2
-
-        Shih_F = 0.2x^5 - 0.5x^4 + 1 / 3 * x^3
-        Shih_F1 = -4x^6 + 12x^5 - 14x^4 + 8x^3 - 2x^2
-        Shih_F2 = 0.5 * (Shih_f^2)
-        Shih_G1 = -24y^5 + 8y^3 - 4y
-
-        Fy =
-            -8 / Re * (24 * Shih_F + 2 * Shih_f1 * Shih_g2 + Shih_f3 * Shih_g) -
-            64 * (Shih_F2 * Shih_G1 - Shih_g * Shih_g1 * Shih_F1)
-
-        Fy
-    end
-
-    function Fp(x, y, t, setup, getJacobian = false)
-        # At pressure points, for pressure solution
-        Shih_p_f = x^4 - 2x^3 + x^2
-        Shih_p_f1 = 4x^3 - 6x^2 + 2x
-        Shih_p_f2 = 12x^2 - 12x + 2
-        Shih_p_f3 = 24x - 12
-        Shih_p_g = y^4 - y^2
-        Shih_p_g1 = 4y^3 - 2y
-        Shih_p_g2 = 12y^2 - 2
-        Shih_p_g3 = 24y
-
-        Shih_p_F = 0.2x^5 - 0.5x^4 + 1 / 3 * x^3
-        Shih_p_F1 = -4x^6 + 12x^5 - 14x^4 + 8x^3 - 2x^2
-        Shih_p_F2 = 0.5 * (Shih_p_f^2)
-        Shih_p_G1 = -24y^5 + 8y^3 - 4y
-    end
-
-    force = Force{T}(; x_c, y_c, Ct, D, isforce, force_unsteady, bodyforce_x, bodyforce_y, Fp)
 
     # Visualization settings
     plotgrid = false                   # Plot gridlines and pressure points

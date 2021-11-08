@@ -96,7 +96,7 @@ Base.@kwdef struct Setup{T, N}
     model::AbstractViscosityModel{T} = LaminarModel{T}()
     grid::Grid{T, N} = Grid{T, N}()
     discretization::Operators{T} = Operators{T}()
-    force::Force{T} = Force{T}()
+    force::AbstractBodyForce{T} = SteadyBodyForce{T}()
     rom::ROM = ROM()
     ibm::IBM = IBM()
     time::Time{T} = Time{T}()

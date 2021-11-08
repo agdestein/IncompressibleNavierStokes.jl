@@ -31,6 +31,7 @@ include("grid/create_grid.jl")
 
 # Force
 include("force/force.jl")
+include("force/build_force.jl")
 
 # Models
 include("models/models.jl")
@@ -125,6 +126,9 @@ export @pack!, @unpack
 
 # Grid
 export create_grid
+
+# Force
+export SteadyBodyForce, UnsteadyBodyForce
 
 # Models
 export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel

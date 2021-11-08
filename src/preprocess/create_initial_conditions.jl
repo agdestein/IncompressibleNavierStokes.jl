@@ -14,25 +14,14 @@ function create_initial_conditions(setup)
     # Boundary conditions
     set_bc_vectors!(setup, t)
 
-    # Construct body force or immersed boundary method
-    # The body force is called in the residual routines e.g. momentum.jl
-    # Steady force can be precomputed once:
-    if setup.force.isforce
-        Fx, Fy, = bodyforce(V, t, setup)
-        F = [Fx; Fy]
-    else
-        F = zeros(NV)
-    end
-    @pack! setup.force = F
-
     # Allocate velocity and pressure
     u = zero(xu)
     v = zero(xv)
     p = zero(xpp)
 
     # Initial velocities
-    u .= setup.case.initial_velocity_u.(xu, yu, [setup])
-    v .= setup.case.initial_velocity_v.(xv, yv, [setup])
+    u .= setup.case.initial_velocity_u.(xu, yu)
+    v .= setup.case.initial_velocity_v.(xv, yv)
     V = [u[:]; v[:]]
 
     # Kinetic energy and momentum of initial velocity field
@@ -49,7 +38,7 @@ function create_initial_conditions(setup)
     end
 
     # Initial pressure: should in principle NOT be prescribed (will be calculated if p_initial)
-    p .= setup.case.initial_pressure.(xpp, ypp, [setup])
+    p .= setup.case.initial_pressure.(xpp, ypp)
     p = p[:]
     if is_steady(problem)
         # For steady state computations, the initial guess is the provided initial condition
