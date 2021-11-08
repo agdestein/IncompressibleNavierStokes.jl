@@ -6,13 +6,12 @@ This saddlepoint system arises from linearization of the convective terms.
 """
 function solve(::SteadyStateProblem, setup, V₀, p₀)
     # Setup
-    @unpack model = setup
+    @unpack model, processors = setup
     @unpack problem = setup.case
     @unpack Nu, Nv, NV, Np = setup.grid
     @unpack G, M, yM = setup.discretization
     @unpack Jacobian_type, nPicard, nonlinear_acc, nonlinear_maxit = setup.solver_settings
     @unpack use_rom = setup.rom
-    @unpack do_rtp, rtp_n = setup.visualization
     @unpack t_start = setup.time
 
     # Temporary variables
@@ -40,8 +39,9 @@ function solve(::SteadyStateProblem, setup, V₀, p₀)
 
     println("Initial momentum residual = $maxres")
 
-    if do_rtp
-        rtp = initialize_rtp(setup, V, p, t)
+    # Processors for iteration results  
+    for ps ∈ processors
+        # initialize!(ps, stepper)
     end
 
     # record(fig, "output/vorticity.mp4", 1:rtp.nt; framerate = 60) do n
@@ -81,9 +81,13 @@ function solve(::SteadyStateProblem, setup, V₀, p₀)
 
         println(": momentum residual = $maxres")
 
-        if do_rtp # && mod(n, rtp_n) == 0
-            update_rtp!(rtp, setup, V, p, t)
+        # Process iteration results with each processor
+        for ps ∈ processors
+            # Only update each `nupdate`-th iteration
+            # stepper.n % ps.nupdate == 0 && process!(ps, stepper)
         end
+
+        # finalize!.(processors)
 
         n += 1
     end

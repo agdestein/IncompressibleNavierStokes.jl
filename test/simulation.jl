@@ -152,22 +152,15 @@
     bc = create_boundary_conditions(T; bc_unsteady, bc_type, u_bc, v_bc)
 
     # Initial conditions
-    initial_velocity_u(x, y, setup) = 0
-    initial_velocity_v(x, y, setup) = 0
-    initial_pressure(x, y, setup) = 0
+    initial_velocity_u(x, y) = 0
+    initial_velocity_v(x, y) = 0
+    initial_pressure(x, y) = 0
     @pack! case = initial_velocity_u, initial_velocity_v, initial_pressure
 
     # Forcing parameters
-    x_c = 0                           # X-coordinate of body
-    y_c = 0                           # Y-coordinate of body
-    Ct = 0                            # Actuator thrust coefficient
-    D = 1                             # Actuator disk diameter
-    isforce = false                   # Presence of a body force
-    force_unsteady = false            # Steady (0) or unsteady (1) force
-    bodyforce_x(x, y, t, setup, getJacobian = false) = 0
-    bodyforce_y(x, y, t, setup, getJacobian = false) = 0
-    Fp(x, y, t, setup, getJacobian = false) = 0
-    force = Force{T}(; x_c, y_c, Ct, D, isforce, force_unsteady, bodyforce_x, bodyforce_y, Fp)
+    bodyforce_u(x, y) = 0
+    bodyforce_v(x, y) = 0
+    force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
     # Iteration processors 
     logger = Logger()                        # Prints time step information
@@ -199,7 +192,7 @@
         ibm,
         time,
         solver_settings,
-        visualization,
+        processors,
         bc,
     )
 
