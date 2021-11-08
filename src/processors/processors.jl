@@ -15,3 +15,10 @@ Base.@kwdef mutable struct RealTimePlotter <: Processor
     fps::Int = 60
     field::Node = Node(nothing)
 end
+
+Base.@kwdef mutable struct VTKWriter <: Processor
+    nupdate::Int = 1
+    dir::String = "output"
+    filename::String = "solution"
+    pvd::CollectionFile = paraview_collection("")
+end

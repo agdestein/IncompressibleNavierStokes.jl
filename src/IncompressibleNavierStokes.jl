@@ -7,6 +7,7 @@ using IterativeSolvers: cg!
 using LinearAlgebra: Diagonal, Factorization, UpperTriangular, I, cholesky, factorize, ldiv!, lu, mul!
 using SparseArrays: SparseMatrixCSC, blockdiag, nnz, sparse, spdiagm, spzeros
 using UnPack: @pack!, @unpack
+using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 # Using Plots: contour, contourf, title!
 using Makie:
     Axis,
@@ -138,7 +139,7 @@ export SteadyBodyForce, UnsteadyBodyForce
 export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
 
 # Processors
-export Logger, RealTimePlotter
+export Logger, RealTimePlotter, VTKWriter
 
 # Problems
 export SteadyStateProblem, UnsteadyProblem, is_steady
@@ -172,8 +173,7 @@ export create_boundary_conditions,
     force,
     check_input!,
     solve,
-    initialize_rtp,
-    update_rtp!
+    get_velocity
 
 export momentum!
 

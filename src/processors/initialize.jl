@@ -90,3 +90,12 @@ function initialize!(plotter::RealTimePlotter, stepper)
 
     plotter
 end
+
+function initialize!(writer::VTKWriter, stepper)
+    @unpack dir, filename = writer
+    isdir(dir) || mkdir(dir);
+    pvd = paraview_collection(joinpath(dir, filename))
+    @pack! writer = pvd
+
+    writer
+end

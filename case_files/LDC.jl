@@ -179,7 +179,12 @@ function LDC()
         # fieldname = :pressure,               # Quantity for real time plotting
         # fieldname = :streamfunction,         # Quantity for real time plotting
     )
-    processors = [logger, real_time_plotter]
+    vtk_writer = VTKWriter(;
+        nupdate = 5,                         # Number of iterations between VTK writings
+        dir = "output/$name",                # Output directory
+        filename = "solution",               # Output file name (without extension)
+    )
+    processors = [logger, real_time_plotter, vtk_writer]
 
     # Final setup
     Setup{T,N}(;

@@ -23,26 +23,39 @@ function process!(logger::Logger, stepper)
 
     println("n = $(stepper.n), t = $t, maxres = $maxres")
     # println("t = $t")
-    
-    logger 
+
+    logger
 end
 
 function process!(plotter::RealTimePlotter, stepper)
     @unpack setup, V, p, t = stepper
     @unpack Nx, Ny, Npx, Npy = setup.grid
-    @unpack field, fieldname = plotter 
-    if fieldname == :velocity 
+    @unpack field, fieldname = plotter
+    if fieldname == :velocity
         up, vp, qp = get_velocity(V, t, setup)
         field[] = qp
-    elseif fieldname == :vorticity 
+    elseif fieldname == :vorticity
         field[] = vorticity!(field[], V, t, setup)
-    elseif fieldname == :streamfunction 
+    elseif fieldname == :streamfunction
         field[] = get_streamfunction(V, t, setup)
-    elseif fieldname == :pressure 
+    elseif fieldname == :pressure
         field[] = reshape(p, Npx, Npy)
     end
     # sleep(1 / rtp.fps)
-    
-    plotter 
+
+    plotter
 end
 
+function process!(writer::VTKWriter, stepper)
+    @unpack dir, filename = writer
+    @unpack setup, V, p, t = stepper
+    @unpack xp, yp = setup.grid;
+    vtk_grid("$dir/$(filename)_t=$t", xp, yp) do vtk
+        up, vp, = get_velocity(V, t, setup)
+        vtk["velocity"] = (up, vp, zero(up))
+        vtk["pressure"] = p
+        writer.pvd[t] = vtk
+    end
+
+    writer
+end
