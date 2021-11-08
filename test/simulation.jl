@@ -169,19 +169,23 @@
     Fp(x, y, t, setup, getJacobian = false) = 0
     force = Force{T}(; x_c, y_c, Ct, D, isforce, force_unsteady, bodyforce_x, bodyforce_y, Fp)
 
-    # Visualization settings
-    plotgrid = false                   # Plot gridlines and pressure points
-    do_rtp = false                     # Real time plotting
-    rtp_type = "vorticity"             # Quantity for real time plotting
-    # rtp_type = "quiver"                # Quantity for real time plotting
-    # rtp_type = "vorticity"             # Quantity for real time plotting
-    # rtp_type = "pressure"              # Quantity for real time plotting
-    # rtp_type = "streamfunction"        # Quantity for real time plotting
-    rtp_n = 10                         # Number of iterations between real time plots
-    initialize_processor(stepper) = nothing
-    process!(processor, stepper) = nothing
-    visualization =
-        Visualization(; plotgrid, do_rtp, rtp_type, rtp_n, initialize_processor, process!)
+    # Iteration processors 
+    logger = Logger()                        # Prints time step information
+    # real_time_plotter = RealTimePlotter(; 
+    #     nupdate = 5,                         # Number of iterations between real time plots
+    #     fieldname = :vorticity,              # Quantity for real time plotting
+    #     # fieldname = :quiver,                 # Quantity for real time plotting 
+    #     # fieldname = :vorticity,              # Quantity for real time plotting 
+    #     # fieldname = :pressure,               # Quantity for real time plotting 
+    #     # fieldname = :streamfunction,         # Quantity for real time plotting 
+    # )
+    # vtk_writer = VTKWriter(;
+    #     nupdate = 5,                         # Number of iterations between VTK writings 
+    #     dir = "output/$name",                # Output directory
+    #     filename = "solution",               # Output file name (without extension)
+    # )
+    # processors = [logger, real_time_plotter, vtk_writer] 
+    processors = [logger] 
 
     # Final setup
     setup = Setup{T,N}(;
