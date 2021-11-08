@@ -20,7 +20,7 @@ Base.@kwdef mutable struct FourierPressureSolver{T} <: PressureSolver{T}
 end
 
 """
-    initialize(pressure_solver)
+    initialize!(pressure_solver)
 
 Initialize pressure solver.
 """
@@ -59,6 +59,8 @@ function initialize!(solver::FourierPressureSolver, setup, A)
     Â[1, 1] = 1
 
     Â = complex(Â)
+
+    # Placeholders for intermediate results
     p̂ = similar(Â)
     f̂ = similar(Â)
 

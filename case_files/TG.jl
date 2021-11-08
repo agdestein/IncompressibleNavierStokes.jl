@@ -169,64 +169,17 @@ function TG()
     bodyforce_v(x, y) = 0
     force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
-    # Visualization settings
-    plotgrid = false                   # Plot gridlines and pressure points
-    do_rtp = false                     # Real time plotting
-    rtp_type = "vorticity"             # Quantity for real time plotting
-    # rtp_type = "quiver"                # Quantity for real time plotting
-    # rtp_type = "vorticity"             # Quantity for real time plotting
-    # rtp_type = "pressure"              # Quantity for real time plotting
-    # rtp_type = "streamfunction"        # Quantity for real time plotting
-    rtp_n = 10                         # Number of iterations between real time plots
-
-    function initialize_processor(stepper)
-        @unpack V, p, t, setup, cache, momentum_cache = stepper
-        @unpack F = cache
-        if setup.visualization.do_rtp
-            rtp = initialize_rtp(setup, V, p, t)
-        else
-            rtp = nothing
-        end
-        # Estimate number of time steps that will be taken
-        nt = ceil(Int, (t_end - t_start) / Δt)
-
-        momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
-        maxres = maximum(abs.(F))
-
-
-        println("n), t = $t, maxres = $maxres")
-        # println("t = $t")
-
-        (; rtp, nt)
-    end
-
-    function process!(processor, stepper)
-        @unpack V, p, t, setup, cache, momentum_cache = stepper
-        @unpack F = cache
-        @unpack do_rtp, rtp_n = setup.visualization
-        @unpack rtp = processor
-
-        # Calculate mass, momentum and energy
-        # maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
-
-        # Residual (in Finite Volume form)
-        # For k-ϵ model residual also contains k and ϵ terms
-        if !isa(model, KEpsilonModel)
-            # Norm of residual
-            momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
-            maxres = maximum(abs.(F))
-        end
-
-        println("n = $(stepper.n), t = $t, maxres = $maxres")
-        # println("t = $t")
-
-        if do_rtp && mod(stepper.n, rtp_n) == 0
-            update_rtp!(rtp, setup, V, p, t)
-        end
-    end
-
-    visualization =
-        Visualization(; plotgrid, do_rtp, rtp_type, rtp_n, initialize_processor, process!)
+    # Iteration processors
+    logger = Logger()                        # Prints time step information
+    real_time_plotter = RealTimePlotter(;
+        nupdate = 10,                        # Number of iterations between real time plots
+        fieldname = :vorticity,              # Quantity for real time plotting
+        # fieldname = :quiver,                 # Quantity for real time plotting
+        # fieldname = :vorticity,              # Quantity for real time plotting
+        # fieldname = :pressure,               # Quantity for real time plotting
+        # fieldname = :streamfunction,         # Quantity for real time plotting
+    )
+    processors = [logger, real_time_plotter]
 
     # Final setup
     Setup{T,N}(;
@@ -240,7 +193,7 @@ function TG()
         ibm,
         time,
         solver_settings,
-        visualization,
+        processors,
         bc,
     )
 end

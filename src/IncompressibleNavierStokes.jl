@@ -70,6 +70,12 @@ include("operators/operator_viscosity.jl")
 # Preprocess
 include("preprocess/create_initial_conditions.jl")
 
+# Processors
+include("processors/processors.jl")
+include("processors/initialize.jl")
+include("processors/process.jl")
+include("processors/finalize.jl")
+
 # Types
 include("time_steppers/methods.jl")
 include("time_steppers/tableaux.jl")
@@ -102,8 +108,6 @@ include("momentum/turbulent_viscosity.jl")
 include("rom/momentum_rom.jl")
 
 # Solvers
-include("solvers/real_time_plot/initialize_rtp.jl")
-include("solvers/real_time_plot/update_rtp.jl")
 include("solvers/get_timestep.jl")
 include("solvers/solve.jl")
 
@@ -132,6 +136,9 @@ export SteadyBodyForce, UnsteadyBodyForce
 
 # Models
 export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
+
+# Processors
+export Logger, RealTimePlotter
 
 # Problems
 export SteadyStateProblem, UnsteadyProblem, is_steady

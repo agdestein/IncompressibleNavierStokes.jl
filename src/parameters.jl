@@ -79,16 +79,6 @@ Base.@kwdef mutable struct SolverSettings{T}
     nPicard::Int = 5                                         # Number of Picard steps before switching to Newton when linearization is Newton (for `SteadyStateProblem`s only)
 end
 
-# Visualization settings
-Base.@kwdef mutable struct Visualization
-    plotgrid::Bool = false                                   # Plot gridlines and pressure points
-    do_rtp::Bool = true                                      # Do real time plotting
-    rtp_type::String = "velocity"                            # "velocity", "quiver", "vorticity" or "pressure"
-    rtp_n::Int = 10                                          # Number of iterations between real time plots
-    initialize_processor::Function = (args...; kwargs...) -> nothing
-    process!::Function = (args...; kwargs...) -> nothing
-end
-
 # Setup
 Base.@kwdef struct Setup{T, N}
     case::Case = Case()
@@ -101,6 +91,6 @@ Base.@kwdef struct Setup{T, N}
     ibm::IBM = IBM()
     time::Time{T} = Time{T}()
     solver_settings::SolverSettings{T} = SolverSettings{T}()
-    visualization::Visualization = Visualization()
+    processors::Vector{Processor} = Processor[]
     bc::BC{T} = BC{T}()
 end
