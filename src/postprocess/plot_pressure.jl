@@ -44,7 +44,9 @@ function plot_pressure(setup, p)
         yp,
         Δpres;
         levels,
+        extendlow = :auto, extendhigh = :auto,
     )
-    display(f)
     save("output/pressure.png", f, pt_per_unit = 2)
+
+    f
 end

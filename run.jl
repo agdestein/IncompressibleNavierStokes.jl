@@ -2,13 +2,13 @@ using IncompressibleNavierStokes
 using GLMakie
 
 ## Load input parameters and constants
-# case_name = "LDC"
+case_name = "LDC"
 # case_name = "BFS"
-case_name = "TG"
+# case_name = "TG"
 include("case_files/$case_name.jl")
 setup = eval(:($(Symbol(case_name))()));
 
-## Prepare 
+## Prepare
 build_operators!(setup);
 V₀, p₀, t₀ = create_initial_conditions(setup);
 
@@ -19,6 +19,6 @@ problem = setup.case.problem;
 @profview V, p = solve(problem, setup, V₀, p₀);
 
 ## Post-process
-plot_pressure(setup, p);
-plot_vorticity(setup, V, setup.time.t_end);
-plot_streamfunction(setup, V, setup.time.t_end);
+plot_pressure(setup, p)
+plot_vorticity(setup, V, setup.time.t_end)
+plot_streamfunction(setup, V, setup.time.t_end)

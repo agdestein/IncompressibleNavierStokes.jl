@@ -60,7 +60,10 @@ function plot_streamfunction(setup, V, t)
         yψ,
         ψ;
         # levels,
+        extendlow = :auto,
+        extendhigh = :auto,
     )
-    display(f)
     save("output/streamfunction.png", f, pt_per_unit = 2)
+
+    f
 end

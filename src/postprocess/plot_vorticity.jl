@@ -37,8 +37,12 @@ function plot_vorticity(setup, V, t)
         ylabel = "y",
     )
     limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
-    contourf!(ax, xω, yω, ω; levels)
-    display(f)
-    #save("output/vorticity.png", f, pt_per_unit = 2)
-    #f
+    contourf!(
+        ax, xω, yω, ω;
+        levels,
+        extendlow = :auto,
+        extendhigh = :auto,
+    )
+    # save("output/vorticity.png", f, pt_per_unit = 2)
+    f
 end
