@@ -5,7 +5,7 @@ Compute the constant part of the turbulent viscosity.
 """
 function turbulent_K end
 
-turbulent_K(model::SmagorinskyModel, setup) = model.C_s^2 * Δmax_size(setup.grid)^2
+turbulent_K(model::SmagorinskyModel, setup) = model.C_s^2 * max_size(setup.grid)^2
 
 function turbulent_K(model::QRModel, setup)
     # FIXME: Is this the correct `α`?
