@@ -22,3 +22,4 @@ problem = setup.case.problem;
 plot_pressure(setup, p)
 plot_vorticity(setup, V, setup.time.t_end)
 plot_streamfunction(setup, V, setup.time.t_end)
+

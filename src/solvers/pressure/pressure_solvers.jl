@@ -11,12 +11,12 @@ end
 Base.@kwdef mutable struct CGPressureSolver{T} <: PressureSolver{T}
     abstol::T = 0
     reltol::T = √eps(T)
-    maxiter::Int = 0 
+    maxiter::Int = 0
 end
 Base.@kwdef mutable struct FourierPressureSolver{T} <: PressureSolver{T}
-    Â = zeros(Complex{T}, 0, 0)
-    p̂ = zeros(Complex{T}, 0, 0)
-    f̂ = zeros(Complex{T}, 0, 0)
+    Â::Matrix{Complex{T}} = zeros(Complex{T}, 0, 0)
+    p̂::Matrix{Complex{T}} = zeros(Complex{T}, 0, 0)
+    f̂::Matrix{Complex{T}} = zeros(Complex{T}, 0, 0)
 end
 
 """
@@ -27,10 +27,9 @@ Initialize pressure solver.
 function initialize! end
 
 initialize!(solver::DirectPressureSolver, setup, A) = (solver.A_fact = factorize(A))
-
-function initialize!(solver::CGPressureSolver, setup, A)
+initialize!(solver::CGPressureSolver, setup, A) =
     solver.maxiter == 0 && (solver.maxiter = size(A, 2))
-end
+
 
 function initialize!(solver::FourierPressureSolver, setup, A)
     @unpack bc = setup
@@ -45,7 +44,7 @@ function initialize!(solver::FourierPressureSolver, setup, A)
     Δy = hy[1]
     if any(!≈(Δx), hx) || any(!≈(Δy), hy)
         error("FourierPressureSolver requires uniform grid along each dimension")
-    end 
+    end
 
     # Fourier transform of the discretization
     # Assuming uniform grid, although Δx, Δy and Δz do not need to be the same
