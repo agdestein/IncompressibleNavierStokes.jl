@@ -147,14 +147,22 @@ function convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian = fals
         yIu_vx = setup.discretization.yIu_vx3
         yIv_vy = setup.discretization.yIv_vy3
     else
-        @unpack Cux, Cuy, Cvx, Cvy = setup.discretization
-        @unpack Au_ux, Au_uy, Av_vx, Av_vy = setup.discretization
-        @unpack yAu_ux, yAu_uy, yAv_vx, yAv_vy = setup.discretization
-        @unpack Iu_ux, Iv_uy, Iu_vx, Iv_vy = setup.discretization
-        @unpack yIu_ux, yIv_uy, yIu_vx, yIv_vy = setup.discretization
+        @unpack Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz  = setup.discretization
+        @unpack Au_ux, Au_uy, Au_uz = setup.discretization
+        @unpack Av_vx, Av_vy, Av_vz = setup.discretization
+        @unpack Aw_wx, Aw_wy, Aw_wz = setup.discretization
+        @unpack yAu_ux, yAu_uy, yAu_uz = setup.discretization
+        @unpack yAv_vx, yAv_vy, yAv_vz = setup.discretization
+        @unpack yAw_wx, yAw_wy, yAw_wz = setup.discretization
+        @unpack Iu_ux, Iv_uy, Iw_uz = setup.discretization
+        @unpack Iu_vx, Iv_vy, Iw_vz = setup.discretization
+        @unpack Iu_wx, Iv_wy, Iw_wz = setup.discretization
+        @unpack yIu_ux, yIv_uy, yIw_uz = setup.discretization
+        @unpack yIu_vx, yIv_vy, yIw_vz = setup.discretization
+        @unpack yIu_wx, yIv_wy, yIw_wz = setup.discretization
     end
 
-    @unpack indu, indv = setup.grid
+    @unpack indu, indv, indv = setup.grid
     @unpack Newton_factor = setup.solver_settings
 
     @unpack u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy = cache
@@ -164,12 +172,15 @@ function convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian = fals
 
     cu = @view c[indu]
     cv = @view c[indv]
+    cw = @view c[indw]
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
+    wₕ = @view V[indw]
 
     ϕu = @view ϕ[indu]
     ϕv = @view ϕ[indv]
+    ϕw = @view ϕ[indw]
 
     # Convection components
     mul!(u_ux, Au_ux, uₕ)
@@ -202,24 +213,56 @@ function convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian = fals
     mul!(∂vū∂x, Cvx, vū_vx)
     mul!(∂vv̄∂y, Cvy, vv̄_vy)
 
-    # U_ux = Au_ux * uₕ + yAu_ux                # U at ux
-    # Ū_ux = Iu_ux * ϕu + yIu_ux                # Ū at ux
+    # u_ux = Au_ux * uₕ + yAu_ux                # u at ux
+    # ū_ux = Iu_ux * ϕu + yIu_ux                # ū at ux
     # ∂uū∂x = Cux * (u_ux .* ū_ux)
 
-    # U_uy = Au_uy * uₕ + yAu_uy                # U at uy
-    # V̄_uy = Iv_uy * ϕv + yIv_uy                # Ū at uy
+    # u_uy = Au_uy * uₕ + yAu_uy                # u at uy
+    # v̄_uy = Iv_uy * ϕv + yIv_uy                # v̄ at uy
     # ∂uv̄∂y = Cuy * (u_uy .* v̄_uy)
 
-    # V_vx = Av_vx * vₕ + yAv_vx                # V at vx
-    # Ū_vx = Iu_vx * ϕu + yIu_vx                # Ū at vx
+    if N == 3
+        u_uz = Au_uz * uₕ + yAu_uz                # u at uz
+        w̄_uy = Iw_uz * ϕw + yIw_uz                # ū at uz
+        ∂uw̄∂z = Cuz * (u_uz .* w̄_uz)
+    end 
+    
+    # v_vx = Av_vx * vₕ + yAv_vx                # v at vx
+    # ū_vx = Iu_vx * ϕu + yIu_vx                # ū at vx
     # ∂vū∂x = Cvx * (v_vx .* ū_vx)
 
-    # V_vy = Av_vy * vₕ + yAv_vy                # V at vy
-    # V̄_vy = Iv_vy * ϕv + yIv_vy                # Ū at vy
+    # v_vy = Av_vy * vₕ + yAv_vy                # v at vy
+    # v̄_vy = Iv_vy * ϕv + yIv_vy                # v̄ at vy
     # ∂vv̄∂y = Cvy * (v_vy .* v̄_vy)
 
-    @. cu = ∂uū∂x + ∂uv̄∂y
-    @. cv = ∂vū∂x + ∂vv̄∂y
+    if N == 3
+        v_vy = Av_vz * vₕ + yAv_vz                # v at vz
+        w̄_vy = Iw_vz * ϕw + yIw_vz                # w̄ at vz
+        ∂vw̄∂z = Cvz * (v_vz .* w̄_vz)
+    end 
+
+    if N == 3
+        w_wx = Aw_wx * wₕ + yAw_wx                # w at wx
+        ū_wx = Iu_wx * ϕu + yIu_wx                # ū at wx
+        ∂wū∂x = Cwx * (w_wx .* ū_wx)
+
+        w_wy = Aw_wy * wₕ + yAw_wy                # w at wy
+        v̄_wy = Iv_wy * ϕv + yIv_wy                # v̄ at wy
+        ∂wv̄∂y = Cwy * (w_wy .* v̄_wy)
+
+        w_wy = Aw_wz * wₕ + yAw_wz                # w at wz
+        w̄_wy = Iw_wz * ϕw + yIw_wz                # w̄ at wz
+        ∂ww̄∂z = Cwz * (w_wz .* w̄_wz)
+    end
+
+    if N == 2
+        @. cu = ∂uū∂x + ∂uv̄∂y
+        @. cv = ∂vū∂x + ∂vv̄∂y
+    else
+        @. cu = ∂uū∂x + ∂uv̄∂y + ∂uw̄∂y
+        @. cv = ∂vū∂x + ∂vv̄∂y + ∂vw̄∂y
+        @. cw = ∂wū∂x + ∂wv̄∂y + ∂ww̄∂y
+    end
 
     if getJacobian
         ## Convective terms, u-component

@@ -6,7 +6,7 @@ Nonuniform cartesian grid of dimension `N` and floating point type `T`.
 Base.@kwdef mutable struct Grid{T, N}
     Nx::Int = 10                             # Number of x-volumes
     Ny::Int = 10                             # Number of y-volumes
-    Nz::Int = 0                              # Number of z-volumes (if any)
+    Nz::Int = 1                              # Number of z-volumes (if any)
     xlims::Tuple{T,T} = (0, 1)               # Horizontal limits (left, right)
     ylims::Tuple{T,T} = (0, 1)               # Vertical limits (bottom, top)
     zlims::Tuple{T,T} = (0, 1)               # Depth limits (back, front)

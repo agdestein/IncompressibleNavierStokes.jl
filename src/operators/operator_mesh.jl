@@ -1,12 +1,13 @@
 function operator_mesh!(setup)
     @unpack bc = setup
     @unpack order4, α = setup.discretization
-    @unpack Nx, Ny, Nw, x, y, z, hx, hy, hz, gx, gy, gz, xp, yp, zp = setup.grid
+    @unpack Nx, Ny, Nz, x, y, z, hx, hy, hz, gx, gy, gz, xp, yp, zp = setup.grid
 
     # Number of pressure points
     Npx = Nx
     Npy = Ny
-    Np = Npx * Npy
+    Npz = Nz
+    Np = Npx * Npy * Npz
 
     ## u-volumes
     # x[1]   x[2]   x[3] ....      x[Nx]   x[Nx+1]
@@ -27,13 +28,18 @@ function operator_mesh!(setup)
     Nux_in -= bc.u.x == (:periodic, :periodic)
     Nux_t = Nux_in + Nux_b  # Total number
 
-    # Y-dir
+    # y-dir
     Nuy_b = 2               # Boundary points
     Nuy_in = Ny             # Inner points
     Nuy_t = Nuy_in + Nuy_b  # Total number
-
+    
+    # z-dir
+    Nuz_b = 2               # Boundary points
+    Nuz_in = Nz             # Inner points
+    Nuz_t = Nuz_in + Nuz_b  # Total number
+    
     # Total number
-    Nu = Nux_in * Nuy_in
+    Nu = Nux_in * Nuy_in * Nuz_in
 
 
     ## v-volumes
@@ -51,11 +57,46 @@ function operator_mesh!(setup)
     Nvy_in -= bc.v.y == (:periodic, :periodic)
     Nvy_t = Nvy_in + Nvy_b # Total number
 
+    # z-dir
+    Nvz_b = 2               # Boundary points
+    Nvz_in = Nz             # Inner points
+    Nvz_t = Nvz_in + Nvz_b  # Total number
+    
     # Total number
-    Nv = Nvx_in * Nvy_in
+    Nv = Nvx_in * Nvy_in * Nvz_in
+
+
+    ## w-volumes
+
+    # X-dir
+    Nwx_b = 2               # Boundary points
+    Nwx_in = Nx             # Inner points
+    Nwx_t = Nwx_in + Nwx_b  # Total number
+
+    # Y-dir
+    Nwy_b = 2               # Boundary points
+    Nwy_in = Ny             # Inner points
+    Nwy_t = Nwy_in + Nwy_b  # Total number
+    
+    # z-dir
+    Nwz_b = 2               # Boundary points
+    Nwz_in = Ny + 1         # Inner points
+    Nwz_in -= bc.w.z[1] ∈ [:dirichlet, :symmetric]
+    Nwz_in -= bc.w.z[2] ∈ [:dirichlet, :symmetric]
+    Nwz_in -= bc.w.z == (:periodic, :periodic)
+    Nwz_t = Nwz_in + Nwz_b  # Total number
+
+    # Total number
+    Nw = Nwx_in * Nwy_in * Nwz_in
+
 
     # Total number of velocity points
-    NV = Nu + Nv + Nw
+    if N == 2
+        NV = Nu + Nv
+    else
+        NV = Nu + Nv + Nw
+    end
+
 
     ## For a grid with three times larger volumes:
     if order4
@@ -348,7 +389,8 @@ function operator_mesh!(setup)
 
     # Indices of unknowns in velocity vector
     indu = 1:Nu
-    indv = Nu+1:Nu+Nv
+    indv = Nu + (1:Nv)
+    indw = Nu + Nv + (1:Nw)
     indV = 1:NV
     indp = NV+1:NV+Np
 
@@ -368,7 +410,7 @@ function operator_mesh!(setup)
     @pack! setup.grid = xin, yin
     @pack! setup.grid = xu, yu, xv
     @pack! setup.grid = yv, xpp, ypp
-    @pack! setup.grid = indu, indv, indV, indp
+    @pack! setup.grid = indu, indv, indw, indV, indp
 
     if order4
         @pack! setup.grid = hx3, hy3, hxi3, hyi3, gxi3, gyi3
