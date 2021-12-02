@@ -56,7 +56,8 @@ function initialize!(plotter::RealTimePlotter, stepper)
         ω = Node(get_vorticity(V, t, setup))
         # ax, hm = contour(fig[1, 1], xω, yω, ω; levels = -10:2:10)
         # ax, hm = contourf(fig[1, 1], xω, yω, ω; levels = -10:2:10, extendlow = :auto, extendhigh = :auto)
-        ax, hm = heatmap(fig[1, 1], xω, yω, ω; colorrange = (-20, 20))#, colormap = :vangogh)
+        # ax, hm = heatmap(fig[1, 1], xω, yω, ω; colorrange = (-20, 20))#, colormap = :vangogh)
+        ax, hm = heatmap(fig[1, 1], xω, yω, ω; colorrange = (-10, 10))#, colormap = :vangogh)
         field = ω
     elseif fieldname == :streamfunction
         if bc.u.x[1] == :periodic

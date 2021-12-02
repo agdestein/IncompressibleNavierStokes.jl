@@ -9,7 +9,6 @@ function process!(logger::Logger, stepper)
     @unpack V, p, t, setup, cache, momentum_cache = stepper
     @unpack model = setup
     @unpack F = cache
-
     # Calculate mass, momentum and energy
     # maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
@@ -47,10 +46,10 @@ function process!(plotter::RealTimePlotter, stepper)
 end
 
 function process!(writer::VTKWriter, stepper)
-    @unpack dir, filename = writer
     @unpack setup, V, p, t = stepper
     @unpack xp, yp = setup.grid;
-    vtk_grid("$dir/$(filename)_t=$t", xp, yp) do vtk
+    tformat = replace(string(t), "." => "p")
+    vtk_grid("$(writer.dir)/$(writer.filename)_t=$tformat", xp, yp) do vtk
         up, vp, = get_velocity(V, t, setup)
         vtk["velocity"] = (up, vp, zero(up))
         vtk["pressure"] = p
