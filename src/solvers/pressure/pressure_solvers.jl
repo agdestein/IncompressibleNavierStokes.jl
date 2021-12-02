@@ -30,10 +30,9 @@ initialize!(solver::DirectPressureSolver, setup, A) = (solver.A_fact = factorize
 initialize!(solver::CGPressureSolver, setup, A) =
     solver.maxiter == 0 && (solver.maxiter = size(A, 2))
 
-
 function initialize!(solver::FourierPressureSolver, setup, A)
-    @unpack bc = setup
-    @unpack hx, hy, Npx, Npy = setup.grid
+    (; bc) = setup
+    (; hx, hy, Npx, Npy) = setup.grid
     if any(!isequal(:periodic), [bc.v.y[1], bc.v.y[2], bc.u.x[1], bc.u.x[1]])
         error("FourierPressureSolver only implemented for periodic boundary conditions")
     end
