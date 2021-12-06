@@ -6,8 +6,9 @@ abstract type AbstractBodyForce{T} end
 Steady (constant) body force.
 """
 Base.@kwdef mutable struct SteadyBodyForce{T} <: AbstractBodyForce{T}
-    bodyforce_u::Function = (x, y) -> 0
-    bodyforce_v::Function = (x, y) -> 0
+    bodyforce_u::Function = (x, y, z) -> 0
+    bodyforce_v::Function = (x, y, z) -> 0
+    bodyforce_w::Function = (x, y, z) -> 0
     F::Vector{T} = T[] # For storing constant body force
 end
 
@@ -18,8 +19,9 @@ Forcing parameters with floating point type `T`.
 """
 Base.@kwdef mutable struct UnsteadyBodyForce{T} <: AbstractBodyForce{T}
     F::Vector{T} = T[] # For storing constant body force
-    bodyforce_u::Function = () -> error("bodyforce_x not implemented")
-    bodyforce_v::Function = () -> error("bodyforce_y not implemented")
+    bodyforce_u::Function = () -> error("bodyforce_u not implemented")
+    bodyforce_v::Function = () -> error("bodyforce_v not implemented")
+    bodyforce_w::Function = () -> error("bodyforce_w not implemented")
 end
 
 

@@ -7,20 +7,36 @@ function set_bc_vectors!(setup, t)
     @unpack problem = setup.case
     @unpack model = setup
     @unpack Re = setup.fluid
-    @unpack u_bc, v_bc, dudt_bc, dvdt_bc = setup.bc
+    @unpack u_bc, v_bc, w_bc, dudt_bc, dvdt_bc, dwdt_bc = setup.bc
     @unpack p_bc, bc_unsteady = setup.bc
-    @unpack Nux_in, Nvy_in, Np, Npx, Npy = setup.grid
-    @unpack xin, yin, x, y, hx, hy, xp, yp = setup.grid
+    @unpack Np, Npx, Npy, Npz = setup.grid
+    @unpack Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t = setup.grid 
+    @unpack Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nuz_b, Nvz_t = setup.grid 
+    @unpack Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t = setup.grid 
+    @unpack xin, yin, zin, x, y, z, hx, hy, hz, xp, yp, zp = setup.grid
     @unpack order4 = setup.discretization
-    @unpack Dux, Duy, Dvx, Dvy = setup.discretization
-    @unpack Au_ux_bc, Au_uy_bc, Av_vx_bc, Av_vy_bc = setup.discretization
-    @unpack Su_ux_bc, Su_uy_bc, Sv_vx_bc, Sv_vy_bc = setup.discretization
+    @unpack Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz, = setup.discretization
+
+    @unpack Au_ux_bc, Au_uy_bc, Au_uz_bc = setup.discretization
+    @unpack Av_vx_bc, Av_vy_bc, Av_vz_bc = setup.discretization
+    @unpack Aw_wx_bc, Aw_wy_bc, Aw_wz_bc = setup.discretization
+
+    @unpack Su_ux_bc, Su_uy_bc, Su_uz_bc = setup.discretization
+    @unpack Sv_vx_bc, Sv_vy_bc, Sv_vz_bc = setup.discretization
+    @unpack Sw_wx_bc, Sw_wy_bc, Sw_wz_bc = setup.discretization
+
     @unpack Iu_ux_bc, Iv_uy_bc_lr, Iv_uy_bc_lu = setup.discretization
     @unpack Iu_vx_bc_lr, Iu_vx_bc_lu, Iv_vy_bc = setup.discretization
-    @unpack Mx_bc, My_bc = setup.discretization
+    @unpack Mx_bc, My_bc, Mz_bc = setup.discretization
     @unpack Aν_vy_bc = setup.discretization
-    @unpack Cux_k_bc, Cuy_k_bc, Cvx_k_bc, Cvy_k_bc, Auy_k_bc, Avx_k_bc =
-        setup.discretization
+
+    @unpack Cux_k_bc, Cuy_k_bc, Cuz_k_bc = setup.discretization
+    @unpack Cvx_k_bc, Cvy_k_bc, Cvz_k_bc = setup.discretization
+    @unpack Cwx_k_bc, Cwy_k_bc, Cwz_k_bc = setup.discretization
+
+    @unpack Auy_k_bc, Avx_k_bc = setup.discretization
+    @unpack Auz_k_bc, Awx_k_bc = setup.discretization
+    @unpack Awy_k_bc, Avz_k_bc = setup.discretization
     @unpack Su_vx_bc_lr, Su_vx_bc_lu, Sv_uy_bc_lr, Sv_uy_bc_lu = setup.discretization
 
     if order4
@@ -32,31 +48,50 @@ function set_bc_vectors!(setup, t)
         @unpack Diffux_div, Diffuy_div, Diffvx_div, Diffvy_div = setup.discretization
         @unpack Mx_bc3, My_bc3 = setup.discretization
     end
-     
+
     # TODO: Split up function into allocating part (constructor?) and mutating `update!`
 
     ## Get BC values
-    uLo = u_bc.(x, y[1], t, [setup])
-    uUp = u_bc.(x, y[end], t, [setup])
+    uLe_i = u_bc.(x[1], yp, zp, t, [setup])
+    uRi_i = u_bc.(x[end], yp, zp, t, [setup])
+    uLo_i = u_bc.(xin, y[1], zp, t, [setup])
+    uUp_i = u_bc.(xin, y[end], zp, t, [setup])
+    uLo_i2 = u_bc.(x, y[1], zp, t, [setup])
+    uUp_i2 = u_bc.(x, y[end], zp, t, [setup])
+    uBa_i = u_bc.(xin, yp, z[1], t, [setup])
+    uFr_i = u_bc.(xin, yp, z[end], t, [setup])
+    uBa_i2 = u_bc.(x, yp, z[1], t, [setup])
+    uFr_i2 = u_bc.(x, yp, z[end], t, [setup])
 
-    uLo_i = u_bc.(xin, y[1], t, [setup])
-    uUp_i = u_bc.(xin, y[end], t, [setup])
-    uLe_i = u_bc.(x[1], yp, t, [setup])
-    uRi_i = u_bc.(x[end], yp, t, [setup])
+    vLe_i = v_bc.(x[1], yin, zp, t, [setup])
+    vRi_i = v_bc.(x[end], yin, zp, t, [setup])
+    vLe_i2 = v_bc.(x[1], y, zp, t, [setup])
+    vRi_i2 = v_bc.(x[end], y, zp, t, [setup])
+    vLo_i = v_bc.(xp, y[1], zp, t, [setup])
+    vUp_i = v_bc.(xp, y[end], zp, t, [setup])
+    vBa_i = v_bc.(xp, yin, z[1], t, [setup])
+    vFr_i = v_bc.(xp, yin, z[end], t, [setup])
+    vBa_i2 = v_bc.(xp, y, z[1], t, [setup])
+    vFr_i2 = v_bc.(xp, y, z[end], t, [setup])
 
-    vLe = v_bc.(x[1], y, t, [setup])
-    vRi = v_bc.(x[end], y, t, [setup])
-
-    vLo_i = v_bc.(xp, y[1], t, [setup])
-    vUp_i = v_bc.(xp, y[end], t, [setup])
-    vLe_i = v_bc.(x[1], yin, t, [setup])
-    vRi_i = v_bc.(x[end], yin, t, [setup])
+    wLe_i = w_bc.(x[1], yp, zin, t, [setup])
+    wRi_i = w_bc.(x[end], yp, zin, t, [setup])
+    wLe_i2 = w_bc.(x[1], yp, z, t, [setup])
+    wRi_i2 = w_bc.(x[end], yp, z, t, [setup])
+    wLo_i = w_bc.(xp, y[1], zin, t, [setup])
+    wUp_i = w_bc.(xp, y[end], zin, t, [setup])
+    wLo_i2 = w_bc.(xp, y[1], z, t, [setup])
+    wUp_i2 = w_bc.(xp, y[end], z, t, [setup])
+    wBa_i = w_bc.(xp, yp, z[1], t, [setup])
+    wFr_i = w_bc.(xp, yp, z[end], t, [setup])
 
     if !is_steady(problem) && bc_unsteady
-        dudtLe_i = dudt_bc.(x[1], yp, t, [setup])
-        dudtRi_i = dudt_bc.(x[end], yp, t, [setup])
-        dvdtLo_i = dvdt_bc.(xp, y[1], t, [setup])
-        dvdtUp_i = dvdt_bc.(xp, y[end], t, [setup])
+        dudtLe_i = dudt_bc.(x[1], yp, zp, t, [setup])
+        dudtRi_i = dudt_bc.(x[end], yp, zp, t, [setup])
+        dvdtLo_i = dvdt_bc.(xp, y[1], zp, t, [setup])
+        dvdtUp_i = dvdt_bc.(xp, y[end], zp, t, [setup])
+        dwdtLo_i = dwdt_bc.(xp, yp, z[1], t, [setup])
+        dwdtUp_i = dwdt_bc.(xp, yp, z[end], t, [setup])
     end
 
     ## Boundary conditions for divergence
@@ -79,7 +114,16 @@ function set_bc_vectors!(setup, t)
         yMy = α * yMy - yMy3
     end
 
-    yM = yMx + yMy
+    # Mz
+    ybc = kron(My_bc.ybc1, wBa_i) + kron(My_bc.ybc2, wFr_i)
+    yMz = My_bc.Bbc * ybc
+    if order4
+        ybc3 = kron(My_bc3.ybc1, vLo_i) + kron(My_bc3.ybc2, vUp_i)
+        yMy3 = My_bc3.Bbc * ybc3
+        yMy = α * yMy - yMy3
+    end
+
+    yM = yMx + yMy + yMz
     @pack! setup.discretization = yM
 
     # Time derivative of divergence
@@ -299,7 +343,7 @@ function set_bc_vectors!(setup, t)
     # Iu_vx (low/up)
     ybc = kron(Iu_vx_bc_lu.ybc1, uLo) + kron(Iu_vx_bc_lu.ybc2, uUp)
     yIu_vx_lu = Iu_vx_bc_lu.Bbc * ybc
-    
+
     # Iu_vx (left/right)
     ybc = kron(uLe_i, Iu_vx_bc_lr.ybc1) + kron(uRi_i, Iu_vx_bc_lr.ybc2)
     yIu_vx_lr = Iu_vx_bc_lu.B2D * Iu_vx_bc_lr.Bbc * ybc

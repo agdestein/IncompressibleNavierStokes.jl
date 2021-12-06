@@ -12,15 +12,6 @@ function operator_convection_diffusion!(setup)
     @unpack Ω⁻¹ = setup.grid
     @unpack Δt = setup.time
     @unpack order4 = setup.discretization
-
-    if order4
-        @unpack α = setup.discretization
-        @unpack hxi3, hyi3, gxi3, gyi3, hxd13, hxd3, hyd13, hyd3 = setup.grid
-        @unpack gxd13, gxd3, gyd13, gyd3 = setup.grid
-        @unpack Ωux, Ωuy, Ωvx, Ωvy = setup.grid
-        @unpack Ωux1, Ωux3, Ωuy1, Ωuy3, Ωvx1, Ωvx3, Ωvy1, Ωvy3 = setup.grid
-    end
-
     @unpack Re = setup.fluid
 
     ## Convection (differencing) operator Cu
@@ -429,21 +420,8 @@ function operator_convection_diffusion!(setup)
 
     ## Assemble operators
     if model isa LaminarModel
-        if order4
-            Diffux_div = (α * Dux - Dux3) * Diagonal(1 ./ Ωux)
-            Diffuy_div = (α * Duy - Duy3) * Diagonal(1 ./ Ωuy)
-            Diffvx_div = (α * Dvx - Dvx3) * Diagonal(1 ./ Ωvx)
-            Diffvy_div = (α * Dvy - Dvy3) * Diagonal(1 ./ Ωvy)
-            Diffu =
-                1 / Re * Diffux_div * (α * Su_ux - Su_ux3) +
-                1 / Re * Diffuy_div * (α * Su_uy - Su_uy3)
-            Diffv =
-                1 / Re * Diffvx_div * (α * Sv_vx - Sv_vx3) +
-                1 / Re * Diffvy_div * (α * Sv_vy - Sv_vy3)
-        else
-            Diffu = 1 / Re * (Dux * Su_ux + Duy * Su_uy)
-            Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy)
-        end
+        Diffu = 1 / Re * (Dux * Su_ux + Duy * Su_uy)
+        Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy)
         Diff = blockdiag(Diffu, Diffv)
     end
 

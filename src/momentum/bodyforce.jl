@@ -5,20 +5,20 @@ Compute body force `F` in momentum equations at velocity points.
 If `getJacobian`, also compute `∇F = ∂F/∂V`.
 """
 function bodyforce!(F, ∇F, V, t, setup; getJacobian = false)
-    @unpack indu, indv, xu, xv, yu, yv = setup.grid
+    @unpack indu, indv, indw, xu, xv, xw, yu, yv, yw, zu, zv, zw = setup.grid
 
     if setup.force isa UnsteadyBodyForce
-        Fx, ∇Fx = setup.force.bodyforce_x.(xu, yu, t, [setup]; getJacobian)
-        Fy, ∇Fy = setup.force.bodyforce_y.(xv, yv, t, [setup]; getJacobian)
-
-        # This works for both 2nd and 4th order method
-        Fy = -Ωv .* Fy[:]
+        Fx, ∇Fx = setup.force.bodyforce_x.(xu, yu, zu, t, [setup]; getJacobian)
+        Fy, ∇Fy = setup.force.bodyforce_y.(xv, yv, zv, t, [setup]; getJacobian)
+        Fz, ∇Fz = setup.force.bodyforce_z.(xw, yw, zw, t, [setup]; getJacobian)
 
         F[indu] .= Fx
         F[indv] .= Fy
+        F[indw] .= Fz
         if getJacobian
             ∇F[indu, :] = ∇Fx
             ∇F[indv, :] = ∇Fy
+            ∇F[indw, :] = ∇Fz
         end
     else
         F .= setup.force.F

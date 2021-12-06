@@ -1,19 +1,23 @@
 """
-    create_grid(Nx, Ny, xlims, ylims, stretch)
+    create_grid(T = Float64, N = 2; Nx, Ny, Nz, xlims, ylims, zlims, stretch)
 
-Create nonuniform cartesian box mesh mesh `xlims` × `ylims` with sizes `N` and stretch factor.
+Create nonuniform cartesian box mesh `xlims` × `ylims` × `zlims` with sizes `N` and
+stretch factors `stretch`.
 """
-function create_grid(T = Float64, N = 2; Nx, Ny, xlims, ylims, stretch)
+function create_grid(T = Float64, N = 2; Nx, Ny, Nz, xlims, ylims, zlims, stretch)
     x = nonuniform_grid(xlims..., Nx, stretch[1])
     y = nonuniform_grid(ylims..., Ny, stretch[2])
+    z = nonuniform_grid(zlims..., Nz, stretch[3])
 
     # Pressure positions
     xp = (x[1:end-1] + x[2:end]) / 2
     yp = (y[1:end-1] + y[2:end]) / 2
+    zp = (z[1:end-1] + z[2:end]) / 2
 
     # Distance between velocity points
     hx = diff(x)
     hy = diff(y)
+    hz = diff(z)
 
     # Distance between pressure points
     gx = zeros(Nx + 1)
@@ -26,15 +30,10 @@ function create_grid(T = Float64, N = 2; Nx, Ny, xlims, ylims, stretch)
     gy[2:Ny] = (hy[1:Ny-1] + hy[2:Ny]) / 2
     gy[Ny+1] = hy[end] / 2
 
-    if N == 3
-        z = nonuniform_grid(zlims..., Nz, stretch[3])
-        yp = (y[1:end-1] + y[2:end]) / 2
-        hz = diff(z)
-        gz = zeros(Nz + 1)
-        gz[1] = hz[1] / 2
-        gz[2:Nz] = (hz[1:Nz-1] + hz[2:Nz]) / 2
-        gz[Nz+1] = hz[end] / 2
-    end
+    gz = zeros(Nz + 1)
+    gz[1] = hz[1] / 2
+    gz[2:Nz] = (hz[1:Nz-1] + hz[2:Nz]) / 2
+    gz[Nz+1] = hz[end] / 2
 
-    Grid{T, N}(; Nx, Ny, xlims, ylims, x, y, xp, yp, hx, hy, gx, gy)
+    Grid{T, N}(; Nx, Ny, Nz, xlims, ylims, zlims, x, y, z, xp, yp, zp, hx, hy, hz, gx, gy, gz)
 end
