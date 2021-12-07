@@ -25,6 +25,11 @@ using Makie:
     record,
     save
 
+
+# Convenience notation
+const ⊗ = kron
+
+
 # Grid
 include("grid/grid.jl")
 include("grid/nonuniform_grid.jl")

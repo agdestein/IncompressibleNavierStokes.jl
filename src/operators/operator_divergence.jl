@@ -12,11 +12,6 @@ function operator_divergence!(setup)
     @unpack Ω⁻¹ = setup.grid
     @unpack order4 = setup.discretization
 
-    if order4
-        @unpack α = setup.discretization
-        @unpack hxi3, hyi3 = setup.grid
-    end
-
     ## Divergence operator M
 
     # Note that the divergence matrix M is not square
@@ -53,32 +48,14 @@ function operator_divergence!(setup)
     M1D = BMx * M1D
 
     # Extension to 2D to be used in post-processing files
-    Bup = kron(sparse(I, Nuy_in, Nuy_in), BMx)
+    Bup = I(Nuy_in) ⊗ BMx
 
     # Boundary conditions
     Mx_bc = bc_general(Nux_t, Nux_in, Nux_b, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
-    Mx_bc = (; Mx_bc..., Bbc = kron(mat_hy, M1D * Mx_bc.Btemp))
+    Mx_bc = (; Mx_bc..., Bbc = mat_hy ⊗ (M1D * Mx_bc.Btemp))
 
     # Extend to 2D
-    Mx = kron(mat_hy, M1D * Mx_bc.B1D)
-
-    if order4
-        mat_hy3 = spdiagm(hyi3)
-        diag1 = ones(Nux_t - 1)
-        M1D3 = spdiagm(Nux_t - 1, Nux_t + 2, 0 => -diag1, 3 => diag1)
-        M1D3 = BMx * M1D3
-        Mx_bc3 = bc_div2(
-            Nux_t + 2,
-            Nux_in,
-            Nux_t + 2 - Nux_in,
-            bc.u.x[1],
-            bc.u.x[2],
-            hx[1],
-            hx[end],
-        )
-        Mx3 = kron(mat_hy3, M1D3 * Mx_bc3.B1D)
-        Mx_bc3 = (; Mx_bc3..., Bbc = kron(mat_hy3, M1D3 * Mx_bc3.Btemp))
-    end
+    Mx = mat_hy ⊗ (M1D * Mx_bc.B1D)
 
     ## My
     # Same as Mx but reversing indices and kron arguments
@@ -105,38 +82,16 @@ function operator_divergence!(setup)
     BMy = spdiagm(Npy, Nvy_t - 1, diagpos => ones(Npy))
     M1D = BMy * M1D
     # Extension to 2D to be used in post-processing files
-    Bvp = kron(BMy, sparse(I, Nvx_in, Nvx_in))
+    Bvp = BMy ⊗ I(Nvx_in)
 
     # Boundary conditions
     My_bc = bc_general(Nvy_t, Nvy_in, Nvy_b, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
-    My_bc = (; My_bc..., Bbc = kron(M1D * My_bc.Btemp, mat_hx))
+    My_bc = (; My_bc..., Bbc = (M1D * My_bc.Btemp) ⊗ mat_hx)
 
     # Extend to 2D
-    My = kron(M1D * My_bc.B1D, mat_hx)
-
-    if order4
-        mat_hx3 = spdiagm(Nx, Nx, hxi3)
-        diag1 = ones(Nvy_t - 1)
-        M1D3 = spdiagm(Nvy_t - 1, Nvy_t + 2, 0 => -diag1, 3 => diag1)
-        M1D3 = BMy * M1D3
-        My_bc3 = bc_div2(
-            Nvy_t + 2,
-            Nvy_in,
-            Nvy_t + 2 - Nvy_in,
-            bc.v.y[1],
-            bc.v.y[2],
-            hy[1],
-            hy[end],
-        )
-        My3 = kron(M1D3 * My_bc3.B1D, mat_hx3)
-        My_bc3 = (; My_bc3..., Bbc = kron(M1D3 * My_bc3.Btemp, mat_hx3))
-    end
+    My = (M1D * My_bc.B1D) ⊗ mat_hx
 
     ## Resulting divergence matrix
-    if order4
-        Mx = α * Mx - Mx3
-        My = α * My - My3
-    end
     M = [Mx My]
 
     ## Gradient operator G
@@ -153,10 +108,6 @@ function operator_divergence!(setup)
     ## Store in setup structure
     @pack! setup.discretization = M, Mx, My, Mx_bc, My_bc, G, Gx, Gy
     @pack! setup.discretization = Bup, Bvp
-
-    if order4
-        @pack! setup.discretization = Mx3, My3, Mx_bc3, My_bc3
-    end
 
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve

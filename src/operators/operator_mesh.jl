@@ -250,49 +250,49 @@ function operator_mesh!(setup)
 
     ## Volumes
     # Volume (area) of pressure control volumes
-    Ωp = kron(hzi, kron(hyi, hxi))
+    Ωp = hzi ⊗ hyi ⊗ hxi
     Ωp⁻¹ = 1 ./ Ωp
 
     # Volume (area) of u control volumes
-    Ωu = kron(hzi, kron(hyi, gxi))
+    Ωu = hzi ⊗ hyi ⊗ gxi
     Ωu⁻¹ = 1 ./ Ωu
 
     # Volume (area) of v control volumes
-    Ωv = kron(hzi, kron(gyi, hxi))
+    Ωv = hzi ⊗ gyi ⊗ hxi
     Ωv⁻¹ = 1 ./ Ωv
 
     # Volume (area) of w control volumes
-    Ωw = kron(gzi, kron(hyi, hxi))
+    Ωw = gzi ⊗ hyi ⊗ hxi
     Ωw⁻¹ = 1 ./ Ωw
 
     Ω = [Ωu; Ωv; Ωw]
     Ω⁻¹ = [Ωu⁻¹; Ωv⁻¹; Ωw⁻¹]
 
     # Metrics that can be useful for initialization:
-    xu = kron(ones(Nuz_in), kron(ones(Nuy_in), xin))
-    yu = kron(ones(Nuz_in), kron(yp, ones(Nux_in)))
-    zu = kron(zp, kron(ones(Nuy_in), ones(Nux_in)))
+    xu = ones(Nuz_in) ⊗ ones(Nuy_in) ⊗ xin
+    yu = ones(Nuz_in) ⊗ yp ⊗ ones(Nux_in)
+    zu = zp ⊗ ones(Nuy_in) ⊗ ones(Nux_in)
     xu = reshape(xu, Nux_in, Nuy_in, Nuz_in)
     yu = reshape(yu, Nux_in, Nuy_in, Nuz_in)
     zu = reshape(zu, Nux_in, Nuy_in, Nuz_in)
 
-    xv = kron(ones(Nvz_in), kron(ones(Nvy_in), xp))
-    yv = kron(ones(Nvz_in), kron(yin, ones(Nvx_in)))
-    zv = kron(zp, kron(ones(Nvy_in), ones(Nvx_in)))
+    xv = ones(Nvz_in) ⊗ ones(Nvy_in) ⊗ xp
+    yv = ones(Nvz_in) ⊗ yin ⊗ ones(Nvx_in)
+    zv = zp ⊗ ones(Nvy_in) ⊗ ones(Nvx_in)
     xv = reshape(xv, Nvx_in, Nvy_in, Nvz_in)
     yv = reshape(yv, Nvx_in, Nvy_in, Nvz_in)
     zv = reshape(zv, Nvx_in, Nvy_in, Nvz_in)
 
-    xw = kron(ones(Nwz_in), kron(ones(Nwy_in), xp))
-    yw = kron(ones(Nwz_in), kron(yp, ones(Nwx_in)))
-    zw = kron(zin, kron(ones(Nwy_in), ones(Nwx_in)))
+    xw = ones(Nwz_in) ⊗ ones(Nwy_in) ⊗ xp
+    yw = ones(Nwz_in) ⊗ yp ⊗ ones(Nwx_in)
+    zw = zin ⊗ ones(Nwy_in) ⊗ ones(Nwx_in)
     xw = reshape(xw, Nwx_in, Nwy_in, Nwz_in)
     yw = reshape(yw, Nwx_in, Nwy_in, Nwz_in)
     zw = reshape(zw, Nwx_in, Nwy_in, Nwz_in)
 
-    xpp = kron(ones(Nz), kron(ones(Ny), xp))
-    ypp = kron(ones(Nz), kron(yp, ones(Nx)))
-    zpp = kron(zp, kron(ones(Ny), ones(Nx)))
+    xpp = ones(Nz) ⊗ ones(Ny) ⊗ xp
+    ypp = ones(Nz) ⊗ yp ⊗ ones(Nx)
+    zpp = zp ⊗ ones(Ny) ⊗ ones(Nx)
     xpp = reshape(xpp, Nx, Ny, Nz)
     ypp = reshape(ypp, Nx, Ny, Nz)
     zpp = reshape(zpp, Nx, Ny, Nz)
