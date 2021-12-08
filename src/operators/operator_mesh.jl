@@ -240,7 +240,7 @@ function operator_mesh!(setup)
 
     Bmap = spdiagm(Nwz_in + 1, Nz + 2, diagpos => ones(Nwz_in + 1))
 
-    # Matrix to map from Nuz_t-1 to Nvz_in points
+    # Matrix to map from Nuz_t-1 to Nwz_in points
     # (used in interpolation, convection_diffusion)
     Buwz = spdiagm(Nwz_in, Nuz_t - 1, diagpos => ones(Nwz_in))
     Bvwz = spdiagm(Nwz_in, Nvz_t - 1, diagpos => ones(Nwz_in))
@@ -312,6 +312,9 @@ function operator_mesh!(setup)
     @pack! setup.grid = Nvx_in, Nvx_b, Nvx_t
     @pack! setup.grid = Nvy_in, Nvy_b, Nvy_t
     @pack! setup.grid = Nvz_in, Nvz_b, Nvz_t
+    @pack! setup.grid = Nwx_in, Nwx_b, Nwx_t
+    @pack! setup.grid = Nwy_in, Nwy_b, Nwy_t
+    @pack! setup.grid = Nwz_in, Nwz_b, Nwz_t
     @pack! setup.grid = Nu, Nv, Nw, NV
     @pack! setup.grid = Ωp, Ωp⁻¹, Ω, Ω⁻¹, Ωu, Ωv, Ωw, Ωu⁻¹, Ωv⁻¹, Ωw⁻¹
     @pack! setup.grid = hxi, hyi, hzi, hxd, hyd, hzd

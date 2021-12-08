@@ -13,6 +13,8 @@ function operator_turbulent_diffusion!(setup)
     @unpack hx, hy, gx, gy, gxd, gyd = setup.grid
     @unpack Buvy, Bvux, Bkux, Bkvy = setup.grid
 
+    # FIXME: 3D implementation
+
     # Averaging weight:
     weight = 1 / 2
 

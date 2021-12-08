@@ -38,7 +38,7 @@ function operator_averaging!(setup)
     Au_uy_bc = bc_general_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.y[1], bc.u.y[2], hy[1], hy[end])
 
     # Extend to 3D
-    Au_uy = I(Nuz_in) ⊗ A1D * Au_uy_bc.B1D ⊗ I(Nux_in)
+    Au_uy = I(Nuz_in) ⊗ (A1D * Au_uy_bc.B1D) ⊗ I(Nux_in)
     Au_uy_bc = (; Au_uy_bc..., Bbc = I(Nuz_in) ⊗ (A1D * Au_uy_bc.Btemp) ⊗ I(Nux_in))
 
 

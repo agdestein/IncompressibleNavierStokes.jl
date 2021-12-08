@@ -92,27 +92,33 @@ Base.@kwdef mutable struct Grid{T, N}
     gzd::Vector{T} = T[]
 
     Buvy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Buwz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Bvux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Bvwz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Bwux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Bwvy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+
     Bkux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Bkvy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Bkwz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
     xin::Vector{T} = T[]
     yin::Vector{T} = T[]
     zin::Vector{T} = T[]
 
     # Separate grids for u, v, and p
-    xu::Matrix{T} = zeros(T, 0, 0)
-    xv::Matrix{T} = zeros(T, 0, 0)
-    xw::Matrix{T} = zeros(T, 0, 0)
-    yu::Matrix{T} = zeros(T, 0, 0)
-    yv::Matrix{T} = zeros(T, 0, 0)
-    yw::Matrix{T} = zeros(T, 0, 0)
-    zu::Matrix{T} = zeros(T, 0, 0)
-    zv::Matrix{T} = zeros(T, 0, 0)
-    zw::Matrix{T} = zeros(T, 0, 0)
-    xpp::Matrix{T} = zeros(T, 0, 0)
-    ypp::Matrix{T} = zeros(T, 0, 0)
-    zpp::Matrix{T} = zeros(T, 0, 0)
+    xu::Array{T,N} = zeros(T, fill(0, N)...)
+    xv::Array{T,N} = zeros(T, fill(0, N)...)
+    xw::Array{T,N} = zeros(T, fill(0, N)...)
+    yu::Array{T,N} = zeros(T, fill(0, N)...)
+    yv::Array{T,N} = zeros(T, fill(0, N)...)
+    yw::Array{T,N} = zeros(T, fill(0, N)...)
+    zu::Array{T,N} = zeros(T, fill(0, N)...)
+    zv::Array{T,N} = zeros(T, fill(0, N)...)
+    zw::Array{T,N} = zeros(T, fill(0, N)...)
+    xpp::Array{T,N} = zeros(T, fill(0, N)...)
+    ypp::Array{T,N} = zeros(T, fill(0, N)...)
+    zpp::Array{T,N} = zeros(T, fill(0, N)...)
 
     # Ranges
     indu::UnitRange{Int} = 0:0

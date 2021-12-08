@@ -37,9 +37,9 @@ function TG3D()
     grid = create_grid(
         T,
         N;
-        Nx = 200,                         # Number of x-volumes
-        Ny = 200,                         # Number of y-volumes
-        Nz = 200,                         # Number of z-volumes
+        Nx = 40,                         # Number of x-volumes
+        Ny = 30,                         # Number of y-volumes
+        Nz = 20,                         # Number of z-volumes
         xlims = (0, 2π),                  # Horizontal limits (left, right)
         ylims = (0, 2π),                  # Vertical limits (bottom, top)
         zlims = (0, 2π),                  # Depth limits (back, front)

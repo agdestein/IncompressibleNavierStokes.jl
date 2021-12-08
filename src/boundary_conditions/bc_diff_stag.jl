@@ -23,7 +23,7 @@ function bc_diff_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
 
     if Nb == 0
         # No boundary points, so simply diagonal matrix without boundary contribution
-        B1D = sparse(I, Nt, Nt)
+        B1D = I(Nt)
         Btemp = spzeros(Nt, 2)
         ybc1 = zeros(2, 1)
         ybc2 = zeros(2, 1)
@@ -79,7 +79,7 @@ function bc_diff_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
         ybc1 = ybc1_1D
         ybc2 = ybc2_1D
 
-        Btemp = Bb * (Bbc * Bb \ sparse(I, Nb, Nb))
+        Btemp = Bb * (Bbc * Bb \ I(Nb))
         B1D = Bin - Btemp * Bbc * Bin
     end
 

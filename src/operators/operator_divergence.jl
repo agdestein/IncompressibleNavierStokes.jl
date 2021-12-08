@@ -5,18 +5,20 @@ function operator_divergence!(setup)
     @unpack bc, model = setup
     @unpack problem = setup.case
     @unpack pressure_solver = setup.solver_settings
-    @unpack Nx, Npx, Npy = setup.grid
-    @unpack Nux_in, Nux_b, Nux_t, Nuy_in = setup.grid
-    @unpack Nvx_in, Nvy_in, Nvy_b, Nvy_t = setup.grid
-    @unpack hx, hy = setup.grid
+    @unpack Nx, Ny, Nz = setup.grid
+    @unpack Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t = setup.grid
+    @unpack Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t = setup.grid
+    @unpack Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t = setup.grid
+    @unpack Nu, Nv, Nw, Np, Npx, Npy, Npz = setup.grid
+    @unpack hx, hy, hz = setup.grid
     @unpack Ω⁻¹ = setup.grid
-    @unpack order4 = setup.discretization
 
     ## Divergence operator M
 
     # Note that the divergence matrix M is not square
     mat_hx = spdiagm(hx)
     mat_hy = spdiagm(hy)
+    mat_hz = spdiagm(hz)
 
     # For fourth order: mat_hx3 is defined in operator_interpolation
 
@@ -47,15 +49,15 @@ function operator_divergence!(setup)
     BMx = spdiagm(Npx, Nux_t - 1, diagpos => ones(Npx))
     M1D = BMx * M1D
 
-    # Extension to 2D to be used in post-processing files
-    Bup = I(Nuy_in) ⊗ BMx
+    # Extension to 3D to be used in post-processing files
+    Bup = I(Nuz_in) ⊗ I(Nuy_in) ⊗ BMx
 
     # Boundary conditions
     Mx_bc = bc_general(Nux_t, Nux_in, Nux_b, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
-    Mx_bc = (; Mx_bc..., Bbc = mat_hy ⊗ (M1D * Mx_bc.Btemp))
+    Mx_bc = (; Mx_bc..., Bbc = mat_hz ⊗ mat_hy ⊗ (M1D * Mx_bc.Btemp))
 
-    # Extend to 2D
-    Mx = mat_hy ⊗ (M1D * Mx_bc.B1D)
+    # Extend to 3D
+    Mx = mat_hz ⊗ mat_hy ⊗ (M1D * Mx_bc.B1D)
 
     ## My
     # Same as Mx but reversing indices and kron arguments
@@ -81,18 +83,54 @@ function operator_divergence!(setup)
 
     BMy = spdiagm(Npy, Nvy_t - 1, diagpos => ones(Npy))
     M1D = BMy * M1D
-    # Extension to 2D to be used in post-processing files
-    Bvp = BMy ⊗ I(Nvx_in)
+
+    # Extension to 3D to be used in post-processing files
+    Bvp = I(Nvz_in) ⊗ BMy ⊗ I(Nvx_in)
 
     # Boundary conditions
     My_bc = bc_general(Nvy_t, Nvy_in, Nvy_b, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
-    My_bc = (; My_bc..., Bbc = (M1D * My_bc.Btemp) ⊗ mat_hx)
+    My_bc = (; My_bc..., Bbc = mat_hz ⊗ (M1D * My_bc.Btemp) ⊗ mat_hx)
 
-    # Extend to 2D
-    My = (M1D * My_bc.B1D) ⊗ mat_hx
+    # Extend to 3D
+    My = mat_hz ⊗ (M1D * My_bc.B1D) ⊗ mat_hx
+
+    ## Mz
+    # Same as Mx but reversing indices and kron arguments
+    diag1 = ones(Nwz_t - 1)
+    M1D = spdiagm(Nwz_t - 1, Nwz_t, 0 => -diag1, 1 => diag1)
+
+    # We only need derivative at inner pressure points, so we map the resulting
+    # Boundary matrix (restriction)
+    diagpos = 0
+    if bc.w.z[2] == :pressure && bc.w.z[1] == :pressure
+        diagpos = 1
+    end
+    if bc.w.z[2] != :pressure && bc.w.z[1] == :pressure
+        diagpos = 1
+    end
+    if bc.w.z[2] == :pressure && bc.w.z[1] != :pressure
+        diagpos = 0
+    end
+    if bc.w.z[2] == :periodic && bc.w.z[1] == :periodic
+        # Like pressure low
+        diagpos = 1
+    end
+
+    BMz = spdiagm(Npz, Nwz_t - 1, diagpos => ones(Npz))
+    M1D = BMz * M1D
+
+    # Extension to 3D to be used in post-processing files
+    Bwp = BMz ⊗ I(Nwy_in) ⊗ I(Nwx_in)
+
+    # Boundary conditions
+    Mz_bc = bc_general(Nwz_t, Nwz_in, Nwz_b, bc.w.z[1], bc.w.z[2], hz[1], hz[end])
+    Mz_bc = (; Mz_bc..., Bbc = (M1D * Mz_bc.Btemp) ⊗ mat_hy ⊗ mat_hx)
+
+    # Extend to 3D
+    Mz = (M1D * Mz_bc.B1D) ⊗ mat_hy ⊗ mat_hx
 
     ## Resulting divergence matrix
-    M = [Mx My]
+    M = [Mx My Mz]
 
     ## Gradient operator G
 
@@ -102,12 +140,13 @@ function operator_divergence!(setup)
     # stress will be zero)
     Gx = -Mx'
     Gy = -My'
+    Gz = -My'
 
-    G = [Gx; Gy]
+    G = [Gx; Gy; Gz]
 
     ## Store in setup structure
-    @pack! setup.discretization = M, Mx, My, Mx_bc, My_bc, G, Gx, Gy
-    @pack! setup.discretization = Bup, Bvp
+    @pack! setup.discretization = M, Mx, My, Mz, Mx_bc, My_bc, Mz_bc, G, Gx, Gy, Gz
+    @pack! setup.discretization = Bup, Bvp, Bwp
 
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
@@ -116,7 +155,7 @@ function operator_divergence!(setup)
         # Only the right hand side vector changes, so the pressure matrix can be set up outside the time-stepping-loop.
 
         # Laplace = div grad
-        A = M * spdiagm(Ω⁻¹) * G
+        A = M * Diagonal(Ω⁻¹) * G
         @pack! setup.discretization = A
 
         # ROM does not require Poisson solve for simple BC
@@ -129,7 +168,7 @@ function operator_divergence!(setup)
 
         # Check if all the row sums of the pressure matrix are zero, which
         # should be the case if there are no pressure boundary conditions
-        if any(isequal(:pressure), [bc.v.y[1], bc.v.y[2], bc.u.x[2], bc.u.x[1]])
+        if any(isequal(:pressure), [bc.u.x..., bc.v.y..., bc.w.z...])
             if any(!isapprox(0; atol = 1e-10), abs.(sum(A; dims = 2)))
                 @warn "Pressure matrix: not all rowsums are zero!"
             end
