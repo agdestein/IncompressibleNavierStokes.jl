@@ -31,12 +31,12 @@ function operator_mesh!(setup)
     Nuy_b = 2               # Boundary points
     Nuy_in = Ny             # Inner points
     Nuy_t = Nuy_in + Nuy_b  # Total number
-    
+
     # z-dir
     Nuz_b = 2               # Boundary points
     Nuz_in = Nz             # Inner points
     Nuz_t = Nuz_in + Nuz_b  # Total number
-    
+
     # Total number
     Nu = Nux_in * Nuy_in * Nuz_in
 
@@ -60,7 +60,7 @@ function operator_mesh!(setup)
     Nvz_b = 2               # Boundary points
     Nvz_in = Nz             # Inner points
     Nvz_t = Nvz_in + Nvz_b  # Total number
-    
+
     # Total number
     Nv = Nvx_in * Nvy_in * Nvz_in
 
@@ -76,7 +76,7 @@ function operator_mesh!(setup)
     Nwy_b = 2               # Boundary points
     Nwy_in = Ny             # Inner points
     Nwy_t = Nwy_in + Nwy_b  # Total number
-    
+
     # z-dir
     Nwz_b = 2               # Boundary points
     Nwz_in = Ny + 1         # Inner points
@@ -105,43 +105,34 @@ function operator_mesh!(setup)
     # hxi: integration and hxd: differentiation
     # Map to find suitable size
     hxi = copy(hx)
+    hxd = [hx[1]; hx; hx[end]]
 
     # Restrict Nx+2 to Nux_in+1 points
-    if bc.u.x == (:dirichlet, :dirichlet)
-        xin = x[2:end-1]
-        hxd = copy(hx)
-        gxi = gx[2:end-1]
-        diagpos = 1
-    elseif bc.u.x == (:dirichlet, :pressure)
-        xin = x[2:end]
-        hxd = [hx; hx[end]]
-        gxi = gx[2:end]
-        diagpos = 1
-    elseif bc.u.x == (:pressure, :dirichlet)
-        xin = x[1:end-1]
-        hxd = [hx[1]; hx]
-        gxi = gx[1:end-1]
-        diagpos = 0
-    elseif bc.u.x == (:pressure, :pressure)
-        xin = x[1:end]
-        hxd = [hx[1]; hx; hx[end]]
-        gxi = copy(gx)
-        diagpos = 0
-    elseif bc.u.x == (:periodic, :periodic)
-        xin = x[1:end-1]
-        hxd = [hx[end]; hx]
-        gxi = [gx[1] + gx[end]; gx[2:end-1]]
-        gxd[1] = (hx[1] + hx[end]) / 2
-        gxd[end] = (hx[1] + hx[end]) / 2
-        diagpos = 0
-    end
+    bc.u.x == (:dirichlet, :dirichlet) && (diagpos = 1)
+    bc.u.x == (:dirichlet, :pressure) && (diagpos = 1)
+    bc.u.x == (:pressure, :dirichlet) && (diagpos = 0)
+    bc.u.x == (:pressure, :pressure) && (diagpos = 0)
+    bc.u.x == (:periodic, :periodic) && (diagpos = 0)
 
     Bmap = spdiagm(Nux_in + 1, Nx + 2, diagpos => ones(Nux_in + 1))
+    Bmap_x_xin = spdiagm(Nux_in, Nx + 1, diagpos => ones(Nux_in + 1))
+    hxd = Bmap * hxd
+    gxi = Bmap_x_xin * gx
+    xin = Bmap_x_xin * x
+
+    if bc.u.x == (:periodic, :periodic)
+        gxd[1] = (hx[1] + hx[end]) / 2
+        gxd[end] = gxd[1]
+        gxi[1] = gxd[1]
+        hxd[1] = hx[end]
+    end
 
     # Matrix to map from Nvx_t-1 to Nux_in points
-    # (used in interpolation, convection_diffusion, viscosity)
-    Bvux = spdiagm(Nux_in, Nvx_t - 1, diagpos => ones(Nux_in))
-    Bwux = spdiagm(Nux_in, Nwx_t - 1, diagpos => ones(Nux_in))
+    Bvux = spdiagm(Nux_in, Nvx_t - 1, diagpos => ones(Nvx_t - 1))
+
+    # Matrix to map from Nwx_t-1 to Nux_in points
+    Bwux = spdiagm(Nux_in, Nwx_t - 1, diagpos => ones(Nwx_t - 1))
+
     # Map from Npx+2 points to Nux_t-1 points (ux faces)
     Bkux = copy(Bmap)
 
@@ -156,43 +147,35 @@ function operator_mesh!(setup)
     # Hyi: integration and hyd: differentiation
     # Map to find suitable size
     hyi = copy(hy)
+    hyd = [hy[1]; hy; hy[end]]
 
     # Restrict Ny+2 to Nvy_in+1 points
-    if bc.v.y == (:dirichlet, :dirichlet)
-        yin = y[2:end-1]
-        hyd = copy(hy)
-        gyi = gy[2:end-1]
-        diagpos = 1
-    elseif bc.v.y == (:dirichlet, :pressure)
-        yin = y[2:end]
-        hyd = [hy; hy[end]]
-        gyi = gy[2:end]
-        diagpos = 1
-    elseif bc.v.y == (:pressure, :dirichlet)
-        yin = y[1:end-1]
-        hyd = [hy[1]; hy]
-        gyi = gy[1:end-1]
-        diagpos = 0
-    elseif bc.v.y == (:pressure, :pressure)
-        yin = y[1:end]
-        hyd = [hy[1]; hy; hy[end]]
-        gyi = copy(gy)
-        diagpos = 0
-    elseif bc.v.y == (:periodic, :periodic)
-        yin = y[1:end-1]
-        hyd = [hy[end]; hy]
-        gyi = [gy[1] + gy[end]; gy[2:end-1]]
-        gyd[1] = (hy[1] + hy[end]) / 2
-        gyd[end] = (hy[1] + hy[end]) / 2
-        diagpos = 0
-    end
+    bc.v.y == (:dirichlet, :dirichlet) && (diagpos = 1)
+    bc.v.y == (:dirichlet, :pressure) && (diagpos = 1)
+    bc.v.y == (:pressure, :dirichlet) && (diagpos = 0)
+    bc.v.y == (:pressure, :pressure) && (diagpos = 0)
+    bc.v.y == (:periodic, :periodic) && (diagpos = 0)
 
     Bmap = spdiagm(Nvy_in + 1, Ny + 2, diagpos => ones(Nvy_in + 1))
+    Bmap_y_yin = spdiagm(Nvy_in, Ny + 1, diagpos => ones(Nvy_in))
+
+    hyd = Bmap * hyd
+    gyi = Bmap_y_yin * gy
+    yin = Bmap_y_yin * y
+
+    if bc.v.y == (:periodic, :periodic)
+        gyd[1] = (hy[1] + hy[end]) / 2
+        gyd[end] = gyd[1]
+        gyi[1] = gyd[1]
+        hyd[1] = hy[end]
+    end
 
     # Matrix to map from Nuy_t-1 to Nvy_in points
-    # (used in interpolation, convection_diffusion)
-    Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(Nvy_in))
-    Bwvy = spdiagm(Nvy_in, Nwy_t - 1, diagpos => ones(Nvy_in))
+    Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(Nuy_t - 1))
+
+    # matrix to map from Nwy_t-1 to Nvy_in points
+    Bwvy = spdiagm(Nvy_in, Nwy_t - 1, diagpos => ones(Nwy_t - 1))
+
     # Map from Npy+2 points to Nvy_t-1 points (vy faces)
     Bkvy = copy(Bmap)
 
@@ -207,43 +190,34 @@ function operator_mesh!(setup)
     # hzi: integration and hzd: differentiation
     # Map to find suitable size
     hzi = copy(hz)
+    hzd = [hz[1]; hz; hz[end]]
 
     # Restrict Nz+2 to Nvz_in+1 points
-    if bc.w.z == (:dirichlet, :dirichlet)
-        zin = z[2:end-1]
-        hzd = copy(hz)
-        gzi = gz[2:end-1]
-        diagpos = 1
-    elseif bc.w.z == (:dirichlet, :pressure)
-        zin = z[2:end]
-        hzd = [hz; hz[end]]
-        gzi = gz[2:end]
-        diagpos = 1
-    elseif bc.w.z == (:pressure, :dirichlet)
-        zin = z[1:end-1]
-        hzd = [hz[1]; hz]
-        gzi = gz[1:end-1]
-        diagpos = 0
-    elseif bc.w.z == (:pressure, :pressure)
-        zin = z[1:end]
-        hzd = [hz[1]; hz; hz[end]]
-        gzi = copy(gz)
-        diagpos = 0
-    elseif bc.w.z == (:periodic, :periodic)
-        zin = z[1:end-1]
-        hzd = [hz[end]; hz]
-        gzi = [gz[1] + gz[end]; gz[2:end-1]]
-        gzd[1] = (hz[1] + hz[end]) / 2
-        gzd[end] = (hz[1] + hz[end]) / 2
-        diagpos = 0
-    end
+    bc.w.z == (:dirichlet, :dirichlet) && (diagpos = 1)
+    bc.w.z == (:dirichlet, :pressure) && (diagpos = 1)
+    bc.w.z == (:pressure, :dirichlet) && (diagpos = 0)
+    bc.w.z == (:pressure, :pressure) && (diagpos = 0)
+    bc.w.z == (:periodic, :periodic) && (diagpos = 0)
 
     Bmap = spdiagm(Nwz_in + 1, Nz + 2, diagpos => ones(Nwz_in + 1))
+    Bmap = spdiagm(Nwz_in, Nz + 1, diagpos => ones(Nwz_in))
+    hzd = Bmap * hzd
+    gzi = Bmap_z_zin * gz
+    zin = Bmap_z_zin * z
+
+    if bc.w.z == (:periodic, :periodic)
+        gzd[1] = (hz[1] + hz[end]) / 2
+        gzd[end] = gzd[1]
+        gzi[1] = gzd[1]
+        hzd[1] = hz[end]
+    end
 
     # Matrix to map from Nuz_t-1 to Nwz_in points
-    # (used in interpolation, convection_diffusion)
-    Buwz = spdiagm(Nwz_in, Nuz_t - 1, diagpos => ones(Nwz_in))
-    Bvwz = spdiagm(Nwz_in, Nvz_t - 1, diagpos => ones(Nwz_in))
+    Buwz = spdiagm(Nwz_in, Nuz_t - 1, diagpos => ones(Nuz_t - 1))
+
+    # matrix to map from Nvz_t-1 to Nwz_in points
+    Bvwz = spdiagm(Nwz_in, Nvz_t - 1, diagpos => ones(Nvz_t - 1))
+
     # Map from Npy+2 points to Nvy_t-1 points (vy faces)
     Bkwz = copy(Bmap)
 
@@ -265,44 +239,33 @@ function operator_mesh!(setup)
     Ωw = gzi ⊗ hyi ⊗ hxi
     Ωw⁻¹ = 1 ./ Ωw
 
+    # Total volumes
     Ω = [Ωu; Ωv; Ωw]
     Ω⁻¹ = [Ωu⁻¹; Ωv⁻¹; Ωw⁻¹]
 
     # Metrics that can be useful for initialization:
-    xu = ones(Nuz_in) ⊗ ones(Nuy_in) ⊗ xin
-    yu = ones(Nuz_in) ⊗ yp ⊗ ones(Nux_in)
-    zu = zp ⊗ ones(Nuy_in) ⊗ ones(Nux_in)
-    xu = reshape(xu, Nux_in, Nuy_in, Nuz_in)
-    yu = reshape(yu, Nux_in, Nuy_in, Nuz_in)
-    zu = reshape(zu, Nux_in, Nuy_in, Nuz_in)
+    xu = reshape(ones(Nuz_in) ⊗ ones(Nuy_in) ⊗ xin, Nux_in, Nuy_in, Nuz_in)
+    yu = reshape(ones(Nuz_in) ⊗ yp ⊗ ones(Nux_in), Nux_in, Nuy_in, Nuz_in)
+    zu = reshape(zp ⊗ ones(Nuy_in) ⊗ ones(Nux_in), Nux_in, Nuy_in, Nuz_in)
 
-    xv = ones(Nvz_in) ⊗ ones(Nvy_in) ⊗ xp
-    yv = ones(Nvz_in) ⊗ yin ⊗ ones(Nvx_in)
-    zv = zp ⊗ ones(Nvy_in) ⊗ ones(Nvx_in)
-    xv = reshape(xv, Nvx_in, Nvy_in, Nvz_in)
-    yv = reshape(yv, Nvx_in, Nvy_in, Nvz_in)
-    zv = reshape(zv, Nvx_in, Nvy_in, Nvz_in)
+    xv = reshape(ones(Nvz_in) ⊗ ones(Nvy_in) ⊗ xp, Nvx_in, Nvy_in, Nvz_in)
+    yv = reshape(ones(Nvz_in) ⊗ yin ⊗ ones(Nvx_in, Nvx_in, Nvy_in, Nvz_in))
+    zv = reshape(zp ⊗ ones(Nvy_in) ⊗ ones(Nvx_in), Nvx_in, Nvy_in, Nvz_in)
 
-    xw = ones(Nwz_in) ⊗ ones(Nwy_in) ⊗ xp
-    yw = ones(Nwz_in) ⊗ yp ⊗ ones(Nwx_in)
-    zw = zin ⊗ ones(Nwy_in) ⊗ ones(Nwx_in)
-    xw = reshape(xw, Nwx_in, Nwy_in, Nwz_in)
-    yw = reshape(yw, Nwx_in, Nwy_in, Nwz_in)
-    zw = reshape(zw, Nwx_in, Nwy_in, Nwz_in)
+    xw = reshape(ones(Nwz_in) ⊗ ones(Nwy_in) ⊗ xp, Nwx_in, Nwy_in, Nwz_in)
+    yw = reshape(ones(Nwz_in) ⊗ yp ⊗ ones(Nwx_in), Nwx_in, Nwy_in, Nwz_in)
+    zw = reshape(zin ⊗ ones(Nwy_in) ⊗ ones(Nwx_in), Nwx_in, Nwy_in, Nwz_in)
 
-    xpp = ones(Nz) ⊗ ones(Ny) ⊗ xp
-    ypp = ones(Nz) ⊗ yp ⊗ ones(Nx)
-    zpp = zp ⊗ ones(Ny) ⊗ ones(Nx)
-    xpp = reshape(xpp, Nx, Ny, Nz)
-    ypp = reshape(ypp, Nx, Ny, Nz)
-    zpp = reshape(zpp, Nx, Ny, Nz)
+    xpp = reshape(ones(Nz) ⊗ ones(Ny) ⊗ xp, Nx, Ny, Nz)
+    ypp = reshape(ones(Nz) ⊗ yp ⊗ ones(Nx), Nx, Ny, Nz)
+    zpp = reshape(zp ⊗ ones(Ny) ⊗ ones(Nx), Nx, Ny, Nz)
 
     # Indices of unknowns in velocity vector
     indu = 1:Nu
     indv = Nu .+ (1:Nv)
     indw = Nu + Nv .+ (1:Nw)
     indV = 1:NV
-    indp = NV+1:NV+Np
+    indp = (NV + 1):(NV + Np)
 
     ## Store quantities in the structure
     @pack! setup.grid = Npx, Npy, Npz, Np
