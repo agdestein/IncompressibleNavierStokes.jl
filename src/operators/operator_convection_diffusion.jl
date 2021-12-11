@@ -19,19 +19,19 @@ function operator_convection_diffusion!(setup)
     # Calculates difference from pressure points to velocity points
     diag1 = ones(Nux_t - 2)
     M1D = spdiagm(Nux_t - 2, Nux_t - 1, 0 => -diag1, 1 => diag1)
-    Cux = I(nz) ⊗ I(Nuy_in) ⊗ M1D
+    Cux = I(Nz) ⊗ I(Nuy_in) ⊗ M1D
     Dux = Diagonal(hzi) ⊗ Diagonal(hyi) ⊗ M1D
 
     # Calculates difference from corner points to velocity points
     diag1 = ones(Nuy_t - 2)
     M1D = spdiagm(Nuy_t - 2, Nuy_t - 1, 0 => -diag1, 1 => diag1)
-    Cuy = I(nz) ⊗ M1D ⊗ I(Nux_in)
+    Cuy = I(Nz) ⊗ M1D ⊗ I(Nux_in)
     Duy = Diagonal(hzi) ⊗ M1D ⊗ Diagonal(gxi)
 
     # Calculates difference from corner points to velocity points
     diag1 = ones(Nuz_t - 2)
     M1D = spdiagm(Nuz_t - 2, Nuz_t - 1, 0 => -diag1, 1 => diag1)
-    Cuz = M1D ⊗ I(ny) ⊗ I(Nux_in)
+    Cuz = M1D ⊗ I(Ny) ⊗ I(Nux_in)
     Duz = M1D ⊗ Diagonal(hyi) ⊗ Diagonal(gxi)
 
     # Cu = [Cux Cuy Cuz]
@@ -40,21 +40,21 @@ function operator_convection_diffusion!(setup)
     ## Convection (differencing) operator Cv
 
     # Calculates difference from pressure points to velocity points
-    diag1 = ones(Nvx_t)
+    diag1 = ones(Nvx_t - 2)
     M1D = spdiagm(Nvx_t - 2, Nvx_t - 1, 0 => -diag1, 1 => diag1)
     Cvx = I(Nz) ⊗ I(Nvy_in) ⊗ M1D
     Dvx = Diagonal(hzi) ⊗ Diagonal(gyi) ⊗ M1D
 
     # Calculates difference from corner points to velocity points
-    diag1 = ones(Nvy_t)
+    diag1 = ones(Nvy_t - 2)
     M1D = spdiagm(Nvy_t - 2, Nvy_t - 1, 0 => -diag1, 1 => diag1)
     Cvy = I(Nz) ⊗ M1D ⊗ I(Nx)
     Dvy = Diagonal(hzi) ⊗ M1D ⊗ Diagonal(hxi)
 
     # Calculates difference from corner points to velocity points
-    diag1 = ones(Nvz_t)
+    diag1 = ones(Nvz_t - 2)
     M1D = spdiagm(Nvz_t - 2, Nvz_t - 1, 0 => -diag1, 1 => diag1)
-    Cvz = M1D ⊗ I(Ny_in) ⊗ I(Nx)
+    Cvz = M1D ⊗ I(Nvy_in) ⊗ I(Nx)
     Dvz = M1D ⊗ Diagonal(gyi) ⊗ Diagonal(hxi)
 
     # Cv = [Cvx Cvy Cvz]
@@ -63,19 +63,19 @@ function operator_convection_diffusion!(setup)
     ## Convection (differencing) operator Cw
 
     # Calculates difference from pressure points to velocity points
-    diag1 = ones(Nwx_t)
+    diag1 = ones(Nwx_t - 2)
     M1D = spdiagm(Nwx_t - 2, Nwx_t - 1, 0 => -diag1, 1 => diag1)
     Cwx = I(Nwz_in) ⊗ I(Ny) ⊗ M1D
     Dwx = Diagonal(gzi) ⊗ Diagonal(hyi) ⊗ M1D
 
     # Calculates difference from corner points to velocity points
-    diag1 = ones(Nwy_t)
+    diag1 = ones(Nwy_t - 2)
     M1D = spdiagm(Nwy_t - 2, Nwy_t - 1, 0 => -diag1, 1 => diag1)
     Cwy = I(Nwz_in) ⊗ M1D ⊗ I(Nx)
     Dwy = Diagonal(gzi) ⊗ M1D ⊗ Diagonal(hxi)
 
     # Calculates difference from corner points to velocity points
-    diag1 = ones(Nwz_t)
+    diag1 = ones(Nwz_t - 2)
     M1D = spdiagm(Nwz_t - 2, Nwz_t - 1, 0 => -diag1, 1 => diag1)
     Cwz = M1D ⊗ I(Ny) ⊗ I(Nx)
     Dwz = M1D ⊗ Diagonal(hyi) ⊗ Diagonal(hxi)
@@ -165,8 +165,8 @@ function operator_convection_diffusion!(setup)
     Nb = Nuz_in + 1 - Nwz_in
     Sw_uz_bc_bf =
         bc_general(Nuz_in + 1, Nwz_in, Nb, bc.w.z[1], bc.w.z[2], hz[1], hz[end])
-    Sw_uz_bc_bf = (; Sw_uz_bc_lu..., B3D = Sw_uz_bc_bf.B1D ⊗ I(Ny) ⊗ I(Nx))
-    Sw_uz_bc_bf = (; Sw_uy_bc_lu..., Bbc = Sw_uz_bc_bf.Btemp ⊗ I(Ny) ⊗ I(Nx))
+    Sw_uz_bc_bf = (; Sw_uz_bc_bf..., B3D = Sw_uz_bc_bf.B1D ⊗ I(Ny) ⊗ I(Nx))
+    Sw_uz_bc_bf = (; Sw_uz_bc_bf..., Bbc = Sw_uz_bc_bf.Btemp ⊗ I(Ny) ⊗ I(Nx))
 
     # Resulting operator:
     Sw_uz = Sw_uz_bc_lr.B3D * Sw_uz_bc_bf.B3D
@@ -234,7 +234,7 @@ function operator_convection_diffusion!(setup)
     diag1 = 1 ./ gyd
     S1D = spdiagm(Nwy_t - 1, Nwy_t, 0 => -diag1, 1 => diag1)
     S1D = Bwvy * S1D
-    S3D = I(Nz + 1) ⊗ S1D ⊗ I(Nz)
+    S3D = I(Nz + 1) ⊗ S1D ⊗ I(Nx)
 
     # Boundary conditions low/up
     Sw_vz_bc_lu =
@@ -246,8 +246,8 @@ function operator_convection_diffusion!(setup)
     Nb = Nvz_in + 1 - Nwz_in
     Sw_vz_bc_bf =
         bc_general(Nvz_in + 1, Nwz_in, Nb, bc.w.z[1], bc.w.z[2], hz[1], hz[end])
-    Sw_vz_bc_bf = (; Sw_vz_bc_bf..., B3D = Sw_vz_bc_lr.B1D ⊗ I(Ny) ⊗ I(Nx))
-    Sw_vz_bc_bf = (; Sw_vz_bc_bf..., Bbc = Sw_vz_bc_lr.Btemp ⊗ I(Ny) ⊗ I(Nx))
+    Sw_vz_bc_bf = (; Sw_vz_bc_bf..., B3D = Sw_vz_bc_bf.B1D ⊗ I(Ny) ⊗ I(Nx))
+    Sw_vz_bc_bf = (; Sw_vz_bc_bf..., Bbc = Sw_vz_bc_bf.Btemp ⊗ I(Ny) ⊗ I(Nx))
 
     # Resulting operator:
     Sw_vz = Sw_vz_bc_lu.B3D * Sw_vz_bc_bf.B3D
@@ -264,7 +264,7 @@ function operator_convection_diffusion!(setup)
     S1D = spdiagm(Nwx_t - 1, Nwx_t, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    Sw_wx_bc = bc_stag_diff(Nwx_t, Nwx_in, Nwx_b, bc.w.x[1], bc.w.x[2], hx[1], hx[end])
+    Sw_wx_bc = bc_diff_stag(Nwx_t, Nwx_in, Nwx_b, bc.w.x[1], bc.w.x[2], hx[1], hx[end])
 
     # Extend to 3D
     Sw_wx = I(Nwz_in) ⊗ I(Nwy_in) ⊗ (S1D * Sw_wx_bc.B1D)
@@ -305,8 +305,8 @@ function operator_convection_diffusion!(setup)
         bc_general_stag(Nuz_t, Nuz_in, Nuz_b, bc.u.z[1], bc.u.z[2], hz[1], hz[end])
 
     # Take I3D into left/right operators for convenience
-    Su_wx_bc_bf = (; Su_wx_bc_bf..., B3D = S3D * (Su_wx_bc_lr.B1D ⊗ I(Ny) ⊗ I(Nx + 1)))
-    Su_wx_bc_bf = (; Su_wx_bc_bf..., Bbc = S3D * (Su_wx_bc_lr.Btemp ⊗ I(Ny) ⊗ I(Nx + 1)))
+    Su_wx_bc_bf = (; Su_wx_bc_bf..., B3D = S3D * (Su_wx_bc_bf.B1D ⊗ I(Ny) ⊗ I(Nx + 1)))
+    Su_wx_bc_bf = (; Su_wx_bc_bf..., Bbc = S3D * (Su_wx_bc_bf.Btemp ⊗ I(Ny) ⊗ I(Nx + 1)))
 
     # Boundary conditions left/right
     Nb = Nwx_in + 1 - Nux_in
@@ -355,7 +355,7 @@ function operator_convection_diffusion!(setup)
     @pack! setup.discretization = Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz
     @pack! setup.discretization = Su_ux, Su_uy, Su_uz
     @pack! setup.discretization = Sv_vx, Sv_vy, Sv_vz
-    @pack! setup.discretization = Sw_wx, Sw_wy, Su_wz
+    @pack! setup.discretization = Sw_wx, Sw_wy, Sw_wz
     @pack! setup.discretization = Su_ux_bc, Su_uy_bc, Su_uz_bc
     @pack! setup.discretization = Sv_vx_bc, Sv_vy_bc, Sv_vz_bc
     @pack! setup.discretization = Sw_wx_bc, Sw_wy_bc, Sw_wz_bc
@@ -367,7 +367,7 @@ function operator_convection_diffusion!(setup)
         @pack! setup.discretization = Sv_uy, Su_vx, Sw_uz, Su_wx, Sw_vz, Sv_wy
     end
 
-    @pack! setup.discretization = Sv_uy_BC_lr, Sv_uy_BC_lu, Sw_uz_bc_lr, Sw_uz_bc_bf
+    @pack! setup.discretization = Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf
     @pack! setup.discretization = Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf
     @pack! setup.discretization = Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf
 

@@ -178,8 +178,8 @@ function operator_interpolation!(setup)
     Nb = Nwx_in + 1 - Nux_in
     Iu_wx_bc_lr =
         bc_general(Nwx_in + 1, Nux_in, Nb, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
-    Iu_wx_bc_lr = (; Iu_wx_bc_lr..., B3D = I(Nz) ⊗ I(Nz) ⊗ Iu_wx_bc_lr.B1D)
-    Iu_wx_bc_lr = (; Iu_wx_bc_lr..., Bbc = I(Nz) ⊗ I(Nz) ⊗ Iu_wx_bc_lr.Btemp)
+    Iu_wx_bc_lr = (; Iu_wx_bc_lr..., B3D = I(Nz) ⊗ I(Ny) ⊗ Iu_wx_bc_lr.B1D)
+    Iu_wx_bc_lr = (; Iu_wx_bc_lr..., Bbc = I(Nz) ⊗ I(Ny) ⊗ Iu_wx_bc_lr.Btemp)
 
     # Resulting operator:
     Iu_wx = Iu_wx_bc_bf.B3D * Iu_wx_bc_lr.B3D

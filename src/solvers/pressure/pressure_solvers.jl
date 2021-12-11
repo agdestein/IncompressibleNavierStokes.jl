@@ -14,9 +14,10 @@ Base.@kwdef mutable struct CGPressureSolver{T} <: PressureSolver{T}
     maxiter::Int = 0
 end
 Base.@kwdef mutable struct FourierPressureSolver{T} <: PressureSolver{T}
-    Â::Matrix{Complex{T}} = zeros(Complex{T}, 0, 0)
-    p̂::Matrix{Complex{T}} = zeros(Complex{T}, 0, 0)
-    f̂::Matrix{Complex{T}} = zeros(Complex{T}, 0, 0)
+    # TODO: Pass dimensionality to create concrete types
+    Â::Array{Complex{T}} = zeros(Complex{T}, 0, 0)
+    p̂::Array{Complex{T}} = zeros(Complex{T}, 0, 0)
+    f̂::Array{Complex{T}} = zeros(Complex{T}, 0, 0)
 end
 
 """
@@ -60,7 +61,7 @@ function initialize!(solver::FourierPressureSolver, setup, A)
     )
 
     # Pressure is determined up to constant, fix at 0
-    Â[1, 1] = 1
+    Â[1] = 1
 
     Â = complex(Â)
 

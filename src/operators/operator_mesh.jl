@@ -79,7 +79,7 @@ function operator_mesh!(setup)
 
     # z-dir
     Nwz_b = 2               # Boundary points
-    Nwz_in = Ny + 1         # Inner points
+    Nwz_in = Nz + 1         # Inner points
     Nwz_in -= bc.w.z[1] ∈ [:dirichlet, :symmetric]
     Nwz_in -= bc.w.z[2] ∈ [:dirichlet, :symmetric]
     Nwz_in -= bc.w.z == (:periodic, :periodic)
@@ -115,7 +115,7 @@ function operator_mesh!(setup)
     bc.u.x == (:periodic, :periodic) && (diagpos = 0)
 
     Bmap = spdiagm(Nux_in + 1, Nx + 2, diagpos => ones(Nux_in + 1))
-    Bmap_x_xin = spdiagm(Nux_in, Nx + 1, diagpos => ones(Nux_in + 1))
+    Bmap_x_xin = spdiagm(Nux_in, Nx + 1, diagpos => ones(Nux_in))
     hxd = Bmap * hxd
     gxi = Bmap_x_xin * gx
     xin = Bmap_x_xin * x
@@ -128,10 +128,10 @@ function operator_mesh!(setup)
     end
 
     # Matrix to map from Nvx_t-1 to Nux_in points
-    Bvux = spdiagm(Nux_in, Nvx_t - 1, diagpos => ones(Nvx_t - 1))
+    Bvux = spdiagm(Nux_in, Nvx_t - 1, diagpos => ones(Nux_in))
 
     # Matrix to map from Nwx_t-1 to Nux_in points
-    Bwux = spdiagm(Nux_in, Nwx_t - 1, diagpos => ones(Nwx_t - 1))
+    Bwux = spdiagm(Nux_in, Nwx_t - 1, diagpos => ones(Nux_in))
 
     # Map from Npx+2 points to Nux_t-1 points (ux faces)
     Bkux = copy(Bmap)
@@ -171,10 +171,10 @@ function operator_mesh!(setup)
     end
 
     # Matrix to map from Nuy_t-1 to Nvy_in points
-    Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(Nuy_t - 1))
+    Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(Nvy_in))
 
     # matrix to map from Nwy_t-1 to Nvy_in points
-    Bwvy = spdiagm(Nvy_in, Nwy_t - 1, diagpos => ones(Nwy_t - 1))
+    Bwvy = spdiagm(Nvy_in, Nwy_t - 1, diagpos => ones(Nvy_in))
 
     # Map from Npy+2 points to Nvy_t-1 points (vy faces)
     Bkvy = copy(Bmap)
@@ -199,8 +199,9 @@ function operator_mesh!(setup)
     bc.w.z == (:pressure, :pressure) && (diagpos = 0)
     bc.w.z == (:periodic, :periodic) && (diagpos = 0)
 
-    Bmap = spdiagm(Nwz_in + 1, Nz + 2, diagpos => ones(Nwz_in + 1))
-    Bmap = spdiagm(Nwz_in, Nz + 1, diagpos => ones(Nwz_in))
+    shape = (Nwz_in + 1, Nz + 2)
+    Bmap = spdiagm(shape..., diagpos => ones(Nwz_in + 1))
+    Bmap_z_zin = spdiagm(Nwz_in, Nz + 1, diagpos => ones(Nwz_in))
     hzd = Bmap * hzd
     gzi = Bmap_z_zin * gz
     zin = Bmap_z_zin * z
@@ -213,10 +214,10 @@ function operator_mesh!(setup)
     end
 
     # Matrix to map from Nuz_t-1 to Nwz_in points
-    Buwz = spdiagm(Nwz_in, Nuz_t - 1, diagpos => ones(Nuz_t - 1))
+    Buwz = spdiagm(Nwz_in, Nuz_t - 1, diagpos => ones(Nwz_in))
 
     # matrix to map from Nvz_t-1 to Nwz_in points
-    Bvwz = spdiagm(Nwz_in, Nvz_t - 1, diagpos => ones(Nvz_t - 1))
+    Bvwz = spdiagm(Nwz_in, Nvz_t - 1, diagpos => ones(Nwz_in))
 
     # Map from Npy+2 points to Nvy_t-1 points (vy faces)
     Bkwz = copy(Bmap)
@@ -249,7 +250,7 @@ function operator_mesh!(setup)
     zu = reshape(zp ⊗ ones(Nuy_in) ⊗ ones(Nux_in), Nux_in, Nuy_in, Nuz_in)
 
     xv = reshape(ones(Nvz_in) ⊗ ones(Nvy_in) ⊗ xp, Nvx_in, Nvy_in, Nvz_in)
-    yv = reshape(ones(Nvz_in) ⊗ yin ⊗ ones(Nvx_in, Nvx_in, Nvy_in, Nvz_in))
+    yv = reshape(ones(Nvz_in) ⊗ yin ⊗ ones(Nvx_in), Nvx_in, Nvy_in, Nvz_in)
     zv = reshape(zp ⊗ ones(Nvy_in) ⊗ ones(Nvx_in), Nvx_in, Nvy_in, Nvz_in)
 
     xw = reshape(ones(Nwz_in) ⊗ ones(Nwy_in) ⊗ xp, Nwx_in, Nwy_in, Nwz_in)
