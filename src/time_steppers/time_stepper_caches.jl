@@ -106,7 +106,7 @@ function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod, setup)
         # Implicit time-stepping for diffusion
         # FIXME: This only works if Δt is constant
         # LU decomposition
-        Diff_fact = lu(sparse(I, NV, NV) - θ * Δt * Diagonal(Ω⁻¹) * Diff)
+        Diff_fact = lu(I(NV) - θ * Δt * Diagonal(Ω⁻¹) * Diff)
     else
         Diff_fact = cholesky(spzeros(0, 0))
     end

@@ -38,7 +38,7 @@ function initialize!(plotter::RealTimePlotter, stepper)
 
     fig = Figure(resolution = (refsize * Lx / (Lx + Ly), refsize * Ly / (Lx + Ly) + 100))
     if fieldname == :velocity
-        up, vp, qp = get_velocity(V, t, setup)
+        up, vp, wp, qp = get_velocity(V, t, setup)
         vel = Node(qp)
         ax, hm = contourf(fig[1, 1], xp, yp, vel)
         field = vel
@@ -97,6 +97,7 @@ function initialize!(writer::VTKWriter, stepper)
     isdir(dir) || mkdir(dir);
     pvd = paraview_collection(joinpath(dir, filename))
     @pack! writer = pvd
-
     writer
 end
+
+initialize!(tracer::QuantityTracer, stepper) = tracer

@@ -12,7 +12,7 @@ function TG3D()
 
     # Case information
     case = Case(;
-        name = "TG",
+        name = "TG3D",
         problem = UnsteadyProblem(),
         # problem = SteadyStateProblem(),
         regularization = "no",
@@ -37,8 +37,8 @@ function TG3D()
     grid = create_grid(
         T,
         N;
-        Nx = 40,                         # Number of x-volumes
-        Ny = 30,                         # Number of y-volumes
+        Nx = 20,                         # Number of x-volumes
+        Ny = 20,                         # Number of y-volumes
         Nz = 20,                         # Number of z-volumes
         xlims = (0, 2π),                  # Horizontal limits (left, right)
         ylims = (0, 2π),                  # Vertical limits (bottom, top)
@@ -84,8 +84,8 @@ function TG3D()
     # Time stepping
     time = Time{T}(;
         t_start = 0,                       # Start time
-        t_end = 1,                         # End time
-        Δt = 0.01,                         # Timestep
+        t_end = 10.0,                       # End time
+        Δt = 0.05,                         # Timestep
         method = RK44(),                   # ODE method
         method_startup = RK44(),           # Startup method for methods that are not self-starting
         nstartup = 2,                      # Number of necessary Vₙ₋ᵢ (= method order)
@@ -172,8 +172,10 @@ function TG3D()
     # initial_velocity_u(x, y, z) = -sinpi(x)cospi(y)cospi(z)
     # initial_velocity_v(x, y, z) = 2cospi(x)sinpi(y)cospi(z)
     # initial_velocity_w(x, y, z) = -cospi(x)cospi(y)sinpi(z)
-    initial_pressure(x, y, z) = 1 / 4 * (cos(2π * x) + cos(2π * y) + cos(2π * z))
-    @pack! case = initial_velocity_u, initial_velocity_v, initial_pressure
+    # initial_pressure(x, y, z) = 1 / 4 * (cos(2π * x) + cos(2π * y) + cos(2π * z))
+    initial_pressure(x, y, z) = 1 / 4 * (cos(2x) + cos(2y) + cos(2z))
+    @pack! case = initial_velocity_u, initial_velocity_v, initial_velocity_w
+    @pack! case = initial_pressure
 
     # Forcing parameters
     bodyforce_u(x, y, z) = 0
@@ -192,11 +194,12 @@ function TG3D()
         # fieldname = :streamfunction,         # Quantity for real time plotting
     )
     vtk_writer = VTKWriter(;
-        nupdate = 10,                        # Number of iterations between VTK writings
-        dir = "output/$(case.name)",                # Output directory
+        nupdate = 1,                         # Number of iterations between VTK writings
+        dir = "output/$(case.name)",         # Output directory
         filename = "solution",               # Output file name (without extension)
     )
-    processors = [logger, real_time_plotter, vtk_writer]
+    tracer = QuantityTracer(; nupdate = 1)   # Stores tracer data
+    processors = [logger, vtk_writer, tracer]
 
     # Final setup
     Setup{T,N}(;

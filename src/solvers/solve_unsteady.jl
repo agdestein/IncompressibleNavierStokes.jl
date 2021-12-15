@@ -26,6 +26,7 @@ function solve(::UnsteadyProblem, setup, V₀, p₀)
     # Processors for iteration results  
     for ps ∈ processors
         initialize!(ps, stepper)
+        process!(ps, stepper)
     end
 
     # record(fig, "output/vorticity.mp4", 1:nt; framerate = 60) do n

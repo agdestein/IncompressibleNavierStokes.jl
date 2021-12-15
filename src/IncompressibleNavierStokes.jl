@@ -9,21 +9,23 @@ using SparseArrays: SparseMatrixCSC, blockdiag, nnz, sparse, spdiagm, spzeros
 using UnPack: @pack!, @unpack
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 # Using Plots: contour, contourf, title!
-using Makie:
-    Axis,
-    Colorbar,
-    DataAspect,
-    Figure,
-    Node,
-    contour,
-    contour!,
-    contourf,
-    contourf!,
-    heatmap,
-    limits!,
-    lines!,
-    record,
-    save
+# using Makie:
+#     Axis,
+#     Colorbar,
+#     DataAspect,
+#     Figure,
+#     Node,
+#     contour,
+#     contour!,
+#     contourf,
+#     contourf!,
+#     heatmap,
+#     limits!,
+#     lines,
+#     lines!,
+#     record,
+#     save
+using Makie
 
 
 # Convenience notation
@@ -130,6 +132,7 @@ include("postprocess/get_streamfunction.jl")
 include("postprocess/plot_vorticity.jl")
 include("postprocess/plot_pressure.jl")
 include("postprocess/plot_streamfunction.jl")
+include("postprocess/plot_tracers.jl")
 
 # Reexport
 export @pack!, @unpack
@@ -144,7 +147,7 @@ export SteadyBodyForce, UnsteadyBodyForce
 export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
 
 # Processors
-export Logger, RealTimePlotter, VTKWriter
+export Logger, RealTimePlotter, VTKWriter, QuantityTracer
 
 # Problems
 export SteadyStateProblem, UnsteadyProblem, is_steady
@@ -182,7 +185,7 @@ export create_boundary_conditions,
 
 export momentum!
 
-export postprocess, plot_pressure, plot_streamfunction, plot_vorticity
+export postprocess, plot_pressure, plot_streamfunction, plot_vorticity, plot_tracers
 
 # ODE methods
 

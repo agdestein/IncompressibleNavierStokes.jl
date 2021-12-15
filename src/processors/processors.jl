@@ -22,3 +22,13 @@ Base.@kwdef mutable struct VTKWriter <: Processor
     filename::String = "solution"
     pvd::CollectionFile = paraview_collection("")
 end
+
+Base.@kwdef mutable struct QuantityTracer <: Processor
+    nupdate::Int = 1
+    t::Vector{Float64} = zeros(0)
+    maxdiv::Vector{Float64} = zeros(0)
+    umom::Vector{Float64} = zeros(0)
+    vmom::Vector{Float64} = zeros(0)
+    wmom::Vector{Float64} = zeros(0)
+    k::Vector{Float64} = zeros(0)
+end

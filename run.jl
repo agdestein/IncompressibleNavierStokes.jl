@@ -17,8 +17,13 @@ V₀, p₀, t₀ = create_initial_conditions(setup);
 problem = setup.case.problem;
 @time V, p = solve(problem, setup, V₀, p₀);
 
+## Plot tracers
+plot_tracers(setup);
+
+##
 @time V, p = solve(problem, setup, V, p);
 
+##
 @profview V, p = solve(problem, setup, V₀, p₀);
 
 ## Post-process

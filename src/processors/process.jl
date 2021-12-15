@@ -31,7 +31,7 @@ function process!(plotter::RealTimePlotter, stepper)
     @unpack Nx, Ny, Npx, Npy = setup.grid
     @unpack field, fieldname = plotter
     if fieldname == :velocity
-        up, vp, qp = get_velocity(V, t, setup)
+        up, vp, wp, qp = get_velocity(V, t, setup)
         field[] = qp
     elseif fieldname == :vorticity
         field[] = vorticity!(field[], V, t, setup)
@@ -47,14 +47,26 @@ end
 
 function process!(writer::VTKWriter, stepper)
     @unpack setup, V, p, t = stepper
-    @unpack xp, yp = setup.grid;
+    @unpack xp, yp, zp = setup.grid;
     tformat = replace(string(t), "." => "p")
-    vtk_grid("$(writer.dir)/$(writer.filename)_t=$tformat", xp, yp) do vtk
-        up, vp, = get_velocity(V, t, setup)
-        vtk["velocity"] = (up, vp, zero(up))
+    vtk_grid("$(writer.dir)/$(writer.filename)_t=$tformat", xp, yp, zp) do vtk
+        up, vp, wp, = get_velocity(V, t, setup)
+        vtk["velocity"] = (up, vp, wp)
         vtk["pressure"] = p
         writer.pvd[t] = vtk
     end
 
     writer
+end
+
+function process!(tracer::QuantityTracer, stepper)
+    @unpack V, p, t, setup = stepper
+    maxdiv, umom, vmom, wmom, k = compute_conservation(V, t, setup)
+    push!(tracer.t, t)
+    push!(tracer.maxdiv, maxdiv)
+    push!(tracer.umom, umom)
+    push!(tracer.vmom, vmom)
+    push!(tracer.wmom, wmom)
+    push!(tracer.k, k)
+    tracer
 end

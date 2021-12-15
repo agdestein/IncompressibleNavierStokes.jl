@@ -102,19 +102,10 @@ function operator_divergence!(setup)
     # We only need derivative at inner pressure points, so we map the resulting
     # Boundary matrix (restriction)
     diagpos = 0
-    if bc.w.z[2] == :pressure && bc.w.z[1] == :pressure
-        diagpos = 1
-    end
-    if bc.w.z[2] != :pressure && bc.w.z[1] == :pressure
-        diagpos = 1
-    end
-    if bc.w.z[2] == :pressure && bc.w.z[1] != :pressure
-        diagpos = 0
-    end
-    if bc.w.z[2] == :periodic && bc.w.z[1] == :periodic
-        # Like pressure low
-        diagpos = 1
-    end
+    bc.w.z[1] == :pressure && bc.w.z[2] == :pressure && (diagpos = 1)
+    bc.w.z[1] == :pressure && bc.w.z[2] != :pressure && (diagpos = 1)
+    bc.w.z[1] != :pressure && bc.w.z[2] == :pressure && (diagpos = 0)
+    bc.w.z[1] == :periodic && bc.w.z[2] == :periodic && (diagpos = 1)
 
     BMz = spdiagm(Npz, Nwz_t - 1, diagpos => ones(Npz))
     M1D = BMz * M1D
@@ -140,7 +131,7 @@ function operator_divergence!(setup)
     # stress will be zero)
     Gx = -Mx'
     Gy = -My'
-    Gz = -My'
+    Gz = -Mz'
 
     G = [Gx; Gy; Gz]
 

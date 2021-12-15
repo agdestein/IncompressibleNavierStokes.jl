@@ -53,7 +53,7 @@ function initialize!(solver::FourierPressureSolver, setup, A)
     j = reshape(0:(Npy-1), 1, :)
     k = reshape(0:(Npz-1), 1, 1, :)
 
-    # Scale with Δx*Δy*Δz, since we solve the PPE in integrated form
+    # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
     Â = @. 4 * Δx * Δy * Δz * (
         sin(i * π / Npx)^2 / Δx^2 +
         sin(j * π / Npy)^2 / Δy^2 +
