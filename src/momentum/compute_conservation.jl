@@ -17,12 +17,12 @@ function compute_conservation(V, t, setup)
     Ωw = @view Ω[indw]
 
     setup.bc.bc_unsteady && set_bc_vectors!(setup, t)
-    uLe_i = u_bc.(x[1], yp, zp', t, [setup])
-    uRi_i = u_bc.(x[end], yp, zp', t, [setup])
-    vLo_i = v_bc.(xp, y[1], zp', t, [setup])
-    vUp_i = v_bc.(xp, y[end], zp', t, [setup])
-    wBa_i = w_bc.(xp, yp', z[1], t, [setup])
-    wFr_i = w_bc.(xp, yp', z[end], t, [setup])
+    uLe_i = reshape(u_bc.(x[1], yp, zp', t, [setup])   , :)
+    uRi_i = reshape(u_bc.(x[end], yp, zp', t, [setup]) , :)
+    vLo_i = reshape(v_bc.(xp, y[1], zp', t, [setup])   , :)
+    vUp_i = reshape(v_bc.(xp, y[end], zp', t, [setup]) , :)
+    wBa_i = reshape(w_bc.(xp, yp', z[1], t, [setup])   , :)
+    wFr_i = reshape(w_bc.(xp, yp', z[end], t, [setup]) , :)
 
     # Check if new velocity field is divergence free (mass conservation)
     maxdiv = maximum(abs.(M * V + yM))

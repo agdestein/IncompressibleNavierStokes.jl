@@ -27,7 +27,6 @@ function set_bc_vectors!(setup, t)
     @unpack Mx_bc, My_bc, Mz_bc = setup.discretization
     @unpack Aν_vy_bc = setup.discretization
 
-
     @unpack Iu_ux_bc, Iv_vy_bc, Iw_wz_bc = setup.discretization
     @unpack Iv_uy_bc_lr, Iv_uy_bc_lu, Iw_uz_bc_lr, Iw_uz_bc_bf = setup.discretization
     @unpack Iu_vx_bc_lr, Iu_vx_bc_lu, Iw_vz_bc_lu, Iw_vz_bc_bf = setup.discretization
@@ -156,7 +155,6 @@ function set_bc_vectors!(setup, t)
     setup.bc.w.z[1] == :pressure && (y1D_ba[1] = -1)
     setup.bc.w.z[2] == :pressure && (y1D_fr[end] = 1)
     y_pz = y1D_ba ⊗ (p_bc.z[1] .* (hy ⊗ hx)) + y1D_fr ⊗ (p_bc.z[2] .* (hy ⊗ hx))
-    y_pz = reshape(permutedims(reshape(y_py, Nvy_in, Nvx_in, Nvz_in), (2, 1, 3)), :)
 
     y_p = [y_px; y_py; y_pz]
     @pack! setup.discretization = y_p
@@ -198,7 +196,7 @@ function set_bc_vectors!(setup, t)
     yAw_wy = Aw_wy_bc.Bbc * ybc
 
     # Aw_wz
-    ybc = Aw_wz_bc.ybc1 ⊗ wBa_i + Aw_wz_bc.ybc2 ⊗ vFr_i
+    ybc = Aw_wz_bc.ybc1 ⊗ wBa_i + Aw_wz_bc.ybc2 ⊗ wFr_i
     yAw_wz = Aw_wz_bc.Bbc * ybc
 
     @pack! setup.discretization = yAu_ux, yAu_uy, yAu_uz

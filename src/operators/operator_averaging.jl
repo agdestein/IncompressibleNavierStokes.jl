@@ -61,7 +61,7 @@ function operator_averaging!(setup)
     A1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    Av_vx_bc = bc_general(Nvx_t, Nvx_in, Nvx_b, bc.v.x[1], bc.v.x[2], hx[1], hx[end])
+    Av_vx_bc = bc_general_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.x[1], bc.v.x[2], hx[1], hx[end])
 
     # Extend to 3D
     Av_vx = I(Nvz_in) ⊗ I(Nvy_in) ⊗ (A1D * Av_vx_bc.B1D)
@@ -75,7 +75,7 @@ function operator_averaging!(setup)
     A1D = spdiagm(Nvy_t - 1, Nvy_t, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    Av_vy_bc = bc_general_stag(Nvy_t, Nvy_in, Nvy_b, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
+    Av_vy_bc = bc_general(Nvy_t, Nvy_in, Nvy_b, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
 
     # Extend to 3D
     Av_vy = I(Nvz_in) ⊗ (A1D * Av_vy_bc.B1D) ⊗ I(Nvx_in)
@@ -100,7 +100,7 @@ function operator_averaging!(setup)
     A1D = spdiagm(Nwx_t - 1, Nwx_t, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    Aw_wx_bc = bc_general(Nwx_t, Nwx_in, Nwx_b, bc.w.x[1], bc.w.x[2], hx[1], hx[end])
+    Aw_wx_bc = bc_general_stag(Nwx_t, Nwx_in, Nwx_b, bc.w.x[1], bc.w.x[2], hx[1], hx[end])
 
     # Extend to 3D
     Aw_wx = I(Nwz_in) ⊗ I(Nwy_in) ⊗ (A1D * Aw_wx_bc.B1D)
@@ -125,7 +125,7 @@ function operator_averaging!(setup)
     A1D = spdiagm(Nwz_t - 1, Nwz_t, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    Aw_wz_bc = bc_general_stag(Nwz_t, Nwz_in, Nwz_b, bc.w.z[1], bc.w.z[2], hz[1], hz[end])
+    Aw_wz_bc = bc_general(Nwz_t, Nwz_in, Nwz_b, bc.w.z[1], bc.w.z[2], hz[1], hz[end])
 
     # Extend to 3D
     Aw_wz = (A1D * Aw_wz_bc.B1D) ⊗ I(Nwy_in) ⊗ I(Nwx_in)

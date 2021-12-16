@@ -185,8 +185,8 @@ function operator_interpolation!(setup)
     Iu_wx = Iu_wx_bc_bf.B3D * Iu_wx_bc_lr.B3D
 
     ## Iv_wy
-    diag1 = fill(weight, Nwz_t - 1)
-    I1D = spdiagm(Nwz_t - 1, Nwz_t, 0 => diag1, 1 => diag1)
+    diag1 = fill(weight, Nvz_t - 1)
+    I1D = spdiagm(Nvz_t - 1, Nvz_t, 0 => diag1, 1 => diag1)
     I1D = Bvwz * I1D * mat_hz2
     I3D = I1D ⊗ I(Ny + 1) ⊗ mat_hx
 
