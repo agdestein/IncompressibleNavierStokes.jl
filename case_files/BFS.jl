@@ -8,7 +8,7 @@ function BFS()
     T = Float64
 
     # Spatial dimension
-    N = 2
+    N = 3
 
     # Case information
     case = Case(;
@@ -20,7 +20,7 @@ function BFS()
 
     # Physical properties
     fluid = Fluid{T}(;
-        Re = 1000,                # Reynolds number
+        Re = 2000,                # Reynolds number
         U1 = 1,                   # Velocity scales
         U2 = 1,                   # Velocity scales
         d_layer = 1,              # Thickness of layer
@@ -34,12 +34,16 @@ function BFS()
     # model = QRModel{T}()
 
     # Grid parameters
-    grid = create_grid(T, N;
-        Nx = 400,                        # Number of x-volumes
-        Ny = 40,                         # Number of y-volumes
-        xlims = (0, 10),                  # Horizontal limits (left, right)
-        ylims = (-0.5, 0.5),              # Vertical limits (bottom, top)
-        stretch = (1, 1),                 # Stretch factor (sx, sy[, sz])
+    grid = create_grid(
+        T,
+        N;
+        Nx = 200,                        # Number of x-volumes
+        Ny = 20,                         # Number of y-volumes
+        Nz = 10,                         # Number of z-volumes
+        xlims = (0, 10),                 # Horizontal limits (left, right)
+        ylims = (-0.5, 0.5),             # Vertical limits (bottom, top)
+        zlims = (-0.25, 0.25),           # Depth limits (back, front)
+        stretch = (1, 1, 1),             # Stretch factor (sx, sy[, sz])
     )
 
     # Discrete operators
@@ -81,7 +85,7 @@ function BFS()
     time = Time{T}(;
         t_start = 0,                 # Start time
         t_end = 20,                  # End time
-        Δt = 0.02,                   # Timestep
+        Δt = 0.01,                   # Timestep
         method = RK44(),             # ODE method
         method_startup = RK44(),     # Startup method for methods that are not self-starting
         nstartup = 2,                # Number of necessary Vₙ₋ᵢ (= method order)
@@ -112,25 +116,55 @@ function BFS()
     # Boundary conditions
     bc_unsteady = false
     bc_type = (;
-        u = (; x = (:dirichlet, :pressure), y = (:dirichlet, :dirichlet)),
-        v = (; x = (:dirichlet, :symmetric), y = (:dirichlet, :dirichlet)),
-        k = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-        e = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-        ν = (; x = (:symmetric, :symmetric), y = (:symmetric, :symmetric)),
+        u = (;
+            x = (:dirichlet, :pressure),
+            y = (:dirichlet, :dirichlet),
+            z = (:dirichlet, :dirichlet),
+        ),
+        v = (;
+            x = (:dirichlet, :symmetric),
+            y = (:dirichlet, :dirichlet),
+            z = (:dirichlet, :dirichlet),
+        ),
+        w = (;
+            x = (:dirichlet, :symmetric),
+            y = (:dirichlet, :dirichlet),
+            z = (:dirichlet, :dirichlet),
+        ),
+        k = (;
+            x = (:dirichlet, :dirichlet),
+            y = (:dirichlet, :dirichlet),
+            z = (:dirichlet, :dirichlet),
+        ),
+        e = (;
+            x = (:dirichlet, :dirichlet),
+            y = (:dirichlet, :dirichlet),
+            z = (:dirichlet, :dirichlet),
+        ),
+        ν = (;
+            x = (:symmetric, :symmetric),
+            y = (:symmetric, :symmetric),
+            z = (:symmetric, :symmetric),
+        ),
     )
-    u_bc(x, y, t, setup) = x ≈ setup.grid.xlims[1] && y ≥ 0 ? 24y * (1 // 2 - y) : zero(y)
-    v_bc(x, y, t, setup) = 0
-    bc = create_boundary_conditions(T; bc_unsteady, bc_type, u_bc, v_bc)
+    u_bc(x, y, z, t, setup) =
+        x ≈ setup.grid.xlims[1] && y ≥ 0 ? 24y * (1 // 2 - y) : zero(y)
+    v_bc(x, y, z, t, setup) = zero(x)
+    w_bc(x, y, z, t, setup) = zero(x)
+    bc = create_boundary_conditions(T; bc_unsteady, bc_type, u_bc, v_bc, w_bc)
 
     # Initial conditions (extend inflow)
-    initial_velocity_u(x, y) = y ≥ 0 ? 24y * (1 // 2 - y) : zero(y)
-    initial_velocity_v(x, y) = 0
-    initial_pressure(x, y) = 0
-    @pack! case = initial_velocity_u, initial_velocity_v, initial_pressure
+    initial_velocity_u(x, y, z) = zero(x) # y ≥ 0 ? 24y * (1 // 2 - y) : zero(y)
+    initial_velocity_v(x, y, z) = zero(x)
+    initial_velocity_w(x, y, z) = zero(x)
+    initial_pressure(x, y, z) = zero(x)
+    @pack! case =
+        initial_velocity_u, initial_velocity_v, initial_velocity_w, initial_pressure
 
     # Forcing parameters
-    bodyforce_u(x, y) = 0
-    bodyforce_v(x, y) = 0
+    bodyforce_u(x, y, z) = 0
+    bodyforce_v(x, y, z) = 0
+    bodyforce_w(x, y, z) = 0
     force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
     # Iteration processors
@@ -144,12 +178,13 @@ function BFS()
         # fieldname = :streamfunction,         # Quantity for real time plotting
     )
     vtk_writer = VTKWriter(;
-        nupdate = 10,                        # Number of iterations between VTK writings
+        nupdate = 5,                         # Number of iterations between VTK writings
         dir = "output/$(case.name)",         # Output directory
         filename = "solution",               # Output file name (without extension)
     )
-    processors = [logger, real_time_plotter, vtk_writer]
-    # processors = [logger, real_time_plotter]
+    tracer = QuantityTracer(; nupdate = 1)
+    processors = [logger, real_time_plotter, vtk_writer, tracer]
+    processors = [logger, vtk_writer, tracer]
 
     # Final setup
     Setup{T,N}(;
