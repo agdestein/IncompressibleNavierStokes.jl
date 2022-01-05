@@ -2,13 +2,10 @@
 CurrentModule = IncompressibleNavierStokes
 ```
 
+![Logo](assets/logo_text_dots.png)
+
 # IncompressibleNavierStokes
 
-Documentation for [IncompressibleNavierStokes](https://github.com/agdestein/IncompressibleNavierStokes.jl).
-
-```@index
-```
-
-```@autodocs
-Modules = [IncompressibleNavierStokes]
-```
+[IncompressibleNavierStokes](https://github.com/agdestein/IncompressibleNavierStokes.jl) is
+a package providing energy-conserving solvers for the incompressible Navier-Stokes equations
+on a staggered cartesian grid.
