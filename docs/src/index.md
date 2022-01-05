@@ -2,9 +2,7 @@
 CurrentModule = IncompressibleNavierStokes
 ```
 
-# IncompressibleNavierStokes
-
-Documentation for [IncompressibleNavierStokes](https://github.com/agdestein/IncompressibleNavierStokes.jl).
+![Logo](assets/logo_text_dots.png)
 
 # IncompressibleNavierStokes
 

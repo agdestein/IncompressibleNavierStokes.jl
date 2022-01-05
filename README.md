@@ -1,3 +1,5 @@
+![Logo](docs/src/assets/logo_text_dots.png)
+
 # IncompressibleNavierStokes
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://agdestein.github.io/IncompressibleNavierStokes.jl/stable)
