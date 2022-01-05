@@ -30,14 +30,14 @@ influence on the accuracy of the velocity.
 """
 function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
 
-    @unpack method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper
-    @unpack NV, Ω⁻¹ = setup.grid
-    @unpack G, y_p, M, yM = setup.discretization
-    @unpack Diff, yDiff, y_p = setup.discretization
-    @unpack pressure_solver = setup.solver_settings
-    @unpack α₁, α₂, θ = method
-    @unpack cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact = cache
-    @unpack d = momentum_cache
+    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
+    (; NV, Ω⁻¹) = setup.grid
+    (; G, y_p, M, yM) = setup.discretization
+    (; Diff, yDiff, y_p) = setup.discretization
+    (; pressure_solver) = setup.solver_settings
+    (; α₁, α₂, θ) = method
+    (; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact) = cache
+    (; d) = momentum_cache
 
     Δt ≈ Δtₙ || error("Adams-Bashforth requires constant time step")
 
@@ -55,7 +55,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     # Unsteady BC at current time
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ)
-        @unpack yDiff = setup.discretization
+        (; yDiff) = setup.discretization
     end
 
     yDiffₙ .= yDiff
@@ -70,7 +70,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ + Δt)
-        @unpack y_p = setup.discretization
+        (; y_p) = setup.discretization
     end
     bodyforce!(bₙ₊₁, nothing, Vₙ, tₙ + Δt, setup)
 
@@ -92,7 +92,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     # Make the velocity field `uₙ₊₁` at `tₙ₊₁` divergence-free (need BC at `tₙ₊₁`)
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ + Δt)
-        @unpack yM = setup.discretization
+        (; yM) = setup.discretization
     end
 
     # Boundary condition for Δp between time steps (!= 0 if fluctuating outlet pressure)

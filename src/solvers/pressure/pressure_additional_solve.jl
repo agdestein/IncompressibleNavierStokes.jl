@@ -5,7 +5,7 @@ Convenience function for allocating momentum cache, `F`, `Δp`, and `f` before d
 additional pressure solve.
 """
 function pressure_additional_solve!(V, p, t, setup)
-    @unpack NV, Np = setup.grid
+    (; NV, Np) = setup.grid
 
     momentum_cache = MomentumCache(setup)
     F = zeros(NV)
@@ -23,9 +23,9 @@ field, resulting in same order pressure as velocity.
 """
 function pressure_additional_solve!(V, p, t, setup, momentum_cache, F, f, Δp)
     # Note: time derivative of BC in ydM
-    @unpack pressure_solver = setup.solver_settings
-    @unpack M, ydM = setup.discretization
-    @unpack Ω⁻¹ = setup.grid
+    (; pressure_solver) = setup.solver_settings
+    (; M, ydM) = setup.discretization
+    (; Ω⁻¹) = setup.grid
 
     # Get updated BC for ydM
     if setup.bc.bc_unsteady

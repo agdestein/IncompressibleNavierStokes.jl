@@ -6,9 +6,9 @@ Process iteration.
 function process! end
 
 function process!(logger::Logger, stepper)
-    @unpack V, p, t, setup, cache, momentum_cache = stepper
-    @unpack model = setup
-    @unpack F = cache
+    (; V, p, t, setup, cache, momentum_cache) = stepper
+    (; model) = setup
+    (; F) = cache
     # Calculate mass, momentum and energy
     # maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
@@ -27,9 +27,9 @@ function process!(logger::Logger, stepper)
 end
 
 function process!(plotter::RealTimePlotter, stepper)
-    @unpack setup, V, p, t = stepper
-    @unpack Nx, Ny, Npx, Npy = setup.grid
-    @unpack field, fieldname = plotter
+    (; setup, V, p, t) = stepper
+    (; Nx, Ny, Npx, Npy) = setup.grid
+    (; field, fieldname) = plotter
     if fieldname == :velocity
         up, vp, wp, qp = get_velocity(V, t, setup)
         field[] = qp
@@ -46,8 +46,8 @@ function process!(plotter::RealTimePlotter, stepper)
 end
 
 function process!(writer::VTKWriter, stepper)
-    @unpack setup, V, p, t = stepper
-    @unpack xp, yp, zp = setup.grid;
+    (; setup, V, p, t) = stepper
+    (; xp, yp, zp) = setup.grid;
     tformat = replace(string(t), "." => "p")
     vtk_grid("$(writer.dir)/$(writer.filename)_t=$tformat", xp, yp, zp) do vtk
         up, vp, wp, = get_velocity(V, t, setup)
@@ -60,7 +60,7 @@ function process!(writer::VTKWriter, stepper)
 end
 
 function process!(tracer::QuantityTracer, stepper)
-    @unpack V, p, t, setup = stepper
+    (; V, p, t, setup) = stepper
     maxdiv, umom, vmom, wmom, k = compute_conservation(V, t, setup)
     push!(tracer.t, t)
     push!(tracer.maxdiv, maxdiv)

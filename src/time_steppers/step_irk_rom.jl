@@ -6,7 +6,7 @@ function step_irk_rom(Vₙ, pₙ, tₙ, Δt, setup)
 
     ## Get coefficients of RK method
     if t ≈ setup.time.t_start
-        @unpack A, b, c, = setup.time.method
+        (; A, b, c,) = setup.time.method
         # RK_order = check_orderconditions(A, b, c);
         # Number of stages
         nstage = length(b)

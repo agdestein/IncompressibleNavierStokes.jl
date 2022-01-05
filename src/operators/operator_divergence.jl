@@ -2,16 +2,15 @@
 Construct divergence and gradient operator
 """
 function operator_divergence!(setup)
-    @unpack bc, model = setup
-    @unpack problem = setup.case
-    @unpack pressure_solver = setup.solver_settings
-    @unpack Nx, Ny, Nz = setup.grid
-    @unpack Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t = setup.grid
-    @unpack Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t = setup.grid
-    @unpack Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t = setup.grid
-    @unpack Nu, Nv, Nw, Np, Npx, Npy, Npz = setup.grid
-    @unpack hx, hy, hz = setup.grid
-    @unpack Ω⁻¹ = setup.grid
+    (; bc, model) = setup
+    (; problem) = setup.case
+    (; pressure_solver) = setup.solver_settings
+    (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuz_in) = setup.grid
+    (; Nvx_in, Nvy_in, Nvy_b, Nvy_t, Nvz_in) = setup.grid
+    (; Nwx_in, Nwy_in, Nwz_in, Nwz_b, Nwz_t) = setup.grid
+    (; Npx, Npy, Npz) = setup.grid
+    (; hx, hy, hz) = setup.grid
+    (; Ω⁻¹) = setup.grid
 
     ## Divergence operator M
 
@@ -30,20 +29,10 @@ function operator_divergence!(setup)
     # We only need derivative at inner pressure points, so we map the resulting
     # Boundary matrix (restrict)
     diagpos = 0
-    if bc.u.x[2] == :pressure && bc.u.x[1] == :pressure
-        diagpos = 1
-    end
-    if bc.u.x[2] != :pressure && bc.u.x[1] == :pressure
-        diagpos = 1
-    end
-    if bc.u.x[2] == :pressure && bc.u.x[1] != :pressure
-        diagpos = 0
-    end
-    if bc.u.x[2] == :periodic && bc.u.x[1] == :periodic
-        # Like pressure left
-        diagpos = 1
-    end
-
+    bc.u.x[2] == :pressure && bc.u.x[1] == :pressure && (diagpos = 1)
+    bc.u.x[2] != :pressure && bc.u.x[1] == :pressure && (diagpos = 1)
+    bc.u.x[2] == :pressure && bc.u.x[1] != :pressure && (diagpos = 0)
+    bc.u.x[2] == :periodic && bc.u.x[1] == :periodic && (diagpos = 1)
     BMx = spdiagm(Npx, Nux_t - 1, diagpos => ones(Npx))
     M1D = BMx * M1D
 
@@ -65,20 +54,10 @@ function operator_divergence!(setup)
     # We only need derivative at inner pressure points, so we map the resulting
     # Boundary matrix (restriction)
     diagpos = 0
-    if bc.v.y[2] == :pressure && bc.v.y[1] == :pressure
-        diagpos = 1
-    end
-    if bc.v.y[2] != :pressure && bc.v.y[1] == :pressure
-        diagpos = 1
-    end
-    if bc.v.y[2] == :pressure && bc.v.y[1] != :pressure
-        diagpos = 0
-    end
-    if bc.v.y[2] == :periodic && bc.v.y[1] == :periodic
-        # Like pressure low
-        diagpos = 1
-    end
-
+    bc.v.y[2] == :pressure && bc.v.y[1] == :pressure && (diagpos = 1)
+    bc.v.y[2] != :pressure && bc.v.y[1] == :pressure && (diagpos = 1)
+    bc.v.y[2] == :pressure && bc.v.y[1] != :pressure && (diagpos = 0)
+    bc.v.y[2] == :periodic && bc.v.y[1] == :periodic && (diagpos = 1)
     BMy = spdiagm(Npy, Nvy_t - 1, diagpos => ones(Npy))
     M1D = BMy * M1D
 
@@ -158,8 +137,8 @@ function operator_divergence!(setup)
 
         # Check if all the row sums of the pressure matrix are zero, which
         # should be the case if there are no pressure boundary conditions
-        if any(isequal(:pressure), [bc.u.x..., bc.v.y..., bc.w.z...])
-            if any(!isapprox(0; atol = 1e-10), abs.(sum(A; dims = 2)))
+        if any(==(:pressure), [bc.u.x..., bc.v.y..., bc.w.z...])
+            if any(≉(0; atol = 1e-10), abs.(sum(A; dims = 2)))
                 @warn "Pressure matrix: not all rowsums are zero!"
             end
         end

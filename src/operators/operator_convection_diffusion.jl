@@ -2,17 +2,15 @@
 Construct convection and diffusion operators.
 """
 function operator_convection_diffusion!(setup)
-    @unpack bc, model = setup
-    @unpack Nx, Ny, Nz = setup.grid
-    @unpack Nu, Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t = setup.grid
-    @unpack Nv, Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t  = setup.grid
-    @unpack Nw, Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t  = setup.grid
-    @unpack hx, hy, hz, hxi, hyi, hzi, hxd, hyd, hzd = setup.grid
-    @unpack gxi, gyi, gzi, gxd, gyd, gzd = setup.grid
-    @unpack Bvux, Bwux, Buvy, Bwvy, Buwz, Bvwz = setup.grid
-    @unpack Ω⁻¹ = setup.grid
-    @unpack Δt = setup.time
-    @unpack Re = setup.fluid
+    (; bc, model) = setup
+    (; Nx, Ny, Nz) = setup.grid
+    (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = setup.grid
+    (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t) = setup.grid
+    (; Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t) = setup.grid
+    (; hx, hy, hz, hxi, hyi, hzi, hxd, hyd, hzd) = setup.grid
+    (; gxi, gyi, gzi, gxd, gyd, gzd) = setup.grid
+    (; Bvux, Bwux, Buvy, Bwvy, Buwz, Bvwz) = setup.grid
+    (; Re) = setup.fluid
 
     ## Convection (differencing) operator Cu
 

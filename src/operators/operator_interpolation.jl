@@ -2,13 +2,13 @@
 Construct averaging operators.
 """
 function operator_interpolation!(setup)
-    @unpack bc = setup
-    @unpack Nx, Ny, Nz = setup.grid
-    @unpack Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t  = setup.grid
-    @unpack Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t  = setup.grid
-    @unpack Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t  = setup.grid
-    @unpack hx, hy, hz, hxi, hyi, hzi = setup.grid
-    @unpack Buvy, Buwz, Bvux, Bvwz, Bwux, Bwvy = setup.grid
+    (; bc) = setup
+    (; Nx, Ny, Nz) = setup.grid
+    (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = setup.grid
+    (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t) = setup.grid
+    (; Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t) = setup.grid
+    (; hx, hy, hz, hxi, hyi, hzi) = setup.grid
+    (; Buvy, Buwz, Bvux, Bvwz, Bwux, Bwvy) = setup.grid
 
     weight = 1 / 2
 
@@ -17,19 +17,19 @@ function operator_interpolation!(setup)
     mat_hz = spdiagm(Nz, Nz, hzi)
 
     # Periodic boundary conditions
-    if bc.u.x[1] == :periodic && bc.u.x[2] == :periodic
+    if bc.u.x == (:periodic, :periodic)
         mat_hx2 = spdiagm(Nx + 2, Nx + 2, [hx[end]; hx; hx[1]])
     else
         mat_hx2 = spdiagm(Nx + 2, Nx + 2, [hx[1]; hx; hx[end]])
     end
 
-    if bc.v.y[1] == :periodic && bc.v.y[2] == :periodic
+    if bc.v.y == (:periodic, :periodic)
         mat_hy2 = spdiagm(Ny + 2, Ny + 2, [hy[end]; hy; hy[1]])
     else
         mat_hy2 = spdiagm(Ny + 2, Ny + 2, [hy[1]; hy; hy[end]])
     end
 
-    if bc.w.z[1] == :periodic && bc.w.z[2] == :periodic
+    if bc.w.z == (:periodic, :periodic)
         mat_hz2 = spdiagm(Nz + 2, Nz + 2, [hz[end]; hz; hz[1]])
     else
         mat_hz2 = spdiagm(Nz + 2, Nz + 2, [hz[1]; hz; hz[end]])

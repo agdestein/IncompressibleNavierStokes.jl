@@ -4,45 +4,45 @@
 Construct boundary conditions.
 """
 function set_bc_vectors!(setup, t)
-    @unpack problem = setup.case
-    @unpack model = setup
-    @unpack Re = setup.fluid
-    @unpack u_bc, v_bc, w_bc, dudt_bc, dvdt_bc, dwdt_bc = setup.bc
-    @unpack p_bc, bc_unsteady = setup.bc
-    @unpack Nz, Np, Npx, Npy, Npz = setup.grid
-    @unpack Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t = setup.grid
-    @unpack Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nuz_b, Nvz_t = setup.grid
-    @unpack Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t = setup.grid
-    @unpack xin, yin, zin, x, y, z, hx, hy, hz, xp, yp, zp = setup.grid
-    @unpack Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz, = setup.discretization
+    (; problem) = setup.case
+    (; model) = setup
+    (; Re) = setup.fluid
+    (; u_bc, v_bc, w_bc, dudt_bc, dvdt_bc, dwdt_bc) = setup.bc
+    (; p_bc, bc_unsteady) = setup.bc
+    (; Nz, Np, Npx, Npy, Npz) = setup.grid
+    (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = setup.grid
+    (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nuz_b, Nvz_t) = setup.grid
+    (; Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t) = setup.grid
+    (; xin, yin, zin, x, y, z, hx, hy, hz, xp, yp, zp) = setup.grid
+    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz,) = setup.discretization
 
-    @unpack Au_ux_bc, Au_uy_bc, Au_uz_bc = setup.discretization
-    @unpack Av_vx_bc, Av_vy_bc, Av_vz_bc = setup.discretization
-    @unpack Aw_wx_bc, Aw_wy_bc, Aw_wz_bc = setup.discretization
+    (; Au_ux_bc, Au_uy_bc, Au_uz_bc) = setup.discretization
+    (; Av_vx_bc, Av_vy_bc, Av_vz_bc) = setup.discretization
+    (; Aw_wx_bc, Aw_wy_bc, Aw_wz_bc) = setup.discretization
 
-    @unpack Su_ux_bc, Su_uy_bc, Su_uz_bc = setup.discretization
-    @unpack Sv_vx_bc, Sv_vy_bc, Sv_vz_bc = setup.discretization
-    @unpack Sw_wx_bc, Sw_wy_bc, Sw_wz_bc = setup.discretization
+    (; Su_ux_bc, Su_uy_bc, Su_uz_bc) = setup.discretization
+    (; Sv_vx_bc, Sv_vy_bc, Sv_vz_bc) = setup.discretization
+    (; Sw_wx_bc, Sw_wy_bc, Sw_wz_bc) = setup.discretization
 
-    @unpack Mx_bc, My_bc, Mz_bc = setup.discretization
-    @unpack Aν_vy_bc = setup.discretization
+    (; Mx_bc, My_bc, Mz_bc) = setup.discretization
+    (; Aν_vy_bc) = setup.discretization
 
-    @unpack Iu_ux_bc, Iv_vy_bc, Iw_wz_bc = setup.discretization
-    @unpack Iv_uy_bc_lr, Iv_uy_bc_lu, Iw_uz_bc_lr, Iw_uz_bc_bf = setup.discretization
-    @unpack Iu_vx_bc_lr, Iu_vx_bc_lu, Iw_vz_bc_lu, Iw_vz_bc_bf = setup.discretization
-    @unpack Iu_wx_bc_lr, Iu_wx_bc_bf, Iv_wy_bc_lu, Iv_wy_bc_bf = setup.discretization
+    (; Iu_ux_bc, Iv_vy_bc, Iw_wz_bc) = setup.discretization
+    (; Iv_uy_bc_lr, Iv_uy_bc_lu, Iw_uz_bc_lr, Iw_uz_bc_bf) = setup.discretization
+    (; Iu_vx_bc_lr, Iu_vx_bc_lu, Iw_vz_bc_lu, Iw_vz_bc_bf) = setup.discretization
+    (; Iu_wx_bc_lr, Iu_wx_bc_bf, Iv_wy_bc_lu, Iv_wy_bc_bf) = setup.discretization
 
-    @unpack Cux_k_bc, Cuy_k_bc, Cuz_k_bc = setup.discretization
-    @unpack Cvx_k_bc, Cvy_k_bc, Cvz_k_bc = setup.discretization
-    @unpack Cwx_k_bc, Cwy_k_bc, Cwz_k_bc = setup.discretization
+    (; Cux_k_bc, Cuy_k_bc, Cuz_k_bc) = setup.discretization
+    (; Cvx_k_bc, Cvy_k_bc, Cvz_k_bc) = setup.discretization
+    (; Cwx_k_bc, Cwy_k_bc, Cwz_k_bc) = setup.discretization
 
-    @unpack Auy_k_bc, Avx_k_bc = setup.discretization
-    @unpack Auz_k_bc, Awx_k_bc = setup.discretization
-    @unpack Awy_k_bc, Avz_k_bc = setup.discretization
+    (; Auy_k_bc, Avx_k_bc) = setup.discretization
+    (; Auz_k_bc, Awx_k_bc) = setup.discretization
+    (; Awy_k_bc, Avz_k_bc) = setup.discretization
 
-    @unpack Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf = setup.discretization
-    @unpack Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf = setup.discretization
-    @unpack Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf = setup.discretization
+    (; Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf) = setup.discretization
+    (; Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf) = setup.discretization
+    (; Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf) = setup.discretization
 
 
     # TODO: Split up function into allocating part (constructor?) and mutating `update!`
@@ -426,12 +426,12 @@ function set_bc_vectors!(setup, t)
         nuUp = zeros(Npx)
 
         ## Nu_ux
-        @unpack Aν_ux_bc = setup.discretization
+        (; Aν_ux_bc) = setup.discretization
         ybc = nuLe ⊗ Aν_ux_bc.ybc1 + nuRi ⊗ Aν_ux_bc.ybc2
         yAν_ux = Aν_ux_bc.Bbc * ybc
 
         ## Nu_uy
-        @unpack Aν_uy_bc_lr, Aν_uy_bc_lu = setup.discretization
+        (; Aν_uy_bc_lr, Aν_uy_bc_lu) = setup.discretization
 
         nuLe_i = [nuLe[1]; nuLe; nuLe[end]]
         nuRi_i = [nuRi[1]; nuRi; nuRi[end]]
@@ -447,7 +447,7 @@ function set_bc_vectors!(setup, t)
         yAν_uy = yAν_uy_lu + yAν_uy_lr
 
         ## Nu_vx
-        @unpack Aν_vx_bc_lr, Aν_vx_bc_lu = setup.discretization
+        (; Aν_vx_bc_lr, Aν_vx_bc_lu) = setup.discretization
 
         nuLo_i = [nuLo[1]; nuLo; nuLo[end]]
         nuUp_i = [nuUp[1]; nuUp; nuUp[end]]

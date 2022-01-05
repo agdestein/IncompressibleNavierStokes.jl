@@ -4,9 +4,9 @@
 Get vorticity from velocity field.
 """
 function get_vorticity(V, t, setup)
-    @unpack bc = setup
-    @unpack Nx, Ny = setup.grid
-    @unpack Wv_vx, Wu_uy = setup.discretization
+    (; bc) = setup
+    (; Nx, Ny) = setup.grid
+    (; Wv_vx, Wu_uy) = setup.discretization
     Wv_vx, Wu_uy
 
     Nωx = bc.u.x[1] == :periodic ? Nx + 1 : Nx - 1
@@ -23,8 +23,8 @@ Compute vorticity values at pressure midpoints.
 This should be consistent with `operator_postprocessing.jl`.
 """
 function vorticity!(ω, V, t, setup)
-    @unpack indu, indv, Nux_in, Nvy_in, Nx, Ny = setup.grid
-    @unpack Wv_vx, Wu_uy = setup.discretization
+    (; indu, indv, Nux_in, Nvy_in, Nx, Ny) = setup.grid
+    (; Wv_vx, Wu_uy) = setup.discretization
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]

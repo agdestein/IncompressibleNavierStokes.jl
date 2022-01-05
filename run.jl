@@ -1,9 +1,17 @@
-using IncompressibleNavierStokes
 using GLMakie
 
+# LSP indexing solution from
+# https://github.com/julia-vscode/julia-vscode/issues/800#issuecomment-650085983
+if isdefined(@__MODULE__, :LanguageServer)
+    include("src/IncompressibleNavierStokes.jl")
+    using .IncompressibleNavierStokes
+else
+    using IncompressibleNavierStokes
+end
+
 ## Load input parameters and constants
-# case_name = "LDC"
-case_name = "BFS"
+case_name = "LDC"
+# case_name = "BFS"
 # case_name = "TG"
 include("case_files/$case_name.jl")
 setup = eval(:($(Symbol(case_name))()));
@@ -18,12 +26,6 @@ problem = setup.case.problem;
 
 ## Plot tracers
 plot_tracers(setup);
-
-##
-@time V, p = solve(problem, setup, V, p);
-
-##
-@profview V, p = solve(problem, setup, V₀, p₀);
 
 ## Post-process
 plot_pressure(setup, p)

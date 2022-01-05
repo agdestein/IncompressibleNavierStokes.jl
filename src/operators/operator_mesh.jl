@@ -1,6 +1,6 @@
 function operator_mesh!(setup)
-    @unpack bc = setup
-    @unpack Nx, Ny, Nz, x, y, z, hx, hy, hz, gx, gy, gz, xp, yp, zp = setup.grid
+    (; bc) = setup
+    (; Nx, Ny, Nz, x, y, z, hx, hy, hz, gx, gy, gz, xp, yp, zp) = setup.grid
 
     # Number of pressure points
     Npx = Nx

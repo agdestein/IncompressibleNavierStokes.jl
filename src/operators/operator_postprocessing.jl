@@ -5,10 +5,10 @@ Construct postprocessing operators such as vorticity.
 """
 function operator_postprocessing!(setup)
     # Boundary conditions
-    @unpack bc = setup
-    @unpack Nx, Ny = setup.grid
-    @unpack hx, hy, gx, gy = setup.grid
-    @unpack gxi, gyi, gxd, gyd = setup.grid
+    (; bc) = setup
+    (; Nx, Ny) = setup.grid
+    (; gx, gy) = setup.grid
+    (; gxd, gyd) = setup.grid
 
     # FIXME: 3D implementation
 

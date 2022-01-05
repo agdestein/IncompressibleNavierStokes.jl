@@ -2,8 +2,8 @@
 Plot streamfunction.
 """
 function plot_streamfunction(setup, V, t)
-    @unpack bc = setup
-    @unpack Nx, Ny, x, y, xlims, ylims = setup.grid
+    (; bc) = setup
+    (; Nx, Ny, x, y, xlims, ylims) = setup.grid
 
     if bc.u.x[1] == :periodic
         xψ = x

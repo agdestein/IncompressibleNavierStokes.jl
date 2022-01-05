@@ -4,7 +4,7 @@
 Convenience function for initializing arrays `c` and `∇c` before filling in convection terms.
 """
 function convection(V, ϕ, t, setup; getJacobian = false)
-    @unpack NV = setup.grid
+    (; NV) = setup.grid
 
     cache = MomentumCache(setup)
     c = zeros(NV)
@@ -20,12 +20,12 @@ Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`.
 The convected quantity is `ϕ` (usually `ϕ = V`).
 """
 function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
-    @unpack order4 = setup.discretization
-    @unpack regularization = setup.case
-    @unpack α = setup.discretization
-    @unpack indu, indv, indw = setup.grid
-    @unpack Newton_factor = setup.solver_settings
-    @unpack c2, ∇c2, c3, ∇c3 = cache
+    (; order4) = setup.discretization
+    (; regularization) = setup.case
+    (; α) = setup.discretization
+    (; indu, indv, indw) = setup.grid
+    (; Newton_factor) = setup.solver_settings
+    (; c2, ∇c2, c3, ∇c3) = cache
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -131,25 +131,25 @@ end
 Compute convection components.
 """
 function convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian = false, order4 = false)
-    @unpack Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz  = setup.discretization
-    @unpack Au_ux, Au_uy, Au_uz = setup.discretization
-    @unpack Av_vx, Av_vy, Av_vz = setup.discretization
-    @unpack Aw_wx, Aw_wy, Aw_wz = setup.discretization
-    @unpack yAu_ux, yAu_uy, yAu_uz = setup.discretization
-    @unpack yAv_vx, yAv_vy, yAv_vz = setup.discretization
-    @unpack yAw_wx, yAw_wy, yAw_wz = setup.discretization
-    @unpack Iu_ux, Iv_uy, Iw_uz = setup.discretization
-    @unpack Iu_vx, Iv_vy, Iw_vz = setup.discretization
-    @unpack Iu_wx, Iv_wy, Iw_wz = setup.discretization
-    @unpack yIu_ux, yIv_uy, yIw_uz = setup.discretization
-    @unpack yIu_vx, yIv_vy, yIw_vz = setup.discretization
-    @unpack yIu_wx, yIv_wy, yIw_wz = setup.discretization
-    @unpack indu, indv, indw = setup.grid
-    @unpack Newton_factor = setup.solver_settings
-    @unpack u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy = cache
-    @unpack v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy = cache
-    @unpack ∂uū∂x, ∂uv̄∂y, ∂vū∂x, ∂vv̄∂y = cache
-    @unpack Conv_ux_11, Conv_uy_11, Conv_uy_12, Conv_vx_21, Conv_vx_22, Conv_vy_22 = cache
+    (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz ) = setup.discretization
+    (; Au_ux, Au_uy, Au_uz) = setup.discretization
+    (; Av_vx, Av_vy, Av_vz) = setup.discretization
+    (; Aw_wx, Aw_wy, Aw_wz) = setup.discretization
+    (; yAu_ux, yAu_uy, yAu_uz) = setup.discretization
+    (; yAv_vx, yAv_vy, yAv_vz) = setup.discretization
+    (; yAw_wx, yAw_wy, yAw_wz) = setup.discretization
+    (; Iu_ux, Iv_uy, Iw_uz) = setup.discretization
+    (; Iu_vx, Iv_vy, Iw_vz) = setup.discretization
+    (; Iu_wx, Iv_wy, Iw_wz) = setup.discretization
+    (; yIu_ux, yIv_uy, yIw_uz) = setup.discretization
+    (; yIu_vx, yIv_vy, yIw_vz) = setup.discretization
+    (; yIu_wx, yIv_wy, yIw_wz) = setup.discretization
+    (; indu, indv, indw) = setup.grid
+    (; Newton_factor) = setup.solver_settings
+    (; u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy) = cache
+    (; v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy) = cache
+    (; ∂uū∂x, ∂uv̄∂y, ∂vū∂x, ∂vv̄∂y) = cache
+    (; Conv_ux_11, Conv_uy_11, Conv_uy_12, Conv_vx_21, Conv_vx_22, Conv_vy_22) = cache
 
     cu = @view c[indu]
     cv = @view c[indv]

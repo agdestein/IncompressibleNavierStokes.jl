@@ -6,11 +6,11 @@ Perform one time step for the general explicit Runge-Kutta method (ERK).
 Dirichlet boundary points are not part of solution vector but are prescribed in a strong manner via the `u_bc` and `v_bc` functions.
 """
 function step!(stepper::ExplicitRungeKuttaStepper, Δt)
-    @unpack V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper
-    @unpack Nu, Nv, Np, Ω⁻¹ = setup.grid
-    @unpack G, M, yM = setup.discretization
-    @unpack pressure_solver = setup.solver_settings
-    @unpack kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f, A, b, c = cache
+    (; V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
+    (; Ω⁻¹) = setup.grid
+    (; G, M, yM) = setup.discretization
+    (; pressure_solver) = setup.solver_settings
+    (; kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f, A, b, c) = cache
 
     # Update current solution (does not depend on previous step size)
     stepper.n += 1
@@ -56,14 +56,14 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt)
         tᵢ = tₙ + c[i] * Δtₙ
         if setup.bc.bc_unsteady
             set_bc_vectors!(setup, tᵢ)
-            @unpack yM = setup.discretization
+            (; yM) = setup.discretization
         end
 
         # Divergence of intermediate velocity field
         @. Vtemp2 = Vₙ / Δtₙ + Vtemp
         mul!(f, M, Vtemp2)
         @. f = (f + yM / Δtₙ) / c[i]
-        # F = (M * (Vₙ / Δtₙ + Vtemp) + yM / Δtₙ) / c[i]
+        # f = (M * (Vₙ / Δtₙ + Vtemp) + yM / Δtₙ) / c[i]
 
         # Solve the Poisson equation, but not for the first step if the boundary conditions are steady
         if setup.bc.bc_unsteady || i > 1

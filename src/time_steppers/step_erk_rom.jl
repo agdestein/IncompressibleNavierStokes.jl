@@ -6,10 +6,10 @@ Perform one time step for the general explicit Runge-Kutta method (ERK) with Red
 function step_erk_rom!(stepper::ExplicitRungeKuttaStepper, Δt)
 # function step_ERK_ROM(Vₙ, pₙ, tₙ, Δt, setup)
     # Number of unknowns (modes) in ROM
-    @unpack M = setup.rom
+    (; M) = setup.rom
 
-    @unpack V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper
-    @unpack kV, kp, Vtemp, Vtemp2, F, ∇F, f, A, b, c = cache
+    (; V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
+    (; kV, kp, Vtemp, Vtemp2, F, ∇F, f, A, b, c) = cache
 
     # Update current solution (does not depend on previous step size)
     stepper.n += 1

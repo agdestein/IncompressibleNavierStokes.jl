@@ -7,14 +7,14 @@ Unsteady Dirichlet boundary points are not part of solution vector but
 are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
 """
 function step!(stepper::ImplicitRungeKuttaStepper, Δt)
-    @unpack V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper
-    @unpack Nu, Nv, NV, Np, Ω, Ω⁻¹ = setup.grid
-    @unpack G, M = setup.discretization
-    @unpack pressure_solver, nonlinear_maxit, nonlinear_acc, nonlinear_Newton, p_add_solve =
+    (; V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
+    (; Nu, Nv, NV, Np, Ω, Ω⁻¹) = setup.grid
+    (; G, M) = setup.discretization
+    (; pressure_solver, nonlinear_maxit, nonlinear_acc, nonlinear_Newton, p_add_solve) =
         setup.solver_settings
-    @unpack Vtotₙ, ptotₙ, Qⱼ, Fⱼ, ∇Fⱼ, fⱼ, F, ∇F, f, Δp, Gp = cache
-    @unpack Gtot, Mtot, yMtot, Ωtot, dfmom, Z = cache
-    @unpack A, b, c, Is, Ω_sNV, A_ext, b_ext = cache
+    (; Vtotₙ, ptotₙ, Qⱼ, Fⱼ, ∇Fⱼ, fⱼ, F, ∇F, f, Δp, Gp) = cache
+    (; Gtot, Mtot, yMtot, Ωtot, dfmom, Z) = cache
+    (; A, b, c, Is, Ω_sNV, A_ext, b_ext) = cache
 
     is_patterned = stepper.n > 1
 
@@ -45,7 +45,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
             # Modify `yM`
             tᵢ = tⱼ[i]
             set_bc_vectors!(setup, tᵢ)
-            @unpack yM = setup.discretization
+            (; yM) = setup.discretization
         end
         yMtot_mat[:, i] .= yM
     end
@@ -164,7 +164,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     if setup.bc.bc_unsteady
         # Allocates new yM
         set_bc_vectors!(setup, tₙ + Δtₙ)
-        @unpack yM = setup.discretization
+        (; yM) = setup.discretization
         f .= yM
         mul!(f, M, V, 1 / Δtₙ, 1 / Δtₙ)
         # f .= 1 / Δtₙ .* (M * V .+ yM)
@@ -211,8 +211,8 @@ function momentum_allstage!(
     momentum_cache;
     getJacobian = false,
 )
-    @unpack Nu, Nv, NV, Np = setup.grid
-    @unpack c, ∇F = cache
+    (; Nu, Nv, NV, Np) = setup.grid
+    (; c, ∇F) = cache
 
     for i = 1:length(c)
         # Indices for current stage

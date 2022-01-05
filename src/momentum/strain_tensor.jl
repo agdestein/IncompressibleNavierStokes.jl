@@ -4,13 +4,13 @@
 Evaluate rate of strain tensor `S(V)` and its magnitude.
 """
 function strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
-    @unpack Nx, Ny, Nu, Nv, Np, indu, indv = setup.grid
-    @unpack Nux_in, Nuy_in, Nvx_in, Nvy_in, = setup.grid
-    @unpack x, y, xp, yp = setup.grid
-    @unpack Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy = setup.discretization
-    @unpack ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy = setup.discretization
-    @unpack Cux_k, Cuy_k, Cvx_k, Cvy_k, Auy_k, Avx_k = setup.discretization
-    @unpack yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k = setup.discretization
+    (; Nx, Ny, Nu, Nv, Np, indu, indv) = setup.grid
+    (; Nux_in, Nuy_in, Nvx_in, Nvy_in,) = setup.grid
+    (; x, y, xp, yp) = setup.grid
+    (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.discretization
+    (; ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy) = setup.discretization
+    (; Cux_k, Cuy_k, Cvx_k, Cvy_k, Auy_k, Avx_k) = setup.discretization
+    (; yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k) = setup.discretization
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]

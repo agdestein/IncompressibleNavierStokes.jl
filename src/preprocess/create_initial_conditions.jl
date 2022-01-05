@@ -4,10 +4,10 @@
 Create initial vectors.
 """
 function create_initial_conditions(setup)
-    @unpack problem = setup.case
-    @unpack xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp = setup.grid
-    @unpack Ω⁻¹, NV = setup.grid
-    @unpack pressure_solver = setup.solver_settings
+    (; problem) = setup.case
+    (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp) = setup.grid
+    (; Ω⁻¹) = setup.grid
+    (; pressure_solver) = setup.solver_settings
 
     t = setup.time.t_start
 
@@ -34,7 +34,7 @@ function create_initial_conditions(setup)
         @warn "Initial velocity field not (discretely) divergence free: $maxdiv. Performing additional projection."
 
         # Make velocity field divergence free
-        @unpack G, M, yM = setup.discretization
+        (; G, M, yM) = setup.discretization
         f = M * V + yM
         Δp = pressure_poisson(pressure_solver, f, t, setup)
         V .-= Ω⁻¹ .* (G * Δp)
@@ -43,15 +43,10 @@ function create_initial_conditions(setup)
     # Initial pressure: should in principle NOT be prescribed (will be calculated if p_initial)
     p .= setup.case.initial_pressure.(xpp, ypp, zpp)
     p = p[:]
-    if is_steady(problem)
-        # For steady state computations, the initial guess is the provided initial condition
-    else
-        if setup.solver_settings.p_initial
-            # Calculate initial pressure from a Poisson equation
-            pressure_additional_solve!(V, p, t, setup)
-        else
-            # Use provided initial condition (not recommended)
-        end
+
+    # For steady state computations, the initial guess is the provided initial condition
+    if !is_steady(problem) && setup.solver_settings.p_initial
+        pressure_additional_solve!(V, p, t, setup)
     end
 
     V, p, t

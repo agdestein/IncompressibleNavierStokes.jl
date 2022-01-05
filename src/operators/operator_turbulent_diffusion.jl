@@ -7,11 +7,11 @@ Average (turbulent) viscosity to cell faces: from `ν` at `xp`, `yp` to `ν` at 
 See also `ke_viscosity.jl`.
 """
 function operator_turbulent_diffusion!(setup)
-    @unpack bc = setup
-    @unpack Npx, Npy = setup.grid
-    @unpack Nux_in, Nuy_in, Nvx_in, Nvy_in = setup.grid
-    @unpack hx, hy, gx, gy, gxd, gyd = setup.grid
-    @unpack Buvy, Bvux, Bkux, Bkvy = setup.grid
+    (; bc) = setup
+    (; Npx, Npy) = setup.grid
+    (; Nux_in, Nuy_in, Nvx_in, Nvy_in) = setup.grid
+    (; hx, hy, gxd, gyd) = setup.grid
+    (; Buvy, Bvux, Bkux, Bkvy) = setup.grid
 
     # FIXME: 3D implementation
 

@@ -2,7 +2,7 @@
 Plot pressure.
 """
 function plot_pressure(setup, p)
-    @unpack Nx, Ny, Npx, Npy, xp, yp, xlims, ylims = setup.grid
+    (; Nx, Ny, Npx, Npy, xp, yp, xlims, ylims) = setup.grid
 
     # Reshape
     pres = reshape(p, Npx, Npy)
