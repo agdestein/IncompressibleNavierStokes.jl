@@ -20,8 +20,6 @@ function operator_divergence!(setup)
     mat_hy = spdiagm(hy)
     mat_hz = spdiagm(hz)
 
-    # For fourth order: mat_hx3 is defined in operator_interpolation
-
     ## Mx
     # Building blocks consisting of diagonal matrices where the diagonal is
     # Equal to constant per block (hy(block)) and changing for next block to

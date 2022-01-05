@@ -37,63 +37,63 @@ function LDC()
     grid = create_grid(
         T,
         N;
-        Nx = 80,               # Number of x-volumes
-        Ny = 80,               # Number of y-volumes
-        Nz = 80,               # Number of z-volumes
+        Nx = 25,                      # Number of x-volumes
+        Ny = 25,                      # Number of y-volumes
+        Nz = 10,                      # Number of z-volumes
         xlims = (0, 1),               # Horizontal limits (left, right)
         ylims = (0, 1),               # Vertical limits (bottom, top)
-        zlims = (0, 1),               # Depth limits (back, front)
+        zlims = (-0.2, 0.2),          # Depth limits (back, front)
         stretch = (1, 1, 1),          # Stretch factor (sx, sy[, sz])
     )
     # Discretization parameters
     discretization = Operators{T}(;
         order4 = false,               # Use 4th order in space (otherwise 2nd order)
-        α = 81,               # Richardson extrapolation factor = 3^4
-        β = 9 / 8,               # Interpolation factor
+        α = 81,                       # Richardson extrapolation factor = 3^4
+        β = 9 / 8,                    # Interpolation factor
     )
 
     # Rom parameters
     rom = ROM(;
-        use_rom = false,     # Use reduced order model
-        rom_type = "POD",     # "POD", "Fourier"
-        M = 10,     # Number of ROM velocity modes
-        Mp = 10,     # Number of ROM pressure modes
-        precompute_convection = true,     # Precomputed convection matrices
-        precompute_diffusion = true,     # Precomputed diffusion matrices
-        precompute_force = true,     # Precomputed forcing term
-        t_snapshots = 0,     # Snapshots
-        Δt_snapshots = false,     # Gap between snapshots
-        mom_cons = false,     # Momentum conserving SVD
+        use_rom = false,                       # Use reduced order model
+        rom_type = "POD",                      # "POD", "Fourier"
+        M = 10,                                # Number of ROM velocity modes
+        Mp = 10,                               # Number of ROM pressure modes
+        precompute_convection = true,          # Precomputed convection matrices
+        precompute_diffusion = true,           # Precomputed diffusion matrices
+        precompute_force = true,               # Precomputed forcing term
+        t_snapshots = 0,                       # Snapshots
+        Δt_snapshots = false,                  # Gap between snapshots
+        mom_cons = false,                      # Momentum conserving SVD
         # ROM boundary constitions:
         # 0: homogeneous (no-slip = periodic)
         # 1: non-homogeneous = time-independent
         # 2: non-homogeneous = time-dependent
         rom_bc = 0,
-        weighted_norm = true,  # Using finite volumes as weights
-        pressure_recovery = false,  # Compute pressure with PPE-ROM
-        pressure_precompute = 0,  # Recover pressure with FOM (0) or ROM (1)
-        subtract_pressure_mean = false,  # Subtract pressure mean from snapshots
-        process_iteration_FOM = true,  # FOM divergence, residuals, and kinetic energy
-        basis_type = "default",  # "default", "svd", "direct", "snapshot"
+        weighted_norm = true,                  # Using finite volumes as weights
+        pressure_recovery = false,             # Compute pressure with PPE-ROM
+        pressure_precompute = 0,               # Recover pressure with FOM (0) or ROM (1)
+        subtract_pressure_mean = false,        # Subtract pressure mean from snapshots
+        process_iteration_FOM = true,          # FOM divergence, residuals, and kinetic energy
+        basis_type = "default",                # "default", "svd", "direct", "snapshot"
     )
 
     # Immersed boundary method
-    ibm = IBM(; use_ibm = false)      # Use immersed boundary method
+    ibm = IBM(; use_ibm = false)               # Use immersed boundary method
 
     # Time stepping
     time = Time{T}(;
-        t_start = 0,   # Start time
-        t_end = 10.0,   # End time
-        Δt = 0.02,   # Timestep
-        method = RK44(),   # ODE method
-        # method = RIA2(),                    # ODE method
+        t_start = 0,                           # Start time
+        t_end = 10.0,                          # End time
+        Δt = 0.02,                             # Timestep
+        method = RK44(),                       # ODE method
+        # method = RIA2(),                       # ODE method
         # method = AdamsBashforthCrankNicolsonMethod(), # ODE method
-        # method = OneLegMethod(),            # ODE method
-        method_startup = RK44(),          # Startup method for methods that are not self-starting
-        nstartup = 2,          # Number of necessary Vₙ₋ᵢ (= method order)
-        isadaptive = false,          # Adapt timestep every n_adapt_Δt iterations
-        n_adapt_Δt = 1,          # Number of iterations between timestep adjustment
-        CFL = 0.5,          # CFL number for adaptive methods
+        # method = OneLegMethod(),               # ODE method
+        method_startup = RK44(),               # Startup method for methods that are not self-starting
+        nstartup = 2,                          # Number of necessary Vₙ₋ᵢ (= method order)
+        isadaptive = false,                    # Adapt timestep every n_adapt_Δt iterations
+        n_adapt_Δt = 1,                        # Number of iterations between timestep adjustment
+        CFL = 0.5,                             # CFL number for adaptive methods
     )
 
     # Solver settings
@@ -149,9 +149,9 @@ function LDC()
             z = (:dirichlet, :dirichlet),
         ),
     )
-    u_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? one(y) : zero(y)
+    u_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? 1.0 : 0.0
     v_bc(x, y, z, t, setup) = zero(x)
-    w_bc(x, y, z, t, setup) = zero(x)
+    w_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? 0.2 : 0.0
     bc = create_boundary_conditions(T; bc_unsteady, bc_type, u_bc, v_bc, w_bc)
 
     # Initial conditions
@@ -160,7 +160,7 @@ function LDC()
     initial_velocity_w(x, y, z) = 0
     initial_pressure(x, y, z) = 0
     @pack! case =
-        initial_velocity_u, initial_velocity_v, intitial_velocity_w, initial_pressure
+        initial_velocity_u, initial_velocity_v, initial_velocity_w, initial_pressure
 
     # Forcing parameters
     bodyforce_u(x, y, z) = 0
