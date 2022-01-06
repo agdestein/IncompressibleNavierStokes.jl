@@ -4,8 +4,8 @@
 Build discrete operators.
 """
 function build_operators!(setup)
-    @unpack model = setup
-    @unpack regularization = setup.case
+    (; model) = setup
+    (; regularization) = setup.case
 
     # Mesh
     operator_mesh!(setup)
@@ -28,9 +28,7 @@ function build_operators!(setup)
     # Turbulence
 
     # Regularization modelling - this changes the convective term
-    if regularization != "no"
-        operator_regularization!(setup)
-    end
+    regularization == "no" || operator_regularization!(setup)
 
     # Classical turbulence modelling via the diffusive term
     operator_viscosity!(model, setup)

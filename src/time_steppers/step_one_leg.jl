@@ -9,12 +9,12 @@ Formulation:
 ``\\frac{(\\beta + 1/2) u^{n+1} - 2 \\beta u^{n} + (\\beta - 1/2) u^{n-1}}{\\Delta t} = F((1 + \\beta) u^n - \\beta u^{n-1})``
 """
 function step!(stepper::OneLegStepper, Δt)
-    @unpack method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache = stepper
-    @unpack β = method
-    @unpack G, M, yM = setup.discretization
-    @unpack pressure_solver, p_add_solve = setup.solver_settings
-    @unpack Ω⁻¹ = setup.grid
-    @unpack Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp = cache
+    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
+    (; β) = method
+    (; G, M, yM) = setup.operators
+    (; pressure_solver, p_add_solve) = setup.solver_settings
+    (; Ω⁻¹) = setup.grid
+    (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache
 
     Δt ≈ Δtₙ || error("One-leg-β-method requires constant time step")
 

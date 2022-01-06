@@ -4,7 +4,7 @@
 Convenience function for initializing arrays `F` and `∇F` before filling in momentum terms.
 """
 function momentum(V, ϕ, p, t, setup; getJacobian = false, nopressure = false)
-    @unpack NV = setup.grid
+    (; NV) = setup.grid
 
     cache = MomentumCache(setup)
     F = zeros(NV)
@@ -29,11 +29,11 @@ function momentum!(
     getJacobian = false,
     nopressure = false,
 )
-    @unpack NV = setup.grid
-    @unpack G, y_p = setup.discretization
+    (; NV) = setup.grid
+    (; G, y_p) = setup.operators
 
     # Store intermediate results in temporary variables
-    @unpack c, ∇c, d, ∇d, b, ∇b, Gp = cache
+    (; c, ∇c, d, ∇d, b, ∇b, Gp) = cache
 
     # Unsteady BC
     if setup.bc.bc_unsteady

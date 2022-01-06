@@ -6,7 +6,7 @@ Nonuniform cartesian grid of dimension `N` and floating point type `T`.
 Base.@kwdef mutable struct Grid{T, N}
     Nx::Int = 10                             # Number of x-volumes
     Ny::Int = 10                             # Number of y-volumes
-    Nz::Int = 0                              # Number of z-volumes (if any)
+    Nz::Int = 1                              # Number of z-volumes (if any)
     xlims::Tuple{T,T} = (0, 1)               # Horizontal limits (left, right)
     ylims::Tuple{T,T} = (0, 1)               # Vertical limits (bottom, top)
     zlims::Tuple{T,T} = (0, 1)               # Depth limits (back, front)
@@ -71,16 +71,6 @@ Base.@kwdef mutable struct Grid{T, N}
     Ωu⁻¹::Vector{T} = T[]
     Ωv⁻¹::Vector{T} = T[]
     Ωw⁻¹::Vector{T} = T[]
-    Ωux::Vector{T} = T[]
-    Ωuy::Vector{T} = T[]
-    Ωuz::Vector{T} = T[]
-    Ωvx::Vector{T} = T[]
-    Ωvy::Vector{T} = T[]
-    Ωvz::Vector{T} = T[]
-    Ωwx::Vector{T} = T[]
-    Ωwy::Vector{T} = T[]
-    Ωwz::Vector{T} = T[]
-    Ωvort::Vector{T} = T[]
 
     hx::Vector{T} = T[]
     hy::Vector{T} = T[]
@@ -102,27 +92,33 @@ Base.@kwdef mutable struct Grid{T, N}
     gzd::Vector{T} = T[]
 
     Buvy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Buwz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Bvux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Bvwz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Bwux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Bwvy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+
     Bkux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Bkvy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Bkwz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
     xin::Vector{T} = T[]
     yin::Vector{T} = T[]
     zin::Vector{T} = T[]
 
     # Separate grids for u, v, and p
-    xu::Matrix{T} = zeros(T, 0, 0)
-    xv::Matrix{T} = zeros(T, 0, 0)
-    xw::Matrix{T} = zeros(T, 0, 0)
-    yu::Matrix{T} = zeros(T, 0, 0)
-    yv::Matrix{T} = zeros(T, 0, 0)
-    yw::Matrix{T} = zeros(T, 0, 0)
-    zu::Matrix{T} = zeros(T, 0, 0)
-    zv::Matrix{T} = zeros(T, 0, 0)
-    zw::Matrix{T} = zeros(T, 0, 0)
-    xpp::Matrix{T} = zeros(T, 0, 0)
-    ypp::Matrix{T} = zeros(T, 0, 0)
-    zpp::Matrix{T} = zeros(T, 0, 0)
+    xu::Array{T,N} = zeros(T, fill(0, N)...)
+    xv::Array{T,N} = zeros(T, fill(0, N)...)
+    xw::Array{T,N} = zeros(T, fill(0, N)...)
+    yu::Array{T,N} = zeros(T, fill(0, N)...)
+    yv::Array{T,N} = zeros(T, fill(0, N)...)
+    yw::Array{T,N} = zeros(T, fill(0, N)...)
+    zu::Array{T,N} = zeros(T, fill(0, N)...)
+    zv::Array{T,N} = zeros(T, fill(0, N)...)
+    zw::Array{T,N} = zeros(T, fill(0, N)...)
+    xpp::Array{T,N} = zeros(T, fill(0, N)...)
+    ypp::Array{T,N} = zeros(T, fill(0, N)...)
+    zpp::Array{T,N} = zeros(T, fill(0, N)...)
 
     # Ranges
     indu::UnitRange{Int} = 0:0

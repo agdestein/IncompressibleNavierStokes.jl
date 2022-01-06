@@ -4,22 +4,18 @@
 Construct postprocessing operators such as vorticity.
 """
 function operator_postprocessing!(setup)
-
     # Boundary conditions
-    @unpack bc = setup
-    @unpack Nx, Ny = setup.grid
-    @unpack hx, hy, gx, gy = setup.grid
-    @unpack gxi, gyi, gxd, gyd = setup.grid
-    @unpack order4 = setup.discretization
+    (; bc) = setup
+    (; Nx, Ny) = setup.grid
+    (; gx, gy) = setup.grid
+    (; gxd, gyd) = setup.grid
 
-    if order4
-        @unpack α, β, gxi3, gyi3, Ωvort3 = setup.grid
-    end
+    # FIXME: 3D implementation
 
     ## Vorticity
 
     # Operators act on internal points only
-    #
+
     # Du/dy, like Su_uy
     diag1 = 1 ./ gy[2:end-1]
     W1D = spdiagm(Ny - 1, Ny, 0 => -diag1, 1 => diag1)
@@ -63,7 +59,7 @@ function operator_postprocessing!(setup)
         Wv_vx = kron(spdiagm(Ny + 1, Ny, -Ny => diag2[[1]], 0 => diag2), W1D)
     end
 
-    @pack! setup.discretization = Wv_vx, Wu_uy
+    @pack! setup.operators = Wv_vx, Wu_uy
 
     setup
 end

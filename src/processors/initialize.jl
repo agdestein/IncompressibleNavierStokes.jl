@@ -4,27 +4,21 @@
 Initialize processor.
 """
 function initialize!(logger::Logger, stepper)
-    @unpack V, p, t, setup, cache, momentum_cache = stepper
-    @unpack t_start, t_end, Δt = setup.time
-    @unpack F = cache
+    (; V, p, t, setup, cache, momentum_cache) = stepper
+    (; t_start, t_end, Δt) = setup.time
+    (; F) = cache
 
     # Estimate number of time steps that will be taken
     nt = ceil(Int, (t_end - t_start) / Δt)
-
-    momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
-    maxres = maximum(abs.(F))
-
-    println("n = $(stepper.n), t = $t, maxres = $maxres")
-    # println("t = $t")
 
     logger
 end
 
 function initialize!(plotter::RealTimePlotter, stepper)
-    @unpack V, p, t, setup = stepper
-    @unpack bc = setup
-    @unpack xlims, ylims, Nx, Ny, x, y, xp, yp = setup.grid
-    @unpack fieldname = plotter
+    (; V, p, t, setup) = stepper
+    (; bc) = setup
+    (; xlims, ylims, Nx, Ny, x, y, xp, yp) = setup.grid
+    (; fieldname) = plotter
 
     Lx = xlims[2] - xlims[1]
     Ly = ylims[2] - ylims[1]
@@ -38,7 +32,7 @@ function initialize!(plotter::RealTimePlotter, stepper)
 
     fig = Figure(resolution = (refsize * Lx / (Lx + Ly), refsize * Ly / (Lx + Ly) + 100))
     if fieldname == :velocity
-        up, vp, qp = get_velocity(V, t, setup)
+        up, vp, wp, qp = get_velocity(V, t, setup)
         vel = Node(qp)
         ax, hm = contourf(fig[1, 1], xp, yp, vel)
         field = vel
@@ -93,10 +87,11 @@ function initialize!(plotter::RealTimePlotter, stepper)
 end
 
 function initialize!(writer::VTKWriter, stepper)
-    @unpack dir, filename = writer
-    isdir(dir) || mkdir(dir);
+    (; dir, filename) = writer
+    ispath(dir) || mkpath(dir);
     pvd = paraview_collection(joinpath(dir, filename))
     @pack! writer = pvd
-
     writer
 end
+
+initialize!(tracer::QuantityTracer, stepper) = tracer

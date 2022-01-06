@@ -7,11 +7,11 @@ Check symmetry of convection operator.
 `flag = 1`: symmetry error
 """
 function check_symmetry(V, t, setup, ϵ = 1e-14)
-    @unpack indu, indv = setup.grid
-    @unpack Cux, Cuy, Cvx, Cvy = setup.discretization
-    @unpack Au_ux, Au_uy, Av_vx, Av_vy = setup.discretization
-    @unpack Iu_ux, Iv_uy, Iu_vx, Iv_vy = setup.discretization
-    @unpack yIu_ux, yIv_uy, yIu_vx, yIv_vy = setup.discretization
+    (; indu, indv) = setup.grid
+    (; Cux, Cuy, Cvx, Cvy) = setup.operators
+    (; Au_ux, Au_uy, Av_vx, Av_vy) = setup.operators
+    (; Iu_ux, Iv_uy, Iu_vx, Iv_vy) = setup.operators
+    (; yIu_ux, yIv_uy, yIu_vx, yIv_vy) = setup.operators
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]

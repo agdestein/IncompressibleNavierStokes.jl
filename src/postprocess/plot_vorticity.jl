@@ -4,8 +4,8 @@
 Plot vorticity field.
 """
 function plot_vorticity(setup, V, t)
-    @unpack bc = setup
-    @unpack Nx, Ny, Nu, Nv, x, y, xlims, ylims = setup.grid
+    (; bc) = setup
+    (; Nx, Ny, Nu, Nv, x, y, xlims, ylims) = setup.grid
 
     # Reshape
     uₕ = @view V[1:Nu]

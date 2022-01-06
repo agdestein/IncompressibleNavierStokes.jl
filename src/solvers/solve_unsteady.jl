@@ -5,9 +5,8 @@ Solve `unsteady_problem`.
 """
 function solve(::UnsteadyProblem, setup, V₀, p₀)
     # Setup
-    @unpack model, processors = setup
-    @unpack use_rom = setup.rom
-    @unpack t_start, t_end, Δt, isadaptive, method, method_startup, nstartup = setup.time
+    (; processors) = setup
+    (; t_end, Δt, isadaptive, method, method_startup, nstartup) = setup.time
 
     # For methods that need a velocity field at n-1 the first time step
     # (e.g. AB-CN, oneleg beta) use ERK or IRK
@@ -26,6 +25,7 @@ function solve(::UnsteadyProblem, setup, V₀, p₀)
     # Processors for iteration results  
     for ps ∈ processors
         initialize!(ps, stepper)
+        process!(ps, stepper)
     end
 
     # record(fig, "output/vorticity.mp4", 1:nt; framerate = 60) do n
@@ -53,6 +53,6 @@ function solve(::UnsteadyProblem, setup, V₀, p₀)
 
     finalize!.(processors)
 
-    @unpack V, p = stepper
+    (; V, p) = stepper
     V, p
 end

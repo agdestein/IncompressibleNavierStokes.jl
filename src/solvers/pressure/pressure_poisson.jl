@@ -5,7 +5,7 @@ Convenience function for initializing the pressure vector `p` before
 calling `pressure_poisson!`.
 """
 function pressure_poisson(solver, f, t, setup)
-    @unpack Np = setup.grid
+    (; Np) = setup.grid
     p = zeros(Np)
     pressure_poisson!(solver, p, f, t, setup)
 end
@@ -27,14 +27,14 @@ end
 
 function pressure_poisson!(solver::CGPressureSolver, p, f, t, setup)
     # TODO: Preconditioner
-    @unpack A = setup.discretization
-    @unpack abstol, reltol, maxiter = solver
+    (; A) = setup.operators
+    (; abstol, reltol, maxiter) = solver
     cg!(p, A, f; abstol, reltol, maxiter)
 end
 
 function pressure_poisson!(solver::FourierPressureSolver, p, f, t, setup)
-    @unpack Npx, Npy = setup.grid
-    @unpack Â, f̂, p̂ = solver
+    (; Npx, Npy) = setup.grid
+    (; Â, f̂, p̂) = solver
 
     f̂[:] = f
 

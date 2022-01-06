@@ -1,4 +1,8 @@
-"Energy-conserving solvers for the incompressible Navier-Stokes equations."
+"""
+    IncompressibleNavierStokes
+
+Energy-conserving solvers for the incompressible Navier-Stokes equations.
+"""
 module IncompressibleNavierStokes
 
 using FFTW: fft!, ifft!
@@ -8,22 +12,12 @@ using LinearAlgebra: Diagonal, Factorization, UpperTriangular, I, cholesky, fact
 using SparseArrays: SparseMatrixCSC, blockdiag, nnz, sparse, spdiagm, spzeros
 using UnPack: @pack!, @unpack
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
-# Using Plots: contour, contourf, title!
-using Makie:
-    Axis,
-    Colorbar,
-    DataAspect,
-    Figure,
-    Node,
-    contour,
-    contour!,
-    contourf,
-    contourf!,
-    heatmap,
-    limits!,
-    lines!,
-    record,
-    save
+using Makie
+
+
+# Convenience notation
+const ⊗ = kron
+
 
 # Grid
 include("grid/grid.jl")
@@ -105,9 +99,6 @@ include("momentum/strain_tensor.jl")
 include("momentum/turbulent_K.jl")
 include("momentum/turbulent_viscosity.jl")
 
-# Reduced Order Model
-include("rom/momentum_rom.jl")
-
 # Solvers
 include("solvers/get_timestep.jl")
 include("solvers/solve.jl")
@@ -125,6 +116,7 @@ include("postprocess/get_streamfunction.jl")
 include("postprocess/plot_vorticity.jl")
 include("postprocess/plot_pressure.jl")
 include("postprocess/plot_streamfunction.jl")
+include("postprocess/plot_tracers.jl")
 
 # Reexport
 export @pack!, @unpack
@@ -139,25 +131,13 @@ export SteadyBodyForce, UnsteadyBodyForce
 export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
 
 # Processors
-export Logger, RealTimePlotter, VTKWriter
+export Logger, RealTimePlotter, VTKWriter, QuantityTracer
 
 # Problems
 export SteadyStateProblem, UnsteadyProblem, is_steady
 
 # Setup
-export Case,
-    Fluid,
-    Visc,
-    Grid,
-    Operators,
-    Force,
-    ROM,
-    IBM,
-    Time,
-    SolverSettings,
-    Visualization,
-    BC,
-    Setup
+export Case, Grid, Operators, Time, SolverSettings, BC, Setup
 
 # Spatial
 export nonuniform_grid
@@ -170,14 +150,12 @@ export create_boundary_conditions,
     build_operators!,
     create_initial_conditions,
     set_bc_vectors!,
-    force,
-    check_input!,
     solve,
     get_velocity
 
 export momentum!
 
-export postprocess, plot_pressure, plot_streamfunction, plot_vorticity
+export plot_pressure, plot_streamfunction, plot_vorticity, plot_tracers
 
 # ODE methods
 

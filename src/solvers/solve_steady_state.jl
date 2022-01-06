@@ -6,13 +6,11 @@ This saddlepoint system arises from linearization of the convective terms.
 """
 function solve(::SteadyStateProblem, setup, V₀, p₀)
     # Setup
-    @unpack model, processors = setup
-    @unpack problem = setup.case
-    @unpack Nu, Nv, NV, Np = setup.grid
-    @unpack G, M, yM = setup.discretization
-    @unpack Jacobian_type, nPicard, nonlinear_acc, nonlinear_maxit = setup.solver_settings
-    @unpack use_rom = setup.rom
-    @unpack t_start = setup.time
+    (; model, processors) = setup
+    (; NV, Np) = setup.grid
+    (; G, M, yM) = setup.operators
+    (; Jacobian_type, nPicard, nonlinear_acc, nonlinear_maxit) = setup.solver_settings
+    (; t_start) = setup.time
 
     # Temporary variables
     momentum_cache = MomentumCache(setup)

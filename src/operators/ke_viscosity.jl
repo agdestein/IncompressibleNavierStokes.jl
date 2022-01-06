@@ -4,10 +4,10 @@
 Average (turbulent) viscosity to cell faces
 """
 function ke_viscosity!(setup)
-    @unpack bc = setup
-	@unpack x, y, xp, yp, hx, hy = setup.grid
-    @unpack Nx, Ny, Npx, Npy, Nux_in, Nuy_in, Nvx_in, Nvy_in, Bvux, Buvy, Bkux, Bkvy = setup.grid
-    @unpack k, e, k_bc, e_bc = bc
+    (; bc) = setup
+	(; x, y, xp, yp, hx, hy) = setup.grid
+    (; Nx, Ny, Npx, Npy, Nux_in, Nuy_in, Nvx_in, Nvy_in, Bvux, Buvy, Bkux, Bkvy) = setup.grid
+    (; k_bc, e_bc) = bc
 
     kLe = fill(k_bc.x[1], Ny + 1)
     kRi = fill(k_bc.x[2], Ny + 1)

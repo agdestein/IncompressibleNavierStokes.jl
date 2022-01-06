@@ -80,11 +80,11 @@ Get time stepper cache for the given ODE method.
 function ode_method_cache end
 
 function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod, setup)
-    @unpack model = setup
-    @unpack NV, Np, Ω⁻¹ = setup.grid
-    @unpack Diff = setup.discretization
-    @unpack Δt = setup.time
-    @unpack θ = method
+    (; model) = setup
+    (; NV, Np, Ω⁻¹) = setup.grid
+    (; Diff) = setup.operators
+    (; Δt) = setup.time
+    (; θ) = method
 
     T = typeof(Δt)
 
@@ -106,7 +106,7 @@ function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod, setup)
         # Implicit time-stepping for diffusion
         # FIXME: This only works if Δt is constant
         # LU decomposition
-        Diff_fact = lu(sparse(I, NV, NV) - θ * Δt * Diagonal(Ω⁻¹) * Diff)
+        Diff_fact = lu(I(NV) - θ * Δt * Diagonal(Ω⁻¹) * Diff)
     else
         Diff_fact = cholesky(spzeros(0, 0))
     end
@@ -115,7 +115,7 @@ function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod, setup)
 end
 
 function ode_method_cache(::OneLegMethod, setup)
-    @unpack NV, Np = setup.grid
+    (; NV, Np) = setup.grid
     T = typeof(setup.time.Δt)
     Vₙ₋₁ = zeros(T, NV)
     pₙ₋₁ = zeros(T, Np)
@@ -130,7 +130,7 @@ function ode_method_cache(method::ExplicitRungeKuttaMethod, setup)
     # TODO: Decide where `T` is to be passed
     T = typeof(setup.time.Δt)
 
-    @unpack NV, Np = setup.grid
+    (; NV, Np) = setup.grid
 
     ns = nstage(method)
     kV = zeros(T, NV, ns)
@@ -143,7 +143,7 @@ function ode_method_cache(method::ExplicitRungeKuttaMethod, setup)
     Δp = zeros(T, Np)
 
     # Get coefficients of RK method
-    @unpack A, b, c = method
+    (; A, b, c) = method
 
     # Shift Butcher tableau, as A[1, :] is always zero for explicit methods
     A = [A[2:end, :]; b']
@@ -155,9 +155,9 @@ function ode_method_cache(method::ExplicitRungeKuttaMethod, setup)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod, setup)
-    @unpack NV, Np, Ω = setup.grid
-    @unpack G, M = setup.discretization
-    @unpack A, b, c = method
+    (; NV, Np, Ω) = setup.grid
+    (; G, M) = setup.operators
+    (; A, b, c) = method
 
     # TODO: Decide where `T` is to be passed
     T = typeof(setup.time.Δt)

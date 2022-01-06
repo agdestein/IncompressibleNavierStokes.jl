@@ -14,9 +14,10 @@ Base.@kwdef mutable struct CGPressureSolver{T} <: PressureSolver{T}
     maxiter::Int = 0
 end
 Base.@kwdef mutable struct FourierPressureSolver{T} <: PressureSolver{T}
-    Â::Matrix{Complex{T}} = zeros(Complex{T}, 0, 0)
-    p̂::Matrix{Complex{T}} = zeros(Complex{T}, 0, 0)
-    f̂::Matrix{Complex{T}} = zeros(Complex{T}, 0, 0)
+    # TODO: Pass dimensionality to create concrete types
+    Â::Array{Complex{T}} = zeros(Complex{T}, 0, 0)
+    p̂::Array{Complex{T}} = zeros(Complex{T}, 0, 0)
+    f̂::Array{Complex{T}} = zeros(Complex{T}, 0, 0)
 end
 
 """
@@ -32,29 +33,35 @@ initialize!(solver::CGPressureSolver, setup, A) =
 
 function initialize!(solver::FourierPressureSolver, setup, A)
     (; bc) = setup
-    (; hx, hy, Npx, Npy) = setup.grid
-    if any(!isequal(:periodic), [bc.v.y[1], bc.v.y[2], bc.u.x[1], bc.u.x[1]])
+    (; hx, hy, hz, Npx, Npy, Npz) = setup.grid
+    if any(!isequal((:periodic, :periodic)), [bc.u.x, bc.v.y, bc.w.z])
         error("FourierPressureSolver only implemented for periodic boundary conditions")
     end
-    if maximum(abs.(diff(hx))) > 1e-14 || maximum(abs.(diff(hy))) > 1e-14
+    if mapreduce(h -> maximum(abs.(diff(h))) > 1e-14, |, [hx, hy, hz])
         error("FourierPressureSolver requires uniform grid in each dimension")
     end
     Δx = hx[1]
     Δy = hy[1]
-    if any(!≈(Δx), hx) || any(!≈(Δy), hy)
+    Δz = hz[1]
+    if any(!≈(Δx), hx) || any(!≈(Δy), hy) || any(!≈(Δz), hz)
         error("FourierPressureSolver requires uniform grid along each dimension")
     end
 
     # Fourier transform of the discretization
     # Assuming uniform grid, although Δx, Δy and Δz do not need to be the same
     i = 0:(Npx-1)
-    j = 0:(Npy-1)
+    j = reshape(0:(Npy-1), 1, :)
+    k = reshape(0:(Npz-1), 1, 1, :)
 
-    # Scale with Δx*Δy*Δz, since we solve the PPE in integrated form
-    Â = @. 4 * Δx * Δy * (sin(i * π / Npx)^2 / Δx^2 + sin(j' * π / Npy)^2 / Δy^2)
+    # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
+    Â = @. 4 * Δx * Δy * Δz * (
+        sin(i * π / Npx)^2 / Δx^2 +
+        sin(j * π / Npy)^2 / Δy^2 +
+        sin(k * π / Npz)^2 / Δz^2
+    )
 
     # Pressure is determined up to constant, fix at 0
-    Â[1, 1] = 1
+    Â[1] = 1
 
     Â = complex(Â)
 

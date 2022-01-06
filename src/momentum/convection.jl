@@ -4,7 +4,7 @@
 Convenience function for initializing arrays `c` and `∇c` before filling in convection terms.
 """
 function convection(V, ϕ, t, setup; getJacobian = false)
-    @unpack NV = setup.grid
+    (; NV) = setup.grid
 
     cache = MomentumCache(setup)
     c = zeros(NV)
@@ -20,21 +20,24 @@ Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`.
 The convected quantity is `ϕ` (usually `ϕ = V`).
 """
 function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
-    @unpack order4 = setup.discretization
-    @unpack regularization = setup.case
-    @unpack α = setup.discretization
-    @unpack indu, indv = setup.grid
-    @unpack Newton_factor = setup.solver_settings
-    @unpack c2, ∇c2, c3, ∇c3 = cache
+    (; order4) = setup.operators
+    (; regularization) = setup.case
+    (; α) = setup.operators
+    (; indu, indv, indw) = setup.grid
+    (; Newton_factor) = setup.solver_settings
+    (; c2, ∇c2, c3, ∇c3) = cache
 
     cu = @view c[indu]
     cv = @view c[indv]
+    cw = @view c[indw]
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
+    wₕ = @view V[indw]
 
     ϕu = @view ϕ[indu]
     ϕv = @view ϕ[indv]
+    ϕw = @view ϕ[indw]
 
     if regularization == "no"
         # No regularization
@@ -51,8 +54,9 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
         # Filter the convecting field
         ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
         ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+        ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α)
 
-        ϕ̄ = [ϕ̄u; ϕ̄v]
+        ϕ̄ = [ϕ̄u; ϕ̄v; ϕ̄w]
 
         # Divergence of filtered velocity field; should be zero!
         maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
@@ -61,12 +65,14 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
     elseif regularization == "C2"
         ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
         ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+        ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α)
 
         ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
         v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
+        w̄ₕ = filter_convection(wₕ, Diffw_f, yDiffw_f, α)
 
-        ϕ̄ = [ϕ̄u; ϕ̄v]
-        V̄ = [ūₕ; v̄ₕ]
+        ϕ̄ = [ϕ̄u; ϕ̄v; ϕ̄w]
+        V̄ = [ūₕ; v̄ₕ; w̄ₕ]
 
         # Divergence of filtered velocity field; should be zero!
         maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
@@ -75,6 +81,7 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
 
         cu .= filter_convection(cu, Diffu_f, yDiffu_f, α)
         cv .= filter_convection(cv, Diffv_f, yDiffv_f, α)
+        cw .= filter_convection(cw, Diffw_f, yDiffw_f, α)
     elseif regularization == "C4"
         # C4 consists of 3 terms:
         # C4 = conv(filter(u), filter(u)) + filter(conv(filter(u), u') +
@@ -84,14 +91,16 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
         # Filter both convecting and convected velocity
         ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
         v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
+        w̄ₕ = filter_convection(wₕ, Diffw_f, yDiffw_f, α)
 
-        V̄ = [ūₕ; v̄ₕ]
+        V̄ = [ūₕ; v̄ₕ; w̄ₕ]
         ΔV = V - V̄
 
         ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
         ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+        ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α)
 
-        ϕ̄ = [ϕ̄u; ϕ̄v]
+        ϕ̄ = [ϕ̄u; ϕ̄v; ϕ̄w]
         Δϕ = ϕ - ϕ̄
 
         # Divergence of filtered velocity field; should be zero!
@@ -110,6 +119,7 @@ function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
 
         cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
         cv .+= filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α)
+        cw .+= filter_convection(cw2 + cw3, Diffw_f, yDiffw_f, α)
     end
 
     c, ∇c
@@ -121,55 +131,37 @@ end
 Compute convection components.
 """
 function convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian = false, order4 = false)
-    if order4
-        Cux = setup.discretization.Cux3
-        Cuy = setup.discretization.Cuy3
-        Cvx = setup.discretization.Cvx3
-        Cvy = setup.discretization.Cvy3
-
-        Au_ux = setup.discretization.Au_ux3
-        Au_uy = setup.discretization.Au_uy3
-        Av_vx = setup.discretization.Av_vx3
-        Av_vy = setup.discretization.Av_vy3
-
-        yAu_ux = setup.discretization.yAu_ux3
-        yAu_uy = setup.discretization.yAu_uy3
-        yAv_vx = setup.discretization.yAv_vx3
-        yAv_vy = setup.discretization.yAv_vy3
-
-        Iu_ux = setup.discretization.Iu_ux3
-        Iv_uy = setup.discretization.Iv_uy3
-        Iu_vx = setup.discretization.Iu_vx3
-        Iv_vy = setup.discretization.Iv_vy3
-
-        yIu_ux = setup.discretization.yIu_ux3
-        yIv_uy = setup.discretization.yIv_uy3
-        yIu_vx = setup.discretization.yIu_vx3
-        yIv_vy = setup.discretization.yIv_vy3
-    else
-        @unpack Cux, Cuy, Cvx, Cvy = setup.discretization
-        @unpack Au_ux, Au_uy, Av_vx, Av_vy = setup.discretization
-        @unpack yAu_ux, yAu_uy, yAv_vx, yAv_vy = setup.discretization
-        @unpack Iu_ux, Iv_uy, Iu_vx, Iv_vy = setup.discretization
-        @unpack yIu_ux, yIv_uy, yIu_vx, yIv_vy = setup.discretization
-    end
-
-    @unpack indu, indv = setup.grid
-    @unpack Newton_factor = setup.solver_settings
-
-    @unpack u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy = cache
-    @unpack v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy = cache
-    @unpack ∂uū∂x, ∂uv̄∂y, ∂vū∂x, ∂vv̄∂y = cache
-    @unpack Conv_ux_11, Conv_uy_11, Conv_uy_12, Conv_vx_21, Conv_vx_22, Conv_vy_22 = cache
+    (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz ) = setup.operators
+    (; Au_ux, Au_uy, Au_uz) = setup.operators
+    (; Av_vx, Av_vy, Av_vz) = setup.operators
+    (; Aw_wx, Aw_wy, Aw_wz) = setup.operators
+    (; yAu_ux, yAu_uy, yAu_uz) = setup.operators
+    (; yAv_vx, yAv_vy, yAv_vz) = setup.operators
+    (; yAw_wx, yAw_wy, yAw_wz) = setup.operators
+    (; Iu_ux, Iv_uy, Iw_uz) = setup.operators
+    (; Iu_vx, Iv_vy, Iw_vz) = setup.operators
+    (; Iu_wx, Iv_wy, Iw_wz) = setup.operators
+    (; yIu_ux, yIv_uy, yIw_uz) = setup.operators
+    (; yIu_vx, yIv_vy, yIw_vz) = setup.operators
+    (; yIu_wx, yIv_wy, yIw_wz) = setup.operators
+    (; indu, indv, indw) = setup.grid
+    (; Newton_factor) = setup.solver_settings
+    (; u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy) = cache
+    (; v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy) = cache
+    (; ∂uū∂x, ∂uv̄∂y, ∂vū∂x, ∂vv̄∂y) = cache
+    (; Conv_ux_11, Conv_uy_11, Conv_uy_12, Conv_vx_21, Conv_vx_22, Conv_vy_22) = cache
 
     cu = @view c[indu]
     cv = @view c[indv]
+    cw = @view c[indw]
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
+    wₕ = @view V[indw]
 
     ϕu = @view ϕ[indu]
     ϕv = @view ϕ[indv]
+    ϕw = @view ϕ[indw]
 
     # Convection components
     mul!(u_ux, Au_ux, uₕ)
@@ -202,24 +194,45 @@ function convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian = fals
     mul!(∂vū∂x, Cvx, vū_vx)
     mul!(∂vv̄∂y, Cvy, vv̄_vy)
 
-    # U_ux = Au_ux * uₕ + yAu_ux                # U at ux
-    # Ū_ux = Iu_ux * ϕu + yIu_ux                # Ū at ux
+    # u_ux = Au_ux * uₕ + yAu_ux                # u at ux
+    # ū_ux = Iu_ux * ϕu + yIu_ux                # ū at ux
     # ∂uū∂x = Cux * (u_ux .* ū_ux)
 
-    # U_uy = Au_uy * uₕ + yAu_uy                # U at uy
-    # V̄_uy = Iv_uy * ϕv + yIv_uy                # Ū at uy
+    # u_uy = Au_uy * uₕ + yAu_uy                # u at uy
+    # v̄_uy = Iv_uy * ϕv + yIv_uy                # v̄ at uy
     # ∂uv̄∂y = Cuy * (u_uy .* v̄_uy)
 
-    # V_vx = Av_vx * vₕ + yAv_vx                # V at vx
-    # Ū_vx = Iu_vx * ϕu + yIu_vx                # Ū at vx
+    u_uz = Au_uz * uₕ + yAu_uz                # u at uz
+    w̄_uz = Iw_uz * ϕw + yIw_uz                # ū at uz
+    ∂uw̄∂z = Cuz * (u_uz .* w̄_uz)
+    
+    # v_vx = Av_vx * vₕ + yAv_vx                # v at vx
+    # ū_vx = Iu_vx * ϕu + yIu_vx                # ū at vx
     # ∂vū∂x = Cvx * (v_vx .* ū_vx)
 
-    # V_vy = Av_vy * vₕ + yAv_vy                # V at vy
-    # V̄_vy = Iv_vy * ϕv + yIv_vy                # Ū at vy
+    # v_vy = Av_vy * vₕ + yAv_vy                # v at vy
+    # v̄_vy = Iv_vy * ϕv + yIv_vy                # v̄ at vy
     # ∂vv̄∂y = Cvy * (v_vy .* v̄_vy)
 
-    @. cu = ∂uū∂x + ∂uv̄∂y
-    @. cv = ∂vū∂x + ∂vv̄∂y
+    v_vz = Av_vz * vₕ + yAv_vz                # v at vz
+    w̄_vz = Iw_vz * ϕw + yIw_vz                # w̄ at vz
+    ∂vw̄∂z = Cvz * (v_vz .* w̄_vz)
+
+    w_wx = Aw_wx * wₕ + yAw_wx                # w at wx
+    ū_wx = Iu_wx * ϕu + yIu_wx                # ū at wx
+    ∂wū∂x = Cwx * (w_wx .* ū_wx)
+
+    w_wy = Aw_wy * wₕ + yAw_wy                # w at wy
+    v̄_wy = Iv_wy * ϕv + yIv_wy                # v̄ at wy
+    ∂wv̄∂y = Cwy * (w_wy .* v̄_wy)
+
+    w_wz = Aw_wz * wₕ + yAw_wz                # w at wz
+    w̄_wz = Iw_wz * ϕw + yIw_wz                # w̄ at wz
+    ∂ww̄∂z = Cwz * (w_wz .* w̄_wz)
+
+    @. cu = ∂uū∂x + ∂uv̄∂y + ∂uw̄∂z
+    @. cv = ∂vū∂x + ∂vv̄∂y + ∂vw̄∂z
+    @. cw = ∂wū∂x + ∂wv̄∂y + ∂ww̄∂z
 
     if getJacobian
         ## Convective terms, u-component
