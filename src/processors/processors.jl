@@ -35,7 +35,7 @@ end
     VTKWriter(nupdate, dir, filename)
 
 Write the solution every `nupdate` time steps to a VTK file. The resulting Paraview data
-collection file is stored in `$dir/$filename.pvd`.
+collection file is stored in `\$dir/\$filename.pvd`.
 """
 Base.@kwdef mutable struct VTKWriter <: Processor
     nupdate::Int = 1

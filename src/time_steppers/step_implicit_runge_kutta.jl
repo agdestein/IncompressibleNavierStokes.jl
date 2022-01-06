@@ -9,7 +9,7 @@ are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
 function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     (; V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
     (; Nu, Nv, NV, Np, Ω, Ω⁻¹) = setup.grid
-    (; G, M) = setup.discretization
+    (; G, M) = setup.operators
     (; pressure_solver, nonlinear_maxit, nonlinear_acc, nonlinear_Newton, p_add_solve) =
         setup.solver_settings
     (; Vtotₙ, ptotₙ, Qⱼ, Fⱼ, ∇Fⱼ, fⱼ, F, ∇F, f, Δp, Gp) = cache
@@ -45,7 +45,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
             # Modify `yM`
             tᵢ = tⱼ[i]
             set_bc_vectors!(setup, tᵢ)
-            (; yM) = setup.discretization
+            (; yM) = setup.operators
         end
         yMtot_mat[:, i] .= yM
     end
@@ -164,7 +164,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     if setup.bc.bc_unsteady
         # Allocates new yM
         set_bc_vectors!(setup, tₙ + Δtₙ)
-        (; yM) = setup.discretization
+        (; yM) = setup.operators
         f .= yM
         mul!(f, M, V, 1 / Δtₙ, 1 / Δtₙ)
         # f .= 1 / Δtₙ .* (M * V .+ yM)

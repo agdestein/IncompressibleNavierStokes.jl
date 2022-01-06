@@ -111,10 +111,10 @@ function operator_turbulent_diffusion!(setup)
     # (Aν_vy * k + yAν_vy)
 
     ## Store in struct
-    @pack! setup.discretization = Aν_ux, Aν_ux_bc
-    @pack! setup.discretization = Aν_uy, Aν_uy_bc_lr, Aν_uy_bc_lu
-    @pack! setup.discretization = Aν_vx, Aν_vx_bc_lr, Aν_vx_bc_lu
-    @pack! setup.discretization = Aν_vy, Aν_vy_bc
+    @pack! setup.operators = Aν_ux, Aν_ux_bc
+    @pack! setup.operators = Aν_uy, Aν_uy_bc_lr, Aν_uy_bc_lu
+    @pack! setup.operators = Aν_vx, Aν_vx_bc_lr, Aν_vx_bc_lu
+    @pack! setup.operators = Aν_vy, Aν_vy_bc
 
     ## Get derivatives u_x, u_y, v_x and v_y at cell centers
     # Differencing velocity to ν-points
@@ -198,9 +198,9 @@ function operator_turbulent_diffusion!(setup)
 
 
     ## Store in struct
-    @pack! setup.discretization =
+    @pack! setup.operators =
         Cux_k, Cux_k_bc, Cuy_k, Cuy_k_bc, Cvx_k, Cvx_k_bc, Cvy_k, Cvy_k_bc
-    @pack! setup.discretization = Auy_k, Auy_k_bc, Avx_k, Avx_k_bc
+    @pack! setup.operators = Auy_k, Auy_k_bc, Avx_k, Avx_k_bc
 
     setup
 end

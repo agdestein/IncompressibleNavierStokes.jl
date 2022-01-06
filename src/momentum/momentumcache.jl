@@ -46,7 +46,7 @@ struct MomentumCache{T}
 end
 function MomentumCache(setup)
     (; Nu, Nv, NV) = setup.grid
-    (; yIu_ux, yIv_uy, yIu_vx, yIv_vy) = setup.discretization
+    (; yIu_ux, yIv_uy, yIu_vx, yIv_vy) = setup.operators
 
     T = eltype(yIu_ux)
 

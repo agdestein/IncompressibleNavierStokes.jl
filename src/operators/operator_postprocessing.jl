@@ -59,7 +59,7 @@ function operator_postprocessing!(setup)
         Wv_vx = kron(spdiagm(Ny + 1, Ny, -Ny => diag2[[1]], 0 => diag2), W1D)
     end
 
-    @pack! setup.discretization = Wv_vx, Wu_uy
+    @pack! setup.operators = Wv_vx, Wu_uy
 
     setup
 end

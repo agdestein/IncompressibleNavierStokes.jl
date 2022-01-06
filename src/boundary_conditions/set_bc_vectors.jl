@@ -6,7 +6,7 @@ Construct boundary conditions.
 function set_bc_vectors!(setup, t)
     (; problem) = setup.case
     (; model) = setup
-    (; Re) = setup.fluid
+    (; Re) = setup.model
     (; u_bc, v_bc, w_bc, dudt_bc, dvdt_bc, dwdt_bc) = setup.bc
     (; p_bc, bc_unsteady) = setup.bc
     (; Nz, Np, Npx, Npy, Npz) = setup.grid
@@ -14,35 +14,35 @@ function set_bc_vectors!(setup, t)
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nuz_b, Nvz_t) = setup.grid
     (; Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t) = setup.grid
     (; xin, yin, zin, x, y, z, hx, hy, hz, xp, yp, zp) = setup.grid
-    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz,) = setup.discretization
+    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz,) = setup.operators
 
-    (; Au_ux_bc, Au_uy_bc, Au_uz_bc) = setup.discretization
-    (; Av_vx_bc, Av_vy_bc, Av_vz_bc) = setup.discretization
-    (; Aw_wx_bc, Aw_wy_bc, Aw_wz_bc) = setup.discretization
+    (; Au_ux_bc, Au_uy_bc, Au_uz_bc) = setup.operators
+    (; Av_vx_bc, Av_vy_bc, Av_vz_bc) = setup.operators
+    (; Aw_wx_bc, Aw_wy_bc, Aw_wz_bc) = setup.operators
 
-    (; Su_ux_bc, Su_uy_bc, Su_uz_bc) = setup.discretization
-    (; Sv_vx_bc, Sv_vy_bc, Sv_vz_bc) = setup.discretization
-    (; Sw_wx_bc, Sw_wy_bc, Sw_wz_bc) = setup.discretization
+    (; Su_ux_bc, Su_uy_bc, Su_uz_bc) = setup.operators
+    (; Sv_vx_bc, Sv_vy_bc, Sv_vz_bc) = setup.operators
+    (; Sw_wx_bc, Sw_wy_bc, Sw_wz_bc) = setup.operators
 
-    (; Mx_bc, My_bc, Mz_bc) = setup.discretization
-    (; Aν_vy_bc) = setup.discretization
+    (; Mx_bc, My_bc, Mz_bc) = setup.operators
+    (; Aν_vy_bc) = setup.operators
 
-    (; Iu_ux_bc, Iv_vy_bc, Iw_wz_bc) = setup.discretization
-    (; Iv_uy_bc_lr, Iv_uy_bc_lu, Iw_uz_bc_lr, Iw_uz_bc_bf) = setup.discretization
-    (; Iu_vx_bc_lr, Iu_vx_bc_lu, Iw_vz_bc_lu, Iw_vz_bc_bf) = setup.discretization
-    (; Iu_wx_bc_lr, Iu_wx_bc_bf, Iv_wy_bc_lu, Iv_wy_bc_bf) = setup.discretization
+    (; Iu_ux_bc, Iv_vy_bc, Iw_wz_bc) = setup.operators
+    (; Iv_uy_bc_lr, Iv_uy_bc_lu, Iw_uz_bc_lr, Iw_uz_bc_bf) = setup.operators
+    (; Iu_vx_bc_lr, Iu_vx_bc_lu, Iw_vz_bc_lu, Iw_vz_bc_bf) = setup.operators
+    (; Iu_wx_bc_lr, Iu_wx_bc_bf, Iv_wy_bc_lu, Iv_wy_bc_bf) = setup.operators
 
-    (; Cux_k_bc, Cuy_k_bc, Cuz_k_bc) = setup.discretization
-    (; Cvx_k_bc, Cvy_k_bc, Cvz_k_bc) = setup.discretization
-    (; Cwx_k_bc, Cwy_k_bc, Cwz_k_bc) = setup.discretization
+    (; Cux_k_bc, Cuy_k_bc, Cuz_k_bc) = setup.operators
+    (; Cvx_k_bc, Cvy_k_bc, Cvz_k_bc) = setup.operators
+    (; Cwx_k_bc, Cwy_k_bc, Cwz_k_bc) = setup.operators
 
-    (; Auy_k_bc, Avx_k_bc) = setup.discretization
-    (; Auz_k_bc, Awx_k_bc) = setup.discretization
-    (; Awy_k_bc, Avz_k_bc) = setup.discretization
+    (; Auy_k_bc, Avx_k_bc) = setup.operators
+    (; Auz_k_bc, Awx_k_bc) = setup.operators
+    (; Awy_k_bc, Avz_k_bc) = setup.operators
 
-    (; Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf) = setup.discretization
-    (; Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf) = setup.discretization
-    (; Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf) = setup.discretization
+    (; Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf) = setup.operators
+    (; Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf) = setup.operators
+    (; Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf) = setup.operators
 
 
     # TODO: Split up function into allocating part (constructor?) and mutating `update!`
@@ -106,7 +106,7 @@ function set_bc_vectors!(setup, t)
     yMz = Mz_bc.Bbc * ybc
 
     yM = yMx + yMy + yMz
-    @pack! setup.discretization = yM
+    @pack! setup.operators = yM
 
     # Time derivative of divergence
     if !is_steady(problem)
@@ -129,7 +129,7 @@ function set_bc_vectors!(setup, t)
         else
             ydM = zeros(Np)
         end
-        @pack! setup.discretization = ydM
+        @pack! setup.operators = ydM
     end
 
     ## Boundary conditions for pressure
@@ -157,7 +157,7 @@ function set_bc_vectors!(setup, t)
     y_pz = y1D_ba ⊗ (p_bc.z[1] .* (hy ⊗ hx)) + y1D_fr ⊗ (p_bc.z[2] .* (hy ⊗ hx))
 
     y_p = [y_px; y_py; y_pz]
-    @pack! setup.discretization = y_p
+    @pack! setup.operators = y_p
 
     ## Boundary conditions for averaging
     # Au_ux
@@ -199,9 +199,9 @@ function set_bc_vectors!(setup, t)
     ybc = Aw_wz_bc.ybc1 ⊗ wBa_i + Aw_wz_bc.ybc2 ⊗ wFr_i
     yAw_wz = Aw_wz_bc.Bbc * ybc
 
-    @pack! setup.discretization = yAu_ux, yAu_uy, yAu_uz
-    @pack! setup.discretization = yAv_vx, yAv_vy, yAv_vz
-    @pack! setup.discretization = yAw_wx, yAw_wy, yAw_wz
+    @pack! setup.operators = yAu_ux, yAu_uy, yAu_uz
+    @pack! setup.operators = yAv_vx, yAv_vy, yAv_vz
+    @pack! setup.operators = yAw_wx, yAw_wy, yAw_wz
 
     ## Bounary conditions for diffusion
 
@@ -321,10 +321,10 @@ function set_bc_vectors!(setup, t)
         yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy + Dvz * ySv_vz)
         yDiffw = 1 / Re * (Dwx * ySw_wx + Dwy * ySw_wy + Dwz * ySw_wz)
         yDiff = [yDiffu; yDiffv; yDiffw]
-        @pack! setup.discretization = yDiff
+        @pack! setup.operators = yDiff
     else
         # Use values directly (see diffusion.jl and strain_tensor.jl)
-        @pack! setup.discretization = ySu_ux, ySu_uy, ySu_uz, ySu_vx, ySv_vx, ySv_vy, ySv_uy
+        @pack! setup.operators = ySu_ux, ySu_uy, ySu_uz, ySu_vx, ySv_vx, ySv_vy, ySv_uy
     end
 
     ## Boundary conditions for interpolation
@@ -412,9 +412,9 @@ function set_bc_vectors!(setup, t)
     ybc = Iw_wz_bc.ybc1 ⊗ wBa_i + Iw_wz_bc.ybc2 ⊗ wFr_i
     yIw_wz = Iw_wz_bc.Bbc * ybc
 
-    @pack! setup.discretization = yIu_ux, yIv_uy, yIw_uz
-    @pack! setup.discretization = yIu_vx, yIv_vy, yIw_vz
-    @pack! setup.discretization = yIu_wx, yIv_wy, yIw_wz
+    @pack! setup.operators = yIu_ux, yIv_uy, yIw_uz
+    @pack! setup.operators = yIu_vx, yIv_vy, yIw_vz
+    @pack! setup.operators = yIu_wx, yIv_wy, yIw_wz
 
     if model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         # Set bc for turbulent viscosity nu_t
@@ -426,12 +426,12 @@ function set_bc_vectors!(setup, t)
         nuUp = zeros(Npx)
 
         ## Nu_ux
-        (; Aν_ux_bc) = setup.discretization
+        (; Aν_ux_bc) = setup.operators
         ybc = nuLe ⊗ Aν_ux_bc.ybc1 + nuRi ⊗ Aν_ux_bc.ybc2
         yAν_ux = Aν_ux_bc.Bbc * ybc
 
         ## Nu_uy
-        (; Aν_uy_bc_lr, Aν_uy_bc_lu) = setup.discretization
+        (; Aν_uy_bc_lr, Aν_uy_bc_lu) = setup.operators
 
         nuLe_i = [nuLe[1]; nuLe; nuLe[end]]
         nuRi_i = [nuRi[1]; nuRi; nuRi[end]]
@@ -447,7 +447,7 @@ function set_bc_vectors!(setup, t)
         yAν_uy = yAν_uy_lu + yAν_uy_lr
 
         ## Nu_vx
-        (; Aν_vx_bc_lr, Aν_vx_bc_lu) = setup.discretization
+        (; Aν_vx_bc_lr, Aν_vx_bc_lu) = setup.operators
 
         nuLo_i = [nuLo[1]; nuLo; nuLo[end]]
         nuUp_i = [nuUp[1]; nuUp; nuUp[end]]
@@ -466,7 +466,7 @@ function set_bc_vectors!(setup, t)
         ybc = Aν_vy_bc.ybc1 ⊗ nuLo + Aν_vy_bc.ybc2 ⊗ nuUp
         yAν_vy = Aν_vy_bc.Bbc * ybc
 
-        @pack! setup.discretization = yAν_ux, yAν_uy, yAν_vx, yAν_vy
+        @pack! setup.operators = yAν_ux, yAν_uy, yAν_vx, yAν_vy
 
         # Set bc for getting du/dx, du/dy, dv/dx, dv/dy at cell centers
 
@@ -494,7 +494,7 @@ function set_bc_vectors!(setup, t)
         ybc = Cvy_k_bc.ybc1 ⊗ vLo_i + Cvy_k_bc.ybc2 ⊗ vUp_i
         yCvy_k = Cvy_k_bc.Bbc * ybc
 
-        @pack! setup.discretization = yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k
+        @pack! setup.operators = yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k
     end
 
     setup

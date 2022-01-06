@@ -8,7 +8,7 @@ Dirichlet boundary points are not part of solution vector but are prescribed in 
 function step!(stepper::ExplicitRungeKuttaStepper, Δt)
     (; V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
     (; Ω⁻¹) = setup.grid
-    (; G, M, yM) = setup.discretization
+    (; G, M, yM) = setup.operators
     (; pressure_solver) = setup.solver_settings
     (; kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f, A, b, c) = cache
 
@@ -56,7 +56,7 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt)
         tᵢ = tₙ + c[i] * Δtₙ
         if setup.bc.bc_unsteady
             set_bc_vectors!(setup, tᵢ)
-            (; yM) = setup.discretization
+            (; yM) = setup.operators
         end
 
         # Divergence of intermediate velocity field

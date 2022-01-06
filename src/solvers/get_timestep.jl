@@ -5,9 +5,9 @@ Estimate time step based on eigenvalues of operators, using Gershgorin.
 """
 function get_timestep(setup, method)
     @unpack NV, Ω⁻¹= setup.grid
-    (; Iu_ux, Iu_vx, Iv_uy, Iv_vy) = setup.discretization
-    (; yIu_ux, yIu_vx, yIv_uy, yIv_vy) = setup.discretization
-    (; Au_ux, Au_uy, Av_vx, Av_vy) = setup.discretization
+    (; Iu_ux, Iu_vx, Iv_uy, Iv_vy) = setup.operators
+    (; yIu_ux, yIu_vx, yIv_uy, yIv_vy) = setup.operators
+    (; Au_ux, Au_uy, Av_vx, Av_vy) = setup.operators
     (; CFL) = setup.time
 
     # For explicit methods only

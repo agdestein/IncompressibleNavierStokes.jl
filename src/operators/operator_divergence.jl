@@ -113,8 +113,8 @@ function operator_divergence!(setup)
     G = [Gx; Gy; Gz]
 
     ## Store in setup structure
-    @pack! setup.discretization = M, Mx, My, Mz, Mx_bc, My_bc, Mz_bc, G, Gx, Gy, Gz
-    @pack! setup.discretization = Bup, Bvp, Bwp
+    @pack! setup.operators = M, Mx, My, Mz, Mx_bc, My_bc, Mz_bc, G, Gx, Gy, Gz
+    @pack! setup.operators = Bup, Bvp, Bwp
 
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
@@ -125,13 +125,7 @@ function operator_divergence!(setup)
 
         # Laplace = div grad
         A = M * Diagonal(Ω⁻¹) * G
-        @pack! setup.discretization = A
-
-        # ROM does not require Poisson solve for simple BC
-        # For rom_bc > 0, we need Poisson solve to determine the V_bc field
-        if setup.rom.use_rom && setup.rom.rom_bc == 0 && setup.rom.rom_type == "POD"
-            return setup
-        end
+        @pack! setup.operators = A
 
         initialize!(pressure_solver, setup, A)
 

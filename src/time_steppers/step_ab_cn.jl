@@ -32,8 +32,8 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
 
     (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
     (; NV, Ω⁻¹) = setup.grid
-    (; G, y_p, M, yM) = setup.discretization
-    (; Diff, yDiff, y_p) = setup.discretization
+    (; G, y_p, M, yM) = setup.operators
+    (; Diff, yDiff, y_p) = setup.operators
     (; pressure_solver) = setup.solver_settings
     (; α₁, α₂, θ) = method
     (; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact) = cache
@@ -55,7 +55,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     # Unsteady BC at current time
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ)
-        (; yDiff) = setup.discretization
+        (; yDiff) = setup.operators
     end
 
     yDiffₙ .= yDiff
@@ -70,7 +70,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ + Δt)
-        (; y_p) = setup.discretization
+        (; y_p) = setup.operators
     end
     bodyforce!(bₙ₊₁, nothing, Vₙ, tₙ + Δt, setup)
 
@@ -92,7 +92,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     # Make the velocity field `uₙ₊₁` at `tₙ₊₁` divergence-free (need BC at `tₙ₊₁`)
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ + Δt)
-        (; yM) = setup.discretization
+        (; yM) = setup.operators
     end
 
     # Boundary condition for Δp between time steps (!= 0 if fluctuating outlet pressure)

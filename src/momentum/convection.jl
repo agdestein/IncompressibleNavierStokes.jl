@@ -20,9 +20,9 @@ Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`.
 The convected quantity is `ϕ` (usually `ϕ = V`).
 """
 function convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
-    (; order4) = setup.discretization
+    (; order4) = setup.operators
     (; regularization) = setup.case
-    (; α) = setup.discretization
+    (; α) = setup.operators
     (; indu, indv, indw) = setup.grid
     (; Newton_factor) = setup.solver_settings
     (; c2, ∇c2, c3, ∇c3) = cache
@@ -131,19 +131,19 @@ end
 Compute convection components.
 """
 function convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian = false, order4 = false)
-    (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz ) = setup.discretization
-    (; Au_ux, Au_uy, Au_uz) = setup.discretization
-    (; Av_vx, Av_vy, Av_vz) = setup.discretization
-    (; Aw_wx, Aw_wy, Aw_wz) = setup.discretization
-    (; yAu_ux, yAu_uy, yAu_uz) = setup.discretization
-    (; yAv_vx, yAv_vy, yAv_vz) = setup.discretization
-    (; yAw_wx, yAw_wy, yAw_wz) = setup.discretization
-    (; Iu_ux, Iv_uy, Iw_uz) = setup.discretization
-    (; Iu_vx, Iv_vy, Iw_vz) = setup.discretization
-    (; Iu_wx, Iv_wy, Iw_wz) = setup.discretization
-    (; yIu_ux, yIv_uy, yIw_uz) = setup.discretization
-    (; yIu_vx, yIv_vy, yIw_vz) = setup.discretization
-    (; yIu_wx, yIv_wy, yIw_wz) = setup.discretization
+    (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz ) = setup.operators
+    (; Au_ux, Au_uy, Au_uz) = setup.operators
+    (; Av_vx, Av_vy, Av_vz) = setup.operators
+    (; Aw_wx, Aw_wy, Aw_wz) = setup.operators
+    (; yAu_ux, yAu_uy, yAu_uz) = setup.operators
+    (; yAv_vx, yAv_vy, yAv_vz) = setup.operators
+    (; yAw_wx, yAw_wy, yAw_wz) = setup.operators
+    (; Iu_ux, Iv_uy, Iw_uz) = setup.operators
+    (; Iu_vx, Iv_vy, Iw_vz) = setup.operators
+    (; Iu_wx, Iv_wy, Iw_wz) = setup.operators
+    (; yIu_ux, yIv_uy, yIw_uz) = setup.operators
+    (; yIu_vx, yIv_vy, yIw_vz) = setup.operators
+    (; yIu_wx, yIv_wy, yIw_wz) = setup.operators
     (; indu, indv, indw) = setup.grid
     (; Newton_factor) = setup.solver_settings
     (; u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy) = cache

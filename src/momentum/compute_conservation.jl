@@ -4,7 +4,7 @@
 Compute mass, momentum and energy conservation properties of velocity field.
 """
 function compute_conservation(V, t, setup)
-    (; M, yM) = setup.discretization
+    (; M, yM) = setup.operators
     (; indu, indv, indw, Ω, x, y, z, xp, yp, zp, hx, hy, hz, gx, gy, gz) = setup.grid
     (; u_bc, v_bc, w_bc) = setup.bc
 

@@ -25,7 +25,7 @@ problem = setup.case.problem;
 @time V, p = solve(problem, setup, V₀, p₀);
 
 ## Plot tracers
-plot_tracers(setup);
+plot_tracers(setup)
 
 ## Post-process
 plot_pressure(setup, p)

@@ -1,4 +1,4 @@
-# Backwards Facing step
+# Backward Facing Step
 
 We begin by loading the package.
 

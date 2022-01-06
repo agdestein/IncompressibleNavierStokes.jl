@@ -23,6 +23,3 @@ Base.@kwdef mutable struct UnsteadyBodyForce{T} <: AbstractBodyForce{T}
     bodyforce_v::Function = () -> error("bodyforce_v not implemented")
     bodyforce_w::Function = () -> error("bodyforce_w not implemented")
 end
-
-
-

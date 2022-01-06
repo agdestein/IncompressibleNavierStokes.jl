@@ -27,7 +27,7 @@ end
 
 function pressure_poisson!(solver::CGPressureSolver, p, f, t, setup)
     # TODO: Preconditioner
-    (; A) = setup.discretization
+    (; A) = setup.operators
     (; abstol, reltol, maxiter) = solver
     cg!(p, A, f; abstol, reltol, maxiter)
 end

@@ -30,7 +30,7 @@ function momentum!(
     nopressure = false,
 )
     (; NV) = setup.grid
-    (; G, y_p) = setup.discretization
+    (; G, y_p) = setup.operators
 
     # Store intermediate results in temporary variables
     (; c, ∇c, d, ∇d, b, ∇b, Gp) = cache

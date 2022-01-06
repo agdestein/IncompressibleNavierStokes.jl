@@ -10,7 +10,7 @@ function operator_convection_diffusion!(setup)
     (; hx, hy, hz, hxi, hyi, hzi, hxd, hyd, hzd) = setup.grid
     (; gxi, gyi, gzi, gxd, gyd, gzd) = setup.grid
     (; Bvux, Bwux, Buvy, Bwvy, Buwz, Bvwz) = setup.grid
-    (; Re) = setup.fluid
+    (; Re) = setup.model
 
     ## Convection (differencing) operator Cu
 
@@ -350,24 +350,24 @@ function operator_convection_diffusion!(setup)
         Diff = blockdiag(Diffu, Diffv, Diffw)
     end
 
-    @pack! setup.discretization = Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz
-    @pack! setup.discretization = Su_ux, Su_uy, Su_uz
-    @pack! setup.discretization = Sv_vx, Sv_vy, Sv_vz
-    @pack! setup.discretization = Sw_wx, Sw_wy, Sw_wz
-    @pack! setup.discretization = Su_ux_bc, Su_uy_bc, Su_uz_bc
-    @pack! setup.discretization = Sv_vx_bc, Sv_vy_bc, Sv_vz_bc
-    @pack! setup.discretization = Sw_wx_bc, Sw_wy_bc, Sw_wz_bc
-    @pack! setup.discretization = Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz
+    @pack! setup.operators = Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz
+    @pack! setup.operators = Su_ux, Su_uy, Su_uz
+    @pack! setup.operators = Sv_vx, Sv_vy, Sv_vz
+    @pack! setup.operators = Sw_wx, Sw_wy, Sw_wz
+    @pack! setup.operators = Su_ux_bc, Su_uy_bc, Su_uz_bc
+    @pack! setup.operators = Sv_vx_bc, Sv_vy_bc, Sv_vz_bc
+    @pack! setup.operators = Sw_wx_bc, Sw_wy_bc, Sw_wz_bc
+    @pack! setup.operators = Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz
 
     if model isa LaminarModel
-        @pack! setup.discretization = Diff
+        @pack! setup.operators = Diff
     else
-        @pack! setup.discretization = Sv_uy, Su_vx, Sw_uz, Su_wx, Sw_vz, Sv_wy
+        @pack! setup.operators = Sv_uy, Su_vx, Sw_uz, Su_wx, Sw_vz, Sv_wy
     end
 
-    @pack! setup.discretization = Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf
-    @pack! setup.discretization = Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf
-    @pack! setup.discretization = Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf
+    @pack! setup.operators = Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf
+    @pack! setup.operators = Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf
+    @pack! setup.operators = Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf
 
     setup
 end

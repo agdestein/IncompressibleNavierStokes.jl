@@ -13,19 +13,12 @@
     regularization = "no"
     case = Case(; name, problem, regularization)
 
-    # Physical properties
-    Re = 1000                         # Reynolds number
-    U1 = 1                            # Velocity scales
-    U2 = 1                            # Velocity scales
-    d_layer = 1                       # Thickness of layer
-    fluid = Fluid{T}(; Re, U1, U2, d_layer)
-
     # Viscosity model
-    model = LaminarModel{T}()
-    # model = KEpsilonModel{T}()
-    # model = MixingLengthModel{T}()
-    # model = SmagorinskyModel{T}()
-    # model = QRModel{T}()
+    model = LaminarModel{T}(; Re = 1000)
+    # model = KEpsilonModel{T}(; Re = 1000)
+    # model = MixingLengthModel{T}(; Re = 1000)
+    # model = SmagorinskyModel{T}(; Re = 1000)
+    # model = QRModel{T}(; Re = 1000)
 
     # Grid parameters
     Nx = 80                           # Number of x-volumes
@@ -34,58 +27,6 @@
     ylims = (0, 1)                    # Vertical limits (bottom, top)
     stretch = (1, 1)                  # Stretch factor (sx, sy[, sz])
     grid = create_grid(T, N; Nx, Ny, xlims, ylims, stretch)
-
-    # Discretization parameters
-    order4 = false                    # Use 4th order in space (otherwise 2nd order)
-    α = 81                            # Richardson extrapolation factor = 3^4
-    β = 9 / 8                         # Interpolation factor
-    discretization = Operators{T}(; order4, α, β)
-
-    # Rom parameters
-    use_rom = false                   # Use reduced order model
-    rom_type = "POD"                  # "POD", "Fourier"
-    M = 10                            # Number of ROM velocity modes
-    Mp = 10                           # Number of ROM pressure modes
-    precompute_convection = true      # Precomputed convection matrices
-    precompute_diffusion = true       # Precomputed diffusion matrices
-    precompute_force = true           # Precomputed forcing term
-    t_snapshots = 0                   # Snapshots
-    Δt_snapshots = false              # Gap between snapshots
-    mom_cons = false                  # Momentum conserving SVD
-    # ROM boundary constitions:
-    # 0: homogeneous (no-slip = periodic)
-    # 1: non-homogeneous = time-independent
-    # 2: non-homogeneous = time-dependent
-    rom_bc = 0
-    weighted_norm = true              # Using finite volumes as weights
-    pressure_recovery = false         # Compute pressure with PPE-ROM
-    pressure_precompute = 0           # Recover pressure with FOM (0) or ROM (1)
-    subtract_pressure_mean = false    # Subtract pressure mean from snapshots
-    process_iteration_FOM = true      # FOM divergence, residuals, and kinetic energy
-    basis_type = "default"            # "default", "svd", "direct", "snapshot"
-    rom = ROM(;
-        use_rom,
-        rom_type,
-        M,
-        Mp,
-        precompute_convection,
-        precompute_diffusion,
-        precompute_force,
-        t_snapshots,
-        Δt_snapshots,
-        mom_cons,
-        rom_bc,
-        weighted_norm,
-        pressure_recovery,
-        pressure_precompute,
-        subtract_pressure_mean,
-        process_iteration_FOM,
-        basis_type,
-    )
-
-    # Immersed boundary method
-    use_ibm = false                    # Use immersed boundary method
-    ibm = IBM(; use_ibm)
 
     # Time stepping
     t_start = 0                        # Start time
@@ -186,10 +127,8 @@
         fluid,
         model,
         grid,
-        discretization,
+        operators,
         force,
-        rom,
-        ibm,
         time,
         solver_settings,
         processors,

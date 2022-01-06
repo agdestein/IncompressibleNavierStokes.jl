@@ -7,10 +7,10 @@ function strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
     (; Nx, Ny, Nu, Nv, Np, indu, indv) = setup.grid
     (; Nux_in, Nuy_in, Nvx_in, Nvy_in,) = setup.grid
     (; x, y, xp, yp) = setup.grid
-    (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.discretization
-    (; ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy) = setup.discretization
-    (; Cux_k, Cuy_k, Cvx_k, Cvy_k, Auy_k, Avx_k) = setup.discretization
-    (; yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k) = setup.discretization
+    (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
+    (; ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy) = setup.operators
+    (; Cux_k, Cuy_k, Cvx_k, Cvy_k, Auy_k, Avx_k) = setup.operators
+    (; yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k) = setup.operators
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]

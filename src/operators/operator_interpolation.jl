@@ -219,13 +219,13 @@ function operator_interpolation!(setup)
 
 
     ## Store in setup structure
-    @pack! setup.discretization = Iu_ux, Iv_uy, Iw_uz
-    @pack! setup.discretization = Iu_vx, Iv_vy, Iw_vz
-    @pack! setup.discretization = Iu_wx, Iv_wy, Iw_wz
-    @pack! setup.discretization = Iu_ux_bc, Iv_vy_bc, Iw_wz_bc
-    @pack! setup.discretization = Iv_uy_bc_lr, Iv_uy_bc_lu, Iu_vx_bc_lr, Iu_vx_bc_lu
-    @pack! setup.discretization = Iw_uz_bc_lr, Iw_uz_bc_bf, Iw_vz_bc_lu, Iw_vz_bc_bf
-    @pack! setup.discretization = Iu_wx_bc_lr, Iu_wx_bc_bf, Iv_wy_bc_lu, Iv_wy_bc_bf
+    @pack! setup.operators = Iu_ux, Iv_uy, Iw_uz
+    @pack! setup.operators = Iu_vx, Iv_vy, Iw_vz
+    @pack! setup.operators = Iu_wx, Iv_wy, Iw_wz
+    @pack! setup.operators = Iu_ux_bc, Iv_vy_bc, Iw_wz_bc
+    @pack! setup.operators = Iv_uy_bc_lr, Iv_uy_bc_lu, Iu_vx_bc_lr, Iu_vx_bc_lu
+    @pack! setup.operators = Iw_uz_bc_lr, Iw_uz_bc_bf, Iw_vz_bc_lu, Iw_vz_bc_bf
+    @pack! setup.operators = Iu_wx_bc_lr, Iu_wx_bc_bf, Iv_wy_bc_lu, Iv_wy_bc_bf
 
     setup
 end

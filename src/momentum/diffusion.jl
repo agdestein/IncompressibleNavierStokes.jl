@@ -6,10 +6,10 @@ Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V`.
 function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
     (; model) = setup
     (; indu, indv, indw) = setup.grid
-    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.discretization
-    (; Diff, yDiff) = setup.discretization
-    (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.discretization
-    (; Aν_ux, Aν_uy, Aν_vx, Aν_vy) = setup.discretization
+    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
+    (; Diff, yDiff) = setup.operators
+    (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
+    (; Aν_ux, Aν_uy, Aν_vx, Aν_vy) = setup.operators
 
     du = @view d[indu]
     dv = @view d[indv]
@@ -39,7 +39,7 @@ function diffusion!(d, ∇d, V, t, setup; getJacobian = false)
         # Note that the factor 2 is because
         # Tau = 2*(ν+ν_t)*S(u), with S(u) = 1/2*(∇u + (∇u)^T)
 
-        ν = 1 / setup.fluid.Re # Molecular viscosity
+        ν = 1 / setup.model.Re # Molecular viscosity
 
         du .= Dux * (2 .* (ν .+ ν_t_ux) .* S11[:]) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12[:])
         dv .= Dvx * (2 .* (ν .+ ν_t_vx) .* S21[:]) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22[:])

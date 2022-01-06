@@ -7,7 +7,7 @@ function get_velocity(V, t, setup)
     # Evaluate boundary conditions at current time
     set_bc_vectors!(setup, t)
 
-    (; Au_ux, yAu_ux, Av_vy, yAv_vy, Aw_wz, yAw_wz, Bup, Bvp, Bwp) = setup.discretization
+    (; Au_ux, yAu_ux, Av_vy, yAv_vy, Aw_wz, yAw_wz, Bup, Bvp, Bwp) = setup.operators
     (; Npx, Npy, Npz, indu, indv, indw) = setup.grid
 
     uh = @view V[indu]

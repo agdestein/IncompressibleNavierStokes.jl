@@ -34,7 +34,7 @@ function create_initial_conditions(setup)
         @warn "Initial velocity field not (discretely) divergence free: $maxdiv. Performing additional projection."
 
         # Make velocity field divergence free
-        (; G, M, yM) = setup.discretization
+        (; G, M, yM) = setup.operators
         f = M * V + yM
         Δp = pressure_poisson(pressure_solver, f, t, setup)
         V .-= Ω⁻¹ .* (G * Δp)

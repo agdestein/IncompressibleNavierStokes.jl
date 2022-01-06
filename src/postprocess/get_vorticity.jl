@@ -6,7 +6,7 @@ Get vorticity from velocity field.
 function get_vorticity(V, t, setup)
     (; bc) = setup
     (; Nx, Ny) = setup.grid
-    (; Wv_vx, Wu_uy) = setup.discretization
+    (; Wv_vx, Wu_uy) = setup.operators
     Wv_vx, Wu_uy
 
     Nωx = bc.u.x[1] == :periodic ? Nx + 1 : Nx - 1
@@ -24,7 +24,7 @@ This should be consistent with `operator_postprocessing.jl`.
 """
 function vorticity!(ω, V, t, setup)
     (; indu, indv, Nux_in, Nvy_in, Nx, Ny) = setup.grid
-    (; Wv_vx, Wu_uy) = setup.discretization
+    (; Wv_vx, Wu_uy) = setup.operators
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]

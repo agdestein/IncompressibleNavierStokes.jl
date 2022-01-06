@@ -2,13 +2,13 @@
 function operator_regularization!(setup)
     # TODO: Identify correct references
     (; indu, indv, indw) = setup.grid
-    (; Ω, Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.discretization
-    (; Su_ux, Su_uy, Su_uz) = setup.discretization
-    (; Sv_vx, Sv_vy, Sv_vz) = setup.discretization
-    (; Sw_wx, Sw_wy, Sw_wz) = setup.discretization
-    (; ySu_ux, ySu_uy, ySu_uz) = setup.discretization
-    (; ySv_vx, ySv_vy, ySv_vz) = setup.discretization
-    (; ySw_wx, ySw_wy, ySw_wz) = setup.discretization
+    (; Ω, Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
+    (; Su_ux, Su_uy, Su_uz) = setup.operators
+    (; Sv_vx, Sv_vy, Sv_vz) = setup.operators
+    (; Sw_wx, Sw_wy, Sw_wz) = setup.operators
+    (; ySu_ux, ySu_uy, ySu_uz) = setup.operators
+    (; ySv_vx, ySv_vy, ySv_vz) = setup.operators
+    (; ySw_wx, ySw_wy, ySw_wz) = setup.operators
 
     Δ = max_size(setup.grid)
     α = 1 / 16 * Δ^2

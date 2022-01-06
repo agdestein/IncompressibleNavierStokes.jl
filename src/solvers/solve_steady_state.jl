@@ -7,11 +7,9 @@ This saddlepoint system arises from linearization of the convective terms.
 function solve(::SteadyStateProblem, setup, V₀, p₀)
     # Setup
     (; model, processors) = setup
-    (; problem) = setup.case
-    (; Nu, Nv, NV, Np) = setup.grid
-    (; G, M, yM) = setup.discretization
+    (; NV, Np) = setup.grid
+    (; G, M, yM) = setup.operators
     (; Jacobian_type, nPicard, nonlinear_acc, nonlinear_maxit) = setup.solver_settings
-    (; use_rom) = setup.rom
     (; t_start) = setup.time
 
     # Temporary variables

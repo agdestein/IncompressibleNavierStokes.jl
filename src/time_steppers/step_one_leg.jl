@@ -11,7 +11,7 @@ Formulation:
 function step!(stepper::OneLegStepper, Δt)
     (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
     (; β) = method
-    (; G, M, yM) = setup.discretization
+    (; G, M, yM) = setup.operators
     (; pressure_solver, p_add_solve) = setup.solver_settings
     (; Ω⁻¹) = setup.grid
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache

@@ -4,7 +4,7 @@ function get_streamfunction(V, t, setup)
     (; u_bc, v_bc) = setup.bc
     (; indu, indv, Nux_in, Nvx_in, Nx, Ny) = setup.grid
     (; hx, hy, x, y, xp, yp) = setup.grid
-    (; Wv_vx, Wu_uy) = setup.discretization
+    (; Wv_vx, Wu_uy) = setup.operators
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]

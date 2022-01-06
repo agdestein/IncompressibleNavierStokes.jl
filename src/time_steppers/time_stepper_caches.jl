@@ -82,7 +82,7 @@ function ode_method_cache end
 function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod, setup)
     (; model) = setup
     (; NV, Np, Ω⁻¹) = setup.grid
-    (; Diff) = setup.discretization
+    (; Diff) = setup.operators
     (; Δt) = setup.time
     (; θ) = method
 
@@ -156,7 +156,7 @@ end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod, setup)
     (; NV, Np, Ω) = setup.grid
-    (; G, M) = setup.discretization
+    (; G, M) = setup.operators
     (; A, b, c) = method
 
     # TODO: Decide where `T` is to be passed

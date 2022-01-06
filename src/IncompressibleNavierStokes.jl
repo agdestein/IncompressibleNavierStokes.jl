@@ -8,23 +8,6 @@ using LinearAlgebra: Diagonal, Factorization, UpperTriangular, I, cholesky, fact
 using SparseArrays: SparseMatrixCSC, blockdiag, nnz, sparse, spdiagm, spzeros
 using UnPack: @pack!, @unpack
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
-# Using Plots: contour, contourf, title!
-# using Makie:
-#     Axis,
-#     Colorbar,
-#     DataAspect,
-#     Figure,
-#     Node,
-#     contour,
-#     contour!,
-#     contourf,
-#     contourf!,
-#     heatmap,
-#     limits!,
-#     lines,
-#     lines!,
-#     record,
-#     save
 using Makie
 
 
@@ -112,9 +95,6 @@ include("momentum/strain_tensor.jl")
 include("momentum/turbulent_K.jl")
 include("momentum/turbulent_viscosity.jl")
 
-# Reduced Order Model
-include("rom/momentum_rom.jl")
-
 # Solvers
 include("solvers/get_timestep.jl")
 include("solvers/solve.jl")
@@ -153,19 +133,7 @@ export Logger, RealTimePlotter, VTKWriter, QuantityTracer
 export SteadyStateProblem, UnsteadyProblem, is_steady
 
 # Setup
-export Case,
-    Fluid,
-    Visc,
-    Grid,
-    Operators,
-    Force,
-    ROM,
-    IBM,
-    Time,
-    SolverSettings,
-    Visualization,
-    BC,
-    Setup
+export Case, Grid, Operators, Time, SolverSettings, BC, Setup
 
 # Spatial
 export nonuniform_grid
@@ -178,14 +146,12 @@ export create_boundary_conditions,
     build_operators!,
     create_initial_conditions,
     set_bc_vectors!,
-    force,
-    check_input!,
     solve,
     get_velocity
 
 export momentum!
 
-export postprocess, plot_pressure, plot_streamfunction, plot_vorticity, plot_tracers
+export plot_pressure, plot_streamfunction, plot_vorticity, plot_tracers
 
 # ODE methods
 

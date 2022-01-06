@@ -133,12 +133,12 @@ function operator_averaging!(setup)
 
 
     ## Store in setup structure
-    @pack! setup.discretization = Au_ux, Au_uy, Au_uz
-    @pack! setup.discretization = Av_vx, Av_vy, Av_vz
-    @pack! setup.discretization = Aw_wx, Aw_wy, Aw_wz
-    @pack! setup.discretization = Au_ux_bc, Au_uy_bc, Au_uz_bc
-    @pack! setup.discretization = Av_vx_bc, Av_vy_bc, Av_vz_bc
-    @pack! setup.discretization = Aw_wx_bc, Aw_wy_bc, Aw_wz_bc
+    @pack! setup.operators = Au_ux, Au_uy, Au_uz
+    @pack! setup.operators = Av_vx, Av_vy, Av_vz
+    @pack! setup.operators = Aw_wx, Aw_wy, Aw_wz
+    @pack! setup.operators = Au_ux_bc, Au_uy_bc, Au_uz_bc
+    @pack! setup.operators = Av_vx_bc, Av_vy_bc, Av_vz_bc
+    @pack! setup.operators = Aw_wx_bc, Aw_wy_bc, Aw_wz_bc
 
     setup
 end
