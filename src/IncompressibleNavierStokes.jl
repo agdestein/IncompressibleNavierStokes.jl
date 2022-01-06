@@ -1,4 +1,8 @@
-"Energy-conserving solvers for the incompressible Navier-Stokes equations."
+"""
+    IncompressibleNavierStokes
+
+Energy-conserving solvers for the incompressible Navier-Stokes equations.
+"""
 module IncompressibleNavierStokes
 
 using FFTW: fft!, ifft!

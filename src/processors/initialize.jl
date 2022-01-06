@@ -88,7 +88,7 @@ end
 
 function initialize!(writer::VTKWriter, stepper)
     (; dir, filename) = writer
-    isdir(dir) || mkdir(dir);
+    ispath(dir) || mkpath(dir);
     pvd = paraview_collection(joinpath(dir, filename))
     @pack! writer = pvd
     writer
