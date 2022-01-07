@@ -9,19 +9,21 @@
     N = 3
 
     # Case information
-    case = Case(;
-        name = "LDC",
-        # problem = SteadyStateProblem(),
-        problem = UnsteadyProblem(),
-        regularization = "no"
-    )
+    name = "LDC"
+    case = Case()
 
-    # Viscosity model
-    model = LaminarModel{T}(; Re = 1000)
-    # model = KEpsilonModel{T}(; Re = 1000)
-    # model = MixingLengthModel{T}(; Re = 1000)
-    # model = SmagorinskyModel{T}(; Re = 1000)
-    # model = QRModel{T}(; Re = 1000)
+    ## Viscosity model
+    viscosity_model = LaminarModel{T}(; Re = 1000)
+    # viscosity_model = KEpsilonModel{T}(; Re = 1000)
+    # viscosity_model = MixingLengthModel{T}(; Re = 1000)
+    # viscosity_model = SmagorinskyModel{T}(; Re = 1000)
+    # viscosity_model = QRModel{T}(; Re = 1000)
+
+    ## Convection model
+    convection_model = NoRegConvectionModel{T}()
+    # convection_model = C2ConvectionModel{T}()
+    # convection_model = C4ConvectionModel{T}()
+    # convection_model = LerayConvectionModel{T}()
 
     # Grid parameters
     grid = create_grid(
@@ -34,22 +36,6 @@
         ylims = (0, 1),               # Vertical limits (bottom, top)
         zlims = (-0.2, 0.2),          # Depth limits (back, front)
         stretch = (1, 1, 1)          # Stretch factor (sx, sy[, sz])
-    )
-
-    # Time stepping
-    time = Time{T}(;
-        t_start = 0,                           # Start time
-        t_end = 0.5,                           # End time
-        Δt = 0.02,                             # Timestep
-        method = RK44(),                       # ODE method
-        # method = RIA2(),                       # ODE method
-        # method = AdamsBashforthCrankNicolsonMethod(), # ODE method
-        # method = OneLegMethod(),               # ODE method
-        method_startup = RK44(),               # Startup method for methods that are not self-starting
-        nstartup = 2,                          # Number of necessary Vₙ₋ᵢ (= method order)
-        isadaptive = false,                    # Adapt timestep every n_adapt_Δt iterations
-        n_adapt_Δt = 1,                        # Number of iterations between timestep adjustment
-        CFL = 0.5                             # CFL number for adaptive methods
     )
 
     # Solver settings
@@ -77,33 +63,33 @@
         u = (;
             x = (:dirichlet, :dirichlet),
             y = (:dirichlet, :dirichlet),
-            z = (:dirichlet, :dirichlet)
+            z = (:dirichlet, :dirichlet),
         ),
         v = (;
             x = (:dirichlet, :dirichlet),
             y = (:dirichlet, :dirichlet),
-            z = (:dirichlet, :dirichlet)
+            z = (:dirichlet, :dirichlet),
         ),
         w = (;
             x = (:dirichlet, :dirichlet),
             y = (:dirichlet, :dirichlet),
-            z = (:dirichlet, :dirichlet)
+            z = (:dirichlet, :dirichlet),
         ),
         k = (;
             x = (:dirichlet, :dirichlet),
             y = (:dirichlet, :dirichlet),
-            z = (:dirichlet, :dirichlet)
+            z = (:dirichlet, :dirichlet),
         ),
         e = (;
             x = (:dirichlet, :dirichlet),
             y = (:dirichlet, :dirichlet),
-            z = (:dirichlet, :dirichlet)
+            z = (:dirichlet, :dirichlet),
         ),
         ν = (;
             x = (:dirichlet, :dirichlet),
             y = (:dirichlet, :dirichlet),
-            z = (:dirichlet, :dirichlet)
-        )
+            z = (:dirichlet, :dirichlet),
+        ),
     )
     u_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? 1.0 : 0.0
     v_bc(x, y, z, t, setup) = zero(x)
@@ -130,28 +116,34 @@
     # Final setup
     setup = Setup{T,N}(;
         case,
-        model,
+        viscosity_model,
+        convection_model,
         grid,
         force,
-        time,
         solver_settings,
-        processors,
-        bc
+        bc,
     )
 
-    for problem ∈ [SteadyStateProblem(), UnsteadyProblem()]
-        setup.case.problem = problem
+    ## Time interval
+    t_start, t_end = tlims = (0.0, 0.5)
 
-        ## Prepare
-        build_operators!(setup)
-        V₀, p₀, t₀ = create_initial_conditions(setup)
+    ## Prepare
+    build_operators!(setup);
+    V₀, p₀ = create_initial_conditions(setup, t_start);
 
-        ## Solve problem
-        problem = setup.case.problem
-        V, p = solve(problem, setup, V₀, p₀)
+    ## Solve steady state problem
+    problem = SteadyStateProblem(setup, V₀, p₀)
+    V, p = @time solve(problem; processors)
+    
+    # Check that solution did not explode
+    @test all(!isnan, V)
+    @test all(!isnan, p)
 
-        # Check that solution did not explode
-        @test all(!isnan, V)
-        @test all(!isnan, p)
-    end
+    ## Solve unsteady problem
+    problem = UnsteadyProblem(setup, V₀, p₀, tlims)
+    V, p = @time solve(problem, RK44(); Δt = 0.01, processors)
+
+    # Check that solution did not explode
+    @test all(!isnan, V)
+    @test all(!isnan, p)
 end

@@ -1,10 +1,9 @@
 """
-    plot_tracers(setup)
+    plot_tracers(tracer)
 
-Plot tracers.
+Plot tracer.
 """
-function plot_tracers(setup)
-    tracer = setup.processors[findfirst(p -> isa(p, QuantityTracer), setup.processors)]
+function plot_tracers(tracer)
     f = Figure()
     lines(f[1, 1], tracer.t, tracer.maxdiv, label = "maxdiv")
     lines(f[2, 1], tracer.t, tracer.umom, label = "u momentum")

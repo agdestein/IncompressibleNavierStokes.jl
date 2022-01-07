@@ -1,15 +1,11 @@
 """
-    V, p = create_initial_conditions(setup)
+    V, p = create_initial_conditions(setup, t)
 
-Create initial vectors.
+Create initial vectors at starting time `t`.
 """
-function create_initial_conditions(setup)
-    (; problem) = setup.case
-    (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp) = setup.grid
-    (; Ω⁻¹) = setup.grid
+function create_initial_conditions(setup, t)
+    (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp, Ω⁻¹) = setup.grid
     (; pressure_solver) = setup.solver_settings
-
-    t = setup.time.t_start
 
     # Boundary conditions
     set_bc_vectors!(setup, t)
@@ -30,8 +26,9 @@ function create_initial_conditions(setup)
     # Iteration 1 corresponds to t₀ = 0 (for unsteady simulations)
     maxdiv, umom, vmom, wmom, k = compute_conservation(V, t, setup)
 
-    if maxdiv > 1e-12 && !is_steady(problem)
-        @warn "Initial velocity field not (discretely) divergence free: $maxdiv. Performing additional projection."
+    if maxdiv > 1e-12
+        @warn "Initial velocity field not (discretely) divergence free: $maxdiv.\n" *
+            "Performing additional projection."
 
         # Make velocity field divergence free
         (; G, M, yM) = setup.operators
@@ -45,9 +42,7 @@ function create_initial_conditions(setup)
     p = p[:]
 
     # For steady state computations, the initial guess is the provided initial condition
-    if !is_steady(problem) && setup.solver_settings.p_initial
-        pressure_additional_solve!(V, p, t, setup)
-    end
+    setup.solver_settings.p_initial && pressure_additional_solve!(V, p, t, setup)
 
-    V, p, t
+    V, p
 end

@@ -9,19 +9,25 @@ will be used in next time step in the Adams-Bashforth part of the method.
 Adams-Bashforth for convection and Crank-Nicolson for diffusion
 formulation:
 
-(u^{n+1} - u^{n})/Δt = -(α₁ c^n + α₂ c^{n-1})
-                       + θ diff^{n+1} + (1-θ) diff^{n}
-                       + θ F^{n+1} + (1-θ) F^{n}
-                       + θ BC^{n+1} + (1-θ) BC^{n}
-                       - G*p + y_p
+```math
+(\\mathbf{u}^{n+1} - \\mathbf{u}^n) / Δt = 
+    -(\\alpha_1 \\mathbf{c}^n + \\alpha_2 \\mathbf{c}^{n-1})
+    + \\theta \\mathbf{diff}^{n+1} + (1-\\theta) \\mathbf{diff}^n
+    + \\theta \\mathbf{F}^{n+1} + (1-\\theta) \\mathbf{F}^n
+    + \\theta \\mathbf{BC}^{n+1} + (1-\\theta) \\mathbf{BC}^n
+    - \\mathbf{G} \\mathbf{p} + \\mathbf{y}_p
+```
 
 where BC are boundary conditions of diffusion. This is rewritten as:
 
-(I/Δt - θ D) u^{n+1} = (I/Δt - (1-θ) D) u^{n}
-                     - (α₁ c^n + α₂ c^{n-1})
-                     + θ F^{n+1} + (1-θ) F^{n}
-                     + θ BC^{n+1} + (1-θ) BC^{n}
-                     - G*p + y_p
+```math
+(\\frac{1}{\\Delta t} \\mathbf{I} - \\theta \\mathbf{D}) \\mathbf{u}^{n+1} =
+    (\\frac{1}{\\Delta t} \\mathbf{I} - (1 - \\theta) \\mathbf{D}) \\mathbf{u}^{n}
+    - (\\alpha_1 \\mathbf{c}^n + \\alpha_2 \\mathbf{c}^{n-1})
+    + \\theta \\mathbf{F}^{n+1} + (1-\\theta) \\mathbf{F}^{n}
+    + \\theta \\mathbf{BC}^{n+1} + (1-\\theta) \\mathbf{BC}^{n}
+    - \\mathbf{G} \\mathbf{p} + \\mathbf{y}_p
+```
 
 The LU decomposition of the LHS matrix is precomputed in `operator_convection_diffusion.jl`.
 
@@ -31,15 +37,14 @@ influence on the accuracy of the velocity.
 function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
 
     (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
+    (; viscosity_model) = setup
     (; NV, Ω⁻¹) = setup.grid
     (; G, y_p, M, yM) = setup.operators
     (; Diff, yDiff, y_p) = setup.operators
     (; pressure_solver) = setup.solver_settings
     (; α₁, α₂, θ) = method
     (; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact) = cache
-    (; d) = momentum_cache
-
-    Δt ≈ Δtₙ || error("Adams-Bashforth requires constant time step")
+    (; d, ∇d) = momentum_cache
 
     # For the first time step, this might be necessary
     convection!(cₙ, nothing, Vₙ, Vₙ, tₙ, setup, momentum_cache)
@@ -59,7 +64,6 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     end
 
     yDiffₙ .= yDiff
-    yDiffₙ₊₁ .= yDiff
 
     # Evaluate boundary conditions and force at starting point
     bodyforce!(bₙ, nothing, Vₙ, tₙ, setup)
@@ -70,9 +74,11 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ + Δt)
-        (; y_p) = setup.operators
+        (; yDiff, y_p) = setup.operators
     end
     bodyforce!(bₙ₊₁, nothing, Vₙ, tₙ + Δt, setup)
+
+    yDiffₙ₊₁ .= yDiff
 
     # Crank-Nicolson weighting for force and diffusion boundary conditions
     @. b = (1 - θ) * bₙ + θ * bₙ₊₁
@@ -86,8 +92,20 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     # Right hand side of the momentum equation update
     @. Rr = Vₙ + Ω⁻¹ * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + yDiff + b - Gpₙ)
 
-    # Use precomputed LU decomposition
-    ldiv!(V, Diff_fact, Rr)
+    # Implicit time-stepping for diffusion
+    if viscosity_model isa LaminarModel
+        # Use precomputed LU decomposition
+        if Δt ≉ cache.Δt
+            # Time step has changed, recompute LU decomposition
+            Diff_fact = lu(I(NV) - θ * Δt * Diagonal(Ω⁻¹) * Diff)
+            @pack! cache = Diff_fact, Δt
+        end
+        ldiv!(V, Diff_fact, Rr)
+    else
+        # Get `∇d` since `Diff` is not constant
+        diffusion!(d, ∇d, V, t, setup; getJacobian = true)
+        V .= ∇d \ Rr
+    end
 
     # Make the velocity field `uₙ₊₁` at `tₙ₊₁` divergence-free (need BC at `tₙ₊₁`)
     if setup.bc.bc_unsteady

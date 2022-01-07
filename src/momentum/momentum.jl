@@ -29,7 +29,7 @@ function momentum!(
     getJacobian = false,
     nopressure = false,
 )
-    (; NV) = setup.grid
+    (; viscosity_model, convection_model) = setup
     (; G, y_p) = setup.operators
 
     # Store intermediate results in temporary variables
@@ -41,10 +41,10 @@ function momentum!(
     end
 
     # Convection
-    convection!(c, ∇c, V, ϕ, t, setup, cache; getJacobian)
+    convection!(convection_model, c, ∇c, V, ϕ, t, setup, cache; getJacobian)
 
     # Diffusion
-    diffusion!(d, ∇d, V, t, setup; getJacobian)
+    diffusion!(viscosity_model, d, ∇d, V, t, setup; getJacobian)
 
     # Body force
     bodyforce!(b, ∇b, V, t, setup; getJacobian)

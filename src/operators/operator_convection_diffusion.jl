@@ -2,7 +2,7 @@
 Construct convection and diffusion operators.
 """
 function operator_convection_diffusion!(setup)
-    (; bc, model) = setup
+    (; bc, viscosity_model) = setup
     (; Nx, Ny, Nz) = setup.grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = setup.grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t) = setup.grid
@@ -10,7 +10,7 @@ function operator_convection_diffusion!(setup)
     (; hx, hy, hz, hxi, hyi, hzi, hxd, hyd, hzd) = setup.grid
     (; gxi, gyi, gzi, gxd, gyd, gzd) = setup.grid
     (; Bvux, Bwux, Buvy, Bwvy, Buwz, Bvwz) = setup.grid
-    (; Re) = setup.model
+    (; Re) = viscosity_model
 
     ## Convection (differencing) operator Cu
 
@@ -343,7 +343,7 @@ function operator_convection_diffusion!(setup)
     Sv_wy = Sv_wy_bc_bf.B3D * Sv_wy_bc_lu.B3D
 
     ## Assemble operators
-    if model isa LaminarModel
+    if viscosity_model isa LaminarModel
         Diffu = 1 / Re * (Dux * Su_ux + Duy * Su_uy + Duz * Su_uz)
         Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy + Dvz * Sv_vz)
         Diffw = 1 / Re * (Dwx * Sw_wx + Dwy * Sw_wy + Dwz * Sw_wz)
@@ -359,7 +359,7 @@ function operator_convection_diffusion!(setup)
     @pack! setup.operators = Sw_wx_bc, Sw_wy_bc, Sw_wz_bc
     @pack! setup.operators = Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz
 
-    if model isa LaminarModel
+    if viscosity_model isa LaminarModel
         @pack! setup.operators = Diff
     else
         @pack! setup.operators = Sv_uy, Su_vx, Sw_uz, Su_wx, Sw_vz, Sv_wy

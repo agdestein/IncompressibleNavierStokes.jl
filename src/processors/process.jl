@@ -7,14 +7,14 @@ function process! end
 
 function process!(logger::Logger, stepper)
     (; V, p, t, setup, cache, momentum_cache) = stepper
-    (; model) = setup
+    (; viscosity_model) = setup
     (; F) = cache
     # Calculate mass, momentum and energy
     # maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
     # Residual (in Finite Volume form)
     # For k-ϵ model residual also contains k and ϵ terms
-    if !isa(model, KEpsilonModel)
+    if !isa(viscosity_model, KEpsilonModel)
         # Norm of residual
         momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
         maxres = maximum(abs.(F))

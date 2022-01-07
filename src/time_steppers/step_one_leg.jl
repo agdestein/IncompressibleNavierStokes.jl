@@ -1,12 +1,16 @@
 """
     step!(stepper::OneLegStepper, Δt)
 
-Do one time step using one-leg-β-method following symmetry-preserving discretization of turbulent flow.
-See [Verstappen and Veldman (JCP 2003)] for details,
-or [Direct numerical simulation of turbulence at lower costs (Journal of Engineering Mathematics 1997)].
+Do one time step using one-leg-β-method following symmetry-preserving discretization of
+turbulent flow. See [Verstappen and Veldman (JCP 2003)] for details, or [Direct numerical
+simulation of turbulence at lower costs (Journal of Engineering Mathematics 1997)].
 
 Formulation:
-``\\frac{(\\beta + 1/2) u^{n+1} - 2 \\beta u^{n} + (\\beta - 1/2) u^{n-1}}{\\Delta t} = F((1 + \\beta) u^n - \\beta u^{n-1})``
+
+```math
+\\frac{(\\beta + 1/2) u^{n+1} - 2 \\beta u^{n} + (\\beta - 1/2) u^{n-1}}{\\Delta t} = F((1 +
+\\beta) u^n - \\beta u^{n-1}).
+```
 """
 function step!(stepper::OneLegStepper, Δt)
     (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
@@ -35,10 +39,12 @@ function step!(stepper::OneLegStepper, Δt)
     # Right-hand side of the momentum equation
     momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
 
-    # Take a time step with this right-hand side, this gives an intermediate velocity field (not divergence free)
+    # Take a time step with this right-hand side, this gives an intermediate velocity field
+    # (not divergence free)
     @. V = (2β * Vₙ - (β - 1//2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1//2)
 
-    # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary conditions at tₙ₊₁
+    # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
+    # conditions at tₙ₊₁
     if setup.bc.bc_unsteady
         set_bc_vectors!(setup, tₙ + Δtₙ)
     end

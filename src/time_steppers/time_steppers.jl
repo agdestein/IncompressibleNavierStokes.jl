@@ -19,18 +19,15 @@ Base.@kwdef mutable struct TimeStepper{M, T}
 end
 
 """
-    TimeStepper(method, setup, V₀, p₀) -> TimeStepper
+    TimeStepper(method, setup, V₀, p₀, t, Δt) -> TimeStepper
 
 Build associated time stepper from method.
 """
-function TimeStepper(method::M, setup, V₀, p₀) where M
-    (; t_start, Δt) = setup.time
-
-    T = typeof(Δt)
+function TimeStepper(method::M, setup, V₀, p₀, t, Δt) where {M}
+    T = eltype(V₀)
 
     # Initialize solution vectors (leave input intact)
     n = 0
-    t = t_start
     V = copy(V₀)
     p = copy(p₀)
 

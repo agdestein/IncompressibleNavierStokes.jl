@@ -14,20 +14,22 @@ T = Float64
 # Spatial dimension
 N = 3
 
-# Case information
-case = Case(;
-    name = "BFS",
-    problem = UnsteadyProblem(),
-    # problem = SteadyStateProblem(),
-    regularization = "no",
-)
+## Case information
+name = "BFS"
+case = Case()
 
-# Viscosity model
-model = LaminarModel{T}(; Re = 2000)
-# model = KEpsilonModel{T}(; Re = 2000)
-# model = MixingLengthModel{T}(; Re = 2000)
-# model = SmagorinskyModel{T}(; Re = 2000)
-# model = QRModel{T}(; Re = 2000)
+## Viscosity model
+viscosity_model = LaminarModel{T}(; Re = 2000)
+# viscosity_model = KEpsilonModel{T}(; Re = 2000)
+# viscosity_model = MixingLengthModel{T}(; Re = 2000)
+# viscosity_model = SmagorinskyModel{T}(; Re = 2000)
+# viscosity_model = QRModel{T}(; Re = 2000)
+
+## Convection model
+convection_model = NoRegConvectionModel{T}()
+# convection_model = C2ConvectionModel{T}()
+# convection_model = C4ConvectionModel{T}()
+# convection_model = LerayConvectionModel{T}()
 
 # Grid parameters
 grid = create_grid(
@@ -40,19 +42,6 @@ grid = create_grid(
     ylims = (-0.5, 0.5),             # Vertical limits (bottom, top)
     zlims = (-0.25, 0.25),           # Depth limits (back, front)
     stretch = (1, 1, 1),             # Stretch factor (sx, sy[, sz])
-)
-
-# Time stepping
-time = Time{T}(;
-    t_start = 0,                 # Start time
-    t_end = 10,                  # End time
-    Δt = 0.01,                   # Timestep
-    method = RK44(),             # ODE method
-    method_startup = RK44(),     # Startup method for methods that are not self-starting
-    nstartup = 2,                # Number of necessary Vₙ₋ᵢ (= method order)
-    isadaptive = false,          # Adapt timestep every n_adapt_Δt iterations
-    n_adapt_Δt = 1,              # Number of iterations between timestep adjustment
-    CFL = 0.5,                   # CFL number for adaptive methods
 )
 
 # Solver settings
@@ -140,37 +129,43 @@ real_time_plotter = RealTimePlotter(;
 )
 vtk_writer = VTKWriter(;
     nupdate = 5,                         # Number of iterations between VTK writings
-    dir = "output/$(case.name)",         # Output directory
+    dir = "output/$name",                # Output directory
     filename = "solution",               # Output file name (without extension)
 )
 tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, real_time_plotter, vtk_writer, tracer]
+# processors = [logger, real_time_plotter, vtk_writer, tracer]
 processors = [logger, vtk_writer, tracer]
 
 # Final setup
 setup = Setup{T,N}(;
     case,
-    model,
+    viscosity_model,
+    convection_model,
     grid,
     force,
-    time,
     solver_settings,
-    processors,
     bc,
 )
 
+## Time interval
+t_start, t_end = tlims = (0.0, 10.0)
+
 ## Prepare
 build_operators!(setup);
-V₀, p₀, t₀ = create_initial_conditions(setup);
+V₀, p₀ = create_initial_conditions(setup, t_start);
 
-## Solve problem
-problem = setup.case.problem;
-@time V, p = solve(problem, setup, V₀, p₀);
+## Solve steady state problem
+problem = SteadyStateProblem(setup, V₀, p₀);
+V, p = @time solve(problem; processors)
+
+## Solve unsteady problem
+problem = UnsteadyProblem(setup, V₀, p₀, tlims);
+V, p = @time solve(problem, RK44(); Δt = 0.01, processors)
 
 ## Plot tracers
-plot_tracers(setup)
+plot_tracers(tracer)
 
 ## Post-process
 plot_pressure(setup, p)
-plot_vorticity(setup, V, setup.time.t_end)
-plot_streamfunction(setup, V, setup.time.t_end)
+plot_vorticity(setup, V, tlims[2])
+plot_streamfunction(setup, V, tlims[2])

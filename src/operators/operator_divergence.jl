@@ -2,8 +2,7 @@
 Construct divergence and gradient operator
 """
 function operator_divergence!(setup)
-    (; bc, model) = setup
-    (; problem) = setup.case
+    (; bc) = setup
     (; pressure_solver) = setup.solver_settings
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuz_in) = setup.grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t, Nvz_in) = setup.grid
@@ -118,25 +117,25 @@ function operator_divergence!(setup)
 
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
-    if !is_steady(problem) && !isa(model, KEpsilonModel)
-        # Note that the matrix for the pressure is constant in time.
-        # Only the right hand side vector changes, so the pressure matrix can be set up
-        # outside the time-stepping-loop.
+    # if !is_steady(problem) && !isa(viscosity_model, KEpsilonModel)
+    # Note that the matrix for the pressure is constant in time.
+    # Only the right hand side vector changes, so the pressure matrix can be set up
+    # outside the time-stepping-loop.
 
-        # Laplace = div grad
-        A = M * Diagonal(Ω⁻¹) * G
-        @pack! setup.operators = A
+    # Laplace = div grad
+    A = M * Diagonal(Ω⁻¹) * G
+    @pack! setup.operators = A
 
-        initialize!(pressure_solver, setup, A)
+    initialize!(pressure_solver, setup, A)
 
-        # Check if all the row sums of the pressure matrix are zero, which
-        # should be the case if there are no pressure boundary conditions
-        if any(==(:pressure), [bc.u.x..., bc.v.y..., bc.w.z...])
-            if any(≉(0; atol = 1e-10), abs.(sum(A; dims = 2)))
-                @warn "Pressure matrix: not all rowsums are zero!"
-            end
+    # Check if all the row sums of the pressure matrix are zero, which
+    # should be the case if there are no pressure boundary conditions
+    if any(==(:pressure), [bc.u.x..., bc.v.y..., bc.w.z...])
+        if any(≉(0; atol = 1e-10), abs.(sum(A; dims = 2)))
+            @warn "Pressure matrix: not all rowsums are zero!"
         end
     end
+    # end
 
     setup
 end

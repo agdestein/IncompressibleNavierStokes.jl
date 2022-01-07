@@ -4,13 +4,11 @@
 Solve steady state problem of the Navier-Stokes equations.
 This saddlepoint system arises from linearization of the convective terms.
 """
-function solve(::SteadyStateProblem, setup, V₀, p₀)
-    # Setup
-    (; model, processors) = setup
+function solve(problem::SteadyStateProblem; processors = Processor[])
+    (; setup, V₀, p₀) = problem
     (; NV, Np) = setup.grid
     (; G, M, yM) = setup.operators
     (; Jacobian_type, nPicard, nonlinear_acc, nonlinear_maxit) = setup.solver_settings
-    (; t_start) = setup.time
 
     # Temporary variables
     momentum_cache = MomentumCache(setup)
@@ -26,7 +24,7 @@ function solve(::SteadyStateProblem, setup, V₀, p₀)
     # Initial velocity field
     V = copy(V₀)
     p = copy(p₀)
-    t = t_start
+    t = 0.0
 
     # Initialize BC arrays
     set_bc_vectors!(setup, t)
@@ -72,10 +70,8 @@ function solve(::SteadyStateProblem, setup, V₀, p₀)
         # Calculate mass, momentum and energy
         maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
-        if !isa(model, KEpsilonModel)
-            momentum!(F, ∇F, V, V, p, t, setup, momentum_cache)
-            maxres = maximum(abs.(F))
-        end
+        momentum!(F, ∇F, V, V, p, t, setup, momentum_cache)
+        maxres = maximum(abs.(F))
 
         println(": momentum residual = $maxres")
 

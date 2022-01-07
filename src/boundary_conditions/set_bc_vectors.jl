@@ -4,9 +4,8 @@
 Construct boundary conditions.
 """
 function set_bc_vectors!(setup, t)
-    (; problem) = setup.case
-    (; model) = setup
-    (; Re) = setup.model
+    (; viscosity_model) = setup
+    (; Re) = viscosity_model
     (; u_bc, v_bc, w_bc, dudt_bc, dvdt_bc, dwdt_bc) = setup.bc
     (; p_bc, bc_unsteady) = setup.bc
     (; Nz, Np, Npx, Npy, Npz) = setup.grid
@@ -81,7 +80,7 @@ function set_bc_vectors!(setup, t)
     wBa_i = reshape(w_bc.(xp, yp', z[1], t, [setup]), :)
     wFr_i = reshape(w_bc.(xp, yp', z[end], t, [setup]), :)
 
-    if !is_steady(problem) && bc_unsteady
+    if bc_unsteady
         dudtLe_i = reshape(dudt_bc.(x[1], yp, zp', t, [setup]), :)
         dudtRi_i = reshape(dudt_bc.(x[end], yp, zp', t, [setup]), :)
         dvdtLo_i = reshape(dvdt_bc.(xp, y[1], zp', t, [setup]), :)
@@ -109,28 +108,26 @@ function set_bc_vectors!(setup, t)
     @pack! setup.operators = yM
 
     # Time derivative of divergence
-    if !is_steady(problem)
-        if bc_unsteady
-            ybc = dudtLe_i ⊗ Mx_bc.ybc1 + dudtRi_i ⊗ Mx_bc.ybc2
-            ydMx = Mx_bc.Bbc * ybc
+    if bc_unsteady
+        ybc = dudtLe_i ⊗ Mx_bc.ybc1 + dudtRi_i ⊗ Mx_bc.ybc2
+        ydMx = Mx_bc.Bbc * ybc
 
-            # My - order of kron is not correct, so reshape
-            ybc = dvdtLo_i ⊗ My_bc.ybc1 + dvdtUp_i ⊗ My_bc.ybc2
-            ybc = reshape(ybc, Nvy_b, Nvx_in, Nvz_in)
-            ybc = permutedims(ybc, (2, 1, 3))
-            ybc = reshape(ybc, :)
-            ydMy = My_bc.Bbc * ybc
+        # My - order of kron is not correct, so reshape
+        ybc = dvdtLo_i ⊗ My_bc.ybc1 + dvdtUp_i ⊗ My_bc.ybc2
+        ybc = reshape(ybc, Nvy_b, Nvx_in, Nvz_in)
+        ybc = permutedims(ybc, (2, 1, 3))
+        ybc = reshape(ybc, :)
+        ydMy = My_bc.Bbc * ybc
 
-            # Mz
-            ybc = Mz_bc.ybc1 ⊗ dwdtBa_i + Mz_bc.ybc2 ⊗ dwdtFr_i
-            ydMz = Mz_bc.Bbc * ybc
+        # Mz
+        ybc = Mz_bc.ybc1 ⊗ dwdtBa_i + Mz_bc.ybc2 ⊗ dwdtFr_i
+        ydMz = Mz_bc.Bbc * ybc
 
-            ydM = ydMx + ydMy + ydMz
-        else
-            ydM = zeros(Np)
-        end
-        @pack! setup.operators = ydM
+        ydM = ydMx + ydMy + ydMz
+    else
+        ydM = zeros(Np)
     end
+    @pack! setup.operators = ydM
 
     ## Boundary conditions for pressure
 
@@ -316,7 +313,7 @@ function set_bc_vectors!(setup, t)
     # Sv_wy
     ySv_wy = ySv_wy_bf + ySv_wy_lu
 
-    if model isa LaminarModel
+    if viscosity_model isa LaminarModel
         yDiffu = 1 / Re * (Dux * ySu_ux + Duy * ySu_uy + Duz * ySu_uz)
         yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy + Dvz * ySv_vz)
         yDiffw = 1 / Re * (Dwx * ySw_wx + Dwy * ySw_wy + Dwz * ySw_wz)
@@ -324,7 +321,9 @@ function set_bc_vectors!(setup, t)
         @pack! setup.operators = yDiff
     else
         # Use values directly (see diffusion.jl and strain_tensor.jl)
-        @pack! setup.operators = ySu_ux, ySu_uy, ySu_uz, ySu_vx, ySv_vx, ySv_vy, ySv_uy
+        @pack! setup.operators =
+            ySu_ux, ySu_uy, ySu_uz, ySv_vx, ySv_vy, ySv_vz, ySw_wx, ySw_wy, ySw_wz
+        @pack! setup.operators = ySu_vx, ySu_wx, ySv_uy, ySv_wy, ySw_uz, ySw_vz
     end
 
     ## Boundary conditions for interpolation
@@ -416,7 +415,7 @@ function set_bc_vectors!(setup, t)
     @pack! setup.operators = yIu_vx, yIv_vy, yIw_vz
     @pack! setup.operators = yIu_wx, yIv_wy, yIw_wz
 
-    if model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
+    if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         # Set bc for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
         # In all other cases, homogeneous (zero) Neumann conditions are used

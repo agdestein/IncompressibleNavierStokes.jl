@@ -3,16 +3,7 @@
 
 Initialize processor.
 """
-function initialize!(logger::Logger, stepper)
-    (; V, p, t, setup, cache, momentum_cache) = stepper
-    (; t_start, t_end, Δt) = setup.time
-    (; F) = cache
-
-    # Estimate number of time steps that will be taken
-    nt = ceil(Int, (t_end - t_start) / Δt)
-
-    logger
-end
+initialize!(logger::Logger, stepper) = logger
 
 function initialize!(plotter::RealTimePlotter, stepper)
     (; V, p, t, setup) = stepper

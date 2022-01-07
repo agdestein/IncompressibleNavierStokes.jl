@@ -8,16 +8,15 @@ module IncompressibleNavierStokes
 using FFTW: fft!, ifft!
 using Interpolations: LinearInterpolation
 using IterativeSolvers: cg!
-using LinearAlgebra: Diagonal, Factorization, UpperTriangular, I, cholesky, factorize, ldiv!, lu, mul!
-using SparseArrays: SparseMatrixCSC, blockdiag, nnz, sparse, spdiagm, spzeros
-using UnPack: @pack!, @unpack
+using LinearAlgebra
+using SparseArrays
+using UnPack
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 using Makie
 
 
 # Convenience notation
 const ⊗ = kron
-
 
 # Grid
 include("grid/grid.jl")
@@ -29,11 +28,8 @@ include("force/force.jl")
 include("force/build_force.jl")
 
 # Models
-include("models/models.jl")
-
-# Problems
-include("problems/problems.jl")
-include("problems/is_steady.jl")
+include("models/viscosity_models.jl")
+include("models/convection_models.jl")
 
 # Boundary condtions
 include("boundary_conditions/boundary_conditions.jl")
@@ -62,15 +58,6 @@ include("operators/ke_diffusion.jl")
 include("operators/ke_viscosity.jl")
 include("operators/operator_viscosity.jl")
 
-# Preprocess
-include("preprocess/create_initial_conditions.jl")
-
-# Processors
-include("processors/processors.jl")
-include("processors/initialize.jl")
-include("processors/process.jl")
-include("processors/finalize.jl")
-
 # Types
 include("time_steppers/methods.jl")
 include("time_steppers/tableaux.jl")
@@ -88,6 +75,16 @@ include("time_steppers/isexplicit.jl")
 include("time_steppers/needs_startup_method.jl")
 include("time_steppers/lambda_max.jl")
 
+# Preprocess
+include("preprocess/create_initial_conditions.jl")
+
+# Processors
+include("processors/processors.jl")
+include("processors/initialize.jl")
+include("processors/process.jl")
+include("processors/finalize.jl")
+
+
 # Momentum equation
 include("momentum/bodyforce.jl")
 include("momentum/compute_conservation.jl")
@@ -98,6 +95,10 @@ include("momentum/momentum.jl")
 include("momentum/strain_tensor.jl")
 include("momentum/turbulent_K.jl")
 include("momentum/turbulent_viscosity.jl")
+
+# Problems
+include("problems/problems.jl")
+include("problems/is_steady.jl")
 
 # Solvers
 include("solvers/get_timestep.jl")
@@ -119,7 +120,7 @@ include("postprocess/plot_streamfunction.jl")
 include("postprocess/plot_tracers.jl")
 
 # Reexport
-export @pack!, @unpack
+export @pack!
 
 # Grid
 export create_grid
@@ -129,6 +130,7 @@ export SteadyBodyForce, UnsteadyBodyForce
 
 # Models
 export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
+export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors
 export Logger, RealTimePlotter, VTKWriter, QuantityTracer

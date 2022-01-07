@@ -7,8 +7,7 @@ function turbulent_K end
 
 turbulent_K(model::SmagorinskyModel, setup) = model.C_s^2 * max_size(setup.grid)^2
 
-function turbulent_K(model::QRModel, setup)
-    # FIXME: Is this the correct `α`?
+function turbulent_K(::QRModel, setup)
     (; α) = setup.operators
     Δ = max_size(setup.grid) 
     C_d = Δ^2 / 8

@@ -47,7 +47,7 @@ Base.@kwdef struct ImplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
     Z::SparseMatrixCSC{T,Int}
 end
 
-Base.@kwdef struct AdamsBashforthCrankNicolsonCache{T} <: AbstractODEMethodCache{T}
+Base.@kwdef mutable struct AdamsBashforthCrankNicolsonCache{T} <: AbstractODEMethodCache{T}
     cₙ::Vector{T}
     cₙ₋₁::Vector{T}
     F::Vector{T}
@@ -61,6 +61,7 @@ Base.@kwdef struct AdamsBashforthCrankNicolsonCache{T} <: AbstractODEMethodCache
     yDiffₙ₊₁::Vector{T}
     Gpₙ::Vector{T}
     Diff_fact::Factorization{T}
+    Δt::T
 end
 
 Base.@kwdef struct OneLegCache{T} <: AbstractODEMethodCache{T}
@@ -79,14 +80,8 @@ Get time stepper cache for the given ODE method.
 """
 function ode_method_cache end
 
-function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod, setup)
-    (; model) = setup
-    (; NV, Np, Ω⁻¹) = setup.grid
-    (; Diff) = setup.operators
-    (; Δt) = setup.time
-    (; θ) = method
-
-    T = typeof(Δt)
+function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod{T}, setup) where {T}
+    (; NV, Np) = setup.grid
 
     cₙ = zeros(T, NV)
     cₙ₋₁ = zeros(T, NV)
@@ -101,22 +96,16 @@ function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod, setup)
     yDiffₙ₊₁ = zeros(T, NV)
     Gpₙ = zeros(T, NV)
 
-    ## Additional for implicit time stepping diffusion
-    if model isa LaminarModel
-        # Implicit time-stepping for diffusion
-        # FIXME: This only works if Δt is constant
-        # LU decomposition
-        Diff_fact = lu(I(NV) - θ * Δt * Diagonal(Ω⁻¹) * Diff)
-    else
-        Diff_fact = cholesky(spzeros(0, 0))
-    end
+    # Compute factorization at first time step (guaranteed since Δt > 0)
+    Δt = 0
+    Diff_fact = cholesky(spzeros(0, 0))
 
-    AdamsBashforthCrankNicolsonCache{T}(; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact)
+    AdamsBashforthCrankNicolsonCache{T}(; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ,
+                                        yDiffₙ₊₁, Gpₙ, Diff_fact, Δt)
 end
 
-function ode_method_cache(::OneLegMethod, setup)
+function ode_method_cache(::OneLegMethod{T}, setup) where {T}
     (; NV, Np) = setup.grid
-    T = typeof(setup.time.Δt)
     Vₙ₋₁ = zeros(T, NV)
     pₙ₋₁ = zeros(T, Np)
     F = zeros(T, NV)
@@ -126,10 +115,7 @@ function ode_method_cache(::OneLegMethod, setup)
     OneLegCache{T}(; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp)
 end
 
-function ode_method_cache(method::ExplicitRungeKuttaMethod, setup)
-    # TODO: Decide where `T` is to be passed
-    T = typeof(setup.time.Δt)
-
+function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup) where {T}
     (; NV, Np) = setup.grid
 
     ns = nstage(method)
@@ -151,16 +137,13 @@ function ode_method_cache(method::ExplicitRungeKuttaMethod, setup)
     # Vector with time instances (1 is the time level of final step)
     c = [c[2:end]; 1]
 
-    ExplicitRungeKuttaCache{T}(; kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp, A = T.(A), b = T.(b), c = T.(c))
+    ExplicitRungeKuttaCache{T}(; kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp, A, b, c)
 end
 
-function ode_method_cache(method::ImplicitRungeKuttaMethod, setup)
+function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
     (; NV, Np, Ω) = setup.grid
     (; G, M) = setup.operators
     (; A, b, c) = method
-
-    # TODO: Decide where `T` is to be passed
-    T = typeof(setup.time.Δt)
 
     # Number of stages
     s = length(b)

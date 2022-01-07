@@ -28,18 +28,29 @@ Base.@kwdef struct OneLegMethod{T} <: AbstractODEMethod{T}
 end
 
 """
-    ExplicitRungeKuttaMethod(A, b, c, r)
-    ImplicitRungeKuttaMethod(A, b, c, r)
+    AbstractRungeKuttaMethod
 
-Runge Kutta method.
+Abstract Runge Kutta method.
 """
 abstract type AbstractRungeKuttaMethod{T} <: AbstractODEMethod{T} end
+
+"""
+    ExplicitRungeKuttaMethod(A, b, c, r)
+
+Explicit Runge Kutta method.
+"""
 struct ExplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
     A::Matrix{T}
     b::Vector{T}
     c::Vector{T}
     r::T
 end
+
+"""
+    ImplicitRungeKuttaMethod(A, b, c, r)
+
+Implicit Runge Kutta method.
+"""
 struct ImplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
     A::Matrix{T}
     b::Vector{T}
@@ -47,10 +58,15 @@ struct ImplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
     r::T
 end
 
+"""
+    runge_kutta_method(A, b, c, r)
+
+Get Runge Kutta method. The function checks whether the method is explicit.
+"""
 function runge_kutta_method(A, b, c, r)
     s = size(A, 1)
     s == size(A, 2) == length(b) == length(c) || error("A, b, and c must have the same sizes")
-    isexplicit = all(isapprox(0), UpperTriangular(A))
+    isexplicit = all(≈(0), UpperTriangular(A))
     # T = promote_type(eltype(A), eltype(b), eltype(c), typeof(r)) 
     # TODO: Find where to pass T
     T = Float64

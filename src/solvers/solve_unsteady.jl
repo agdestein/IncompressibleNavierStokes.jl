@@ -1,12 +1,20 @@
 """
-    solve(unsteady_problem, setup, V₀, p₀)
+    solve(::UnsteadyProblem, setup, V₀, p₀)
 
-Solve `unsteady_problem`.
+Solve unsteady problem.
 """
-function solve(::UnsteadyProblem, setup, V₀, p₀)
-    # Setup
-    (; processors) = setup
-    (; t_end, Δt, isadaptive, method, method_startup, nstartup) = setup.time
+function solve(
+        problem::UnsteadyProblem, method;
+        Δt = nothing,
+        n_adapt_Δt = 1,
+        processors = Processor[],
+        method_startup = nothing,
+        nstartup = 1,
+    )
+    (; setup, V₀, p₀, tlims) = problem
+    
+    t_start, t_end = tlims
+    isadaptive = isnothing(Δt)
 
     # For methods that need a velocity field at n-1 the first time step
     # (e.g. AB-CN, oneleg beta) use ERK or IRK
@@ -17,7 +25,9 @@ function solve(::UnsteadyProblem, setup, V₀, p₀)
         method_use = method
     end
 
-    stepper = TimeStepper(method_use, setup, V₀, p₀)
+    isadaptive && (Δt = 0)
+    stepper = TimeStepper(method_use, setup, V₀, p₀, t_start, Δt)
+    isadaptive && (Δt = get_timestep(stepper))
 
     # Initialize BC arrays
     set_bc_vectors!(setup, stepper.t)
@@ -32,13 +42,12 @@ function solve(::UnsteadyProblem, setup, V₀, p₀)
     while stepper.t < t_end
         if stepper.n == nstartup && needs_startup_method(method)
             println("n = $(stepper.n): switching to primary ODE method ($method)")
-            method_use = method
             stepper = change_time_stepper(stepper, method)
         end
 
         # Change timestep based on operators
         if isadaptive && rem(stepper.n, n_adapt_Δt) == 0
-            Δt = get_timestep(setup, method_use)
+            Δt = get_timestep(stepper)
         end
 
         # Perform a single time step with the time integration method
