@@ -1,7 +1,21 @@
 """
-    solve(::UnsteadyProblem, setup, V₀, p₀)
+    solve(
+        problem::UnsteadyProblem, method;
+        Δt = nothing,
+        n_adapt_Δt = 1,
+        processors = Processor[],
+        method_startup = nothing,
+        nstartup = 1,
+    )
 
-Solve unsteady problem.
+Solve unsteady problem using `method`.
+
+The time step is chosen every `n_adapt_Δt` iteration if `Δt` is `nothing`.
+
+For methods that are not self-starting, `nstartup` startup iterations are performed with
+`method_startup`.
+
+Each `processor` is called after every `processor.nupdate` time step.
 """
 function solve(
         problem::UnsteadyProblem, method;
@@ -46,7 +60,7 @@ function solve(
         end
 
         # Change timestep based on operators
-        if isadaptive && rem(stepper.n, n_adapt_Δt) == 0
+        if isadaptive && rem(stepper.n, n_adapt_Δt) == 0 
             Δt = get_timestep(stepper)
         end
 

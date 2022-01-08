@@ -10,23 +10,27 @@ Adams-Bashforth for convection and Crank-Nicolson for diffusion
 formulation:
 
 ```math
-(\\mathbf{u}^{n+1} - \\mathbf{u}^n) / Δt = 
-    -(\\alpha_1 \\mathbf{c}^n + \\alpha_2 \\mathbf{c}^{n-1})
-    + \\theta \\mathbf{diff}^{n+1} + (1-\\theta) \\mathbf{diff}^n
-    + \\theta \\mathbf{F}^{n+1} + (1-\\theta) \\mathbf{F}^n
-    + \\theta \\mathbf{BC}^{n+1} + (1-\\theta) \\mathbf{BC}^n
-    - \\mathbf{G} \\mathbf{p} + \\mathbf{y}_p
+\\begin{align*}
+(\\mathbf{u}^{n+1} - \\mathbf{u}^n) / Δt & = \\\\
+    & -(\\alpha_1 \\mathbf{c}^n + \\alpha_2 \\mathbf{c}^{n-1}) \\\\
+    & + \\theta \\mathbf{d}^{n+1} + (1-\\theta) \\mathbf{d}^n \\\\
+    & + \\theta \\mathbf{F}^{n+1} + (1-\\theta) \\mathbf{F}^n \\\\
+    & + \\theta \\mathbf{BC}^{n+1} + (1-\\theta) \\mathbf{BC}^n \\\\
+    & - \\mathbf{G} \\mathbf{p} + \\mathbf{y}_p
+\\end{align*}
 ```
 
 where BC are boundary conditions of diffusion. This is rewritten as:
 
 ```math
-(\\frac{1}{\\Delta t} \\mathbf{I} - \\theta \\mathbf{D}) \\mathbf{u}^{n+1} =
-    (\\frac{1}{\\Delta t} \\mathbf{I} - (1 - \\theta) \\mathbf{D}) \\mathbf{u}^{n}
-    - (\\alpha_1 \\mathbf{c}^n + \\alpha_2 \\mathbf{c}^{n-1})
-    + \\theta \\mathbf{F}^{n+1} + (1-\\theta) \\mathbf{F}^{n}
-    + \\theta \\mathbf{BC}^{n+1} + (1-\\theta) \\mathbf{BC}^{n}
-    - \\mathbf{G} \\mathbf{p} + \\mathbf{y}_p
+\\begin{align*}
+(\\frac{1}{\\Delta t} \\mathbf{I} - \\theta \\mathbf{D}) \\mathbf{u}^{n+1} & =
+    (\\frac{1}{\\Delta t} \\mathbf{I} - (1 - \\theta) \\mathbf{D}) \\mathbf{u}^{n} \\\\
+    & - (\\alpha_1 \\mathbf{c}^n + \\alpha_2 \\mathbf{c}^{n-1}) \\\\
+    & + \\theta \\mathbf{F}^{n+1} + (1-\\theta) \\mathbf{F}^{n} \\\\
+    & + \\theta \\mathbf{BC}^{n+1} + (1-\\theta) \\mathbf{BC}^{n} \\\\
+    & - \\mathbf{G} \\mathbf{p} + \\mathbf{y}_p
+\\end{align*}
 ```
 
 The LU decomposition of the LHS matrix is precomputed in `operator_convection_diffusion.jl`.

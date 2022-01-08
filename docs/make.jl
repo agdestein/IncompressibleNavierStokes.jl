@@ -5,7 +5,7 @@ DocMeta.setdocmeta!(
     IncompressibleNavierStokes,
     :DocTestSetup,
     :(using IncompressibleNavierStokes);
-    recursive = true
+    recursive = true,
 )
 
 makedocs(;
@@ -23,7 +23,7 @@ makedocs(;
         "Getting Started" => "getting_started.md",
         "Examples" => [
             "Lid-Driven Cavity" => "examples/ldc.md",
-            "Backwards Facing Step" => "examples/bfs.md",
+            "Backward Facing Step" => "examples/bfs.md",
             "Taylor-Green Vortex" => "examples/tgv.md",
         ],
         "Theory" => [
