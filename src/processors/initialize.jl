@@ -24,7 +24,7 @@ function initialize!(plotter::RealTimePlotter, stepper)
     fig = Figure(resolution = (refsize * Lx / (Lx + Ly), refsize * Ly / (Lx + Ly) + 100))
     if fieldname == :velocity
         up, vp, wp, qp = get_velocity(V, t, setup)
-        vel = Node(qp)
+        vel = Observable(qp)
         ax, hm = contourf(fig[1, 1], xp, yp, vel)
         field = vel
     elseif fieldname == :vorticity
@@ -38,7 +38,7 @@ function initialize!(plotter::RealTimePlotter, stepper)
         else
             yω = y[2:end-1]
         end
-        ω = Node(get_vorticity(V, t, setup))
+        ω = Observable(get_vorticity(V, t, setup))
         # ax, hm = contour(fig[1, 1], xω, yω, ω; levels = -10:2:10)
         # ax, hm = contourf(fig[1, 1], xω, yω, ω; levels = -10:2:10, extendlow = :auto, extendhigh = :auto)
         # ax, hm = heatmap(fig[1, 1], xω, yω, ω; colorrange = (-20, 20))#, colormap = :vangogh)
@@ -55,7 +55,7 @@ function initialize!(plotter::RealTimePlotter, stepper)
         else
             yψ = y[2:end-1]
         end
-        ψ = Node(get_streamfunction(V, t, setup))
+        ψ = Observable(get_streamfunction(V, t, setup))
         ax, hm = contourf(fig[1, 1], xψ, yψ, ψ)
         field = ψ
     elseif fieldname == :pressure
