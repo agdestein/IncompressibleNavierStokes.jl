@@ -105,14 +105,10 @@ function operator_divergence!(setup)
     # Note that this also holds for outflow boundary conditions, if the stress
     # on the ouflow boundary is properly taken into account in y_p (often this
     # stress will be zero)
-    Gx = -Mx'
-    Gy = -My'
-    Gz = -Mz'
-
-    G = [Gx; Gy; Gz]
+    G = -M'
 
     ## Store in setup structure
-    @pack! setup.operators = M, Mx, My, Mz, Mx_bc, My_bc, Mz_bc, G, Gx, Gy, Gz
+    @pack! setup.operators = M, Mx_bc, My_bc, Mz_bc, G
     @pack! setup.operators = Bup, Bvp, Bwp
 
     ## Pressure matrix for pressure correction method;

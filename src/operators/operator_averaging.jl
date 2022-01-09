@@ -1,5 +1,6 @@
 """
     operator_averaging!(setup)
+
 Construct averaging operators.
 """
 function operator_averaging!(setup)

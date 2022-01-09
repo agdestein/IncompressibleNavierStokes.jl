@@ -7,7 +7,7 @@ module IncompressibleNavierStokes
 
 using FFTW: fft!, ifft!
 using Interpolations: LinearInterpolation
-using IterativeSolvers: cg!
+using IterativeSolvers
 using LinearAlgebra
 using SparseArrays
 using UnPack

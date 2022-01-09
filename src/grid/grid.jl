@@ -62,15 +62,8 @@ Base.@kwdef mutable struct Grid{T, N}
 
     # Operator mesh?
     Ωp::Vector{T} = T[]
-    Ωp⁻¹::Vector{T} = T[]
     Ω::Vector{T} = T[]
-    Ωu::Vector{T} = T[]
-    Ωv::Vector{T} = T[]
-    Ωw::Vector{T} = T[]
     Ω⁻¹::Vector{T} = T[]
-    Ωu⁻¹::Vector{T} = T[]
-    Ωv⁻¹::Vector{T} = T[]
-    Ωw⁻¹::Vector{T} = T[]
 
     hx::Vector{T} = T[]
     hy::Vector{T} = T[]

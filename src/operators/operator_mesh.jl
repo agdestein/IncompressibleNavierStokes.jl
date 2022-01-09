@@ -43,12 +43,12 @@ function operator_mesh!(setup)
 
     ## v-volumes
 
-    # X-dir
+    # x-dir
     Nvx_b = 2               # Boundary points
     Nvx_in = Nx             # Inner points
     Nvx_t = Nvx_in + Nvx_b  # Total number
 
-    # Y-dir
+    # y-dir
     Nvy_b = 2               # Boundary points
     Nvy_in = Ny + 1         # Inner points
     Nvy_in -= bc.v.y[1] ∈ [:dirichlet, :symmetric]
@@ -67,12 +67,12 @@ function operator_mesh!(setup)
 
     ## w-volumes
 
-    # X-dir
+    # x-dir
     Nwx_b = 2               # Boundary points
     Nwx_in = Nx             # Inner points
     Nwx_t = Nwx_in + Nwx_b  # Total number
 
-    # Y-dir
+    # y-dir
     Nwy_b = 2               # Boundary points
     Nwy_in = Ny             # Inner points
     Nwy_t = Nwy_in + Nwy_b  # Total number
@@ -137,14 +137,14 @@ function operator_mesh!(setup)
     Bkux = copy(Bmap)
 
 
-    ## Y-direction
+    ## y-direction
 
-    # Gyi: integration and gyd: differentiation
+    # gyi: integration and gyd: differentiation
     gyd = copy(gy)
     gyd[1] = hy[1]
     gyd[end] = hy[end]
 
-    # Hyi: integration and hyd: differentiation
+    # hyi: integration and hyd: differentiation
     # Map to find suitable size
     hyi = copy(hy)
     hyd = [hy[1]; hy; hy[end]]
@@ -180,7 +180,7 @@ function operator_mesh!(setup)
     Bkvy = copy(Bmap)
 
 
-    ## Z-direction
+    ## z-direction
 
     # gzi: integration and gzd: differentiation
     gzd = copy(gz)
@@ -216,7 +216,7 @@ function operator_mesh!(setup)
     # Matrix to map from Nuz_t-1 to Nwz_in points
     Buwz = spdiagm(Nwz_in, Nuz_t - 1, diagpos => ones(Nwz_in))
 
-    # matrix to map from Nvz_t-1 to Nwz_in points
+    # Matrix to map from Nvz_t-1 to Nwz_in points
     Bvwz = spdiagm(Nwz_in, Nvz_t - 1, diagpos => ones(Nwz_in))
 
     # Map from Npy+2 points to Nvy_t-1 points (vy faces)
@@ -226,23 +226,19 @@ function operator_mesh!(setup)
     ## Volumes
     # Volume (area) of pressure control volumes
     Ωp = hzi ⊗ hyi ⊗ hxi
-    Ωp⁻¹ = 1 ./ Ωp
 
     # Volume (area) of u control volumes
     Ωu = hzi ⊗ hyi ⊗ gxi
-    Ωu⁻¹ = 1 ./ Ωu
 
     # Volume (area) of v control volumes
     Ωv = hzi ⊗ gyi ⊗ hxi
-    Ωv⁻¹ = 1 ./ Ωv
 
     # Volume (area) of w control volumes
     Ωw = gzi ⊗ hyi ⊗ hxi
-    Ωw⁻¹ = 1 ./ Ωw
 
     # Total volumes
     Ω = [Ωu; Ωv; Ωw]
-    Ω⁻¹ = [Ωu⁻¹; Ωv⁻¹; Ωw⁻¹]
+    Ω⁻¹ = 1 ./ Ω
 
     # Metrics that can be useful for initialization:
     xu = reshape(ones(Nuz_in) ⊗ ones(Nuy_in) ⊗ xin, Nux_in, Nuy_in, Nuz_in)
@@ -266,7 +262,7 @@ function operator_mesh!(setup)
     indv = Nu .+ (1:Nv)
     indw = Nu + Nv .+ (1:Nw)
     indV = 1:NV
-    indp = (NV + 1):(NV + Np)
+    indp = NV .+ (1:Np)
 
     ## Store quantities in the structure
     @pack! setup.grid = Npx, Npy, Npz, Np
@@ -280,7 +276,7 @@ function operator_mesh!(setup)
     @pack! setup.grid = Nwy_in, Nwy_b, Nwy_t
     @pack! setup.grid = Nwz_in, Nwz_b, Nwz_t
     @pack! setup.grid = Nu, Nv, Nw, NV
-    @pack! setup.grid = Ωp, Ωp⁻¹, Ω, Ω⁻¹, Ωu, Ωv, Ωw, Ωu⁻¹, Ωv⁻¹, Ωw⁻¹
+    @pack! setup.grid = Ωp, Ω, Ω⁻¹
     @pack! setup.grid = hxi, hyi, hzi, hxd, hyd, hzd
     @pack! setup.grid = gxi, gyi, gzi, gxd, gyd, gzd
     @pack! setup.grid = Buvy, Bvux, Buwz, Bwux, Bvwz, Bwvy, Bkux, Bkvy, Bkwz

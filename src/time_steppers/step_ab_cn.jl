@@ -11,8 +11,8 @@ formulation:
 
 ```math
 \\begin{align*}
-(\\mathbf{u}^{n+1} - \\mathbf{u}^n) / Δt & = \\\\
-    & -(\\alpha_1 \\mathbf{c}^n + \\alpha_2 \\mathbf{c}^{n-1}) \\\\
+(\\mathbf{u}^{n+1} - \\mathbf{u}^n) / Δt & =
+    -(\\alpha_1 \\mathbf{c}^n + \\alpha_2 \\mathbf{c}^{n-1}) \\\\
     & + \\theta \\mathbf{d}^{n+1} + (1-\\theta) \\mathbf{d}^n \\\\
     & + \\theta \\mathbf{F}^{n+1} + (1-\\theta) \\mathbf{F}^n \\\\
     & + \\theta \\mathbf{BC}^{n+1} + (1-\\theta) \\mathbf{BC}^n \\\\

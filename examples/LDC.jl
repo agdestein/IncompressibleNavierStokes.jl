@@ -7,6 +7,8 @@ if isdefined(@__MODULE__, :LanguageServer)
     using .IncompressibleNavierStokes
 end
 
+using MKL
+
 using IncompressibleNavierStokes
 using GLMakie
 
@@ -135,7 +137,8 @@ vtk_writer = VTKWriter(;
 )
 tracer = QuantityTracer(; nupdate = 1)
 # processors = [logger, real_time_plotter, vtk_writer, tracer]
-processors = [logger, vtk_writer, tracer]
+# processors = [logger, vtk_writer, tracer]
+processors = [logger]
 
 # Final setup
 setup = Setup{T,N}(;

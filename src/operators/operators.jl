@@ -50,18 +50,12 @@ Base.@kwdef mutable struct Operators{T}
     Iv_wy_bc_bf::NamedTuple = (;)
 
     M::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Mx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    My::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Mz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
     Mx_bc::NamedTuple = (;)
     My_bc::NamedTuple = (;)
     Mz_bc::NamedTuple = (;)
 
     G::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Gx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Gy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Gz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
     Bup::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Bvp::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)

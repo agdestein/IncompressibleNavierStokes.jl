@@ -85,8 +85,8 @@ function set_bc_vectors!(setup, t)
         dudtRi_i = reshape(dudt_bc.(x[end], yp, zp', t, [setup]), :)
         dvdtLo_i = reshape(dvdt_bc.(xp, y[1], zp', t, [setup]), :)
         dvdtUp_i = reshape(dvdt_bc.(xp, y[end], zp', t, [setup]), :)
-        dwdtLo_i = reshape(dwdt_bc.(xp, yp', z[1], t, [setup]), :)
-        dwdtUp_i = reshape(dwdt_bc.(xp, yp', z[end], t, [setup]), :)
+        dwdtBa_i = reshape(dwdt_bc.(xp, yp', z[1], t, [setup]), :)
+        dwdtFr_i = reshape(dwdt_bc.(xp, yp', z[end], t, [setup]), :)
     end
 
     ## Boundary conditions for divergence

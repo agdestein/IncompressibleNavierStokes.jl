@@ -1,7 +1,3 @@
-```@meta
-CurrentModule = IncompressibleNavierStokes
-```
-
 ![Logo](assets/logo_text_dots.png)
 
 # IncompressibleNavierStokes

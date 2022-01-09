@@ -1,4 +1,6 @@
 """
+    operator_convection_diffusion!(setup)
+
 Construct convection and diffusion operators.
 """
 function operator_convection_diffusion!(setup)

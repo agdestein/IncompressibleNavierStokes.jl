@@ -5,7 +5,7 @@ Estimate time step based on eigenvalues of operators, using Gershgorin.
 """
 function get_timestep(stepper)
     (; setup, method, V) = stepper
-    (; NV, Ω⁻¹, indu, indv, indw) = setup.grid
+    (; NV, indu, indv, indw, Ω⁻¹) = setup.grid
     (; Diff) = setup.operators
     (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz) = setup.operators
     (; Au_ux, Au_uy, Au_uz, Av_vx, Av_vy, Av_vz, Aw_wx, Aw_wy, Aw_wz) = setup.operators

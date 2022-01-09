@@ -18,6 +18,7 @@ function solve(problem::SteadyStateProblem; processors = Processor[])
     f = zeros(NV + Np)
     ∇F = spzeros(NV, NV)
     Z2 = spzeros(Np, Np)
+    Δq = zeros(NV + Np)
 
     # Initialize solution vectors
     # Loop index
@@ -61,7 +62,10 @@ function solve(problem::SteadyStateProblem; processors = Processor[])
         fmass = M * V + yM
         f = [-F; fmass]
         Z = [∇F -G; -M Z2]
+
         Δq = Z \ f
+        # gmres!(Δq, Z, f)
+        # bicgstabl!(Δq, Z, f)
 
         ΔV = @view Δq[1:NV]
         Δp = @view Δq[NV+1:end]
