@@ -1,5 +1,5 @@
 """
-    function solve(problem::SteadyStateProblem; processors = Processor[])
+    solve(problem::SteadyStateProblem; processors = Processor[])
 
 Solve steady state problem of the Navier-Stokes equations.
 This saddlepoint system arises from linearization of the convective terms.

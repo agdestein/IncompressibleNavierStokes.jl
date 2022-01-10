@@ -164,6 +164,7 @@ export plot_pressure, plot_streamfunction, plot_vorticity, plot_tracers
 export AdamsBashforthCrankNicolsonMethod, OneLegMethod
 
 # Runge Kutta methods
+export ExplicitRungeKuttaMethod, ImplicitRungeKuttaMethod, runge_kutta_method
 
 # Explicit Methods
 export FE11, SSP22, SSP42, SSP33, SSP43, SSP104, rSSPs2, rSSPs3, Wray3, RK56, DOPRI6
