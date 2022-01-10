@@ -28,10 +28,11 @@ end
 
 function process!(plotter::RealTimePlotter, stepper)
     (; setup, V, p, t) = stepper
-    (; Nx, Ny, Npx, Npy) = setup.grid
+    (; Npx, Npy) = setup.grid
     (; field, fieldname) = plotter
     if fieldname == :velocity
-        up, vp, wp, qp = get_velocity(V, t, setup)
+        vels = get_velocity(V, t, setup)
+        qp = .√sum(vels .^ 2)
         field[] = qp
     elseif fieldname == :vorticity
         field[] = vorticity!(field[], V, t, setup)
@@ -48,10 +49,16 @@ end
 function process!(writer::VTKWriter, stepper)
     (; setup, V, p, t) = stepper
     (; xp, yp, zp) = setup.grid;
+    dim = get_dimension(setup.grid)
+    if dim == 2
+        coords = (xp, yp)
+    elseif dim == 3
+        coords = (xp, yp, zp)
+    end
+    
     tformat = replace(string(t), "." => "p")
-    vtk_grid("$(writer.dir)/$(writer.filename)_t=$tformat", xp, yp, zp) do vtk
-        up, vp, wp, = get_velocity(V, t, setup)
-        vtk["velocity"] = (up, vp, wp)
+    vtk_grid("$(writer.dir)/$(writer.filename)_t=$tformat", coords...) do vtk
+        vtk["velocity"] = get_velocity(V, t, setup)
         vtk["pressure"] = p
         writer.pvd[t] = vtk
     end

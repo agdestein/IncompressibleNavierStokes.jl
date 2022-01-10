@@ -15,9 +15,6 @@ using GLMakie
 # Floating point type for simulations
 T = Float64
 
-# Spatial dimension
-N = 3
-
 # Case information
 name = "LDC"
 case = Case()
@@ -37,8 +34,7 @@ convection_model = NoRegConvectionModel{T}()
 
 # Grid parameters
 grid = create_grid(
-    T,
-    N;
+    T;
     Nx = 25,                      # Number of x-volumes
     Ny = 25,                      # Number of y-volumes
     Nz = 10,                      # Number of z-volumes
@@ -141,7 +137,7 @@ tracer = QuantityTracer(; nupdate = 1)
 processors = [logger]
 
 # Final setup
-setup = Setup{T,N}(;
+setup = Setup{T}(;
     case,
     viscosity_model,
     convection_model,

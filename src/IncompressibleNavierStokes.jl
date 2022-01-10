@@ -20,6 +20,7 @@ const ⊗ = kron
 
 # Grid
 include("grid/grid.jl")
+include("grid/get_dimension.jl")
 include("grid/nonuniform_grid.jl")
 include("grid/create_grid.jl")
 
@@ -124,6 +125,7 @@ export @pack!
 
 # Grid
 export create_grid
+export get_dimension
 
 # Force
 export SteadyBodyForce, UnsteadyBodyForce
