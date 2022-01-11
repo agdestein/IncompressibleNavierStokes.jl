@@ -48,10 +48,11 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
 
         # Periodic boundary conditions
         if bc.u.x == (:periodic, :periodic)
-            mat_hx2 = spdiagm(Nx + 4, Nx + 4, [hx[end-1]; hx[end]; hx; hx[1]; hx[2]])
-            mat_hx4 = spdiagm(Nx + 4, Nx + 4, [hx3[end-1]; hx3[end]; hxi3; hx3[1]; hx3[2]])
+            mat_hx2 = spdiagm(Nx + 4, Nx + 4, [hx[end - 1]; hx[end]; hx; hx[1]; hx[2]])
+            mat_hx4 =
+                spdiagm(Nx + 4, Nx + 4, [hx3[end - 1]; hx3[end]; hxi3; hx3[1]; hx3[2]])
         else
-            mat_hx2 = spdiagm(Nx + 4, Nx + 4, [hx[2]; hx[1]; hx; hx[end]; hx[end-1]])
+            mat_hx2 = spdiagm(Nx + 4, Nx + 4, [hx[2]; hx[1]; hx; hx[end]; hx[end - 1]])
             mat_hx4 = spdiagm(
                 Nx + 4,
                 Nx + 4,
@@ -59,17 +60,18 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
                     hx[1] + hx[2] + hx[3]
                     2 * hx[1] + hx[2]
                     hxi3
-                    2 * hx[end] + hx[end-1]
-                    hx[end] + hx[end-1] + hx[end-2]
+                    2 * hx[end] + hx[end - 1]
+                    hx[end] + hx[end - 1] + hx[end - 2]
                 ],
             )
         end
 
         if bc.v.y == (:periodic, :periodic)
-            mat_hy2 = spdiagm(Ny + 4, Ny + 4, [hy[end-1]; hy[end]; hy; hy[1]; hy[2]])
-            mat_hy4 = spdiagm(Ny + 4, Ny + 4, [hy3[end-1]; hy3[end]; hyi3; hy3[1]; hy3[2]])
+            mat_hy2 = spdiagm(Ny + 4, Ny + 4, [hy[end - 1]; hy[end]; hy; hy[1]; hy[2]])
+            mat_hy4 =
+                spdiagm(Ny + 4, Ny + 4, [hy3[end - 1]; hy3[end]; hyi3; hy3[1]; hy3[2]])
         else
-            mat_hy2 = spdiagm(Ny + 4, Ny + 4, [hy[2]; hy[1]; hy; hy[end]; hy[end-1]])
+            mat_hy2 = spdiagm(Ny + 4, Ny + 4, [hy[2]; hy[1]; hy; hy[end]; hy[end - 1]])
             mat_hy4 = spdiagm(
                 Ny + 4,
                 Ny + 4,
@@ -77,8 +79,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
                     hy[1] + hy[2] + hy[3]
                     2 * hy[1] + hy[2]
                     hyi3
-                    2 * hy[end] + hy[end-1]
-                    hy[end] + hy[end-1] + hy[end-2]
+                    2 * hy[end] + hy[end - 1]
+                    hy[end] + hy[end - 1] + hy[end - 2]
                 ],
             )
         end
@@ -119,6 +121,7 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
             hx[1],
             hx[end],
         )
+
         # Extend to 2D
         Iu_ux3 = mat_hy3 ⊗ (I1D3 * Iu_ux_bc3.B1D)
         Iu_ux_bc3 = (; Iu_ux_bc3..., Bbc = mat_hy3 ⊗ (I1D3 * Iu_ux_bc3.Btemp))
@@ -127,6 +130,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         diag1 = fill(weight1, Nvx_t)
         diag2 = fill(weight2, Nvx_t)
         I1D = spdiagm(Nvx_t - 1, Nvx_t + 2, 0 => diag2, 1 => diag1, 2 => diag1, 3 => diag2)
+        any(==(:pressure), bc.u.x) &&
+            @warn "Possible interpolation bug (see https://github.com/bsanderse/INS2D/commit/b8de84dbe151d6de32928563ca8fa5785cce6318)"
 
         # Restrict to u-points
         # The restriction is essentially 1D so it can be directly applied to I1D
@@ -135,7 +140,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
 
         # Boundary conditions low/up
         Nb = Nuy_in + 1 - Nvy_in
-        Iv_uy_bc_lu = bc_general(Nuy_in + 1, Nvy_in, Nb, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
+        Iv_uy_bc_lu =
+            bc_general(Nuy_in + 1, Nvy_in, Nb, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
         Iv_uy_bc_lu = (; Iv_uy_bc_lu..., B2D = Iv_uy_bc_lu.B1D ⊗ I(Nvx_in))
         Iv_uy_bc_lu = (; Iv_uy_bc_lu..., Bbc = Iv_uy_bc_lu.Btemp ⊗ I(Nvx_in))
 
@@ -151,14 +157,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         )
 
         # Take I2D into left/right operators for convenience
-        Iv_uy_bc_lr = (;
-            Iv_uy_bc_lr...,
-            B2D = I2D * I(Nuy_t - 1) ⊗ Iv_uy_bc_lr.B1D
-        )
-        Iv_uy_bc_lr = (;
-            Iv_uy_bc_lr...,
-            Bbc = I2D * I(Nuy_t - 1) ⊗ Iv_uy_bc_lr.Btemp
-        )
+        Iv_uy_bc_lr = (; Iv_uy_bc_lr..., B2D = I2D * I(Nuy_t - 1) ⊗ Iv_uy_bc_lr.B1D)
+        Iv_uy_bc_lr = (; Iv_uy_bc_lr..., Bbc = I2D * I(Nuy_t - 1) ⊗ Iv_uy_bc_lr.Btemp)
 
         # Resulting operator:
         Iv_uy = Iv_uy_bc_lr.B2D * Iv_uy_bc_lu.B2D
@@ -202,6 +202,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         diag1 = fill(weight1, Nuy_t)
         diag2 = fill(weight2, Nuy_t)
         I1D = spdiagm(Nuy_t - 1, Nuy_t + 2, 0 => diag2, 1 => diag1, 2 => diag1, 3 => diag2)
+        any(==(:pressure), bc.v.y) &&
+            @warn "Possible interpolation bug (see https://github.com/bsanderse/INS2D/commit/b8de84dbe151d6de32928563ca8fa5785cce6318)"
 
         # Restrict to v-points
         I1D = Buvy * I1D * mat_hy2
@@ -320,6 +322,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         ## Iv_uy
         diag1 = fill(weight, Nvx_t - 1)
         I1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => diag1, 1 => diag1)
+        bc.u.x[1] == :pressure && (I1D[1, :] ./= 2)
+        bc.u.x[2] == :pressure && (I1D[end, :] ./= 2)
 
         # The restriction is essentially 1D so it can be directly applied to I1D
         I1D = Bvux * I1D * mat_hx2
@@ -327,7 +331,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
 
         # Boundary conditions low/up
         Nb = Nuy_in + 1 - Nvy_in
-        Iv_uy_bc_lu = bc_general(Nuy_in + 1, Nvy_in, Nb, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
+        Iv_uy_bc_lu =
+            bc_general(Nuy_in + 1, Nvy_in, Nb, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
         Iv_uy_bc_lu = (; Iv_uy_bc_lu..., B2D = Iv_uy_bc_lu.B1D ⊗ I(Nvx_in))
         Iv_uy_bc_lu = (; Iv_uy_bc_lu..., Bbc = Iv_uy_bc_lu.Btemp ⊗ I(Nvx_in))
 
@@ -349,6 +354,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         I1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => diag1, 1 => diag1)
         I1D = Buvy * I1D * mat_hy2
         I2D = I1D ⊗ I(Nvx_t - 1)
+        bc.v.y[1] == :pressure && (I1D[1, :] ./= 2)
+        bc.v.y[2] == :pressure && (I1D[end, :] ./= 2)
 
         # Boundary conditions low/up
         Iu_vx_bc_lu =
@@ -385,7 +392,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
     @pack! operators = Iv_uy_bc_lr, Iv_uy_bc_lu, Iu_vx_bc_lr, Iu_vx_bc_lu
     if order4
         @pack! operators = Iu_ux3, Iv_uy3, Iu_vx3, Iv_vy3
-        @pack! operators = Iu_ux_bc3, Iv_uy_bc_lr3, Iv_uy_bc_lu3, Iu_vx_bc_lr3, Iu_vx_bc_lu3, Iv_vy_bc3
+        @pack! operators =
+            Iu_ux_bc3, Iv_uy_bc_lr3, Iv_uy_bc_lu3, Iu_vx_bc_lr3, Iu_vx_bc_lu3, Iv_vy_bc3
     end
 
     setup
@@ -444,6 +452,8 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     ## Iv_uy
     diag1 = fill(weight, Nvx_t - 1)
     I1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => diag1, 1 => diag1)
+    bc.u.x[1] == :pressure && (I1D[1, :] ./= 2)
+    bc.u.x[2] == :pressure && (I1D[end, :] ./= 2)
 
     # The restriction is essentially 1D so it can be directly applied to I1D
     I1D = Bvux * I1D * mat_hx2
@@ -470,6 +480,9 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     ## Iw_uz
     diag1 = fill(weight, Nwx_t - 1)
     I1D = spdiagm(Nwx_t - 1, Nwx_t, 0 => diag1, 1 => diag1)
+    bc.u.x[1] == :pressure && (I1D[1, :] ./= 2)
+    bc.u.x[2] == :pressure && (I1D[end, :] ./= 2)
+
     I1D = Bwux * I1D * mat_hx2
     I3D = I(Nz + 1) ⊗ mat_hy ⊗ I1D
 
@@ -497,6 +510,9 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     ## Iu_vx
     diag1 = fill(weight, Nuy_t - 1)
     I1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => diag1, 1 => diag1)
+    bc.v.y[1] == :pressure && (I1D[1, :] ./= 2)
+    bc.v.y[2] == :pressure && (I1D[end, :] ./= 2)
+
     I1D = Buvy * I1D * mat_hy2
     I3D = mat_hz ⊗ I1D ⊗ I(Nx + 1)
 
@@ -508,8 +524,7 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
 
     # Boundary conditions left/right
     Nb = Nvx_in + 1 - Nux_in
-    Iu_vx_bc_lr =
-        bc_general(Nvx_in + 1, Nux_in, Nb, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
+    Iu_vx_bc_lr = bc_general(Nvx_in + 1, Nux_in, Nb, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
     Iu_vx_bc_lr = (; Iu_vx_bc_lr..., B3D = I(Nz) ⊗ I(Ny) ⊗ Iu_vx_bc_lr.B1D)
     Iu_vx_bc_lr = (; Iu_vx_bc_lr..., Bbc = I(Nz) ⊗ I(Ny) ⊗ Iu_vx_bc_lr.Btemp)
 
@@ -530,6 +545,9 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     ## Iw_vz
     diag1 = fill(weight, Nwy_t - 1)
     I1D = spdiagm(Nwy_t - 1, Nwy_t, 0 => diag1, 1 => diag1)
+    bc.v.y[1] == :pressure && (I1D[1, :] ./= 2)
+    bc.v.y[2] == :pressure && (I1D[end, :] ./= 2)
+
     I1D = Bwvy * I1D * mat_hy2
     I3D = I(Nz + 1) ⊗ I1D ⊗ mat_hx
 
@@ -541,8 +559,7 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
 
     # Boundary conditions left/right
     Nb = Nvz_in + 1 - Nwz_in
-    Iw_vz_bc_bf =
-        bc_general(Nvz_in + 1, Nwz_in, Nb, bc.w.z[1], bc.w.z[2], hz[1], hz[end])
+    Iw_vz_bc_bf = bc_general(Nvz_in + 1, Nwz_in, Nb, bc.w.z[1], bc.w.z[2], hz[1], hz[end])
     Iw_vz_bc_bf = (; Iw_vz_bc_bf..., B3D = Iw_vz_bc_bf.B1D ⊗ I(Ny) ⊗ I(Nx))
     Iw_vz_bc_bf = (; Iw_vz_bc_bf..., Bbc = Iw_vz_bc_bf.Btemp ⊗ I(Ny) ⊗ I(Nx))
 
@@ -556,6 +573,9 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     ## Iu_wx
     diag1 = fill(weight, Nuz_t - 1)
     I1D = spdiagm(Nuz_t - 1, Nuz_t, 0 => diag1, 1 => diag1)
+    bc.w.z[1] == :pressure && (I1D[1, :] ./= 2)
+    bc.w.z[2] == :pressure && (I1D[end, :] ./= 2)
+
     I1D = Buwz * I1D * mat_hz2
     I3D = I1D ⊗ mat_hy ⊗ I(Nx + 1)
 
@@ -567,8 +587,7 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
 
     # Boundary conditions left/right
     Nb = Nwx_in + 1 - Nux_in
-    Iu_wx_bc_lr =
-        bc_general(Nwx_in + 1, Nux_in, Nb, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
+    Iu_wx_bc_lr = bc_general(Nwx_in + 1, Nux_in, Nb, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
     Iu_wx_bc_lr = (; Iu_wx_bc_lr..., B3D = I(Nz) ⊗ I(Ny) ⊗ Iu_wx_bc_lr.B1D)
     Iu_wx_bc_lr = (; Iu_wx_bc_lr..., Bbc = I(Nz) ⊗ I(Ny) ⊗ Iu_wx_bc_lr.Btemp)
 
@@ -578,19 +597,21 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     ## Iv_wy
     diag1 = fill(weight, Nvz_t - 1)
     I1D = spdiagm(Nvz_t - 1, Nvz_t, 0 => diag1, 1 => diag1)
+    bc.w.z[1] == :pressure && (I1D[1, :] ./= 2)
+    bc.w.z[2] == :pressure && (I1D[end, :] ./= 2)
+
     I1D = Bvwz * I1D * mat_hz2
     I3D = I1D ⊗ I(Ny + 1) ⊗ mat_hx
 
     # Boundary conditions back/front
     Iv_wy_bc_bf =
         bc_general_stag(Nvz_t, Nvz_in, Nvz_b, bc.v.y[1], bc.v.y[2], hz[1], hz[end])
-    Iv_wy_bc_bf = (; Iv_wy_bc_bf..., B3D = I3D * (Iv_wy_bc_bf.B1D ⊗ I(Ny + 1) ⊗  I(Nx)))
-    Iv_wy_bc_bf = (; Iv_wy_bc_bf..., Bbc = I3D * (Iv_wy_bc_bf.Btemp ⊗ I(Ny + 1) ⊗  I(Nx)))
+    Iv_wy_bc_bf = (; Iv_wy_bc_bf..., B3D = I3D * (Iv_wy_bc_bf.B1D ⊗ I(Ny + 1) ⊗ I(Nx)))
+    Iv_wy_bc_bf = (; Iv_wy_bc_bf..., Bbc = I3D * (Iv_wy_bc_bf.Btemp ⊗ I(Ny + 1) ⊗ I(Nx)))
 
     # Boundary conditions low/up
     Nb = Nwy_in + 1 - Nvy_in
-    Iv_wy_bc_lu =
-        bc_general(Nwy_in + 1, Nvy_in, Nb, bc.v.z[1], bc.v.z[2], hy[1], hy[end])
+    Iv_wy_bc_lu = bc_general(Nwy_in + 1, Nvy_in, Nb, bc.v.z[1], bc.v.z[2], hy[1], hy[end])
     Iv_wy_bc_lu = (; Iv_wy_bc_lu..., B3D = I(Nz) ⊗ Iv_wy_bc_lu.B1D ⊗ I(Nx))
     Iv_wy_bc_lu = (; Iv_wy_bc_lu..., Bbc = I(Nz) ⊗ Iv_wy_bc_lu.Btemp ⊗ I(Nx))
 
