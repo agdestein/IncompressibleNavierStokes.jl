@@ -1,5 +1,5 @@
 # Run a typical simulation
-@testset "Simulation" begin
+@testset "Simulation 3D" begin
     # Lid-Driven Cavity case (LDC).
 
     # Floating point type for simulations
@@ -28,9 +28,6 @@
     Nz = 10                           # Number of z-volumes
     grid = create_grid(
         T, Nx, Ny, Nz;
-        Nx = 25,                      # Number of x-volumes
-        Ny = 25,                      # Number of y-volumes
-        Nz = 10;                      # Number of z-volumes
         xlims = (0, 1),               # Horizontal limits (left, right)
         ylims = (0, 1),               # Vertical limits (bottom, top)
         zlims = (-0.2, 0.2),          # Depth limits (back, front)
