@@ -8,13 +8,13 @@ are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
 """
 function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     (; V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
-    (; Nu, Nv, NV, Np, Ω, Ω⁻¹) = setup.grid
+    (; NV, Np, Ω⁻¹) = setup.grid
     (; G, M) = setup.operators
-    (; pressure_solver, nonlinear_maxit, nonlinear_acc, nonlinear_Newton, p_add_solve) =
+    (; pressure_solver, maxiter, abstol, newton_type, p_add_solve) =
         setup.solver_settings
     (; Vtotₙ, ptotₙ, Qⱼ, Fⱼ, ∇Fⱼ, fⱼ, F, ∇F, f, Δp, Gp) = cache
-    (; Gtot, Mtot, yMtot, Ωtot, dfmom, Z) = cache
-    (; A, b, c, Is, Ω_sNV, A_ext, b_ext) = cache
+    (; Mtot, yMtot, Ωtot, dfmom, Z) = cache
+    (; A, b, c, Ω_sNV, A_ext, b_ext) = cache
 
     is_patterned = stepper.n > 1
 
@@ -81,7 +81,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     mul!(fmassⱼ, Mtot, Vⱼ, -1, -1)
     # fmassⱼ .= .-(Mtot * Vⱼ .+ yMtot)
 
-    if nonlinear_Newton == "approximate"
+    if newton_type == :approximate
         # Approximate Newton (Jacobian is based on current solution Vₙ)
         momentum!(F, ∇F, Vₙ, Vₙ, pₙ, tₙ, setup, momentum_cache; getJacobian = true)
 
@@ -100,15 +100,15 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
         Z_fact = lu(Z)
     end
 
-    while maximum(abs.(f)) > nonlinear_acc
-        if nonlinear_Newton == "approximate"
+    while maximum(abs.(f)) > abstol
+        if newton_type == :approximate
             # Approximate Newton
             # ΔQⱼ = Z \ fⱼ
 
             # Re-use the decomposition
             # ΔQⱼ = Z_fact \ fⱼ
             ldiv!(ΔQⱼ, Z_fact, fⱼ)
-        elseif nonlinear_Newton == "full"
+        elseif newton_type == :full
             # Full Newton
             momentum_allstage!(
                 Fⱼ,
@@ -148,9 +148,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
         mul!(fmassⱼ, Mtot, Vⱼ, -1, -1)
         # fmassⱼ = -(Mtot * Vⱼ + yMtot)
 
-        if iter > nonlinear_maxit
-            error("Newton not converged in $nonlinear_maxit iterations")
-        end
+        iter ≤ maxiter || error("Newton solver not converged in $maxiter iterations")
     end
 
     # Solution at new time step with b-coefficients of RK method
@@ -168,7 +166,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
         f .= yM
         mul!(f, M, V, 1 / Δtₙ, 1 / Δtₙ)
         # f .= 1 / Δtₙ .* (M * V .+ yM)
-        pressure_poisson!(pressure_solver, p, f, tₙ + Δtₙ, setup)
+        pressure_poisson!(pressure_solver, p, f)
 
         mul!(Gp, G, p)
         @. V -= Δtₙ * Ω⁻¹ * Gp
@@ -211,7 +209,7 @@ function momentum_allstage!(
     momentum_cache;
     getJacobian = false,
 )
-    (; Nu, Nv, NV, Np) = setup.grid
+    (; NV, Np) = setup.grid
     (; c, ∇F) = cache
 
     for i = 1:length(c)

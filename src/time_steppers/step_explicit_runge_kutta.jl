@@ -67,7 +67,7 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt)
 
         # Solve the Poisson equation, but not for the first step if the boundary conditions are steady
         if setup.bc.bc_unsteady || i > 1
-            pressure_poisson!(pressure_solver, p, f, tᵢ, setup)
+            pressure_poisson!(pressure_solver, p, f)
         else
             # Bc steady AND i = 1
             p .= pₙ

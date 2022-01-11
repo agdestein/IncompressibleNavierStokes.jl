@@ -27,15 +27,14 @@ Plot the solution every `nupdate` time steps. Available fieldnames are:
 Base.@kwdef mutable struct RealTimePlotter <: Processor
     nupdate::Int = 1
     fieldname::Symbol = :vorticity
-    fps::Int = 60
     field::Observable = Observable(nothing)
 end
 
 """
-    VTKWriter(; nupdate, dir, filename)
+    VTKWriter(; nupdate, dir = "output", filename = "solution")
 
 Write the solution every `nupdate` time steps to a VTK file. The resulting Paraview data
-collection file is stored in `\$dir/\$filename.pvd`.
+collection file is stored in `"\$dir/\$filename.pvd"`.
 """
 Base.@kwdef mutable struct VTKWriter <: Processor
     nupdate::Int = 1

@@ -124,7 +124,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     f = (M * V + yM) / Δt - M * y_Δp
 
     # Solve the Poisson equation for the pressure
-    pressure_poisson!(pressure_solver, Δp, f, tₙ + Δt, setup)
+    pressure_poisson!(pressure_solver, Δp, f)
 
     # Update velocity field
     V .-= Δt .* Ω⁻¹ .* (G * Δp .+ y_Δp)

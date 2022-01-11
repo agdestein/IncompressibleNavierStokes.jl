@@ -6,11 +6,17 @@ This saddlepoint system arises from linearization of the convective terms.
 
 Each `processor` is called after every `processor.nupdate` iteration.
 """
-function solve(problem::SteadyStateProblem; processors = Processor[])
+function solve(
+    problem::SteadyStateProblem;
+    jacobian_type = :newton,
+    npicard = 2,
+    abstol = 1e-10,
+    maxiter = 10,
+    processors = Processor[],
+)
     (; setup, V₀, p₀) = problem
     (; NV, Np) = setup.grid
     (; G, M, yM) = setup.operators
-    (; Jacobian_type, nPicard, nonlinear_acc, nonlinear_maxit) = setup.solver_settings
 
     # Temporary variables
     momentum_cache = MomentumCache(setup)
@@ -38,23 +44,23 @@ function solve(problem::SteadyStateProblem; processors = Processor[])
 
     println("Initial momentum residual = $maxres")
 
-    # Processors for iteration results  
+    # Processors for iteration results
     for ps ∈ processors
         # initialize!(ps, stepper)
     end
 
     # record(fig, "output/vorticity.mp4", 1:rtp.nt; framerate = 60) do n
-    while maxres > nonlinear_acc
-        if n > nonlinear_maxit
-            @warn "Newton not converged in $nonlinear_maxit iterations, showing results anyway"
+    while maxres > abstol
+        if n > maxiter
+            @warn "Newton not converged in $maxiter iterations, showing results anyway"
             break
         end
 
         print("Iteration $n")
 
-        if Jacobian_type == "newton" && nPicard < n
+        if jacobian_type == :newton && npicard < n
             # Switch to Newton
-            setup.solver_settings.Newton_factor = true
+            setup.solver_settings.newton_factor = true
         end
 
         momentum!(F, ∇F, V, V, p, t, setup, momentum_cache; getJacobian = true)
@@ -68,7 +74,7 @@ function solve(problem::SteadyStateProblem; processors = Processor[])
         # bicgstabl!(Δq, Z, f)
 
         ΔV = @view Δq[1:NV]
-        Δp = @view Δq[NV+1:end]
+        Δp = @view Δq[(NV + 1):end]
 
         V .+= ΔV
         p .+= Δp

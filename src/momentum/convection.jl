@@ -214,7 +214,7 @@ function convection_components!(
     end
 
     (; indu, indv) = grid
-    (; Newton_factor) = setup.solver_settings
+    (; newton_factor) = setup.solver_settings
 
     (; u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy) = cache
     (; v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy) = cache
@@ -283,13 +283,13 @@ function convection_components!(
     if getJacobian
         ## Convective terms, u-component
         C1 = Cux * Diagonal(ū_ux)
-        C2 = Cux * Diagonal(u_ux) * Newton_factor
+        C2 = Cux * Diagonal(u_ux) * newton_factor
         Conv_ux_11 .= C1 * Au_ux .+ C2 * Iu_ux
         # mul!(Conv_ux_11, C1, Au_ux)
         # mul!(Conv_ux_11, C2, Iu_ux, 1, 1)
 
         C1 = Cuy * Diagonal(v̄_uy)
-        C2 = Cuy * Diagonal(u_uy) * Newton_factor
+        C2 = Cuy * Diagonal(u_uy) * newton_factor
         # mul!(Conv_uy_11, C1, Au_uy)
         # mul!(Conv_uy_12, C2, Iv_uy)
         Conv_uy_11 .= C1 * Au_uy
@@ -297,14 +297,14 @@ function convection_components!(
 
         ## Convective terms, v-component
         C1 = Cvx * Diagonal(ū_vx)
-        C2 = Cvx * Diagonal(v_vx) * Newton_factor
+        C2 = Cvx * Diagonal(v_vx) * newton_factor
         # mul!(Conv_vx_21, C2, Iu_vx)
         # mul!(Conv_vx_22, C1, Av_vx)
         Conv_vx_21 .= C2 * Iu_vx
         Conv_vx_22 .= C1 * Av_vx
 
         C1 = Cvy * Diagonal(v̄_vy)
-        C2 = Cvy * Diagonal(v_vy) * Newton_factor
+        C2 = Cvy * Diagonal(v_vy) * newton_factor
         Conv_vy_22 .= C1 * Av_vy .+ C2 * Iv_vy
         # mul!(Conv_vy_22, C1, Av_vy)
         # mul!(Conv_vy_22, C2, Iv_vy, 1, 1)
@@ -339,7 +339,7 @@ function convection_components!(
     (; yIu_vx, yIv_vy, yIw_vz) = operators
     (; yIu_wx, yIv_wy, yIw_wz) = operators
     (; indu, indv, indw) = grid
-    (; Newton_factor) = setup.solver_settings
+    (; newton_factor) = setup.solver_settings
     (; u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy, u_uz, w̄_uz, uw̄_uz) = cache
     (; v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy, v_vz, w̄_vz, vw̄_vz) = cache
     (; w_wx, ū_wx, wū_wx, w_wy, v̄_wy, wv̄_wy, w_wz, w̄_wz, ww̄_wz) = cache
@@ -473,20 +473,20 @@ function convection_components!(
     if getJacobian
         ## Convective terms, u-component
         C1 = Cux * Diagonal(ū_ux)
-        C2 = Cux * Diagonal(u_ux) * Newton_factor
+        C2 = Cux * Diagonal(u_ux) * newton_factor
         Conv_ux_11 .= C1 * Au_ux .+ C2 * Iu_ux
         # mul!(Conv_ux_11, C1, Au_ux)
         # mul!(Conv_ux_11, C2, Iu_ux, 1, 1)
 
         C1 = Cuy * Diagonal(v̄_uy)
-        C2 = Cuy * Diagonal(u_uy) * Newton_factor
+        C2 = Cuy * Diagonal(u_uy) * newton_factor
         # mul!(Conv_uy_11, C1, Au_uy)
         # mul!(Conv_uy_12, C2, Iv_uy)
         Conv_uy_11 .= C1 * Au_uy
         Conv_uy_12 .= C2 * Iv_uy
 
         C1 = Cuz * Diagonal(w̄_uz)
-        C2 = Cuz * Diagonal(u_uz) * Newton_factor
+        C2 = Cuz * Diagonal(u_uz) * newton_factor
         # mul!(Conv_uz_11, C1, Au_uz)
         # mul!(Conv_uz_12, C2, Iw_uz)
         Conv_uz_11 .= C1 * Au_uz
@@ -494,20 +494,20 @@ function convection_components!(
 
         ## Convective terms, v-component
         C1 = Cvx * Diagonal(ū_vx)
-        C2 = Cvx * Diagonal(v_vx) * Newton_factor
+        C2 = Cvx * Diagonal(v_vx) * newton_factor
         # mul!(Conv_vx_21, C2, Iu_vx)
         # mul!(Conv_vx_22, C1, Av_vx)
         Conv_vx_21 .= C2 * Iu_vx
         Conv_vx_22 .= C1 * Av_vx
 
         C1 = Cvy * Diagonal(v̄_vy)
-        C2 = Cvy * Diagonal(v_vy) * Newton_factor
+        C2 = Cvy * Diagonal(v_vy) * newton_factor
         Conv_vy_22 .= C1 * Av_vy .+ C2 * Iv_vy
         # mul!(Conv_vy_22, C1, Av_vy)
         # mul!(Conv_vy_22, C2, Iv_vy, 1, 1)
 
         C1 = Cvz * Diagonal(w̄_vz)
-        C2 = Cvz * Diagonal(v_vz) * Newton_factor
+        C2 = Cvz * Diagonal(v_vz) * newton_factor
         # mul!(Conv_vz_23, C2, Iu_vz)
         # mul!(Conv_vz_22, C1, Av_vz)
         Conv_vz_23 .= C2 * Iw_vz
@@ -515,21 +515,21 @@ function convection_components!(
 
         ## Convective terms, w-component
         C1 = Cwx * Diagonal(ū_wx)
-        C2 = Cwx * Diagonal(w_wx) * Newton_factor
+        C2 = Cwx * Diagonal(w_wx) * newton_factor
         Conv_wx_31 .= C2 * Iu_wx
         Conv_wx_33 .= C1 * Aw_wx
         # mul!(Conv_wx_31, C2, Iu_wx, 1, 1)
         # mul!(Conv_wx_33, C1, Aw_wx)
 
         C1 = Cwy * Diagonal(v̄_wy)
-        C2 = Cwy * Diagonal(w_wy) * Newton_factor
+        C2 = Cwy * Diagonal(w_wy) * newton_factor
         # mul!(Conv_wy_32, C2, Iv_wy)
         # mul!(Conv_wy_33, C1, Aw_wy)
         Conv_wy_32 .= C2 * Iv_wy
         Conv_wy_33 .= C1 * Aw_wy
 
         C1 = Cwz * Diagonal(w̄_wz)
-        C2 = Cwz * Diagonal(w_wz) * Newton_factor
+        C2 = Cwz * Diagonal(w_wz) * newton_factor
         # mul!(Conv_wz_33, C1, Aw_wz)
         # mul!(Conv_wz_33, C2, Iw_wz, 1, 1)
         Conv_wz_33 .= C1 * Aw_wz .+ C2 * Iw_wz

@@ -6,7 +6,7 @@ calling `pressure_poisson!`.
 """
 function pressure_poisson(solver, f, t, setup)
     p = zeros(setup.grid.Np)
-    pressure_poisson!(solver, p, f, t, setup)
+    pressure_poisson!(solver, p, f, t)
 end
 
 """
@@ -17,21 +17,20 @@ For periodic and no-slip BC, the sum of `f` should be zero.
 """
 function pressure_poisson! end
 
-function pressure_poisson!(solver::DirectPressureSolver, p, f, t, setup, tol = 1e-14)
+function pressure_poisson!(solver::DirectPressureSolver, p, f)
     # Assume the Laplace matrix is known (A) and is possibly factorized
     
     # Use pre-determined decomposition
     p .= solver.A_fact \ f
 end
 
-function pressure_poisson!(solver::CGPressureSolver, p, f, t, setup)
+function pressure_poisson!(solver::CGPressureSolver, p, f)
     # TODO: Preconditioner
-    (; A) = setup.operators
-    (; abstol, reltol, maxiter) = solver
+    (; A, abstol, reltol, maxiter) = solver
     cg!(p, A, f; abstol, reltol, maxiter)
 end
 
-function pressure_poisson!(solver::FourierPressureSolver, p, f, t, setup)
+function pressure_poisson!(solver::FourierPressureSolver, p, f)
     (; Â, f̂, p̂) = solver
 
     f̂[:] = f

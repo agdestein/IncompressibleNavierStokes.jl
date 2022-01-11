@@ -58,7 +58,7 @@ function step!(stepper::OneLegStepper, Δt)
     # f .= (M * V + yM) / Δtᵦ
 
     # Solve the Poisson equation for the pressure
-    pressure_poisson!(pressure_solver, Δp, f, tₙ + Δtₙ, setup)
+    pressure_poisson!(pressure_solver, Δp, f)
     mul!(GΔp, G, Δp)
 
     # Update velocity field

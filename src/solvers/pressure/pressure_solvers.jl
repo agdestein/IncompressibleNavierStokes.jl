@@ -20,6 +20,7 @@ end
 Conjugate gradients iterative pressure solver.
 """
 Base.@kwdef mutable struct CGPressureSolver{T} <: PressureSolver{T}
+    A::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     abstol::T = 0
     reltol::T = √eps(T)
     maxiter::Int = 0
@@ -45,8 +46,11 @@ Initialize pressure solver.
 function initialize! end
 
 initialize!(solver::DirectPressureSolver, setup, A) = (solver.A_fact = factorize(A))
-initialize!(solver::CGPressureSolver, setup, A) =
+
+function initialize!(solver::CGPressureSolver, setup, A)
+    @pack! solver = A
     solver.maxiter == 0 && (solver.maxiter = size(A, 2))
+end
 
 function initialize!(solver::FourierPressureSolver, setup, A)
     (; bc) = setup

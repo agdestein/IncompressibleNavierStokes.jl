@@ -1,4 +1,8 @@
-# Discrete operators 
+"""
+    Operators()
+
+Discrete operators.
+"""
 Base.@kwdef mutable struct Operators{T}
     order4::Bool = false                     # Use 4th order in space (otherwise 2nd order)
     α::T = 81                                # Richardson extrapolation factor = 3^4
