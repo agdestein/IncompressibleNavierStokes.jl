@@ -1,8 +1,15 @@
 """
-    V, p = create_initial_conditions(setup, t; p_initial = true)
+    create_initial_conditions(
+        setup,
+        t;
+        initial_velocity_u,
+        initial_velocity_v,
+        [initial_velocity_w,]
+        initial_pressure = nothing,
+    )
 
-Create initial vectors at starting time `t`. If `p_initial` is true, calculate compatible IC
-for the pressure.
+Create initial vectors at starting time `t`. If `p_initial` is a function instead of
+`nothing`, calculate compatible IC for the pressure.
 """
 function create_initial_conditions end
 

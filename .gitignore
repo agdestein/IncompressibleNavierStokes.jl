@@ -3,6 +3,7 @@
 *.jl.mem
 *Manifest.toml
 /docs/build/
+/docs/src/generated/
 *output/
 
 # Vim swap

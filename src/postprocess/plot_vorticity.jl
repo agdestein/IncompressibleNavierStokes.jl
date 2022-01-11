@@ -5,11 +5,7 @@ Plot vorticity field.
 """
 function plot_vorticity(setup, V, t)
     (; bc) = setup
-    (; Nx, Ny, Nu, Nv, x, y, xlims, ylims) = setup.grid
-
-    # Reshape
-    uₕ = @view V[1:Nu]
-    vₕ = @view V[Nu+1:Nu+Nv]
+    (; x, y, xlims, ylims) = setup.grid
 
     if bc.u.x[1] == :periodic
         xω = x
@@ -28,9 +24,9 @@ function plot_vorticity(setup, V, t)
     # Plot vorticity
     # levels = [minimum(ω), -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, maximum(ω)]
     levels = [-7, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 7]
-    f = Figure()
+    fig = Figure()
     ax = Axis(
-        f[1, 1];
+        fig[1, 1];
         aspect = DataAspect(),
         title = "Vorticity ω",
         xlabel = "x",
@@ -43,6 +39,8 @@ function plot_vorticity(setup, V, t)
         extendlow = :auto,
         extendhigh = :auto,
     )
-    # save("output/vorticity.png", f, pt_per_unit = 2)
-    f
+
+    # save("output/vorticity.png", fig, pt_per_unit = 2)
+
+    fig
 end

@@ -1,5 +1,22 @@
 using IncompressibleNavierStokes
+using Literate
 using Documenter
+
+# Generate examples
+examples = [
+    # "Lid-Driven Cavity" => "LDC",
+    "Lid-Driven Cavity" => "LidDrivenCavity2D",
+    # "Backward Facing Step" => "BFS",
+    # "Taylor-Green Vortex" => "TGV",
+]
+output = "generated"
+for e ∈ examples
+    e = joinpath(@__DIR__, "..", "examples", "$(e.second).jl")
+    o = joinpath(@__DIR__, "src", output)
+    Literate.markdown(e, o)
+    Literate.notebook(e, o)
+    Literate.script(e, o)
+end
 
 DocMeta.setdocmeta!(
     IncompressibleNavierStokes,
@@ -16,16 +33,12 @@ makedocs(;
     format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", "false") == "true",
         canonical = "https://agdestein.github.io/IncompressibleNavierStokes.jl",
-        assets = String[]
+        assets = String[],
     ),
     pages = [
         "Home" => "index.md",
         "Getting Started" => "getting_started.md",
-        "Examples" => [
-            "Lid-Driven Cavity" => "examples/ldc.md",
-            "Backward Facing Step" => "examples/bfs.md",
-            "Taylor-Green Vortex" => "examples/tgv.md",
-        ],
+        "Examples" => [e.first => joinpath(output, e.second * ".md") for e ∈ examples],
         "Theory" => [
             "Theory" => "theory/theory.md",
             "Operators" => "theory/operators.md",
@@ -38,5 +51,5 @@ makedocs(;
 
 deploydocs(;
     repo = "github.com/agdestein/IncompressibleNavierStokes.jl",
-    devbranch = "main"
+    devbranch = "main",
 )

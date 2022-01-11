@@ -29,9 +29,9 @@ function plot_pressure(setup, p)
         0.3
         # maximum(Δpres) + 0.1
     ]
-    f = Figure()
+    fig = Figure()
     ax = Axis(
-        f[1, 1];
+        fig[1, 1];
         aspect = DataAspect(),
         title = "Pressure deviation Δp",
         xlabel = "x",
@@ -46,7 +46,8 @@ function plot_pressure(setup, p)
         levels,
         extendlow = :auto, extendhigh = :auto,
     )
-    save("output/pressure.png", f, pt_per_unit = 2)
 
-    f
+    # save("output/pressure.png", fig, pt_per_unit = 2)
+
+    fig
 end

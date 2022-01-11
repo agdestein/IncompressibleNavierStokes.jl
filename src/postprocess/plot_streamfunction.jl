@@ -3,7 +3,7 @@ Plot streamfunction.
 """
 function plot_streamfunction(setup, V, t)
     (; bc) = setup
-    (; Nx, Ny, x, y, xlims, ylims) = setup.grid
+    (; x, y, xlims, ylims) = setup.grid
 
     if bc.u.x[1] == :periodic
         xψ = x
@@ -45,9 +45,9 @@ function plot_streamfunction(setup, V, t)
         0.0015
         maximum(ψ) + 1
     ]
-    f = Figure()
+    fig = Figure()
     ax = Axis(
-        f[1, 1],
+        fig[1, 1],
         aspect = DataAspect(),
         title = "Stream function ψ",
         xlabel = "x",
@@ -63,7 +63,7 @@ function plot_streamfunction(setup, V, t)
         extendlow = :auto,
         extendhigh = :auto,
     )
-    save("output/streamfunction.png", f, pt_per_unit = 2)
+    # save("output/streamfunction.png", fig, pt_per_unit = 2)
 
-    f
+    fig
 end

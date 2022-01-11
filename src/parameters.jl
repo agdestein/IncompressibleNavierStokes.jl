@@ -1,4 +1,15 @@
-# Solver settings
+"""
+    SolverSettings(;
+        pressure_solver = DirectPressureSolver(),
+        p_add_solve = true,
+        abstol = 1e-10,
+        reltol = 1e-14,
+        maxiter = 10,
+        newton_type = :approximate,
+    )
+
+Solver settings.
+"""
 Base.@kwdef mutable struct SolverSettings{T}
     pressure_solver::PressureSolver = DirectPressureSolver() # PressureSolver
     p_add_solve::Bool = true                                 # Additional pressure solve to make it same order as velocity
@@ -13,7 +24,11 @@ Base.@kwdef mutable struct SolverSettings{T}
     newton_factor::Bool = false                              # Newton factor
 end
 
-# Setup
+"""
+    Setup(; viscosity_model, convection_model, grid, force, solver_settings, bc)
+
+Simulation setup.
+"""
 Base.@kwdef struct Setup{T,N}
     viscosity_model::AbstractViscosityModel{T}
     convection_model::AbstractConvectionModel{T}
