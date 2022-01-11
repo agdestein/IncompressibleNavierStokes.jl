@@ -37,10 +37,8 @@ is_steady
 ## Setup
 
 ```@docs
-Case
 Grid
 Operators
-Time
 SolverSettings
 BC
 Setup

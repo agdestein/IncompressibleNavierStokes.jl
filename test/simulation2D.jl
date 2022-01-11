@@ -37,9 +37,9 @@
         # pressure_solver = CGPressureSolver{T}(),      # Pressure solver
         # pressure_solver = FourierPressureSolver{T}(), # Pressure solver
         p_add_solve = true,                             # Additional pressure solve for second order pressure
-        abstol = 1e-10,                          # Absolute accuracy
-        reltol = 1e-14,                       # Relative accuracy
-        maxiter = 10,                           # Maximum number of iterations
+        abstol = 1e-10,                                 # Absolute accuracy
+        reltol = 1e-14,                                 # Relative accuracy
+        maxiter = 10,                                   # Maximum number of iterations
         # :no: Replace iteration matrix with I/Δt (no Jacobian)
         # :approximate: Build Jacobian once before iterations only
         # :full: Build Jacobian at each iteration
@@ -90,7 +90,9 @@
     )
 
     ## Iteration processors
-    processors = [Logger(), QuantityTracer(; nupdate = 1)]
+    logger = Logger()
+    tracer = QuantityTracer()
+    processors = [logger, tracer]
 
     @testset "Steady state problem" begin
         problem = SteadyStateProblem(setup, V₀, p₀)
@@ -102,10 +104,6 @@
 
         # Check that the average velocity is smaller than the lid velocity
         @test sum(abs, V) / length(V) < lid_vel
-
-        # Check for steady state convergence
-        @test tracer.umom[end] < 1e-10
-        @test tracer.vmom[end] < 1e-10
     end
 
 
@@ -119,5 +117,9 @@
 
         # Check that the average velocity is smaller than the lid velocity
         @test sum(abs, V) / length(V) < lid_vel
+
+        # Check for steady state convergence
+        @test tracer.umom[end] < 1e-10
+        @test tracer.vmom[end] < 1e-10
     end
 end

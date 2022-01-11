@@ -1,7 +1,7 @@
 # Run a typical simulation: Lid-Driven Cavity case (LDC)
 @testset "Simulation 3D" begin
     # Case name for saving results
-    name = "LidDrivenCavity2D"
+    name = "LidDrivenCavity3D"
 
     # Floating point type for simulations
     T = Float64
@@ -40,19 +40,20 @@
         # pressure_solver = CGPressureSolver{T}(),      # Pressure solver
         # pressure_solver = FourierPressureSolver{T}(), # Pressure solver
         p_add_solve = true,                             # Additional pressure solve for second order pressure
-        abstol = 1e-10,                          # Absolute accuracy
-        reltol = 1e-14,                       # Relative accuracy
-        maxiter = 10,                           # Maximum number of iterations
-        # :no: Replace iteration matrix with I/Δt (no Jacobian)
-        # :approximate: Build Jacobian once before iterations only
-        # :full: Build Jacobian at each iteration
+        abstol = 1e-10,                                 # Absolute accuracy
+        reltol = 1e-14,                                 # Relative accuracy
+        maxiter = 10,                                   # Maximum number of iterations
+        # `:no`: Replace iteration matrix with I/Δt (no Jacobian)
+        # `:approximate`: Build Jacobian once before iterations only
+        # `:full`: Build Jacobian at each iteration
         newton_type = :approximate,
     )
 
     ## Boundary conditions
-    u_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? 1.0 : 0.0
+    lid_vel = [1.0, 0.0, 0.2] # Lid velocity
+    u_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? lid_vel[1] : 0.0
     v_bc(x, y, z, t, setup) = zero(x)
-    w_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? 0.2 : 0.0
+    w_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? lid_vel[3] : 0.0
     bc = create_boundary_conditions(
         T,
         u_bc,
@@ -122,7 +123,9 @@
     )
 
     ## Iteration processors
-    processors = [Logger(), QuantityTracer(; nupdate = 1)]
+    logger = Logger()
+    tracer = QuantityTracer()
+    processors = [logger, tracer]
 
     @testset "Steady state problem" begin
         problem = SteadyStateProblem(setup, V₀, p₀)
@@ -133,12 +136,7 @@
         @test all(!isnan, p)
 
         # Check that the average velocity is smaller than the lid velocity
-        @test sum(abs, V) / length(V) < lid_vel
-
-        # Check for steady state convergence
-        @test tracer.umom[end] < 1e-10
-        @test tracer.vmom[end] < 1e-10
-        @test tracer.wmom[end] < 1e-10
+        @test sum(abs, V) / length(V) < norm(lid_vel)
     end
 
     @testset "Unsteady problem" begin
@@ -150,6 +148,11 @@
         @test all(!isnan, p)
 
         # Check that the average velocity is smaller than the lid velocity
-        @test sum(abs, V) / length(V) < lid_vel
+        @test sum(abs, V) / length(V) < norm(lid_vel)
+
+        # Check for steady state convergence
+        @test tracer.umom[end] < 1e-10
+        @test tracer.vmom[end] < 1e-10
+        @test tracer.wmom[end] < 1e-10
     end
 end

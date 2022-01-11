@@ -6,9 +6,10 @@ if isdefined(@__MODULE__, :LanguageServer)
 end
 
 using IncompressibleNavierStokes
+using LinearAlgebra
 using Test
 
-@testset "IncompressibleNavierStokes.jl" begin
+@testset "IncompressibleNavierStokes" begin
     include("simulation2D.jl")
     include("simulation3D.jl")
 end
