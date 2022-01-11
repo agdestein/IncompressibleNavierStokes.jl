@@ -12,8 +12,12 @@ end                                                                             
 # We start by loading IncompressibleNavierStokes and a Makie plotting backend.
 
 using IncompressibleNavierStokes
-using GLMakie
 
+if haskey(ENV, "GITHUB_ACTIONS")
+    using CairoMakie
+else
+    using GLMakie
+end
 
 # ## Build problem
 
