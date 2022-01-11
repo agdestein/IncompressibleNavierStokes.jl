@@ -1,15 +1,16 @@
 ## Regularization matrices
 function operator_regularization!(setup)
-    (; indu, indv, indw) = setup.grid
-    (; Ω, Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
-    (; Su_ux, Su_uy, Su_uz) = setup.operators
-    (; Sv_vx, Sv_vy, Sv_vz) = setup.operators
-    (; Sw_wx, Sw_wy, Sw_wz) = setup.operators
-    (; ySu_ux, ySu_uy, ySu_uz) = setup.operators
-    (; ySv_vx, ySv_vy, ySv_vz) = setup.operators
-    (; ySw_wx, ySw_wy, ySw_wz) = setup.operators
+    (; grid, operators) = setup
+    (; indu, indv, indw) = grid
+    (; Ω, Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = operators
+    (; Su_ux, Su_uy, Su_uz) = operators
+    (; Sv_vx, Sv_vy, Sv_vz) = operators
+    (; Sw_wx, Sw_wy, Sw_wz) = operators
+    (; ySu_ux, ySu_uy, ySu_uz) = operators
+    (; ySv_vx, ySv_vy, ySv_vz) = operators
+    (; ySw_wx, ySw_wy, ySw_wz) = operators
 
-    Δ = max_size(setup.grid)
+    Δ = max_size(grid)
     α = 1 / 16 * Δ^2
 
     Ωu⁻¹ = 1 ./ Ω[indu]
@@ -25,7 +26,7 @@ function operator_regularization!(setup)
     yDiffv_f = Ωv⁻¹ .* (Dvx * ySv_vx + Dvy * ySv_vy + Dvz * ySv_vz)
     yDiffw_f = Ωw⁻¹ .* (Dwx * ySw_wx + Dwy * ySw_wy + Dwz * ySw_wz)
 
-    @pack! setup.operators = Diffu_f, Diffv_f, Diffw_f, yDiffu_f, yDiffv_f, yDiffw_f, α
+    @pack! operators = Diffu_f, Diffv_f, Diffw_f, yDiffu_f, yDiffv_f, yDiffw_f, α
 
     setup
 end

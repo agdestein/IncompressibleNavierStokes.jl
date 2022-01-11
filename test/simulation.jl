@@ -23,15 +23,18 @@
     # convection_model = LerayConvectionModel{T}()
 
     # Grid parameters
+    Nx = 25                           # Number of x-volumes
+    Ny = 25                           # Number of y-volumes
+    Nz = 10                           # Number of z-volumes
     grid = create_grid(
-        T;
+        T, Nx, Ny, Nz;
         Nx = 25,                      # Number of x-volumes
         Ny = 25,                      # Number of y-volumes
-        Nz = 10,                      # Number of z-volumes
+        Nz = 10;                      # Number of z-volumes
         xlims = (0, 1),               # Horizontal limits (left, right)
         ylims = (0, 1),               # Vertical limits (bottom, top)
         zlims = (-0.2, 0.2),          # Depth limits (back, front)
-        stretch = (1, 1, 1)          # Stretch factor (sx, sy[, sz])
+        stretch = (1, 1, 1),          # Stretch factor (sx, sy[, sz])
     )
 
     # Solver settings
@@ -90,7 +93,7 @@
     u_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? 1.0 : 0.0
     v_bc(x, y, z, t, setup) = zero(x)
     w_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? 0.2 : 0.0
-    bc = create_boundary_conditions(T; bc_unsteady, bc_type, u_bc, v_bc, w_bc)
+    bc = create_boundary_conditions(T, u_bc, v_bc, w_bc; bc_unsteady, bc_type)
 
     # Initial conditions
     initial_velocity_u(x, y, z) = 0
@@ -110,7 +113,7 @@
     processors = [Logger(), QuantityTracer(; nupdate = 1)]
 
     # Final setup
-    setup = Setup{T}(;
+    setup = Setup{T,3}(;
         case,
         viscosity_model,
         convection_model,

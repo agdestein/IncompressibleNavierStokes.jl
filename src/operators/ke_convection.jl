@@ -1,9 +1,8 @@
-
 function ke_convection!(setup)
-    bc = setup
-	Nx, Ny, x, y, xp, yp, hx, hy = setup.grid
-    Npx, Npy, Nux_in, Nvy_in = setup.grid
-    k_bc = bc
+    (; bc) = setup
+    (; Nx, Ny, x, y, xp, yp, hx, hy) = grid
+    (; Npx, Npy, Nux_in, Nvy_in) = grid
+    (; k_bc) = bc
 
     kLe = fill(k_bc.x[1], Ny + 1)
     kRi = fill(k_bc.x[2], Ny + 1)

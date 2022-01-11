@@ -16,7 +16,7 @@ using GLMakie
 T = Float64
 
 # Case information
-name = "LDC"
+name = "LidDrivenCavity2D"
 case = Case()
 
 ## Viscosity model
@@ -33,13 +33,13 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
 # Grid parameters
+Nx = 25                           # Number of x-volumes
+Ny = 25                           # Number of y-volumes
 grid = create_grid(
-    T;
-    Nx = 25,                      # Number of x-volumes
-    Ny = 25,                      # Number of y-volumes
+    T, Nx, Ny;
     xlims = (0, 1),               # Horizontal limits (left, right)
     ylims = (0, 1),               # Vertical limits (bottom, top)
-    stretch = (1, 1),          # Stretch factor (sx, sy[, sz])
+    stretch = (1, 1),             # Stretch factor (sx, sy[, sz])
 )
 
 # Solver settings
@@ -90,19 +90,19 @@ bc_type = (;
         z = (:dirichlet, :dirichlet),
     ),
 )
-u_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? 1.0 : 0.0
-v_bc(x, y, z, t, setup) = zero(x)
-bc = create_boundary_conditions(T; bc_unsteady, bc_type, u_bc, v_bc)
+u_bc(x, y, t, setup) = y ≈ setup.grid.ylims[2] ? 1.0 : 0.0
+v_bc(x, y, t, setup) = zero(x)
+bc = create_boundary_conditions(T, u_bc, v_bc; bc_unsteady, bc_type)
 
 # Initial conditions
-initial_velocity_u(x, y, z) = 0
-initial_velocity_v(x, y, z) = 0
-initial_pressure(x, y, z) = 0
+initial_velocity_u(x, y) = 0
+initial_velocity_v(x, y) = 0
+initial_pressure(x, y) = 0
 @pack! case = initial_velocity_u, initial_velocity_v, initial_pressure
 
 # Forcing parameters
-bodyforce_u(x, y, z) = 0
-bodyforce_v(x, y, z) = 0
+bodyforce_u(x, y) = 0
+bodyforce_v(x, y) = 0
 force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
 # Iteration processors
@@ -127,7 +127,7 @@ processors = [logger, real_time_plotter, vtk_writer, tracer]
 # processors = [logger]
 
 # Final setup
-setup = Setup{T}(;
+setup = Setup{T,2}(;
     case,
     viscosity_model,
     convection_model,

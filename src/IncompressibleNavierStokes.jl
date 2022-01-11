@@ -32,8 +32,13 @@ include("force/build_force.jl")
 include("models/viscosity_models.jl")
 include("models/convection_models.jl")
 
-# Boundary condtions
+# Types
 include("boundary_conditions/boundary_conditions.jl")
+include("solvers/pressure/pressure_solvers.jl")
+include("operators/operators.jl")
+include("parameters.jl")
+
+# Boundary condtions
 include("boundary_conditions/create_boundary_conditions.jl")
 include("boundary_conditions/bc_diff_stag.jl")
 include("boundary_conditions/bc_diff_stag3.jl")
@@ -42,7 +47,6 @@ include("boundary_conditions/bc_general_stag.jl")
 include("boundary_conditions/set_bc_vectors.jl")
 
 # Operators
-include("operators/operators.jl")
 include("operators/build_operators.jl")
 include("operators/interpolate_nu.jl")
 include("operators/operator_averaging.jl")
@@ -59,16 +63,13 @@ include("operators/ke_diffusion.jl")
 include("operators/ke_viscosity.jl")
 include("operators/operator_viscosity.jl")
 
-# Types
+
+# Time steppers
+include("momentum/momentumcache.jl")
 include("time_steppers/methods.jl")
 include("time_steppers/tableaux.jl")
 include("time_steppers/nstage.jl")
 include("time_steppers/time_stepper_caches.jl")
-include("solvers/pressure/pressure_solvers.jl")
-include("momentum/momentumcache.jl")
-include("parameters.jl")
-
-# Time steppers
 include("time_steppers/time_steppers.jl")
 include("time_steppers/change_time_stepper.jl")
 include("time_steppers/step.jl")

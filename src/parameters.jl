@@ -29,11 +29,11 @@ Base.@kwdef mutable struct SolverSettings{T}
 end
 
 # Setup
-Base.@kwdef struct Setup{T, N}
+Base.@kwdef struct Setup{T,N}
     case::Case
     viscosity_model::AbstractViscosityModel{T}
     convection_model::AbstractConvectionModel{T}
-    grid::Grid{T, N}
+    grid::Grid{T,N}
     operators::Operators{T} = Operators{T}()
     force::AbstractBodyForce{T}
     solver_settings::SolverSettings{T}

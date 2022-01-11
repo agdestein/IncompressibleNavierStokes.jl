@@ -153,17 +153,17 @@ function operator_mesh!(setup::Setup{T,2}) where {T}
         hxd = [hx; hx[end]]
         gxi = gx[2:end]
         diagpos = 1
-elseif bc.u.x == (:pressure, :dirichlet)
+    elseif bc.u.x == (:pressure, :dirichlet)
         xin = x[1:end-1]
         hxd = [hx[1]; hx]
         gxi = gx[1:end-1]
         diagpos = 0
-elseif bc.u.x == (:pressure, :pressure)
+    elseif bc.u.x == (:pressure, :pressure)
         xin = x[1:end]
         hxd = [hx[1]; hx; hx[end]]
         gxi = copy(gx)
         diagpos = 0
-elseif bc.u.x == (:periodic, :periodic)
+    elseif bc.u.x == (:periodic, :periodic)
         xin = x[1:end-1]
         hxd = [hx[end]; hx]
         gxi = [gx[1] + gx[end]; gx[2:end-1]]
@@ -259,7 +259,6 @@ elseif bc.u.x == (:periodic, :periodic)
     ##
     # Volume (area) of pressure control volumes
     Ωp = hyi ⊗ hxi
-    Ωp⁻¹ = 1 ./ Ωp
 
     # Volume (area) of u control volumes
     Ωu = hyi ⊗ gxi
@@ -375,8 +374,8 @@ end
 
 # 3D version
 function operator_mesh!(setup::Setup{T,3}) where {T}
-    (; bc) = setup
-    (; Nx, Ny, Nz, x, y, z, hx, hy, hz, gx, gy, gz, xp, yp, zp) = setup.grid
+    (; grid, bc) = setup
+    (; Nx, Ny, Nz, x, y, z, hx, hy, hz, gx, gy, gz, xp, yp, zp) = grid
 
     # Number of pressure points
     Npx = Nx
@@ -641,24 +640,24 @@ function operator_mesh!(setup::Setup{T,3}) where {T}
     indp = NV .+ (1:Np)
 
     ## Store quantities in the structure
-    @pack! setup.grid = Npx, Npy, Npz, Np
-    @pack! setup.grid = Nux_in, Nux_b, Nux_t
-    @pack! setup.grid = Nuy_in, Nuy_b, Nuy_t
-    @pack! setup.grid = Nuz_in, Nuz_b, Nuz_t
-    @pack! setup.grid = Nvx_in, Nvx_b, Nvx_t
-    @pack! setup.grid = Nvy_in, Nvy_b, Nvy_t
-    @pack! setup.grid = Nvz_in, Nvz_b, Nvz_t
-    @pack! setup.grid = Nwx_in, Nwx_b, Nwx_t
-    @pack! setup.grid = Nwy_in, Nwy_b, Nwy_t
-    @pack! setup.grid = Nwz_in, Nwz_b, Nwz_t
-    @pack! setup.grid = Nu, Nv, Nw, NV
-    @pack! setup.grid = Ωp, Ω, Ω⁻¹
-    @pack! setup.grid = hxi, hyi, hzi, hxd, hyd, hzd
-    @pack! setup.grid = gxi, gyi, gzi, gxd, gyd, gzd
-    @pack! setup.grid = Buvy, Bvux, Buwz, Bwux, Bvwz, Bwvy, Bkux, Bkvy, Bkwz
-    @pack! setup.grid = xin, yin, zin
-    @pack! setup.grid = xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp
-    @pack! setup.grid = indu, indv, indw, indV, indp
+    @pack! grid = Npx, Npy, Npz, Np
+    @pack! grid = Nux_in, Nux_b, Nux_t
+    @pack! grid = Nuy_in, Nuy_b, Nuy_t
+    @pack! grid = Nuz_in, Nuz_b, Nuz_t
+    @pack! grid = Nvx_in, Nvx_b, Nvx_t
+    @pack! grid = Nvy_in, Nvy_b, Nvy_t
+    @pack! grid = Nvz_in, Nvz_b, Nvz_t
+    @pack! grid = Nwx_in, Nwx_b, Nwx_t
+    @pack! grid = Nwy_in, Nwy_b, Nwy_t
+    @pack! grid = Nwz_in, Nwz_b, Nwz_t
+    @pack! grid = Nu, Nv, Nw, NV
+    @pack! grid = Ωp, Ω, Ω⁻¹
+    @pack! grid = hxi, hyi, hzi, hxd, hyd, hzd
+    @pack! grid = gxi, gyi, gzi, gxd, gyd, gzd
+    @pack! grid = Buvy, Bvux, Buwz, Bwux, Bvwz, Bwvy, Bkux, Bkvy, Bkwz
+    @pack! grid = xin, yin, zin
+    @pack! grid = xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp
+    @pack! grid = indu, indv, indw, indV, indp
 
     setup
 end

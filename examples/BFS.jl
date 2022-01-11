@@ -29,11 +29,11 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
 # Grid parameters
+Nx = 100                             # Number of x-volumes
+Ny = 10                              # Number of y-volumes
+Nz = 5                               # Number of z-volumes
 grid = create_grid(
-    T;
-    Nx = 100,                        # Number of x-volumes
-    Ny = 10,                         # Number of y-volumes
-    Nz = 5,                          # Number of z-volumes
+    T, Nx, Ny, Nz;
     xlims = (0, 10),                 # Horizontal limits (left, right)
     ylims = (-0.5, 0.5),             # Vertical limits (bottom, top)
     zlims = (-0.25, 0.25),           # Depth limits (back, front)
@@ -97,7 +97,7 @@ u_bc(x, y, z, t, setup) =
     x ≈ setup.grid.xlims[1] && y ≥ 0 ? 24y * (1 // 2 - y) : zero(y)
 v_bc(x, y, z, t, setup) = zero(x)
 w_bc(x, y, z, t, setup) = zero(x)
-bc = create_boundary_conditions(T; bc_unsteady, bc_type, u_bc, v_bc, w_bc)
+bc = create_boundary_conditions(T, u_bc, v_bc, w_bc; bc_unsteady, bc_type)
 
 # Initial conditions (extend inflow)
 initial_velocity_u(x, y, z) = zero(x) # y ≥ 0 ? 24y * (1 // 2 - y) : zero(y)
@@ -133,7 +133,7 @@ tracer = QuantityTracer(; nupdate = 1)
 processors = [logger, vtk_writer, tracer]
 
 # Final setup
-setup = Setup{T}(;
+setup = Setup{T,3}(;
     case,
     viscosity_model,
     convection_model,

@@ -87,4 +87,12 @@ function initialize!(writer::VTKWriter, stepper)
     writer
 end
 
-initialize!(tracer::QuantityTracer, stepper) = tracer
+function initialize!(tracer::QuantityTracer, stepper)
+    tracer.t = zeros(0)
+    tracer.maxdiv = zeros(0)
+    tracer.umom = zeros(0)
+    tracer.vmom = zeros(0)
+    tracer.wmom = zeros(0)
+    tracer.k = zeros(0)
+    tracer
+end

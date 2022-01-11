@@ -3,7 +3,7 @@
 
 Create nonuniform cartesian box mesh `xlims` × `ylims` with stretch factors `stretch`.
 """
-function create_grid(T = Float64; Nx, Ny, xlims, ylims, stretch)
+function create_grid(T, Nx, Ny; xlims, ylims, stretch)
     x = nonuniform_grid(xlims..., Nx, stretch[1])
     y = nonuniform_grid(ylims..., Ny, stretch[2])
 
@@ -35,7 +35,7 @@ end
 Create nonuniform cartesian box mesh `xlims` × `ylims` × `zlims` with stretch factors
 `stretch`.
 """
-function create_grid(T = Float64; Nx, Ny, Nz, xlims, ylims, zlims, stretch)
+function create_grid(T, Nx, Ny, Nz; xlims, ylims, zlims, stretch)
     x = nonuniform_grid(xlims..., Nx, stretch[1])
     y = nonuniform_grid(ylims..., Ny, stretch[2])
     z = nonuniform_grid(zlims..., Nz, stretch[3])

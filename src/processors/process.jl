@@ -67,13 +67,18 @@ function process!(writer::VTKWriter, stepper)
 end
 
 function process!(tracer::QuantityTracer, stepper)
-    (; V, p, t, setup) = stepper
-    maxdiv, umom, vmom, wmom, k = compute_conservation(V, t, setup)
+    (; V, t, setup) = stepper
+    N = get_dimension(setup.grid)
+    if N == 2
+        maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
+    elseif N == 3
+        maxdiv, umom, vmom, wmom, k = compute_conservation(V, t, setup)
+    end
     push!(tracer.t, t)
     push!(tracer.maxdiv, maxdiv)
     push!(tracer.umom, umom)
     push!(tracer.vmom, vmom)
-    push!(tracer.wmom, wmom)
+    N == 3 && push!(tracer.wmom, wmom)
     push!(tracer.k, k)
     tracer
 end

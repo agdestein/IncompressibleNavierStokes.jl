@@ -3,12 +3,15 @@
 
 Construct postprocessing operators such as vorticity.
 """
+function operator_postprocessing! end
+
+# function operator_postprocessing!(setup::Setup{T,2}) where {T}
 function operator_postprocessing!(setup)
     # Boundary conditions
-    (; bc) = setup
-    (; Nx, Ny) = setup.grid
-    (; gx, gy) = setup.grid
-    (; gxd, gyd) = setup.grid
+    (; grid, operators, bc) = setup
+    (; Nx, Ny) = grid
+    (; gx, gy) = grid
+    (; gxd, gyd) = grid
 
     # FIXME: 3D implementation
 
@@ -59,7 +62,7 @@ function operator_postprocessing!(setup)
         Wv_vx = kron(spdiagm(Ny + 1, Ny, -Ny => diag2[[1]], 0 => diag2), W1D)
     end
 
-    @pack! setup.operators = Wv_vx, Wu_uy
+    @pack! operators = Wv_vx, Wu_uy
 
     setup
 end
