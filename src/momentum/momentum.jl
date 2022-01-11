@@ -18,11 +18,12 @@ end
 
 Calculate rhs of momentum equations and, optionally, Jacobian with respect to velocity field.
 
-`V`: velocity field
-`ϕ`: "convection" field: e.g. `∂(ϕx V)/∂x + ∂(ϕy V)/∂y`; usually `ϕ = V` (so `ϕx = u`, `ϕy = v`)
-`p`: pressure
-`getJacobian`: return `∇F = ∂F/∂V`
-`nopressure`: exclude pressure gradient; in this case input argument `p` is not used
+- `V`: velocity field
+- `ϕ`: convected field: e.g. ``\\frac{\\partial (\\phi_x V)}{\\partial x} + \\frac{\\partial
+  (\\phi_y V)}{\\partial y}``; usually `ϕ = V` (so `ϕx = u`, `ϕy = v`)
+- `p`: pressure
+- `getJacobian`: return `∇F = ∂F/∂V`
+- `nopressure`: exclude pressure gradient; in this case input argument `p` is not used
 """
 function momentum!(
     F, ∇F, V, ϕ, p, t, setup, cache;

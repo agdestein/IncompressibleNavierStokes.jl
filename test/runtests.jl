@@ -9,5 +9,6 @@ using IncompressibleNavierStokes
 using Test
 
 @testset "IncompressibleNavierStokes.jl" begin
-    include("simulation.jl")
+    include("simulation2D.jl")
+    include("simulation3D.jl")
 end

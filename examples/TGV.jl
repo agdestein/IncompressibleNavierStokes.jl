@@ -11,9 +11,6 @@ using GLMakie
 # Floating point type for simulations
 T = Float64
 
-# Spatial dimension
-N = 3
-
 # Case information
 name = "TGV"
 case = Case()
@@ -32,12 +29,11 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
 # Grid parameters
+Nx = 20                               # Number of x-volumes
+Ny = 20                               # Number of y-volumes
+Nz = 20                               # Number of z-volumes
 grid = create_grid(
-    T,
-    N;
-    Nx = 20,                         # Number of x-volumes
-    Ny = 20,                         # Number of y-volumes
-    Nz = 20,                         # Number of z-volumes
+    T, Nx, Ny, Nz;
     xlims = (0, 2π),                  # Horizontal limits (left, right)
     ylims = (0, 2π),                  # Vertical limits (bottom, top)
     zlims = (0, 2π),                  # Depth limits (back, front)
@@ -104,12 +100,9 @@ dudt_bc(x, y, z, t, setup) = zero(x)
 dvdt_bc(x, y, z, t, setup) = zero(x)
 dwdt_bc(x, y, z, t, setup) = zero(x)
 bc = create_boundary_conditions(
-    T;
+    T, u_bc, v_bc, w_bc;
     bc_unsteady,
     bc_type,
-    u_bc,
-    v_bc,
-    w_bc,
     dudt_bc,
     dvdt_bc,
     dwdt_bc,
@@ -152,7 +145,7 @@ tracer = QuantityTracer(; nupdate = 1)   # Stores tracer data
 processors = [logger, vtk_writer, tracer]
 
 # Final setup
-setup = Setup{T,N}(;
+setup = Setup{T,3}(;
     case,
     viscosity_model,
     convection_model,

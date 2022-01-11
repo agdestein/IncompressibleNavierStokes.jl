@@ -15,9 +15,9 @@ Base.@kwdef struct Logger <: Processor
 end
 
 """
-    RealTimePlotter(nupdate, field)
+    RealTimePlotter(; nupdate, fieldname)
 
-Plot the solution every `nupdat` time steps. Available fields are:
+Plot the solution every `nupdate` time steps. Available fieldnames are:
 
 - `:velocity`,
 - `:vorticity`,
@@ -32,7 +32,7 @@ Base.@kwdef mutable struct RealTimePlotter <: Processor
 end
 
 """
-    VTKWriter(nupdate, dir, filename)
+    VTKWriter(; nupdate, dir, filename)
 
 Write the solution every `nupdate` time steps to a VTK file. The resulting Paraview data
 collection file is stored in `\$dir/\$filename.pvd`.

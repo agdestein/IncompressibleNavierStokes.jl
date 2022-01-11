@@ -22,8 +22,7 @@ model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
 function convection! end
 
 function convection!(::NoRegConvectionModel, c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
-    (; order4) = setup.operators
-    (; α) = setup.operators
+    (; order4, α) = setup.operators
     (; c3, ∇c3) = cache
 
     # No regularization
@@ -39,8 +38,8 @@ function convection!(::NoRegConvectionModel, c, ∇c, V, ϕ, t, setup, cache; ge
 end
 
 function convection!(::C2ConvectionModel, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
-    (; α) = setup.operators
     (; indu, indv, indw) = setup.grid
+    (; α) = setup.operators
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -78,8 +77,8 @@ function convection!(::C2ConvectionModel, ∇c, V, ϕ, t, setup, cache; getJacob
 end
 
 function convection!(::C4ConvectionModel, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
-    (; α) = setup.operators
     (; indu, indv, indw) = setup.grid
+    (; α) = setup.operators
     (; c2, ∇c2, c3, ∇c3) = cache
 
     cu = @view c[indu]
@@ -135,10 +134,8 @@ function convection!(::C4ConvectionModel, ∇c, V, ϕ, t, setup, cache; getJacob
 end
 
 function convection!(::LerayConvectionModel, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
-    (; order4) = setup.operators
-    (; regularization) = setup.case
-    (; α) = setup.operators
     (; indu, indv, indw) = setup.grid
+    (; α) = setup.operators
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -173,21 +170,175 @@ end
 
 Compute convection components.
 """
-function convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian = false, order4 = false)
-    (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz) = setup.operators
-    (; Au_ux, Au_uy, Au_uz) = setup.operators
-    (; Av_vx, Av_vy, Av_vz) = setup.operators
-    (; Aw_wx, Aw_wy, Aw_wz) = setup.operators
-    (; yAu_ux, yAu_uy, yAu_uz) = setup.operators
-    (; yAv_vx, yAv_vy, yAv_vz) = setup.operators
-    (; yAw_wx, yAw_wy, yAw_wz) = setup.operators
-    (; Iu_ux, Iv_uy, Iw_uz) = setup.operators
-    (; Iu_vx, Iv_vy, Iw_vz) = setup.operators
-    (; Iu_wx, Iv_wy, Iw_wz) = setup.operators
-    (; yIu_ux, yIv_uy, yIw_uz) = setup.operators
-    (; yIu_vx, yIv_vy, yIw_vz) = setup.operators
-    (; yIu_wx, yIv_wy, yIw_wz) = setup.operators
-    (; indu, indv, indw) = setup.grid
+function convection_components! end
+
+# 2D version
+function convection_components!(
+        c, ∇c, V, ϕ, setup::Setup{T,2}, cache;
+        getJacobian = false,
+        order4 = false,
+    ) where {T}
+    (; grid, operators) = setup
+
+    if order4
+        Cux = operators.Cux3
+        Cuy = operators.Cuy3
+        Cvx = operators.Cvx3
+        Cvy = operators.Cvy3
+
+        Au_ux = operators.Au_ux3
+        Au_uy = operators.Au_uy3
+        Av_vx = operators.Av_vx3
+        Av_vy = operators.Av_vy3
+
+        yAu_ux = operators.yAu_ux3
+        yAu_uy = operators.yAu_uy3
+        yAv_vx = operators.yAv_vx3
+        yAv_vy = operators.yAv_vy3
+
+        Iu_ux = operators.Iu_ux3
+        Iv_uy = operators.Iv_uy3
+        Iu_vx = operators.Iu_vx3
+        Iv_vy = operators.Iv_vy3
+
+        yIu_ux = operators.yIu_ux3
+        yIv_uy = operators.yIv_uy3
+        yIu_vx = operators.yIu_vx3
+        yIv_vy = operators.yIv_vy3
+    else
+        (; Cux, Cuy, Cvx, Cvy) = operators
+        (; Au_ux, Au_uy, Av_vx, Av_vy) = operators
+        (; yAu_ux, yAu_uy, yAv_vx, yAv_vy) = operators
+        (; Iu_ux, Iv_uy, Iu_vx, Iv_vy) = operators
+        (; yIu_ux, yIv_uy, yIu_vx, yIv_vy) = operators
+    end
+
+    (; indu, indv) = grid
+    (; Newton_factor) = setup.solver_settings
+
+    (; u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy) = cache
+    (; v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy) = cache
+    (; ∂uū∂x, ∂uv̄∂y, ∂vū∂x, ∂vv̄∂y) = cache
+    (; Conv_ux_11, Conv_uy_11, Conv_uy_12, Conv_vx_21, Conv_vx_22, Conv_vy_22) = cache
+
+    cu = @view c[indu]
+    cv = @view c[indv]
+
+    uₕ = @view V[indu]
+    vₕ = @view V[indv]
+
+    ϕu = @view ϕ[indu]
+    ϕv = @view ϕ[indv]
+
+    # Convection components
+    mul!(u_ux, Au_ux, uₕ)
+    mul!(ū_ux, Iu_ux, ϕu)
+    mul!(u_uy, Au_uy, uₕ)
+    mul!(v̄_uy, Iv_uy, ϕv)
+    mul!(v_vx, Av_vx, vₕ)
+    mul!(ū_vx, Iu_vx, ϕu)
+    mul!(v_vy, Av_vy, vₕ)
+    mul!(v̄_vy, Iv_vy, ϕv)
+
+    u_ux .+= yAu_ux
+    ū_ux .+= yIu_ux
+    @. uū_ux = u_ux * ū_ux
+
+    u_uy .+= yAu_uy
+    v̄_uy .+= yIv_uy
+    @. uv̄_uy = u_uy * v̄_uy
+
+    v_vx .+= yAv_vx
+    ū_vx .+= yIu_vx
+    @. vū_vx = v_vx * ū_vx
+
+    v_vy .+= yAv_vy
+    v̄_vy .+= yIv_vy
+    @. vv̄_vy = v_vy * v̄_vy
+
+    mul!(∂uū∂x, Cux, uū_ux)
+    mul!(∂uv̄∂y, Cuy, uv̄_uy)
+    mul!(∂vū∂x, Cvx, vū_vx)
+    mul!(∂vv̄∂y, Cvy, vv̄_vy)
+
+    # U_ux = Au_ux * uₕ + yAu_ux                # U at ux
+    # Ū_ux = Iu_ux * ϕu + yIu_ux                # Ū at ux
+    # ∂uū∂x = Cux * (u_ux .* ū_ux)
+
+    # U_uy = Au_uy * uₕ + yAu_uy                # U at uy
+    # V̄_uy = Iv_uy * ϕv + yIv_uy                # Ū at uy
+    # ∂uv̄∂y = Cuy * (u_uy .* v̄_uy)
+
+    # V_vx = Av_vx * vₕ + yAv_vx                # V at vx
+    # Ū_vx = Iu_vx * ϕu + yIu_vx                # Ū at vx
+    # ∂vū∂x = Cvx * (v_vx .* ū_vx)
+
+    # V_vy = Av_vy * vₕ + yAv_vy                # V at vy
+    # V̄_vy = Iv_vy * ϕv + yIv_vy                # Ū at vy
+    # ∂vv̄∂y = Cvy * (v_vy .* v̄_vy)
+
+    @. cu = ∂uū∂x + ∂uv̄∂y
+    @. cv = ∂vū∂x + ∂vv̄∂y
+
+    if getJacobian
+        ## Convective terms, u-component
+        C1 = Cux * Diagonal(ū_ux)
+        C2 = Cux * Diagonal(u_ux) * Newton_factor
+        Conv_ux_11 .= C1 * Au_ux .+ C2 * Iu_ux
+        # mul!(Conv_ux_11, C1, Au_ux)
+        # mul!(Conv_ux_11, C2, Iu_ux, 1, 1)
+
+        C1 = Cuy * Diagonal(v̄_uy)
+        C2 = Cuy * Diagonal(u_uy) * Newton_factor
+        # mul!(Conv_uy_11, C1, Au_uy)
+        # mul!(Conv_uy_12, C2, Iv_uy)
+        Conv_uy_11 .= C1 * Au_uy
+        Conv_uy_12 .= C2 * Iv_uy
+
+        ## Convective terms, v-component
+        C1 = Cvx * Diagonal(ū_vx)
+        C2 = Cvx * Diagonal(v_vx) * Newton_factor
+        # mul!(Conv_vx_21, C2, Iu_vx)
+        # mul!(Conv_vx_22, C1, Av_vx)
+        Conv_vx_21 .= C2 * Iu_vx
+        Conv_vx_22 .= C1 * Av_vx
+
+        C1 = Cvy * Diagonal(v̄_vy)
+        C2 = Cvy * Diagonal(v_vy) * Newton_factor
+        Conv_vy_22 .= C1 * Av_vy .+ C2 * Iv_vy
+        # mul!(Conv_vy_22, C1, Av_vy)
+        # mul!(Conv_vy_22, C2, Iv_vy, 1, 1)
+
+        ∇c[indu, indu] = Conv_ux_11 + Conv_uy_11
+        ∇c[indu, indv] = Conv_uy_12
+        ∇c[indv, indu] = Conv_vx_21
+        ∇c[indv, indv] = Conv_vx_22 + Conv_vy_22
+    end
+
+    c, ∇c
+end
+
+# 3D version
+function convection_components!(
+        c, ∇c, V, ϕ, setup::Setup{T,3}, cache;
+        getJacobian = false,
+        order4 = false,
+    ) where {T}
+    (; grid, operators) = setup
+    (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz) = operators
+    (; Au_ux, Au_uy, Au_uz) = operators
+    (; Av_vx, Av_vy, Av_vz) = operators
+    (; Aw_wx, Aw_wy, Aw_wz) = operators
+    (; yAu_ux, yAu_uy, yAu_uz) = operators
+    (; yAv_vx, yAv_vy, yAv_vz) = operators
+    (; yAw_wx, yAw_wy, yAw_wz) = operators
+    (; Iu_ux, Iv_uy, Iw_uz) = operators
+    (; Iu_vx, Iv_vy, Iw_vz) = operators
+    (; Iu_wx, Iv_wy, Iw_wz) = operators
+    (; yIu_ux, yIv_uy, yIw_uz) = operators
+    (; yIu_vx, yIv_vy, yIw_vz) = operators
+    (; yIu_wx, yIv_wy, yIw_wz) = operators
+    (; indu, indv, indw) = grid
     (; Newton_factor) = setup.solver_settings
     (; u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy, u_uz, w̄_uz, uw̄_uz) = cache
     (; v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy, v_vz, w̄_vz, vw̄_vz) = cache

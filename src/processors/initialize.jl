@@ -8,7 +8,7 @@ initialize!(logger::Logger, stepper) = logger
 function initialize!(plotter::RealTimePlotter, stepper)
     (; V, p, t, setup) = stepper
     (; bc) = setup
-    (; xlims, ylims, Nx, Ny, x, y, xp, yp) = setup.grid
+    (; xlims, ylims, x, y, xp, yp) = setup.grid
     (; fieldname) = plotter
 
     Lx = xlims[2] - xlims[1]
@@ -23,7 +23,9 @@ function initialize!(plotter::RealTimePlotter, stepper)
 
     fig = Figure(resolution = (refsize * Lx / (Lx + Ly), refsize * Ly / (Lx + Ly) + 100))
     if fieldname == :velocity
-        up, vp, wp, qp = get_velocity(V, t, setup)
+        vels = get_velocity(V, t, setup)
+        qp = .√sum(vels .^ 2)
+
         vel = Observable(qp)
         ax, hm = contourf(fig[1, 1], xp, yp, vel)
         field = vel
@@ -85,4 +87,12 @@ function initialize!(writer::VTKWriter, stepper)
     writer
 end
 
-initialize!(tracer::QuantityTracer, stepper) = tracer
+function initialize!(tracer::QuantityTracer, stepper)
+    tracer.t = zeros(0)
+    tracer.maxdiv = zeros(0)
+    tracer.umom = zeros(0)
+    tracer.vmom = zeros(0)
+    tracer.wmom = zeros(0)
+    tracer.k = zeros(0)
+    tracer
+end

@@ -65,6 +65,17 @@ Base.@kwdef mutable struct Grid{T, N}
     Ω::Vector{T} = T[]
     Ω⁻¹::Vector{T} = T[]
 
+    # For order4
+    Ωux::Vector{T} = T[]
+    Ωvx::Vector{T} = T[]
+    Ωwx::Vector{T} = T[]
+    Ωuy::Vector{T} = T[]
+    Ωvy::Vector{T} = T[]
+    Ωwy::Vector{T} = T[]
+    Ωuz::Vector{T} = T[]
+    Ωvz::Vector{T} = T[]
+    Ωwz::Vector{T} = T[]
+
     hx::Vector{T} = T[]
     hy::Vector{T} = T[]
     hz::Vector{T} = T[]
