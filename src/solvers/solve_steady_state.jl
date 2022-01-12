@@ -35,6 +35,9 @@ function solve(
     p = copy(p₀)
     t = 0.0
 
+    # Start with Picard iterations
+    setup.solver_settings.newton_factor = false
+
     # Initialize BC arrays
     set_bc_vectors!(setup, t)
 
