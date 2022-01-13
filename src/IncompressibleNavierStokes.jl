@@ -120,8 +120,9 @@ include("utils/filter_convection.jl")
 include("postprocess/get_velocity.jl")
 include("postprocess/get_vorticity.jl")
 include("postprocess/get_streamfunction.jl")
-include("postprocess/plot_vorticity.jl")
 include("postprocess/plot_pressure.jl")
+include("postprocess/plot_velocity.jl")
+include("postprocess/plot_vorticity.jl")
 include("postprocess/plot_streamfunction.jl")
 include("postprocess/plot_tracers.jl")
 
@@ -164,7 +165,7 @@ export create_boundary_conditions,
 
 export momentum!
 
-export plot_pressure, plot_streamfunction, plot_vorticity, plot_tracers
+export plot_pressure, plot_streamfunction, plot_velocity, plot_vorticity, plot_tracers
 
 # ODE methods
 

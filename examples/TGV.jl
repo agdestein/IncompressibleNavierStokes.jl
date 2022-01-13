@@ -138,10 +138,10 @@ V₀, p₀ = create_initial_conditions(
 
 ## Iteration processors
 logger = Logger()
-real_time_plotter = RealTimePlotter(; nupdate = 10, fieldname = :vorticity)
+real_time_plotter = RealTimePlotter(; nupdate = 10, fieldname = :velocity)
 vtk_writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, vtk_writer, tracer]
+processors = [logger, real_time_plotter, vtk_writer, tracer]
 
 
 ## Solve steady state problem
@@ -157,5 +157,6 @@ V, p = @time solve(problem, RK44(); Δt = 0.01, processors)
 ## Post-process
 plot_tracers(tracer)
 plot_pressure(setup, p)
+plot_velocity(setup, V, t_end)
 plot_vorticity(setup, V, tlims[2])
 plot_streamfunction(setup, V, tlims[2])

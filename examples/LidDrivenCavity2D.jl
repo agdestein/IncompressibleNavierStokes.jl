@@ -38,6 +38,10 @@ T = Float64
 # They all take a Reynolds number as a parameter. Here we choose a moderate Reynolds number.
 
 viscosity_model = LaminarModel{T}(; Re = 1000)
+# viscosity_model = KEpsilonModel{T}(; Re = 3000)
+# viscosity_model = MixingLengthModel{T}(; Re = 3000)
+# viscosity_model = SmagorinskyModel{T}(; Re = 3000)
+# viscosity_model = QRModel{T}(; Re = 3000)
 
 # Available convection models are:
 #
@@ -164,6 +168,10 @@ plot_tracers(tracer)
 # We may also plot the final pressure field,
 
 plot_pressure(setup, p)
+
+# velocity field,
+
+plot_velocity(setup, V, t_end)
 
 # vorticity field,
 

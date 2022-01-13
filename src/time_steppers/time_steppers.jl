@@ -3,7 +3,7 @@
 
 Time stepper for solving ODEs.
 """
-Base.@kwdef mutable struct TimeStepper{M, T}
+Base.@kwdef mutable struct TimeStepper{M,T,N}
     method::M
     n::Int = 0
     V::Vector{T}
@@ -13,7 +13,7 @@ Base.@kwdef mutable struct TimeStepper{M, T}
     pₙ::Vector{T}
     tₙ::T
     Δtₙ::T
-    setup::Any # Setup{T}
+    setup::Setup{T,N}
     cache::AbstractODEMethodCache{T}
     momentum_cache::MomentumCache{T}
 end
@@ -23,9 +23,7 @@ end
 
 Build associated time stepper from method.
 """
-function TimeStepper(method::M, setup, V₀, p₀, t, Δt) where {M}
-    T = eltype(V₀)
-
+function TimeStepper(method::M, setup::Setup{T,N}, V₀, p₀, t, Δt) where {M,T,N}
     # Initialize solution vectors (leave input intact)
     n = 0
     V = copy(V₀)
@@ -41,10 +39,10 @@ function TimeStepper(method::M, setup, V₀, p₀, t, Δt) where {M}
     cache = ode_method_cache(method, setup)
     momentum_cache = MomentumCache(setup)
 
-    TimeStepper{M, T}(; method, n, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache)
+    TimeStepper{M,T,N}(; method, n, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache)
 end
 
-const AdamsBashforthCrankNicolsonStepper{S, T} = TimeStepper{AdamsBashforthCrankNicolsonMethod{S}, T}
-const OneLegStepper{S, T} = TimeStepper{OneLegMethod{S}, T}
-const ExplicitRungeKuttaStepper{S, T} = TimeStepper{ExplicitRungeKuttaMethod{S}, T}
-const ImplicitRungeKuttaStepper{S, T} = TimeStepper{ImplicitRungeKuttaMethod{S}, T}
+const AdamsBashforthCrankNicolsonStepper{S} = TimeStepper{AdamsBashforthCrankNicolsonMethod{S}}
+const OneLegStepper{S} = TimeStepper{OneLegMethod{S}}
+const ExplicitRungeKuttaStepper{S} = TimeStepper{ExplicitRungeKuttaMethod{S}}
+const ImplicitRungeKuttaStepper{S} = TimeStepper{ImplicitRungeKuttaMethod{S}}

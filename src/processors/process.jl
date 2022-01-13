@@ -15,25 +15,30 @@ function process!(logger::Logger, stepper)
     # For k-ϵ model residual also contains k and ϵ terms
     momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
 
-    @info "Iteration $(stepper.n)" t norm(F)
+    @info "Iteration $(stepper.n)" t norm(F) maximum(F)
 
     logger
 end
 
 function process!(plotter::RealTimePlotter, stepper)
     (; setup, V, p, t) = stepper
-    (; Npx, Npy) = setup.grid
+    (; Npx, Npy, Npz) = setup.grid
     (; field, fieldname) = plotter
+    N = get_dimension(setup.grid)
     if fieldname == :velocity
         vels = get_velocity(V, t, setup)
-        qp = .√sum(vels .^ 2)
+        qp = map((vels...) -> √sum(vel -> vel ^ 2, vels), vels...)
         field[] = qp
     elseif fieldname == :vorticity
         field[] = vorticity!(field[], V, t, setup)
     elseif fieldname == :streamfunction
         field[] = get_streamfunction(V, t, setup)
     elseif fieldname == :pressure
-        field[] = reshape(p, Npx, Npy)
+        if N == 2
+            field[] = reshape(p, Npx, Npy)
+        elseif N == 3
+            field[] = reshape(p, Npx, Npy, Npz)
+        end
     end
 
     plotter

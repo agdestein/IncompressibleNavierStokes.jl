@@ -19,7 +19,7 @@ name = "BFS"
 T = Float64
 
 ## Viscosity model
-viscosity_model = LaminarModel{T}(; Re = 2000)
+viscosity_model = LaminarModel{T}(; Re = 3000)
 # viscosity_model = KEpsilonModel{T}(; Re = 2000)
 # viscosity_model = MixingLengthModel{T}(; Re = 2000)
 # viscosity_model = SmagorinskyModel{T}(; Re = 2000)
@@ -62,7 +62,7 @@ solver_settings = SolverSettings{T}(;
 )
 
 ## Boundary conditions
-u_bc(x, y, z, t, setup) = x ≈ setup.grid.xlims[1] && y ≥ 0 ? 24y * (1 // 2 - y) : zero(y)
+u_bc(x, y, z, t, setup) = x ≈ setup.grid.xlims[1] && y ≥ 0 ? 24y * (1 // 2 - y) : zero(x)
 v_bc(x, y, z, t, setup) = zero(x)
 w_bc(x, y, z, t, setup) = zero(x)
 bc = create_boundary_conditions(
@@ -116,7 +116,7 @@ setup = Setup{T,3}(; viscosity_model, convection_model, grid, force, solver_sett
 build_operators!(setup);
 
 ## Time interval
-t_start, t_end = tlims = (0.0, 5.0)
+t_start, t_end = tlims = (0.0, 20.0)
 
 ## Initial conditions (extend inflow)
 initial_velocity_u(x, y, z) = y ≥ 0 ? 24y * (1 // 2 - y) : zero(y)
@@ -133,12 +133,11 @@ V₀, p₀ = create_initial_conditions(
 );
 
 ## Iteration processors
-logger = Logger()
-real_time_plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
+logger = Logger(; nupdate = 10)
+real_time_plotter = RealTimePlotter(; nupdate = 10, fieldname = :velocity)
 vtk_writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
-# processors = [logger, real_time_plotter, vtk_writer, tracer]
-processors = [logger, vtk_writer, tracer]
+processors = [logger, real_time_plotter, vtk_writer, tracer]
 
 
 ## Solve steady state problem
@@ -154,5 +153,6 @@ V, p = @time solve(problem, RK44(); Δt = 0.005, processors);
 ## Post-process
 plot_tracers(tracer)
 plot_pressure(setup, p)
+plot_velocity(setup, V, t_end)
 plot_vorticity(setup, V, tlims[2])
 plot_streamfunction(setup, V, tlims[2])

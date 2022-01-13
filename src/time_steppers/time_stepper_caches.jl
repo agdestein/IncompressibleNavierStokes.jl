@@ -74,13 +74,13 @@ Base.@kwdef struct OneLegCache{T} <: AbstractODEMethodCache{T}
 end
 
 """
-    ode_method_cache(method, args...; kwargs...)
+    ode_method_cache(method, setup)
 
 Get time stepper cache for the given ODE method.
 """
 function ode_method_cache end
 
-function ode_method_cache(method::AdamsBashforthCrankNicolsonMethod{T}, setup) where {T}
+function ode_method_cache(::AdamsBashforthCrankNicolsonMethod{T}, setup) where {T}
     (; NV, Np) = setup.grid
 
     cₙ = zeros(T, NV)

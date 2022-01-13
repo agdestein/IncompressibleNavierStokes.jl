@@ -5,14 +5,12 @@ Initialize processor.
 """
 initialize!(logger::Logger, stepper) = logger
 
-function initialize!(plotter::RealTimePlotter, stepper)
+# 2D real time plot
+function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,2}) where {M,T}
     (; V, p, t, setup) = stepper
     (; bc) = setup
     (; xlims, ylims, x, y, xp, yp) = setup.grid
     (; fieldname) = plotter
-
-    Lx = xlims[2] - xlims[1]
-    Ly = ylims[2] - ylims[1]
 
     vel = nothing
     ω = nothing
@@ -20,8 +18,8 @@ function initialize!(plotter::RealTimePlotter, stepper)
 
     fig = Figure()
     if fieldname == :velocity
-        vels = get_velocity(V, t, setup)
-        qp = .√sum(vels .^ 2)
+        up, vp = get_velocity(V, t, setup)
+        qp = map((u, v) -> √sum(u ^ 2 + v ^ 2), up, vp)
 
         vel = Observable(qp)
         ax, hm = contourf(fig[1, 1], xp, yp, vel)
@@ -69,6 +67,32 @@ function initialize!(plotter::RealTimePlotter, stepper)
     ax.ylabel = "y"
     limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
     Colorbar(fig[1, 2], hm)
+    display(fig)
+
+    @pack! plotter = field
+
+    plotter
+end
+
+# 3D real time plot
+function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,3}) where {M,T}
+    (; V, t, setup) = stepper
+    (; xlims, ylims, zlims, xp, yp, zp) = setup.grid
+    (; fieldname) = plotter
+
+
+    fig = Figure()
+    if fieldname == :velocity
+        up, vp, wp = get_velocity(V, t, setup)
+        qp = map((u, v, w) -> √sum(u ^ 2 + v ^ 2 + w ^ 2), up, vp, wp)
+        vel = Observable(qp)
+        field = vel
+        ax = Axis3(fig[1, 1]; title = "Velocity (magnitude)", aspect = :data)
+        hm = contour!(ax, xp, yp, zp, vel; shading = false)
+    else
+        error("Unknown fieldname")
+    end
+    # Colorbar(fig[1, 2], hm)
     display(fig)
 
     @pack! plotter = field

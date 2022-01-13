@@ -46,11 +46,6 @@ function solve(
 
     println("Initial momentum residual = $maxres")
 
-    # Processors for iteration results
-    for ps ∈ processors
-        # initialize!(ps, stepper)
-    end
-
     # record(fig, "output/vorticity.mp4", 1:rtp.nt; framerate = 60) do n
     while maxres > abstol
         if n > maxiter
@@ -88,14 +83,6 @@ function solve(
         maxres = maximum(abs.(F))
 
         println(": momentum residual = $maxres")
-
-        # Process iteration results with each processor
-        for ps ∈ processors
-            # Only update each `nupdate`-th iteration
-            # stepper.n % ps.nupdate == 0 && process!(ps, stepper)
-        end
-
-        # finalize!.(processors)
 
         n += 1
     end
