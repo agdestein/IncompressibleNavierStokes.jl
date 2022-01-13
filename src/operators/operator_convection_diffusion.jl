@@ -14,11 +14,10 @@ function operator_convection_diffusion!(setup::Setup{T,2}) where {T}
     (; hx, hy, hxi, hyi, hxd, hyd) = grid
     (; gxi, gyi, gxd, gyd) = grid
     (; Buvy, Bvux) = grid
-    (; order4) = operators
+    (; order4, α) = grid
     (; Re) = viscosity_model
 
     if order4
-        (; α) = operators
         (; hxi3, hyi3, gxi3, gyi3, hxd13, hxd3, hyd13, hyd3) = grid
         (; gxd13, gxd3, gyd13, gyd3) = grid
         (; Ωux, Ωuy, Ωvx, Ωvy) = grid

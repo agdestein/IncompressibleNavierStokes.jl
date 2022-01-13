@@ -10,7 +10,7 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     (; grid, operators, viscosity_model) = setup
     (; Nux_in, Nvy_in, Np, Npx, Npy) = grid
     (; xin, yin, x, y, hx, hy, xp, yp) = grid
-    (; order4) = operators
+    (; order4, α) = grid
     (; Dux, Duy, Dvx, Dvy) = operators
     (; Au_ux_bc, Au_uy_bc, Av_vx_bc, Av_vy_bc) = operators
     (; Su_ux_bc, Su_uy_bc, Sv_vx_bc, Sv_vy_bc) = operators
@@ -26,7 +26,6 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     (; Re) = viscosity_model
 
     if order4
-        (; α) = operators
         (; Au_ux_bc3, Au_uy_bc3, Av_vx_bc3, Av_vy_bc3) = operators
         (; Iu_ux_bc3, Iv_uy_bc_lu3, Iv_uy_bc_lr3) = operators
         (; Iu_vx_bc_lu3, Iu_vx_bc_lr3, Iv_vy_bc3) = operators

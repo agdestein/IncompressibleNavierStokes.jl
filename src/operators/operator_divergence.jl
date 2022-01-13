@@ -13,10 +13,9 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t) = grid
     (; hx, hy) = grid
     (; Ω⁻¹) = grid
-    (; order4) = operators
+    (; order4, α) = grid
 
     if order4
-        (; α) = operators
         (; hxi3, hyi3) = grid
     end
 

@@ -26,7 +26,6 @@ function solve(
     Z2 = spzeros(Np, Np)
     Δq = zeros(NV + Np)
 
-    # Initialize solution vectors
     # Loop index
     n = 1
 
@@ -83,7 +82,7 @@ function solve(
         p .+= Δp
 
         # Calculate mass, momentum and energy
-        maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
+        # maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
         momentum!(F, ∇F, V, V, p, t, setup, momentum_cache)
         maxres = maximum(abs.(F))

@@ -61,6 +61,7 @@ grid = create_grid(
     xlims = (0, 1),               # Horizontal limits (left, right)
     ylims = (0, 1),               # Vertical limits (bottom, top)
     stretch = (1, 1),             # Stretch factor (sx, sy)
+    order4 = false,               # Use 4th order in space
 )
 
 # Solver settings are used by certain implicit solvers.
@@ -154,7 +155,7 @@ V, p = @time solve(problem, RK44(); Δt = 0.01, processors);
 
 
 # ## Postprocess
-
+#
 # The `tracer` object contains a history of some quantities related to the momentum and
 # energy.
 

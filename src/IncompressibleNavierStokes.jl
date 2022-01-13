@@ -40,8 +40,11 @@ include("parameters.jl")
 
 # Boundary condtions
 include("boundary_conditions/create_boundary_conditions.jl")
+include("boundary_conditions/bc_av3.jl")
+include("boundary_conditions/bc_av_stag3.jl")
 include("boundary_conditions/bc_diff_stag.jl")
 include("boundary_conditions/bc_diff_stag3.jl")
+include("boundary_conditions/bc_int3.jl")
 include("boundary_conditions/bc_general.jl")
 include("boundary_conditions/bc_general_stag.jl")
 include("boundary_conditions/set_bc_vectors.jl")

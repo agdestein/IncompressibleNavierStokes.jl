@@ -126,10 +126,6 @@ t_start, t_end = tlims = (0.0, 10.0)
 initial_velocity_u(x, y, z) = sin(x)cos(y)cos(z)
 initial_velocity_v(x, y, z) = -cos(x)sin(y)cos(z)
 initial_velocity_w(x, y, z) = zero(z)
-# initial_velocity_u(x, y, z) = -sinpi(x)cospi(y)cospi(z)
-# initial_velocity_v(x, y, z) = 2cospi(x)sinpi(y)cospi(z)
-# initial_velocity_w(x, y, z) = -cospi(x)cospi(y)sinpi(z)
-# initial_pressure(x, y, z) = 1 / 4 * (cos(2π * x) + cos(2π * y) + cos(2π * z))
 initial_pressure(x, y, z) = 1 / 4 * (cos(2x) + cos(2y) + cos(2z))
 V₀, p₀ = create_initial_conditions(
     setup,

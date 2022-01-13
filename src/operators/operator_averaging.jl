@@ -11,7 +11,7 @@ function operator_averaging!(setup::Setup{T,2}) where {T}
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t) = grid
     (; hx, hy) = grid
-    (; order4) = operators
+    (; order4) = grid
 
     # Averaging weight:
     weight = 1 / 2
@@ -67,7 +67,7 @@ function operator_averaging!(setup::Setup{T,2}) where {T}
     ## Fourth order
     if order4
         ## Au_ux: evaluate u at ux location
-        diag1 = weight * ones(Nux_t + 4)
+        diag1 = weight * ones(Nux_in + 3)
         A1D3 = spdiagm(Nux_in + 3, Nux_t + 4, 0 => diag1, 3 => diag1)
 
         # Boundary conditions
@@ -86,7 +86,7 @@ function operator_averaging!(setup::Setup{T,2}) where {T}
         Au_ux_bc3 = (; Au_ux_bc3..., Bbc = I(Nuy_in) ⊗ (A1D3 * Au_ux_bc3.Btemp))
 
         ## Au_uy: evaluate u at uy location
-        diag1 = weight * ones(Nuy_t + 4)
+        diag1 = weight * ones(Nuy_in + 3)
         A1D3 = spdiagm(Nuy_in + 3, Nuy_t + 4, 0 => diag1, 3 => diag1)
 
         # Boundary conditions
@@ -105,7 +105,7 @@ function operator_averaging!(setup::Setup{T,2}) where {T}
         Au_uy_bc3 = (; Au_uy_bc3..., Bbc = (A1D3 * Au_uy_bc3.Btemp) ⊗ I(Nux_in))
 
         ## Av_vx: evaluate v at vx location
-        diag1 = weight * ones(Nvx_t + 4)
+        diag1 = weight * ones(Nvx_in + 3)
         A1D3 = spdiagm(Nvx_in + 3, Nvx_t + 4, 0 => diag1, 3 => diag1)
 
         # Boundary conditions
@@ -120,11 +120,11 @@ function operator_averaging!(setup::Setup{T,2}) where {T}
         )
 
         # Extend to 2D
-        Av_vx3 = I(Nvy_in) ⊗ A1D3 * Av_vx_bc3.B1D
+        Av_vx3 = I(Nvy_in) ⊗ (A1D3 * Av_vx_bc3.B1D)
         Av_vx_bc3 = (; Av_vx_bc3..., Bbc = I(Nvy_in) ⊗ (A1D3 * Av_vx_bc3.Btemp))
 
         ## Av_vy: evaluate v at vy location
-        diag1 = weight * ones(Nvy_t + 4)
+        diag1 = weight * ones(Nvy_in + 3)
         A1D3 = spdiagm(Nvy_in + 3, Nvy_t + 4, 0 => diag1, 3 => diag1)
 
         # Boundary conditions

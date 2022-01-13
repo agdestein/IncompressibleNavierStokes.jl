@@ -22,7 +22,7 @@ model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
 function convection! end
 
 function convection!(::NoRegConvectionModel, c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
-    (; order4, α) = setup.operators
+    (; order4, α) = setup.grid
     (; c3, ∇c3) = cache
 
     # No regularization

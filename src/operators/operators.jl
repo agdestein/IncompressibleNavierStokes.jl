@@ -4,10 +4,6 @@
 Discrete operators.
 """
 Base.@kwdef mutable struct Operators{T}
-    order4::Bool = false                     # Use 4th order in space (otherwise 2nd order)
-    α::T = 81                                # Richardson extrapolation factor = 3^4
-    β::T = 9 // 8                            # Interpolation factor
-
     Au_ux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Au_uy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Au_uz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
@@ -261,4 +257,14 @@ Base.@kwdef mutable struct Operators{T}
     yAvz_k::Vector{T} = T[]
     yAwx_k::Vector{T} = T[]
     yAwy_k::Vector{T} = T[]
+
+
+    Au_ux3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Au_uy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Av_vx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Av_vy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Au_ux_bc3::NamedTuple = (;)
+    Au_uy_bc3::NamedTuple = (;)
+    Av_vx_bc3::NamedTuple = (;)
+    Av_vy_bc3::NamedTuple = (;)
 end

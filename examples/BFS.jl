@@ -109,14 +109,14 @@ bc = create_boundary_conditions(
 bodyforce_u(x, y, z) = 0
 bodyforce_v(x, y, z) = 0
 bodyforce_w(x, y, z) = 0
-force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
+force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v, bodyforce_w)
 
 ## Build setup and assemble operators
 setup = Setup{T,3}(; viscosity_model, convection_model, grid, force, solver_settings, bc);
 build_operators!(setup);
 
 ## Time interval
-t_start, t_end = tlims = (0.0, 30.0)
+t_start, t_end = tlims = (0.0, 5.0)
 
 ## Initial conditions (extend inflow)
 initial_velocity_u(x, y, z) = y ≥ 0 ? 24y * (1 // 2 - y) : zero(y)

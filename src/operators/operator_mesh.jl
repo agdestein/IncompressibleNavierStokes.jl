@@ -7,8 +7,8 @@ function operator_mesh! end
 
 # 2D version
 function operator_mesh!(setup::Setup{T,2}) where {T}
-    (; grid, operators, bc) = setup
-    (; order4, α) = operators
+    (; grid, bc) = setup
+    (; order4, α) = grid
     (; Nx, Ny, x, y, hx, hy, gx, gy, xp, yp) = grid
 
     # Number of pressure points

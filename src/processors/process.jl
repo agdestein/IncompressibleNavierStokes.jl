@@ -7,21 +7,15 @@ function process! end
 
 function process!(logger::Logger, stepper)
     (; V, p, t, setup, cache, momentum_cache) = stepper
-    (; viscosity_model) = setup
     (; F) = cache
     # Calculate mass, momentum and energy
     # maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
     # Residual (in Finite Volume form)
     # For k-ϵ model residual also contains k and ϵ terms
-    if !isa(viscosity_model, KEpsilonModel)
-        # Norm of residual
-        momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
-        maxres = maximum(abs.(F))
-    end
+    momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
 
-    println("n = $(stepper.n), t = $t, maxres = $maxres")
-    # println("t = $t")
+    @info "Iteration $(stepper.n)" t norm(F)
 
     logger
 end
@@ -41,7 +35,6 @@ function process!(plotter::RealTimePlotter, stepper)
     elseif fieldname == :pressure
         field[] = reshape(p, Npx, Npy)
     end
-    # sleep(1 / rtp.fps)
 
     plotter
 end
@@ -49,10 +42,10 @@ end
 function process!(writer::VTKWriter, stepper)
     (; setup, V, p, t) = stepper
     (; xp, yp, zp) = setup.grid;
-    dim = get_dimension(setup.grid)
-    if dim == 2
+    N = get_dimension(setup.grid)
+    if N == 2
         coords = (xp, yp)
-    elseif dim == 3
+    elseif N == 3
         coords = (xp, yp, zp)
     end
     

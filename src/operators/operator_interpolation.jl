@@ -13,10 +13,9 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t) = grid
     (; hx, hy, hxi, hyi) = grid
     (; Buvy, Bvux) = grid
-    (; order4) = operators
+    (; order4, β) = grid
 
     if order4
-        (; β) = operators
         (; hxi3, hyi3, hx3, hy3) = grid
     end
 
@@ -86,8 +85,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         end
 
         ## Iu_ux
-        diag1 = fill(weight1, Nux_t + 1)
-        diag2 = fill(weight2, Nux_t + 1)
+        diag1 = fill(weight1, Nux_t - 1)
+        diag2 = fill(weight2, Nux_t - 1)
         I1D = spdiagm(Nux_t - 1, Nux_t + 2, 0 => diag2, 1 => diag1, 2 => diag1, 3 => diag2)
 
         # Boundary conditions

@@ -17,11 +17,8 @@ function initialize!(plotter::RealTimePlotter, stepper)
     vel = nothing
     ω = nothing
     ψ = nothing
-    pres = nothing
 
-    refsize = 2000
-
-    fig = Figure(resolution = (refsize * Lx / (Lx + Ly), refsize * Ly / (Lx + Ly) + 100))
+    fig = Figure()
     if fieldname == :velocity
         vels = get_velocity(V, t, setup)
         qp = .√sum(vels .^ 2)
