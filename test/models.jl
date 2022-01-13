@@ -1,20 +1,7 @@
 # Run a typical simulation: Lid-Driven Cavity case (LDC)
-@testset "Simulation 2D" begin
+@testset "Models" begin
     # Floating point type for simulations
     T = Float64
-
-    ## Viscosity model
-    viscosity_model = LaminarModel{T}(; Re = 1000)
-    # viscosity_model = KEpsilonModel{T}(; Re = 1000)
-    # viscosity_model = MixingLengthModel{T}(; Re = 1000)
-    # viscosity_model = SmagorinskyModel{T}(; Re = 1000)
-    # viscosity_model = QRModel{T}(; Re = 1000)
-
-    ## Convection model
-    convection_model = NoRegConvectionModel{T}()
-    # convection_model = C2ConvectionModel{T}()
-    # convection_model = C4ConvectionModel{T}()
-    # convection_model = LerayConvectionModel{T}()
 
     ## Grid parameters
     Nx = 25                           # Number of x-volumes
@@ -66,56 +53,80 @@
     bodyforce_v(x, y) = 0
     force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
-    ## Build setup and assemble operators
-    setup =
-        Setup{T,2}(; viscosity_model, convection_model, grid, force, solver_settings, bc)
-    build_operators!(setup)
-
-    ## Time interval
-    t_start, t_end = tlims = (0.0, 0.5)
-
     ## Initial conditions
     initial_velocity_u(x, y) = 0
     initial_velocity_v(x, y) = 0
     initial_pressure(x, y) = 0
-    V₀, p₀ = create_initial_conditions(
-        setup,
-        t_start;
-        initial_velocity_u,
-        initial_velocity_v,
-        initial_pressure,
-    )
+
+    ## Time interval
+    t_start, t_end = tlims = (0.0, 0.5)
 
     ## Iteration processors
     logger = Logger()
     tracer = QuantityTracer()
     processors = [logger, tracer]
 
-    @testset "Steady state problem" begin
-        problem = SteadyStateProblem(setup, V₀, p₀)
-        V, p = solve(problem; processors)
+    ## Viscosity models
+    Re = 1000
+    lam = LaminarModel{T}(; Re)
+    kϵ = KEpsilonModel{T}(; Re)
+    ml = MixingLengthModel{T}(; Re)
+    smag = SmagorinskyModel{T}(; Re)
+    qr = QRModel{T}(; Re)
 
-        # Check that solution did not explode
-        @test all(!isnan, V)
-        @test all(!isnan, p)
+    ## Convection models
+    noreg = NoRegConvectionModel{T}()
+    c2 = C2ConvectionModel{T}()
+    c4 = C4ConvectionModel{T}()
+    leray = LerayConvectionModel{T}()
 
-        # Check that the average velocity is smaller than the lid velocity
-        @test sum(abs, V) / length(V) < lid_vel
-    end
+    models = [
+        (lam, noreg)
+        (kϵ, noreg)
+        (ml, noreg)
+        (smag, noreg)
+        (qr, noreg)
+        (lam, c2)
+        (lam, c4)
+        (lam, leray)
+    ]
 
-    @testset "Unsteady problem" begin
-        problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-        V, p = solve(problem, RK44(); Δt = 0.01, processors)
+    for (viscosity_model, convection_model) in models
+        @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
+            setup = Setup{T,2}(;
+                viscosity_model,
+                convection_model,
+                grid,
+                force,
+                solver_settings,
+                bc,
+            )
 
-        # Check that solution did not explode
-        @test all(!isnan, V)
-        @test all(!isnan, p)
+            build_operators!(setup)
 
-        # Check that the average velocity is smaller than the lid velocity
-        @test sum(abs, V) / length(V) < lid_vel
+            V₀, p₀ = create_initial_conditions(
+                setup,
+                t_start;
+                initial_velocity_u,
+                initial_velocity_v,
+                initial_pressure,
+            )
 
-        # Check for steady state convergence
-        @test tracer.umom[end] < 1e-10
-        @test tracer.vmom[end] < 1e-10
+            problem = SteadyStateProblem(setup, V₀, p₀)
+            @test V, p = solve(problem; processors)
+
+            # Check that the average velocity is smaller than the lid velocity
+            @test sum(abs, V) / length(V) < lid_vel
+
+            problem = UnsteadyProblem(setup, V₀, p₀, tlims)
+            V, p = solve(problem, RK44(); Δt = 0.01, processors)
+
+            # Check that the average velocity is smaller than the lid velocity
+            sum(abs, V) / length(V) < lid_vel
+
+            # Check for steady state convergence
+            @test tracer.umom[end] < 1e-10
+            @test tracer.vmom[end] < 1e-10
+        end
     end
 end

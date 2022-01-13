@@ -1,8 +1,5 @@
 # Run a typical simulation: Lid-Driven Cavity case (LDC)
 @testset "Simulation 3D" begin
-    # Case name for saving results
-    name = "LidDrivenCavity3D"
-
     # Floating point type for simulations
     T = Float64
 

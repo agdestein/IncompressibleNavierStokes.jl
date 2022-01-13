@@ -12,4 +12,5 @@ using Test
 @testset "IncompressibleNavierStokes" begin
     include("simulation2D.jl")
     include("simulation3D.jl")
+    include("models.jl")
 end
