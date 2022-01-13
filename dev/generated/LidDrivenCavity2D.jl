@@ -21,6 +21,7 @@ grid = create_grid(
     xlims = (0, 1),               # Horizontal limits (left, right)
     ylims = (0, 1),               # Vertical limits (bottom, top)
     stretch = (1, 1),             # Stretch factor (sx, sy)
+    order4 = false,               # Use 4th order in space
 )
 
 solver_settings = SolverSettings{T}(;
@@ -83,6 +84,8 @@ V, p = @time solve(problem, RK44(); Δt = 0.01, processors);
 plot_tracers(tracer)
 
 plot_pressure(setup, p)
+
+plot_velocity(setup, V, t_end)
 
 plot_vorticity(setup, V, tlims[2])
 
