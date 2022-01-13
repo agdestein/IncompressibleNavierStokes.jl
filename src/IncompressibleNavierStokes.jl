@@ -23,6 +23,7 @@ include("grid/grid.jl")
 include("grid/get_dimension.jl")
 include("grid/nonuniform_grid.jl")
 include("grid/create_grid.jl")
+include("grid/max_size.jl")
 
 # Force
 include("force/force.jl")

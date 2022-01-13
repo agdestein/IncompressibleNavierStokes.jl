@@ -1,5 +1,5 @@
 function ke_convection!(setup)
-    (; bc) = setup
+    (; grid, bc) = setup
     (; Nx, Ny, x, y, xp, yp, hx, hy) = grid
     (; Npx, Npy, Nux_in, Nvy_in) = grid
     (; k_bc) = bc

@@ -26,7 +26,7 @@ function diffusion!(model::Union{QRModel,SmagorinskyModel,MixingLengthModel}, d,
 
     du = @view d[indu]
     dv = @view d[indv]
-    dw = @view d[indw]
+    # dw = @view d[indw]
 
     # Get components of strain tensor and its magnitude;
     # The magnitude S_abs is evaluated at pressure points
@@ -45,7 +45,7 @@ function diffusion!(model::Union{QRModel,SmagorinskyModel,MixingLengthModel}, d,
     # Note that the factor 2 is because
     # Tau = 2*(ν+ν_t)*S(u), with S(u) = 1/2*(∇u + (∇u)^T)
 
-    ν = 1 / setup.model.Re # Molecular viscosity
+    ν = 1 / model.Re # Molecular viscosity
 
     du .= Dux * (2 .* (ν .+ ν_t_ux) .* S11[:]) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12[:])
     dv .= Dvx * (2 .* (ν .+ ν_t_vx) .* S21[:]) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22[:])
