@@ -18,8 +18,7 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     (; Iu_vx_bc_lr, Iu_vx_bc_lu, Iv_vy_bc) = operators
     (; Mx_bc, My_bc) = operators
     (; Aν_vy_bc) = operators
-    (; Cux_k_bc, Cuy_k_bc, Cvx_k_bc, Cvy_k_bc, Auy_k_bc, Avx_k_bc) =
-        operators
+    (; Cux_k_bc, Cuy_k_bc, Cvx_k_bc, Cvy_k_bc, Auy_k_bc, Avx_k_bc) = operators
     (; Su_vx_bc_lr, Su_vx_bc_lu, Sv_uy_bc_lr, Sv_uy_bc_lu) = operators
     (; u_bc, v_bc, dudt_bc, dvdt_bc) = setup.bc
     (; p_bc, bc_unsteady) = setup.bc
@@ -33,7 +32,7 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         (; Diffux_div, Diffuy_div, Diffvx_div, Diffvy_div) = operators
         (; Mx_bc3, My_bc3) = operators
     end
-     
+
     # TODO: Split up function into allocating part (constructor?) and mutating `update!`
 
     ## Get BC values
@@ -298,7 +297,7 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     # Iu_vx (low/up)
     ybc = Iu_vx_bc_lu.ybc1 ⊗ uLo + Iu_vx_bc_lu.ybc2 ⊗ uUp
     yIu_vx_lu = Iu_vx_bc_lu.Bbc * ybc
-    
+
     # Iu_vx (left/right)
     ybc = uLe_i ⊗ Iu_vx_bc_lr.ybc1 + uRi_i ⊗ Iu_vx_bc_lr.ybc2
     yIu_vx_lr = Iu_vx_bc_lu.B2D * Iu_vx_bc_lr.Bbc * ybc
@@ -347,7 +346,7 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         @pack! operators = yIu_ux3, yIv_uy3, yIu_vx3, yIv_vy3
     end
 
-    if viscosity_model isa Union{QRModel, SmagorinskyModel, MixingLengthModel}
+    if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         # Set BC for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
         # In all other cases, homogeneous (zero) Neumann conditions are used
@@ -366,7 +365,7 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
 
         nuLe_i = [nuLe[1]; nuLe; nuLe[end]]
         nuRi_i = [nuRi[1]; nuRi; nuRi[end]]
-        
+
         # In x-direction
         ybc = nuLe_i ⊗ Aν_uy_bc_lr.ybc1 + nuRi_i ⊗ Aν_uy_bc_lr.ybc2
         yAν_uy_lr = Aν_uy_bc_lr.B2D * ybc
@@ -386,7 +385,7 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         # In y-direction
         ybc = Aν_vx_bc_lu.ybc1 ⊗ nuLo_i + Aν_vx_bc_lu.ybc2 ⊗ nuUp_i
         yAν_vx_lu = Aν_vx_bc_lu.B2D * ybc
-        
+
         # In x-direction
         ybc = nuLe ⊗ Aν_vx_bc_lr.ybc1 + nuRi ⊗ Aν_vx_bc_lr.ybc2
         yAν_vx_lr = Aν_vx_bc_lr.B2D * ybc
@@ -442,7 +441,7 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nuz_b, Nvz_t) = setup.grid
     (; Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t) = setup.grid
     (; xin, yin, zin, x, y, z, hx, hy, hz, xp, yp, zp) = setup.grid
-    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz,) = setup.operators
+    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
 
     (; Au_ux_bc, Au_uy_bc, Au_uz_bc) = setup.operators
     (; Av_vx_bc, Av_vy_bc, Av_vz_bc) = setup.operators

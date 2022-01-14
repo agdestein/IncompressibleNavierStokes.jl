@@ -105,8 +105,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         Iu_ux_bc = (; Iu_ux_bc..., Bbc = mat_hy ⊗ (I1D * Iu_ux_bc.Btemp))
 
         ## Iu_ux3
-        diag1 = fill(weight1, Nux_t + 4)
-        diag2 = fill(weight2, Nux_t + 4)
+        diag1 = fill(weight1, Nux_in + 3)
+        diag2 = fill(weight2, Nux_in + 3)
         I1D3 =
             spdiagm(Nux_in + 3, Nux_t + 4, 0 => diag2, 1 => diag1, 2 => diag1, 3 => diag2)
 
@@ -126,8 +126,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         Iu_ux_bc3 = (; Iu_ux_bc3..., Bbc = mat_hy3 ⊗ (I1D3 * Iu_ux_bc3.Btemp))
 
         ## Iv_uy
-        diag1 = fill(weight1, Nvx_t)
-        diag2 = fill(weight2, Nvx_t)
+        diag1 = fill(weight1, Nvx_t - 1)
+        diag2 = fill(weight2, Nvx_t - 1)
         I1D = spdiagm(Nvx_t - 1, Nvx_t + 2, 0 => diag2, 1 => diag1, 2 => diag1, 3 => diag2)
         any(==(:pressure), bc.u.x) &&
             @warn "Possible interpolation bug (see https://github.com/bsanderse/INS2D/commit/b8de84dbe151d6de32928563ca8fa5785cce6318)"
@@ -156,8 +156,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         )
 
         # Take I2D into left/right operators for convenience
-        Iv_uy_bc_lr = (; Iv_uy_bc_lr..., B2D = I2D * I(Nuy_t - 1) ⊗ Iv_uy_bc_lr.B1D)
-        Iv_uy_bc_lr = (; Iv_uy_bc_lr..., Bbc = I2D * I(Nuy_t - 1) ⊗ Iv_uy_bc_lr.Btemp)
+        Iv_uy_bc_lr = (; Iv_uy_bc_lr..., B2D = I2D * (I(Nuy_t - 1) ⊗ Iv_uy_bc_lr.B1D))
+        Iv_uy_bc_lr = (; Iv_uy_bc_lr..., Bbc = I2D * (I(Nuy_t - 1) ⊗ Iv_uy_bc_lr.Btemp))
 
         # Resulting operator:
         Iv_uy = Iv_uy_bc_lr.B2D * Iv_uy_bc_lu.B2D
@@ -191,15 +191,15 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         )
 
         # Take I2D into left/right operators for convenience
-        Iv_uy_bc_lr3 = (; Iv_uy_bc_lr3..., B2D = I2D * I(Nuy_t + 1) ⊗ Iv_uy_bc_lr3.B1D)
-        Iv_uy_bc_lr3 = (; Iv_uy_bc_lr3..., Bbc = I2D * I(Nuy_t + 1) ⊗ Iv_uy_bc_lr3.Btemp)
+        Iv_uy_bc_lr3 = (; Iv_uy_bc_lr3..., B2D = I2D * (I(Nuy_t + 1) ⊗ Iv_uy_bc_lr3.B1D))
+        Iv_uy_bc_lr3 = (; Iv_uy_bc_lr3..., Bbc = I2D * (I(Nuy_t + 1) ⊗ Iv_uy_bc_lr3.Btemp))
 
         # Resulting operator:
         Iv_uy3 = Iv_uy_bc_lr3.B2D * Iv_uy_bc_lu3.B2D
 
         ## Iu_vx
-        diag1 = fill(weight1, Nuy_t)
-        diag2 = fill(weight2, Nuy_t)
+        diag1 = fill(weight1, Nuy_t - 1)
+        diag2 = fill(weight2, Nuy_t - 1)
         I1D = spdiagm(Nuy_t - 1, Nuy_t + 2, 0 => diag2, 1 => diag1, 2 => diag1, 3 => diag2)
         any(==(:pressure), bc.v.y) &&
             @warn "Possible interpolation bug (see https://github.com/bsanderse/INS2D/commit/b8de84dbe151d6de32928563ca8fa5785cce6318)"
@@ -218,8 +218,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
             hy[1],
             hy[end],
         )
-        Iu_vx_bc_lu = (; Iu_vx_bc_lu..., B2D = I2D * Iu_vx_bc_lu.B1D ⊗ I(Nvx_t - 1))
-        Iu_vx_bc_lu = (; Iu_vx_bc_lu..., Bbc = I2D * Iu_vx_bc_lu.Btemp ⊗ I(Nvx_t - 1))
+        Iu_vx_bc_lu = (; Iu_vx_bc_lu..., B2D = I2D * (Iu_vx_bc_lu.B1D ⊗ I(Nvx_t - 1)))
+        Iu_vx_bc_lu = (; Iu_vx_bc_lu..., Bbc = I2D * (Iu_vx_bc_lu.Btemp ⊗ I(Nvx_t - 1)))
 
         # Boundary conditions left/right
         Nb = Nvx_in + 1 - Nux_in
@@ -233,8 +233,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         Iu_vx = Iu_vx_bc_lu.B2D * Iu_vx_bc_lr.B2D
 
         ## Iu_vx3
-        diag1 = fill(weight1, Nuy_t)
-        diag2 = fill(weight2, Nuy_t)
+        diag1 = fill(weight1, Nuy_t - 1)
+        diag2 = fill(weight2, Nuy_t - 1)
         I1D = spdiagm(Nuy_t - 1, Nuy_t + 2, 0 => diag2, 1 => diag1, 2 => diag1, 3 => diag2)
 
         # Restrict to v-points
@@ -251,8 +251,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
             hy[1],
             hy[end],
         )
-        Iu_vx_bc_lu3 = (; Iu_vx_bc_lu3..., B2D = I2D * Iu_vx_bc_lu3.B1D ⊗ I(Nvx_t + 1))
-        Iu_vx_bc_lu3 = (; Iu_vx_bc_lu3..., Bbc = I2D * Iu_vx_bc_lu3.Btemp ⊗ I(Nvx_t + 1))
+        Iu_vx_bc_lu3 = (; Iu_vx_bc_lu3..., B2D = I2D * (Iu_vx_bc_lu3.B1D ⊗ I(Nvx_t + 1)))
+        Iu_vx_bc_lu3 = (; Iu_vx_bc_lu3..., Bbc = I2D * (Iu_vx_bc_lu3.Btemp ⊗ I(Nvx_t + 1)))
 
         # Boundary conditions left/right
         Nb = Nvx_in + 3 - Nux_in
@@ -266,8 +266,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         Iu_vx3 = Iu_vx_bc_lu3.B2D * Iu_vx_bc_lr3.B2D
 
         ## Iv_vy
-        diag1 = fill(weight1, Nvy_t + 1)
-        diag2 = fill(weight2, Nvy_t + 1)
+        diag1 = fill(weight1, Nvy_t - 1)
+        diag2 = fill(weight2, Nvy_t - 1)
         I1D = spdiagm(Nvy_t - 1, Nvy_t + 2, 0 => diag2, 1 => diag1, 2 => diag1, 3 => diag2)
 
         # Boundary conditions
@@ -286,8 +286,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         Iv_vy_bc = (; Iv_vy_bc..., Bbc = (I1D * Iv_vy_bc.Btemp) ⊗ mat_hx)
 
         ## Iv_vy3
-        diag1 = fill(weight1, Nvx_t + 4)
-        diag2 = fill(weight2, Nvx_t + 4)
+        diag1 = fill(weight1, Nvy_in + 3)
+        diag2 = fill(weight2, Nvy_in + 3)
         I1D3 =
             spdiagm(Nvy_in + 3, Nvy_t + 4, 0 => diag2, 1 => diag1, 2 => diag1, 3 => diag2)
 

@@ -4,7 +4,7 @@ function bc_general(Nt, Nin, Nb, bc1, bc2, h1, h2)
     # Then u can be written entirely in terms of uin and ybc as:
     # U = (Bin-Btemp*Bbc*Bin)*uin + Btemp*ybc, where
     # Btemp = Bb*(Bbc*Bb)^(-1)
-    # Bb, Bin and Bbc depend on type of BC (Neumann/Dirichlet/periodic)
+    # Bb, Bin and Bbc depend on type of bc (Neumann/Dirichlet/periodic)
     # Val1 and val2 can be scalars or vectors with either the value or the
     # Derivative
     # (ghost) points on boundary / grid lines
@@ -23,8 +23,8 @@ function bc_general(Nt, Nin, Nb, bc1, bc2, h1, h2)
         # No boundary points, so simply diagonal matrix without boundary contribution
         B1D = I(Nt)
         Btemp = spzeros(Nt, 2)
-        ybc1 = zeros(2, 1)
-        ybc2 = zeros(2, 1)
+        ybc1 = zeros(2)
+        ybc2 = zeros(2)
     elseif Nb == 1
         # One boundary point
         Bb = spzeros(Nt, Nb)
@@ -108,7 +108,7 @@ function bc_general(Nt, Nin, Nb, bc1, bc2, h1, h2)
         ybc1 = ybc1_1D
         ybc2 = ybc2_1D
 
-        Btemp = Bb * (Bbc * Bb \ I(Nb)) # = inv(Bbc*Bb)
+        Btemp = Bb / (Bbc * Bb)
         B1D = Bin - Btemp * Bbc * Bin
     end
 

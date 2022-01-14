@@ -25,8 +25,8 @@ function bc_diff_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
         # No boundary points, so simply diagonal matrix without boundary contribution
         B1D = I(Nt)
         Btemp = spzeros(Nt, 2)
-        ybc1 = zeros(2, 1)
-        ybc2 = zeros(2, 1)
+        ybc1 = zeros(2)
+        ybc2 = zeros(2)
     elseif Nb == 1
         # One boundary point (should not be unnecessary)
     elseif Nb == 2
@@ -79,7 +79,7 @@ function bc_diff_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
         ybc1 = ybc1_1D
         ybc2 = ybc2_1D
 
-        Btemp = Bb * (Bbc * Bb \ I(Nb))
+        Btemp = Bb / (Bbc * Bb)
         B1D = Bin - Btemp * Bbc * Bin
     end
 

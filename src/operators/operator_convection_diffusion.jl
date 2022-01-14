@@ -72,7 +72,7 @@ function operator_convection_diffusion!(setup::Setup{T,2}) where {T}
         ## Convection (differencing) operator Cu
 
         # Calculates difference from pressure points to velocity points
-        diag1 = ones(Nux_t)
+        diag1 = ones(Nux_t - 2)
         D1D = spdiagm(Nux_t - 2, Nux_t + 1, 1 => -diag1, 2 => diag1)
         Dux = Diagonal(hyi) ⊗ D1D
 
@@ -82,18 +82,18 @@ function operator_convection_diffusion!(setup::Setup{T,2}) where {T}
         # Size as Dux3)
 
         # Calculates difference from pressure points to velocity points
-        diag1 = ones(Nux_t)
+        diag1 = ones(Nux_t - 2)
         D1D3 = spdiagm(Nux_t - 2, Nux_t + 1, 0 => -diag1, 3 => diag1)
         Cux3 = I(Ny) ⊗ D1D3
         Dux3 = Diagonal(hyi3) ⊗ D1D3
 
         # Calculates difference from corner points to velocity points
-        diag1 = ones(Nuy_t)
+        diag1 = ones(Nuy_t - 2)
         D1D = spdiagm(Nuy_t - 2, Nuy_t + 1, 1 => -diag1, 2 => diag1)
         Duy = D1D ⊗ Diagonal(gxi)
 
         # Calculates difference from corner points to velocity points
-        diag1 = ones(Nuy_t)
+        diag1 = ones(Nuy_t - 2)
         D1D3 = spdiagm(Nuy_t - 2, Nuy_t + 1, 0 => -diag1, 3 => diag1)
 
         # Uncomment for new BC (functions/new)
@@ -111,12 +111,12 @@ function operator_convection_diffusion!(setup::Setup{T,2}) where {T}
         ## Convection (differencing) operator Cv
 
         # Calculates difference from pressure points to velocity points
-        diag1 = ones(Nvx_t)
+        diag1 = ones(Nvx_t - 2)
         D1D = spdiagm(Nvx_t - 2, Nvx_t + 1, 1 => -diag1, 2 => diag1)
         Dvx = Diagonal(gyi) ⊗ D1D
 
         # Calculates difference from pressure points to velocity points
-        diag1 = ones(Nvx_t)
+        diag1 = ones(Nvx_t - 2)
         D1D3 = spdiagm(Nvx_t - 2, Nvx_t + 1, 0 => -diag1, 3 => diag1)
 
         # Uncomment for new BC (functions/new)
@@ -132,12 +132,12 @@ function operator_convection_diffusion!(setup::Setup{T,2}) where {T}
         Dvx3 = Diagonal(gyi3) ⊗ D1D3
 
         # Calculates difference from corner points to velocity points
-        diag1 = ones(Nvy_t, 1)
+        diag1 = ones(Nvy_t - 2)
         D1D = spdiagm(Nvy_t - 2, Nvy_t + 1, 1 => -diag1, 2 => diag1)
         Dvy = D1D ⊗ Diagonal(hxi)
 
         # Calculates difference from corner points to velocity points
-        diag1 = ones(Nvy_t, 1)
+        diag1 = ones(Nvy_t - 2)
         D1D3 = spdiagm(Nvy_t - 2, Nvy_t + 1, 0 => -diag1, 3 => diag1)
         Cvy3 = D1D3 ⊗ I(Nvx_in)
         Dvy3 = D1D3 ⊗ Diagonal(hxi3)

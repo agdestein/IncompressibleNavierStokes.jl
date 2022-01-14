@@ -218,6 +218,7 @@ function convection_components!(
 
     (; u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy) = cache
     (; v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy) = cache
+
     (; ∂uū∂x, ∂uv̄∂y, ∂vū∂x, ∂vv̄∂y) = cache
     (; Conv_ux_11, Conv_uy_11, Conv_uy_12, Conv_vx_21, Conv_vx_22, Conv_vy_22) = cache
 
@@ -231,30 +232,54 @@ function convection_components!(
     ϕv = @view ϕ[indv]
 
     # Convection components
-    mul!(u_ux, Au_ux, uₕ)
-    mul!(ū_ux, Iu_ux, ϕu)
-    mul!(u_uy, Au_uy, uₕ)
-    mul!(v̄_uy, Iv_uy, ϕv)
-    mul!(v_vx, Av_vx, vₕ)
-    mul!(ū_vx, Iu_vx, ϕu)
-    mul!(v_vy, Av_vy, vₕ)
-    mul!(v̄_vy, Iv_vy, ϕv)
+    if order4
+        # TODO: preallocated arrays for order4
+        u_ux = Au_ux * uₕ + yAu_ux                # U at ux
+        ū_ux = Iu_ux * ϕu + yIu_ux                # Ū at ux
+        # ∂uū∂x = Cux * (u_ux .* ū_ux)
+        uū_ux = @. u_ux = u_ux * ū_ux
 
-    u_ux .+= yAu_ux
-    ū_ux .+= yIu_ux
-    @. uū_ux = u_ux * ū_ux
+        u_uy = Au_uy * uₕ + yAu_uy                # U at uy
+        v̄_uy = Iv_uy * ϕv + yIv_uy                # Ū at uy
+        # ∂uv̄∂y = Cuy * (u_uy .* v̄_uy)
+        uv̄_uy = @. u_uy = u_uy * v̄_uy
 
-    u_uy .+= yAu_uy
-    v̄_uy .+= yIv_uy
-    @. uv̄_uy = u_uy * v̄_uy
+        v_vx = Av_vx * vₕ + yAv_vx                # V at vx
+        ū_vx = Iu_vx * ϕu + yIu_vx                # Ū at vx
+        ∂vū∂x = Cvx * (v_vx .* ū_vx)
+        vū_vx = @. v_vx = v_vx * ū_vx
 
-    v_vx .+= yAv_vx
-    ū_vx .+= yIu_vx
-    @. vū_vx = v_vx * ū_vx
+        v_vy = Av_vy * vₕ + yAv_vy                # V at vy
+        v̄_vy = Iv_vy * ϕv + yIv_vy                # Ū at vy
+        # ∂vv̄∂y = Cvy * (v_vy .* v̄_vy)
+        vv̄_vy = @. v_vy = v_vy * v̄_vy
+    else
+        # Fill preallocated arrays
+        mul!(u_ux, Au_ux, uₕ)
+        mul!(ū_ux, Iu_ux, ϕu)
+        mul!(u_uy, Au_uy, uₕ)
+        mul!(v̄_uy, Iv_uy, ϕv)
+        mul!(v_vx, Av_vx, vₕ)
+        mul!(ū_vx, Iu_vx, ϕu)
+        mul!(v_vy, Av_vy, vₕ)
+        mul!(v̄_vy, Iv_vy, ϕv)
 
-    v_vy .+= yAv_vy
-    v̄_vy .+= yIv_vy
-    @. vv̄_vy = v_vy * v̄_vy
+        u_ux .+= yAu_ux
+        ū_ux .+= yIu_ux
+        @. uū_ux = u_ux * ū_ux
+
+        u_uy .+= yAu_uy
+        v̄_uy .+= yIv_uy
+        @. uv̄_uy = u_uy * v̄_uy
+
+        v_vx .+= yAv_vx
+        ū_vx .+= yIu_vx
+        @. vū_vx = v_vx * ū_vx
+
+        v_vy .+= yAv_vy
+        v̄_vy .+= yIv_vy
+        @. vv̄_vy = v_vy * v̄_vy
+    end
 
     mul!(∂uū∂x, Cux, uū_ux)
     mul!(∂uv̄∂y, Cuy, uv̄_uy)
@@ -262,19 +287,19 @@ function convection_components!(
     mul!(∂vv̄∂y, Cvy, vv̄_vy)
 
     # U_ux = Au_ux * uₕ + yAu_ux                # U at ux
-    # Ū_ux = Iu_ux * ϕu + yIu_ux                # Ū at ux
+    # ū_ux = Iu_ux * ϕu + yIu_ux                # Ū at ux
     # ∂uū∂x = Cux * (u_ux .* ū_ux)
 
-    # U_uy = Au_uy * uₕ + yAu_uy                # U at uy
-    # V̄_uy = Iv_uy * ϕv + yIv_uy                # Ū at uy
+    # u_uy = Au_uy * uₕ + yAu_uy                # U at uy
+    # v̄_uy = Iv_uy * ϕv + yIv_uy                # Ū at uy
     # ∂uv̄∂y = Cuy * (u_uy .* v̄_uy)
 
-    # V_vx = Av_vx * vₕ + yAv_vx                # V at vx
-    # Ū_vx = Iu_vx * ϕu + yIu_vx                # Ū at vx
+    # v_vx = Av_vx * vₕ + yAv_vx                # V at vx
+    # ū_vx = Iu_vx * ϕu + yIu_vx                # Ū at vx
     # ∂vū∂x = Cvx * (v_vx .* ū_vx)
 
-    # V_vy = Av_vy * vₕ + yAv_vy                # V at vy
-    # V̄_vy = Iv_vy * ϕv + yIv_vy                # Ū at vy
+    # v_vy = Av_vy * vₕ + yAv_vy                # V at vy
+    # v̄_vy = Iv_vy * ϕv + yIv_vy                # Ū at vy
     # ∂vv̄∂y = Cvy * (v_vy .* v̄_vy)
 
     @. cu = ∂uū∂x + ∂uv̄∂y

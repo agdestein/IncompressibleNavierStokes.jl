@@ -40,14 +40,21 @@ include("operators/operators.jl")
 include("parameters.jl")
 
 # Boundary condtions
-include("boundary_conditions/create_boundary_conditions.jl")
 include("boundary_conditions/bc_av3.jl")
 include("boundary_conditions/bc_av_stag3.jl")
+include("boundary_conditions/bc_diff3.jl")
 include("boundary_conditions/bc_diff_stag.jl")
 include("boundary_conditions/bc_diff_stag3.jl")
-include("boundary_conditions/bc_int3.jl")
+include("boundary_conditions/bc_div2.jl")
 include("boundary_conditions/bc_general.jl")
 include("boundary_conditions/bc_general_stag.jl")
+include("boundary_conditions/bc_int2.jl")
+include("boundary_conditions/bc_int3.jl")
+include("boundary_conditions/bc_int_mixed2.jl")
+include("boundary_conditions/bc_int_mixed_stag2.jl")
+include("boundary_conditions/bc_int_mixed_stag3.jl")
+include("boundary_conditions/bc_vort3.jl")
+include("boundary_conditions/create_boundary_conditions.jl")
 include("boundary_conditions/set_bc_vectors.jl")
 
 # Operators

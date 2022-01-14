@@ -267,4 +267,46 @@ Base.@kwdef mutable struct Operators{T}
     Au_uy_bc3::NamedTuple = (;)
     Av_vx_bc3::NamedTuple = (;)
     Av_vy_bc3::NamedTuple = (;)
+
+        Iu_ux3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+        Iv_uy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+        Iu_vx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+        Iv_vy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+
+        Iu_ux_bc3::NamedTuple = (;)
+        Iv_uy_bc_lr3::NamedTuple = (;)
+        Iv_uy_bc_lu3::NamedTuple = (;)
+        Iu_vx_bc_lr3::NamedTuple = (;)
+        Iu_vx_bc_lu3::NamedTuple = (;)
+        Iv_vy_bc3::NamedTuple = (;)
+
+            Mx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+            My3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+            Mx_bc3::NamedTuple = (;)
+            My_bc3::NamedTuple = (;)
+
+    Cux3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Cuy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Cvx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Cvy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+
+    Su_ux_bc3::NamedTuple = (;)
+    Su_uy_bc3::NamedTuple = (;)
+    Sv_vx_bc3::NamedTuple = (;)
+    Sv_vy_bc3::NamedTuple = (;)
+
+    Diffux_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Diffuy_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Diffvx_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Diffvy_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+
+    yIu_ux3::Vector{T} = T[]
+    yIv_uy3::Vector{T} = T[]
+    yIu_vx3::Vector{T} = T[]
+    yIv_vy3::Vector{T} = T[]
+
+    yAu_ux3::Vector{T} = T[]
+    yAu_uy3::Vector{T} = T[]
+    yAv_vx3::Vector{T} = T[]
+    yAv_vy3::Vector{T} = T[]
 end

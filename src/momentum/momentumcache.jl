@@ -81,7 +81,7 @@ Base.@kwdef struct MomentumCache{T}
 end
 
 function MomentumCache(setup)
-    (; Nu, Nv, Nw, NV) = setup.grid
+    (; Nu, Nv, Nw, NV, order4) = setup.grid
     (; yIu_ux, yIv_uy, yIw_uz, yIu_vx, yIv_vy, yIw_vz, yIu_wx, yIv_wy, yIw_wz) = setup.operators
 
     T = eltype(yIu_ux)

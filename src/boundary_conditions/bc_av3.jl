@@ -36,7 +36,7 @@ function bc_av3(Nt, Nin, Nb, bc1, bc2, h1, h2)
             Bin = spdiagm(Nt, Nin, -3 => ones(Nin))
             Bb = spzeros(Nt, Nb)
             Bb[1:3, 1:3] = I(3)
-            Bb[(end - 2):end, (end - 2):end] = I(3)
+            Bb[(end-2):end, (end-2):end] = I(3)
             if bc1 == :dirichlet
                 Bbc[1, 1] = 1 / 2
                 Bbc[1, 5] = 1 / 2
@@ -50,29 +50,29 @@ function bc_av3(Nt, Nin, Nb, bc1, bc2, h1, h2)
                 error("not implemented")
             elseif bc1 == :periodic
                 Bbc[1:3, 1:3] = -I(3)
-                Bbc[1:3, (end - 5):(end - 3)] = I(3)
-                Bbc[(end - 2):end, 4:6] = -I(3)
-                Bbc[(end - 2):end, (end - 2):end] = I(3)
+                Bbc[1:3, (end-5):(end-3)] = I(3)
+                Bbc[(end-2):end, 4:6] = -I(3)
+                Bbc[(end-2):end, (end-2):end] = I(3)
             else
                 error("not implemented")
             end
 
             if bc2 == :dirichlet
                 Bbc[end, end] = 1 / 2
-                Bbc[end, end - 4] = 1 / 2
-                Bbc[end - 1, end - 1] = 1 / 2
-                Bbc[end - 1, end - 3] = 1 / 2
-                Bbc[end - 2, end - 2] = 1
-                ybc2_1D[end - 2] = 1        # uRi
-                ybc2_1D[end - 1] = 1
+                Bbc[end, end-4] = 1 / 2
+                Bbc[end-1, end-1] = 1 / 2
+                Bbc[end-1, end-3] = 1 / 2
+                Bbc[end-2, end-2] = 1
+                ybc2_1D[end-2] = 1        # uRi
+                ybc2_1D[end-1] = 1
                 ybc2_1D[end] = 1
             elseif bc2 == :pressure
                 error("not implemented")
             elseif bc2 == :periodic
                 Bbc[1:3, 1:3] = -I(3)
-                Bbc[1:3, (end - 5):(end - 3)] = I(3)
-                Bbc[(end - 2):end, 4:6] = -I(3)
-                Bbc[(end - 2):end, (end - 2):end] = I(3)
+                Bbc[1:3, (end-5):(end-3)] = I(3)
+                Bbc[(end-2):end, 4:6] = -I(3)
+                Bbc[(end-2):end, (end-2):end] = I(3)
             else
                 error("not implemented")
             end

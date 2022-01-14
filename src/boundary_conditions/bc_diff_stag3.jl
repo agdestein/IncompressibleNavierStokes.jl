@@ -23,17 +23,17 @@ function bc_diff_stag3(Nt, Nin, Nb, bc1, bc2, h1, h2)
 
     if Nb == 0
         # No boundary points, so simply diagonal matrix without boundary contribution
-        B1D = sparse(I, Nt, Nt)
+        B1D = I(Nt)
         Btemp = spzeros(Nt, 2)
-        ybc1 = zeros(2, 1)
-        ybc2 = zeros(2, 1)
+        ybc1 = zeros(2)
+        ybc2 = zeros(2)
     elseif Nb == 6
         # Normal situation, 2 boundary points
         # Boundary matrices
-        Bin = spdiags(ones(Nt), -3, Nt, Nin)
-        Bb = spalloc(Nt, Nb, 2)
-        Bb[1:3, 1:3] = sparse(I, 3, 3)
-        Bb[end-2:end, end-2:end] = sparse(I, 3, 3)
+        Bin = spdiagm(Nt, Nin, -3 => ones(Nin))
+        Bb = spzeros(Nt, Nb)
+        Bb[1:3, 1:3] = I(3)
+        Bb[(end-2):end, (end-2):end] = I(3)
 
         if bc1 == :dirichlet
             Bbc[1, 1] = 1 / 2      # Dirichlet
@@ -48,10 +48,10 @@ function bc_diff_stag3(Nt, Nin, Nb, bc1, bc2, h1, h2)
         elseif bc1 == :symmetric
             error("not implemented")
         elseif bc1 == :periodic
-            Bbc[1:3, 1:3] = -sparse(I, 3, 3)
-            Bbc[1:3, end-5:end-3] = sparse(I, 3, 3)
-            Bbc[end-2:end, 4:6] = -sparse(I, 3, 3)
-            Bbc[end-2:end, end-2:end] = sparse(I, 3, 3)
+            Bbc[1:3, 1:3] = -I(3)
+            Bbc[1:3, (end-5):(end-3)] = I(3)
+            Bbc[(end-2):end, 4:6] = -I(3)
+            Bbc[(end-2):end, (end-2):end] = I(3)
         else
             error("not implemented")
         end
@@ -70,24 +70,22 @@ function bc_diff_stag3(Nt, Nin, Nb, bc1, bc2, h1, h2)
             error("not implemented")
         elseif bc2 == :periodic
             # Actually redundant
-            Bbc[1:3, 1:3] = -sparse(I, 3, 3)
-            Bbc[1:3, end-5:end-3] = sparse(I, 3, 3)
-            Bbc[end-2:end, 4:6] = -sparse(I, 3, 3)
-            Bbc[end-2:end, end-2:end] = sparse(I, 3, 3)
+            Bbc[1:3, 1:3] = -I(3)
+            Bbc[1:3, (end-5):(end-3)] = I(3)
+            Bbc[(end-2):end, 4:6] = -I(3)
+            Bbc[(end-2):end, (end-2):end] = I(3)
         else
             error("not implemented")
         end
-    elseif Nb == 1
-        # One boundary point
-        error("not implemented")
-    end
 
-    if Nb ∈ [1, 2]
         ybc1 = ybc1_1D
         ybc2 = ybc2_1D
 
-        Btemp = Bb * (Bbc * Bb \ sparse(I, Nb, Nb))
+        Btemp = Bb / (Bbc * Bb)
         B1D = Bin - Btemp * Bbc * Bin
+    elseif Nb == 1
+        # One boundary point
+        error("not implemented")
     end
 
     (; B1D, Btemp, ybc1, ybc2)
