@@ -70,15 +70,17 @@ V₀, p₀ = create_initial_conditions(
     initial_pressure,
 );
 
-logger = Logger(; nupdate = 10)
-real_time_plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
-tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, real_time_plotter, tracer]
-
 problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = @time solve(problem; processors);
+V, p = @time solve(problem);
 
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
+
+logger = Logger(; nupdate = 10)
+plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
+writer = VTKWriter(; nupdate = 10, dir = "output/LidDrivenCavity2D")
+tracer = QuantityTracer(; nupdate = 1)
+processors = [logger, plotter, tracer]
+
 V, p = @time solve(problem, RK44(); Δt = 0.01, processors);
 
 plot_tracers(tracer)
