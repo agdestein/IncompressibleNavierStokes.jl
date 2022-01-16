@@ -1,18 +1,20 @@
 """
+    plot_streamfunction(setup, V, t)
+
 Plot streamfunction.
 """
-function plot_streamfunction(setup, V, t)
+function plot_streamfunction end
+
+# 2D version
+function plot_streamfunction(setup::Setup{T,2}, V, t) where {T}
     (; bc) = setup
     (; x, y, xlims, ylims) = setup.grid
 
-    if bc.u.x[1] == :periodic
+    if all(==(:periodic), (bc.u.x[1], bc.v.y[1]))
         xψ = x
-    else
-        xψ = x[2:end-1]
-    end
-    if bc.v.y[1] == :periodic
         yψ = y
     else
+        xψ = x[2:end-1]
         yψ = y[2:end-1]
     end
 
@@ -66,4 +68,9 @@ function plot_streamfunction(setup, V, t)
     # save("output/streamfunction.png", fig, pt_per_unit = 2)
 
     fig
+end
+
+# 3D version
+function plot_streamfunction(setup::Setup{T,3}, V, t) where {T}
+    error("Not implemented")
 end

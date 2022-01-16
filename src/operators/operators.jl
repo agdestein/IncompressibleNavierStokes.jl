@@ -4,6 +4,8 @@
 Discrete operators.
 """
 Base.@kwdef mutable struct Operators{T}
+    α::T = 0
+
     Au_ux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Au_uy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Au_uz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
@@ -298,6 +300,13 @@ Base.@kwdef mutable struct Operators{T}
     Su_uy_bc3::NamedTuple = (;)
     Sv_vx_bc3::NamedTuple = (;)
     Sv_vy_bc3::NamedTuple = (;)
+
+    Diffu_f::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Diffv_f::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Diffw_f::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    yDiffu_f::Vector{T} = T[]
+    yDiffv_f::Vector{T} = T[]
+    yDiffw_f::Vector{T} = T[]
 
     Diffux_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Diffuy_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)

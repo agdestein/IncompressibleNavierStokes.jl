@@ -14,7 +14,7 @@ function ke_convection!(setup)
 	kLo = LinearInterpolation(x,kLo)(xp)
 	kUp = LinearInterpolation(x,kUp)(xp)
 
-    ## X-directionk
+    ## X-direction
 
     # Differencing matrix
     diag1 = ones(Npx)

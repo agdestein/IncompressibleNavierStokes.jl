@@ -27,7 +27,7 @@ function build_operators!(setup)
     # Turbulence
 
     # Regularization modelling - this changes the convective term
-    convection_model isa NoRegConvectionModel || operator_regularization!(setup)
+    operator_regularization!(setup)
 
     # Classical turbulence modelling via the diffusive term
     operator_viscosity!(viscosity_model, setup)

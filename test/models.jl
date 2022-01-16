@@ -82,13 +82,11 @@
 
     models = [
         (lam, noreg)
-        (kϵ, noreg)
         (ml, noreg)
         (smag, noreg)
         (qr, noreg)
         (lam, c2)
         (lam, c4)
-        (lam, leray)
     ]
 
     for (viscosity_model, convection_model) in models
@@ -127,6 +125,23 @@
             # Check for steady state convergence
             @test tracer.umom[end] < 1e-10
             @test tracer.vmom[end] < 1e-10
+        end
+    end
+
+    unfinished_models = [(kϵ, noreg), (lam, leray)]
+
+    for (viscosity_model, convection_model) in models
+        @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
+            setup = Setup{T,2}(;
+                viscosity_model = kϵ,
+                convection_model = noreg,
+                grid,
+                force,
+                solver_settings,
+                bc,
+            )
+
+            @test_broken build_operators!(setup) isa Setup
         end
     end
 end

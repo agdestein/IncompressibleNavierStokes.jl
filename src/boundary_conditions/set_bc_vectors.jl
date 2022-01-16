@@ -7,9 +7,10 @@ function set_bc_vectors! end
 
 # 2D version
 function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
-    (; grid, operators, viscosity_model) = setup
+    (; grid, operators, bc, viscosity_model) = setup
     (; Nux_in, Nvy_in, Np, Npx, Npy) = grid
     (; xin, yin, x, y, hx, hy, xp, yp) = grid
+    (; Ω, indu, indv) = grid
     (; order4, α) = grid
     (; Dux, Duy, Dvx, Dvy) = operators
     (; Au_ux_bc, Au_uy_bc, Av_vx_bc, Av_vy_bc) = operators
@@ -20,8 +21,8 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     (; Aν_vy_bc) = operators
     (; Cux_k_bc, Cuy_k_bc, Cvx_k_bc, Cvy_k_bc, Auy_k_bc, Avx_k_bc) = operators
     (; Su_vx_bc_lr, Su_vx_bc_lu, Sv_uy_bc_lr, Sv_uy_bc_lu) = operators
-    (; u_bc, v_bc, dudt_bc, dvdt_bc) = setup.bc
-    (; p_bc, bc_unsteady) = setup.bc
+    (; u_bc, v_bc, dudt_bc, dvdt_bc) = bc
+    (; p_bc, bc_unsteady) = bc
     (; Re) = viscosity_model
 
     if order4
@@ -112,10 +113,10 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     # Left and right side
     y1D_le = zeros(Nux_in)
     y1D_ri = zeros(Nux_in)
-    if setup.bc.u.x[1] == :pressure
+    if bc.u.x[1] == :pressure
         y1D_le[1] = -1
     end
-    if setup.bc.u.x[2] == :pressure
+    if bc.u.x[2] == :pressure
         y1D_ri[end] = 1
     end
     y_px = (hy .* p_bc.x[1]) ⊗ y1D_le + (hy .* p_bc.x[2]) ⊗ y1D_ri
@@ -123,10 +124,10 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     # Lower and upper side
     y1D_lo = zeros(Nvy_in)
     y1D_up = zeros(Nvy_in)
-    if setup.bc.v.y[1] == :pressure
+    if bc.v.y[1] == :pressure
         y1D_lo[1] = -1
     end
-    if setup.bc.v.y[2] == :pressure
+    if bc.v.y[2] == :pressure
         y1D_up[end] = 1
     end
     y_py = y1D_lo ⊗ (hx .* p_bc.y[1]) + y1D_up ⊗ (hx .* p_bc.y[2])
@@ -235,15 +236,21 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         ybc = Sv_vy_bc.ybc1 ⊗ vLo_i + Sv_vy_bc.ybc2 ⊗ vUp_i
         ySv_vy = Sv_vy_bc.Bbc * ybc
 
-        if viscosity_model isa LaminarModel
-            yDiffu = 1 / Re * (Dux * ySu_ux + Duy * ySu_uy)
-            yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy)
-            yDiff = [yDiffu; yDiffv]
-            @pack! operators = yDiff
-        else
-            # Use values directly (see diffusion.jl and strain_tensor.jl)
-            @pack! operators = ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy
-        end
+        yDiffu = 1 / Re * (Dux * ySu_ux + Duy * ySu_uy)
+        yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy)
+        yDiff = [yDiffu; yDiffv]
+        @pack! operators = yDiff
+
+        Ωu⁻¹ = 1 ./ Ω[indu]
+        Ωv⁻¹ = 1 ./ Ω[indv]
+
+        # Diffusive terms in finite-difference setting, without viscosity
+        yDiffu_f = Ωu⁻¹ .* (Dux * ySu_ux + Duy * ySu_uy)
+        yDiffv_f = Ωv⁻¹ .* (Dvx * ySv_vx + Dvy * ySv_vy)
+
+        # Use values directly (see diffusion.jl and strain_tensor.jl)
+        @pack! operators = ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy
+        @pack! operators = yDiffu_f, yDiffv_f
     end
 
     ## Boundary conditions for interpolation
@@ -266,25 +273,25 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     yIv_uy = yIv_uy_lr + yIv_uy_lu
 
     if order4
-        if setup.bc.v.y[1] == :dirichlet
+        if bc.v.y[1] == :dirichlet
             vLe_ext = [2 * vLe[1] - vLe[2]; vLe]
             vRi_ext = [2 * vRi[1] - vRi[2]; vRi]
-        elseif setup.bc.v.y[1] == :periodic
+        elseif bc.v.y[1] == :periodic
             vLe_ext = [0; vLe]
             vRi_ext = [0; vRi]
-        elseif setup.bc.v.y[1] == :pressure
+        elseif bc.v.y[1] == :pressure
             vLe_ext = [vLe[2]; vLe]
             vRi_ext = [vRi[2]; vRi]
         end
-        if setup.bc.v.y[2] == :dirichlet
-            vLe_ext = [vLe_ext; 2 * vLe[end] - vLe[end-1]]
+        if bc.v.y[2] == :dirichlet
+            vLe_ext = [vLe_ext; 2 * vLe[end] - vLe[end - 1]]
             vRi_ext = [vRi_ext; 2 * vRi[1] - vRi[2]]
-        elseif setup.bc.v.y[2] == :periodic
+        elseif bc.v.y[2] == :periodic
             vLe_ext = [vLe_ext; 0]
             vRi_ext = [vRi_ext; 0]
-        elseif setup.bc.v.y[2] == :pressure
-            vLe_ext = [vLe_ext; vLe[end-1]]
-            vRi_ext = [vRi_ext; vRi[end-1]]
+        elseif bc.v.y[2] == :pressure
+            vLe_ext = [vLe_ext; vLe[end - 1]]
+            vRi_ext = [vRi_ext; vRi[end - 1]]
         end
         ybc3 = vLe_ext ⊗ Iv_uy_bc_lr3.ybc1 + vRi_ext ⊗ Iv_uy_bc_lr3.ybc2
         yIv_uy_lr3 = Iv_uy_bc_lr3.Bbc * ybc3
@@ -304,25 +311,25 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     yIu_vx = yIu_vx_lr + yIu_vx_lu
 
     if order4
-        if setup.bc.u.x[1] == :dirichlet
+        if bc.u.x[1] == :dirichlet
             uLo_ext = [2 * uLo[1] - uLo[2]; uLo]
             uUp_ext = [2 * uUp[1] - uUp[2]; uUp]
-        elseif setup.bc.u.x[1] == :periodic
+        elseif bc.u.x[1] == :periodic
             uLo_ext = [0; uLo]
             uUp_ext = [0; uUp]
-        elseif setup.bc.u.x[1] == :pressure
+        elseif bc.u.x[1] == :pressure
             uLo_ext = [uLo[2]; uLo]
             uUp_ext = [uUp[2]; uUp]
         end
-        if setup.bc.u.x[2] == :dirichlet
-            uLo_ext = [uLo_ext; 2 * uLo[end] - uLo[end-1]]
+        if bc.u.x[2] == :dirichlet
+            uLo_ext = [uLo_ext; 2 * uLo[end] - uLo[end - 1]]
             uUp_ext = [uUp_ext; 2 * uUp[1] - uUp[2]]
-        elseif setup.bc.u.x[2] == :periodic
+        elseif bc.u.x[2] == :periodic
             uLo_ext = [uLo_ext; 0]
             uUp_ext = [uUp_ext; 0]
-        elseif setup.bc.u.x[2] == :pressure
-            uLo_ext = [uLo_ext; uLo[end-1]]
-            uUp_ext = [uUp_ext; uUp[end-1]]
+        elseif bc.u.x[2] == :pressure
+            uLo_ext = [uLo_ext; uLo[end - 1]]
+            uUp_ext = [uUp_ext; uUp[end - 1]]
         end
         ybc3 = Iu_vx_bc_lu3.ybc1 ⊗ uLo_ext + Iu_vx_bc_lu3.ybc2 ⊗ uUp_ext
         yIu_vx_lu3 = Iu_vx_bc_lu3.Bbc * ybc3
@@ -432,44 +439,45 @@ end
 
 # 3D version
 function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
-    (; viscosity_model) = setup
+    (; grid, operators, bc, viscosity_model) = setup
     (; Re) = viscosity_model
-    (; u_bc, v_bc, w_bc, dudt_bc, dvdt_bc, dwdt_bc) = setup.bc
-    (; p_bc, bc_unsteady) = setup.bc
-    (; Nz, Np, Npx, Npy, Npz) = setup.grid
-    (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = setup.grid
-    (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nuz_b, Nvz_t) = setup.grid
-    (; Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t) = setup.grid
-    (; xin, yin, zin, x, y, z, hx, hy, hz, xp, yp, zp) = setup.grid
-    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
+    (; u_bc, v_bc, w_bc, dudt_bc, dvdt_bc, dwdt_bc) = bc
+    (; p_bc, bc_unsteady) = bc
+    (; Ω, indu, indv, indw) = grid
+    (; Nz, Np, Npx, Npy, Npz) = grid
+    (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = grid
+    (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nuz_b, Nvz_t) = grid
+    (; Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t) = grid
+    (; xin, yin, zin, x, y, z, hx, hy, hz, xp, yp, zp) = grid
+    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = operators
 
-    (; Au_ux_bc, Au_uy_bc, Au_uz_bc) = setup.operators
-    (; Av_vx_bc, Av_vy_bc, Av_vz_bc) = setup.operators
-    (; Aw_wx_bc, Aw_wy_bc, Aw_wz_bc) = setup.operators
+    (; Au_ux_bc, Au_uy_bc, Au_uz_bc) = operators
+    (; Av_vx_bc, Av_vy_bc, Av_vz_bc) = operators
+    (; Aw_wx_bc, Aw_wy_bc, Aw_wz_bc) = operators
 
-    (; Su_ux_bc, Su_uy_bc, Su_uz_bc) = setup.operators
-    (; Sv_vx_bc, Sv_vy_bc, Sv_vz_bc) = setup.operators
-    (; Sw_wx_bc, Sw_wy_bc, Sw_wz_bc) = setup.operators
+    (; Su_ux_bc, Su_uy_bc, Su_uz_bc) = operators
+    (; Sv_vx_bc, Sv_vy_bc, Sv_vz_bc) = operators
+    (; Sw_wx_bc, Sw_wy_bc, Sw_wz_bc) = operators
 
-    (; Mx_bc, My_bc, Mz_bc) = setup.operators
-    (; Aν_vy_bc) = setup.operators
+    (; Mx_bc, My_bc, Mz_bc) = operators
+    (; Aν_vy_bc) = operators
 
-    (; Iu_ux_bc, Iv_vy_bc, Iw_wz_bc) = setup.operators
-    (; Iv_uy_bc_lr, Iv_uy_bc_lu, Iw_uz_bc_lr, Iw_uz_bc_bf) = setup.operators
-    (; Iu_vx_bc_lr, Iu_vx_bc_lu, Iw_vz_bc_lu, Iw_vz_bc_bf) = setup.operators
-    (; Iu_wx_bc_lr, Iu_wx_bc_bf, Iv_wy_bc_lu, Iv_wy_bc_bf) = setup.operators
+    (; Iu_ux_bc, Iv_vy_bc, Iw_wz_bc) = operators
+    (; Iv_uy_bc_lr, Iv_uy_bc_lu, Iw_uz_bc_lr, Iw_uz_bc_bf) = operators
+    (; Iu_vx_bc_lr, Iu_vx_bc_lu, Iw_vz_bc_lu, Iw_vz_bc_bf) = operators
+    (; Iu_wx_bc_lr, Iu_wx_bc_bf, Iv_wy_bc_lu, Iv_wy_bc_bf) = operators
 
-    (; Cux_k_bc, Cuy_k_bc, Cuz_k_bc) = setup.operators
-    (; Cvx_k_bc, Cvy_k_bc, Cvz_k_bc) = setup.operators
-    (; Cwx_k_bc, Cwy_k_bc, Cwz_k_bc) = setup.operators
+    (; Cux_k_bc, Cuy_k_bc, Cuz_k_bc) = operators
+    (; Cvx_k_bc, Cvy_k_bc, Cvz_k_bc) = operators
+    (; Cwx_k_bc, Cwy_k_bc, Cwz_k_bc) = operators
 
-    (; Auy_k_bc, Avx_k_bc) = setup.operators
-    (; Auz_k_bc, Awx_k_bc) = setup.operators
-    (; Awy_k_bc, Avz_k_bc) = setup.operators
+    (; Auy_k_bc, Avx_k_bc) = operators
+    (; Auz_k_bc, Awx_k_bc) = operators
+    (; Awy_k_bc, Avz_k_bc) = operators
 
-    (; Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf) = setup.operators
-    (; Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf) = setup.operators
-    (; Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf) = setup.operators
+    (; Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf) = operators
+    (; Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf) = operators
+    (; Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf) = operators
 
 
     # TODO: Split up function into allocating part (constructor?) and mutating `update!`
@@ -533,7 +541,7 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     yMz = Mz_bc.Bbc * ybc
 
     yM = yMx + yMy + yMz
-    @pack! setup.operators = yM
+    @pack! operators = yM
 
     # Time derivative of divergence
     if bc_unsteady
@@ -555,34 +563,34 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     else
         ydM = zeros(Np)
     end
-    @pack! setup.operators = ydM
+    @pack! operators = ydM
 
     ## Boundary conditions for pressure
 
     # Left and right side
     y1D_le = zeros(Nux_in)
     y1D_ri = zeros(Nux_in)
-    setup.bc.u.x[1] == :pressure && (y1D_le[1] = -1)
-    setup.bc.u.x[2] == :pressure && (y1D_ri[end] = 1)
+    bc.u.x[1] == :pressure && (y1D_le[1] = -1)
+    bc.u.x[2] == :pressure && (y1D_ri[end] = 1)
     y_px = (p_bc.x[1] .* (hz ⊗ hy)) ⊗ y1D_le + (p_bc.x[2] .* (hz ⊗ hy)) ⊗ y1D_ri
 
     # Lower and upper side (order of kron not correct, so reshape)
     y1D_lo = zeros(Nvy_in)
     y1D_up = zeros(Nvy_in)
-    setup.bc.v.y[1] == :pressure && (y1D_lo[1] = -1)
-    setup.bc.v.y[2] == :pressure && (y1D_up[end] = 1)
+    bc.v.y[1] == :pressure && (y1D_lo[1] = -1)
+    bc.v.y[2] == :pressure && (y1D_up[end] = 1)
     y_py = (p_bc.y[1] .* (hz ⊗ hx)) ⊗ y1D_lo + (p_bc.y[2] .* (hz ⊗ hx)) ⊗ y1D_up
     y_py = reshape(permutedims(reshape(y_py, Nvy_in, Nvx_in, Nvz_in), (2, 1, 3)), :)
 
     # Back and front side
     y1D_ba = zeros(Nwz_in)
     y1D_fr = zeros(Nwz_in)
-    setup.bc.w.z[1] == :pressure && (y1D_ba[1] = -1)
-    setup.bc.w.z[2] == :pressure && (y1D_fr[end] = 1)
+    bc.w.z[1] == :pressure && (y1D_ba[1] = -1)
+    bc.w.z[2] == :pressure && (y1D_fr[end] = 1)
     y_pz = y1D_ba ⊗ (p_bc.z[1] .* (hy ⊗ hx)) + y1D_fr ⊗ (p_bc.z[2] .* (hy ⊗ hx))
 
     y_p = [y_px; y_py; y_pz]
-    @pack! setup.operators = y_p
+    @pack! operators = y_p
 
     ## Boundary conditions for averaging
     # Au_ux
@@ -624,9 +632,9 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     ybc = Aw_wz_bc.ybc1 ⊗ wBa_i + Aw_wz_bc.ybc2 ⊗ wFr_i
     yAw_wz = Aw_wz_bc.Bbc * ybc
 
-    @pack! setup.operators = yAu_ux, yAu_uy, yAu_uz
-    @pack! setup.operators = yAv_vx, yAv_vy, yAv_vz
-    @pack! setup.operators = yAw_wx, yAw_wy, yAw_wz
+    @pack! operators = yAu_ux, yAu_uy, yAu_uz
+    @pack! operators = yAv_vx, yAv_vy, yAv_vz
+    @pack! operators = yAw_wx, yAw_wy, yAw_wz
 
     ## Bounary conditions for diffusion
 
@@ -741,18 +749,26 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     # Sv_wy
     ySv_wy = ySv_wy_bf + ySv_wy_lu
 
-    if viscosity_model isa LaminarModel
-        yDiffu = 1 / Re * (Dux * ySu_ux + Duy * ySu_uy + Duz * ySu_uz)
-        yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy + Dvz * ySv_vz)
-        yDiffw = 1 / Re * (Dwx * ySw_wx + Dwy * ySw_wy + Dwz * ySw_wz)
-        yDiff = [yDiffu; yDiffv; yDiffw]
-        @pack! setup.operators = yDiff
-    else
-        # Use values directly (see diffusion.jl and strain_tensor.jl)
-        @pack! setup.operators =
-            ySu_ux, ySu_uy, ySu_uz, ySv_vx, ySv_vy, ySv_vz, ySw_wx, ySw_wy, ySw_wz
-        @pack! setup.operators = ySu_vx, ySu_wx, ySv_uy, ySv_wy, ySw_uz, ySw_vz
-    end
+    yDiffu = 1 / Re * (Dux * ySu_ux + Duy * ySu_uy + Duz * ySu_uz)
+    yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy + Dvz * ySv_vz)
+    yDiffw = 1 / Re * (Dwx * ySw_wx + Dwy * ySw_wy + Dwz * ySw_wz)
+    yDiff = [yDiffu; yDiffv; yDiffw]
+    @pack! operators = yDiff
+
+    Ωu⁻¹ = 1 ./ Ω[indu]
+    Ωv⁻¹ = 1 ./ Ω[indv]
+    Ωw⁻¹ = 1 ./ Ω[indw]
+
+    # Diffusive terms in finite-difference setting, without viscosity
+    yDiffu_f = Ωu⁻¹ .* (Dux * ySu_ux + Duy * ySu_uy + Duz * ySu_uz)
+    yDiffv_f = Ωv⁻¹ .* (Dvx * ySv_vx + Dvy * ySv_vy + Dvz * ySv_vz)
+    yDiffw_f = Ωw⁻¹ .* (Dwx * ySw_wx + Dwy * ySw_wy + Dwz * ySw_wz)
+
+    # Use values directly (see diffusion.jl and strain_tensor.jl)
+    @pack! operators =
+        ySu_ux, ySu_uy, ySu_uz, ySv_vx, ySv_vy, ySv_vz, ySw_wx, ySw_wy, ySw_wz
+    @pack! operators = ySu_vx, ySu_wx, ySv_uy, ySv_wy, ySw_uz, ySw_vz
+    @pack! operators = yDiffu_f, yDiffv_f, yDiffw_f
 
     ## Boundary conditions for interpolation
 
@@ -839,9 +855,9 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     ybc = Iw_wz_bc.ybc1 ⊗ wBa_i + Iw_wz_bc.ybc2 ⊗ wFr_i
     yIw_wz = Iw_wz_bc.Bbc * ybc
 
-    @pack! setup.operators = yIu_ux, yIv_uy, yIw_uz
-    @pack! setup.operators = yIu_vx, yIv_vy, yIw_vz
-    @pack! setup.operators = yIu_wx, yIv_wy, yIw_wz
+    @pack! operators = yIu_ux, yIv_uy, yIw_uz
+    @pack! operators = yIu_vx, yIv_vy, yIw_vz
+    @pack! operators = yIu_wx, yIv_wy, yIw_wz
 
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         # Set bc for turbulent viscosity nu_t
@@ -853,12 +869,12 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
         nuUp = zeros(Npx)
 
         ## Nu_ux
-        (; Aν_ux_bc) = setup.operators
+        (; Aν_ux_bc) = operators
         ybc = nuLe ⊗ Aν_ux_bc.ybc1 + nuRi ⊗ Aν_ux_bc.ybc2
         yAν_ux = Aν_ux_bc.Bbc * ybc
 
         ## Nu_uy
-        (; Aν_uy_bc_lr, Aν_uy_bc_lu) = setup.operators
+        (; Aν_uy_bc_lr, Aν_uy_bc_lu) = operators
 
         nuLe_i = [nuLe[1]; nuLe; nuLe[end]]
         nuRi_i = [nuRi[1]; nuRi; nuRi[end]]
@@ -874,7 +890,7 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
         yAν_uy = yAν_uy_lu + yAν_uy_lr
 
         ## Nu_vx
-        (; Aν_vx_bc_lr, Aν_vx_bc_lu) = setup.operators
+        (; Aν_vx_bc_lr, Aν_vx_bc_lu) = operators
 
         nuLo_i = [nuLo[1]; nuLo; nuLo[end]]
         nuUp_i = [nuUp[1]; nuUp; nuUp[end]]
@@ -893,7 +909,7 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
         ybc = Aν_vy_bc.ybc1 ⊗ nuLo + Aν_vy_bc.ybc2 ⊗ nuUp
         yAν_vy = Aν_vy_bc.Bbc * ybc
 
-        @pack! setup.operators = yAν_ux, yAν_uy, yAν_vx, yAν_vy
+        @pack! operators = yAν_ux, yAν_uy, yAν_vx, yAν_vy
 
         # Set bc for getting du/dx, du/dy, dv/dx, dv/dy at cell centers
 
@@ -921,7 +937,7 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
         ybc = Cvy_k_bc.ybc1 ⊗ vLo_i + Cvy_k_bc.ybc2 ⊗ vUp_i
         yCvy_k = Cvy_k_bc.Bbc * ybc
 
-        @pack! setup.operators = yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k
+        @pack! operators = yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k
     end
 
     setup
