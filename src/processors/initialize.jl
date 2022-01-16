@@ -19,22 +19,20 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,2}) wher
     fig = Figure()
     if fieldname == :velocity
         up, vp = get_velocity(V, t, setup)
-        qp = map((u, v) -> √sum(u ^ 2 + v ^ 2), up, vp)
+        qp = map((u, v) -> √sum(u^2 + v^2), up, vp)
 
         vel = Observable(qp)
         ax, hm = contourf(fig[1, 1], xp, yp, vel)
         field = vel
     elseif fieldname == :vorticity
-        if bc.u.x[1] == :periodic
+        if all(==(:periodic), (bc.u.x[1], bc.v.y[1]))
             xω = x
-        else
-            xω = x[2:end-1]
-        end
-        if bc.v.y[1] == :periodic
             yω = y
         else
-            yω = y[2:end-1]
+            xω = x[2:(end - 1)]
+            yω = y[2:(end - 1)]
         end
+
         ω = Observable(get_vorticity(V, t, setup))
         # ax, hm = contour(fig[1, 1], xω, yω, ω; levels = -10:2:10)
         # ax, hm = contourf(fig[1, 1], xω, yω, ω; levels = -10:2:10, extendlow = :auto, extendhigh = :auto)
@@ -45,12 +43,12 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,2}) wher
         if bc.u.x[1] == :periodic
             xψ = x
         else
-            xψ = x[2:end-1]
+            xψ = x[2:(end - 1)]
         end
         if bc.v.y[1] == :periodic
             yψ = y
         else
-            yψ = y[2:end-1]
+            yψ = y[2:(end - 1)]
         end
         ψ = Observable(get_streamfunction(V, t, setup))
         ax, hm = contourf(fig[1, 1], xψ, yψ, ψ)
@@ -77,18 +75,41 @@ end
 # 3D real time plot
 function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,3}) where {M,T}
     (; V, t, setup) = stepper
-    (; xlims, ylims, zlims, xp, yp, zp) = setup.grid
+    (; grid, bc) = setup
+    (; x, y, z, xp, yp, zp) = grid
     (; fieldname) = plotter
-
 
     fig = Figure()
     if fieldname == :velocity
         up, vp, wp = get_velocity(V, t, setup)
-        qp = map((u, v, w) -> √sum(u ^ 2 + v ^ 2 + w ^ 2), up, vp, wp)
+        qp = map((u, v, w) -> √sum(u^2 + v^2 + w^2), up, vp, wp)
         vel = Observable(qp)
         field = vel
         ax = Axis3(fig[1, 1]; title = "Velocity (magnitude)", aspect = :data)
         hm = contour!(ax, xp, yp, zp, vel; shading = false)
+    elseif fieldname == :vorticity
+        if all(==(:periodic), (bc.u.x[1], bc.v.y[1], bc.w.z[1]))
+            xω = x
+            yω = y
+            zω = z
+        else
+            xω = x[2:(end - 1)]
+            yω = y[2:(end - 1)]
+            zω = z[2:(end - 1)]
+        end
+        ω = Observable(get_vorticity(V, t, setup))
+        field = ω
+        ax = Axis3(fig[1, 1]; title = "Vorticity (magnitude)", aspect = :data)
+        hm = contour!(
+            ax,
+            xω,
+            yω,
+            zω,
+            ω;
+            shading = false,
+            # extendlow = :auto,
+            # extendhigh = :auto,
+        )
     else
         error("Unknown fieldname")
     end
@@ -102,7 +123,7 @@ end
 
 function initialize!(writer::VTKWriter, stepper)
     (; dir, filename) = writer
-    ispath(dir) || mkpath(dir);
+    ispath(dir) || mkpath(dir)
     pvd = paraview_collection(joinpath(dir, filename))
     @pack! writer = pvd
     writer

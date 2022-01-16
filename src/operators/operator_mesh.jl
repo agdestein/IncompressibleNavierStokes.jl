@@ -253,6 +253,7 @@ function operator_mesh!(setup::Setup{T,2}) where {T}
     # Matrix to map from Nuy_t-1 to Nvy_in points
     # (used in interpolation, convection_diffusion)
     Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(Nvy_in))
+
     # Map from Npy+2 points to Nvy_t-1 points (vy faces)
     Bkvy = copy(Bmap)
 

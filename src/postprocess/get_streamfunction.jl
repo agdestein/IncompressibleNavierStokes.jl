@@ -1,6 +1,12 @@
-function get_streamfunction(V, t, setup)
-    # Compute streamfunction from a Poisson equation nabla^2 ψ = -ω
+"""
+    get_streamfunction(V, t, setup)
 
+Compute streamfunction ``\\psi`` from a Poisson equation ``\\nabla^2 \\psi = -\\omega``.
+"""
+function get_streamfunction end
+
+# 2D version
+function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
     (; u_bc, v_bc) = setup.bc
     (; indu, indv, Nux_in, Nvx_in, Nx, Ny) = setup.grid
     (; hx, hy, x, y, xp, yp) = setup.grid
@@ -21,19 +27,19 @@ function get_streamfunction(V, t, setup)
     end
     ψLe = cumsum(hy .* u1)
     ψUpLe = ψLe[end]
-    ψLe = ψLe[1:end-1]
+    ψLe = ψLe[1:(end - 1)]
 
     # V = -d ψ / dx; integrate left->right
     if setup.bc.v.y[2] == :dirichlet
         v1 = v_bc.(xp, y[end], t, [setup])
     elseif setup.bc.v.y[2] == :pressure
-        v1 = vₕ[end-Nvx_in+1:end]
+        v1 = vₕ[(end - Nvx_in + 1):end]
     elseif setup.bc.v.y[2] == :periodic
         v1 = vₕ[1:Nvx_in]
     end
     ψUp = ψUpLe .- cumsum(hx .* v1)
     ψUpRi = ψUp[end]
-    ψUp = ψUp[1:end-1]
+    ψUp = ψUp[1:(end - 1)]
 
     # U = d ψ / dy; integrate up->lo
     if setup.bc.u.x[2] == :dirichlet
@@ -45,7 +51,7 @@ function get_streamfunction(V, t, setup)
     end
     ψRi = ψUpRi .- cumsum(hy[end:-1:1] .* u2[end:-1:1])
     ψLoRi = ψRi[end]
-    ψRi = ψRi[end-1:-1:1]
+    ψRi = ψRi[(end - 1):-1:1]
 
     # V = -d ψ / dx; integrate right->left
     if setup.bc.v.y[1] == :dirichlet
@@ -55,7 +61,7 @@ function get_streamfunction(V, t, setup)
     end
     ψLo = ψLoRi .+ cumsum(hx[end:-1:1] .* v2[end:-1:1])
     ψLoLe = ψLo[end]
-    ψLo = ψLo[end-1:-1:1]
+    ψLo = ψLo[(end - 1):-1:1]
 
     if abs(ψLoLe) > 1e-12
         @warn "Contour integration of ψ not consistent: $(abs(ψLoLe))"
@@ -69,6 +75,7 @@ function get_streamfunction(V, t, setup)
     diag1 = 1 ./ hx .* ones(Nx)
     Q1D = spdiagm(Nx, Nx + 1, 0 => -diag1, 1 => diag1)
     Qx_bc = bc_general(Nx + 1, Nx - 1, 2, :dirichlet, :dirichlet, hx[1], hx[end])
+
     # Extend to 2D
     Q2Dx = kron(sparse(I, Ny - 1, Ny - 1), Q1D * Qx_bc.B1D)
     yQx =
@@ -79,6 +86,7 @@ function get_streamfunction(V, t, setup)
     diag1 = 1 ./ hy .* ones(Ny)
     Q1D = spdiagm(Ny, Ny + 1, 0 => -diag1, 1 => diag1)
     Qy_bc = bc_general(Ny + 1, Ny - 1, 2, :dirichlet, :dirichlet, hy[1], hy[end])
+
     # Extend to 2D
     Q2Dy = kron(Q1D * Qy_bc.B1D, sparse(I, Nx - 1, Nx - 1))
     yQy =
@@ -91,8 +99,13 @@ function get_streamfunction(V, t, setup)
     ω = get_vorticity(V, t, setup)
     ω_flat = reshape(ω, length(ω))
 
-    # Solve streamfunction from Poisson equaton
+    # Solve streamfunction from Poisson equation
     ψ = -Aψ \ (ω_flat + yAψ)
 
     reshape(ψ, size(ω)...)
+end
+
+# 3D version
+function get_streamfunction(V, t, setup::Setup{T,3}) where {T}
+    error("Not implemented")
 end

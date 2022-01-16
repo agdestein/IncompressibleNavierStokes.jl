@@ -710,10 +710,6 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     Sw_vz = Sw_vz_bc_lu.B3D * Sw_vz_bc_bf.B3D
 
 
-
-
-
-
     ## Diffusion operator (stress tensor), w-component: similar to averaging, but with mesh sizes
 
     ## Sw_wx: evaluate w at wx location

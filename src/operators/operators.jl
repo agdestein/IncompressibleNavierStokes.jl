@@ -124,8 +124,12 @@ Base.@kwdef mutable struct Operators{T}
 
     Diff::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
-    Wv_vx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Wu_uy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Wu_uz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Wv_vx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Wv_vz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Ww_wy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Ww_wx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
     yM::Vector{T} = T[]
     y_p::Vector{T} = T[]

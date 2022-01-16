@@ -56,7 +56,9 @@ function process!(writer::VTKWriter, stepper)
     
     tformat = replace(string(t), "." => "p")
     vtk_grid("$(writer.dir)/$(writer.filename)_t=$tformat", coords...) do vtk
-        vtk["velocity"] = get_velocity(V, t, setup)
+        up, vp = get_velocity(V, t, setup)
+        wp = zeros(size(up)) # ParaView only considers 3D vectors
+        vtk["velocity"] = (up, vp, wp)
         vtk["pressure"] = p
         writer.pvd[t] = vtk
     end
