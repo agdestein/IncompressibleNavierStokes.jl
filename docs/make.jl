@@ -2,6 +2,13 @@ using IncompressibleNavierStokes
 using Literate
 using Documenter
 
+DocMeta.setdocmeta!(
+    IncompressibleNavierStokes,
+    :DocTestSetup,
+    :(using IncompressibleNavierStokes);
+    recursive = true,
+)
+
 # Generate examples
 examples = [
     # "Lid-Driven Cavity" => "LDC",
@@ -17,13 +24,6 @@ for e ∈ examples
     Literate.notebook(e, o)
     Literate.script(e, o)
 end
-
-DocMeta.setdocmeta!(
-    IncompressibleNavierStokes,
-    :DocTestSetup,
-    :(using IncompressibleNavierStokes);
-    recursive = true,
-)
 
 makedocs(;
     modules = [IncompressibleNavierStokes],
