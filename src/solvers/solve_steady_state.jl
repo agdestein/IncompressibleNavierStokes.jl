@@ -12,7 +12,6 @@ function solve(
     npicard = 2,
     abstol = 1e-10,
     maxiter = 10,
-    processors = Processor[],
 )
     (; setup, V₀, p₀) = problem
     (; NV, Np) = setup.grid

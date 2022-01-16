@@ -113,7 +113,7 @@
             )
 
             problem = SteadyStateProblem(setup, V₀, p₀)
-            @test V, p = solve(problem; processors)
+            V, p = solve(problem)
 
             # Check that the average velocity is smaller than the lid velocity
             @test sum(abs, V) / length(V) < lid_vel

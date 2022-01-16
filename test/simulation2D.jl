@@ -86,14 +86,9 @@
         initial_pressure,
     )
 
-    ## Iteration processors
-    logger = Logger()
-    tracer = QuantityTracer()
-    processors = [logger, tracer]
-
     @testset "Steady state problem" begin
         problem = SteadyStateProblem(setup, V₀, p₀)
-        V, p = solve(problem; processors)
+        V, p = solve(problem)
 
         # Check that solution did not explode
         @test all(!isnan, V)
@@ -102,6 +97,11 @@
         # Check that the average velocity is smaller than the lid velocity
         @test sum(abs, V) / length(V) < lid_vel
     end
+
+    ## Iteration processors
+    logger = Logger()
+    tracer = QuantityTracer()
+    processors = [logger, tracer]
 
     @testset "Unsteady problem" begin
         problem = UnsteadyProblem(setup, V₀, p₀, tlims)

@@ -135,31 +135,27 @@ V₀, p₀ = create_initial_conditions(
     initial_pressure,
 );
 
-## Iteration processors
-logger = Logger()
-real_time_plotter = RealTimePlotter(; nupdate = 5, fieldname = :velocity)
-vtk_writer = VTKWriter(; nupdate = 5, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, real_time_plotter, vtk_writer, tracer]
-
 
 ## Solve steady state problem
 problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = @time solve(problem; processors)
+V, p = @time solve(problem; npicard = 5, maxiter = 15);
 
+
+## Iteration processors
+logger = Logger()
+real_time_plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
+vtk_writer = VTKWriter(; nupdate = 5, dir = "output/$name", filename = "solution")
+tracer = QuantityTracer(; nupdate = 1)
+processors = [logger, real_time_plotter, vtk_writer, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = @time solve(problem, RK44(); Δt = 0.01, processors)
 
 
-## Plot tracers
+## Post-process
 plot_tracers(tracer)
-
-## Plot pressure
 plot_pressure(setup, p)
-
-
 plot_velocity(setup, V, t_end)
 plot_vorticity(setup, V, tlims[2])
 plot_streamfunction(setup, V, tlims[2])

@@ -129,14 +129,6 @@ V₀, p₀ = create_initial_conditions(
     initial_pressure,
 );
 
-# We may also define a list of iteration processors. They are processed after every
-# `nupdate` iteration.
-
-logger = Logger(; nupdate = 10)
-real_time_plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
-tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, real_time_plotter, tracer]
-
 
 # ## Solve problems
 #
@@ -147,14 +139,24 @@ processors = [logger, real_time_plotter, tracer]
 # momentum equation is zero.
 
 problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = @time solve(problem; processors);
+V, p = @time solve(problem);
 
 # For this test case, the same steady state may be obtained by solving an
-# [`UnsteadyProblem`](@ref) for a sufficiently long time. A ODE method is needed in this
-# case. Here we will opt for a standard fourth order Runge-Kutta method with a fixed time
-# step.
-
+# [`UnsteadyProblem`](@ref) for a sufficiently long time.
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
+
+# We may also define a list of iteration processors. They are processed after every
+# `nupdate` iteration.
+
+logger = Logger(; nupdate = 10)
+plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
+writer = VTKWriter(; nupdate = 10, dir = "output/LidDrivenCavity2D")
+tracer = QuantityTracer(; nupdate = 1)
+processors = [logger, plotter, tracer]
+
+#  A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
+#  with a fixed time step.
+
 V, p = @time solve(problem, RK44(); Δt = 0.01, processors);
 
 
