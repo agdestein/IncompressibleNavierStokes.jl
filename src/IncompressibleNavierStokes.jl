@@ -115,11 +115,11 @@ include("problems/problems.jl")
 include("problems/is_steady.jl")
 
 # Solvers
-include("solvers/get_timestep.jl")
-include("solvers/solve.jl")
-
+include("solvers/pressure/initialize_pressure.jl")
 include("solvers/pressure/pressure_poisson.jl")
 include("solvers/pressure/pressure_additional_solve.jl")
+include("solvers/get_timestep.jl")
+include("solvers/solve.jl")
 
 # Utils
 include("utils/filter_convection.jl")
