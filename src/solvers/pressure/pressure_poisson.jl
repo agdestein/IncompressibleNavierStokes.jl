@@ -6,20 +6,20 @@ calling `pressure_poisson!`.
 """
 function pressure_poisson(solver, f, t, setup)
     p = zeros(setup.grid.Np)
-    pressure_poisson!(solver, p, f, t)
+    pressure_poisson!(solver, p, f)
 end
 
 """
-    pressure_poisson!(solver, p, f, t, setup, tol = 1e-14)
+    pressure_poisson!(solver, p, f, t)
 
 Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
-For periodic and no-slip BC, the sum of `f` should be zero. 
+For periodic and no-slip BC, the sum of `f` should be zero.
 """
 function pressure_poisson! end
 
 function pressure_poisson!(solver::DirectPressureSolver, p, f)
     # Assume the Laplace matrix is known (A) and is possibly factorized
-    
+
     # Use pre-determined decomposition
     p .= solver.A_fact \ f
 end
@@ -40,9 +40,9 @@ function pressure_poisson!(solver::FourierPressureSolver, p, f)
 
     # Solve for coefficients in Fourier space
     @. p̂ = -f̂ / Â;
-    
+
     # Transform back
-    ifft!(p̂) 
+    ifft!(p̂)
     @. p[:] = real(@view p̂[:])
 
     p

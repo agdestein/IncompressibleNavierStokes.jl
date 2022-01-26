@@ -11,7 +11,7 @@ function operator_postprocessing!(setup::Setup{T,2}) where {T}
     (; grid, operators, bc) = setup
     (; Nx, Ny, gx, gy, gxd, gyd) = grid
 
-    if bc.u.x[1] == :periodic && bc.v.y[1] == :periodic
+    if all(==(:periodic), (bc.u.x[1], bc.v.y[1]))
         # For entirely periodic BC, covering entire mesh
 
         # dv/dx, like Sv_vx
@@ -64,7 +64,7 @@ function operator_postprocessing!(setup::Setup{T,3}) where {T}
     (; grid, operators, bc) = setup
     (; Nx, Ny, Nz, gx, gy, gz, gxd, gyd, gzd) = grid
 
-    if bc.u.x[1] == :periodic && bc.v.y[1] == :periodic && bc.w.z[1] == :periodic
+    if all(==(:periodic), (bc.u.x[1], bc.v.y[1], bc.w.z[1]))
         # For entirely periodic BC, covering entire mesh
 
         diag = 1 ./ gxd

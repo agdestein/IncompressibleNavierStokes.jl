@@ -3,6 +3,7 @@
 
 Construct divergence and gradient operator.
 """
+function operator_divergence! end
 
 # 2D version
 function operator_divergence!(setup::Setup{T,2}) where {T}

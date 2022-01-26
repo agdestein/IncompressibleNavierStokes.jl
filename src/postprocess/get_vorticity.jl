@@ -132,9 +132,9 @@ function vorticity!(ω, V, t, setup::Setup{T,3}) where {T}
     # ωz_flat .= Wv_vx * vₕ_in - Wu_uy * uₕ_in
    
     ω_flat .= .√(
-        (Ww_wy * wₕ_in - Wv_vz * vₕ_in) .^ 2 +
-        (Wu_uz * uₕ_in - Ww_wx * wₕ_in) .^ 2 +
-        (Wv_vx * vₕ_in - Wu_uy * uₕ_in) .^ 2
+        (Ww_wy * wₕ_in .- Wv_vz * vₕ_in) .^ 2 .+
+        (Wu_uz * uₕ_in .- Ww_wx * wₕ_in) .^ 2 .+
+        (Wv_vx * vₕ_in .- Wu_uy * uₕ_in) .^ 2
     )
 
     ω

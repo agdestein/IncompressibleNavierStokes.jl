@@ -1,3 +1,8 @@
+"""
+    AbstractViscosityModel
+
+Abstract viscosity model.
+"""
 abstract type AbstractViscosityModel{T} end
 
 """

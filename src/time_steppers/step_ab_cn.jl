@@ -39,7 +39,6 @@ Note that, in constrast to explicit methods, the pressure from previous time ste
 influence on the accuracy of the velocity.
 """
 function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
-
     (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
     (; viscosity_model) = setup
     (; NV, Ω⁻¹) = setup.grid

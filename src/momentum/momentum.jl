@@ -37,9 +37,7 @@ function momentum!(
     (; c, ∇c, d, ∇d, b, ∇b, Gp) = cache
 
     # Unsteady BC
-    if setup.bc.bc_unsteady
-        set_bc_vectors!(setup, t)
-    end
+    setup.bc.bc_unsteady && set_bc_vectors!(setup, t)
 
     # Convection
     convection!(convection_model, c, ∇c, V, ϕ, t, setup, cache; getJacobian)

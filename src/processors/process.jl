@@ -27,7 +27,7 @@ function process!(plotter::RealTimePlotter, stepper)
     N = get_dimension(setup.grid)
     if fieldname == :velocity
         vels = get_velocity(V, t, setup)
-        qp = map((vels...) -> √sum(vel -> vel ^ 2, vels), vels...)
+        qp = map((vels...) -> √sum(vel -> vel^2, vels), vels...)
         field[] = qp
     elseif fieldname == :vorticity
         field[] = vorticity!(field[], V, t, setup)
@@ -46,19 +46,23 @@ end
 
 function process!(writer::VTKWriter, stepper)
     (; setup, V, p, t) = stepper
-    (; xp, yp, zp) = setup.grid;
+    (; xp, yp, zp) = setup.grid
     N = get_dimension(setup.grid)
     if N == 2
         coords = (xp, yp)
     elseif N == 3
         coords = (xp, yp, zp)
     end
-    
+
     tformat = replace(string(t), "." => "p")
     vtk_grid("$(writer.dir)/$(writer.filename)_t=$tformat", coords...) do vtk
-        up, vp = get_velocity(V, t, setup)
-        wp = zeros(size(up)) # ParaView only considers 3D vectors
-        vtk["velocity"] = (up, vp, wp)
+        vels = get_velocity(V, t, setup)
+        if N == 2
+            # ParaView prefers 3D vectors. Add zero z-component.
+            wp = zeros(size(vels[1]))
+            vels = (vels..., wp)
+        end
+        vtk["velocity"] = vels
         vtk["pressure"] = p
         writer.pvd[t] = vtk
     end

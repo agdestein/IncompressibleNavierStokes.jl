@@ -72,5 +72,5 @@ end
 
 # 3D version
 function plot_streamfunction(setup::Setup{T,3}, V, t) where {T}
-    error("Not implemented")
+    error("Not implemented (3D)")
 end

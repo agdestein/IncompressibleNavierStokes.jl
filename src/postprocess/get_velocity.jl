@@ -6,6 +6,7 @@ Get velocity values at pressure points. Interpolate velocities to pressure posit
 """
 function get_velocity end
 
+# 2D version
 function get_velocity(V, t, setup::Setup{T,2}) where {T}
     # Evaluate boundary conditions at current time
     set_bc_vectors!(setup, t)
@@ -22,6 +23,7 @@ function get_velocity(V, t, setup::Setup{T,2}) where {T}
     up, vp
 end
 
+# 3D version
 function get_velocity(V, t, setup::Setup{T,3}) where {T}
     # Evaluate boundary conditions at current time
     set_bc_vectors!(setup, t)

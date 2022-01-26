@@ -14,7 +14,7 @@ function convection(model, V, ϕ, t, setup; getJacobian = false)
 end
 
 """
-    convection!(model, c, ∇c, V, ϕ, t, cache, setup; getJacobian = false)
+    convection!(model, c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
 
 Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`, using the convection
 model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
@@ -361,4 +361,3 @@ function convection!(
 
     c, ∇c
 end
-
