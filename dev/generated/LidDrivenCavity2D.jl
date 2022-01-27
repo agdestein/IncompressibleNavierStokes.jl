@@ -12,17 +12,9 @@ viscosity_model = LaminarModel{T}(; Re = 1000)
 
 convection_model = NoRegConvectionModel{T}()
 
-Nx = 100                          # Number of x-volumes
-Ny = 100                          # Number of y-volumes
-grid = create_grid(
-    T,
-    Nx,
-    Ny;
-    xlims = (0, 1),               # Horizontal limits (left, right)
-    ylims = (0, 1),               # Vertical limits (bottom, top)
-    stretch = (1, 1),             # Stretch factor (sx, sy)
-    order4 = false,               # Use 4th order in space
-)
+x = nonuniform_grid(0, 1, 100)
+y = nonuniform_grid(0, 1, 100)
+grid = create_grid(x, y; T);
 
 solver_settings = SolverSettings{T}(;
     pressure_solver = DirectPressureSolver{T}(),    # Pressure solver
@@ -36,17 +28,14 @@ solver_settings = SolverSettings{T}(;
 u_bc(x, y, t, setup) = y ≈ setup.grid.ylims[2] ? 1.0 : 0.0
 v_bc(x, y, t, setup) = zero(x)
 bc = create_boundary_conditions(
-    T,
     u_bc,
     v_bc;
     bc_unsteady = false,
     bc_type = (;
         u = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
         v = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-        k = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-        e = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-        ν = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
     ),
+    T,
 )
 
 bodyforce_u(x, y) = 0
@@ -79,7 +68,7 @@ logger = Logger(; nupdate = 10)
 plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
 writer = VTKWriter(; nupdate = 10, dir = "output/LidDrivenCavity2D")
 tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, plotter, tracer]
+processors = [logger, plotter, writer, tracer]
 
 V, p = @time solve(problem, RK44(); Δt = 0.01, processors);
 
