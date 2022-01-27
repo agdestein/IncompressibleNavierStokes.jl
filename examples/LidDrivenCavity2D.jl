@@ -38,10 +38,6 @@ T = Float64
 # They all take a Reynolds number as a parameter. Here we choose a moderate Reynolds number.
 
 viscosity_model = LaminarModel{T}(; Re = 1000)
-# viscosity_model = KEpsilonModel{T}(; Re = 3000)
-# viscosity_model = MixingLengthModel{T}(; Re = 3000)
-# viscosity_model = SmagorinskyModel{T}(; Re = 3000)
-# viscosity_model = QRModel{T}(; Re = 3000)
 
 # Available convection models are:
 #
@@ -59,7 +55,7 @@ convection_model = NoRegConvectionModel{T}()
 
 x = cosine_grid(0, 1, 50)
 y = stretched_grid(0, 1, 50, 0.95)
-grid = create_grid(x, y; T);
+grid = create_grid(x, y; T)
 
 # The grid may be visualized using the `plot_grid` function.
 
@@ -104,7 +100,7 @@ setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, solver_sett
 
 # The discrete operators are built with the [`build_operators!`](@ref) function.
 
-build_operators!(setup);
+build_operators!(setup)
 
 # We will solve for a time interval of ten seconds.
 
@@ -121,7 +117,7 @@ V₀, p₀ = create_initial_conditions(
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure,
-);
+)
 
 
 # ## Solve problems
@@ -132,13 +128,13 @@ V₀, p₀ = create_initial_conditions(
 # A [`SteadyStateProblem`](@ref) is for computing a state where the right hand side of the
 # momentum equation is zero.
 
-problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = @time solve(problem);
+problem = SteadyStateProblem(setup, V₀, p₀)
+V, p = @time solve(problem)
 
 # For this test case, the same steady state may be obtained by solving an
 # [`UnsteadyProblem`](@ref) for a sufficiently long time.
 
-problem = UnsteadyProblem(setup, V₀, p₀, tlims);
+problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 
 # We may also define a list of iteration processors. They are processed after every
 # `nupdate` iteration.
@@ -152,7 +148,7 @@ processors = [logger, plotter, writer, tracer]
 #  A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
 #  with a fixed time step.
 
-V, p = @time solve(problem, RK44(); Δt = 0.001, processors);
+V, p = @time solve(problem, RK44(); Δt = 0.001, processors)
 
 
 # ## Postprocess

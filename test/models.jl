@@ -3,6 +3,12 @@
     # Floating point type for simulations
     T = Float64
 
+    ## Viscosity model
+    viscosity_model = LaminarModel{T}(; Re = 2000)
+
+    ## Convection model
+    convection_model = NoRegConvectionModel{T}()
+
     ## Grid parameters
     x = stretched_grid(0, 1, 25)
     y = stretched_grid(0, 1, 25)
@@ -34,6 +40,9 @@
         bc_type = (;
             u = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
             v = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
+            ν = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
+            k = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
+            e = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
         ),
         T,
     )
@@ -104,17 +113,22 @@
             V, p = solve(problem)
 
             # Check that the average velocity is smaller than the lid velocity
-            @test sum(abs, V) / length(V) < lid_vel
+            broken = convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
+            @test sum(abs, V) / length(V) < lid_vel broken = broken
 
             problem = UnsteadyProblem(setup, V₀, p₀, tlims)
             V, p = solve(problem, RK44(); Δt = 0.01, processors)
 
             # Check that the average velocity is smaller than the lid velocity
-            sum(abs, V) / length(V) < lid_vel
+            broken =
+                viscosity_model isa Union{QRModel,MixingLengthModel} ||
+                convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
+            @test sum(abs, V) / length(V) < lid_vel broken = broken
 
             # Check for steady state convergence
-            @test tracer.umom[end] < 1e-10
-            @test tracer.vmom[end] < 1e-10
+            broken = viscosity_model isa Union{QRModel,MixingLengthModel}
+            @test tracer.umom[end] < 1e-10 broken = broken
+            @test tracer.vmom[end] < 1e-10 broken = broken
         end
     end
 

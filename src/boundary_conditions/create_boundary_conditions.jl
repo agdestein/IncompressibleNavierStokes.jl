@@ -1,5 +1,5 @@
 """
-    create_boundary_conditions(T = Float64; bc_unsteady, bc_type, u_bc, v_bc, w_bc, kwargs...)
+    create_boundary_conditions(u_bc, v_bc[, w_bc]; T = Float64, bc_unsteady, bc_type, kwargs...)
 
 Create discrete boundary condtions.
 

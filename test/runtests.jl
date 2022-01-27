@@ -10,7 +10,9 @@ using LinearAlgebra
 using Test
 
 @testset "IncompressibleNavierStokes" begin
+    include("grid.jl")
+    include("pressure_solvers.jl")
+    include("models.jl")
     include("simulation2D.jl")
     include("simulation3D.jl")
-    include("models.jl")
 end

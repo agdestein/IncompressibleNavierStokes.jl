@@ -44,10 +44,11 @@ BC
 Setup
 ```
 
-## Spatial
+## One-dimensional grids
 
 ```@docs
 stretched_grid
+cosine_grid
 ```
 
 ## Pressure solvers
@@ -73,9 +74,11 @@ momentum!
 ## Plot
 
 ```@docs
+plot_grid
 plot_pressure
-plot_streamfunction
+plot_velocity
 plot_vorticity
+plot_streamfunction
 plot_tracers
 ```
 

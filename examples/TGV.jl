@@ -93,7 +93,7 @@ force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v, bodyforce_w)
 
 ## Build setup and assemble operators
 setup = Setup{T,3}(; viscosity_model, convection_model, grid, force, solver_settings, bc);
-build_operators!(setup);
+@time build_operators!(setup);
 
 ## Time interval
 t_start, t_end = tlims = (0.0, 50.0)

@@ -16,7 +16,6 @@ function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
     (; hx, hy, gxd, gyd) = grid
     (; Buvy, Bvux, Bkux, Bkvy) = grid
 
-    # FIXME: 3D implementation
 
     # Averaging weight:
     weight = 1 / 2
@@ -206,4 +205,9 @@ function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
     @pack! setup.operators = Auy_k, Auy_k_bc, Avx_k, Avx_k_bc
 
     setup
+end
+
+# TODO: 3D implementation
+function operator_turbulent_diffusion!(setup::Setup{T,3}) where {T}
+    error("Not implemented (3D)")
 end
