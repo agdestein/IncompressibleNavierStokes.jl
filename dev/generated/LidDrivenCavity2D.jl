@@ -14,7 +14,7 @@ convection_model = NoRegConvectionModel{T}()
 
 x = cosine_grid(0, 1, 50)
 y = stretched_grid(0, 1, 50, 0.95)
-grid = create_grid(x, y; T);
+grid = create_grid(x, y; T)
 
 plot_grid(grid)
 
@@ -46,7 +46,7 @@ force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
 setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, solver_settings, bc)
 
-build_operators!(setup);
+build_operators!(setup)
 
 t_start, t_end = tlims = (0.0, 10.0)
 
@@ -59,12 +59,12 @@ V₀, p₀ = create_initial_conditions(
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure,
-);
+)
 
-problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = @time solve(problem);
+problem = SteadyStateProblem(setup, V₀, p₀)
+V, p = @time solve(problem)
 
-problem = UnsteadyProblem(setup, V₀, p₀, tlims);
+problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 
 logger = Logger(; nupdate = 20)
 plotter = RealTimePlotter(; nupdate = 20, fieldname = :vorticity)
@@ -72,7 +72,7 @@ writer = VTKWriter(; nupdate = 20, dir = "output/LidDrivenCavity2D")
 tracer = QuantityTracer(; nupdate = 10)
 processors = [logger, plotter, writer, tracer]
 
-V, p = @time solve(problem, RK44(); Δt = 0.001, processors);
+V, p = @time solve(problem, RK44(); Δt = 0.001, processors)
 
 plot_tracers(tracer)
 
