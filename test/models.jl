@@ -3,12 +3,6 @@
     # Floating point type for simulations
     T = Float64
 
-    ## Viscosity model
-    viscosity_model = LaminarModel{T}(; Re = 2000)
-
-    ## Convection model
-    convection_model = NoRegConvectionModel{T}()
-
     ## Grid parameters
     x = stretched_grid(0, 1, 25)
     y = stretched_grid(0, 1, 25)

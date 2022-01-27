@@ -64,6 +64,7 @@
     IncompressibleNavierStokes.initialize!(cg, setup, A)
     IncompressibleNavierStokes.initialize!(fourier, setup, A)
 
+    initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
     p_exact = reshape(initial_pressure.(grid.xpp, grid.ypp), :)
     f = A * p_exact
 
