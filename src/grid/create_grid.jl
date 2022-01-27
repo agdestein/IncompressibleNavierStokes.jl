@@ -1,5 +1,5 @@
 """
-    create_grid(x, y; order4 = false)
+    create_grid(x, y; order4 = false, T = eltype(x))
 
 Create nonuniform cartesian box mesh `xlims` × `ylims` with stretch factors `stretch`. If
 `order4` is `true`, a fourth order mesh is created.
@@ -33,12 +33,12 @@ function create_grid(x, y; order4 = false, T = eltype(x))
 end
 
 """
-    create_grid(x, y, z; order4 = false)
+    create_grid(x, y, z; order4 = false, T = eltype(x))
 
 Create nonuniform cartesian box mesh `xlims` × `ylims` × `zlims` with stretch factors
 `stretch`.
 """
-function create_grid(x, y, z; order4 = false, T = Float64)
+function create_grid(x, y, z; order4 = false, T = eltype(x))
     order4 && error("Fourth order grids not yet implemented for 3D")
 
     Nx = length(x) - 1

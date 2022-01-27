@@ -37,7 +37,8 @@ include("models/convection_models.jl")
 include("boundary_conditions/boundary_conditions.jl")
 include("solvers/pressure/pressure_solvers.jl")
 include("operators/operators.jl")
-include("parameters.jl")
+include("solvers/solver_settings.jl")
+include("setup.jl")
 
 # Boundary condtions
 include("boundary_conditions/bc_av3.jl")
