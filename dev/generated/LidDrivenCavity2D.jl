@@ -12,9 +12,11 @@ viscosity_model = LaminarModel{T}(; Re = 1000)
 
 convection_model = NoRegConvectionModel{T}()
 
-x = nonuniform_grid(0, 1, 100)
-y = nonuniform_grid(0, 1, 100)
+x = cosine_grid(0, 1, 50)
+y = stretched_grid(0, 1, 50, 0.95)
 grid = create_grid(x, y; T);
+
+plot_grid(grid)
 
 solver_settings = SolverSettings{T}(;
     pressure_solver = DirectPressureSolver{T}(),    # Pressure solver
@@ -64,13 +66,13 @@ V, p = @time solve(problem);
 
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 
-logger = Logger(; nupdate = 10)
-plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
-writer = VTKWriter(; nupdate = 10, dir = "output/LidDrivenCavity2D")
-tracer = QuantityTracer(; nupdate = 1)
+logger = Logger(; nupdate = 20)
+plotter = RealTimePlotter(; nupdate = 20, fieldname = :vorticity)
+writer = VTKWriter(; nupdate = 20, dir = "output/LidDrivenCavity2D")
+tracer = QuantityTracer(; nupdate = 10)
 processors = [logger, plotter, writer, tracer]
 
-V, p = @time solve(problem, RK44(); Δt = 0.01, processors);
+V, p = @time solve(problem, RK44(); Δt = 0.001, processors);
 
 plot_tracers(tracer)
 
