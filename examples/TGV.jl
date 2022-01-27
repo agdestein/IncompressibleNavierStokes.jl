@@ -17,7 +17,7 @@ name = "TGV"
 T = Float64
 
 ## Viscosity model
-viscosity_model = LaminarModel{T}(; Re = 1000)
+viscosity_model = LaminarModel{T}(; Re = 2000)
 # viscosity_model = KEpsilonModel{T}(; Re = 1000)
 # viscosity_model = MixingLengthModel{T}(; Re = 1000)
 # viscosity_model = SmagorinskyModel{T}(; Re = 1000)
@@ -30,19 +30,10 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
 ## Grid
-Nx = 20                               # Number of x-volumes
-Ny = 20                               # Number of y-volumes
-Nz = 20                               # Number of z-volumes
-grid = create_grid(
-    T,
-    Nx,
-    Ny,
-    Nz;
-    xlims = (0, 2π),                  # Horizontal limits (left, right)
-    ylims = (0, 2π),                  # Vertical limits (bottom, top)
-    zlims = (0, 2π),                  # Depth limits (back, front)
-    stretch = (1, 1, 1),              # Stretch factor (sx, sy, sz)
-);
+x = nonuniform_grid(0, 2π, 20)
+y = nonuniform_grid(0, 2π, 20)
+z = nonuniform_grid(0, 2π, 20)
+grid = create_grid(x, y, z; T);
 
 ## Solver settings
 solver_settings = SolverSettings{T}(;
@@ -67,7 +58,6 @@ dudt_bc(x, y, z, t, setup) = zero(x)
 dvdt_bc(x, y, z, t, setup) = zero(x)
 dwdt_bc(x, y, z, t, setup) = zero(x)
 bc = create_boundary_conditions(
-    T,
     u_bc,
     v_bc,
     w_bc;
@@ -91,22 +81,8 @@ bc = create_boundary_conditions(
             y = (:periodic, :periodic),
             z = (:periodic, :periodic),
         ),
-        k = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
-        e = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
-        ν = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
     ),
+    T,
 )
 
 ## Forcing parameters
@@ -120,7 +96,7 @@ setup = Setup{T,3}(; viscosity_model, convection_model, grid, force, solver_sett
 build_operators!(setup);
 
 ## Time interval
-t_start, t_end = tlims = (0.0, 10.0)
+t_start, t_end = tlims = (0.0, 50.0)
 
 ## Initial conditions
 initial_velocity_u(x, y, z) = sin(x)cos(y)cos(z)
@@ -148,6 +124,7 @@ real_time_plotter = RealTimePlotter(; nupdate = 10, fieldname = :vorticity)
 vtk_writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
 processors = [logger, real_time_plotter, vtk_writer, tracer]
+# processors = [logger, real_time_plotter, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);

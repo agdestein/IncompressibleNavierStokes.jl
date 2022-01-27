@@ -1,16 +1,16 @@
 """
-    pressure_poisson(solver, f, t, setup)
+    pressure_poisson(solver, f, setup)
 
 Convenience function for initializing the pressure vector `p` before
 calling `pressure_poisson!`.
 """
-function pressure_poisson(solver, f, t, setup)
+function pressure_poisson(solver, f, setup)
     p = zeros(setup.grid.Np)
     pressure_poisson!(solver, p, f)
 end
 
 """
-    pressure_poisson!(solver, p, f, t)
+    pressure_poisson!(solver, p, f)
 
 Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
 For periodic and no-slip BC, the sum of `f` should be zero.

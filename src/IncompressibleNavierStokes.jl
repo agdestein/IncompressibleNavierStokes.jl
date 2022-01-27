@@ -5,8 +5,8 @@ Energy-conserving solvers for the incompressible Navier-Stokes equations.
 """
 module IncompressibleNavierStokes
 
-using FFTW: fft!, ifft!
-using Interpolations: LinearInterpolation
+using FFTW
+using Interpolations
 using IterativeSolvers
 using LinearAlgebra
 using SparseArrays

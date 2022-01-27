@@ -1,12 +1,14 @@
 """
-    create_grid(T = Float64; Nx, Ny, xlims, ylims, stretch, order4 = false)
+    create_grid(x, y; order4 = false)
 
 Create nonuniform cartesian box mesh `xlims` × `ylims` with stretch factors `stretch`. If
 `order4` is `true`, a fourth order mesh is created.
 """
-function create_grid(T, Nx, Ny; xlims, ylims, stretch, order4 = false)
-    x = nonuniform_grid(xlims..., Nx, stretch[1])
-    y = nonuniform_grid(ylims..., Ny, stretch[2])
+function create_grid(x, y; order4 = false, T = eltype(x))
+    Nx = length(x) - 1
+    Ny = length(y) - 1
+    xlims = (x[1], x[end])
+    ylims = (y[1], y[end])
 
     # Pressure positions
     xp = (x[1:(end - 1)] + x[2:end]) / 2
@@ -31,17 +33,20 @@ function create_grid(T, Nx, Ny; xlims, ylims, stretch, order4 = false)
 end
 
 """
-    create_grid(T = Float64; Nx, Ny, Nz, xlims, ylims, zlims, stretch, order4 = false)
+    create_grid(x, y, z; order4 = false)
 
 Create nonuniform cartesian box mesh `xlims` × `ylims` × `zlims` with stretch factors
 `stretch`.
 """
-function create_grid(T, Nx, Ny, Nz; xlims, ylims, zlims, stretch, order4 = false)
+function create_grid(x, y, z; order4 = false, T = Float64)
     order4 && error("Fourth order grids not yet implemented for 3D")
 
-    x = nonuniform_grid(xlims..., Nx, stretch[1])
-    y = nonuniform_grid(ylims..., Ny, stretch[2])
-    z = nonuniform_grid(zlims..., Nz, stretch[3])
+    Nx = length(x) - 1
+    Ny = length(y) - 1
+    Nz = length(z) - 1
+    xlims = (x[1], x[end])
+    ylims = (y[1], y[end])
+    zlims = (z[1], z[end])
 
     # Pressure positions
     xp = (x[1:(end - 1)] + x[2:end]) / 2

@@ -34,19 +34,10 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
 ## Grid
-Nx = 25                           # Number of x-volumes
-Ny = 25                           # Number of y-volumes
-Nz = 10                           # Number of z-volumes
-grid = create_grid(
-    T,
-    Nx,
-    Ny,
-    Nz;
-    xlims = (0, 1),               # Horizontal limits (left, right)
-    ylims = (0, 1),               # Vertical limits (bottom, top)
-    zlims = (-0.2, 0.2),          # Depth limits (back, front)
-    stretch = (1, 1, 1),          # Stretch factor (sx, sy[, sz])
-)
+x = nonuniform_grid(0, 1, 25)
+y = nonuniform_grid(0, 1, 25)
+z = nonuniform_grid(-0.2, 0.2, 10)
+grid = create_grid(x, y, z; T);
 
 ## Solver settings
 solver_settings = SolverSettings{T}(;
@@ -68,7 +59,6 @@ u_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? 1.0 : 0.0
 v_bc(x, y, z, t, setup) = zero(x)
 w_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? 0.2 : 0.0
 bc = create_boundary_conditions(
-    T,
     u_bc,
     v_bc,
     w_bc;
@@ -89,22 +79,8 @@ bc = create_boundary_conditions(
             y = (:dirichlet, :dirichlet),
             z = (:periodic, :periodic),
         ),
-        k = (;
-            x = (:dirichlet, :dirichlet),
-            y = (:dirichlet, :dirichlet),
-            z = (:periodic, :periodic),
-        ),
-        e = (;
-            x = (:dirichlet, :dirichlet),
-            y = (:dirichlet, :dirichlet),
-            z = (:periodic, :periodic),
-        ),
-        ν = (;
-            x = (:dirichlet, :dirichlet),
-            y = (:dirichlet, :dirichlet),
-            z = (:dirichlet, :dirichlet),
-        ),
     ),
+    T,
 )
 
 

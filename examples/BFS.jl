@@ -32,19 +32,10 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
 ## Grid
-Nx = 100                             # Number of x-volumes
-Ny = 16                              # Number of y-volumes
-Nz = 8                               # Number of z-volumes
-grid = create_grid(
-    T,
-    Nx,
-    Ny,
-    Nz;
-    xlims = (0, 10),                 # Horizontal limits (left, right)
-    ylims = (-0.5, 0.5),             # Vertical limits (bottom, top)
-    zlims = (-0.25, 0.25),           # Depth limits (back, front)
-    stretch = (1, 1, 1),             # Stretch factor (sx, sy[, sz])
-)
+x = nonuniform_grid(0, 10, 100)
+y = nonuniform_grid(-0.5, 0.5, 16)
+z = nonuniform_grid(-0.25, 0.25, 8)
+grid = create_grid(x, y, z; T);
 
 ## Solver settings
 solver_settings = SolverSettings{T}(;
@@ -66,7 +57,6 @@ u_bc(x, y, z, t, setup) = x ≈ setup.grid.xlims[1] && y ≥ 0 ? 24y * (1 // 2 -
 v_bc(x, y, z, t, setup) = zero(x)
 w_bc(x, y, z, t, setup) = zero(x)
 bc = create_boundary_conditions(
-    T,
     u_bc,
     v_bc,
     w_bc;
@@ -87,22 +77,8 @@ bc = create_boundary_conditions(
             y = (:dirichlet, :dirichlet),
             z = (:periodic, :periodic),
         ),
-        k = (;
-            x = (:dirichlet, :dirichlet),
-            y = (:dirichlet, :dirichlet),
-            z = (:periodic, :periodic),
-        ),
-        e = (;
-            x = (:dirichlet, :dirichlet),
-            y = (:dirichlet, :dirichlet),
-            z = (:periodic, :periodic),
-        ),
-        ν = (;
-            x = (:symmetric, :symmetric),
-            y = (:symmetric, :symmetric),
-            z = (:symmetric, :symmetric),
-        ),
     ),
+    T,
 )
 
 ## Forcing parameters
@@ -116,7 +92,7 @@ setup = Setup{T,3}(; viscosity_model, convection_model, grid, force, solver_sett
 build_operators!(setup);
 
 ## Time interval
-t_start, t_end = tlims = (0.0, 20.0)
+t_start, t_end = tlims = (0.0, 25.0)
 
 ## Initial conditions (extend inflow)
 initial_velocity_u(x, y, z) = y ≥ 0 ? 24y * (1 // 2 - y) : zero(y)
@@ -140,7 +116,7 @@ V, p = @time solve(problem);
 
 ## Iteration processors
 logger = Logger(; nupdate = 10)
-real_time_plotter = RealTimePlotter(; nupdate = 10, fieldname = :velocity)
+real_time_plotter = RealTimePlotter(; nupdate = 20, fieldname = :velocity)
 vtk_writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
 processors = [logger, real_time_plotter, vtk_writer, tracer]

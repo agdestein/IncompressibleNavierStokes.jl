@@ -4,16 +4,9 @@
     T = Float64
 
     ## Grid parameters
-    Nx = 25                           # Number of x-volumes
-    Ny = 25                           # Number of y-volumes
-    grid = create_grid(
-        T,
-        Nx,
-        Ny;
-        xlims = (0, 1),               # Horizontal limits (left, right)
-        ylims = (0, 1),               # Vertical limits (bottom, top)
-        stretch = (1, 1),             # Stretch factor (sx, sy[, sz])
-    )
+    x = nonuniform_grid(0, 1, 25)
+    y = nonuniform_grid(0, 1, 25)
+    grid = create_grid(x, y; T)
 
     ## Solver settings
     solver_settings = SolverSettings{T}(;
@@ -35,17 +28,14 @@
     u_bc(x, y, t, setup) = y ≈ setup.grid.ylims[2] ? lid_vel : 0.0
     v_bc(x, y, t, setup) = zero(x)
     bc = create_boundary_conditions(
-        T,
         u_bc,
         v_bc;
         bc_unsteady = false,
         bc_type = (;
             u = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
             v = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-            k = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-            e = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-            ν = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
         ),
+        T,
     )
 
     ## Forcing parameters

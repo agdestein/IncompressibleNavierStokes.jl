@@ -9,7 +9,7 @@ i.e. the corners of pressure volumes, so they cover the entire domain, including
 function create_boundary_conditions end
 
 # 2D version
-function create_boundary_conditions(T, u_bc, v_bc; bc_unsteady, bc_type, kwargs...)
+function create_boundary_conditions(u_bc, v_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
     bc_type.u.x[1] ∈ [:dirichlet, :periodic, :pressure] || error("Wrong BC for u-left")
     bc_type.u.x[2] ∈ [:dirichlet, :periodic, :pressure] || error("Wrong BC for u-right")
     bc_type.u.y[1] ∈ [:dirichlet, :periodic, :symmetric] || error("Wrong BC for u-low")
@@ -32,7 +32,7 @@ function create_boundary_conditions(T, u_bc, v_bc; bc_unsteady, bc_type, kwargs.
 end
 
 # 3D version
-function create_boundary_conditions(T, u_bc, v_bc, w_bc; bc_unsteady, bc_type, kwargs...)
+function create_boundary_conditions(u_bc, v_bc, w_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
     bc_type.u.x[1] ∈ [:dirichlet, :periodic, :pressure] || error("Wrong BC for u-left")
     bc_type.u.x[2] ∈ [:dirichlet, :periodic, :pressure] || error("Wrong BC for u-right")
     bc_type.u.y[1] ∈ [:dirichlet, :periodic, :symmetric] || error("Wrong BC for u-low")
