@@ -17,9 +17,9 @@
     # convection_model = LerayConvectionModel{T}()
 
     ## Grid parameters
-    x = nonuniform_grid(0, 1, 25)
-    y = nonuniform_grid(0, 1, 25)
-    z = nonuniform_grid(-0.2, 0.2, 10)
+    x = stretched_grid(0, 1, 25)
+    y = stretched_grid(0, 1, 25)
+    z = stretched_grid(-0.2, 0.2, 10)
     grid = create_grid(x, y, z; T);
 
     ## Solver settings

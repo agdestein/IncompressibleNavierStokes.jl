@@ -30,9 +30,9 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
 ## Grid
-x = nonuniform_grid(0, 2π, 20)
-y = nonuniform_grid(0, 2π, 20)
-z = nonuniform_grid(0, 2π, 20)
+x = stretched_grid(0, 2π, 20)
+y = stretched_grid(0, 2π, 20)
+z = stretched_grid(0, 2π, 20)
 grid = create_grid(x, y, z; T);
 
 ## Solver settings

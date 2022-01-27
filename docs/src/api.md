@@ -47,7 +47,7 @@ Setup
 ## Spatial
 
 ```@docs
-nonuniform_grid
+stretched_grid
 ```
 
 ## Pressure solvers

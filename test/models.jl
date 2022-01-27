@@ -4,8 +4,8 @@
     T = Float64
 
     ## Grid parameters
-    x = nonuniform_grid(0, 1, 25)
-    y = nonuniform_grid(0, 1, 25)
+    x = stretched_grid(0, 1, 25)
+    y = stretched_grid(0, 1, 25)
     grid = create_grid(x, y; T)
 
     ## Solver settings

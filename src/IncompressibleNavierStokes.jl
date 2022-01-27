@@ -21,7 +21,8 @@ const ⊗ = kron
 # Grid
 include("grid/grid.jl")
 include("grid/get_dimension.jl")
-include("grid/nonuniform_grid.jl")
+include("grid/stretched_grid.jl")
+include("grid/cosine_grid.jl")
 include("grid/create_grid.jl")
 include("grid/max_size.jl")
 
@@ -129,6 +130,7 @@ include("utils/filter_convection.jl")
 include("postprocess/get_velocity.jl")
 include("postprocess/get_vorticity.jl")
 include("postprocess/get_streamfunction.jl")
+include("postprocess/plot_grid.jl")
 include("postprocess/plot_pressure.jl")
 include("postprocess/plot_velocity.jl")
 include("postprocess/plot_vorticity.jl")
@@ -156,25 +158,22 @@ export Logger, RealTimePlotter, VTKWriter, QuantityTracer
 export SteadyStateProblem, UnsteadyProblem, is_steady
 
 # Setup
-export Case, Grid, Operators, Time, SolverSettings, BC, Setup
+export Grid, Operators, SolverSettings, BC, Setup
 
-# Spatial
-export nonuniform_grid
+# 1D grids
+export stretched_grid, cosine_grid
 
 # Pressure solvers
 export DirectPressureSolver, CGPressureSolver, FourierPressureSolver
 
 # Main driver
 export create_boundary_conditions,
-    build_operators!,
-    create_initial_conditions,
-    set_bc_vectors!,
-    solve,
-    get_velocity
+    build_operators!, create_initial_conditions, set_bc_vectors!, solve, get_velocity
 
 export momentum!
 
-export plot_pressure, plot_streamfunction, plot_velocity, plot_vorticity, plot_tracers
+export plot_grid,
+    plot_pressure, plot_streamfunction, plot_velocity, plot_vorticity, plot_tracers
 
 # ODE methods
 

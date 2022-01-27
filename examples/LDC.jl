@@ -33,11 +33,13 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = C4ConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
-## Grid
-x = nonuniform_grid(0, 1, 25)
-y = nonuniform_grid(0, 1, 25)
-z = nonuniform_grid(-0.2, 0.2, 10)
+## Nonuniform grid -- refine near walls
+x = cosine_grid(0.0, 1.0, 25)
+y = stretched_grid(0.0, 1.0, 25, 0.95)
+z = stretched_grid(-0.2, 0.2, 10)
 grid = create_grid(x, y, z; T);
+
+plot_grid(grid)
 
 ## Solver settings
 solver_settings = SolverSettings{T}(;

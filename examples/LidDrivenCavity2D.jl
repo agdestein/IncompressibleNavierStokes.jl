@@ -54,10 +54,16 @@ viscosity_model = LaminarModel{T}(; Re = 1000)
 
 convection_model = NoRegConvectionModel{T}()
 
-# We create a two-dimensional domain with a box of size `[1, 1]`.
-x = nonuniform_grid(0, 1, 100)
-y = nonuniform_grid(0, 1, 100)
+# We create a two-dimensional domain with a box of size `[1, 1]`. We add a slight scaling
+# factor of 95% to increase the precision near the moving lid.
+
+x = cosine_grid(0, 1, 50)
+y = stretched_grid(0, 1, 50, 0.95)
 grid = create_grid(x, y; T);
+
+# The grid may be visualized using the `plot_grid` function.
+
+plot_grid(grid)
 
 # Solver settings are used by certain implicit solvers.
 
@@ -131,21 +137,22 @@ V, p = @time solve(problem);
 
 # For this test case, the same steady state may be obtained by solving an
 # [`UnsteadyProblem`](@ref) for a sufficiently long time.
+
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 
 # We may also define a list of iteration processors. They are processed after every
 # `nupdate` iteration.
 
-logger = Logger(; nupdate = 10)
-plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
-writer = VTKWriter(; nupdate = 10, dir = "output/LidDrivenCavity2D")
-tracer = QuantityTracer(; nupdate = 1)
+logger = Logger(; nupdate = 20)
+plotter = RealTimePlotter(; nupdate = 20, fieldname = :vorticity)
+writer = VTKWriter(; nupdate = 20, dir = "output/LidDrivenCavity2D")
+tracer = QuantityTracer(; nupdate = 10)
 processors = [logger, plotter, writer, tracer]
 
 #  A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
 #  with a fixed time step.
 
-V, p = @time solve(problem, RK44(); Δt = 0.01, processors);
+V, p = @time solve(problem, RK44(); Δt = 0.001, processors);
 
 
 # ## Postprocess
