@@ -35,6 +35,8 @@ y = stretched_grid(0, 2π, 20)
 z = stretched_grid(0, 2π, 20)
 grid = create_grid(x, y, z; T);
 
+plot_grid(grid)
+
 ## Solver settings
 solver_settings = SolverSettings{T}(;
     # pressure_solver = DirectPressureSolver{T}(), # Pressure solver
@@ -120,11 +122,10 @@ V, p = @time solve(problem; npicard = 6)
 
 ## Iteration processors
 logger = Logger()
-real_time_plotter = RealTimePlotter(; nupdate = 10, fieldname = :vorticity)
-vtk_writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
+plotter = RealTimePlotter(; nupdate = 10, fieldname = :vorticity)
+writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, real_time_plotter, vtk_writer, tracer]
-# processors = [logger, real_time_plotter, tracer]
+processors = [logger, plotter, writer, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);

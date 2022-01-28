@@ -13,7 +13,7 @@ using IncompressibleNavierStokes
 using GLMakie
 
 # Case name for saving results
-name = "BFS"
+name = "BackwardFacingStep3D"
 
 # Floating point type for simulations
 T = Float64
@@ -33,9 +33,11 @@ convection_model = NoRegConvectionModel{T}()
 
 ## Grid
 x = stretched_grid(0, 10, 100)
-y = stretched_grid(-0.5, 0.5, 16)
+y = cosine_grid(-0.5, 0.5, 16)
 z = stretched_grid(-0.25, 0.25, 8)
 grid = create_grid(x, y, z; T);
+
+plot_grid(grid)
 
 ## Solver settings
 solver_settings = SolverSettings{T}(;
@@ -116,10 +118,10 @@ V, p = @time solve(problem);
 
 ## Iteration processors
 logger = Logger(; nupdate = 10)
-real_time_plotter = RealTimePlotter(; nupdate = 20, fieldname = :velocity)
-vtk_writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
+plotter = RealTimePlotter(; nupdate = 20, fieldname = :velocity)
+writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, real_time_plotter, vtk_writer, tracer]
+processors = [logger, plotter, writer, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);

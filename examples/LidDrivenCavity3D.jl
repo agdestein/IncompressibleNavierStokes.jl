@@ -121,10 +121,10 @@ V, p = @time solve(problem; npicard = 5, maxiter = 15);
 
 ## Iteration processors
 logger = Logger()
-real_time_plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
-vtk_writer = VTKWriter(; nupdate = 5, dir = "output/$name", filename = "solution")
+plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
+writer = VTKWriter(; nupdate = 5, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, real_time_plotter, vtk_writer, tracer]
+processors = [logger, plotter, writer, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);

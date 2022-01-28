@@ -1,3 +1,10 @@
+# LSP indexing solution
+# https://github.com/julia-vscode/julia-vscode/issues/800#issuecomment-650085983
+if isdefined(@__MODULE__, :LanguageServer)
+    include("../src/IncompressibleNavierStokes.jl")
+    using .IncompressibleNavierStokes
+end
+
 using IncompressibleNavierStokes
 using Literate
 using Documenter
@@ -11,10 +18,12 @@ DocMeta.setdocmeta!(
 
 # Generate examples
 examples = [
-    # "Lid-Driven Cavity" => "LDC",
-    "Lid-Driven Cavity" => "LidDrivenCavity2D",
-    # "Backward Facing Step" => "BFS",
-    # "Taylor-Green Vortex" => "TGV",
+    "Lid-Driven Cavity (2D)" => "LidDrivenCavity2D",
+    # "Lid-Driven Cavity (3D)" => "LidDrivenCavity3D",
+    # "Backward Facing Step (2D)" => "BackwardFacingStep2D",
+    # "Backward Facing Step (3D)" => "BackwardFacingStep3D",
+    # "Taylor-Green Vortex (2D)" => "TaylorGreenVortex2D",
+    # "Taylor-Green Vortex (3D)" => "TaylorGreenVortex3D",
 ]
 output = "generated"
 for e ∈ examples
