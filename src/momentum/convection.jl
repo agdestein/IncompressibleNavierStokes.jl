@@ -1,20 +1,20 @@
 """
-    convection(model, V, ϕ, t, setup; getJacobian = false)
+    convection(model, V, ϕ, setup; getJacobian = false)
 
 Convenience function for initializing arrays `c` and `∇c` before filling in convection terms.
 """
-function convection(model, V, ϕ, t, setup; getJacobian = false)
+function convection(model, V, ϕ, setup; getJacobian = false)
     (; NV) = setup.grid
 
     cache = MomentumCache(setup)
     c = zeros(NV)
     ∇c = spzeros(NV, NV)
 
-    convection!(model, c, ∇c, V, ϕ, t, setup, cache; getJacobian)
+    convection!(model, c, ∇c, V, ϕ, setup, cache; getJacobian)
 end
 
 """
-    convection!(model, c, ∇c, V, ϕ, t, setup, cache; getJacobian = false)
+    convection!(model, c, ∇c, V, ϕ, setup, cache; getJacobian = false)
 
 Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`, using the convection
 model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
@@ -27,7 +27,6 @@ function convection!(
     ∇c,
     V,
     ϕ,
-    t,
     setup,
     cache;
     getJacobian = false,
@@ -54,7 +53,6 @@ function convection!(
     ∇c,
     V,
     ϕ,
-    t,
     setup::Setup{T,2},
     cache;
     getJacobian = false,
@@ -99,7 +97,6 @@ function convection!(
     ∇c,
     V,
     ϕ,
-    t,
     setup::Setup{T,3},
     cache;
     getJacobian = false,
@@ -150,7 +147,6 @@ function convection!(
     ∇c,
     V,
     ϕ,
-    t,
     setup::Setup{T,2},
     cache;
     getJacobian = false,
@@ -202,6 +198,7 @@ function convection!(
     # @sync begin
     #     @spawn convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian)
     #     @spawn convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache, getJacobian)
+    #     @spawn convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian)
     # end
 
     cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
@@ -217,7 +214,6 @@ function convection!(
     ∇c,
     V,
     ϕ,
-    t,
     setup::Setup{T,3},
     cache;
     getJacobian = false,
@@ -295,7 +291,6 @@ function convection!(
     ∇c,
     V,
     ϕ,
-    t,
     setup::Setup{T,2},
     cache;
     getJacobian = false,
@@ -331,7 +326,6 @@ function convection!(
     ∇c,
     V,
     ϕ,
-    t,
     setup::Setup{T,3},
     cache;
     getJacobian = false,

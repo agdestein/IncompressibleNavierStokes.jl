@@ -31,7 +31,8 @@ end
 """
     bodyforce(V, t, setup; getJacobian = false)
 
-Body force in momentum equations in Finite Volume setting, so integrated `dFx`, `dFy` are the Jacobians `∂Fx/∂V` and `∂Fy/∂V`.
+Body force in momentum equations in Finite Volume setting, so integrated `dFx`, `dFy` are
+the Jacobians `∂Fx/∂V` and `∂Fy/∂V`.
 """
 function bodyforce(V, t, setup; getJacobian = false)
     # Fx, dFx = setup.force.bodyforce_x.(xu, yu, t, [setup], getJacobian)

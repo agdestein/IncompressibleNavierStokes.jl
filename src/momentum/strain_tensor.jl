@@ -1,9 +1,9 @@
 """
-    strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
+    strain_tensor(V, setup; getJacobian = false, get_S_abs = false)
 
 Evaluate rate of strain tensor `S(V)` and its magnitude.
 """
-function strain_tensor(V, t, setup; getJacobian = false, get_S_abs = false)
+function strain_tensor(V, setup; getJacobian = false, get_S_abs = false)
     (; Nx, Ny, Nu, Nv, Np, indu, indv) = setup.grid
     (; Nux_in, Nuy_in, Nvx_in, Nvy_in,) = setup.grid
     (; x, y, xp, yp) = setup.grid

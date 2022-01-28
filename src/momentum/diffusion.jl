@@ -1,11 +1,11 @@
 """
-    diffusion!(model, d, ∇d, V, t, setup; getJacobian = false)
+    diffusion!(model, d, ∇d, V, setup; getJacobian = false)
 
 Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V` using viscosity model `model`.
 """
 function diffusion! end
 
-function diffusion!(::LaminarModel, d, ∇d, V, t, setup; getJacobian = false)
+function diffusion!(::LaminarModel, d, ∇d, V, setup; getJacobian = false)
     (; Diff, yDiff) = setup.operators
 
     # d = Diff * V + yDiff
@@ -17,8 +17,14 @@ function diffusion!(::LaminarModel, d, ∇d, V, t, setup; getJacobian = false)
     d, ∇d
 end
 
-function diffusion!(model::Union{QRModel,SmagorinskyModel,MixingLengthModel}, d, ∇d, V, t,
-    setup; getJacobian = false)
+function diffusion!(
+    model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
+    d,
+    ∇d,
+    V,
+    setup;
+    getJacobian = false,
+)
     (; indu, indv, indw) = setup.grid
     (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
     (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
@@ -30,8 +36,7 @@ function diffusion!(model::Union{QRModel,SmagorinskyModel,MixingLengthModel}, d,
 
     # Get components of strain tensor and its magnitude;
     # The magnitude S_abs is evaluated at pressure points
-    S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v =
-        strain_tensor(V, t, setup; getJacobian)
+    S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v = strain_tensor(V, setup; getJacobian)
 
     # Turbulent viscosity at all pressure points
     ν_t = turbulent_viscosity(model, setup, S_abs)
@@ -82,6 +87,6 @@ function diffusion!(model::Union{QRModel,SmagorinskyModel,MixingLengthModel}, d,
     d, ∇d
 end
 
-function diffusion!(model::KEpsilonModel, d, ∇d, V, t, setup; getJacobian = false)
+function diffusion!(model::KEpsilonModel, d, ∇d, V, setup; getJacobian = false)
     error("k-e implementation in diffusion.jl not finished")
 end

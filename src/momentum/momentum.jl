@@ -31,19 +31,20 @@ function momentum!(
     nopressure = false,
 )
     (; viscosity_model, convection_model) = setup
+
+    # Unsteady BC (y_p must be loaded after set_bc_vectors!)
+    # TODO: preallocate y_p, and only update in set_bc
+    setup.bc.bc_unsteady && set_bc_vectors!(setup, t)
     (; G, y_p) = setup.operators
 
     # Store intermediate results in temporary variables
     (; c, ∇c, d, ∇d, b, ∇b, Gp) = cache
 
-    # Unsteady BC
-    setup.bc.bc_unsteady && set_bc_vectors!(setup, t)
-
     # Convection
-    convection!(convection_model, c, ∇c, V, ϕ, t, setup, cache; getJacobian)
+    convection!(convection_model, c, ∇c, V, ϕ, setup, cache; getJacobian)
 
     # Diffusion
-    diffusion!(viscosity_model, d, ∇d, V, t, setup; getJacobian)
+    diffusion!(viscosity_model, d, ∇d, V, setup; getJacobian)
 
     # Body force
     bodyforce!(b, ∇b, V, t, setup; getJacobian)
