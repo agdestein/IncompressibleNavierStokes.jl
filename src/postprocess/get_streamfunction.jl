@@ -21,7 +21,7 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
     # U = d ψ / dy; integrate low->up
     if setup.bc.u.x[1] == :dirichlet
         # u1 = interp1(y, uLe, yp);
-        u1 = u_bc.(x[1], yp, t, [setup])
+        u1 = u_bc.(x[1], yp, t)
     elseif setup.bc.u.x[1] ∈ [:pressure, :periodic]
         u1 = uₕ[1:Nux_in:end]
     end
@@ -31,7 +31,7 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
 
     # V = -d ψ / dx; integrate left->right
     if setup.bc.v.y[2] == :dirichlet
-        v1 = v_bc.(xp, y[end], t, [setup])
+        v1 = v_bc.(xp, y[end], t)
     elseif setup.bc.v.y[2] == :pressure
         v1 = vₕ[(end - Nvx_in + 1):end]
     elseif setup.bc.v.y[2] == :periodic
@@ -43,7 +43,7 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
 
     # U = d ψ / dy; integrate up->lo
     if setup.bc.u.x[2] == :dirichlet
-        u2 = u_bc.(x[end], yp, t, [setup])
+        u2 = u_bc.(x[end], yp, t)
     elseif setup.bc.u.x[2] == :pressure
         u2 = uₕ[Nux_in:Nux_in:end]
     elseif setup.bc.u.x[2] == :periodic
@@ -55,7 +55,7 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
 
     # V = -d ψ / dx; integrate right->left
     if setup.bc.v.y[1] == :dirichlet
-        v2 = v_bc.(xp, y[1], t, [setup])
+        v2 = v_bc.(xp, y[1], t)
     elseif setup.bc.v.y[1] ∈ [:pressure, :periodic]
         v2 = vₕ[1:Nvx_in]
     end

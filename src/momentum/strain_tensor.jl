@@ -3,9 +3,12 @@
 
 Evaluate rate of strain tensor `S(V)` and its magnitude.
 """
-function strain_tensor(V, setup; getJacobian = false, get_S_abs = false)
+function strain_tensor end
+
+# 2D version
+function strain_tensor(V, setup::Setup{T,2}; getJacobian = false, get_S_abs = false) where {T}
     (; Nx, Ny, Nu, Nv, Np, indu, indv) = setup.grid
-    (; Nux_in, Nuy_in, Nvx_in, Nvy_in,) = setup.grid
+    (; Nux_in, Nuy_in, Nvx_in, Nvy_in) = setup.grid
     (; x, y, xp, yp) = setup.grid
     (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
     (; ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy) = setup.operators
@@ -47,13 +50,13 @@ function strain_tensor(V, setup; getJacobian = false, get_S_abs = false)
             # So S11 has size (Npx+1)*Npy; the last row are "ghost" points equal to the
             # First points. we have S11 at positions ([xp[1] - 1/2*(hx[1]+hx[end]); xp], yp)
             S11_p = reshape(S11, Nux_in + 1, Nuy_in)
-            S11_p = S11_p(2:Nux_in+1, :) # B
+            S11_p = S11_p(2:(Nux_in + 1), :) # B
 
             # S12 is defined on the corners: size Nux_in*(Nuy_in+1), positions (xin, y)
             # Get S12 and S21 at all corner points
             S12_temp = zeros(Nx + 1, Ny + 1)
             S12_temp[1:Nx, :] = reshape(S12, Nx, Ny + 1)
-            S12_temp[Nx+1, :] = S12_temp[1, :]
+            S12_temp[Nx + 1, :] = S12_temp[1, :]
         elseif bc.u.x[1] == :dirichlet && bc.u.x[2] == :pressure
             S11_p = reshape(S11, Nux_in + 1, Nuy_in)
             S11_p = S11_p[1:Nux_in, :] # Cut off last point
@@ -61,7 +64,7 @@ function strain_tensor(V, setup; getJacobian = false, get_S_abs = false)
             # S12 is defined on the corners: size Nux_in*(Nuy_in+1), positions (xin, y)
             # Get S12 and S21 at all corner points
             S12_temp = zeros(Nx + 1, Ny + 1)
-            S12_temp[2:Nx+1, :] = reshape(S12, Nx, Ny + 1)
+            S12_temp[2:(Nx + 1), :] = reshape(S12, Nx, Ny + 1)
             S12_temp[1, :] = S12_temp[2, :] # Copy from x[2] to x[1]; one could do this more accurately in principle by using the BC
         else
             error("BC not implemented in strain_tensor.jl")
@@ -70,12 +73,12 @@ function strain_tensor(V, setup; getJacobian = false, get_S_abs = false)
         if bc.v.y[1] == :periodic && bc.v.y[2] == :periodic
             # Similarly, S22(:, Npy+1) = S22(:, 1). positions (xp, [yp;yp[1]])
             S22_p = reshape(S22, Nvx_in, Nvy_in + 1)
-            S22_p = S22_p(:, 2:Nvy_in+1) # Why not 1:Nvy_in?
+            S22_p = S22_p(:, 2:(Nvy_in + 1)) # Why not 1:Nvy_in?
 
             # Similarly S21 is size (Nux_in+1)*Nuy_in, positions (x, yin)
             S21_temp = zeros(Nx + 1, Ny + 1)
             S21_temp[:, 1:Ny] = reshape(S21, Nx + 1, Ny)
-            S21_temp[:, Ny+1] = S21_temp[:, 1]
+            S21_temp[:, Ny + 1] = S21_temp[:, 1]
         elseif bc.v.y[1] == :pressure && bc.v.y[2] == :pressure
             S22_p = reshape(S22, Nvx_in, Nvy_in + 1)
             S22_p = S22_p(:, 2:Nvy_in)
@@ -94,7 +97,7 @@ function strain_tensor(V, setup; getJacobian = false, get_S_abs = false)
         S21_p = interp2(y', x, S21_temp, yp', xp)
 
         ## Invariants
-        q = @. 1 / 2 * (S11_p[:] ^ 2 + S12_p[:] ^ 2 + S21_p[:] ^ 2 + S22_p[:] ^ 2)
+        q = @. 1 / 2 * (S11_p[:]^2 + S12_p[:]^2 + S21_p[:]^2 + S22_p[:]^2)
 
         # Absolute value of strain tensor
         # With S as defined above, i.e. 1/2*(grad u + grad u^T)
@@ -113,7 +116,7 @@ function strain_tensor(V, setup; getJacobian = false, get_S_abs = false)
         S21_p = S12_p
         S22_p = Cvy_k * vₕ + yCvy_k
 
-        S_abs = @. sqrt(2 * S11_p ^ 2 + 2 * S22_p ^ 2 + 2 * S12_p ^ 2 + 2 * S21_p ^ 2)
+        S_abs = @. sqrt(2 * S11_p^2 + 2 * S22_p^2 + 2 * S12_p^2 + 2 * S21_p^2)
 
         # Jacobian of S_abs wrt u and v
         if getJacobian
@@ -130,4 +133,9 @@ function strain_tensor(V, setup; getJacobian = false, get_S_abs = false)
     end
 
     S11, S12, S21, S22, S_abs, Jacu, Jacv
+end
+
+# 3D version
+function strain_tensor(V, setup::Setup{T,3}; getJacobian = false, get_S_abs = false) where {T}
+    error("Not implemented (3D)")
 end

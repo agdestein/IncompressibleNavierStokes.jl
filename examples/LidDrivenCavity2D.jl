@@ -53,8 +53,8 @@ convection_model = NoRegConvectionModel{T}()
 # We create a two-dimensional domain with a box of size `[1, 1]`. We add a slight scaling
 # factor of 95% to increase the precision near the moving lid.
 
-x = cosine_grid(0, 1, 50)
-y = stretched_grid(0, 1, 50, 0.95)
+x = cosine_grid(0.0, 1.0, 50)
+y = stretched_grid(0.0, 1.0, 50, 0.95)
 grid = create_grid(x, y; T)
 
 # The grid may be visualized using the `plot_grid` function.
@@ -75,8 +75,8 @@ solver_settings = SolverSettings{T}(;
 # Dirichlet boundary conditions are specified as plain Julia functions. They are marked by
 # the `:dirichlet` symbol. Other possible BC types are `:periodic`, `:symmetric`, and `:pressure`.
 
-u_bc(x, y, t, setup) = y ≈ setup.grid.ylims[2] ? 1.0 : 0.0
-v_bc(x, y, t, setup) = zero(x)
+u_bc(x, y, t) = y ≈ grid.ylims[2] ? 1.0 : 0.0
+v_bc(x, y, t) = zero(x)
 bc = create_boundary_conditions(
     u_bc,
     v_bc;

@@ -18,10 +18,10 @@ function compute_conservation(V, t, setup::Setup{T,2}) where {T}
     Ωv = @view Ω[indv]
 
     setup.bc.bc_unsteady && set_bc_vectors!(setup, t)
-    uLe_i = reshape(u_bc.(x[1], yp, t, [setup])   , :)
-    uRi_i = reshape(u_bc.(x[end], yp, t, [setup]) , :)
-    vLo_i = reshape(v_bc.(xp, y[1], t, [setup])   , :)
-    vUp_i = reshape(v_bc.(xp, y[end], t, [setup]) , :)
+    uLe_i = reshape(u_bc.(x[1], yp, t), :)
+    uRi_i = reshape(u_bc.(x[end], yp, t), :)
+    vLo_i = reshape(v_bc.(xp, y[1], t), :)
+    vUp_i = reshape(v_bc.(xp, y[end], t), :)
 
     # Check if new velocity field is divergence free (mass conservation)
     maxdiv = maximum(abs.(M * V + yM))
@@ -63,12 +63,12 @@ function compute_conservation(V, t, setup::Setup{T,3}) where {T}
     Ωw = @view Ω[indw]
 
     setup.bc.bc_unsteady && set_bc_vectors!(setup, t)
-    uLe_i = reshape(u_bc.(x[1], yp, zp', t, [setup])   , :)
-    uRi_i = reshape(u_bc.(x[end], yp, zp', t, [setup]) , :)
-    vLo_i = reshape(v_bc.(xp, y[1], zp', t, [setup])   , :)
-    vUp_i = reshape(v_bc.(xp, y[end], zp', t, [setup]) , :)
-    wBa_i = reshape(w_bc.(xp, yp', z[1], t, [setup])   , :)
-    wFr_i = reshape(w_bc.(xp, yp', z[end], t, [setup]) , :)
+    uLe_i = reshape(u_bc.(x[1], yp, zp', t), :)
+    uRi_i = reshape(u_bc.(x[end], yp, zp', t), :)
+    vLo_i = reshape(v_bc.(xp, y[1], zp', t), :)
+    vUp_i = reshape(v_bc.(xp, y[end], zp', t), :)
+    wBa_i = reshape(w_bc.(xp, yp', z[1], t), :)
+    wFr_i = reshape(w_bc.(xp, yp', z[end], t), :)
 
     # Check if new velocity field is divergence free (mass conservation)
     maxdiv = maximum(abs.(M * V + yM))

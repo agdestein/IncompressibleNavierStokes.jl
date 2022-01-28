@@ -37,27 +37,27 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     # TODO: Split up function into allocating part (constructor?) and mutating `update!`
 
     ## Get BC values
-    uLo = u_bc.(x, y[1], t, [setup])
-    uUp = u_bc.(x, y[end], t, [setup])
+    uLo = u_bc.(x, y[1], t)
+    uUp = u_bc.(x, y[end], t)
 
-    uLo_i = u_bc.(xin, y[1], t, [setup])
-    uUp_i = u_bc.(xin, y[end], t, [setup])
-    uLe_i = u_bc.(x[1], yp, t, [setup])
-    uRi_i = u_bc.(x[end], yp, t, [setup])
+    uLo_i = u_bc.(xin, y[1], t)
+    uUp_i = u_bc.(xin, y[end], t)
+    uLe_i = u_bc.(x[1], yp, t)
+    uRi_i = u_bc.(x[end], yp, t)
 
-    vLe = v_bc.(x[1], y, t, [setup])
-    vRi = v_bc.(x[end], y, t, [setup])
+    vLe = v_bc.(x[1], y, t)
+    vRi = v_bc.(x[end], y, t)
 
-    vLo_i = v_bc.(xp, y[1], t, [setup])
-    vUp_i = v_bc.(xp, y[end], t, [setup])
-    vLe_i = v_bc.(x[1], yin, t, [setup])
-    vRi_i = v_bc.(x[end], yin, t, [setup])
+    vLo_i = v_bc.(xp, y[1], t)
+    vUp_i = v_bc.(xp, y[end], t)
+    vLe_i = v_bc.(x[1], yin, t)
+    vRi_i = v_bc.(x[end], yin, t)
 
     if bc_unsteady
-        dudtLe_i = dudt_bc.(x[1], yp, t, [setup])
-        dudtRi_i = dudt_bc.(x[end], yp, t, [setup])
-        dvdtLo_i = dvdt_bc.(xp, y[1], t, [setup])
-        dvdtUp_i = dvdt_bc.(xp, y[end], t, [setup])
+        dudtLe_i = dudt_bc.(x[1], yp, t)
+        dudtRi_i = dudt_bc.(x[end], yp, t)
+        dvdtLo_i = dvdt_bc.(xp, y[1], t)
+        dvdtUp_i = dvdt_bc.(xp, y[end], t)
     end
 
     ## Boundary conditions for divergence
@@ -113,23 +113,15 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     # Left and right side
     y1D_le = zeros(Nux_in)
     y1D_ri = zeros(Nux_in)
-    if bc.u.x[1] == :pressure
-        y1D_le[1] = -1
-    end
-    if bc.u.x[2] == :pressure
-        y1D_ri[end] = 1
-    end
+    bc.u.x[1] == :pressure && (y1D_le[1] = -1)
+    bc.u.x[2] == :pressure && (y1D_ri[end] = 1)
     y_px = (hy .* p_bc.x[1]) ⊗ y1D_le + (hy .* p_bc.x[2]) ⊗ y1D_ri
 
     # Lower and upper side
     y1D_lo = zeros(Nvy_in)
     y1D_up = zeros(Nvy_in)
-    if bc.v.y[1] == :pressure
-        y1D_lo[1] = -1
-    end
-    if bc.v.y[2] == :pressure
-        y1D_up[end] = 1
-    end
+    bc.v.y[1] == :pressure && ( y1D_lo[1] = -1)
+    bc.v.y[2] == :pressure && ( y1D_up[end] = 1)
     y_py = y1D_lo ⊗ (hx .* p_bc.y[1]) + y1D_up ⊗ (hx .* p_bc.y[2])
 
     y_p = [y_px; y_py]
@@ -407,11 +399,11 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
 
         # Set BC for getting du/dx, du/dy, dv/dx, dv/dy at cell centers
 
-        uLo_p = u_bc.(xp, y[1], t, [setup])
-        uUp_p = u_bc.(xp, y[end], t, [setup])
+        uLo_p = u_bc.(xp, y[1], t)
+        uUp_p = u_bc.(xp, y[end], t)
 
-        vLe_p = v_bc.(x[1], yp, t, [setup])
-        vRi_p = v_bc.(x[end], yp, t, [setup])
+        vLe_p = v_bc.(x[1], yp, t)
+        vRi_p = v_bc.(x[end], yp, t)
 
         ybc = uLe_i ⊗ Cux_k_bc.ybc1 + uRi_i ⊗ Cux_k_bc.ybc2
         yCux_k = Cux_k_bc.Bbc * ybc
@@ -483,46 +475,46 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     # TODO: Split up function into allocating part (constructor?) and mutating `update!`
 
     ## Get bc values
-    uLe_i = reshape(u_bc.(x[1], yp, zp', t, [setup]), :)
-    uRi_i = reshape(u_bc.(x[end], yp, zp', t, [setup]), :)
-    uLo_i = reshape(u_bc.(xin, y[1], zp', t, [setup]), :)
-    uUp_i = reshape(u_bc.(xin, y[end], zp', t, [setup]), :)
-    uLo_i2 = reshape(u_bc.(x, y[1], zp', t, [setup]), :)
-    uUp_i2 = reshape(u_bc.(x, y[end], zp', t, [setup]), :)
-    uBa_i = reshape(u_bc.(xin, yp', z[1], t, [setup]), :)
-    uFr_i = reshape(u_bc.(xin, yp', z[end], t, [setup]), :)
-    uBa_i2 = reshape(u_bc.(x, yp', z[1], t, [setup]), :)
-    uFr_i2 = reshape(u_bc.(x, yp', z[end], t, [setup]), :)
+    uLe_i = reshape(u_bc.(x[1], yp, zp', t), :)
+    uRi_i = reshape(u_bc.(x[end], yp, zp', t), :)
+    uLo_i = reshape(u_bc.(xin, y[1], zp', t), :)
+    uUp_i = reshape(u_bc.(xin, y[end], zp', t), :)
+    uLo_i2 = reshape(u_bc.(x, y[1], zp', t), :)
+    uUp_i2 = reshape(u_bc.(x, y[end], zp', t), :)
+    uBa_i = reshape(u_bc.(xin, yp', z[1], t), :)
+    uFr_i = reshape(u_bc.(xin, yp', z[end], t), :)
+    uBa_i2 = reshape(u_bc.(x, yp', z[1], t), :)
+    uFr_i2 = reshape(u_bc.(x, yp', z[end], t), :)
 
-    vLe_i = reshape(v_bc.(x[1], yin, zp', t, [setup]), :)
-    vRi_i = reshape(v_bc.(x[end], yin, zp', t, [setup]), :)
-    vLe_i2 = reshape(v_bc.(x[1], y, zp', t, [setup]), :)
-    vRi_i2 = reshape(v_bc.(x[end], y, zp', t, [setup]), :)
-    vLo_i = reshape(v_bc.(xp, y[1], zp', t, [setup]), :)
-    vUp_i = reshape(v_bc.(xp, y[end], zp', t, [setup]), :)
-    vBa_i = reshape(v_bc.(xp, yin', z[1], t, [setup]), :)
-    vFr_i = reshape(v_bc.(xp, yin', z[end], t, [setup]), :)
-    vBa_i2 = reshape(v_bc.(xp, y', z[1], t, [setup]), :)
-    vFr_i2 = reshape(v_bc.(xp, y', z[end], t, [setup]), :)
+    vLe_i = reshape(v_bc.(x[1], yin, zp', t), :)
+    vRi_i = reshape(v_bc.(x[end], yin, zp', t), :)
+    vLe_i2 = reshape(v_bc.(x[1], y, zp', t), :)
+    vRi_i2 = reshape(v_bc.(x[end], y, zp', t), :)
+    vLo_i = reshape(v_bc.(xp, y[1], zp', t), :)
+    vUp_i = reshape(v_bc.(xp, y[end], zp', t), :)
+    vBa_i = reshape(v_bc.(xp, yin', z[1], t), :)
+    vFr_i = reshape(v_bc.(xp, yin', z[end], t), :)
+    vBa_i2 = reshape(v_bc.(xp, y', z[1], t), :)
+    vFr_i2 = reshape(v_bc.(xp, y', z[end], t), :)
 
-    wLe_i = reshape(w_bc.(x[1], yp, zin', t, [setup]), :)
-    wRi_i = reshape(w_bc.(x[end], yp, zin', t, [setup]), :)
-    wLe_i2 = reshape(w_bc.(x[1], yp, z', t, [setup]), :)
-    wRi_i2 = reshape(w_bc.(x[end], yp, z', t, [setup]), :)
-    wLo_i = reshape(w_bc.(xp, y[1], zin', t, [setup]), :)
-    wUp_i = reshape(w_bc.(xp, y[end], zin', t, [setup]), :)
-    wLo_i2 = reshape(w_bc.(xp, y[1], z', t, [setup]), :)
-    wUp_i2 = reshape(w_bc.(xp, y[end], z', t, [setup]), :)
-    wBa_i = reshape(w_bc.(xp, yp', z[1], t, [setup]), :)
-    wFr_i = reshape(w_bc.(xp, yp', z[end], t, [setup]), :)
+    wLe_i = reshape(w_bc.(x[1], yp, zin', t), :)
+    wRi_i = reshape(w_bc.(x[end], yp, zin', t), :)
+    wLe_i2 = reshape(w_bc.(x[1], yp, z', t), :)
+    wRi_i2 = reshape(w_bc.(x[end], yp, z', t), :)
+    wLo_i = reshape(w_bc.(xp, y[1], zin', t), :)
+    wUp_i = reshape(w_bc.(xp, y[end], zin', t), :)
+    wLo_i2 = reshape(w_bc.(xp, y[1], z', t), :)
+    wUp_i2 = reshape(w_bc.(xp, y[end], z', t), :)
+    wBa_i = reshape(w_bc.(xp, yp', z[1], t), :)
+    wFr_i = reshape(w_bc.(xp, yp', z[end], t), :)
 
     if bc_unsteady
-        dudtLe_i = reshape(dudt_bc.(x[1], yp, zp', t, [setup]), :)
-        dudtRi_i = reshape(dudt_bc.(x[end], yp, zp', t, [setup]), :)
-        dvdtLo_i = reshape(dvdt_bc.(xp, y[1], zp', t, [setup]), :)
-        dvdtUp_i = reshape(dvdt_bc.(xp, y[end], zp', t, [setup]), :)
-        dwdtBa_i = reshape(dwdt_bc.(xp, yp', z[1], t, [setup]), :)
-        dwdtFr_i = reshape(dwdt_bc.(xp, yp', z[end], t, [setup]), :)
+        dudtLe_i = reshape(dudt_bc.(x[1], yp, zp', t), :)
+        dudtRi_i = reshape(dudt_bc.(x[end], yp, zp', t), :)
+        dvdtLo_i = reshape(dvdt_bc.(xp, y[1], zp', t), :)
+        dvdtUp_i = reshape(dvdt_bc.(xp, y[end], zp', t), :)
+        dwdtBa_i = reshape(dwdt_bc.(xp, yp', z[1], t), :)
+        dwdtFr_i = reshape(dwdt_bc.(xp, yp', z[end], t), :)
     end
 
     ## Boundary conditions for divergence
@@ -913,11 +905,11 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
 
         # Set bc for getting du/dx, du/dy, dv/dx, dv/dy at cell centers
 
-        uLo_p = u_bc.(xp, y[1], t, [setup])
-        uUp_p = u_bc.(xp, y[end], t, [setup])
+        uLo_p = u_bc.(xp, y[1], t)
+        uUp_p = u_bc.(xp, y[end], t)
 
-        vLe_p = v_bc.(x[1], yp, t, [setup])
-        vRi_p = v_bc.(x[end], yp, t, [setup])
+        vLe_p = v_bc.(x[1], yp, t)
+        vRi_p = v_bc.(x[end], yp, t)
 
         ybc = uLe_i ⊗ Cux_k_bc.ybc1 + uRi_i ⊗ Cux_k_bc.ybc2
         yCux_k = Cux_k_bc.Bbc * ybc

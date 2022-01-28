@@ -57,9 +57,9 @@ solver_settings = SolverSettings{T}(;
 )
 
 ## Boundary conditions
-u_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? 1.0 : 0.0
-v_bc(x, y, z, t, setup) = zero(x)
-w_bc(x, y, z, t, setup) = y ≈ setup.grid.ylims[2] ? 0.2 : 0.0
+u_bc(x, y, z, t) = y ≈ grid.ylims[2] ? 1.0 : 0.0
+v_bc(x, y, z, t) = 0.0
+w_bc(x, y, z, t) = y ≈ grid.ylims[2] ? 0.2 : 0.0
 bc = create_boundary_conditions(
     u_bc,
     v_bc,
@@ -87,9 +87,9 @@ bc = create_boundary_conditions(
 
 
 ## Forcing parameters
-bodyforce_u(x, y, z) = 0
-bodyforce_v(x, y, z) = 0
-bodyforce_w(x, y, z) = 0
+bodyforce_u(x, y, z) = 0.0
+bodyforce_v(x, y, z) = 0.0
+bodyforce_w(x, y, z) = 0.0
 force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v, bodyforce_w)
 
 ## Build setup and assemble operators
@@ -100,10 +100,10 @@ build_operators!(setup);
 t_start, t_end = tlims = (0.0, 10.0)
 
 ## Initial conditions
-initial_velocity_u(x, y, z) = 0
-initial_velocity_v(x, y, z) = 0
-initial_velocity_w(x, y, z) = 0
-initial_pressure(x, y, z) = 0
+initial_velocity_u(x, y, z) = 0.0
+initial_velocity_v(x, y, z) = 0.0
+initial_velocity_w(x, y, z) = 0.0
+initial_pressure(x, y, z) = 0.0
 V₀, p₀ = create_initial_conditions(
     setup,
     t_start;

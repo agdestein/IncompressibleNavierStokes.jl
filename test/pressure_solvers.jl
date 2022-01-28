@@ -23,15 +23,11 @@
     )
 
     ## Boundary conditions
-    u_bc(x, y, t, setup) = zero(x)
-    v_bc(x, y, t, setup) = zero(x)
-    dudt_bc(x, y, t, setup) = zero(x)
-    dvdt_bc(x, y, t, setup) = zero(x)
+    u_bc(x, y, t) = 0.0
+    v_bc(x, y, t) = 0.0
     bc = create_boundary_conditions(
         u_bc,
         v_bc;
-        dudt_bc,
-        dvdt_bc,
         bc_unsteady = false,
         bc_type = (;
             u = (;
@@ -47,8 +43,8 @@
     )
 
     ## Forcing parameters
-    bodyforce_u(x, y) = 0
-    bodyforce_v(x, y) = 0
+    bodyforce_u(x, y) = 0.0
+    bodyforce_v(x, y) = 0.0
     force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
     ## Build setup and assemble operators

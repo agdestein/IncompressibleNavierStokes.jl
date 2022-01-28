@@ -34,11 +34,10 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt)
     # ⋮
     # At i = s we calculate Fₛ, pₙ₊₁, and uₙ₊₁
     for i = 1:nstage
-        # Right-hand side for tᵢ based on current velocity field uₕ, vₕ at, level i
-        # This includes force evaluation at tᵢ and pressure gradient
-        # Boundary conditions will be set through set_bc_vectors! inside momentum
-        # The pressure p is not important here, it will be removed again in the
-        # next step
+        # Right-hand side for tᵢ based on current velocity field uₕ, vₕ at level i. This
+        # includes force evaluation at tᵢ and pressure gradient. Boundary conditions will be
+        # set through set_bc_vectors! inside momentum. The pressure p is not important here,
+        # it will be removed again in the next step
         momentum!(F, ∇F, V, V, p, tᵢ, setup, momentum_cache)
 
         # Store right-hand side of stage i

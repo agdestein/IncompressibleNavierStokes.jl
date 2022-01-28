@@ -32,7 +32,7 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
 ## Grid
-x = stretched_grid(0, 10, 300)
+x = stretched_grid(0.0, 10.0, 300)
 y = cosine_grid(-0.5, 0.5, 50)
 grid = create_grid(x, y; T);
 
@@ -54,11 +54,11 @@ solver_settings = SolverSettings{T}(;
 )
 
 ## Boundary conditions
-u_bc(x, y, t, setup) = x ≈ setup.grid.xlims[1] && y ≥ 0 ? 24y * (1 / 2 - y) : 0.0
-v_bc(x, y, t, setup) = 0.0
+u_bc(x, y, t) = x ≈ grid.xlims[1] && y ≥ 0 ? 24y * (1 / 2 - y) : 0.0
+v_bc(x, y, t) = 0.0
 bc = create_boundary_conditions(
     u_bc,
-    v_bc,
+    v_bc;
     bc_unsteady = false,
     bc_type = (;
         u = (;
@@ -86,7 +86,7 @@ build_operators!(setup);
 t_start, t_end = tlims = (0.0, 30.0)
 
 ## Initial conditions (extend inflow)
-initial_velocity_u(x, y) = y ≥ 0 ? 24y * (1 / 2 - y) : 0.0
+initial_velocity_u(x, y) = y ≥ 0.0 ? 24y * (1 / 2 - y) : 0.0
 initial_velocity_v(x, y) = 0.0
 initial_pressure(x, y) = 0.0
 V₀, p₀ = create_initial_conditions(
