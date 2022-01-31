@@ -12,8 +12,8 @@ viscosity_model = LaminarModel{T}(; Re = 1000)
 
 convection_model = NoRegConvectionModel{T}()
 
-x = cosine_grid(0, 1, 50)
-y = stretched_grid(0, 1, 50, 0.95)
+x = cosine_grid(0.0, 1.0, 50)
+y = stretched_grid(0.0, 1.0, 50, 0.95)
 grid = create_grid(x, y; T)
 
 plot_grid(grid)
@@ -27,8 +27,8 @@ solver_settings = SolverSettings{T}(;
     newton_type = :approximate,
 )
 
-u_bc(x, y, t, setup) = y ≈ setup.grid.ylims[2] ? 1.0 : 0.0
-v_bc(x, y, t, setup) = zero(x)
+u_bc(x, y, t) = y ≈ grid.ylims[2] ? 1.0 : 0.0
+v_bc(x, y, t) = zero(x)
 bc = create_boundary_conditions(
     u_bc,
     v_bc;
@@ -80,7 +80,8 @@ plot_pressure(setup, p)
 
 plot_velocity(setup, V, t_end)
 
-plot_vorticity(setup, V, tlims[2])
+levels = [-7, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 7]
+plot_vorticity(setup, V, tlims[2]; levels)
 
 plot_streamfunction(setup, V, tlims[2])
 
