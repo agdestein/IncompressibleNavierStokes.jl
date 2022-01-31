@@ -18,18 +18,18 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
     # Boundary values by integrating around domain
     # Start with ψ = 0 at lower left corner
 
-    # U = d ψ / dy; integrate low->up
+    # u = d ψ / dy; integrate low->up
     if setup.bc.u.x[1] == :dirichlet
         # u1 = interp1(y, uLe, yp);
         u1 = u_bc.(x[1], yp, t)
-    elseif setup.bc.u.x[1] ∈ [:pressure, :periodic]
+    elseif setup.bc.u.x[1] ∈ (:pressure, :periodic)
         u1 = uₕ[1:Nux_in:end]
     end
     ψLe = cumsum(hy .* u1)
     ψUpLe = ψLe[end]
     ψLe = ψLe[1:(end - 1)]
 
-    # V = -d ψ / dx; integrate left->right
+    # v = -d ψ / dx; integrate left->right
     if setup.bc.v.y[2] == :dirichlet
         v1 = v_bc.(xp, y[end], t)
     elseif setup.bc.v.y[2] == :pressure
@@ -41,7 +41,7 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
     ψUpRi = ψUp[end]
     ψUp = ψUp[1:(end - 1)]
 
-    # U = d ψ / dy; integrate up->lo
+    # u = d ψ / dy; integrate up->lo
     if setup.bc.u.x[2] == :dirichlet
         u2 = u_bc.(x[end], yp, t)
     elseif setup.bc.u.x[2] == :pressure
@@ -53,46 +53,46 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
     ψLoRi = ψRi[end]
     ψRi = ψRi[(end - 1):-1:1]
 
-    # V = -d ψ / dx; integrate right->left
+    # v = -d ψ / dx; integrate right->left
     if setup.bc.v.y[1] == :dirichlet
         v2 = v_bc.(xp, y[1], t)
-    elseif setup.bc.v.y[1] ∈ [:pressure, :periodic]
+    elseif setup.bc.v.y[1] ∈ (:pressure, :periodic)
         v2 = vₕ[1:Nvx_in]
     end
     ψLo = ψLoRi .+ cumsum(hx[end:-1:1] .* v2[end:-1:1])
     ψLoLe = ψLo[end]
     ψLo = ψLo[(end - 1):-1:1]
 
-    if abs(ψLoLe) > 1e-12
-        @warn "Contour integration of ψ not consistent: $(abs(ψLoLe))"
-    end
+    abs(ψLoLe) > 1e-12 && @warn "Contour integration of ψ not consistent" abs(ψLoLe)
+
 
     # Solve del^2 ψ = -ω
     # Only dirichlet boundary conditions because we calculate streamfunction at
     # Inner points only
 
+
     # X-direction
-    diag1 = 1 ./ hx .* ones(Nx)
-    Q1D = spdiagm(Nx, Nx + 1, 0 => -diag1, 1 => diag1)
+    diag = 1 ./ hx
+    Q1D = spdiagm(Nx, Nx + 1, 0 => -diag, 1 => diag)
     Qx_bc = bc_general(Nx + 1, Nx - 1, 2, :dirichlet, :dirichlet, hx[1], hx[end])
 
     # Extend to 2D
-    Q2Dx = kron(sparse(I, Ny - 1, Ny - 1), Q1D * Qx_bc.B1D)
-    yQx =
-        kron(sparse(I, Ny - 1, Ny - 1), Q1D * Qx_bc.Btemp) *
-        (kron(ψLe .* ones(Ny - 1), Qx_bc.ybc1) + kron(ψRi .* ones(Ny - 1), Qx_bc.ybc2))
+    Q2Dx = I(Ny - 1) ⊗ (Q1D * Qx_bc.B1D)
+    yQx = (I(Ny - 1) ⊗ (Q1D * Qx_bc.Btemp)) * (ψLe ⊗ Qx_bc.ybc1 + ψRi ⊗ Qx_bc.ybc2)
+
 
     # Y-direction
-    diag1 = 1 ./ hy .* ones(Ny)
-    Q1D = spdiagm(Ny, Ny + 1, 0 => -diag1, 1 => diag1)
+    diag = 1 ./ hy
+    Q1D = spdiagm(Ny, Ny + 1, 0 => -diag, 1 => diag)
     Qy_bc = bc_general(Ny + 1, Ny - 1, 2, :dirichlet, :dirichlet, hy[1], hy[end])
 
     # Extend to 2D
-    Q2Dy = kron(Q1D * Qy_bc.B1D, sparse(I, Nx - 1, Nx - 1))
-    yQy =
-        kron(Q1D * Qy_bc.Btemp, sparse(I, Nx - 1, Nx - 1)) *
-        (kron(Qy_bc.ybc1, ψLo .* ones(Nx - 1)) + kron(Qy_bc.ybc2, ψUp .* ones(Nx - 1)))
+    Q2Dy = (Q1D * Qy_bc.B1D) ⊗ I(Nx - 1)
+    yQy = ((Q1D * Qy_bc.Btemp) ⊗ I(Nx - 1)) * (Qy_bc.ybc1 ⊗ ψLo + Qy_bc.ybc2 ⊗ ψUp)
 
+
+    # FIXME: Dimension error in periodic case
+    @show size(Wv_vx) size(Q2Dx) size(Wu_uy) size(Q2Dy)
     Aψ = Wv_vx * Q2Dx + Wu_uy * Q2Dy
     yAψ = Wv_vx * yQx + Wu_uy * yQy
 

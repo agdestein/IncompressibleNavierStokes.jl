@@ -1,12 +1,12 @@
 """
-    plot_vorticity(setup, V, t)
+    plot_vorticity(setup, V, t; kwargs...)
 
 Plot vorticity field.
 """
 function plot_vorticity end
 
 # 2D version
-function plot_vorticity(setup, V, t)
+function plot_vorticity(setup, V, t; kwargs...)
     (; bc) = setup
     (; x, y, xlims, ylims) = setup.grid
 
@@ -14,15 +14,18 @@ function plot_vorticity(setup, V, t)
         xω = x
         yω = y
     else
-        xω = x[2:end-1]
-        yω = y[2:end-1]
+        xω = x[2:(end - 1)]
+        yω = y[2:(end - 1)]
     end
 
     # Get fields
     ω = get_vorticity(V, t, setup)
+
+    # Levels
+    μ, σ = mean(ω), std(ω)
+    levels = LinRange(μ - 1.5σ, μ + 1.5σ, 10)
+
     # Plot vorticity
-    # levels = [minimum(ω), -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, maximum(ω)]
-    levels = [-7, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 7]
     fig = Figure()
     ax = Axis(
         fig[1, 1];
@@ -32,12 +35,7 @@ function plot_vorticity(setup, V, t)
         ylabel = "y",
     )
     limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
-    contourf!(
-        ax, xω, yω, ω;
-        levels,
-        extendlow = :auto,
-        extendhigh = :auto,
-    )
+    contourf!(ax, xω, yω, ω; extendlow = :auto, extendhigh = :auto, levels, kwargs...)
 
     # save("output/vorticity.png", fig, pt_per_unit = 2)
 
@@ -45,7 +43,7 @@ function plot_vorticity(setup, V, t)
 end
 
 # 3D version
-function plot_vorticity(setup::Setup{T,3}, V, t) where {T}
+function plot_vorticity(setup::Setup{T,3}, V, t; kwargs...) where {T}
     (; grid, bc) = setup
     (; x, y, z) = grid
 
@@ -54,18 +52,16 @@ function plot_vorticity(setup::Setup{T,3}, V, t) where {T}
         yω = y
         zω = z
     else
-        xω = x[2:end-1]
-        yω = y[2:end-1]
-        zω = z[2:end-1]
+        xω = x[2:(end - 1)]
+        yω = y[2:(end - 1)]
+        zω = z[2:(end - 1)]
     end
 
     ω = get_vorticity(V, t, setup)
-    contour(
-        xω,
-        yω,
-        zω,
-        ω;
-        extendlow = :auto,
-        extendhigh = :auto,
-    )
+
+    # Levels
+    μ, σ = mean(ω), std(ω)
+    levels = LinRange(μ - 3σ, μ + 3σ, 10)
+
+    contour(xω, yω, zω, ω; levels, kwargs...)
 end

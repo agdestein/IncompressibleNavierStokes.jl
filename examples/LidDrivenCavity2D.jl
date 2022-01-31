@@ -145,8 +145,8 @@ writer = VTKWriter(; nupdate = 20, dir = "output/LidDrivenCavity2D")
 tracer = QuantityTracer(; nupdate = 10)
 processors = [logger, plotter, writer, tracer]
 
-#  A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
-#  with a fixed time step.
+# A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
+# with a fixed time step.
 
 V, p = @time solve(problem, RK44(); Δt = 0.001, processors)
 
@@ -168,7 +168,8 @@ plot_velocity(setup, V, t_end)
 
 # vorticity field,
 
-plot_vorticity(setup, V, tlims[2])
+levels = [-7, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 7]
+plot_vorticity(setup, V, tlims[2]; levels)
 
 # or streamfunction.
 

@@ -1,12 +1,12 @@
 """
-    plot_streamfunction(setup, V, t)
+    plot_streamfunction(setup, V, t; kwargs...)
 
 Plot streamfunction.
 """
 function plot_streamfunction end
 
 # 2D version
-function plot_streamfunction(setup::Setup{T,2}, V, t) where {T}
+function plot_streamfunction(setup::Setup{T,2}, V, t; kwargs...) where {T}
     (; bc) = setup
     (; x, y, xlims, ylims) = setup.grid
 
@@ -21,32 +21,11 @@ function plot_streamfunction(setup::Setup{T,2}, V, t) where {T}
     # Get fields
     ψ = get_streamfunction(V, t, setup)
 
+    # Levels
+    μ, σ = mean(ψ), std(ψ)
+    levels = LinRange(μ - 1.5σ, μ + 1.5σ, 10)
+
     # Plot stream function
-    levels = [
-        minimum(ψ) - 1
-        -0.1175
-        -0.115
-        -0.11
-        -0.1
-        -0.09
-        -0.07
-        -0.05
-        -0.03
-        -0.01
-        -0.0001
-        -1.0e-5
-        -1.0e-10
-        0.0
-        1.0e-6
-        1.0e-5
-        5.0e-5
-        0.0001
-        0.00025
-        0.0005
-        0.001
-        0.0015
-        maximum(ψ) + 1
-    ]
     fig = Figure()
     ax = Axis(
         fig[1, 1],
@@ -61,9 +40,10 @@ function plot_streamfunction(setup::Setup{T,2}, V, t) where {T}
         xψ,
         yψ,
         ψ;
-        # levels,
         extendlow = :auto,
         extendhigh = :auto,
+        # levels,
+        kwargs...,
     )
     # save("output/streamfunction.png", fig, pt_per_unit = 2)
 
@@ -71,6 +51,6 @@ function plot_streamfunction(setup::Setup{T,2}, V, t) where {T}
 end
 
 # 3D version
-function plot_streamfunction(setup::Setup{T,3}, V, t) where {T}
+function plot_streamfunction(setup::Setup{T,3}, V, t; kwargs...) where {T}
     error("Not implemented (3D)")
 end

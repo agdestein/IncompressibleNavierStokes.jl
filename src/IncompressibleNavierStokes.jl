@@ -10,6 +10,7 @@ using Interpolations
 using IterativeSolvers
 using LinearAlgebra
 using SparseArrays
+using Statistics
 using UnPack
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 using Makie
