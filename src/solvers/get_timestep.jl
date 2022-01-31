@@ -1,19 +1,68 @@
 """
-    get_timestep(setup)
+    get_timestep(stepper, CFL)
 
 Estimate time step based on eigenvalues of operators, using Gershgorin.
 """
-function get_timestep(stepper)
+function get_timestep end
+
+# 2D version
+function get_timestep(stepper::TimeStepper{M,T,2}, CFL) where {M,T}
     (; setup, method, V) = stepper
-    (; NV, indu, indv, indw, Ω⁻¹) = setup.grid
-    (; Diff) = setup.operators
-    (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz) = setup.operators
-    (; Au_ux, Au_uy, Au_uz, Av_vx, Av_vy, Av_vz, Aw_wx, Aw_wy, Aw_wz) = setup.operators
-    (; Iu_ux, Iu_vx, Iu_wx, Iv_uy, Iv_vy, Iv_wy, Iw_uz, Iw_vz, Iw_wz) = setup.operators
-    (; yIu_ux, yIu_vx, yIu_wx) = setup.operators
-    (; yIv_uy, yIv_vy, yIv_wy) = setup.operators
-    (; yIw_uz, yIw_vz, yIw_wz) = setup.operators
-    (; CFL) = method
+    (; grid, operators) = setup
+    (; NV, indu, indv, Ω⁻¹) = grid
+    (; Diff) = operators
+    (; Cux, Cuy, Cvx, Cvy) = operators
+    (; Au_ux, Au_uy, Av_vx, Av_vy) = operators
+    (; Iu_ux, Iu_vx, Iv_uy, Iv_vy) = operators
+    (; yIu_ux, yIu_vx, yIv_uy, yIv_vy) = operators
+
+    uₕ = @view V[indu]
+    vₕ = @view V[indv]
+
+    # For explicit methods only
+    if isexplicit(method)
+        # Convective part
+        Cu =
+            Cux * spdiagm(Iu_ux * uₕ + yIu_ux) * Au_ux +
+            Cuy * spdiagm(Iv_uy * vₕ + yIv_uy) * Au_uy
+        Cv =
+            Cvx * spdiagm(Iu_vx * uₕ + yIu_vx) * Av_vx +
+            Cvy * spdiagm(Iv_vy * vₕ + yIv_vy) * Av_vy
+        C = blockdiag(Cu, Cv)
+        test = spdiagm(Ω⁻¹) * C
+        sum_conv = abs.(test) * ones(NV) - diag(abs.(test)) - diag(test)
+        λ_conv = maximum(sum_conv)
+
+        # Based on max. value of stability region (not a very good indication
+        # For the methods that do not include the imaginary axis)
+        Δt_conv = λ_conv_max(method) / λ_conv
+
+        ## Diffusive part
+        test = Diagonal(Ω⁻¹) * Diff
+        sum_diff = abs.(test) * ones(NV) - diag(abs.(test)) - diag(test)
+        λ_diff = maximum(sum_diff)
+
+        # Based on max. value of stability region
+        Δt_diff = λ_diff_max(method) / λ_diff
+
+        Δt = CFL * min(Δt_conv, Δt_diff)
+    end
+
+    Δt
+end
+
+# 3D version
+function get_timestep(stepper::TimeStepper{M,T,3}, CFL) where {M,T}
+    (; setup, method, V) = stepper
+    (; grid, operators) = setup
+    (; NV, indu, indv, indw, Ω⁻¹) = grid
+    (; Diff) = operators
+    (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz) = operators
+    (; Au_ux, Au_uy, Au_uz, Av_vx, Av_vy, Av_vz, Aw_wx, Aw_wy, Aw_wz) = operators
+    (; Iu_ux, Iu_vx, Iu_wx, Iv_uy, Iv_vy, Iv_wy, Iw_uz, Iw_vz, Iw_wz) = operators
+    (; yIu_ux, yIu_vx, yIu_wx) = operators
+    (; yIv_uy, yIv_vy, yIv_wy) = operators
+    (; yIw_uz, yIw_vz, yIw_wz) = operators
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
@@ -41,7 +90,7 @@ function get_timestep(stepper)
 
         # Based on max. value of stability region (not a very good indication
         # For the methods that do not include the imaginary axis)
-        Δt_conv = λ_conv_max / λ_conv
+        Δt_conv = λ_conv_max(method) / λ_conv
 
         ## Diffusive part
         test = Diagonal(Ω⁻¹) * Diff
@@ -49,7 +98,7 @@ function get_timestep(stepper)
         λ_diff = maximum(sum_diff)
 
         # Based on max. value of stability region
-        Δt_diff = λ_diff_max(method, setup) / λ_diff
+        Δt_diff = λ_diff_max(method) / λ_diff
 
         Δt = CFL * min(Δt_conv, Δt_diff)
     end

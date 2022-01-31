@@ -2,6 +2,7 @@
     solve(
         problem::UnsteadyProblem, method;
         Δt = nothing,
+        CFL = 1,
         n_adapt_Δt = 1,
         processors = Processor[],
         method_startup = nothing,
@@ -10,7 +11,8 @@
 
 Solve unsteady problem using `method`.
 
-The time step is chosen every `n_adapt_Δt` iteration if `Δt` is `nothing`.
+The time step is chosen every `n_adapt_Δt` iteration with CFL-number `CFL` if `Δt` is
+`nothing`.
 
 For methods that are not self-starting, `nstartup` startup iterations are performed with
 `method_startup`.
@@ -20,6 +22,7 @@ Each `processor` is called after every `processor.nupdate` time step.
 function solve(
         problem::UnsteadyProblem, method;
         Δt = nothing,
+        CFL = 1,
         n_adapt_Δt = 1,
         processors = Processor[],
         method_startup = nothing,
@@ -41,7 +44,7 @@ function solve(
 
     isadaptive && (Δt = 0)
     stepper = TimeStepper(method_use, setup, V₀, p₀, t_start, Δt)
-    isadaptive && (Δt = get_timestep(stepper))
+    isadaptive && (Δt = get_timestep(stepper, CFL))
 
     # Initialize BC arrays
     set_bc_vectors!(setup, stepper.t)
@@ -61,7 +64,7 @@ function solve(
 
         # Change timestep based on operators
         if isadaptive && rem(stepper.n, n_adapt_Δt) == 0 
-            Δt = get_timestep(stepper)
+            Δt = get_timestep(stepper, CFL)
         end
 
         # Perform a single time step with the time integration method
