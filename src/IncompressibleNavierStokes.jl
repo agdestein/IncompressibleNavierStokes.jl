@@ -137,6 +137,7 @@ include("postprocess/plot_velocity.jl")
 include("postprocess/plot_vorticity.jl")
 include("postprocess/plot_streamfunction.jl")
 include("postprocess/plot_tracers.jl")
+include("postprocess/save_vtk.jl")
 
 # Reexport
 export @pack!
@@ -174,7 +175,12 @@ export create_boundary_conditions,
 export momentum!
 
 export plot_grid,
-    plot_pressure, plot_streamfunction, plot_velocity, plot_vorticity, plot_tracers
+    plot_pressure,
+    plot_streamfunction,
+    plot_velocity,
+    plot_vorticity,
+    plot_tracers,
+    save_vtk
 
 # ODE methods
 
