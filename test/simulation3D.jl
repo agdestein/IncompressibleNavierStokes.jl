@@ -20,7 +20,7 @@
     x = stretched_grid(0.0, 1.0, 25)
     y = stretched_grid(0.0, 1.0, 25)
     z = stretched_grid(-0.2, 0.2, 10)
-    grid = create_grid(x, y, z; T);
+    grid = create_grid(x, y, z; T)
 
     ## Solver settings
     solver_settings = SolverSettings{T}(;

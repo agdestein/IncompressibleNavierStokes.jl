@@ -10,7 +10,7 @@
     ## Grid
     x = stretched_grid(0, 2π, 20)
     y = stretched_grid(0, 2π, 20)
-    grid = create_grid(x, y; T);
+    grid = create_grid(x, y; T)
 
     ## Solver settings
     solver_settings = SolverSettings{T}(;
@@ -30,14 +30,8 @@
         v_bc;
         bc_unsteady = false,
         bc_type = (;
-            u = (;
-                x = (:periodic, :periodic),
-                y = (:periodic, :periodic),
-            ),
-            v = (;
-                x = (:periodic, :periodic),
-                y = (:periodic, :periodic),
-            ),
+            u = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
+            v = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
         ),
         T,
     )
@@ -48,8 +42,9 @@
     force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
     ## Build setup and assemble operators
-    setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, solver_settings, bc);
-    build_operators!(setup);
+    setup =
+        Setup{T,2}(; viscosity_model, convection_model, grid, force, solver_settings, bc)
+    build_operators!(setup)
     (; A) = setup.operators
 
     direct = DirectPressureSolver{T}()
