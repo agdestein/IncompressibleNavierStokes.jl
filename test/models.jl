@@ -8,14 +8,6 @@
     y = stretched_grid(0.0, 1.0, 25)
     grid = create_grid(x, y; T)
 
-    ## Solver settings
-    solver_settings = SolverSettings{T}(;
-        pressure_solver = DirectPressureSolver{T}(),    # Pressure solver
-        # pressure_solver = CGPressureSolver{T}(),      # Pressure solver
-        # pressure_solver = FourierPressureSolver{T}(), # Pressure solver
-        p_add_solve = true,                             # Additional pressure solve for second order pressure
-    )
-
     ## Boundary conditions
     lid_vel = 1.0 # Lid velocity
     u_bc(x, y, t) = y ≈ grid.ylims[2] ? lid_vel : 0.0
@@ -38,6 +30,11 @@
     bodyforce_u(x, y) = 0.0
     bodyforce_v(x, y) = 0.0
     force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
+
+    ## Pressure solver
+    pressure_solver = DirectPressureSolver{T}()
+    # pressure_solver = CGPressureSolver{T}()
+    # pressure_solver = FourierPressureSolver{T}()
 
     ## Initial conditions
     initial_velocity_u(x, y) = 0.0
@@ -82,7 +79,7 @@
                 convection_model,
                 grid,
                 force,
-                solver_settings,
+                pressure_solver,
                 bc,
             )
 
@@ -128,7 +125,7 @@
                 convection_model = noreg,
                 grid,
                 force,
-                solver_settings,
+                pressure_solver,
                 bc,
             )
 

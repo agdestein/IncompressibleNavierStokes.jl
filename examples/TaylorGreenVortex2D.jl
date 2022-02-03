@@ -36,14 +36,6 @@ grid = create_grid(x, y; T);
 
 plot_grid(grid)
 
-## Solver settings
-solver_settings = SolverSettings{T}(;
-    # pressure_solver = DirectPressureSolver{T}(), # Pressure solver
-    # pressure_solver = CGPressureSolver{T}(; maxiter = 500, abstol = 1e-8), # Pressure solver
-    pressure_solver = FourierPressureSolver{T}(), # Pressure solver
-    p_add_solve = true,              # Additional pressure solve to make it same order as velocity
-)
-
 ## Boundary conditions
 u_bc(x, y, t) = zero(x)
 v_bc(x, y, t) = zero(x)
@@ -63,8 +55,13 @@ bodyforce_u(x, y) = 0
 bodyforce_v(x, y) = 0
 force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
+## Pressure solver
+# pressure_solver = DirectPressureSolver{T}()
+# pressure_solver = CGPressureSolver{T}(; maxiter = 500, abstol = 1e-8)
+pressure_solver = FourierPressureSolver{T}()
+
 ## Build setup and assemble operators
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, solver_settings, bc);
+setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc);
 build_operators!(setup);
 
 ## Time interval

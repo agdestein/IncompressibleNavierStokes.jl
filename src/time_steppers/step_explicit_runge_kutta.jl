@@ -6,10 +6,11 @@ Perform one time step for the general explicit Runge-Kutta method (ERK).
 Dirichlet boundary points are not part of solution vector but are prescribed in a strong manner via the `u_bc` and `v_bc` functions.
 """
 function step!(stepper::ExplicitRungeKuttaStepper, Δt)
-    (; V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
-    (; Ω⁻¹) = setup.grid
-    (; G, M, yM) = setup.operators
-    (; pressure_solver) = setup.solver_settings
+    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
+    (; grid, operators, pressure_solver) = setup
+    (; Ω⁻¹) = grid
+    (; G, M, yM) = operators
+    (; p_add_solve) = method
     (; kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f, A, b, c) = cache
 
     # Update current solution (does not depend on previous step size)
@@ -82,7 +83,7 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt)
     end
 
     if setup.bc.bc_unsteady
-        if setup.solver_settings.p_add_solve
+        if p_add_solve
             pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
         else
             # Standard method

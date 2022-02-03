@@ -23,7 +23,7 @@ field, resulting in same order pressure as velocity.
 """
 function pressure_additional_solve!(V, p, t, setup, momentum_cache, F, f, Δp)
     # Note: time derivative of BC in ydM
-    (; pressure_solver) = setup.solver_settings
+    (; pressure_solver) = setup
     (; Ω⁻¹) = setup.grid
     (; M, ydM) = setup.operators
 

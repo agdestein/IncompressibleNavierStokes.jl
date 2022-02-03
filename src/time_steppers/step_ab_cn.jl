@@ -40,12 +40,11 @@ influence on the accuracy of the velocity.
 """
 function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
-    (; convection_model, viscosity_model) = setup
-    (; NV, Ω⁻¹) = setup.grid
-    (; G, y_p, M, yM) = setup.operators
-    (; Diff, yDiff, y_p) = setup.operators
-    (; pressure_solver) = setup.solver_settings
-    (; α₁, α₂, θ) = method
+    (; convection_model, viscosity_model, grid, operators, pressure_solver) = setup
+    (; NV, Ω⁻¹) = grid
+    (; G, y_p, M, yM) = operators
+    (; Diff, yDiff, y_p) = operators
+    (; p_add_solve, α₁, α₂, θ) = method
     (; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact) = cache
     (; d, ∇d) = momentum_cache
 
@@ -131,7 +130,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     # First order pressure:
     p .= pₙ .+ Δp
 
-    if setup.solver_settings.p_add_solve
+    if p_add_solve
         pressure_additional_solve!(V, p, tₙ + Δt, setup, momentum_cache, F, f, Δp)
     end
 

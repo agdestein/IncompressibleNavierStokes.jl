@@ -21,8 +21,8 @@ function create_initial_conditions(
     initial_velocity_v,
     initial_pressure = nothing,
 ) where {T}
-    (; xu, yu, xv, yv, xpp, ypp, Ω⁻¹) = setup.grid
-    (; pressure_solver) = setup.solver_settings
+    (; grid, pressure_solver) = setup
+    (; xu, yu, xv, yv, xpp, ypp, Ω⁻¹) = grid
 
     # Boundary conditions
     set_bc_vectors!(setup, t)
@@ -71,8 +71,8 @@ function create_initial_conditions(
     initial_velocity_w,
     initial_pressure = nothing,
 ) where {T}
-    (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp, Ω⁻¹) = setup.grid
-    (; pressure_solver) = setup.solver_settings
+    (; grid, pressure_solver) = setup
+    (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp, Ω⁻¹) = grid
 
     # Boundary conditions
     set_bc_vectors!(setup, t)

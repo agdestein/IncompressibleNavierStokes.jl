@@ -8,11 +8,10 @@ are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
 """
 function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
-    (; NV, Np, Ω⁻¹) = setup.grid
-    (; G, M) = setup.operators
-    (; pressure_solver, p_add_solve) =
-        setup.solver_settings
-        (; maxiter, abstol, newton_type) = method
+    (; grid, operators, pressure_solver) = setup
+    (; NV, Np, Ω⁻¹) = grid
+    (; G, M) = operators
+    (; p_add_solve, maxiter, abstol, newton_type) = method
     (; Vtotₙ, ptotₙ, Qⱼ, Fⱼ, ∇Fⱼ, fⱼ, F, ∇F, f, Δp, Gp) = cache
     (; Mtot, yMtot, Ωtot, dfmom, Z) = cache
     (; A, b, c, Ω_sNV, A_ext, b_ext) = cache
@@ -55,8 +54,8 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     iter = 0
 
     # Index in global solution vector
-    ind_Vⱼ = 1:(NV*s)
-    ind_pⱼ = (NV*s+1):((NV+Np)*s)
+    ind_Vⱼ = 1:(NV * s)
+    ind_pⱼ = (NV * s + 1):((NV + Np) * s)
 
     # Vtot contains all stages and is ordered as [u₁; v₁; u₂; v₂; ...; uₛ; vₛ];
     # Starting guess for intermediate stages
@@ -176,7 +175,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
             pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
         else
             # Standard method; take last pressure
-            p .= pⱼ[(end-Np+1):end]
+            p .= pⱼ[(end - Np + 1):end]
         end
     else
         # For steady bc we do an additional pressure solve
@@ -184,7 +183,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
         # pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
 
         # Standard method; take pressure of last stage
-        p .= pⱼ[(end-Np+1):end]
+        p .= pⱼ[(end - Np + 1):end]
     end
 
     t = tₙ + Δtₙ

@@ -12,12 +12,6 @@
     y = stretched_grid(0, 2π, 20)
     grid = create_grid(x, y; T)
 
-    ## Solver settings
-    solver_settings = SolverSettings{T}(;
-        pressure_solver = FourierPressureSolver{T}(), # Pressure solver
-        p_add_solve = true,              # Additional pressure solve to make it same order as velocity
-    )
-
     ## Boundary conditions
     u_bc(x, y, t) = 0.0
     v_bc(x, y, t) = 0.0
@@ -37,9 +31,12 @@
     bodyforce_v(x, y) = 0.0
     force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
+    ## Pressure solver
+    pressure_solver = FourierPressureSolver{T}()
+
     ## Build setup and assemble operators
     setup =
-        Setup{T,2}(; viscosity_model, convection_model, grid, force, solver_settings, bc)
+        Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
     build_operators!(setup)
     (; A) = setup.operators
 

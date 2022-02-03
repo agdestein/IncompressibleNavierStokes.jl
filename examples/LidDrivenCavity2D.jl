@@ -61,13 +61,6 @@ grid = create_grid(x, y; T)
 
 plot_grid(grid)
 
-# Solver settings are used by certain implicit solvers.
-
-solver_settings = SolverSettings{T}(;
-    pressure_solver = DirectPressureSolver{T}(),    # Pressure solver
-    p_add_solve = true,                             # Additional pressure solve for second order pressure
-)
-
 # Dirichlet boundary conditions are specified as plain Julia functions. They are marked by
 # the `:dirichlet` symbol. Other possible BC types are `:periodic`, `:symmetric`, and `:pressure`.
 
@@ -90,9 +83,14 @@ bodyforce_u(x, y) = 0
 bodyforce_v(x, y) = 0
 force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
+# We also choos a pressure solver. The direct solver will precompute the LU decomposition of
+# the Poisson matrix.
+
+pressure_solver = DirectPressureSolver{T}()
+
 # We may now assemble our setup.
 
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, solver_settings, bc)
+setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
 
 # The discrete operators are built with the [`build_operators!`](@ref) function.
 

@@ -14,10 +14,9 @@ Formulation:
 """
 function step!(stepper::OneLegStepper, Δt)
     (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
-    (; β) = method
-    (; grid, operators, bc, solver_settings) = setup
+    (; p_add_solve, β) = method
+    (; grid, operators, bc, pressure_solver) = setup
     (; G, M) = operators
-    (; pressure_solver, p_add_solve) = solver_settings
     (; Ω⁻¹) = grid
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache
 

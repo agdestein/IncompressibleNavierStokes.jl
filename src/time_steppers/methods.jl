@@ -16,6 +16,7 @@ Base.@kwdef struct AdamsBashforthCrankNicolsonMethod{T} <: AbstractODEMethod{T}
     α₁::T = 3 // 2
     α₂::T = -1 // 2
     θ::T = 1 // 2
+    p_add_solve::Bool = true
 end
 
 """
@@ -25,6 +26,7 @@ Explicit one-leg β-method.
 """
 Base.@kwdef struct OneLegMethod{T} <: AbstractODEMethod{T}
     β::T = 1 // 2
+    p_add_solve::Bool = true
 end
 
 """
@@ -39,11 +41,12 @@ abstract type AbstractRungeKuttaMethod{T} <: AbstractODEMethod{T} end
 
 Explicit Runge Kutta method.
 """
-struct ExplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
+Base.@kwdef struct ExplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
     A::Matrix{T}
     b::Vector{T}
     c::Vector{T}
     r::T
+    p_add_solve::Bool = true
 end
 
 """
@@ -67,12 +70,17 @@ Base.@kwdef struct ImplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
     maxiter::Int = 10
     abstol::T = 1e-14
     reltol::T = 1e-14
+    p_add_solve::Bool = true
 end
 
 """
-    runge_kutta_method(A, b, c, r)
+    runge_kutta_method(A, b, c, r; [p_add_solve], [newton_type], [maxiter], [abstol], [reltol])
 
 Get Runge Kutta method. The function checks whether the method is explicit.
+
+`p_add_solve`: whether to add a pressure solve step to the method.
+
+For implicit RK methods: `newton_type`, `maxiter`, `abstol`, `reltol`.
 """
 function runge_kutta_method(A, b, c, r; kwargs...)
     s = size(A, 1)
@@ -86,7 +94,7 @@ function runge_kutta_method(A, b, c, r; kwargs...)
     c = convert(Vector{T}, c)
     r = convert(T, r)
     if isexplicit
-        ExplicitRungeKuttaMethod(A, b, c, r; kwargs...)
+        ExplicitRungeKuttaMethod(; A, b, c, r, kwargs...)
     else
         ImplicitRungeKuttaMethod(; A, b, c, r, kwargs...)
     end
