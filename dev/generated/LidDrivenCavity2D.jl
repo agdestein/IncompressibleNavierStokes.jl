@@ -18,15 +18,6 @@ grid = create_grid(x, y; T)
 
 plot_grid(grid)
 
-solver_settings = SolverSettings{T}(;
-    pressure_solver = DirectPressureSolver{T}(),    # Pressure solver
-    p_add_solve = true,                             # Additional pressure solve for second order pressure
-    abstol = 1e-10,                                 # Absolute accuracy
-    reltol = 1e-14,                                 # Relative accuracy
-    maxiter = 10,                                   # Maximum number of iterations
-    newton_type = :approximate,
-)
-
 u_bc(x, y, t) = y ≈ grid.ylims[2] ? 1.0 : 0.0
 v_bc(x, y, t) = zero(x)
 bc = create_boundary_conditions(
@@ -44,7 +35,9 @@ bodyforce_u(x, y) = 0
 bodyforce_v(x, y) = 0
 force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, solver_settings, bc)
+pressure_solver = DirectPressureSolver{T}()
+
+setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
 
 build_operators!(setup)
 
