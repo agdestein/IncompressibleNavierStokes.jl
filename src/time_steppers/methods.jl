@@ -6,7 +6,7 @@ Abstract ODE method.
 abstract type AbstractODEMethod{T} end
 
 """
-    AdamsBashforthCrankNicolsonMethod(; α₁ = 3 // 2, α₂ = -1 // 2, θ = 1 // 2)
+    AdamsBashforthCrankNicolsonMethod(; α₁ = 3 // 2, α₂ = -1 // 2, θ = 1 // 2, p_add_solve = true)
 
 IMEX AB-CN: Adams-Bashforth for explicit convection (parameters `α₁` and `α₂`) and
 Crank-Nicolson for implicit diffusion (implicitness `θ`).
@@ -20,7 +20,7 @@ Base.@kwdef struct AdamsBashforthCrankNicolsonMethod{T} <: AbstractODEMethod{T}
 end
 
 """
-    OneLegMethod(β = 1 // 2)
+    OneLegMethod(; β = 1 // 2, p_add_solve = true)
 
 Explicit one-leg β-method.
 """
@@ -37,7 +37,7 @@ Abstract Runge Kutta method.
 abstract type AbstractRungeKuttaMethod{T} <: AbstractODEMethod{T} end
 
 """
-    ExplicitRungeKuttaMethod(A, b, c, r)
+    ExplicitRungeKuttaMethod(; A, b, c, r, p_add_solve = true)
 
 Explicit Runge Kutta method.
 """
@@ -50,7 +50,17 @@ Base.@kwdef struct ExplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
 end
 
 """
-    ImplicitRungeKuttaMethod(A, b, c, r; newton_type = :full, maxiter = 10)
+    ImplicitRungeKuttaMethod(;
+        A,
+        b,
+        c,
+        r,
+        newton_type = :full,
+        maxiter = 10,
+        abstol = 1e-14,
+        reltol = 1e-14,
+        p_add_solve = true,
+    )
 
 Implicit Runge Kutta method.
 
@@ -84,9 +94,10 @@ For implicit RK methods: `newton_type`, `maxiter`, `abstol`, `reltol`.
 """
 function runge_kutta_method(A, b, c, r; kwargs...)
     s = size(A, 1)
-    s == size(A, 2) == length(b) == length(c) || error("A, b, and c must have the same sizes")
+    s == size(A, 2) == length(b) == length(c) ||
+        error("A, b, and c must have the same sizes")
     isexplicit = all(≈(0), UpperTriangular(A))
-    # T = promote_type(eltype(A), eltype(b), eltype(c), typeof(r)) 
+    # T = promote_type(eltype(A), eltype(b), eltype(c), typeof(r))
     # TODO: Find where to pass T
     T = Float64
     A = convert(Matrix{T}, A)
