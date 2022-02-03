@@ -604,13 +604,13 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
 
     # Boundary conditions back/front
     Iv_wy_bc_bf =
-        bc_general_stag(Nvz_t, Nvz_in, Nvz_b, bc.v.y[1], bc.v.y[2], hz[1], hz[end])
+        bc_general_stag(Nvz_t, Nvz_in, Nvz_b, bc.v.z[1], bc.v.z[2], hz[1], hz[end])
     Iv_wy_bc_bf = (; Iv_wy_bc_bf..., B3D = I3D * (Iv_wy_bc_bf.B1D ⊗ I(Ny + 1) ⊗ I(Nx)))
     Iv_wy_bc_bf = (; Iv_wy_bc_bf..., Bbc = I3D * (Iv_wy_bc_bf.Btemp ⊗ I(Ny + 1) ⊗ I(Nx)))
 
     # Boundary conditions low/up
     Nb = Nwy_in + 1 - Nvy_in
-    Iv_wy_bc_lu = bc_general(Nwy_in + 1, Nvy_in, Nb, bc.v.z[1], bc.v.z[2], hy[1], hy[end])
+    Iv_wy_bc_lu = bc_general(Nwy_in + 1, Nvy_in, Nb, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
     Iv_wy_bc_lu = (; Iv_wy_bc_lu..., B3D = I(Nz) ⊗ Iv_wy_bc_lu.B1D ⊗ I(Nx))
     Iv_wy_bc_lu = (; Iv_wy_bc_lu..., Bbc = I(Nz) ⊗ Iv_wy_bc_lu.Btemp ⊗ I(Nx))
 

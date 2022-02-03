@@ -558,7 +558,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     S1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    Su_uy_bc = bc_diff_stag(Nuy_t, Nuy_in, Nuy_b, bc.u.y[1], bc.u.y[2], hy[1], hy[end])
+    Su_uy_bc = bc_general_stag_diff(Nuy_t, Nuy_in, Nuy_b, bc.u.y[1], bc.u.y[2], hy[1], hy[end])
 
     # Extend to 3D
     Su_uy = I(Nuz_in) ⊗ (S1D * Su_uy_bc.B1D) ⊗ I(Nux_in)
@@ -569,7 +569,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     S1D = spdiagm(Nuz_t - 1, Nuz_t, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    Su_uz_bc = bc_diff_stag(Nuz_t, Nuz_in, Nuz_b, bc.u.z[1], bc.u.z[2], hz[1], hz[end])
+    Su_uz_bc = bc_general_stag_diff(Nuz_t, Nuz_in, Nuz_b, bc.u.z[1], bc.u.z[2], hz[1], hz[end])
 
     # Extend to 3D
     Su_uz = (S1D * Su_uz_bc.B1D) ⊗ I(Nuy_in) ⊗ I(Nux_in)
@@ -658,7 +658,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     S1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    Sv_vx_bc = bc_diff_stag(Nvx_t, Nvx_in, Nvx_b, bc.v.x[1], bc.v.x[2], hx[1], hx[end])
+    Sv_vx_bc = bc_general_stag_diff(Nvx_t, Nvx_in, Nvx_b, bc.v.x[1], bc.v.x[2], hx[1], hx[end])
 
     # Extend to 3D
     Sv_vx = I(Nvz_in) ⊗ I(Nvy_in) ⊗ (S1D * Sv_vx_bc.B1D)
@@ -680,7 +680,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     S1D = spdiagm(Nvz_t - 1, Nvz_t, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    Sv_vz_bc = bc_diff_stag(Nvz_t, Nvz_in, Nvz_b, bc.v.z[1], bc.v.z[2], hz[1], hz[end])
+    Sv_vz_bc = bc_general_stag_diff(Nvz_t, Nvz_in, Nvz_b, bc.v.z[1], bc.v.z[2], hz[1], hz[end])
 
     # Extend to 3D
     Sv_vz = (S1D * Sv_vz_bc.B1D) ⊗ I(Nvy_in) ⊗ I(Nvx_in)
@@ -717,7 +717,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     S1D = spdiagm(Nwx_t - 1, Nwx_t, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    Sw_wx_bc = bc_diff_stag(Nwx_t, Nwx_in, Nwx_b, bc.w.x[1], bc.w.x[2], hx[1], hx[end])
+    Sw_wx_bc = bc_general_stag_diff(Nwx_t, Nwx_in, Nwx_b, bc.w.x[1], bc.w.x[2], hx[1], hx[end])
 
     # Extend to 3D
     Sw_wx = I(Nwz_in) ⊗ I(Nwy_in) ⊗ (S1D * Sw_wx_bc.B1D)
@@ -728,7 +728,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     S1D = spdiagm(Nwy_t - 1, Nwy_t, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    Sw_wy_bc = bc_diff_stag(Nwy_t, Nwy_in, Nwy_b, bc.w.y[1], bc.w.y[2], hy[1], hy[end])
+    Sw_wy_bc = bc_general_stag_diff(Nwy_t, Nwy_in, Nwy_b, bc.w.y[1], bc.w.y[2], hy[1], hy[end])
 
     # Extend to 3D
     Sw_wy = I(Nwz_in) ⊗ (S1D * Sw_wy_bc.B1D) ⊗ I(Nwx_in)
@@ -739,7 +739,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     S1D = spdiagm(Nwz_t - 1, Nwz_t, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    Sw_wz_bc = bc_diff_stag(Nwz_t, Nwz_in, Nwz_b, bc.w.z[1], bc.w.z[2], hz[1], hz[end])
+    Sw_wz_bc = bc_general(Nwz_t, Nwz_in, Nwz_b, bc.w.z[1], bc.w.z[2], hz[1], hz[end])
 
     # Extend to 3D
     Sw_wz = (S1D * Sw_wz_bc.B1D) ⊗ I(Nwy_in) ⊗ I(Nwx_in)

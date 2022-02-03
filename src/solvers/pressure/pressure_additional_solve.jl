@@ -22,13 +22,14 @@ Do additional pressure solve. This makes the pressure compatible with the veloci
 field, resulting in same order pressure as velocity.
 """
 function pressure_additional_solve!(V, p, t, setup, momentum_cache, F, f, Δp)
-    # Note: time derivative of BC in ydM
-    (; pressure_solver) = setup
-    (; Ω⁻¹) = setup.grid
-    (; M, ydM) = setup.operators
+    (; grid, operators, pressure_solver) = setup
+    (; Ω⁻¹) = grid
+    (; M) = operators
 
-    # Get updated BC for ydM
+    # Get updated BC for ydM (time derivative of BC in ydM)
+    # FIXME: `set_bc_vectors` are called to often (also inside `momentum!`)
     setup.bc.bc_unsteady && set_bc_vectors!(setup, t)
+    (; ydM) = operators
 
     # Momentum already contains G*p with the current p, we therefore effectively solve for
     # the pressure difference

@@ -2,7 +2,7 @@ function bc_diff_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
     # Total solution u is written as u = Bb*ub + Bin*uin
     # The boundary conditions can be written as Bbc*u = ybc
     # Then u can be written entirely in terms of uin and ybc as:
-    # U = (Bin-Btemp*Bbc*Bin)*uin + Btemp*ybc, where
+    # u = (Bin-Btemp*Bbc*Bin)*uin + Btemp*ybc, where
     # Btemp = Bb*(Bbc*Bb)^(-1)
     # Bb, Bin and Bbc depend on type of bc (Neumann/Dirichlet/periodic)
 

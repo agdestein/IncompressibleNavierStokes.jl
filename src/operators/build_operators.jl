@@ -4,7 +4,7 @@
 Build discrete operators.
 """
 function build_operators!(setup)
-    (; viscosity_model, convection_model) = setup
+    (; viscosity_model) = setup
 
     # Mesh
     operator_mesh!(setup)
