@@ -19,7 +19,7 @@ Forcing parameters with floating point type `T`.
 """
 Base.@kwdef mutable struct UnsteadyBodyForce{T} <: AbstractBodyForce{T}
     F::Vector{T} = T[] # For storing constant body force
-    bodyforce_u::Function = () -> error("bodyforce_u not implemented")
-    bodyforce_v::Function = () -> error("bodyforce_v not implemented")
-    bodyforce_w::Function = () -> error("bodyforce_w not implemented")
+    bodyforce_u::Function = (x, y, z, t) -> error("bodyforce_u not implemented")
+    bodyforce_v::Function = (x, y, z, t) -> error("bodyforce_v not implemented")
+    bodyforce_w::Function = (x, y, z, t) -> error("bodyforce_w not implemented")
 end
