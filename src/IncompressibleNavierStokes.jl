@@ -127,11 +127,13 @@ include("solvers/solve.jl")
 
 # Utils
 include("utils/filter_convection.jl")
+include("utils/get_lims.jl")
 
 # Postprocess
 include("postprocess/get_velocity.jl")
 include("postprocess/get_vorticity.jl")
 include("postprocess/get_streamfunction.jl")
+include("postprocess/plot_force.jl")
 include("postprocess/plot_grid.jl")
 include("postprocess/plot_pressure.jl")
 include("postprocess/plot_velocity.jl")
@@ -175,7 +177,8 @@ export create_boundary_conditions,
 
 export momentum!
 
-export plot_grid,
+export plot_force,
+       plot_grid,
     plot_pressure,
     plot_streamfunction,
     plot_velocity,

@@ -8,57 +8,65 @@ initialize!(logger::Logger, stepper) = logger
 # 2D real time plot
 function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,2}) where {M,T}
     (; V, p, t, setup) = stepper
-    (; bc) = setup
-    (; xlims, ylims, x, y, xp, yp) = setup.grid
-    (; fieldname) = plotter
+    (; bc, grid) = setup
+    (; xlims, ylims, x, y, xp, yp) = grid
+    (; fieldname, type) = plotter
 
-    vel = nothing
-    ω = nothing
-    ψ = nothing
-
-    fig = Figure()
     if fieldname == :velocity
         up, vp = get_velocity(V, t, setup)
-        qp = map((u, v) -> √sum(u^2 + v^2), up, vp)
-
-        vel = Observable(qp)
-        ax, hm = contourf(fig[1, 1], xp, yp, vel)
-        field = vel
+        f = map((u, v) -> √sum(u^2 + v^2), up, vp)
+        xf, yf = xp, yp
     elseif fieldname == :vorticity
         if all(==(:periodic), (bc.u.x[1], bc.v.y[1]))
-            xω = x
-            yω = y
+            xf = x
+            yf = y
         else
-            xω = x[2:(end - 1)]
-            yω = y[2:(end - 1)]
+            xf = x[2:(end - 1)]
+            yf = y[2:(end - 1)]
         end
-
-        ω = Observable(get_vorticity(V, t, setup))
-        # ax, hm = contour(fig[1, 1], xω, yω, ω; levels = -10:2:10)
-        # ax, hm = contourf(fig[1, 1], xω, yω, ω; levels = -10:2:10, extendlow = :auto, extendhigh = :auto)
-        # ax, hm = heatmap(fig[1, 1], xω, yω, ω; colorrange = (-20, 20))#, colormap = :vangogh)
-        ax, hm = heatmap(fig[1, 1], xω, yω, ω; colorrange = (-10, 10))#, colormap = :vangogh)
-        field = ω
+        f = get_vorticity(V, t, setup)
     elseif fieldname == :streamfunction
         if bc.u.x[1] == :periodic
-            xψ = x
+            xf = x
         else
-            xψ = x[2:(end - 1)]
+            xf = x[2:(end - 1)]
         end
         if bc.v.y[1] == :periodic
-            yψ = y
+            yf = y
         else
-            yψ = y[2:(end - 1)]
+            yf = y[2:(end - 1)]
         end
-        ψ = Observable(get_streamfunction(V, t, setup))
-        ax, hm = contourf(fig[1, 1], xψ, yψ, ψ)
-        field = ψ
+        f = get_streamfunction(V, t, setup)
     elseif fieldname == :pressure
         error("Not implemented")
-        field = p
+        xf, yf = xp, yp
+        f = reshape(copy(p), length(xp), length(yp))
     else
         error("Unknown fieldname")
     end
+
+    field = Observable(f)
+
+    fig = Figure()
+
+    if type == heatmap
+        lims = Observable(get_lims(f))
+        ax, hm = heatmap(fig[1, 1], xf, yf, field; colorrange = lims)
+    elseif type ∈ (contour, contourf)
+        lims = Observable(LinRange(get_lims(f)..., 10))
+        ax, hm = type(
+            fig[1, 1],
+            xf,
+            yf,
+            field;
+            extendlow = :auto,
+            extendhigh = :auto,
+            levels = lims,
+        )
+    else
+        error("Unknown plot type")
+    end
+
     ax.title = titlecase(string(fieldname))
     ax.aspect = DataAspect()
     ax.xlabel = "x"
@@ -67,56 +75,77 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,2}) wher
     Colorbar(fig[1, 2], hm)
     display(fig)
 
-    @pack! plotter = field
+    @pack! plotter = field, lims
 
     plotter
 end
 
 # 3D real time plot
 function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,3}) where {M,T}
-    (; V, t, setup) = stepper
+    (; V, p, t, setup) = stepper
     (; grid, bc) = setup
     (; x, y, z, xp, yp, zp) = grid
-    (; fieldname) = plotter
+    (; fieldname, type) = plotter
 
-    fig = Figure()
     if fieldname == :velocity
         up, vp, wp = get_velocity(V, t, setup)
-        qp = map((u, v, w) -> √sum(u^2 + v^2 + w^2), up, vp, wp)
-        vel = Observable(qp)
-        field = vel
-        ax = Axis3(fig[1, 1]; title = "Velocity (magnitude)", aspect = :data)
-        hm = contour!(ax, xp, yp, zp, vel; shading = false)
+        f = map((u, v, w) -> √sum(u^2 + v^2 + w^2), up, vp, wp)
+        xf, yf, zf = xp, yp, zp
     elseif fieldname == :vorticity
-        if all(==(:periodic), (bc.u.x[1], bc.v.y[1], bc.w.z[1]))
-            xω = x
-            yω = y
-            zω = z
+        if all(==(:periodic), (bc.u.x[1], bc.v.y[1]))
+            xf = x
+            yf = y
+            zf = y
         else
-            xω = x[2:(end - 1)]
-            yω = y[2:(end - 1)]
-            zω = z[2:(end - 1)]
+            xf = x[2:(end - 1)]
+            yf = y[2:(end - 1)]
+            zf = z[2:(end - 1)]
         end
-        ω = Observable(get_vorticity(V, t, setup))
-        field = ω
-        ax = Axis3(fig[1, 1]; title = "Vorticity (magnitude)", aspect = :data)
-        hm = contour!(
-            ax,
-            xω,
-            yω,
-            zω,
-            ω;
-            shading = false,
-            # extendlow = :auto,
-            # extendhigh = :auto,
-        )
+        f = get_vorticity(V, t, setup)
+    elseif fieldname == :streamfunction
+        if bc.u.x[1] == :periodic
+            xf = x
+        else
+            xf = x[2:(end - 1)]
+        end
+        if bc.v.y[1] == :periodic
+            yf = y
+        else
+            yf = y[2:(end - 1)]
+        end
+        f = get_streamfunction(V, t, setup)
+    elseif fieldname == :pressure
+        xf, yf, zf = xp, yp, zp
+        f = reshape(copy(p), length(xp), length(yp), length(zp))
     else
         error("Unknown fieldname")
     end
-    # Colorbar(fig[1, 2], hm)
+
+    field = Observable(f)
+
+    fig = Figure()
+
+    if type ∈ (contour, contourf)
+        type == contour && (type! = contour!)
+        type == contourf && (type! = contourf!)
+        lims = Observable(LinRange(get_lims(f, 3)..., 10))
+        ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect = :data)
+        hm = type!(
+            ax,
+            xf,
+            yf,
+            zf,
+            field;
+            levels = lims,
+            shading = false,
+        )
+    else
+        error("Unknown plot type")
+    end
+    # Colorbar(fig[1, 2], hm; ticks = lims)
     display(fig)
 
-    @pack! plotter = field
+    @pack! plotter = field, lims
 
     plotter
 end

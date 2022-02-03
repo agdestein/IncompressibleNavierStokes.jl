@@ -92,7 +92,7 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
 
 
     # FIXME: Dimension error in periodic case
-    @show size(Wv_vx) size(Q2Dx) size(Wu_uy) size(Q2Dy)
+    # @show size(Wv_vx) size(Q2Dx) size(Wu_uy) size(Q2Dy)
     Aψ = Wv_vx * Q2Dx + Wu_uy * Q2Dy
     yAψ = Wv_vx * yQx + Wu_uy * yQy
 

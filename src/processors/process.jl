@@ -23,22 +23,38 @@ end
 function process!(plotter::RealTimePlotter, stepper)
     (; setup, V, p, t) = stepper
     (; Npx, Npy, Npz) = setup.grid
-    (; field, fieldname) = plotter
+    (; field, lims, fieldname, type) = plotter
     N = get_dimension(setup.grid)
     if fieldname == :velocity
         vels = get_velocity(V, t, setup)
-        qp = map((vels...) -> √sum(vel -> vel^2, vels), vels...)
-        field[] = qp
+        f = map((vels...) -> √sum(vel -> vel^2, vels), vels...)
+        n = 3.0
     elseif fieldname == :vorticity
-        field[] = vorticity!(field[], V, t, setup)
+        # Use preallocated field
+        f = vorticity!(field[], V, t, setup)
+        n = 3.0
     elseif fieldname == :streamfunction
-        field[] = get_streamfunction(V, t, setup)
+        f = get_streamfunction(V, t, setup)
+        n = 3.0
     elseif fieldname == :pressure
+        f = copy(p)
         if N == 2
-            field[] = reshape(p, Npx, Npy)
+            f = reshape(f, Npx, Npy)
         elseif N == 3
-            field[] = reshape(p, Npx, Npy, Npz)
+            f = reshape(f, Npx, Npy, Npz)
         end
+        n = 5.0
+    end
+
+    field[] = f
+
+    N == 2 && (n = 1.5)
+    # nlevel = N == 2 ? 10 : N == 3 ? 5 : error()
+    nlevel = 10
+    if type == heatmap
+        lims[] = get_lims(f, n)
+    elseif type ∈ (contour, contourf)
+        lims[] = LinRange(get_lims(f, n)..., nlevel)
     end
 
     plotter
