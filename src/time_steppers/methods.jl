@@ -47,15 +47,26 @@ struct ExplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
 end
 
 """
-    ImplicitRungeKuttaMethod(A, b, c, r)
+    ImplicitRungeKuttaMethod(A, b, c, r; newton_type = :full, maxiter = 10)
 
 Implicit Runge Kutta method.
+
+The implicit linear system is solved at each time step using Newton's method. The
+`newton_type` may be one of the following:
+
+- `:no`: Replace iteration matrix with I/Δt (no Jacobian)
+- `:approximate`: Build Jacobian once before iterations only
+- `:full`: Build Jacobian at each iteration
 """
-struct ImplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
+Base.@kwdef struct ImplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
     A::Matrix{T}
     b::Vector{T}
     c::Vector{T}
     r::T
+    newton_type::Symbol = :full
+    maxiter::Int = 10
+    abstol::T = 1e-14
+    reltol::T = 1e-14
 end
 
 """
@@ -63,7 +74,7 @@ end
 
 Get Runge Kutta method. The function checks whether the method is explicit.
 """
-function runge_kutta_method(A, b, c, r)
+function runge_kutta_method(A, b, c, r; kwargs...)
     s = size(A, 1)
     s == size(A, 2) == length(b) == length(c) || error("A, b, and c must have the same sizes")
     isexplicit = all(≈(0), UpperTriangular(A))
@@ -75,9 +86,9 @@ function runge_kutta_method(A, b, c, r)
     c = convert(Vector{T}, c)
     r = convert(T, r)
     if isexplicit
-        ExplicitRungeKuttaMethod(A, b, c, r)
+        ExplicitRungeKuttaMethod(A, b, c, r; kwargs...)
     else
-        ImplicitRungeKuttaMethod(A, b, c, r)
+        ImplicitRungeKuttaMethod(; A, b, c, r, kwargs...)
     end
 end
 

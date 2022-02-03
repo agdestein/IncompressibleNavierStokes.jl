@@ -44,13 +44,6 @@ solver_settings = SolverSettings{T}(;
     # pressure_solver = CGPressureSolver{T}(),      # Pressure solver
     # pressure_solver = FourierPressureSolver{T}(), # Pressure solver
     p_add_solve = true,                             # Additional pressure solve to make it same order as velocity
-    abstol = 1e-10,                                 # Absolute accuracy
-    reltol = 1e-14,                                 # Relative accuracy
-    maxiter = 10,                                   # Maximum number of iterations
-    # :no: Replace iteration matrix with I/Δt (no Jacobian)
-    # :approximate: Build Jacobian once before iterations only
-    # :full: Build Jacobian at each iteration
-    newton_type = :full,
 )
 
 ## Boundary conditions
@@ -61,14 +54,8 @@ bc = create_boundary_conditions(
     v_bc;
     bc_unsteady = false,
     bc_type = (;
-        u = (;
-            x = (:dirichlet, :pressure),
-            y = (:dirichlet, :dirichlet),
-        ),
-        v = (;
-            x = (:dirichlet, :symmetric),
-            y = (:dirichlet, :dirichlet),
-        ),
+        u = (; x = (:dirichlet, :pressure), y = (:dirichlet, :dirichlet)),
+        v = (; x = (:dirichlet, :symmetric), y = (:dirichlet, :dirichlet)),
     ),
     T,
 )
@@ -104,11 +91,12 @@ V, p = @time solve(problem);
 
 
 ## Iteration processors
-logger = Logger(; nupdate = 10)
-plotter = RealTimePlotter(; nupdate = 20, fieldname = :vorticity)
+logger = Logger(; nupdate = 5)
+plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
 writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 10)
 processors = [logger, plotter, writer, tracer]
+processors = [logger, plotter, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);

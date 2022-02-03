@@ -15,9 +15,10 @@ Formulation:
 function step!(stepper::OneLegStepper, Δt)
     (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
     (; β) = method
-    (; G, M, yM) = setup.operators
-    (; pressure_solver, p_add_solve) = setup.solver_settings
-    (; Ω⁻¹) = setup.grid
+    (; grid, operators, bc, solver_settings) = setup
+    (; G, M) = operators
+    (; pressure_solver, p_add_solve) = solver_settings
+    (; Ω⁻¹) = grid
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache
 
     Δt ≈ Δtₙ || error("One-leg-β-method requires constant time step")
@@ -45,9 +46,8 @@ function step!(stepper::OneLegStepper, Δt)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
-    if setup.bc.bc_unsteady
-        set_bc_vectors!(setup, tₙ + Δtₙ)
-    end
+    bc.bc_unsteady && set_bc_vectors!(setup, tₙ + Δtₙ)
+    (; yM) = operators
 
     # Adapt time step for pressure calculation
     Δtᵦ = Δtₙ / (β + 1//2)

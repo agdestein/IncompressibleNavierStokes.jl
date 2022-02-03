@@ -66,10 +66,6 @@ plot_grid(grid)
 solver_settings = SolverSettings{T}(;
     pressure_solver = DirectPressureSolver{T}(),    # Pressure solver
     p_add_solve = true,                             # Additional pressure solve for second order pressure
-    abstol = 1e-10,                                 # Absolute accuracy
-    reltol = 1e-14,                                 # Relative accuracy
-    maxiter = 10,                                   # Maximum number of iterations
-    newton_type = :approximate,
 )
 
 # Dirichlet boundary conditions are specified as plain Julia functions. They are marked by

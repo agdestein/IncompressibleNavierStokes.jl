@@ -40,7 +40,7 @@ influence on the accuracy of the velocity.
 """
 function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
-    (; viscosity_model) = setup
+    (; convection_model, viscosity_model) = setup
     (; NV, Ω⁻¹) = setup.grid
     (; G, y_p, M, yM) = setup.operators
     (; Diff, yDiff, y_p) = setup.operators
@@ -50,7 +50,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     (; d, ∇d) = momentum_cache
 
     # For the first time step, this might be necessary
-    convection!(cₙ, nothing, Vₙ, Vₙ, tₙ, setup, momentum_cache)
+    convection!(convection_model, cₙ, nothing, Vₙ, Vₙ, setup, momentum_cache)
 
     # Advance one step
     stepper.n += 1
@@ -72,7 +72,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     bodyforce!(bₙ, nothing, Vₙ, tₙ, setup)
 
     # Convection of current solution
-    convection!(cₙ, nothing, Vₙ, Vₙ, tₙ, setup, momentum_cache)
+    convection!(convection_model, cₙ, nothing, Vₙ, Vₙ, setup, momentum_cache)
 
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
     if setup.bc.bc_unsteady

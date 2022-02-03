@@ -14,10 +14,6 @@
     solver_settings = SolverSettings{T}(;
         pressure_solver = FourierPressureSolver{T}(),
         p_add_solve = true,
-        abstol = 1e-10,
-        reltol = 1e-14,
-        maxiter = 10,
-        newton_type = :full,
     )
 
     ## Boundary conditions
@@ -81,12 +77,12 @@
         problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 
         @testset "Explicit Runge Kutta" begin
-            V, p = @time solve(problem, RK44(); Δt = 0.01)
+            V, p = solve(problem, RK44(); Δt = 0.01)
             @test norm(V - V_exact) / norm(V_exact) < 1e-4
         end
 
         @testset "Implicit Runge Kutta" begin
-            V, p = @time solve(problem, RIA2(); Δt = 0.01)
+            V, p = solve(problem, RIA2(); Δt = 0.01)
             @test_broken norm(V - V_exact) / norm(V_exact) < 1e-3
         end
 

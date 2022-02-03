@@ -135,7 +135,7 @@ Base.@kwdef mutable struct Grid{T,N}
     indV::UnitRange{Int} = 0:0
     indp::UnitRange{Int} = 0:0
 
-    
+
 
     hx3::Vector{T} = T[]
     hy3::Vector{T} = T[]
@@ -147,20 +147,20 @@ Base.@kwdef mutable struct Grid{T,N}
     hxd13::Vector{T} = T[]
     hxd3::Vector{T} = T[]
     hyd13::Vector{T} = T[]
-         hyd3::Vector{T} = T[]
-         gxd13::Vector{T} = T[]
-         gxd3::Vector{T} = T[]
-         gyd13::Vector{T} = T[]
-         gyd3::Vector{T} = T[]
+    hyd3::Vector{T} = T[]
+    gxd13::Vector{T} = T[]
+    gxd3::Vector{T} = T[]
+    gyd13::Vector{T} = T[]
+    gyd3::Vector{T} = T[]
 
-         Ωux1::Vector{T} = T[]
-         Ωux3::Vector{T} = T[]
-         Ωuy1::Vector{T} = T[]
-         Ωuy3::Vector{T} = T[]
-         Ωvx1::Vector{T} = T[]
-         Ωvx3::Vector{T} = T[]
-         Ωvy1::Vector{T} = T[]
-         Ωvy3::Vector{T} = T[]
+    Ωux1::Vector{T} = T[]
+    Ωux3::Vector{T} = T[]
+    Ωuy1::Vector{T} = T[]
+    Ωuy3::Vector{T} = T[]
+    Ωvx1::Vector{T} = T[]
+    Ωvx3::Vector{T} = T[]
+    Ωvy1::Vector{T} = T[]
+    Ωvy3::Vector{T} = T[]
 
 
 end

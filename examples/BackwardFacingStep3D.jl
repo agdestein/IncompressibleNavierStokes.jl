@@ -32,8 +32,8 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
 ## Grid
-x = stretched_grid(0, 10, 100)
-y = cosine_grid(-0.5, 0.5, 16)
+x = stretched_grid(0, 10, 160)
+y = stretched_grid(-0.5, 0.5, 16)
 z = stretched_grid(-0.25, 0.25, 8)
 grid = create_grid(x, y, z; T);
 
@@ -45,13 +45,6 @@ solver_settings = SolverSettings{T}(;
     # pressure_solver = CGPressureSolver{T}(),      # Pressure solver
     # pressure_solver = FourierPressureSolver{T}(), # Pressure solver
     p_add_solve = true,                             # Additional pressure solve to make it same order as velocity
-    abstol = 1e-10,                                 # Absolute accuracy
-    reltol = 1e-14,                                 # Relative accuracy
-    maxiter = 10,                                   # Maximum number of iterations
-    # :no: Replace iteration matrix with I/Δt (no Jacobian)
-    # :approximate: Build Jacobian once before iterations only
-    # :full: Build Jacobian at each iteration
-    newton_type = :full,
 )
 
 ## Boundary conditions
@@ -118,14 +111,14 @@ V, p = @time solve(problem);
 
 ## Iteration processors
 logger = Logger(; nupdate = 10)
-plotter = RealTimePlotter(; nupdate = 20, fieldname = :velocity)
+plotter = RealTimePlotter(; nupdate = 50, fieldname = :velocity)
 writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer(; nupdate = 1)
+tracer = QuantityTracer(; nupdate = 25)
 processors = [logger, plotter, writer, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = @time solve(problem, RK44(); Δt = 0.005, processors);
+V, p = @time solve(problem, RK44(); Δt = 0.01, processors);
 
 
 ## Post-process

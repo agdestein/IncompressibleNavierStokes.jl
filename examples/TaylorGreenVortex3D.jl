@@ -43,13 +43,6 @@ solver_settings = SolverSettings{T}(;
     # pressure_solver = CGPressureSolver{T}(; maxiter = 500, abstol = 1e-8), # Pressure solver
     pressure_solver = FourierPressureSolver{T}(), # Pressure solver
     p_add_solve = true,              # Additional pressure solve to make it same order as velocity
-    abstol = 1e-10,                  # Absolute accuracy
-    reltol = 1e-14,                  # Relative accuracy
-    maxiter = 10,                    # Maximum number of iterations
-    # :no: Replace iteration matrix with I/Δt (no Jacobian)
-    # :approximate: Build Jacobian once before iterations only
-    # :full: Build Jacobian at each iteration
-    newton_type = :full,
 )
 
 ## Boundary conditions

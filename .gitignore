@@ -5,6 +5,7 @@
 /docs/build/
 /docs/src/generated/
 *output/
+examples/test.jl
 
 # Vim swap
 *.swp

@@ -3,14 +3,14 @@
 
 Convenience function for initializing arrays `c` and `∇c` before filling in convection terms.
 """
-function convection(model, V, ϕ, setup; getJacobian = false)
+function convection(model, V, ϕ, setup; getJacobian = false, newton_factor = false)
     (; NV) = setup.grid
 
     cache = MomentumCache(setup)
     c = zeros(NV)
     ∇c = spzeros(NV, NV)
 
-    convection!(model, c, ∇c, V, ϕ, setup, cache; getJacobian)
+    convection!(model, c, ∇c, V, ϕ, setup, cache; getJacobian, newton_factor)
 end
 
 """
@@ -30,15 +30,16 @@ function convection!(
     setup,
     cache;
     getJacobian = false,
+    newton_factor = false,
 )
     (; order4, α) = setup.grid
     (; c3, ∇c3) = cache
 
     # No regularization
-    convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian, order4 = false)
+    convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian, newton_factor, order4 = false)
 
     if order4
-        convection_components!(c3, ∇c3, V, ϕ, setup, cache; getJacobian, order4)
+        convection_components!(c3, ∇c3, V, ϕ, setup, cache; getJacobian, newton_factor, order4)
         @. c = α * c - c3
         getJacobian && (@. ∇c = α * ∇c - ∇c3)
     end
@@ -56,6 +57,7 @@ function convection!(
     setup::Setup{T,2},
     cache;
     getJacobian = false,
+    newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv) = grid
@@ -82,7 +84,7 @@ function convection!(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian)
+    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
 
     cu .= filter_convection(cu, Diffu_f, yDiffu_f, α)
     cv .= filter_convection(cv, Diffv_f, yDiffv_f, α)
@@ -100,6 +102,7 @@ function convection!(
     setup::Setup{T,3},
     cache;
     getJacobian = false,
+    newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
@@ -131,7 +134,7 @@ function convection!(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian)
+    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
 
     cu .= filter_convection(cu, Diffu_f, yDiffu_f, α)
     cv .= filter_convection(cv, Diffv_f, yDiffv_f, α)
@@ -150,6 +153,7 @@ function convection!(
     setup::Setup{T,2},
     cache;
     getJacobian = false,
+    newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv) = grid
@@ -190,15 +194,18 @@ function convection!(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * V̄ + yM))
 
-    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian)
-    convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache; getJacobian)
-    convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian)
+    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
+    convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache; getJacobian, newton_factor)
+    convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian, newton_factor)
 
     # TODO: consider inner loop parallelization
     # @sync begin
-    #     @spawn convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian)
-    #     @spawn convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache, getJacobian)
-    #     @spawn convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian)
+    #     @spawn convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian,
+    #     newton_factor)
+    #     @spawn convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache, getJacobian,
+    #     newton_factor)
+    #     @spawn convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian,
+    #     newton_factor)
     # end
 
     cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
@@ -217,6 +224,7 @@ function convection!(
     setup::Setup{T,3},
     cache;
     getJacobian = false,
+    newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
@@ -266,15 +274,18 @@ function convection!(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * V̄ + yM))
 
-    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian)
-    convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache; getJacobian)
-    convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian)
+    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
+    convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache; getJacobian, newton_factor)
+    convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian, newton_factor)
 
     # TODO: consider inner loop parallelization
     # @sync begin
-    #     @spawn convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian)
-    #     @spawn convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache, getJacobian)
-    #     @spawn convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache, getJacobian)
+    #     @spawn convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian,
+    #     newton_factor)
+    #     @spawn convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache, getJacobian,
+    #     newton_factor)
+    #     @spawn convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache, getJacobian,
+    #     newton_factor)
     # end
 
     cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
@@ -294,6 +305,7 @@ function convection!(
     setup::Setup{T,2},
     cache;
     getJacobian = false,
+    newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv) = grid
@@ -314,7 +326,7 @@ function convection!(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    convection_components!(c, ∇c, V, ϕ̄, setup, cache; getJacobian)
+    convection_components!(c, ∇c, V, ϕ̄, setup, cache; getJacobian, newton_factor)
 
     c, ∇c
 end
@@ -329,6 +341,7 @@ function convection!(
     setup::Setup{T,3},
     cache;
     getJacobian = false,
+    newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
@@ -351,7 +364,7 @@ function convection!(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    convection_components!(c, ∇c, V, ϕ̄, setup, cache; getJacobian)
+    convection_components!(c, ∇c, V, ϕ̄, setup, cache; getJacobian, newton_factor)
 
     c, ∇c
 end

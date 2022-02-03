@@ -29,6 +29,7 @@ function momentum!(
     F, ∇F, V, ϕ, p, t, setup, cache;
     getJacobian = false,
     nopressure = false,
+    newton_factor = false,
 )
     (; viscosity_model, convection_model) = setup
 
@@ -41,7 +42,7 @@ function momentum!(
     (; c, ∇c, d, ∇d, b, ∇b, Gp) = cache
 
     # Convection
-    convection!(convection_model, c, ∇c, V, ϕ, setup, cache; getJacobian)
+    convection!(convection_model, c, ∇c, V, ϕ, setup, cache; getJacobian, newton_factor)
 
     # Diffusion
     diffusion!(viscosity_model, d, ∇d, V, setup; getJacobian)

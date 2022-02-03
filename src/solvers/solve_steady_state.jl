@@ -34,7 +34,7 @@ function solve(
     t = 0.0
 
     # Start with Picard iterations
-    setup.solver_settings.newton_factor = false
+    newton_factor = false
 
     # Initialize BC arrays
     set_bc_vectors!(setup, t)
@@ -56,10 +56,10 @@ function solve(
 
         if jacobian_type == :newton && npicard < n
             # Switch to Newton
-            setup.solver_settings.newton_factor = true
+            newton_factor = true
         end
 
-        momentum!(F, ∇F, V, V, p, t, setup, momentum_cache; getJacobian = true)
+        momentum!(F, ∇F, V, V, p, t, setup, momentum_cache; getJacobian = true, newton_factor)
 
         fmass = M * V + yM
         f = [-F; fmass]
