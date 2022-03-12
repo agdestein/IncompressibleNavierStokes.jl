@@ -163,7 +163,7 @@ export Logger, RealTimePlotter, VTKWriter, QuantityTracer
 export SteadyStateProblem, UnsteadyProblem, is_steady
 
 # Setup
-export Grid, Operators, SolverSettings, BC, Setup
+export Grid, Operators, BC, Setup
 
 # 1D grids
 export stretched_grid, cosine_grid

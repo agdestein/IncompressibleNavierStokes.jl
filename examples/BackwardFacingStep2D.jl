@@ -88,8 +88,8 @@ V, p = @time solve(problem);
 
 
 ## Iteration processors
-logger = Logger(; nupdate = 5)
-plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
+logger = Logger(; nupdate = 1)
+plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity, type = contour)
 writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 10)
 processors = [logger, plotter, writer, tracer]

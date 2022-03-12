@@ -1,15 +1,18 @@
-function bc_general(Nt, Nin, Nb, bc1, bc2, h1, h2)
-    # Total solution u is written as u = Bb*ub + Bin*uin
-    # The boundary conditions can be written as Bbc*u = ybc
-    # Then u can be written entirely in terms of uin and ybc as:
-    # U = (Bin-Btemp*Bbc*Bin)*uin + Btemp*ybc, where
-    # Btemp = Bb*(Bbc*Bb)^(-1)
-    # Bb, Bin and Bbc depend on type of bc (Neumann/Dirichlet/periodic)
-    # Val1 and val2 can be scalars or vectors with either the value or the
-    # Derivative
-    # (ghost) points on boundary / grid lines
+"""
+    bc_general(Nt, Nin, Nb, bc1, bc2, h1, h2)
 
-    # Some input checking:
+Total solution `u` is written as `u = Bb*ub + Bin*uin`
+
+The boundary conditions can be written as `Bbc*u = ybc`
+
+Then `u` can be written entirely in terms of `uin` and `ybc` as: `u =
+(Bin-Btemp*Bbc*Bin)*uin + Btemp*ybc`, where `Btemp = Bb/(Bbc*Bb)`.
+
+`Bb`, `Bin` and `Bbc` depend on type of bc (Neumann/Dirichlet/periodic) `val1` and `val2`
+can be scalars or vectors with either the value or the derivative (ghost) points on
+boundary/grid lines
+"""
+function bc_general(Nt, Nin, Nb, bc1, bc2, h1, h2)
     if Nt != Nin + Nb
         error("Number of inner points plus boundary points is not equal to total points")
     end
@@ -31,7 +34,7 @@ function bc_general(Nt, Nin, Nb, bc1, bc2, h1, h2)
         diagpos = -1
         if bc1 == :dirichlet
             Bbc[1, 1] = 1
-            ybc1_1D[1] = 1        # ULe
+            ybc1_1D[1] = 1        # uLe
             Bb[1, 1] = 1
         elseif bc1 == :pressure
             diagpos = 0
@@ -46,7 +49,7 @@ function bc_general(Nt, Nin, Nb, bc1, bc2, h1, h2)
 
         if bc2 == :dirichlet
             Bbc[Nb, end] = 1
-            ybc2_1D[1] = 1        # URi
+            ybc2_1D[1] = 1        # uRi
             Bb[end, Nb] = 1
         elseif bc2 == :pressure
 
@@ -71,7 +74,7 @@ function bc_general(Nt, Nin, Nb, bc1, bc2, h1, h2)
 
         if bc1 == :dirichlet
             Bbc[1, 1] = 1
-            ybc1_1D[1] = 1        # ULe
+            ybc1_1D[1] = 1        # uLe
         elseif bc1 == :pressure
             Bbc[1, 1] = -1
             Bbc[1, 2] = 1
@@ -87,11 +90,11 @@ function bc_general(Nt, Nin, Nb, bc1, bc2, h1, h2)
 
         if bc2 == :dirichlet
             Bbc[Nb, end] = 1
-            ybc2_1D[2] = 1        # URi
+            ybc2_1D[2] = 1        # uRi
         elseif bc2 == :pressure
             Bbc[Nb, end-1] = -1
             Bbc[Nb, end] = 1
-            ybc2_1D[2] = 2 * h2     # DuRi
+            ybc2_1D[2] = 2 * h2     # duRi
         elseif bc2 == :periodic # Actually redundant
             Bbc[1, 1] = -1
             Bbc[1, end-1] = 1

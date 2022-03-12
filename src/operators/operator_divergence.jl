@@ -29,13 +29,13 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
 
     ## Mx
     # Building blocks consisting of diagonal matrices where the diagonal is
-    # Equal to constant per block (hy(block)) and changing for next block to
-    # Hy(block+1)
+    # equal to constant per block (hy(block)) and changing for next block to
+    # hy(block+1)
     diag1 = ones(Nux_t - 1)
     M1D = spdiagm(Nux_t - 1, Nux_t, 0 => -diag1, 1 => diag1)
 
     # We only need derivative at inner pressure points, so we map the resulting
-    # Boundary matrix (restrict)
+    # boundary matrix (restrict)
     diagpos = 0
     bc.u.x[2] == :pressure && bc.u.x[1] == :pressure && (diagpos = 1)
     bc.u.x[2] != :pressure && bc.u.x[1] == :pressure && (diagpos = 1)
@@ -73,13 +73,12 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
         Mx_bc3 = (; Mx_bc3..., Bbc = mat_hy3 ⊗ (M1D3 * Mx_bc3.Btemp))
     end
 
-    ## My
-    # Same as Mx but reversing indices and kron arguments
+    ## My (same as Mx but reversing indices and kron arguments)
     diag1 = ones(Nvy_t - 1)
     M1D = spdiagm(Nvy_t - 1, Nvy_t, 0 => -diag1, 1 => diag1)
 
     # We only need derivative at inner pressure points, so we map the resulting
-    # Boundary matrix (restriction)
+    # boundary matrix (restriction)
     diagpos = 0
     bc.v.y[2] == :pressure && bc.v.y[1] == :pressure && (diagpos = 1)
     bc.v.y[2] != :pressure && bc.v.y[1] == :pressure && (diagpos = 1)
@@ -88,6 +87,7 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
 
     BMy = spdiagm(Npy, Nvy_t - 1, diagpos => ones(Npy))
     M1D = BMy * M1D
+
     # Extension to 2D to be used in post-processing files
     Bvp = BMy ⊗ I(Nvx_in)
 
@@ -123,16 +123,14 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
     end
     M = [Mx My]
 
+
     ## Gradient operator G
 
     # Like in the continuous case, grad = -div^T
     # Note that this also holds for outflow boundary conditions, if the stress
     # on the ouflow boundary is properly taken into account in y_p (often this
     # stress will be zero)
-    Gx = -Mx'
-    Gy = -My'
-
-    G = [Gx; Gy]
+    G = -M'
 
     ## Store in setup structure
     @pack! operators = M, Mx_bc, My_bc, G
@@ -155,8 +153,8 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
 
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions
-    if any(==(:pressure), (bc.u.x..., bc.v.y...))
-         if any(≉(0; atol = 1e-10), abs.(sum(A; dims = 2)))
+    if all(≠(:pressure), (bc.u.x..., bc.v.y...))
+        if any(≉(0; atol = 1e-10), sum(A; dims = 2))
             @warn "Pressure matrix: not all rowsums are zero!"
         end
     end
@@ -177,9 +175,9 @@ function operator_divergence!(setup::Setup{T,3}) where {T}
     ## Divergence operator M
 
     # Note that the divergence matrix M is not square
-    mat_hx = spdiagm(hx)
-    mat_hy = spdiagm(hy)
-    mat_hz = spdiagm(hz)
+    mat_hx = Diagonal(hx)
+    mat_hy = Diagonal(hy)
+    mat_hz = Diagonal(hz)
 
     ## Mx
     # Building blocks consisting of diagonal matrices where the diagonal is
@@ -289,8 +287,8 @@ function operator_divergence!(setup::Setup{T,3}) where {T}
 
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions
-    if any(==(:pressure), (bc.u.x..., bc.v.y..., bc.w.z...))
-         if any(≉(0; atol = 1e-10), abs.(sum(A; dims = 2)))
+    if all(≠(:pressure), (bc.u.x..., bc.v.y..., bc.w.z...))
+        if any(≉(0; atol = 1e-10), sum(A; dims = 2))
             @warn "Pressure matrix: not all rowsums are zero!"
         end
     end

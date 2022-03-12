@@ -19,9 +19,6 @@ function initialize!(solver::FourierPressureSolver, setup::Setup{T,2}, A) where 
     if any(!isequal((:periodic, :periodic)), (bc.u.x, bc.v.y))
         error("FourierPressureSolver only implemented for periodic boundary conditions")
     end
-    if mapreduce(h -> maximum(abs.(diff(h))) > 1e-14, |, [hx, hy])
-        error("FourierPressureSolver requires uniform grid in each dimension")
-    end
     Δx = hx[1]
     Δy = hy[1]
     if any(≉(Δx), hx) || any(≉(Δy), hy)
@@ -57,9 +54,6 @@ function initialize!(solver::FourierPressureSolver, setup::Setup{T,3}, A) where 
     (; hx, hy, hz, Npx, Npy, Npz) = setup.grid
     if any(!isequal((:periodic, :periodic)), [bc.u.x, bc.v.y, bc.w.z])
         error("FourierPressureSolver only implemented for periodic boundary conditions")
-    end
-    if mapreduce(h -> maximum(abs.(diff(h))) > 1e-14, |, [hx, hy, hz])
-        error("FourierPressureSolver requires uniform grid in each dimension")
     end
     Δx = hx[1]
     Δy = hy[1]

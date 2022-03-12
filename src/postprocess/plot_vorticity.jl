@@ -31,7 +31,7 @@ function plot_vorticity(setup, V, t; kwargs...)
     ax = Axis(
         fig[1, 1];
         aspect = DataAspect(),
-        title = "Vorticity ω",
+        title = "Vorticity",
         xlabel = "x",
         ylabel = "y",
     )

@@ -163,8 +163,8 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         Iv_uy = Iv_uy_bc_lr.B2D * Iv_uy_bc_lu.B2D
 
         ## Iv_uy3
-        diag1 = fill(weight1, Nvy_t)
-        diag2 = fill(weight2, Nvy_t)
+        diag1 = fill(weight1, Nvx_t - 1)
+        diag2 = fill(weight2, Nvx_t - 1)
         I1D = spdiagm(Nvx_t - 1, Nvx_t + 2, 0 => diag2, 1 => diag1, 2 => diag1, 3 => diag2)
 
         # Restrict to u-points

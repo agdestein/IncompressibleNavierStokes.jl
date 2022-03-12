@@ -145,9 +145,9 @@ Base.@kwdef mutable struct Operators{T}
     yAw_wx::Vector{T} = T[]
     yAw_wy::Vector{T} = T[]
     yAw_wz::Vector{T} = T[]
-    
+
     yDiff::Vector{T} = T[]
-    
+
     yIu_ux::Vector{T} = T[]
     yIv_uy::Vector{T} = T[]
     yIw_uz::Vector{T} = T[]
@@ -208,9 +208,6 @@ Base.@kwdef mutable struct Operators{T}
     A::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
     ydM::Vector{T} = T[]
-    ypx::Vector{T} = T[]
-    ypy::Vector{T} = T[]
-    ypz::Vector{T} = T[]
 
     Aν_ux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Aν_uy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
@@ -274,22 +271,22 @@ Base.@kwdef mutable struct Operators{T}
     Av_vx_bc3::NamedTuple = (;)
     Av_vy_bc3::NamedTuple = (;)
 
-        Iu_ux3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-        Iv_uy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-        Iu_vx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-        Iv_vy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Iu_ux3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Iv_uy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Iu_vx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Iv_vy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
-        Iu_ux_bc3::NamedTuple = (;)
-        Iv_uy_bc_lr3::NamedTuple = (;)
-        Iv_uy_bc_lu3::NamedTuple = (;)
-        Iu_vx_bc_lr3::NamedTuple = (;)
-        Iu_vx_bc_lu3::NamedTuple = (;)
-        Iv_vy_bc3::NamedTuple = (;)
+    Iu_ux_bc3::NamedTuple = (;)
+    Iv_uy_bc_lr3::NamedTuple = (;)
+    Iv_uy_bc_lu3::NamedTuple = (;)
+    Iu_vx_bc_lr3::NamedTuple = (;)
+    Iu_vx_bc_lu3::NamedTuple = (;)
+    Iv_vy_bc3::NamedTuple = (;)
 
-            Mx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-            My3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-            Mx_bc3::NamedTuple = (;)
-            My_bc3::NamedTuple = (;)
+    Mx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    My3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Mx_bc3::NamedTuple = (;)
+    My_bc3::NamedTuple = (;)
 
     Cux3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Cuy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)

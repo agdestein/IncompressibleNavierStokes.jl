@@ -34,7 +34,7 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         (; Mx_bc3, My_bc3) = operators
     end
 
-    # TODO: Split up function into allocating part (constructor?) and mutating `update!`
+    # TODO: Split function into allocating part (constructor?) and mutating `update!`
 
     ## Get BC values
     uLo = u_bc.(x, y[1], t)
@@ -120,8 +120,8 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     # Lower and upper side
     y1D_lo = zeros(Nvy_in)
     y1D_up = zeros(Nvy_in)
-    bc.v.y[1] == :pressure && ( y1D_lo[1] = -1)
-    bc.v.y[2] == :pressure && ( y1D_up[end] = 1)
+    bc.v.y[1] == :pressure && (y1D_lo[1] = -1)
+    bc.v.y[2] == :pressure && (y1D_up[end] = 1)
     y_py = y1D_lo ⊗ (hx .* p_bc.y[1]) + y1D_up ⊗ (hx .* p_bc.y[2])
 
     y_p = [y_px; y_py]

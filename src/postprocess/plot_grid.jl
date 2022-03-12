@@ -7,7 +7,12 @@ function plot_grid end
 
 function plot_grid(grid::Grid{T,2}) where {T}
     (; x, y) = grid
-    wireframe(x, y, zeros(length(x), length(y)); axis = (; aspect = DataAspect()))
+    wireframe(
+        x,
+        y,
+        zeros(length(x), length(y));
+        axis = (; aspect = DataAspect(), xlabel = "x", ylabel = "y"),
+    )
 end
 
 function plot_grid(grid::Grid{T,3}) where {T}
@@ -21,14 +26,12 @@ function plot_grid(grid::Grid{T,3}) where {T}
     fig = Figure()
 
     ax = Axis3(fig[1, 1])
-    for func! in [surface!, wireframe!]
-        wireframe!(ax, x, y, fill(z[1], length(x), length(y)))
-        wireframe!(ax, x, y, fill(z[end], length(x), length(y)))
-        wireframe!(ax, x, fill(y[1], length(z)), repeat(z, 1, length(x))')
-        wireframe!(ax, x, fill(y[end], length(z)), repeat(z, 1, length(x))')
-        wireframe!(ax, fill(x[1], length(z)), y, repeat(z, 1, length(y)))
-        wireframe!(ax, fill(x[end], length(z)), y, repeat(z, 1, length(y)))
-    end
+    wireframe!(ax, x, y, fill(z[1], length(x), length(y)))
+    wireframe!(ax, x, y, fill(z[end], length(x), length(y)))
+    wireframe!(ax, x, fill(y[1], length(z)), repeat(z, 1, length(x))')
+    wireframe!(ax, x, fill(y[end], length(z)), repeat(z, 1, length(x))')
+    wireframe!(ax, fill(x[1], length(z)), y, repeat(z, 1, length(y)))
+    wireframe!(ax, fill(x[end], length(z)), y, repeat(z, 1, length(y)))
     ax.aspect = :data
 
     ax = Axis(fig[1, 2]; xlabel = "x", ylabel = "y")

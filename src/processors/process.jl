@@ -8,11 +8,7 @@ function process! end
 function process!(logger::Logger, stepper)
     (; V, p, t, setup, cache, momentum_cache) = stepper
     (; F) = cache
-    # Calculate mass, momentum and energy
-    # maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
 
-    # Residual (in Finite Volume form)
-    # For k-ϵ model residual also contains k and ϵ terms
     momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
 
     @info "Iteration $(stepper.n)" t norm(F) maximum(F)

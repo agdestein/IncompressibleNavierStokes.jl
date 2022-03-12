@@ -25,7 +25,8 @@ viscosity_model = LaminarModel{T}(; Re = 100)
 # viscosity_model = QRModel{T}(; Re = 100)
 
 ## Convection model
-convection_model = NoRegConvectionModel{T}() # convection_model = C2ConvectionModel{T}()
+convection_model = NoRegConvectionModel{T}()
+# convection_model = C2ConvectionModel{T}()
 # convection_model = C4ConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
@@ -38,12 +39,10 @@ plot_grid(grid)
 
 ## Boundary conditions
 f = 0.5
-u_bc(x, y, t) = x ≈ grid.xlims[1] ? cos(π / 6 * sin(f * t)) : 0.0
-v_bc(x, y, t) = x ≈ grid.xlims[1] ? sin(π / 6 * sin(f * t)) : 0.0
-dudt_bc(x, y, t) =
-    x ≈ grid.xlims[1] ? -π / 6 * f * cos(f * t) * sin(π / 6 * sin(f * t)) : 0.0
-dvdt_bc(x, y, t) =
-    x ≈ grid.xlims[1] ? π / 6 * f * cos(f * t) * cos(π / 6 * sin(f * t)) : 0.0
+u_bc(x, y, t) = x ≈ 0.0 ? cos(π / 6 * sin(f * t)) : 0.0
+v_bc(x, y, t) = x ≈ 0.0 ? sin(π / 6 * sin(f * t)) : 0.0
+dudt_bc(x, y, t) = x ≈ 0.0 ? -π / 6 * f * cos(f * t) * sin(π / 6 * sin(f * t)) : 0.0
+dvdt_bc(x, y, t) = x ≈ 0.0 ? π / 6 * f * cos(f * t) * cos(π / 6 * sin(f * t)) : 0.0
 bc = create_boundary_conditions(
     u_bc,
     v_bc;
@@ -58,11 +57,11 @@ bc = create_boundary_conditions(
 )
 
 ## Forcing parameters
-c = (2.0, 0.0) # Disk center
+xc, yc = 2.0, 0.0 # Disk center
 D = 1.0 # Disk diameter
 δ = 0.11 # Disk thickness
 Cₜ = 0.01 # Thrust coefficient
-inside(x, y) = abs(x - c[1]) ≤ δ / 2 && abs(y - c[2]) ≤ D / 2
+inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
 bodyforce_u(x, y) = -Cₜ * inside(x, y)
 bodyforce_v(x, y) = 0.0
 force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)

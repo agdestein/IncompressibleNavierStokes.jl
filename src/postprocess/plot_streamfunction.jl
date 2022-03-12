@@ -31,7 +31,7 @@ function plot_streamfunction(setup::Setup{T,2}, V, t; kwargs...) where {T}
     ax = Axis(
         fig[1, 1],
         aspect = DataAspect(),
-        title = "Stream function ψ",
+        title = "Stream function",
         xlabel = "x",
         ylabel = "y",
     )
