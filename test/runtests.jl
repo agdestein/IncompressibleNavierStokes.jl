@@ -9,6 +9,7 @@ using IncompressibleNavierStokes
 using LinearAlgebra
 using Statistics
 using Test
+using Aqua
 
 @testset "IncompressibleNavierStokes" begin
     include("grid.jl")
@@ -17,4 +18,8 @@ using Test
     include("solvers.jl")
     include("simulation2D.jl")
     include("simulation3D.jl")
+
+    @testset "Aqua" begin
+        Aqua.test_all(IncompressibleNavierStokes; ambiguities = false)
+    end
 end
