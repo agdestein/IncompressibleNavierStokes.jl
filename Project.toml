@@ -18,6 +18,7 @@ UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 
 [compat]
+Aqua = "0.5"
 CairoMakie = "0.7"
 FFTW = "1"
 GLMakie = "0.4, 0.5"
