@@ -20,6 +20,10 @@ using Aqua
     include("simulation3D.jl")
 
     @testset "Aqua" begin
-        Aqua.test_all(IncompressibleNavierStokes; ambiguities = false)
+        Aqua.test_all(
+            IncompressibleNavierStokes;
+            ambiguities = false,
+            project_toml_formatting = false, # https://github.com/JuliaTesting/Aqua.jl/issues/72
+        )
     end
 end
