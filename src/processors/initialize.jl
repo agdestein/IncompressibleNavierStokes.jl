@@ -138,6 +138,7 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,3}) wher
             field;
             levels = lims,
             shading = false,
+            alpha = 0.05,
         )
     else
         error("Unknown plot type")

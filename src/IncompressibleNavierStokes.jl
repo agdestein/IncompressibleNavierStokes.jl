@@ -16,7 +16,6 @@ using UnPack
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 using Makie
 
-
 # Convenience notation
 const ⊗ = kron
 

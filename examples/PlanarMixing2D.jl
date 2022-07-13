@@ -1,6 +1,6 @@
-# # Shear layer case
+# # Planar mixing case
 #
-# Shear layer test case.
+# Planar mixing test case.
 
 if isdefined(@__MODULE__, :LanguageServer)
     include("../src/IncompressibleNavierStokes.jl")
@@ -11,17 +11,17 @@ using IncompressibleNavierStokes
 using GLMakie
 
 # Case name for saving results
-name = "ShearLayer2D"
+name = "PlanarMixing2D"
 
 # Floating point type for simulations
 T = Float64
 
 ## Viscosity model
-viscosity_model = LaminarModel{T}(; Re = Inf)
-# viscosity_model = KEpsilonModel{T}(; Re = Inf)
-# viscosity_model = MixingLengthModel{T}(; Re = Inf)
-# viscosity_model = SmagorinskyModel{T}(; Re = Inf)
-# viscosity_model = QRModel{T}(; Re = Inf)
+viscosity_model = LaminarModel{T}(; Re = 500)
+# viscosity_model = KEpsilonModel{T}(; Re = 500)
+# viscosity_model = MixingLengthModel{T}(; Re = 500)
+# viscosity_model = SmagorinskyModel{T}(; Re = 500)
+# viscosity_model = QRModel{T}(; Re = 500)
 
 ## Convection model
 convection_model = NoRegConvectionModel{T}()
@@ -30,23 +30,31 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
 ## Grid
-x = stretched_grid(0.0, 2π, 40)
-y = stretched_grid(0.0, 2π, 40)
-grid = create_grid(x, y; T, order4 = true);
+x = stretched_grid(0.0, 256.0, 1024)
+y = stretched_grid(-32.0, 32.0, 256)
+grid = create_grid(x, y; T, order4 = false);
 
-# Plot grid
 plot_grid(grid)
 
-## Boundary conditions
-u_bc(x, y, t) = 0.0
+## Boundary conditions ΔU = 1.0
+ΔU = 1.0
+Ū = 1.0
+ϵ = (0.082Ū, 0.012Ū)
+n = (0.4π, 0.3π)
+ω = (0.22, 0.11)
+u_bc(x, y, t) = 1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * sin(ω * t))
 v_bc(x, y, t) = 0.0
+dudt_bc(x, y, t) = sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * ω * cos(ω * t))
+dvdt_bc(x, y, t) = 0.0
 bc = create_boundary_conditions(
     u_bc,
     v_bc;
-    bc_unsteady = false,
+    dudt_bc,
+    dvdt_bc,
+    bc_unsteady = true,
     bc_type = (;
-        u = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
-        v = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
+        u = (; x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)),
+        v = (; x = (:dirichlet, :symmetric), y = (:pressure, :pressure)),
     ),
     T,
 )
@@ -66,15 +74,11 @@ setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_so
 build_operators!(setup);
 
 ## Time interval
-t_start, t_end = tlims = (0.0, 8.0)
+t_start, t_end = tlims = (0.0, 300.0)
 
 ## Initial conditions
-# we add 1 to u in order to make global momentum conservation less trivial
-d = π / 15
-e = 0.05
-initial_velocity_u(x, y) = y ≤ π ? tanh((y - π / 2) / d) : tanh((3π / 2 - y) / d)
-# initial_velocity_u(x, y) = 1.0 + (y ≤ π ? tanh((y - π / 2) / d) : tanh((3π / 2 - y) / d))
-initial_velocity_v(x, y) = e * sin(x)
+initial_velocity_u(x, y) = u_bc(x, y, 0.0)
+initial_velocity_v(x, y) = 0.0
 initial_pressure(x, y) = 0.0
 V₀, p₀ = create_initial_conditions(
     setup,
@@ -92,19 +96,20 @@ V, p = @time solve(problem);
 
 ## Iteration processors
 logger = Logger(; nupdate = 1)
-plotter = RealTimePlotter(; nupdate = 1, fieldname = :vorticity, type = contourf)
+plotter = RealTimePlotter(; nupdate = 10, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer(; nupdate = 1)
+tracer = QuantityTracer(; nupdate = 10)
 processors = [logger, plotter, writer, tracer]
+# , lims = (-0.8, 0.02)
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = @time solve(problem, RK44(); Δt = 0.1, processors);
+V, p = @time solve(problem, RK44P2(); Δt = 0.1, processors);
 
 
 ## Post-process
 plot_tracers(tracer)
 plot_pressure(setup, p)
 plot_velocity(setup, V, t_end)
-plot_vorticity(setup, V, tlims[2])
+plot_vorticity(setup, V, tlims[2]);
 plot_streamfunction(setup, V, tlims[2])

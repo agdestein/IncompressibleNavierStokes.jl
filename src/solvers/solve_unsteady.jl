@@ -20,14 +20,15 @@ For methods that are not self-starting, `nstartup` startup iterations are perfor
 Each `processor` is called after every `processor.nupdate` time step.
 """
 function solve(
-        problem::UnsteadyProblem, method;
-        Δt = nothing,
-        CFL = 1,
-        n_adapt_Δt = 1,
-        processors = Processor[],
-        method_startup = nothing,
-        nstartup = 1,
-    )
+    problem::UnsteadyProblem,
+    method;
+    Δt = nothing,
+    CFL = 1,
+    n_adapt_Δt = 1,
+    processors = Processor[],
+    method_startup = nothing,
+    nstartup = 1,
+)
     (; setup, V₀, p₀, tlims) = problem
     
     t_start, t_end = tlims

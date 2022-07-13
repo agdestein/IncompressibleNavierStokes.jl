@@ -47,5 +47,5 @@ function plot_velocity(setup::Setup{T,3}, V, t; kwargs...) where {T}
     levels = LinRange(μ - 3σ, μ + 3σ, 10)
 
     # contour(xp, yp, zp, qp; levels, kwargs...)
-    contour(xp, yp, zp, qp)
+    contour(xp, yp, zp, qp; kwargs...)
 end

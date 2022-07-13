@@ -3,7 +3,8 @@
 
 Perform one time step for the general explicit Runge-Kutta method (ERK).
 
-Dirichlet boundary points are not part of solution vector but are prescribed in a strong manner via the `u_bc` and `v_bc` functions.
+Dirichlet boundary points are not part of solution vector but are prescribed in a strong
+manner via the `u_bc` and `v_bc` functions.
 """
 function step!(stepper::ExplicitRungeKuttaStepper, Δt)
     (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper

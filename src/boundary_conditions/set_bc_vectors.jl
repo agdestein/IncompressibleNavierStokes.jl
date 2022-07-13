@@ -206,6 +206,7 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         # Sv_uy (left/right)
         ybc = vLe ⊗ Sv_uy_bc_lr.ybc1 + vRi ⊗ Sv_uy_bc_lr.ybc2
         ySv_uy_lr = Sv_uy_bc_lr.Bbc * ybc
+
         # Iv_uy (low/up)
         ybc = Sv_uy_bc_lu.ybc1 ⊗ vLo_i + Sv_uy_bc_lu.ybc2 ⊗ vUp_i
         ySv_uy_lu = Sv_uy_bc_lr.B2D * Sv_uy_bc_lu.Bbc * ybc
@@ -215,6 +216,7 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         # Su_vx (low/up)
         ybc = Su_vx_bc_lu.ybc1 ⊗ uLo + Su_vx_bc_lu.ybc2 ⊗ uUp
         ySu_vx_lu = Su_vx_bc_lu.Bbc * ybc
+
         # Su_vx (left/right)
         ybc = uLe_i ⊗ Su_vx_bc_lr.ybc1 + uRi_i ⊗ Su_vx_bc_lr.ybc2
         ySu_vx_lr = Su_vx_bc_lu.B2D * Su_vx_bc_lr.Bbc * ybc
