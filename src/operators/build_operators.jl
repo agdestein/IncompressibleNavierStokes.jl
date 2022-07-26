@@ -24,11 +24,6 @@ function build_operators!(setup)
     # Body force
     build_force!(setup.force, setup.grid)
 
-    # Turbulence
-
-    # Regularization modelling - this changes the convective term
-    operator_regularization!(setup)
-
     # Classical turbulence modelling via the diffusive term
     operator_viscosity!(viscosity_model, setup)
 

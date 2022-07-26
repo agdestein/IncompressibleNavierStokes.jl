@@ -6,56 +6,43 @@ Do one time step for implicit Runge-Kutta method.
 Unsteady Dirichlet boundary points are not part of solution vector but
 are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
 """
-function step!(stepper::ImplicitRungeKuttaStepper, Δt)
-    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
+function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache)
+    (; method, V, p, t, n, setup) = stepper
     (; grid, operators, pressure_solver) = setup
     (; NV, Np, Ω⁻¹) = grid
     (; G, M) = operators
     (; p_add_solve, maxiter, abstol, newton_type) = method
     (; Vtotₙ, ptotₙ, Qⱼ, Fⱼ, ∇Fⱼ, fⱼ, F, ∇F, f, Δp, Gp) = cache
-    (; Mtot, yMtot, Ωtot, dfmom, Z) = cache
-    (; A, b, c, Ω_sNV, A_ext, b_ext) = cache
+    (; Mtot, Ωtot, dfmom, Z) = cache
+    (; A, b, c, Ω_sNV, A_ext, b_ext, Vₙ, pₙ, tₙ) = cache
 
     is_patterned = stepper.n > 1
 
     # Update current solution (does not depend on previous step size)
-    stepper.n += 1
     Vₙ .= V
     pₙ .= p
     tₙ = t
-    Δtₙ = Δt
 
     # Number of stages
     s = length(b)
 
     # Time instances at all stages, tⱼ = [t₁, t₂, ..., tₛ]
-    tⱼ = @. tₙ + c * Δtₙ
+    tⱼ = @. tₙ + c * Δt
 
     Vtotₙ_mat = reshape(Vtotₙ, :, s)
     ptotₙ_mat = reshape(ptotₙ, :, s)
-    yMtot_mat = reshape(yMtot, :, s)
     for i = 1:s
         # Initialize with the solution at tₙ
         Vtotₙ_mat[:, i] .= Vₙ
         ptotₙ_mat[:, i] .= pₙ
-
-        # Boundary conditions at all the stage time steps to make the velocity field
-        # uᵢ₊₁ at tᵢ₊₁ divergence-free (BC at tᵢ₊₁ needed)
-        if i == 1 || setup.bc.bc_unsteady
-            # Modify `yM`
-            tᵢ = tⱼ[i]
-            set_bc_vectors!(setup, tᵢ)
-            (; yM) = setup.operators
-        end
-        yMtot_mat[:, i] .= yM
     end
 
     # Iteration counter
     iter = 0
 
     # Index in global solution vector
-    ind_Vⱼ = 1:(NV * s)
-    ind_pⱼ = (NV * s + 1):((NV + Np) * s)
+    ind_Vⱼ = 1:(NV*s)
+    ind_pⱼ = (NV*s+1):((NV+Np)*s)
 
     # Vtot contains all stages and is ordered as [u₁; v₁; u₂; v₂; ...; uₛ; vₛ];
     # Starting guess for intermediate stages
@@ -66,24 +53,23 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     pⱼ .= ptotₙ
 
     # Initialize right-hand side for all stages
-    momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, cache, momentum_cache)
+    momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, pⱼ, tⱼ, setup, cache, momentum_cache)
 
     fmomⱼ = @view fⱼ[ind_Vⱼ]
     fmassⱼ = @view fⱼ[ind_pⱼ]
 
     # Initialize momentum residual
     mul!(fmomⱼ, A_ext, Fⱼ)
-    @. fmomⱼ -= (Ωtot * Vⱼ - Ωtot * Vtotₙ) / Δtₙ
-    # fmomⱼ .= .-(Ωtot .* Vⱼ .- Ωtot .* Vtotₙ) ./ Δtₙ .+ A_ext * Fⱼ
+    @. fmomⱼ -= (Ωtot * Vⱼ - Ωtot * Vtotₙ) / Δt
+    # fmomⱼ .= .-(Ωtot .* Vⱼ .- Ωtot .* Vtotₙ) ./ Δt .+ A_ext * Fⱼ
 
     # Initialize mass residual
-    fmassⱼ .= yMtot
     mul!(fmassⱼ, Mtot, Vⱼ, -1, -1)
-    # fmassⱼ .= .-(Mtot * Vⱼ .+ yMtot)
+    # fmassⱼ .= .-(Mtot * Vⱼ)
 
     if newton_type == :approximate
         # Approximate Newton (Jacobian is based on current solution Vₙ)
-        momentum!(F, ∇F, Vₙ, Vₙ, pₙ, tₙ, setup, momentum_cache; getJacobian = true)
+        momentum!(F, ∇F, Vₙ, pₙ, tₙ, setup, momentum_cache; getJacobian = true)
 
         # Update iteration matrix, which is now fixed during iterations
         if is_patterned
@@ -91,8 +77,8 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
         else
             dfmom .= kron(A, ∇F)
         end
-        @. dfmom = Ω_sNV / Δtₙ - dfmom
-        # dfmom .= Ω_sNV ./ Δtₙ .- kron(A, ∇F)
+        @. dfmom = Ω_sNV / Δt - dfmom
+        # dfmom .= Ω_sNV ./ Δt .- kron(A, ∇F)
         Z[ind_Vⱼ, ind_Vⱼ] .= dfmom
 
         # Determine LU decomposition
@@ -114,7 +100,6 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
                 Fⱼ,
                 ∇Fⱼ,
                 Vⱼ,
-                Vⱼ,
                 pⱼ,
                 tⱼ,
                 setup,
@@ -125,8 +110,8 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
 
             # Update iteration matrix
             mul!(dfmom, A_ext, ∇Fⱼ)
-            dfmom = Ω_sNV / Δtₙ - dfmom
-            # dfmom .= Ω_sNV / Δtₙ - A_ext * ∇Fⱼ
+            dfmom = Ω_sNV / Δt - dfmom
+            # dfmom .= Ω_sNV / Δt - A_ext * ∇Fⱼ
             Z[ind_Vⱼ, ind_Vⱼ] .= dfmom
 
             # Get change
@@ -140,60 +125,45 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
         iter += 1
 
         # Evaluate RHS for next iteration and check residual based on computed Vⱼ, pⱼ
-        momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, cache, momentum_cache)
+        momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, pⱼ, tⱼ, setup, cache, momentum_cache)
         mul!(fmomⱼ, A_ext, Fⱼ)
-        @. fmomⱼ -= (Ωtot * Vⱼ - Ωtot * Vtotₙ) / Δtₙ
-        # fmomⱼ = -(Ωtot .* Vⱼ - Ωtot .* Vtotₙ) / Δtₙ + A_ext * Fⱼ
-        fmassⱼ .= yMtot
+        @. fmomⱼ -= (Ωtot * Vⱼ - Ωtot * Vtotₙ) / Δt
+        # fmomⱼ = -(Ωtot .* Vⱼ - Ωtot .* Vtotₙ) / Δt + A_ext * Fⱼ
         mul!(fmassⱼ, Mtot, Vⱼ, -1, -1)
-        # fmassⱼ = -(Mtot * Vⱼ + yMtot)
+        # fmassⱼ = -(Mtot * Vⱼ)
 
         iter ≤ maxiter || error("Newton solver not converged in $maxiter iterations")
     end
 
     # Solution at new time step with b-coefficients of RK method
     mul!(V, b_ext, Fⱼ)
-    @. V = Vₙ + Δtₙ * Ω⁻¹ * V
-    # V .= Vₙ .+ Δtₙ .* Ω⁻¹ .* (b_ext * Fⱼ)
+    @. V = Vₙ + Δt * Ω⁻¹ * V
+    # V .= Vₙ .+ Δt .* Ω⁻¹ .* (b_ext * Fⱼ)
 
     # Make V satisfy the incompressibility constraint at n+1; this is only needed when the
     # boundary conditions are time-dependent. For stiffly accurate methods, this can also
     # be skipped (e.g. Radau IIA) - this still needs to be implemented
-    if setup.bc.bc_unsteady
-        # Allocates new yM
-        set_bc_vectors!(setup, tₙ + Δtₙ)
-        (; yM) = setup.operators
-        f .= yM
-        mul!(f, M, V, 1 / Δtₙ, 1 / Δtₙ)
-        # f .= 1 / Δtₙ .* (M * V .+ yM)
-        pressure_poisson!(pressure_solver, p, f)
 
-        mul!(Gp, G, p)
-        @. V -= Δtₙ * Ω⁻¹ * Gp
-
-        if p_add_solve
-            pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
-        else
-            # Standard method; take last pressure
-            p .= pⱼ[(end - Np + 1):end]
-        end
-    else
-        # For steady bc we do an additional pressure solve
-        # That saves a pressure solve for iter = 1 in the next time step
-        # pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
-
-        # Standard method; take pressure of last stage
-        p .= pⱼ[(end - Np + 1):end]
+    # For steady bc we do an additional pressure solve
+    # That saves a pressure solve for iter = 1 in the next time step
+    if p_add_solve
+        # Momentum already contains G*p with the current p, we therefore
+        # effectively solve for the pressure difference
+        momentum!(F, V, p, tₙ + Δt, setup, momentum_cache)
+        @. F = Ω⁻¹ .* F
+        mul!(f, M, F)
+        pressure_poisson!(pressure_solver, Δp, f)
+        p .= p .+ Δp
     end
 
-    t = tₙ + Δtₙ
-    @pack! stepper = t, tₙ, Δtₙ
+    # Standard method; take pressure of last stage
+    p .= pⱼ[(end-Np+1):end]
 
-    stepper
+    ImplicitRungeKuttaStepper(; method, V, p, t, n, setup)
 end
 
 """
-    momentum_allstage!(F, ∇F, V, C, p, t, setup, cache, momentum_cache; getJacobian = false)
+    momentum_allstage!(F, ∇F, V, p, t, setup, cache, momentum_cache; getJacobian = false)
 
 Call momentum for multiple `(V, p)` pairs, as required in implicit RK methods.
 """
@@ -201,7 +171,6 @@ function momentum_allstage!(
     Fⱼ,
     ∇Fⱼ,
     Vⱼ,
-    ϕⱼ,
     pⱼ,
     tⱼ,
     setup,
@@ -220,12 +189,11 @@ function momentum_allstage!(
         # Quantities at current stage
         F = @view Fⱼ[ind_Vᵢ]
         V = @view Vⱼ[ind_Vᵢ]
-        ϕ = @view ϕⱼ[ind_Vᵢ]
         p = @view pⱼ[ind_pᵢ]
         t = tⱼ[i]
 
         # Compute residual and Jacobian for this stage
-        momentum!(F, ∇F, V, ϕ, p, t, setup, momentum_cache; getJacobian)
+        momentum!(F, ∇F, V, p, t, setup, momentum_cache; getJacobian)
 
         ∇Fⱼ[ind_Vᵢ, ind_Vᵢ] = ∇F
     end

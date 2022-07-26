@@ -52,31 +52,16 @@
     ## Viscosity models
     Re = 1000
     lam = LaminarModel{T}(; Re)
-    kϵ = KEpsilonModel{T}(; Re)
     ml = MixingLengthModel{T}(; Re)
     smag = SmagorinskyModel{T}(; Re)
     qr = QRModel{T}(; Re)
 
-    ## Convection models
-    noreg = NoRegConvectionModel{T}()
-    c2 = C2ConvectionModel{T}()
-    c4 = C4ConvectionModel{T}()
-    leray = LerayConvectionModel{T}()
+    models = [lam, ml, smag, qr]
 
-    models = [
-        (lam, noreg)
-        (ml, noreg)
-        (smag, noreg)
-        (qr, noreg)
-        (lam, c2)
-        (lam, c4)
-    ]
-
-    for (viscosity_model, convection_model) in models
-        @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
+    for viscosity_model ∈ models
+        @testset "$(typeof(viscosity_model))" begin
             setup = Setup{T,2}(;
                 viscosity_model,
-                convection_model,
                 grid,
                 force,
                 pressure_solver,
@@ -93,43 +78,17 @@
                 initial_pressure,
             )
 
-            problem = SteadyStateProblem(setup, V₀, p₀)
-            V, p = solve(problem)
-
-            # Check that the average velocity is smaller than the lid velocity
-            broken = convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
-            @test sum(abs, V) / length(V) < lid_vel broken = broken
-
             problem = UnsteadyProblem(setup, V₀, p₀, tlims)
             V, p = solve(problem, RK44(); Δt = 0.01, processors)
 
             # Check that the average velocity is smaller than the lid velocity
-            broken =
-                viscosity_model isa Union{QRModel,MixingLengthModel} ||
-                convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
+            broken = viscosity_model isa Union{QRModel,MixingLengthModel}
             @test sum(abs, V) / length(V) < lid_vel broken = broken
 
             # Check for steady state convergence
             broken = viscosity_model isa Union{QRModel,MixingLengthModel}
             @test tracer.umom[end] < 1e-10 broken = broken
             @test tracer.vmom[end] < 1e-10 broken = broken
-        end
-    end
-
-    unfinished_models = [(kϵ, noreg), (lam, leray)]
-
-    for (viscosity_model, convection_model) in models
-        @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
-            setup = Setup{T,2}(;
-                viscosity_model = kϵ,
-                convection_model = noreg,
-                grid,
-                force,
-                pressure_solver,
-                bc,
-            )
-
-            @test_broken build_operators!(setup) isa Setup
         end
     end
 end

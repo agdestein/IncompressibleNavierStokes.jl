@@ -33,7 +33,7 @@ Fourier transform pressure solver for periodic domains.
 """
 Base.@kwdef mutable struct FourierPressureSolver{T} <: AbstractPressureSolver{T}
     # TODO: Pass dimensionality to create concrete types
-    Â::Array{Complex{T}} = Complex{T}[]
-    p̂::Array{Complex{T}} = Complex{T}[]
-    f̂::Array{Complex{T}} = Complex{T}[]
+    Ahat::Array{Complex{T}} = Complex{T}[]
+    phat::Array{Complex{T}} = Complex{T}[]
+    fhat::Array{Complex{T}} = Complex{T}[]
 end

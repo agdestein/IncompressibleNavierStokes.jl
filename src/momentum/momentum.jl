@@ -1,72 +1,64 @@
 """
-    momentum(V, ϕ, p, t, setup; getJacobian = false, nopressure = false)
+    momentum(V, p, t, setup; nopressure = false)
 
 Convenience function for initializing arrays `F` and `∇F` before filling in momentum terms.
 """
-function momentum(V, ϕ, p, t, setup; getJacobian = false, nopressure = false)
-    (; NV) = setup.grid
-
-    cache = MomentumCache(setup)
-    F = zeros(NV)
-    ∇F = spzeros(NV, NV)
-
-    momentum!(F, ∇F, V, ϕ, p, t, setup, cache; getJacobian, nopressure)
+function momentum(V, p, t, setup; nopressure = false)
+    (; viscosity_model, force) = setup
+    (; G) = setup.operators
+    c = convection(V, setup)
+    d = diffusion(viscosity_model, V, setup)
+    b = bodyforce(force, t, setup)
+    F = -c + d + b
+    nopressure ? F : F - G * p
 end
 
 """
-    momentum!(F, ∇F, V, ϕ, p, t, setup, cache; getJacobian = false, nopressure = false)
+    momentum!(F, V, p, t, setup, cache; nopressure = false)
 
 Calculate rhs of momentum equations and, optionally, Jacobian with respect to velocity field.
 
-- `V`: velocity field
-- `ϕ`: convected field: e.g. ``\\frac{\\partial (\\phi_x V)}{\\partial x} + \\frac{\\partial
-  (\\phi_y V)}{\\partial y}``; usually `ϕ = V` (so `ϕx = u`, `ϕy = v`)
-- `p`: pressure
-- `getJacobian`: return `∇F = ∂F/∂V`
-- `nopressure`: exclude pressure gradient; in this case input argument `p` is not used
+  - `V`: velocity field
+  - `p`: pressure
+  - `nopressure`: exclude pressure gradient; in this case input argument `p` is not used
 """
-function momentum!(
-    F, ∇F, V, ϕ, p, t, setup, cache;
-    getJacobian = false,
-    nopressure = false,
-    newton_factor = false,
-)
-    (; viscosity_model, convection_model) = setup
+function momentum!(F, V, p, t, setup, cache; nopressure = false)
+    (; viscosity_model, force) = setup
+    (; G) = setup.operators
 
-    # Unsteady BC (y_p must be loaded after set_bc_vectors!)
-    # TODO: preallocate y_p, and only update in set_bc
-    setup.bc.bc_unsteady && set_bc_vectors!(setup, t)
-    (; G, y_p) = setup.operators
+    # Temporary arrays for storing intermediate results
+    (; c, d, b, Gp) = cache
 
-    # Store intermediate results in temporary variables
-    (; c, ∇c, d, ∇d, b, ∇b, Gp) = cache
-
-    # Convection
-    convection!(convection_model, c, ∇c, V, ϕ, setup, cache; getJacobian, newton_factor)
-
-    # Diffusion
-    diffusion!(viscosity_model, d, ∇d, V, setup; getJacobian)
-
-    # Body force
-    bodyforce!(b, ∇b, V, t, setup; getJacobian)
+    # Forces
+    convection!(c, V, setup, cache)
+    diffusion!(viscosity_model, d, V, setup)
+    bodyforce!(force, b, t, setup)
 
     # Residual in Finite Volume form, including the pressure contribution
     @. F = -c + d + b
 
-    # Nopressure = false is the most common situation, in which we return the entire
+    # nopressure = false is the most common situation, in which we return the entire
     # right-hand side vector
     if !nopressure
         mul!(Gp, G, p)
-        Gp .+= y_p
         @. F -= Gp
-        # F .= F .- (G * p .+ y_p)
     end
 
-    if getJacobian
-        # Jacobian requested
-        # We return only the Jacobian with respect to V (not p)
-        @. ∇F = -∇c + ∇d + ∇b
-    end
+    F
+end
 
-    F, ∇F
+function momentum_jacobian!(∇F, V, p, t, setup, cache; nopressure = false)
+    (; viscosity_model) = setup
+
+    # Temporary arrays for storing intermediate results
+    (; ∇c, ∇d) = cache
+
+    # Forces
+    convection_jacobian!(∇c, V, setup, cache)
+    diffusion_jacobian!(viscosity_model, ∇d, V, setup)
+
+    # Residual in Finite Volume form, including the pressure contribution
+    @. ∇F = -∇c + ∇d
+
+    ∇F
 end

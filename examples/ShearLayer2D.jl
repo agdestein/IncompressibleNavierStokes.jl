@@ -3,11 +3,11 @@
 # Shear layer test case.
 
 if isdefined(@__MODULE__, :LanguageServer)
-    include("../src/IncompressibleNavierStokes.jl")
-    using .IncompressibleNavierStokes
+    include("../src/DifferentiableNavierStokes.jl")
+    using .DifferentiableNavierStokes
 end
 
-using IncompressibleNavierStokes
+using DifferentiableNavierStokes
 using GLMakie
 
 # Case name for saving results
@@ -18,16 +18,9 @@ T = Float64
 
 ## Viscosity model
 viscosity_model = LaminarModel{T}(; Re = Inf)
-# viscosity_model = KEpsilonModel{T}(; Re = Inf)
 # viscosity_model = MixingLengthModel{T}(; Re = Inf)
 # viscosity_model = SmagorinskyModel{T}(; Re = Inf)
 # viscosity_model = QRModel{T}(; Re = Inf)
-
-## Convection model
-convection_model = NoRegConvectionModel{T}()
-# convection_model = C2ConvectionModel{T}()
-# convection_model = C4ConvectionModel{T}()
-# convection_model = LerayConvectionModel{T}()
 
 ## Grid
 x = stretched_grid(0.0, 2π, 40)
@@ -62,7 +55,7 @@ pressure_solver = DirectPressureSolver{T}()
 # pressure_solver = FourierPressureSolver{T}()
 
 ## Build setup and assemble operators
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc);
+setup = Setup{T,2}(; viscosity_model,  grid, force, pressure_solver, bc);
 build_operators!(setup);
 
 ## Time interval
@@ -83,11 +76,6 @@ V₀, p₀ = create_initial_conditions(
     initial_velocity_v,
     initial_pressure,
 );
-
-
-## Solve steady state problem
-problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = @time solve(problem);
 
 
 ## Iteration processors

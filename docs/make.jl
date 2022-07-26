@@ -1,18 +1,18 @@
 # LSP indexing solution
 # https://github.com/julia-vscode/julia-vscode/issues/800#issuecomment-650085983
 if isdefined(@__MODULE__, :LanguageServer)
-    include("../src/IncompressibleNavierStokes.jl")
-    using .IncompressibleNavierStokes
+    include("../src/DifferentiableNavierStokes.jl")
+    using .DifferentiableNavierStokes
 end
 
-using IncompressibleNavierStokes
+using DifferentiableNavierStokes
 using Literate
 using Documenter
 
 DocMeta.setdocmeta!(
-    IncompressibleNavierStokes,
+    DifferentiableNavierStokes,
     :DocTestSetup,
-    :(using IncompressibleNavierStokes);
+    :(using DifferentiableNavierStokes);
     recursive = true,
 )
 
@@ -35,13 +35,13 @@ for e ∈ examples
 end
 
 makedocs(;
-    modules = [IncompressibleNavierStokes],
+    modules = [DifferentiableNavierStokes],
     authors = "Syver Døving Agdestein and contributors",
-    repo = "https://github.com/agdestein/IncompressibleNavierStokes.jl/blob/{commit}{path}#{line}",
-    sitename = "IncompressibleNavierStokes.jl",
+    repo = "https://github.com/agdestein/DifferentiableNavierStokes.jl/blob/{commit}{path}#{line}",
+    sitename = "DifferentiableNavierStokes.jl",
     format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", "false") == "true",
-        canonical = "https://agdestein.github.io/IncompressibleNavierStokes.jl",
+        canonical = "https://agdestein.github.io/DifferentiableNavierStokes.jl",
         assets = String[],
     ),
     pages = [
@@ -59,7 +59,7 @@ makedocs(;
 )
 
 deploydocs(;
-    repo = "github.com/agdestein/IncompressibleNavierStokes.jl",
+    repo = "github.com/agdestein/DifferentiableNavierStokes.jl",
     devbranch = "main",
     pushpreview = true,
 )

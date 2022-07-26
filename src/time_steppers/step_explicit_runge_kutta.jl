@@ -1,34 +1,30 @@
 """
-    step!(stepper::ExplicitRungeKuttaStepper, Δt)
+    step(stepper::ExplicitRungeKuttaStepper, Δt)
 
 Perform one time step for the general explicit Runge-Kutta method (ERK).
 
 Dirichlet boundary points are not part of solution vector but are prescribed in a strong
 manner via the `u_bc` and `v_bc` functions.
 """
-function step!(stepper::ExplicitRungeKuttaStepper, Δt)
-    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
+function step(stepper::ExplicitRungeKuttaStepper, Δt)
+    (; method, V, p, t, n, setup) = stepper
     (; grid, operators, pressure_solver) = setup
     (; Ω⁻¹) = grid
-    (; G, M, yM) = operators
-    (; p_add_solve) = method
-    (; kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f, A, b, c) = cache
+    (; G, M) = operators
+    (; A, b, c, p_add_solve) = method
 
     # Update current solution (does not depend on previous step size)
-    stepper.n += 1
-    Vₙ .= V
-    pₙ .= p
+    Vₙ = V
+    pₙ = p
     tₙ = t
-    Δtₙ = Δt
 
     # Number of stages
+    nV = length(V)
     nstage = length(b)
 
     # Reset RK arrays
-    kV .= 0
-    kp .= 0
-
     tᵢ = tₙ
+    kV = zeros(nV, 0)
 
     ## Start looping over stages
 
@@ -40,64 +36,132 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt)
         # includes force evaluation at tᵢ and pressure gradient. Boundary conditions will be
         # set through set_bc_vectors! inside momentum. The pressure p is not important here,
         # it will be removed again in the next step
-        momentum!(F, ∇F, V, V, p, tᵢ, setup, momentum_cache)
+        F = momentum(V, p, tᵢ, setup)
 
         # Store right-hand side of stage i
-        # Remove the -G*p contribution (but not y_p)
-        kVᵢ = @view kV[:, i]
-        mul!(kVᵢ, G, p)
-        @. kVᵢ = Ω⁻¹ * (F + kVᵢ)
-        # kVᵢ .= Ω⁻¹ .* (F + G * p)
+        # Remove the -G*p contribution
+        kVᵢ = Ω⁻¹ .* (F .+ G * p)
+        kV = [kV kVᵢ]
 
         # Update velocity current stage by sum of Fᵢ's until this stage, weighted
         # with Butcher tableau coefficients. This gives uᵢ₊₁, and for i=s gives uᵢ₊₁
-        mul!(Vtemp, kV, A[i, :])
-
-        # Boundary conditions at tᵢ₊₁
-        tᵢ = tₙ + c[i] * Δtₙ
-        if setup.bc.bc_unsteady
-            set_bc_vectors!(setup, tᵢ)
-            (; yM) = setup.operators
-        end
+        tᵢ = tₙ + c[i] * Δt
+        V = kV * A[i, 1:i]
 
         # Divergence of intermediate velocity field
-        @. Vtemp2 = Vₙ / Δtₙ + Vtemp
-        mul!(f, M, Vtemp2)
-        @. f = (f + yM / Δtₙ) / c[i]
-        # f = (M * (Vₙ / Δtₙ + Vtemp) + yM / Δtₙ) / c[i]
+        f = (M * (Vₙ / Δt + V)) / c[i]
 
         # Solve the Poisson equation, but not for the first step if the boundary conditions are steady
-        if setup.bc.bc_unsteady || i > 1
-            pressure_poisson!(pressure_solver, p, f)
+        if i == 1
+            p = pₙ
         else
-            # Bc steady AND i = 1
-            p .= pₙ
+            p = pressure_poisson(pressure_solver, f)
         end
-
-        # Store pressure
-        kp[:, i] .= p
-
-        mul!(Vtemp2, G, p)
 
         # Update velocity current stage, which is now divergence free
-        @. V = Vₙ + Δtₙ * (Vtemp - c[i] * Ω⁻¹ * Vtemp2)
+        V = Vₙ + Δt * (V - c[i] * Ω⁻¹ .* (G * p))
     end
 
-    if setup.bc.bc_unsteady
-        if p_add_solve
-            pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+    # That saves a pressure solve for i = 1 in the next time step
+    if p_add_solve
+        # Momentum already contains G*p with the current p, we therefore
+        # effectively solve for the pressure difference
+        F = momentum(V, p, tₙ + Δt, setup)
+        f = M * (Ω⁻¹ .* F)
+        Δp = pressure_poisson(pressure_solver, f)
+        p + Δp
+    end
+
+    t = tₙ + Δt
+    n = n + 1
+
+    ExplicitRungeKuttaStepper(; method, V, p, t, n, setup)
+end
+
+"""
+    step!(stepper::ExplicitRungeKuttaStepper, Δt)
+
+Perform one time step for the general explicit Runge-Kutta method (ERK).
+
+Dirichlet boundary points are not part of solution vector but are prescribed in a strong
+manner via the `u_bc` and `v_bc` functions.
+"""
+function step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache)
+    (; method, V, p, t, n, setup) = stepper
+    (; grid, operators, pressure_solver) = setup
+    (; Ω⁻¹) = grid
+    (; G, M) = operators
+    (; Vₙ, pₙ, kV, Vtemp, F, ∇F, Δp, f) = cache
+    (; A, b, c, p_add_solve) = method
+
+    # Update current solution (does not depend on previous step size)
+    Vₙ .= V
+    pₙ .= p
+    tₙ = t
+
+    # Number of stages
+    nstage = length(b)
+
+    # Reset RK arrays
+    tᵢ = tₙ
+    kV .= 0
+
+    ## Start looping over stages
+
+    # At i = 1 we calculate F₁, p₂ and u₂
+    # ⋮
+    # At i = s we calculate Fₛ, pₙ₊₁, and uₙ₊₁
+    for i = 1:nstage
+        # Right-hand side for tᵢ based on current velocity field uₕ, vₕ at level i. This
+        # includes force evaluation at tᵢ and pressure gradient. Boundary conditions will be
+        # set through set_bc_vectors! inside momentum. The pressure p is not important here,
+        # it will be removed again in the next step
+        momentum!(F, V, p, tᵢ, setup, momentum_cache)
+
+        # Store right-hand side of stage i
+        # Remove the -G*p contribution
+        kVᵢ = @view kV[:, i]
+        mul!(kVᵢ, G, p)
+        @. kVᵢ = Ω⁻¹ * (F + kVᵢ)
+
+        # Update velocity current stage by sum of Fᵢ's until this stage, weighted
+        # with Butcher tableau coefficients. This gives uᵢ₊₁, and for i=s gives uᵢ₊₁
+        mul!(V, kV, A[i, :])
+
+        # Boundary conditions at tᵢ₊₁
+        tᵢ = tₙ + c[i] * Δt
+
+        # Divergence of intermediate velocity field
+        @. Vtemp = Vₙ / Δt + V
+        mul!(f, M, Vtemp)
+        @. f = f / c[i]
+
+        # Solve the Poisson equation, but not for the first step if the boundary conditions are steady
+        if i == 1
+            p .= pₙ
         else
-            # Standard method
-            @views p .= kp[:, end]
+            pressure_poisson!(pressure_solver, p, f)
         end
-    else
-        # For steady bc we do an additional pressure solve
-        # That saves a pressure solve for i = 1 in the next time step
-        pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+
+        mul!(Vtemp, G, p)
+
+        # Update velocity current stage, which is now divergence free
+        @. V = Vₙ + Δt * (V - c[i] * Ω⁻¹ * Vtemp)
     end
 
-    t = tₙ + Δtₙ
-    @pack! stepper = t, tₙ, Δtₙ
+    # That saves a pressure solve for i = 1 in the next time step
+    if p_add_solve
+        # Momentum already contains G*p with the current p, we therefore
+        # effectively solve for the pressure difference
+        momentum!(F, V, p, tₙ + Δt, setup, momentum_cache)
+        @. F = Ω⁻¹ .* F
+        mul!(f, M, F)
+        pressure_poisson!(pressure_solver, Δp, f)
+        p .= p .+ Δp
+    end
 
-    stepper
+    t = tₙ + Δt
+    n = n + 1
+
+    ExplicitRungeKuttaStepper(; method, V, p, t, n, setup)
 end

@@ -1,3 +1,5 @@
+diffusion(::LaminarModel, V, setup) = setup.operators.Diff * V
+
 """
     diffusion!(model, d, ∇d, V, setup; getJacobian = false)
 
@@ -5,17 +7,8 @@ Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V` using vi
 """
 function diffusion! end
 
-function diffusion!(::LaminarModel, d, ∇d, V, setup; getJacobian = false)
-    (; Diff, yDiff) = setup.operators
-
-    # d = Diff * V + yDiff
-    mul!(d, Diff, V)
-    d .+= yDiff
-
-    getJacobian && (∇d .= Diff)
-
-    d, ∇d
-end
+diffusion!(::LaminarModel, d, V, setup) = mul!(d, setup.operators.Diff, V)
+diffusion_jacobian!(::LaminarModel, ∇d, V, setup) = (∇d .= setup.operators.Diff)
 
 function diffusion!(
     model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
@@ -85,8 +78,4 @@ function diffusion!(
     end
 
     d, ∇d
-end
-
-function diffusion!(model::KEpsilonModel, d, ∇d, V, setup; getJacobian = false)
-    error("k-e implementation in diffusion.jl not finished")
 end

@@ -15,15 +15,6 @@ Base.@kwdef struct LaminarModel{T} <: AbstractViscosityModel{T}
 end
 
 """
-    KEpsilonModel(Re)
-
-K-epsilon model with Reynolds number `Re`.
-"""
-Base.@kwdef struct KEpsilonModel{T} <: AbstractViscosityModel{T}
-    Re::T # Reynolds number
-end
-
-"""
     MixingLengthModel(Re)
 
 Mixing-length model with Reynolds number `Re` and mixing length `lm`.

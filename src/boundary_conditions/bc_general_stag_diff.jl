@@ -1,4 +1,4 @@
-function bc_general_stag_diff(Nt, Nin, Nb, bc1, bc2, h1, h2)
+function bc_general_stag_diff(Nt, Nin, Nb, h1, h2)
     # Total solution u is written as u = Bb*ub + Bin*uin
     # The boundary conditions can be written as Bbc*u = ybc
     # Then u can be written entirely in terms of uin and ybc as:
@@ -38,44 +38,18 @@ function bc_general_stag_diff(Nt, Nin, Nb, bc1, bc2, h1, h2)
         Bb[1, 1] = 1
         Bb[end, Nb] = 1
 
-        if bc1 == :dirichlet
-            Bbc[1, 1] = 3 / 8
-            Bbc[1, 2] = 3 / 4
-            Bbc[1, 3] = -1 / 8
-            ybc1_1D[1] = 1        # ULo
-        elseif bc1 == :symmetric
-            Bbc[1, 1] = -1
-            Bbc[1, 2] = 1
-            ybc1_1D[1] = h1   # DuLo
-        elseif bc1 == :periodic
-            Bbc[1, 1] = -1
-            Bbc[1, end-1] = 1
-            Bbc[2, 2] = -1
-            Bbc[2, end] = 1
-        else
-            error("not implemented")
-        end
+        Bbc[1, 1] = -1
+        Bbc[1, end-1] = 1
+        Bbc[2, 2] = -1
+        Bbc[2, end] = 1
 
-        if bc2 == :dirichlet
-            Bbc[end, end-2] = -1 / 8
-            Bbc[end, end-1] = 3 / 4
-            Bbc[end, end] = 3 / 8
-            ybc2_1D[2] = 1     # UUp
-        elseif bc2 == :symmetric
-            Bbc[2, end-1] = -1
-            Bbc[2, end] = 1
-            ybc2_1D[2] = h2     # DuUp
-        elseif bc2 == :periodic
-            Bbc[1, 1] = -1
-            Bbc[1, end-1] = 1
-            Bbc[2, 2] = -1
-            Bbc[2, end] = 1
-        else
-            error("not implemented")
-        end
+        Bbc[1, 1] = -1
+        Bbc[1, end-1] = 1
+        Bbc[2, 2] = -1
+        Bbc[2, end] = 1
     end
 
-    if Nb ∈ [1, 2]
+    if Nb ∈ (1, 2)
         ybc1 = ybc1_1D
         ybc2 = ybc2_1D
 

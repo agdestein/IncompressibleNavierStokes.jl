@@ -6,9 +6,9 @@ Initialize processor.
 initialize!(logger::Logger, stepper) = logger
 
 # 2D real time plot
-function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,2}) where {M,T}
+function initialize!(plotter::RealTimePlotter, stepper::AbstractTimeStepper{T,2}) where {T}
     (; V, p, t, setup) = stepper
-    (; bc, grid) = setup
+    (; grid) = setup
     (; xlims, ylims, x, y, xp, yp) = grid
     (; fieldname, type) = plotter
 
@@ -17,25 +17,12 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,2}) wher
         f = map((u, v) -> √sum(u^2 + v^2), up, vp)
         xf, yf = xp, yp
     elseif fieldname == :vorticity
-        if all(==(:periodic), (bc.u.x[1], bc.v.y[1]))
-            xf = x
-            yf = y
-        else
-            xf = x[2:(end - 1)]
-            yf = y[2:(end - 1)]
-        end
+        xf = x
+        yf = y
         f = get_vorticity(V, t, setup)
     elseif fieldname == :streamfunction
-        if bc.u.x[1] == :periodic
-            xf = x
-        else
-            xf = x[2:(end - 1)]
-        end
-        if bc.v.y[1] == :periodic
-            yf = y
-        else
-            yf = y[2:(end - 1)]
-        end
+        xf = x
+        yf = y
         f = get_streamfunction(V, t, setup)
     elseif fieldname == :pressure
         error("Not implemented")
@@ -68,7 +55,7 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,2}) wher
     end
 
     ax.title = titlecase(string(fieldname))
-    ax.aspect = DataAspect()
+    # ax.aspect = DataAspect()
     ax.xlabel = "x"
     ax.ylabel = "y"
     limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
@@ -81,9 +68,9 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,2}) wher
 end
 
 # 3D real time plot
-function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,3}) where {M,T}
+function initialize!(plotter::RealTimePlotter, stepper::AbstractTimeStepper{T,3}) where {T}
     (; V, p, t, setup) = stepper
-    (; grid, bc) = setup
+    (; grid) = setup
     (; x, y, z, xp, yp, zp) = grid
     (; fieldname, type) = plotter
 
@@ -92,27 +79,13 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,3}) wher
         f = map((u, v, w) -> √sum(u^2 + v^2 + w^2), up, vp, wp)
         xf, yf, zf = xp, yp, zp
     elseif fieldname == :vorticity
-        if all(==(:periodic), (bc.u.x[1], bc.v.y[1]))
-            xf = x
-            yf = y
-            zf = y
-        else
-            xf = x[2:(end - 1)]
-            yf = y[2:(end - 1)]
-            zf = z[2:(end - 1)]
-        end
+        xf = x
+        yf = y
+        zf = y
         f = get_vorticity(V, t, setup)
     elseif fieldname == :streamfunction
-        if bc.u.x[1] == :periodic
-            xf = x
-        else
-            xf = x[2:(end - 1)]
-        end
-        if bc.v.y[1] == :periodic
-            yf = y
-        else
-            yf = y[2:(end - 1)]
-        end
+        xf = x
+        yf = y
         f = get_streamfunction(V, t, setup)
     elseif fieldname == :pressure
         xf, yf, zf = xp, yp, zp
@@ -130,16 +103,7 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,3}) wher
         type == contourf && (type! = contourf!)
         lims = Observable(LinRange(get_lims(f, 3)..., 10))
         ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect = :data)
-        hm = type!(
-            ax,
-            xf,
-            yf,
-            zf,
-            field;
-            levels = lims,
-            shading = false,
-            alpha = 0.05,
-        )
+        hm = type!(ax, xf, yf, zf, field; levels = lims, shading = false, alpha = 0.05)
     else
         error("Unknown plot type")
     end

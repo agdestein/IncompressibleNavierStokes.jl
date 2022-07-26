@@ -14,11 +14,7 @@ end
 
 # Fourier, 2D version
 function initialize!(solver::FourierPressureSolver, setup::Setup{T,2}, A) where {T}
-    (; bc) = setup
     (; hx, hy, Npx, Npy) = setup.grid
-    if any(!isequal((:periodic, :periodic)), (bc.u.x, bc.v.y))
-        error("FourierPressureSolver only implemented for periodic boundary conditions")
-    end
     Δx = hx[1]
     Δy = hy[1]
     if any(≉(Δx), hx) || any(≉(Δy), hy)
@@ -31,30 +27,26 @@ function initialize!(solver::FourierPressureSolver, setup::Setup{T,2}, A) where 
     j = reshape(0:(Npy-1), 1, :)
 
     # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
-    Â = @. 4 * Δx * Δy * (
+    Ahat = @. 4 * Δx * Δy * (
         sin(i * π / Npx)^2 / Δx^2 +
         sin(j * π / Npy)^2 / Δy^2
     )
 
     # Pressure is determined up to constant, fix at 0
-    Â[1] = 1
+    Ahat[1] = 1
 
-    Â = complex(Â)
+    Ahat = complex(Ahat)
 
     # Placeholders for intermediate results
-    p̂ = similar(Â)
-    f̂ = similar(Â)
+    phat = similar(Ahat)
+    fhat = similar(Ahat)
 
-    @pack! solver = Â, p̂, f̂
+    @pack! solver = Ahat, phat, fhat
 end
 
 # Fourier, 3D version
 function initialize!(solver::FourierPressureSolver, setup::Setup{T,3}, A) where {T}
-    (; bc) = setup
     (; hx, hy, hz, Npx, Npy, Npz) = setup.grid
-    if any(!isequal((:periodic, :periodic)), [bc.u.x, bc.v.y, bc.w.z])
-        error("FourierPressureSolver only implemented for periodic boundary conditions")
-    end
     Δx = hx[1]
     Δy = hy[1]
     Δz = hz[1]
@@ -69,20 +61,20 @@ function initialize!(solver::FourierPressureSolver, setup::Setup{T,3}, A) where 
     k = reshape(0:(Npz-1), 1, 1, :)
 
     # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
-    Â = @. 4 * Δx * Δy * Δz * (
+    Ahat = @. 4 * Δx * Δy * Δz * (
         sin(i * π / Npx)^2 / Δx^2 +
         sin(j * π / Npy)^2 / Δy^2 +
         sin(k * π / Npz)^2 / Δz^2
     )
 
     # Pressure is determined up to constant, fix at 0
-    Â[1] = 1
+    Ahat[1] = 1
 
-    Â = complex(Â)
+    Ahat = complex(Ahat)
 
     # Placeholders for intermediate results
-    p̂ = similar(Â)
-    f̂ = similar(Â)
+    phat = similar(Ahat)
+    fhat = similar(Ahat)
 
-    @pack! solver = Â, p̂, f̂
+    @pack! solver = Ahat, phat, fhat
 end

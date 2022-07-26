@@ -1,4 +1,4 @@
-function bc_diff_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
+function bc_diff_stag(Nt, Nin, Nb, h1, h2)
     # Total solution u is written as u = Bb*ub + Bin*uin
     # The boundary conditions can be written as Bbc*u = ybc
     # Then u can be written entirely in terms of uin and ybc as:
@@ -38,44 +38,18 @@ function bc_diff_stag(Nt, Nin, Nb, bc1, bc2, h1, h2)
         Bb[1, 1] = 1
         Bb[end, Nb] = 1
 
-        if bc1 == :dirichlet
-            # Zeroth order (standard mirror conditions)
-            Bbc[1, 1] = 1 / 2
-            Bbc[1, 2] = 1 / 2
-            ybc1_1D[1] = 1        # ULo
-        elseif bc1 == :symmetric
-            Bbc[1, 1] = -1
-            Bbc[1, 2] = 1
-            ybc1_1D[1] = h1   # DuLo
-        elseif bc1 == :periodic
-            Bbc[1, 1] = -1
-            Bbc[1, end-1] = 1
-            Bbc[2, 2] = -1
-            Bbc[2, end] = 1
-        else
-            error("not implemented")
-        end
+        Bbc[1, 1] = -1
+        Bbc[1, end-1] = 1
+        Bbc[2, 2] = -1
+        Bbc[2, end] = 1
 
-        if bc2 == :dirichlet
-            # Zeroth order (standard mirror conditions)
-            Bbc[end, end-1] = 1 / 2
-            Bbc[end, end] = 1 / 2
-            ybc2_1D[2] = 1     # UUp
-        elseif bc2 == :symmetric
-            Bbc[2, end-1] = -1
-            Bbc[2, end] = 1
-            ybc2_1D[2] = h2     # DuUp
-        elseif bc2 == :periodic
-            Bbc[1, 1] = -1
-            Bbc[1, end-1] = 1
-            Bbc[2, 2] = -1
-            Bbc[2, end] = 1
-        else
-            error("not implemented")
-        end
+        Bbc[1, 1] = -1
+        Bbc[1, end-1] = 1
+        Bbc[2, 2] = -1
+        Bbc[2, end] = 1
     end
 
-    if Nb ∈ [1, 2]
+    if Nb ∈ (1, 2)
         ybc1 = ybc1_1D
         ybc2 = ybc2_1D
 

@@ -1,3 +1,77 @@
+function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
+    (; method, V, p, t, n, cₙ, tₙ, setup, cache, momentum_cache) = stepper
+    (; viscosity_model, force, grid, operators, pressure_solver) = setup
+    (; NV, Ω⁻¹) = grid
+    (; G, M) = operators
+    (; Diff) = operators
+    (; p_add_solve, α₁, α₂, θ) = method
+
+    Δt ≈ t - tₙ || error("AB-CN-method requires constant time step")
+
+    # For the first time step, this might be necessary
+    cₙ = convection(Vₙ, setup)
+
+    # Advance one step
+    Vₙ = V
+    pₙ = p
+    tₙ = t
+    cₙ₋₁ = cₙ
+
+    # Evaluate boundary conditions and force at starting point
+    bₙ = bodyforce(force, tₙ, setup)
+
+    # Convection of current solution
+    cₙ = convection(Vₙ, setup, momentum_cache)
+
+    # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
+    bₙ₊₁ = bodyforce(force, tₙ + Δt, setup)
+
+    # Crank-Nicolson weighting for force and diffusion boundary conditions
+    b = @. (1 - θ) * bₙ + θ * bₙ₊₁
+
+    Gpₙ = G * pₙ
+    d = Diff * V
+
+    # Right hand side of the momentum equation update
+    Rr = @. Vₙ + Ω⁻¹ * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + b - Gpₙ)
+
+    # Implicit time-stepping for diffusion
+    if viscosity_model isa LaminarModel
+        # Use precomputed LU decomposition
+        V = Diff_fact \ Rr
+    else
+        # Get `∇d` since `Diff` is not constant
+        ∇d = diffusion_jacobian(V, t, setup)
+        V = ∇d \ Rr
+    end
+
+    # Divergence of `Ru` and `Rv` is directly calculated with `M`
+    f = (M * V) / Δt
+
+    # Solve the Poisson equation for the pressure
+    Δp = pressure_poisson(pressure_solver, f)
+
+    # Update velocity field
+    V = V .- Δt .* Ω⁻¹ .* (G * Δp)
+
+    # First order pressure:
+    p = pₙ + Δp
+
+    if p_add_solve
+        # Momentum already contains G*p with the current p, we therefore
+        # effectively solve for the pressure difference
+        F = momentum(V, p, tₙ + Δt, setup)
+        f = M * (Ω⁻¹ .* F)
+        Δp = pressure_poisson(pressure_solver, f)
+        p = p + Δp
+    end
+
+    n = n + 1
+    t = tₙ + Δt
+
+    AdamsBashforthCrankNicolsonStepper(; method, V, p, t, n, cₙ, tₙ, setup)
+end
+
 """
     step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
 
@@ -39,103 +113,78 @@ Note that, in constrast to explicit methods, the pressure from previous time ste
 influence on the accuracy of the velocity.
 """
 function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
-    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
-    (; convection_model, viscosity_model, grid, operators, pressure_solver) = setup
+    (; method, V, p, t, n, cₙ, tₙ, setup, cache, momentum_cache) = stepper
+    (; viscosity_model, force, grid, operators, pressure_solver) = setup
     (; NV, Ω⁻¹) = grid
-    (; G, y_p, M, yM) = operators
-    (; Diff, yDiff, y_p) = operators
+    (; G, M) = operators
+    (; Diff) = operators
     (; p_add_solve, α₁, α₂, θ) = method
-    (; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact) = cache
+    (; Vₙ, pₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, Gpₙ, Diff_fact) = cache
     (; d, ∇d) = momentum_cache
 
+    Δt ≈ t - tₙ || error("AB-CN-method requires constant time step")
+
     # For the first time step, this might be necessary
-    convection!(convection_model, cₙ, nothing, Vₙ, Vₙ, setup, momentum_cache)
+    convection!(cₙ, Vₙ, setup, momentum_cache)
 
     # Advance one step
-    stepper.n += 1
     Vₙ .= V
     pₙ .= p
     tₙ = t
-    Δtₙ = Δt
     cₙ₋₁ .= cₙ
 
-    # Unsteady BC at current time
-    if setup.bc.bc_unsteady
-        set_bc_vectors!(setup, tₙ)
-        (; yDiff) = setup.operators
-    end
-
-    yDiffₙ .= yDiff
-
     # Evaluate boundary conditions and force at starting point
-    bodyforce!(bₙ, nothing, Vₙ, tₙ, setup)
+    bodyforce!(force, bₙ, tₙ, setup)
 
     # Convection of current solution
-    convection!(convection_model, cₙ, nothing, Vₙ, Vₙ, setup, momentum_cache)
+    convection!(cₙ, Vₙ, setup, momentum_cache)
 
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
-    if setup.bc.bc_unsteady
-        set_bc_vectors!(setup, tₙ + Δt)
-        (; yDiff, y_p) = setup.operators
-    end
-    bodyforce!(bₙ₊₁, nothing, Vₙ, tₙ + Δt, setup)
-
-    yDiffₙ₊₁ .= yDiff
+    bodyforce!(force, bₙ₊₁, tₙ + Δt, setup)
 
     # Crank-Nicolson weighting for force and diffusion boundary conditions
     @. b = (1 - θ) * bₙ + θ * bₙ₊₁
-    yDiff = @. (1 - θ) * yDiffₙ + θ * yDiffₙ₊₁
 
     mul!(Gpₙ, G, pₙ)
-    Gpₙ .+= y_p
-
     mul!(d, Diff, V)
 
     # Right hand side of the momentum equation update
-    @. Rr = Vₙ + Ω⁻¹ * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + yDiff + b - Gpₙ)
+    @. Rr = Vₙ + Ω⁻¹ * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + b - Gpₙ)
 
     # Implicit time-stepping for diffusion
     if viscosity_model isa LaminarModel
         # Use precomputed LU decomposition
-        if Δt ≉ cache.Δt
-            # Time step has changed, recompute LU decomposition
-            Diff_fact = lu(I(NV) - θ * Δt * Diagonal(Ω⁻¹) * Diff)
-            @pack! cache = Diff_fact, Δt
-        end
         ldiv!(V, Diff_fact, Rr)
     else
         # Get `∇d` since `Diff` is not constant
-        diffusion!(d, ∇d, V, t, setup; getJacobian = true)
+        diffusion_jacobian!(∇d, V, t, setup)
         V .= ∇d \ Rr
     end
 
-    # Make the velocity field `uₙ₊₁` at `tₙ₊₁` divergence-free (need BC at `tₙ₊₁`)
-    if setup.bc.bc_unsteady
-        set_bc_vectors!(setup, tₙ + Δt)
-        (; yM) = setup.operators
-    end
-
-    # Boundary condition for Δp between time steps (!= 0 if fluctuating outlet pressure)
-    y_Δp = zeros(NV)
-
     # Divergence of `Ru` and `Rv` is directly calculated with `M`
-    f = (M * V + yM) / Δt - M * y_Δp
+    f = (M * V) / Δt
 
     # Solve the Poisson equation for the pressure
     pressure_poisson!(pressure_solver, Δp, f)
 
     # Update velocity field
-    V .-= Δt .* Ω⁻¹ .* (G * Δp .+ y_Δp)
+    V .= V .- Δt .* Ω⁻¹ .* (G * Δp)
 
     # First order pressure:
     p .= pₙ .+ Δp
 
     if p_add_solve
-        pressure_additional_solve!(V, p, tₙ + Δt, setup, momentum_cache, F, f, Δp)
+        # Momentum already contains G*p with the current p, we therefore
+        # effectively solve for the pressure difference
+        momentum!(F, V, p, tₙ + Δt, setup, momentum_cache)
+        @. F = Ω⁻¹ .* F
+        mul!(f, M, F)
+        pressure_poisson!(pressure_solver, Δp, f)
+        p .= p .+ Δp
     end
 
-    t = tₙ + Δtₙ
-    @pack! stepper = t, tₙ, Δtₙ
+    n = n + 1
+    t = tₙ + Δt
 
-    stepper
+    AdamsBashforthCrankNicolsonStepper(; method, V, p, t, n, cₙ, tₙ, setup)
 end

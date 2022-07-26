@@ -4,10 +4,6 @@
 Nonuniform cartesian grid of dimension `N` and floating point type `T`.
 """
 Base.@kwdef mutable struct Grid{T,N}
-    order4::Bool = false                     # Use 4th order in space (otherwise 2nd order)
-    α::T = 81                                # Richardson extrapolation factor = 3^4
-    β::T = 9 // 8                            # Interpolation factor
-
     Nx::Int = 10                             # Number of x-volumes
     Ny::Int = 10                             # Number of y-volumes
     Nz::Int = 1                              # Number of z-volumes (if any)
@@ -134,34 +130,5 @@ Base.@kwdef mutable struct Grid{T,N}
     indw::UnitRange{Int} = 0:0
     indV::UnitRange{Int} = 0:0
     indp::UnitRange{Int} = 0:0
-
-
-
-    hx3::Vector{T} = T[]
-    hy3::Vector{T} = T[]
-    hxi3::Vector{T} = T[]
-    hyi3::Vector{T} = T[]
-    gxi3::Vector{T} = T[]
-    gyi3::Vector{T} = T[]
-
-    hxd13::Vector{T} = T[]
-    hxd3::Vector{T} = T[]
-    hyd13::Vector{T} = T[]
-    hyd3::Vector{T} = T[]
-    gxd13::Vector{T} = T[]
-    gxd3::Vector{T} = T[]
-    gyd13::Vector{T} = T[]
-    gyd3::Vector{T} = T[]
-
-    Ωux1::Vector{T} = T[]
-    Ωux3::Vector{T} = T[]
-    Ωuy1::Vector{T} = T[]
-    Ωuy3::Vector{T} = T[]
-    Ωvx1::Vector{T} = T[]
-    Ωvx3::Vector{T} = T[]
-    Ωvy1::Vector{T} = T[]
-    Ωvy3::Vector{T} = T[]
-
-
 end
 

@@ -4,9 +4,40 @@
 Convenience function for initializing the pressure vector `p` before
 calling `pressure_poisson!`.
 """
+function pressure_poisson end
+
 function pressure_poisson(solver, f, setup)
     p = zeros(setup.grid.Np)
     pressure_poisson!(solver, p, f)
+end
+
+function pressure_poisson(solver::DirectPressureSolver, f)
+    # Assume the Laplace matrix is known (A) and is possibly factorized
+
+    # Use pre-determined decomposition
+    solver.A_fact \ f
+end
+
+function pressure_poisson(solver::CGPressureSolver, f)
+    (; A, abstol, reltol, maxiter) = solver
+    cg(A, f; abstol, reltol, maxiter)
+end
+
+function pressure_poisson(solver::FourierPressureSolver, f)
+    (; Ahat) = solver
+
+    f = reshape(f, size(Ahat))
+
+    # Fourier transform of right hand side
+    fhat = fft(f)
+
+    # Solve for coefficients in Fourier space
+    phat = @. -fhat / Ahat
+
+    # Transform back
+    p = ifft(phat)
+
+    reshape(real.(p), :)
 end
 
 """
@@ -31,19 +62,19 @@ function pressure_poisson!(solver::CGPressureSolver, p, f)
 end
 
 function pressure_poisson!(solver::FourierPressureSolver, p, f)
-    (; Â, f̂, p̂) = solver
+    (; Ahat, fhat, phat) = solver
 
-    f̂[:] = f
+    fhat[:] = f
 
     # Fourier transform of right hand side
-    fft!(f̂);
+    fft!(fhat)
 
     # Solve for coefficients in Fourier space
-    @. p̂ = -f̂ / Â;
+    @. phat = -fhat / Ahat
 
     # Transform back
-    ifft!(p̂)
-    @. p[:] = real(@view p̂[:])
+    ifft!(phat)
+    @. p[:] = real(@view phat[:])
 
     p
 end

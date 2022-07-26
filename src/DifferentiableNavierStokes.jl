@@ -1,20 +1,20 @@
-# TODO: Find method for autogenerating obvious/repetitive function signatures in docstrings
 """
-    IncompressibleNavierStokes
+    DifferentiableNavierStokes
 
 Energy-conserving solvers for the incompressible Navier-Stokes equations.
 """
-module IncompressibleNavierStokes
+module DifferentiableNavierStokes
 
 using FFTW
 using Interpolations
 using IterativeSolvers
 using LinearAlgebra
+using Makie
+using Printf
 using SparseArrays
 using Statistics
 using UnPack
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
-using Makie
 
 # Convenience notation
 const ⊗ = kron
@@ -33,32 +33,17 @@ include("force/build_force.jl")
 
 # Models
 include("models/viscosity_models.jl")
-include("models/convection_models.jl")
 
 # Types
-include("boundary_conditions/boundary_conditions.jl")
 include("solvers/pressure/pressure_solvers.jl")
 include("operators/operators.jl")
 include("setup.jl")
 
 # Boundary condtions
-include("boundary_conditions/bc_av3.jl")
-include("boundary_conditions/bc_av_stag3.jl")
-include("boundary_conditions/bc_diff3.jl")
 include("boundary_conditions/bc_diff_stag.jl")
-include("boundary_conditions/bc_diff_stag3.jl")
-include("boundary_conditions/bc_div2.jl")
 include("boundary_conditions/bc_general.jl")
 include("boundary_conditions/bc_general_stag.jl")
 include("boundary_conditions/bc_general_stag_diff.jl")
-include("boundary_conditions/bc_int2.jl")
-include("boundary_conditions/bc_int3.jl")
-include("boundary_conditions/bc_int_mixed2.jl")
-include("boundary_conditions/bc_int_mixed_stag2.jl")
-include("boundary_conditions/bc_int_mixed_stag3.jl")
-include("boundary_conditions/bc_vort3.jl")
-include("boundary_conditions/create_boundary_conditions.jl")
-include("boundary_conditions/set_bc_vectors.jl")
 
 # Operators
 include("operators/build_operators.jl")
@@ -69,12 +54,7 @@ include("operators/operator_divergence.jl")
 include("operators/operator_interpolation.jl")
 include("operators/operator_mesh.jl")
 include("operators/operator_postprocessing.jl")
-include("operators/operator_regularization.jl")
 include("operators/operator_turbulent_diffusion.jl")
-include("operators/ke_production.jl")
-include("operators/ke_convection.jl")
-include("operators/ke_diffusion.jl")
-include("operators/ke_viscosity.jl")
 include("operators/operator_viscosity.jl")
 
 
@@ -84,7 +64,7 @@ include("time_steppers/methods.jl")
 include("time_steppers/tableaux.jl")
 include("time_steppers/nstage.jl")
 include("time_steppers/time_stepper_caches.jl")
-include("time_steppers/time_steppers.jl")
+include("time_steppers/steppers.jl")
 include("time_steppers/change_time_stepper.jl")
 include("time_steppers/step.jl")
 include("time_steppers/isexplicit.jl")
@@ -104,8 +84,6 @@ include("processors/finalize.jl")
 # Momentum equation
 include("momentum/bodyforce.jl")
 include("momentum/compute_conservation.jl")
-include("momentum/check_symmetry.jl")
-include("momentum/convection_components.jl")
 include("momentum/convection.jl")
 include("momentum/diffusion.jl")
 include("momentum/momentum.jl")
@@ -115,17 +93,14 @@ include("momentum/turbulent_viscosity.jl")
 
 # Problems
 include("problems/problems.jl")
-include("problems/is_steady.jl")
 
 # Solvers
 include("solvers/pressure/initialize_pressure.jl")
 include("solvers/pressure/pressure_poisson.jl")
-include("solvers/pressure/pressure_additional_solve.jl")
 include("solvers/get_timestep.jl")
-include("solvers/solve.jl")
+include("solvers/solve_unsteady.jl")
 
 # Utils
-include("utils/filter_convection.jl")
 include("utils/get_lims.jl")
 
 # Postprocess
@@ -152,14 +127,13 @@ export get_dimension
 export SteadyBodyForce, UnsteadyBodyForce
 
 # Models
-export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
-export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
+export LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
 
 # Processors
 export Logger, RealTimePlotter, VTKWriter, QuantityTracer
 
 # Problems
-export SteadyStateProblem, UnsteadyProblem, is_steady
+export UnsteadyProblem
 
 # Setup
 export Grid, Operators, BC, Setup

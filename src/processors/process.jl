@@ -6,13 +6,8 @@ Process iteration.
 function process! end
 
 function process!(logger::Logger, stepper)
-    (; V, p, t, setup, cache, momentum_cache) = stepper
-    (; F) = cache
-
-    momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
-
-    @info "Iteration $(stepper.n)" t norm(F) maximum(F)
-
+    (; n, t) = stepper
+    @printf "Iteration %d\tt = %g\n" n t
     logger
 end
 
@@ -86,9 +81,9 @@ function process!(tracer::QuantityTracer, stepper)
     (; V, t, setup) = stepper
     N = get_dimension(setup.grid)
     if N == 2
-        maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
+        maxdiv, umom, vmom, k = compute_conservation(V, setup)
     elseif N == 3
-        maxdiv, umom, vmom, wmom, k = compute_conservation(V, t, setup)
+        maxdiv, umom, vmom, wmom, k = compute_conservation(V, setup)
     end
     push!(tracer.t, t)
     push!(tracer.maxdiv, maxdiv)

@@ -4,9 +4,6 @@
     ## Viscosity model
     viscosity_model = LaminarModel{T}(; Re = 1000)
 
-    ## Convection model
-    convection_model = NoRegConvectionModel{T}()
-
     ## Grid
     x = stretched_grid(0, 2π, 20)
     y = stretched_grid(0, 2π, 20)
@@ -36,7 +33,7 @@
 
     ## Build setup and assemble operators
     setup =
-        Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
+        Setup{T,2}(; viscosity_model,  grid, force, pressure_solver, bc)
     build_operators!(setup)
     (; A) = setup.operators
 
@@ -44,17 +41,17 @@
     cg = CGPressureSolver{T}()
     fourier = FourierPressureSolver{T}()
 
-    IncompressibleNavierStokes.initialize!(direct, setup, A)
-    IncompressibleNavierStokes.initialize!(cg, setup, A)
-    IncompressibleNavierStokes.initialize!(fourier, setup, A)
+    DifferentiableNavierStokes.initialize!(direct, setup, A)
+    DifferentiableNavierStokes.initialize!(cg, setup, A)
+    DifferentiableNavierStokes.initialize!(fourier, setup, A)
 
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
     p_exact = reshape(initial_pressure.(grid.xpp, grid.ypp), :)
     f = A * p_exact
 
-    p_direct = IncompressibleNavierStokes.pressure_poisson!(direct, copy(p_exact), f)
-    p_cg = IncompressibleNavierStokes.pressure_poisson!(cg, copy(p_exact), f)
-    p_fourier = IncompressibleNavierStokes.pressure_poisson!(fourier, copy(p_exact), f)
+    p_direct = DifferentiableNavierStokes.pressure_poisson!(direct, copy(p_exact), f)
+    p_cg = DifferentiableNavierStokes.pressure_poisson!(cg, copy(p_exact), f)
+    p_fourier = DifferentiableNavierStokes.pressure_poisson!(fourier, copy(p_exact), f)
 
     @test_broken p_direct ≈ p_exact # `A` is really badly conditioned
     @test p_cg ≈ p_exact

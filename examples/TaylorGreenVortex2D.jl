@@ -1,13 +1,19 @@
-# # Taylor-Green vortex case (TG).
+# # Taylor-Green vortex case (2D).
 #
 # This test case considers the Taylor-Green vortex.
 
 if isdefined(@__MODULE__, :LanguageServer)
-    include("../src/IncompressibleNavierStokes.jl")
-    using .IncompressibleNavierStokes
+    include("../src/DifferentiableNavierStokes.jl")
+    using .DifferentiableNavierStokes
 end
 
-using IncompressibleNavierStokes
+using Revise
+using Hardanger
+using GLMakie
+colorscheme!("GruvboxDark")
+set_theme!(makie(gruvbox()))
+
+using DifferentiableNavierStokes
 using GLMakie
 
 # Case name for saving results
@@ -17,38 +23,17 @@ name = "TaylorGreenVortex2D"
 T = Float64
 
 ## Viscosity model
-viscosity_model = LaminarModel{T}(; Re = 2000)
-# viscosity_model = KEpsilonModel{T}(; Re = 1000)
+viscosity_model = LaminarModel{T}(; Re = 100)
 # viscosity_model = MixingLengthModel{T}(; Re = 1000)
 # viscosity_model = SmagorinskyModel{T}(; Re = 1000)
 # viscosity_model = QRModel{T}(; Re = 1000)
 
-## Convection model
-convection_model = NoRegConvectionModel{T}()
-# convection_model = C2ConvectionModel{T}()
-# convection_model = C4ConvectionModel{T}()
-# convection_model = LerayConvectionModel{T}()
-
 ## Grid
-x = stretched_grid(0, 2π, 20)
-y = stretched_grid(0, 2π, 20)
+x = stretched_grid(0, 2, 100)
+y = stretched_grid(0, 2, 100)
 grid = create_grid(x, y; T);
 
 plot_grid(grid)
-
-## Boundary conditions
-u_bc(x, y, t) = zero(x)
-v_bc(x, y, t) = zero(x)
-bc = create_boundary_conditions(
-    u_bc,
-    v_bc;
-    bc_unsteady = false,
-    bc_type = (;
-        u = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
-        v = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
-    ),
-    T,
-)
 
 ## Forcing parameters
 bodyforce_u(x, y) = 0
@@ -61,36 +46,31 @@ force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 pressure_solver = FourierPressureSolver{T}()
 
 ## Build setup and assemble operators
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc);
+setup = Setup{T,2}(; viscosity_model, grid, force, pressure_solver);
 build_operators!(setup);
 
 ## Time interval
-t_start, t_end = tlims = (0.0, 50.0)
+t_start, t_end = tlims = (0.0, 5.0)
 
 ## Initial conditions
-initial_velocity_u(x, y) = -sin(x)cos(y)
-initial_velocity_v(x, y) = cos(x)sin(y)
-initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
+initial_velocity_u(x, y) = -sinpi(x)cospi(y)
+initial_velocity_v(x, y) = cospi(x)sinpi(y)
+initial_pressure(x, y) = 1 / 4 * (cospi(2x) + cospi(2y))
 V₀, p₀ = create_initial_conditions(
-    setup,
-    t_start;
+    setup;
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure,
 );
 
 
-## Solve steady state problem
-problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = @time solve(problem; npicard = 2);
-
-
 ## Iteration processors
 logger = Logger()
-plotter = RealTimePlotter(; nupdate = 10, fieldname = :vorticity)
+plotter = RealTimePlotter(; nupdate = 10, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
 processors = [logger, plotter, writer, tracer]
+# processors = []
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);

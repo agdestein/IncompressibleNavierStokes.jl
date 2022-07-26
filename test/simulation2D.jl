@@ -5,16 +5,9 @@
 
     ## Viscosity model
     viscosity_model = LaminarModel{T}(; Re = 1000)
-    # viscosity_model = KEpsilonModel{T}(; Re = 1000)
     # viscosity_model = MixingLengthModel{T}(; Re = 1000)
     # viscosity_model = SmagorinskyModel{T}(; Re = 1000)
     # viscosity_model = QRModel{T}(; Re = 1000)
-
-    ## Convection model
-    convection_model = NoRegConvectionModel{T}()
-    # convection_model = C2ConvectionModel{T}()
-    # convection_model = C4ConvectionModel{T}()
-    # convection_model = LerayConvectionModel{T}()
 
     ## Grid parameters
     x = stretched_grid(0.0, 1.0, 25)
@@ -48,7 +41,7 @@
 
     ## Build setup and assemble operators
     setup =
-        Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
+        Setup{T,2}(; viscosity_model,  grid, force, pressure_solver, bc)
     build_operators!(setup)
 
     ## Time interval
@@ -65,18 +58,6 @@
         initial_velocity_v,
         initial_pressure,
     )
-
-    @testset "Steady state problem" begin
-        problem = SteadyStateProblem(setup, V₀, p₀)
-        V, p = solve(problem)
-
-        # Check that solution did not explode
-        @test all(!isnan, V)
-        @test all(!isnan, p)
-
-        # Check that the average velocity is smaller than the lid velocity
-        @test sum(abs, V) / length(V) < lid_vel
-    end
 
     ## Iteration processors
     logger = Logger()

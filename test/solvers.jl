@@ -3,7 +3,6 @@
 
     Re = 500
     viscosity_model = LaminarModel{T}(; Re)
-    convection_model = NoRegConvectionModel{T}()
 
     ## Grid
     x = stretched_grid(0, 2π, 50)
@@ -34,7 +33,7 @@
 
     ## Build setup and assemble operators
     setup =
-        Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
+        Setup{T,2}(; viscosity_model,  grid, force, pressure_solver, bc)
     build_operators!(setup)
 
     ## Time interval
@@ -51,15 +50,6 @@
         initial_velocity_v,
         initial_pressure,
     )
-
-    @testset "Steady state" begin
-        problem = SteadyStateProblem(setup, V₀, p₀)
-        V, p = solve(problem)
-        uₕ = V[grid.indu]
-        vₕ = V[grid.indv]
-        @test norm(uₕ .- mean(uₕ)) / mean(uₕ) < 1e-8
-        @test norm(vₕ .- mean(vₕ)) / mean(vₕ) < 1e-8
-    end
 
     # Exact solutions
     F(t) = exp(-2t / Re)

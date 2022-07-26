@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = IncompressibleNavierStokes
+CurrentModule = DifferentiableNavierStokes
 ```
 
 # API Reference
@@ -29,9 +29,7 @@ QuantityTracer
 ## Problems
 
 ```@docs
-SteadyStateProblem
 UnsteadyProblem
-is_steady
 ```
 
 ## Setup
@@ -86,21 +84,10 @@ plot_tracers
 
 ```@docs
 LaminarModel
-KEpsilonModel
 MixingLengthModel
 SmagorinskyModel
 QRModel
 ```
-
-## Convection Models
-
-```@docs
-NoRegConvectionModel
-C2ConvectionModel
-C4ConvectionModel
-LerayConvectionModel
-```
-
 
 ## ODE methods
 

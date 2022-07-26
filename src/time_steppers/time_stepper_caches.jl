@@ -7,16 +7,13 @@ abstract type AbstractODEMethodCache{T} end
 
 Base.@kwdef struct ExplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
     kV::Matrix{T}
-    kp::Matrix{T}
     Vtemp::Vector{T}
-    Vtemp2::Vector{T}
+    Vₙ::Vector{T}
+    pₙ::Vector{T}
     F::Vector{T}
     ∇F::SparseMatrixCSC{T,Int}
     f::Vector{T}
     Δp::Vector{T}
-    A::Matrix{T}
-    b::Vector{T}
-    c::Vector{T}
 end
 
 Base.@kwdef struct ImplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
@@ -41,7 +38,6 @@ Base.@kwdef struct ImplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
     c_ext::SparseMatrixCSC{T,Int}
     Gtot::SparseMatrixCSC{T,Int}
     Mtot::SparseMatrixCSC{T,Int}
-    yMtot::Vector{T}
     Ωtot::Vector{T}
     dfmom::SparseMatrixCSC{T,Int}
     Z::SparseMatrixCSC{T,Int}
@@ -57,8 +53,6 @@ Base.@kwdef mutable struct AdamsBashforthCrankNicolsonCache{T} <: AbstractODEMet
     b::Vector{T}
     bₙ::Vector{T}
     bₙ₊₁::Vector{T}
-    yDiffₙ::Vector{T}
-    yDiffₙ₊₁::Vector{T}
     Gpₙ::Vector{T}
     Diff_fact::Factorization{T}
     Δt::T
@@ -92,16 +86,26 @@ function ode_method_cache(::AdamsBashforthCrankNicolsonMethod{T}, setup) where {
     b = zeros(T, NV)
     bₙ = zeros(T, NV)
     bₙ₊₁ = zeros(T, NV)
-    yDiffₙ = zeros(T, NV)
-    yDiffₙ₊₁ = zeros(T, NV)
     Gpₙ = zeros(T, NV)
 
     # Compute factorization at first time step (guaranteed since Δt > 0)
     Δt = 0
     Diff_fact = cholesky(spzeros(0, 0))
 
-    AdamsBashforthCrankNicolsonCache{T}(; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ,
-                                        yDiffₙ₊₁, Gpₙ, Diff_fact, Δt)
+    AdamsBashforthCrankNicolsonCache{T}(;
+        cₙ,
+        cₙ₋₁,
+        F,
+        f,
+        Δp,
+        Rr,
+        b,
+        bₙ,
+        bₙ₊₁,
+        Gpₙ,
+        Diff_fact,
+        Δt,
+    )
 end
 
 function ode_method_cache(::OneLegMethod{T}, setup) where {T}
@@ -117,27 +121,16 @@ end
 
 function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup) where {T}
     (; NV, Np) = setup.grid
-
     ns = nstage(method)
     kV = zeros(T, NV, ns)
-    kp = zeros(T, Np, ns)
     Vtemp = zeros(T, NV)
-    Vtemp2 = zeros(T, NV)
+    Vₙ = zeros(T, NV)
+    pₙ = zeros(T, Np)
     F = zeros(T, NV)
     ∇F = spzeros(T, NV, NV)
     f = zeros(T, Np)
     Δp = zeros(T, Np)
-
-    # Get coefficients of RK method
-    (; A, b, c) = method
-
-    # Shift Butcher tableau, as A[1, :] is always zero for explicit methods
-    A = [A[2:end, :]; b']
-
-    # Vector with time instances (1 is the time level of final step)
-    c = [c[2:end]; 1]
-
-    ExplicitRungeKuttaCache{T}(; kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp, A, b, c)
+    ExplicitRungeKuttaCache{T}(; kV, Vtemp, Vₙ, pₙ, F, ∇F, f, Δp)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
@@ -175,7 +168,6 @@ function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
 
     # Divergence operator
     Mtot = kron(Is, M)
-    yMtot = zeros(T, Np * s)
 
     # Finite volumes
     Ωtot = kron(ones(s), Ω)
@@ -202,8 +194,13 @@ function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
         c,
         Is,
         Ω_sNV,
-        A_ext, b_ext, c_ext,
-        Gtot, Mtot, yMtot, Ωtot,
-        dfmom, Z
+        A_ext,
+        b_ext,
+        c_ext,
+        Gtot,
+        Mtot,
+        Ωtot,
+        dfmom,
+        Z,
     )
 end

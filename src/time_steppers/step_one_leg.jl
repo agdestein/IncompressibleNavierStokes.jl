@@ -1,3 +1,63 @@
+function step(stepper::OneLegStepper, Δt)
+    (; method, V, p, t, Vₙ, pₙ, tₙ, setup) = stepper
+    (; p_add_solve, β) = method
+    (; grid, operators, pressure_solver) = setup
+    (; G, M) = operators
+    (; Ω⁻¹) = grid
+
+    Δt ≈ t - tₙ || error("One-leg-β-method requires constant time step")
+
+    # Update current solution (does not depend on previous step size)
+    Vₙ₋₁ = Vₙ
+    pₙ₋₁ = pₙ
+    Vₙ = V
+    pₙ = p
+    tₙ = t
+
+    # Intermediate ("offstep") velocities
+    t = tₙ + β * Δt
+    @. V = (1 + β) * Vₙ - β * Vₙ₋₁
+    @. p = (1 + β) * pₙ - β * pₙ₋₁
+
+    # Right-hand side of the momentum equation
+    F = momentum(V, p, t, setup)
+
+    # Take a time step with this right-hand side, this gives an intermediate velocity field
+    # (not divergence free)
+    V = @. (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δt * Ω⁻¹ * F) / (β + 1 // 2)
+
+    # Adapt time step for pressure calculation
+    Δtᵦ = Δt / (β + 1 // 2)
+
+    # Divergence of intermediate velocity field
+    f = (M * V) / Δtᵦ
+
+    # Solve the Poisson equation for the pressure
+    Δp = pressure_poisson(pressure_solver, f)
+    mul!(GΔp, G, Δp)
+
+    # Update velocity field
+    V = V .- Δtᵦ .* Ω⁻¹ .* (G * Δp)
+
+    # Update pressure (second order)
+    p = @. 2pₙ - pₙ₋₁ + 4 // 3 * Δp
+
+    # Alternatively, do an additional Poisson solve
+    if p_add_solve
+        # Momentum already contains G*p with the current p, we therefore
+        # effectively solve for the pressure difference
+        F = momentum(V, p, tₙ + Δt, setup)
+        f = M * (Ω⁻¹ .* F)
+        Δp = pressure_poisson(pressure_solver, f)
+        p = p + Δp
+    end
+
+    n = n + 1
+    t = tₙ + Δt
+
+    OneLegStepper(; method, V, p, t, n, Vₙ, pₙ, tₙ, setup)
+end
+
 """
     step!(stepper::OneLegStepper, Δt)
 
@@ -12,49 +72,41 @@ Formulation:
 \\beta) u^n - \\beta u^{n-1}).
 ```
 """
-function step!(stepper::OneLegStepper, Δt)
-    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
+function step!(stepper::OneLegStepper, Δt; cache, momentum_cache)
+    (; method, V, p, t, Vₙ, pₙ, tₙ, setup) = stepper
     (; p_add_solve, β) = method
-    (; grid, operators, bc, pressure_solver) = setup
+    (; grid, operators, pressure_solver) = setup
     (; G, M) = operators
     (; Ω⁻¹) = grid
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache
 
-    Δt ≈ Δtₙ || error("One-leg-β-method requires constant time step")
+    Δt ≈ t - tₙ || error("One-leg-β-method requires constant time step")
 
     # Update current solution (does not depend on previous step size)
-    stepper.n += 1
     Vₙ₋₁ .= Vₙ
     pₙ₋₁ .= pₙ
     Vₙ .= V
     pₙ .= p
     tₙ = t
-    Δtₙ = Δt
 
     # Intermediate ("offstep") velocities
-    t = tₙ + β * Δtₙ
+    t = tₙ + β * Δt
     @. V = (1 + β) * Vₙ - β * Vₙ₋₁
     @. p = (1 + β) * pₙ - β * pₙ₋₁
 
     # Right-hand side of the momentum equation
-    momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
+    momentum!(F, V, p, t, setup, momentum_cache)
 
     # Take a time step with this right-hand side, this gives an intermediate velocity field
     # (not divergence free)
-    @. V = (2β * Vₙ - (β - 1//2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1//2)
-
-    # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
-    # conditions at tₙ₊₁
-    bc.bc_unsteady && set_bc_vectors!(setup, tₙ + Δtₙ)
-    (; yM) = operators
+    @. V = (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δt * Ω⁻¹ * F) / (β + 1 // 2)
 
     # Adapt time step for pressure calculation
-    Δtᵦ = Δtₙ / (β + 1//2)
+    Δtᵦ = Δt / (β + 1 // 2)
 
     # Divergence of intermediate velocity field
-    f .= yM
     mul!(f, M, V, 1 / Δtᵦ, 1 / Δtᵦ)
-    # f .= (M * V + yM) / Δtᵦ
+    # f .= (M * V) / Δtᵦ
 
     # Solve the Poisson equation for the pressure
     pressure_poisson!(pressure_solver, Δp, f)
@@ -68,11 +120,15 @@ function step!(stepper::OneLegStepper, Δt)
 
     # Alternatively, do an additional Poisson solve
     if p_add_solve
-        pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+        momentum!(F, V, p, tₙ + Δt, setup, momentum_cache)
+        @. F = Ω⁻¹ .* F
+        mul!(f, M, F)
+        pressure_poisson!(pressure_solver, Δp, f)
+        p .= p .+ Δp
     end
 
-    t = tₙ + Δtₙ
-    @pack! stepper = t, tₙ, Δtₙ
+    n = n + 1
+    t = tₙ + Δt
 
-    stepper
+    OneLegStepper(; method, V, p, t, n, Vₙ, pₙ, tₙ, setup)
 end

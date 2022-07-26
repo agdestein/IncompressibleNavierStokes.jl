@@ -105,6 +105,10 @@ function runge_kutta_method(A, b, c, r; kwargs...)
     c = convert(Vector{T}, c)
     r = convert(T, r)
     if isexplicit
+        # Shift Butcher tableau, as A[1, :] is always zero for explicit methods
+        A = [A[2:end, :]; b']
+        # Vector with time instances (1 is the time level of final step)
+        c = [c[2:end]; 1]
         ExplicitRungeKuttaMethod(; A, b, c, r, kwargs...)
     else
         ImplicitRungeKuttaMethod(; A, b, c, r, kwargs...)

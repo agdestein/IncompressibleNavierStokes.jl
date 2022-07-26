@@ -1,370 +1,329 @@
 """
-    convection(model, V, ϕ, setup; getJacobian = false)
+    convection(V, setup)
 
-Convenience function for initializing arrays `c` and `∇c` before filling in convection terms.
+Compute convective forces (out-of-place version).
 """
-function convection(model, V, ϕ, setup; getJacobian = false, newton_factor = false)
-    (; NV) = setup.grid
+function convection end
 
-    cache = MomentumCache(setup)
-    c = zeros(NV)
-    ∇c = spzeros(NV, NV)
+# 2D version
+function convection(V, setup::Setup{T,2}) where {T}
+    (; grid, operators) = setup
+    (; Cux, Cuy, Cvx, Cvy) = operators
+    (; Au_ux, Au_uy, Av_vx, Av_vy) = operators
+    (; Iu_ux, Iv_uy, Iu_vx, Iv_vy) = operators
+    (; indu, indv) = grid
 
-    convection!(model, c, ∇c, V, ϕ, setup, cache; getJacobian, newton_factor)
+    u = @view V[indu]
+    v = @view V[indv]
+
+    ∂uu∂x = Cux * ((Au_ux * u) .* (Iu_ux * u))
+    ∂uv∂y = Cuy * ((Au_uy * u) .* (Iv_uy * v))
+    ∂vu∂x = Cvx * ((Av_vx * v) .* (Iu_vx * u))
+    ∂vv∂y = Cvy * ((Av_vy * v) .* (Iv_vy * v))
+
+    cu = ∂uu∂x + ∂uv∂y
+    cv = ∂vu∂x + ∂vv∂y
+
+    [cu; cv]
 end
 
-"""
-    convection!(model, c, ∇c, V, ϕ, setup, cache; getJacobian = false)
+# 3D version
+function convection(V, setup::Setup{T,3}) where {T}
+    (; grid, operators) = setup
+    (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz) = operators
+    (; Au_ux, Au_uy, Au_uz) = operators
+    (; Av_vx, Av_vy, Av_vz) = operators
+    (; Aw_wx, Aw_wy, Aw_wz) = operators
+    (; Iu_ux, Iv_uy, Iw_uz) = operators
+    (; Iu_vx, Iv_vy, Iw_vz) = operators
+    (; Iu_wx, Iv_wy, Iw_wz) = operators
+    (; indu, indv, indw) = grid
 
-Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`, using the convection
-model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
+    u = @view V[indu]
+    v = @view V[indv]
+    w = @view V[indw]
+
+    ∂uu∂x = Cux * ((Au_ux * u) .* (Iu_ux * u))
+    ∂uv∂y = Cuy * ((Au_uy * u) .* (Iv_uy * v))
+    ∂uw∂z = Cuz * ((Au_uz * u) .* (Iw_uz * w))
+
+    ∂vu∂x = Cvx * ((Av_vx * v) .* (Iu_vx * u))
+    ∂vv∂y = Cvy * ((Av_vy * v) .* (Iv_vy * v))
+    ∂vw∂z = Cvz * ((Av_vz * v) .* (Iw_vz * w))
+
+    ∂wu∂x = Cwx * ((Aw_wx * w) .* (Iu_wx * u))
+    ∂wv∂y = Cwy * ((Aw_wy * w) .* (Iv_wy * v))
+    ∂ww∂z = Cwz * ((Aw_wz * w) .* (Iw_wz * w))
+
+    cu = ∂uu∂x + ∂uv∂y + ∂uw∂z
+    cv = ∂vu∂x + ∂vv∂y + ∂vw∂z
+    cw = ∂wu∂x + ∂wv∂y + ∂ww∂z
+
+    [cu; cv; cw]
+end
+
+
+"""
+    convection!(c, V, setup, cache)
+
+Compute convective forces (in-place mutating version).
 """
 function convection! end
 
-function convection!(
-    ::NoRegConvectionModel,
-    c,
-    ∇c,
-    V,
-    ϕ,
-    setup,
-    cache;
-    getJacobian = false,
-    newton_factor = false,
-)
-    (; order4, α) = setup.grid
-    (; c3, ∇c3) = cache
-
-    # No regularization
-    convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian, newton_factor, order4 = false)
-
-    if order4
-        convection_components!(c3, ∇c3, V, ϕ, setup, cache; getJacobian, newton_factor, order4)
-        @. c = α * c - c3
-        getJacobian && (@. ∇c = α * ∇c - ∇c3)
-    end
-
-    c, ∇c
-end
-
 # 2D version
-function convection!(
-    ::C2ConvectionModel,
-    c,
-    ∇c,
-    V,
-    ϕ,
-    setup::Setup{T,2},
-    cache;
-    getJacobian = false,
-    newton_factor = false,
-) where {T}
+function convection!(c, V, setup::Setup{T,2}, cache) where {T}
     (; grid, operators) = setup
+
+    (; Cux, Cuy, Cvx, Cvy) = operators
+    (; Au_ux, Au_uy, Av_vx, Av_vy) = operators
+    (; Iu_ux, Iv_uy, Iu_vx, Iv_vy) = operators
+
     (; indu, indv) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, M, yM, α) = operators
+
+        (; u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy) = cache
+        (; v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy) = cache
+
+        (; ∂uū∂x, ∂uv̄∂y, ∂vū∂x, ∂vv̄∂y) = cache
 
     cu = @view c[indu]
     cv = @view c[indv]
 
-    uₕ = @view V[indu]
-    vₕ = @view V[indv]
+    u = @view V[indu]
+    v = @view V[indv]
 
-    ϕu = @view ϕ[indu]
-    ϕv = @view ϕ[indv]
+    # Fill preallocated arrays
+    mul!(u_ux, Au_ux, u)
+     mul!(ū_ux, Iu_ux, u)
+    mul!(u_uy, Au_uy, u)
+     mul!(v̄_uy, Iv_uy, v)
+    mul!(v_vx, Av_vx, v)
+     mul!(ū_vx, Iu_vx, u)
+    mul!(v_vy, Av_vy, v)
+     mul!(v̄_vy, Iv_vy, v)
 
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+      @. uū_ux = u_ux * ū_ux
+      @. uv̄_uy = u_uy * v̄_uy
+      @. vū_vx = v_vx * ū_vx
+      @. vv̄_vy = v_vy * v̄_vy
 
-    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
-    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
+      mul!(∂uū∂x, Cux, uū_ux)
+      mul!(∂uv̄∂y, Cuy, uv̄_uy)
+      mul!(∂vū∂x, Cvx, vū_vx)
+      mul!(∂vv̄∂y, Cvy, vv̄_vy)
 
-    ϕ̄ = [ϕ̄u; ϕ̄v]
-    V̄ = [ūₕ; v̄ₕ]
+      @. cu = ∂uū∂x + ∂uv̄∂y
+      @. cv = ∂vū∂x + ∂vv̄∂y
 
-    # Divergence of filtered velocity field; should be zero!
-    maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
-
-    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
-
-    cu .= filter_convection(cu, Diffu_f, yDiffu_f, α)
-    cv .= filter_convection(cv, Diffv_f, yDiffv_f, α)
-
-    c, ∇c
+    c
 end
 
 # 3D version
-function convection!(
-    ::C2ConvectionModel,
-    c,
-    ∇c,
-    V,
-    ϕ,
-    setup::Setup{T,3},
-    cache;
-    getJacobian = false,
-    newton_factor = false,
-) where {T}
+function convection!(c, V, setup::Setup{T,3}, cache) where {T}
     (; grid, operators) = setup
+    (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz) = operators
+    (; Au_ux, Au_uy, Au_uz) = operators
+    (; Av_vx, Av_vy, Av_vz) = operators
+    (; Aw_wx, Aw_wy, Aw_wz) = operators
+    (; Iu_ux, Iv_uy, Iw_uz) = operators
+    (; Iu_vx, Iv_vy, Iw_vz) = operators
+    (; Iu_wx, Iv_wy, Iw_wz) = operators
     (; indu, indv, indw) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, Diffw_f, yDiffw_f, M, yM, α) = operators
+          (; u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy, u_uz, w̄_uz, uw̄_uz) = cache
+          (; v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy, v_vz, w̄_vz, vw̄_vz) = cache
+          (; w_wx, ū_wx, wū_wx, w_wy, v̄_wy, wv̄_wy, w_wz, w̄_wz, ww̄_wz) = cache
+             (; ∂uū∂x, ∂uv̄∂y, ∂uw̄∂z, ∂vū∂x, ∂vv̄∂y, ∂vw̄∂z, ∂wū∂x, ∂wv̄∂y, ∂ww̄∂z) = cache
 
     cu = @view c[indu]
     cv = @view c[indv]
     cw = @view c[indw]
 
-    uₕ = @view V[indu]
-    vₕ = @view V[indv]
-    wₕ = @view V[indw]
+    u = @view V[indu]
+    v = @view V[indv]
+    w = @view V[indw]
 
-    ϕu = @view ϕ[indu]
-    ϕv = @view ϕ[indv]
-    ϕw = @view ϕ[indw]
+    # Convection components
+    mul!(u_ux, Au_ux, u)
+     mul!(ū_ux, Iu_ux, u)
+    mul!(u_uy, Au_uy, u)
+     mul!(v̄_uy, Iv_uy, v)
+    mul!(u_uz, Au_uz, u)
+     mul!(w̄_uz, Iw_uz, w)
 
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
-    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α)
+    mul!(v_vx, Av_vx, v)
+     mul!(ū_vx, Iu_vx, u)
+    mul!(v_vy, Av_vy, v)
+     mul!(v̄_vy, Iv_vy, v)
+    mul!(v_vz, Av_vz, v)
+     mul!(w̄_vz, Iw_vz, w)
 
-    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
-    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
-    w̄ₕ = filter_convection(wₕ, Diffw_f, yDiffw_f, α)
+    mul!(w_wx, Aw_wx, w)
+     mul!(ū_wx, Iu_wx, u)
+    mul!(w_wy, Aw_wy, w)
+     mul!(v̄_wy, Iv_wy, v)
+    mul!(w_wz, Aw_wz, w)
+     mul!(w̄_wz, Iw_wz, w)
 
-    ϕ̄ = [ϕ̄u; ϕ̄v; ϕ̄w]
-    V̄ = [ūₕ; v̄ₕ; w̄ₕ]
+      @. uū_ux = u_ux * ū_ux
+      @. uv̄_uy = u_uy * v̄_uy
+      @. uw̄_uz = u_uz * w̄_uz
+      @. vū_vx = v_vx * ū_vx
+      @. vv̄_vy = v_vy * v̄_vy
+      @. vw̄_vz = v_vz * w̄_vz
+      @. wū_wx = w_wx * ū_wx
+      @. wv̄_wy = w_wy * v̄_wy
+      @. ww̄_wz = w_wz * w̄_wz
 
-    # Divergence of filtered velocity field; should be zero!
-    maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
+      mul!(∂uū∂x, Cux, uū_ux)
+      mul!(∂uv̄∂y, Cuy, uv̄_uy)
+      mul!(∂uw̄∂z, Cuz, uw̄_uz)
 
-    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
+      mul!(∂vū∂x, Cvx, vū_vx)
+      mul!(∂vv̄∂y, Cvy, vv̄_vy)
+      mul!(∂vw̄∂z, Cvz, vw̄_vz)
 
-    cu .= filter_convection(cu, Diffu_f, yDiffu_f, α)
-    cv .= filter_convection(cv, Diffv_f, yDiffv_f, α)
-    cw .= filter_convection(cw, Diffw_f, yDiffw_f, α)
+      mul!(∂wū∂x, Cwx, wū_wx)
+      mul!(∂wv̄∂y, Cwy, wv̄_wy)
+      mul!(∂ww̄∂z, Cwz, ww̄_wz)
 
-    c, ∇c
+       @. cu = ∂uū∂x + ∂uv̄∂y + ∂uw̄∂z
+       @. cv = ∂vū∂x + ∂vv̄∂y + ∂vw̄∂z
+       @. cw = ∂wū∂x + ∂wv̄∂y + ∂ww̄∂z
+
+    c
 end
 
+"""
+    convection_jacobian!
+
+Compute the Jacobian of the convective forces with respect to the velocity `V`.
+"""
+function convection_jacobian! end
+
 # 2D version
-function convection!(
-    ::C4ConvectionModel,
-    c,
-    ∇c,
-    V,
-    ϕ,
-    setup::Setup{T,2},
-    cache;
-    getJacobian = false,
-    newton_factor = false,
-) where {T}
+function convection_jacobian!(∇c, V, setup::Setup{T,2}, cache) where {T}
     (; grid, operators) = setup
+    (; Cux, Cuy, Cvx, Cvy) = operators
+    (; Au_ux, Au_uy, Av_vx, Av_vy) = operators
+    (; Iu_ux, Iv_uy, Iu_vx, Iv_vy) = operators
     (; indu, indv) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, M, yM, α) = operators
-    (; c2, ∇c2, c3, ∇c3) = cache
+      (; ū_ux, v̄_uy) = cache
+      (; ū_vx, v̄_vy) = cache
+    (; Conv_ux_11, Conv_uy_11, Conv_uy_12, Conv_vx_21, Conv_vx_22, Conv_vy_22) = cache
 
-    cu = @view c[indu]
-    cv = @view c[indv]
-    cu2 = @view c2[indu]
-    cv2 = @view c2[indv]
-    cu3 = @view c3[indu]
-    cv3 = @view c3[indv]
+    u = @view V[indu]
+    v = @view V[indv]
 
-    uₕ = @view V[indu]
-    vₕ = @view V[indv]
+    # Fill preallocated arrays
+     mul!(ū_ux, Iu_ux, u)
+     mul!(v̄_uy, Iv_uy, v)
+     mul!(ū_vx, Iu_vx, u)
+     mul!(v̄_vy, Iv_vy, v)
 
-    ϕu = @view ϕ[indu]
-    ϕv = @view ϕ[indv]
+    ## Convective terms, u-component
+     C1 = Cux * Diagonal(ū_ux)
+    Conv_ux_11 .= C1 * Au_ux
 
-    # C4 consists of 3 terms:
-    # C4 = conv(filter(u), filter(u)) + filter(conv(filter(u), u') +
-    #      filter(conv(u', filter(u)))
-    # Where u' = u - filter(u)
+     C1 = Cuy * Diagonal(v̄_uy)
+    Conv_uy_11 .= C1 * Au_uy
+    Conv_uy_12 .= 0
 
-    # Filter both convecting and convected velocity
-    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
-    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
+    ## Convective terms, v-component
+     C1 = Cvx * Diagonal(ū_vx)
+    Conv_vx_21 .= 0
+    Conv_vx_22 .= C1 * Av_vx
 
-    V̄ = [ūₕ; v̄ₕ]
-    ΔV = V - V̄
+     C1 = Cvy * Diagonal(v̄_vy)
+    Conv_vy_22 .= C1 * Av_vy
 
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+    ∇c[indu, indu] = Conv_ux_11 + Conv_uy_11
+    ∇c[indu, indv] = Conv_uy_12
+    ∇c[indv, indu] = Conv_vx_21
+    ∇c[indv, indv] = Conv_vx_22 + Conv_vy_22
 
-    ϕ̄ = [ϕ̄u; ϕ̄v]
-    Δϕ = ϕ - ϕ̄
-
-    # Divergence of filtered velocity field; should be zero!
-    maxdiv_f = maximum(abs.(M * V̄ + yM))
-
-    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
-    convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache; getJacobian, newton_factor)
-    convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian, newton_factor)
-
-    # TODO: consider inner loop parallelization
-    # @sync begin
-    #     @spawn convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian,
-    #     newton_factor)
-    #     @spawn convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache, getJacobian,
-    #     newton_factor)
-    #     @spawn convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian,
-    #     newton_factor)
-    # end
-
-    cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
-    cv .+= filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α)
-
-    c, ∇c
+    ∇c
 end
 
 # 3D version
-function convection!(
-    ::C4ConvectionModel,
-    c,
-    ∇c,
-    V,
-    ϕ,
-    setup::Setup{T,3},
-    cache;
-    getJacobian = false,
-    newton_factor = false,
-) where {T}
+function convection_jacobian!(∇c, V, setup::Setup{T,3}, cache) where {T}
     (; grid, operators) = setup
+    (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz) = operators
+    (; Au_ux, Au_uy, Au_uz) = operators
+    (; Av_vx, Av_vy, Av_vz) = operators
+    (; Aw_wx, Aw_wy, Aw_wz) = operators
+    (; Iu_ux, Iv_uy, Iw_uz) = operators
+    (; Iu_vx, Iv_vy, Iw_vz) = operators
+    (; Iu_wx, Iv_wy, Iw_wz) = operators
     (; indu, indv, indw) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, Diffw_f, yDiffw_f, M, yM, α) = operators
-    (; c2, ∇c2, c3, ∇c3) = cache
+       (; ū_ux, v̄_uy, w̄_uz) = cache
+       (; ū_vx, v̄_vy, w̄_vz) = cache
+       (; ū_wx, v̄_wy, w̄_wz) = cache
+    (; Conv_ux_11, Conv_uy_11, Conv_uz_11, Conv_uy_12, Conv_uz_13) = cache
+    (; Conv_vx_21, Conv_vx_22, Conv_vy_22, Conv_vz_22, Conv_vz_23) = cache
+    (; Conv_wx_31, Conv_wy_32, Conv_wx_33, Conv_wy_33, Conv_wz_33) = cache
 
-    cu = @view c[indu]
-    cv = @view c[indv]
-    cw = @view c[indw]
+    u = @view V[indu]
+    v = @view V[indv]
+    w = @view V[indw]
 
-    cu2 = @view c2[indu]
-    cv2 = @view c2[indv]
-    cw2 = @view c2[indw]
+    # Convection components
+     mul!(ū_ux, Iu_ux, u)
+     mul!(v̄_uy, Iv_uy, v)
+     mul!(w̄_uz, Iw_uz, w)
 
-    cu3 = @view c3[indu]
-    cv3 = @view c3[indv]
-    cw3 = @view c3[indw]
+     mul!(ū_vx, Iu_vx, u)
+     mul!(v̄_vy, Iv_vy, v)
+     mul!(w̄_vz, Iw_vz, w)
 
-    uₕ = @view V[indu]
-    vₕ = @view V[indv]
-    wₕ = @view V[indw]
+     mul!(ū_wx, Iu_wx, u)
+     mul!(v̄_wy, Iv_wy, v)
+     mul!(w̄_wz, Iw_wz, w)
 
-    ϕu = @view ϕ[indu]
-    ϕv = @view ϕ[indv]
-    ϕw = @view ϕ[indw]
+    ## Convective terms, u-component
+     C1 = Cux * Diagonal(ū_ux)
+    Conv_ux_11 .= C1 * Au_ux
 
-    # C4 consists of 3 terms:
-    # C4 = conv(filter(u), filter(u)) + filter(conv(filter(u), u') +
-    #      filter(conv(u', filter(u)))
-    # Where u' = u - filter(u)
+     C1 = Cuy * Diagonal(v̄_uy)
+    Conv_uy_11 .= C1 * Au_uy
+    Conv_uy_12 .= 0
 
-    # Filter both convecting and convected velocity
-    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
-    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
-    w̄ₕ = filter_convection(wₕ, Diffw_f, yDiffw_f, α)
+     C1 = Cuz * Diagonal(w̄_uz)
+    Conv_uz_11 .= C1 * Au_uz
+    Conv_uz_13 .= 0
 
-    V̄ = [ūₕ; v̄ₕ; w̄ₕ]
-    ΔV = V - V̄
+    ## Convective terms, v-component
+     C1 = Cvx * Diagonal(ū_vx)
+    Conv_vx_21 .= 0
+    Conv_vx_22 .= C1 * Av_vx
 
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
-    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α)
+     C1 = Cvy * Diagonal(v̄_vy)
+    Conv_vy_22 .= C1 * Av_vy
 
-    ϕ̄ = [ϕ̄u; ϕ̄v; ϕ̄w]
-    Δϕ = ϕ - ϕ̄
+     C1 = Cvz * Diagonal(w̄_vz)
+    Conv_vz_23 .= 0
+    Conv_vz_22 .= C1 * Av_vz
 
-    # Divergence of filtered velocity field; should be zero!
-    maxdiv_f = maximum(abs.(M * V̄ + yM))
+    ## Convective terms, w-component
+     C1 = Cwx * Diagonal(ū_wx)
+    Conv_wx_31 .= 0
+    Conv_wx_33 .= C1 * Aw_wx
 
-    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
-    convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache; getJacobian, newton_factor)
-    convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian, newton_factor)
+     C1 = Cwy * Diagonal(v̄_wy)
+    Conv_wy_32 .= 0
+    Conv_wy_33 .= C1 * Aw_wy
 
-    # TODO: consider inner loop parallelization
-    # @sync begin
-    #     @spawn convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian,
-    #     newton_factor)
-    #     @spawn convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache, getJacobian,
-    #     newton_factor)
-    #     @spawn convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache, getJacobian,
-    #     newton_factor)
-    # end
+     C1 = Cwz * Diagonal(w̄_wz)
+    Conv_wz_33 .= C1 * Aw_wz
 
-    cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
-    cv .+= filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α)
-    cw .+= filter_convection(cw2 + cw3, Diffw_f, yDiffw_f, α)
+    ## Jacobian
+    ∇c[indu, indu] = Conv_ux_11 + Conv_uy_11 + Conv_uz_11
+    ∇c[indu, indv] = Conv_uy_12
+    ∇c[indu, indw] = Conv_uz_13
+    ∇c[indv, indu] = Conv_vx_21
+    ∇c[indv, indv] = Conv_vx_22 + Conv_vy_22 + Conv_vz_22
+    ∇c[indv, indw] = Conv_vz_23
+    ∇c[indw, indu] = Conv_wx_31
+    ∇c[indw, indv] = Conv_wy_32
+    ∇c[indw, indw] = Conv_wx_33 + Conv_wy_33 + Conv_wz_33
 
-    c, ∇c
-end
-
-# 2D version
-function convection!(
-    ::LerayConvectionModel,
-    c,
-    ∇c,
-    V,
-    ϕ,
-    setup::Setup{T,2},
-    cache;
-    getJacobian = false,
-    newton_factor = false,
-) where {T}
-    (; grid, operators) = setup
-    (; indu, indv) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, M, yM, α) = operators
-
-    ϕu = @view ϕ[indu]
-    ϕv = @view ϕ[indv]
-
-    # TODO: needs finishing
-    error("Leray convection not implemented yet")
-
-    # Filter the convecting field
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
-
-    ϕ̄ = [ϕ̄u; ϕ̄v]
-
-    # Divergence of filtered velocity field; should be zero!
-    maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
-
-    convection_components!(c, ∇c, V, ϕ̄, setup, cache; getJacobian, newton_factor)
-
-    c, ∇c
-end
-
-# 3D version
-function convection!(
-    ::LerayConvectionModel,
-    c,
-    ∇c,
-    V,
-    ϕ,
-    setup::Setup{T,3},
-    cache;
-    getJacobian = false,
-    newton_factor = false,
-) where {T}
-    (; grid, operators) = setup
-    (; indu, indv, indw) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, Diffw_f, yDiffw_f, M, yM, α) = operators
-
-    ϕu = @view ϕ[indu]
-    ϕv = @view ϕ[indv]
-    ϕw = @view ϕ[indw]
-
-    # TODO: needs finishing
-    error("Leray convection not implemented yet")
-
-    # Filter the convecting field
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
-    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α)
-
-    ϕ̄ = [ϕ̄u; ϕ̄v; ϕ̄w]
-
-    # Divergence of filtered velocity field; should be zero!
-    maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
-
-    convection_components!(c, ∇c, V, ϕ̄, setup, cache; getJacobian, newton_factor)
-
-    c, ∇c
+    ∇c
 end
