@@ -1,7 +1,7 @@
 function step(stepper::OneLegStepper, Δt)
-    (; method, V, p, t, Vₙ, pₙ, tₙ, setup) = stepper
+    (; method, V, p, t, Vₙ, pₙ, tₙ, setup, pressure_solver) = stepper
     (; p_add_solve, β) = method
-    (; grid, operators, pressure_solver) = setup
+    (; grid, operators) = setup
     (; G, M) = operators
     (; Ω⁻¹) = grid
 
@@ -73,9 +73,9 @@ Formulation:
 ```
 """
 function step!(stepper::OneLegStepper, Δt; cache, momentum_cache)
-    (; method, V, p, t, Vₙ, pₙ, tₙ, setup) = stepper
+    (; method, V, p, t, Vₙ, pₙ, tₙ, setup, pressure_solver) = stepper
     (; p_add_solve, β) = method
-    (; grid, operators, pressure_solver) = setup
+    (; grid, operators) = setup
     (; G, M) = operators
     (; Ω⁻¹) = grid
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache

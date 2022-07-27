@@ -7,6 +7,7 @@
         processors = Processor[],
         method_startup = nothing,
         nstartup = 1,
+        pressure_solver = DirectPressureSolver(problem.setup),
     )
 
 Solve unsteady problem using `method`.
@@ -29,6 +30,7 @@ function solve(
     method_startup = nothing,
     nstartup = 1,
     inplace = false,
+    pressure_solver = DirectPressureSolver(problem.setup),
 )
     (; setup, V₀, p₀, tlims) = problem
     
@@ -44,7 +46,7 @@ function solve(
         method_use = method
     end
 
-    stepper, cache, momentum_cache = time_stepper(method_use, setup, V₀, p₀, t_start)
+    stepper, cache, momentum_cache = time_stepper(method_use, setup, V₀, p₀, t_start, pressure_solver)
     isadaptive && (Δt = get_timestep(stepper, cfl_number))
 
     # Processors for iteration results  

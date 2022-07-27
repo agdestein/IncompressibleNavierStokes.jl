@@ -35,7 +35,6 @@ include("force/build_force.jl")
 include("models/viscosity_models.jl")
 
 # Types
-include("solvers/pressure/pressure_solvers.jl")
 include("operators/operators.jl")
 include("setup.jl")
 
@@ -56,7 +55,6 @@ include("operators/operator_mesh.jl")
 include("operators/operator_postprocessing.jl")
 include("operators/operator_turbulent_diffusion.jl")
 include("operators/operator_viscosity.jl")
-
 
 # Time steppers
 include("momentum/momentumcache.jl")
@@ -80,7 +78,6 @@ include("processors/initialize.jl")
 include("processors/process.jl")
 include("processors/finalize.jl")
 
-
 # Momentum equation
 include("momentum/bodyforce.jl")
 include("momentum/compute_conservation.jl")
@@ -95,7 +92,7 @@ include("momentum/turbulent_viscosity.jl")
 include("problems/problems.jl")
 
 # Solvers
-include("solvers/pressure/initialize_pressure.jl")
+include("solvers/pressure/pressure_solvers.jl")
 include("solvers/pressure/pressure_poisson.jl")
 include("solvers/get_timestep.jl")
 include("solvers/solve_unsteady.jl")

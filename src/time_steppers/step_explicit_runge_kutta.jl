@@ -7,8 +7,8 @@ Dirichlet boundary points are not part of solution vector but are prescribed in 
 manner via the `u_bc` and `v_bc` functions.
 """
 function step(stepper::ExplicitRungeKuttaStepper, Δt)
-    (; method, V, p, t, n, setup) = stepper
-    (; grid, operators, pressure_solver) = setup
+    (; method, V, p, t, n, setup, pressure_solver) = stepper
+    (; grid, operators) = setup
     (; Ω⁻¹) = grid
     (; G, M) = operators
     (; A, b, c, p_add_solve) = method
@@ -75,7 +75,7 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt)
     t = tₙ + Δt
     n = n + 1
 
-    ExplicitRungeKuttaStepper(; method, V, p, t, n, setup)
+    ExplicitRungeKuttaStepper(; method, V, p, t, n, setup, pressure_solver)
 end
 
 """
@@ -87,8 +87,8 @@ Dirichlet boundary points are not part of solution vector but are prescribed in 
 manner via the `u_bc` and `v_bc` functions.
 """
 function step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache)
-    (; method, V, p, t, n, setup) = stepper
-    (; grid, operators, pressure_solver) = setup
+    (; method, V, p, t, n, setup, pressure_solver) = stepper
+    (; grid, operators) = setup
     (; Ω⁻¹) = grid
     (; G, M) = operators
     (; Vₙ, pₙ, kV, Vtemp, F, ∇F, Δp, f) = cache
@@ -163,5 +163,5 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache)
     t = tₙ + Δt
     n = n + 1
 
-    ExplicitRungeKuttaStepper(; method, V, p, t, n, setup)
+    ExplicitRungeKuttaStepper(; method, V, p, t, n, setup, pressure_solver)
 end

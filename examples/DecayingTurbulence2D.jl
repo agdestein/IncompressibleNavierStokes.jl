@@ -19,6 +19,14 @@ name = "DecayingTurbulence2D"
 # Floating point type for simulations
 T = Float64
 
+## Grid
+N = 500
+x = stretched_grid(0, 1, N)
+y = stretched_grid(0, 1, N)
+grid = create_grid(x, y; T);
+
+plot_grid(grid)
+
 ## Viscosity model
 viscosity_model = LaminarModel{T}(; Re = 10000)
 # viscosity_model = MixingLengthModel{T}(; Re = 1000)
@@ -30,22 +38,15 @@ bodyforce_u(x, y) = 0
 bodyforce_v(x, y) = 0
 force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
-## Pressure solver
-# pressure_solver = DirectPressureSolver{T}()
-# pressure_solver = CGPressureSolver{T}(; maxiter = 500, abstol = 1e-8)
-pressure_solver = FourierPressureSolver{T}()
-
-## Grid
-N = 500
-x = stretched_grid(0, 1, N)
-y = stretched_grid(0, 1, N)
-grid = create_grid(x, y; T);
-
-plot_grid(grid)
-
 ## Build setup and assemble operators
-setup = Setup{T,2}(; viscosity_model, grid, force, pressure_solver);
+setup = Setup(grid, viscosity_model, force);
 build_operators!(setup);
+
+## Pressure solver
+# pressure_solver = DirectPressureSolver(setup)
+# pressure_solver = CGPressureSolver(setup; maxiter = 500, abstol = 1e-8)
+pressure_solver = FourierPressureSolver(setup)
+
 
 ## Initial conditions
 u = zero(grid.xu)
@@ -73,18 +74,16 @@ v = imag.(ifft(uhat))
 V = [reshape(u, :); reshape(v, :)]
 p = reshape(p, :)
 f = setup.operators.M * V
-Δp = DifferentiableNavierStokes.pressure_poisson(pressure_solver, f, setup)
-V .-= setup.grid.Ω⁻¹ .* (setup.operators.G * Δp)
+Δp = DifferentiableNavierStokes.pressure_poisson(pressure_solver, f)
+V .= V .- setup.grid.Ω⁻¹ .* (setup.operators.G * Δp)
 (; Ω⁻¹) = grid
-(; M) = operators
+(; M) = setup.operators
 # Momentum already contains G*p with the current p, we therefore
 # effectively solve for the pressure difference
 F = DifferentiableNavierStokes.momentum(V, p, 0.0, setup)
 f = M * (Ω⁻¹ .* F)
 Δp = DifferentiableNavierStokes.pressure_poisson(pressure_solver, f)
 p = p + Δp
-
-V₀, p₀ = V, p
 
 ## Iteration processors
 nupdate = 1
@@ -97,11 +96,12 @@ processors = [logger, plotter, tracer]
 # processors = [logger]
 
 ## Time interval
-t_start, t_end = tlims = (0.0, 0.02)
+t_start, t_end = tlims = (0.0, 0.01)
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V, p, tlims);
-V, p, t = @time solve(problem, RK44(); Δt = 0.0001, processors, inplace = false)
+V, p, t =
+    @time solve(problem, RK44(); Δt = 0.0001, processors, inplace = false, pressure_solver)
 
 k = 1:K
 u = reshape(V[grid.indu], N, N)

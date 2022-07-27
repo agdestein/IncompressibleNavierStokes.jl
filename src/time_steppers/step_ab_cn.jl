@@ -1,6 +1,6 @@
 function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
-    (; method, V, p, t, n, cₙ, tₙ, setup, cache, momentum_cache) = stepper
-    (; viscosity_model, force, grid, operators, pressure_solver) = setup
+    (; method, V, p, t, n, cₙ, tₙ, setup, pressure_solver) = stepper
+    (; viscosity_model, force, grid, operators) = setup
     (; NV, Ω⁻¹) = grid
     (; G, M) = operators
     (; Diff) = operators
@@ -73,7 +73,7 @@ function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
 end
 
 """
-    step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
+    step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum_cache)
 
 Perform one time step with Adams-Bashforth for convection and Crank-Nicolson for diffusion.
 
@@ -112,9 +112,9 @@ The LU decomposition of the LHS matrix is precomputed in `operator_convection_di
 Note that, in constrast to explicit methods, the pressure from previous time steps has an
 influence on the accuracy of the velocity.
 """
-function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
-    (; method, V, p, t, n, cₙ, tₙ, setup, cache, momentum_cache) = stepper
-    (; viscosity_model, force, grid, operators, pressure_solver) = setup
+function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum_cache)
+    (; method, V, p, t, n, cₙ, tₙ, setup, pressure_solver) = stepper
+    (; viscosity_model, force, grid, operators) = setup
     (; NV, Ω⁻¹) = grid
     (; G, M) = operators
     (; Diff) = operators

@@ -7,8 +7,8 @@ Unsteady Dirichlet boundary points are not part of solution vector but
 are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
 """
 function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache)
-    (; method, V, p, t, n, setup) = stepper
-    (; grid, operators, pressure_solver) = setup
+    (; method, V, p, t, n, setup, pressure_solver) = stepper
+    (; grid, operators) = setup
     (; NV, Np, Ω⁻¹) = grid
     (; G, M) = operators
     (; p_add_solve, maxiter, abstol, newton_type) = method

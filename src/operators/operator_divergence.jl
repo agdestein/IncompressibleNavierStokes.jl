@@ -7,7 +7,7 @@ function operator_divergence! end
 
 # 2D version
 function operator_divergence!(setup::Setup{T,2}) where {T}
-    (; grid, operators, pressure_solver) = setup
+    (; grid, operators) = setup
     (; Npx, Npy) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t) = grid
@@ -90,8 +90,6 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
     A = M * Diagonal(Ω⁻¹) * G
     @pack! operators = A
 
-    initialize!(pressure_solver, setup, A)
-
     # Check if all the row sums of the pressure matrix are zero
     if any(≉(0; atol = 1e-10), sum(A; dims = 2))
         @warn "Pressure matrix: not all rowsums are zero!"
@@ -102,7 +100,7 @@ end
 
 # 3D version
 function operator_divergence!(setup::Setup{T,3}) where {T}
-    (; grid, operators, pressure_solver) = setup
+    (; grid, operators) = setup
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuz_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t, Nvz_in) = grid
     (; Nwx_in, Nwy_in, Nwz_in, Nwz_b, Nwz_t) = grid
@@ -206,8 +204,6 @@ function operator_divergence!(setup::Setup{T,3}) where {T}
     # Laplace = div grad
     A = M * Diagonal(Ω⁻¹) * G
     @pack! operators = A
-
-    initialize!(pressure_solver, setup, A)
 
     # Check if all the row sums of the pressure matrix are zero
     if any(≉(0; atol = 1e-10), sum(A; dims = 2))

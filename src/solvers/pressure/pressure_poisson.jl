@@ -6,11 +6,6 @@ calling `pressure_poisson!`.
 """
 function pressure_poisson end
 
-function pressure_poisson(solver, f, setup)
-    p = zeros(setup.grid.Np)
-    pressure_poisson!(solver, p, f)
-end
-
 function pressure_poisson(solver::DirectPressureSolver, f)
     # Assume the Laplace matrix is known (A) and is possibly factorized
 
