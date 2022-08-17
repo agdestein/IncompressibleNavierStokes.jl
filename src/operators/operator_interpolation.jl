@@ -1,13 +1,12 @@
 """
-    operator_interpolation!(setup)
+    operator_interpolation(grid)
 
 Construct averaging operators.
 """
-function operator_interpolation! end
+function operator_interpolation end
 
 # 2D version
-function operator_interpolation!(setup::Setup{T,2}) where {T}
-    (; grid, operators) = setup
+function operator_interpolation(grid::Grid{T,2}) where {T}
     (; Nx, Ny) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t) = grid
@@ -24,7 +23,7 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
     mat_hy2 = spdiagm(Ny + 2, Ny + 2, [hy[end]; hy; hy[1]])
 
     ## Interpolation operators, u-component
-    
+
     ## Iu_ux
     diag1 = fill(weight, Nux_t - 1)
     I1D = spdiagm(Nux_t - 1, Nux_t, 0 => diag1, 1 => diag1)
@@ -47,14 +46,12 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
 
     # Boundary conditions low/up
     Nb = Nuy_in + 1 - Nvy_in
-    Iv_uy_bc_lu =
-        bc_general(Nuy_in + 1, Nvy_in, Nb, hy[1], hy[end])
+    Iv_uy_bc_lu = bc_general(Nuy_in + 1, Nvy_in, Nb, hy[1], hy[end])
     Iv_uy_bc_lu = (; Iv_uy_bc_lu..., B2D = Iv_uy_bc_lu.B1D ⊗ I(Nvx_in))
     Iv_uy_bc_lu = (; Iv_uy_bc_lu..., Bbc = Iv_uy_bc_lu.Btemp ⊗ I(Nvx_in))
 
     # Boundary conditions left/right
-    Iv_uy_bc_lr =
-        bc_general_stag(Nvx_t, Nvx_in, Nvx_b, hx[1], hx[end])
+    Iv_uy_bc_lr = bc_general_stag(Nvx_t, Nvx_in, Nvx_b, hx[1], hx[end])
 
     # Take I2D into left/right operators for convenience
     Iv_uy_bc_lr = (; Iv_uy_bc_lr..., B2D = I2D * (I(Nuy_t - 1) ⊗ Iv_uy_bc_lr.B1D))
@@ -72,15 +69,13 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
     I2D = I1D ⊗ I(Nvx_t - 1)
 
     # Boundary conditions low/up
-    Iu_vx_bc_lu =
-        bc_general_stag(Nuy_t, Nuy_in, Nuy_b, hy[1], hy[end])
+    Iu_vx_bc_lu = bc_general_stag(Nuy_t, Nuy_in, Nuy_b, hy[1], hy[end])
     Iu_vx_bc_lu = (; Iu_vx_bc_lu..., B2D = I2D * (Iu_vx_bc_lu.B1D ⊗ I(Nvx_t - 1)))
     Iu_vx_bc_lu = (; Iu_vx_bc_lu..., Bbc = I2D * (Iu_vx_bc_lu.Btemp ⊗ I(Nvx_t - 1)))
 
     # Boundary conditions left/right
     Nb = Nvx_in + 1 - Nux_in
-    Iu_vx_bc_lr =
-        bc_general(Nvx_in + 1, Nux_in, Nb, hx[1], hx[end])
+    Iu_vx_bc_lr = bc_general(Nvx_in + 1, Nux_in, Nb, hx[1], hx[end])
 
     Iu_vx_bc_lr = (; Iu_vx_bc_lr..., B2D = I(Nuy_in) ⊗ Iu_vx_bc_lr.B1D)
     Iu_vx_bc_lr = (; Iu_vx_bc_lr..., Bbc = I(Nuy_in) ⊗ Iu_vx_bc_lr.Btemp)
@@ -99,15 +94,11 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
     Iv_vy = (I1D * Iv_vy_bc.B1D) ⊗ mat_hx
     Iv_vy_bc = (; Iv_vy_bc..., Bbc = (I1D * Iv_vy_bc.Btemp) ⊗ mat_hx)
 
-    ## Store in setup structure
-    @pack! operators = Iu_ux, Iv_uy, Iu_vx, Iv_vy
-
-    setup
+    (; Iu_ux, Iv_uy, Iu_vx, Iv_vy)
 end
 
 # 3D version
-function operator_interpolation!(setup::Setup{T,3}) where {T}
-    (; grid, operators) = setup
+function operator_interpolation(grid::Grid{T,3}) where {T}
     (; Nx, Ny, Nz) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t) = grid
@@ -156,8 +147,7 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     Iv_uy_bc_lu = (; Iv_uy_bc_lu..., Bbc = I(Nz) ⊗ Iv_uy_bc_lu.Btemp ⊗ I(Nvx_in))
 
     # Boundary conditions left/right
-    Iv_uy_bc_lr =
-        bc_general_stag(Nvx_t, Nvx_in, Nvx_b, hx[1], hx[end])
+    Iv_uy_bc_lr = bc_general_stag(Nvx_t, Nvx_in, Nvx_b, hx[1], hx[end])
 
     # Take I2D into left/right operators for convenience
     Iv_uy_bc_lr = (; Iv_uy_bc_lr..., B3D = I3D * (I(Nz) ⊗ I(Nuy_t - 1) ⊗ Iv_uy_bc_lr.B1D))
@@ -175,8 +165,7 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     I3D = I(Nz + 1) ⊗ mat_hy ⊗ I1D
 
     # Boundary conditions left/right
-    Iw_uz_bc_lr =
-        bc_general_stag(Nwx_t, Nwx_in, Nwx_b, hx[1], hx[end])
+    Iw_uz_bc_lr = bc_general_stag(Nwx_t, Nwx_in, Nwx_b, hx[1], hx[end])
 
     # Take I3D into left/right operators for convenience
     Iw_uz_bc_lr = (; Iw_uz_bc_lr..., B3D = I3D * (I(Nz + 1) ⊗ I(Ny) ⊗ Iw_uz_bc_lr.B1D))
@@ -202,8 +191,7 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     I3D = mat_hz ⊗ I1D ⊗ I(Nx + 1)
 
     # Boundary conditions low/up
-    Iu_vx_bc_lu =
-        bc_general_stag(Nuy_t, Nuy_in, Nuy_b, hy[1], hy[end])
+    Iu_vx_bc_lu = bc_general_stag(Nuy_t, Nuy_in, Nuy_b, hy[1], hy[end])
     Iu_vx_bc_lu = (; Iu_vx_bc_lu..., B3D = I3D * (I(Nz) ⊗ Iu_vx_bc_lu.B1D ⊗ I(Nx + 1)))
     Iu_vx_bc_lu = (; Iu_vx_bc_lu..., Bbc = I3D * (I(Nz) ⊗ Iu_vx_bc_lu.Btemp ⊗ I(Nx + 1)))
 
@@ -235,8 +223,7 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     I3D = I(Nz + 1) ⊗ I1D ⊗ mat_hx
 
     # Boundary conditions low/up
-    Iw_vz_bc_lu =
-        bc_general_stag(Nwy_t, Nwy_in, Nwy_b, hy[1], hy[end])
+    Iw_vz_bc_lu = bc_general_stag(Nwy_t, Nwy_in, Nwy_b, hy[1], hy[end])
     Iw_vz_bc_lu = (; Iw_vz_bc_lu..., B3D = I3D * (I(Nz + 1) ⊗ Iw_vz_bc_lu.B1D ⊗ I(Nx)))
     Iw_vz_bc_lu = (; Iw_vz_bc_lu..., Bbc = I3D * (I(Nz + 1) ⊗ Iw_vz_bc_lu.Btemp ⊗ I(Nx)))
 
@@ -261,8 +248,7 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     I3D = I1D ⊗ mat_hy ⊗ I(Nx + 1)
 
     # Boundary conditions back/front
-    Iu_wx_bc_bf =
-        bc_general_stag(Nuz_t, Nuz_in, Nuz_b, hz[1], hz[end])
+    Iu_wx_bc_bf = bc_general_stag(Nuz_t, Nuz_in, Nuz_b, hz[1], hz[end])
     Iu_wx_bc_bf = (; Iu_wx_bc_bf..., B3D = I3D * (Iu_wx_bc_bf.B1D ⊗ I(Ny) ⊗ I(Nx + 1)))
     Iu_wx_bc_bf = (; Iu_wx_bc_bf..., Bbc = I3D * (Iu_wx_bc_bf.Btemp ⊗ I(Ny) ⊗ I(Nx + 1)))
 
@@ -283,8 +269,7 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     I3D = I1D ⊗ I(Ny + 1) ⊗ mat_hx
 
     # Boundary conditions back/front
-    Iv_wy_bc_bf =
-        bc_general_stag(Nvz_t, Nvz_in, Nvz_b, hz[1], hz[end])
+    Iv_wy_bc_bf = bc_general_stag(Nvz_t, Nvz_in, Nvz_b, hz[1], hz[end])
     Iv_wy_bc_bf = (; Iv_wy_bc_bf..., B3D = I3D * (Iv_wy_bc_bf.B1D ⊗ I(Ny + 1) ⊗ I(Nx)))
     Iv_wy_bc_bf = (; Iv_wy_bc_bf..., Bbc = I3D * (Iv_wy_bc_bf.Btemp ⊗ I(Ny + 1) ⊗ I(Nx)))
 
@@ -308,11 +293,5 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     Iw_wz = (I1D * Iw_wz_bc.B1D) ⊗ mat_hy ⊗ mat_hx
     Iw_wz_bc = (; Iw_wz_bc..., Bbc = (I1D * Iw_wz_bc.Btemp) ⊗ mat_hy ⊗ mat_hx)
 
-
-    ## Store in setup structure
-    @pack! operators = Iu_ux, Iv_uy, Iw_uz
-    @pack! operators = Iu_vx, Iv_vy, Iw_vz
-    @pack! operators = Iu_wx, Iv_wy, Iw_wz
-
-    setup
+    (; Iu_ux, Iv_uy, Iw_uz, Iu_vx, Iv_vy, Iw_vz, Iu_wx, Iv_wy, Iw_wz)
 end

@@ -12,8 +12,8 @@
 
 Solve unsteady problem using `method`.
 
-The time step is chosen every `n_adapt_Δt` iteration with CFL-number `cfl` if `Δt` is
-`nothing`.
+If `Δt = nothing`, the time step is chosen every `n_adapt_Δt` iteration with
+CFL-number `cfl`.
 
 For methods that are not self-starting, `nstartup` startup iterations are performed with
 `method_startup`.

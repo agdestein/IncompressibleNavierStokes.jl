@@ -1,13 +1,12 @@
 """
-    operator_averaging!(setup)
+    operator_averaging(grid)
 
 Construct averaging operators.
 """
-function operator_averaging! end
+function operator_averaging end
 
 # 2D version
-function operator_averaging!(setup::Setup{T,2}) where {T}
-    (; grid, operators) = setup
+function operator_averaging(grid::Grid{T,2}) where {T}
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t) = grid
     (; hx, hy) = grid
@@ -63,13 +62,11 @@ function operator_averaging!(setup::Setup{T,2}) where {T}
     Av_vy = (A1D * Av_vy_bc.B1D) ⊗ I(Nvx_in)
     Av_vy_bc = (; Av_vy_bc..., Bbc = (A1D * Av_vy_bc.Btemp) ⊗ I(Nvx_in))
 
-    ## Store in setup structure
-    @pack! operators = Au_ux, Au_uy, Av_vx, Av_vy
+    (; Au_ux, Au_uy, Av_vx, Av_vy)
 end
 
 # 3D version
-function operator_averaging!(setup::Setup{T,3}) where {T}
-    (; grid, operators) = setup
+function operator_averaging(grid::Grid{T,3}) where {T}
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t) = grid
     (; Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t) = grid
@@ -90,10 +87,7 @@ function operator_averaging!(setup::Setup{T,3}) where {T}
 
     # Extend to 3D
     Au_ux = I(Nuz_in) ⊗ I(Nuy_in) ⊗ (A1D * Au_ux_bc.B1D)
-    Au_ux_bc = (;
-        Au_ux_bc...,
-        Bbc = I(Nuz_in) ⊗ I(Nuy_in) ⊗ (A1D * Au_ux_bc.Btemp)
-    )
+    Au_ux_bc = (; Au_ux_bc..., Bbc = I(Nuz_in) ⊗ I(Nuy_in) ⊗ (A1D * Au_ux_bc.Btemp))
 
 
     ## Au_uy: evaluate u at uy location
@@ -131,10 +125,7 @@ function operator_averaging!(setup::Setup{T,3}) where {T}
 
     # Extend to 3D
     Av_vx = I(Nvz_in) ⊗ I(Nvy_in) ⊗ (A1D * Av_vx_bc.B1D)
-    Av_vx_bc = (;
-        Av_vx_bc...,
-        Bbc = I(Nvz_in) ⊗ I(Nvy_in) ⊗ (A1D * Av_vx_bc.Btemp)
-    )
+    Av_vx_bc = (; Av_vx_bc..., Bbc = I(Nvz_in) ⊗ I(Nvy_in) ⊗ (A1D * Av_vx_bc.Btemp))
 
     ## Av_vy: evaluate v at vy location
     diag1 = weight * ones(Nvy_t - 1)
@@ -170,10 +161,7 @@ function operator_averaging!(setup::Setup{T,3}) where {T}
 
     # Extend to 3D
     Aw_wx = I(Nwz_in) ⊗ I(Nwy_in) ⊗ (A1D * Aw_wx_bc.B1D)
-    Aw_wx_bc = (;
-        Aw_wx_bc...,
-        Bbc = I(Nwz_in) ⊗ I(Nwy_in) ⊗ (A1D * Aw_wx_bc.Btemp)
-    )
+    Aw_wx_bc = (; Aw_wx_bc..., Bbc = I(Nwz_in) ⊗ I(Nwy_in) ⊗ (A1D * Aw_wx_bc.Btemp))
 
     ## Aw_wy: evaluate w at wy location
     diag1 = weight * ones(Nwy_t - 1)
@@ -195,13 +183,8 @@ function operator_averaging!(setup::Setup{T,3}) where {T}
 
     # Extend to 3D
     Aw_wz = (A1D * Aw_wz_bc.B1D) ⊗ I(Nwy_in) ⊗ I(Nwx_in)
-    Aw_wz_bc = (; Aw_wz_bc..., Bbc = kron((A1D * Aw_wz_bc.Btemp), kron(I(Nwy_in), I(Nwx_in))))
+    Aw_wz_bc =
+        (; Aw_wz_bc..., Bbc = kron((A1D * Aw_wz_bc.Btemp), kron(I(Nwy_in), I(Nwx_in))))
 
-
-    ## Store in setup structure
-    @pack! operators = Au_ux, Au_uy, Au_uz
-    @pack! operators = Av_vx, Av_vy, Av_vz
-    @pack! operators = Aw_wx, Aw_wy, Aw_wz
-
-    setup
+    (; Au_ux, Au_uy, Au_uz, Av_vx, Av_vy, Av_vz, Aw_wx, Aw_wy, Aw_wz)
 end

@@ -1,4 +1,4 @@
-diffusion(::LaminarModel, V, setup) = setup.operators.Diff * V
+diffusion(m::LaminarModel, V, setup) = 1 / m.Re * (setup.operators.Diff * V)
 
 """
     diffusion!(model, d, ∇d, V, setup; getJacobian = false)
@@ -7,8 +7,14 @@ Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V` using vi
 """
 function diffusion! end
 
-diffusion!(::LaminarModel, d, V, setup) = mul!(d, setup.operators.Diff, V)
-diffusion_jacobian!(::LaminarModel, ∇d, V, setup) = (∇d .= setup.operators.Diff)
+function diffusion!(m::LaminarModel, d, V, setup) 
+    mul!(d, setup.operators.Diff, V)
+    @. d = 1 / m.Re * d
+end
+
+function diffusion_jacobian!(m::LaminarModel, ∇d, V, setup) 
+    @. ∇d = 1 / m.Re * setup.operators.Diff
+end
 
 function diffusion!(
     model::Union{QRModel,SmagorinskyModel,MixingLengthModel},

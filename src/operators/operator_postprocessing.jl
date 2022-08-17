@@ -1,14 +1,12 @@
 """
-    operator_postprocessing!(setup)
+    operator_postprocessing(grid)
 
 Construct postprocessing operators such as vorticity.
 """
-function operator_postprocessing! end
+function operator_postprocessing end
 
 # 2D version
-function operator_postprocessing!(setup::Setup{T,2}) where {T}
-    # Boundary conditions
-    (; grid, operators) = setup
+function operator_postprocessing(grid::Grid{T,2}) where {T}
     (; Nx, Ny, gx, gy, gxd, gyd) = grid
 
     # For entirely periodic BC, covering entire mesh
@@ -41,15 +39,11 @@ function operator_postprocessing!(setup::Setup{T,2}) where {T}
     Wu_uy = ∂y ⊗ repeat_x
     Wv_vx = repeat_y ⊗ ∂x
 
-    @pack! operators = Wv_vx, Wu_uy
-
-    setup
+    (; Wv_vx, Wu_uy)
 end
 
 # 3D version
-function operator_postprocessing!(setup::Setup{T,3}) where {T}
-    # Boundary conditions
-    (; grid, operators) = setup
+function operator_postprocessing(grid::Grid{T,3}) where {T}
     (; Nx, Ny, Nz, gx, gy, gz, gxd, gyd, gzd) = grid
 
     # For entirely periodic BC, covering entire mesh
@@ -65,7 +59,8 @@ function operator_postprocessing!(setup::Setup{T,3}) where {T}
     )
     # FIXME: nonuniform weights: 1/gi / (1/gi + 1/gj) ?
     diag = fill(1 / 2, Nx)
-    average_x = spdiagm(Nx + 1, Nx, -Nx => [1 / 2], -1 => diag, 0 => diag, Nx - 1 => [1 / 2])
+    average_x =
+        spdiagm(Nx + 1, Nx, -Nx => [1 / 2], -1 => diag, 0 => diag, Nx - 1 => [1 / 2])
     repeat_x = spdiagm(Nx + 1, Nx, -Nx => [1], 0 => ones(Nx))
 
     diag = 1 ./ gyd
@@ -78,7 +73,8 @@ function operator_postprocessing!(setup::Setup{T,3}) where {T}
         Ny - 1 => -diag[[end - 1]],
     )
     diag = fill(1 / 2, Ny)
-    average_y = spdiagm(Ny + 1, Ny, -Ny => [1 / 2], -1 => diag, 0 => diag, Ny - 1 => [1 / 2])
+    average_y =
+        spdiagm(Ny + 1, Ny, -Ny => [1 / 2], -1 => diag, 0 => diag, Ny - 1 => [1 / 2])
     repeat_y = spdiagm(Ny + 1, Ny, -Ny => [1], 0 => ones(Ny))
 
     diag = 1 ./ gzd
@@ -91,7 +87,8 @@ function operator_postprocessing!(setup::Setup{T,3}) where {T}
         Nz - 1 => -diag[[end - 1]],
     )
     diag = fill(1 / 2, Nz)
-    average_z = spdiagm(Nz + 1, Nz, -Nz => [1 / 2], -1 => diag, 0 => diag, Nz - 1 => [1 / 2])
+    average_z =
+        spdiagm(Nz + 1, Nz, -Nz => [1 / 2], -1 => diag, 0 => diag, Nz - 1 => [1 / 2])
     repeat_z = spdiagm(Nz + 1, Nz, -Nz => [1], 0 => ones(Nz))
 
     # Extend to 3D
@@ -102,7 +99,5 @@ function operator_postprocessing!(setup::Setup{T,3}) where {T}
     Ww_wy = repeat_z ⊗ ∂y ⊗ average_x
     Ww_wx = repeat_z ⊗ average_y ⊗ ∂x
 
-    @pack! operators = Wu_uy, Wu_uz, Wv_vx, Wv_vz, Ww_wy, Ww_wx
-
-    setup
+    (; Wu_uy, Wu_uz, Wv_vx, Wv_vz, Ww_wy, Ww_wx)
 end

@@ -1,13 +1,12 @@
 """
-    operator_divergence!(setup)
+    operator_divergence(grid)
 
 Construct divergence and gradient operator.
 """
-function operator_divergence! end
+function operator_divergence end
 
 # 2D version
-function operator_divergence!(setup::Setup{T,2}) where {T}
-    (; grid, operators) = setup
+function operator_divergence(grid::Grid{T,2}) where {T}
     (; Npx, Npy) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t) = grid
@@ -77,10 +76,6 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
     # Note that this also holds for outflow boundary conditions
     G = -M'
 
-    ## Store in setup structure
-    @pack! operators = M, G
-    @pack! operators = Bup, Bvp
-
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
     # Note that the matrix for the pressure is constant in time.
@@ -88,19 +83,17 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
 
     # Laplace = div grad
     A = M * Diagonal(Ω⁻¹) * G
-    @pack! operators = A
 
     # Check if all the row sums of the pressure matrix are zero
     if any(≉(0; atol = 1e-10), sum(A; dims = 2))
         @warn "Pressure matrix: not all rowsums are zero!"
     end
 
-    setup
+(; A, M, G, Bup, Bvp)
 end
 
 # 3D version
-function operator_divergence!(setup::Setup{T,3}) where {T}
-    (; grid, operators) = setup
+function operator_divergence(grid::Grid{T,3}) where {T}
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuz_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t, Nvz_in) = grid
     (; Nwx_in, Nwy_in, Nwz_in, Nwz_b, Nwz_t) = grid
@@ -190,10 +183,6 @@ function operator_divergence!(setup::Setup{T,3}) where {T}
     # Note that this also holds for outflow boundary conditions
     G = -M'
 
-    ## Store in setup structure
-    @pack! operators = M, G
-    @pack! operators = Bup, Bvp, Bwp
-
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional
     # poisson solve.
@@ -203,12 +192,11 @@ function operator_divergence!(setup::Setup{T,3}) where {T}
 
     # Laplace = div grad
     A = M * Diagonal(Ω⁻¹) * G
-    @pack! operators = A
 
     # Check if all the row sums of the pressure matrix are zero
     if any(≉(0; atol = 1e-10), sum(A; dims = 2))
         @warn "Pressure matrix: not all rowsums are zero!"
     end
 
-    setup
+(; A, M, G, Bup, Bvp, Bwp)
 end

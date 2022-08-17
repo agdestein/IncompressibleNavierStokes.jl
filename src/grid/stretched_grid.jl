@@ -14,7 +14,7 @@ x_n = a + (b - a) \\frac{1 - s^n}{1 - s^N}, \\quad n = 0, \\dots, N.
 Note that `stretched_grid(a, b, N, s)[n]` corresponds to ``x_{n - 1}``.
 """
 function stretched_grid(a, b, N, s = 1)
-    s > 0 || error("The strecth factor must be positive")
+    @assert s > 0
     if s ≈ 1
         LinRange(a, b, N + 1)
     else

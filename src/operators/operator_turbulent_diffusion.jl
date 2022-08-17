@@ -1,21 +1,19 @@
 """
-    operator_turbulent_diffusion!(setup)
+    operator_turbulent_diffusion(grid)
 
 Average (turbulent) viscosity to cell faces: from `ν` at `xp`, `yp` to `ν` at `ux`, `uy`,
 `vx`, `vy` locations.
 
 See also `ke_viscosity.jl`.
 """
-function operator_turbulent_diffusion! end
+function operator_turbulent_diffusion end
 
 # 2D version
-function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
-    (; grid, operators) = setup
+function operator_turbulent_diffusion(grid::Grid{T,2}) where {T}
     (; Npx, Npy) = grid
     (; Nux_in, Nuy_in, Nvx_in, Nvy_in) = grid
     (; hx, hy, gxd, gyd) = grid
     (; Buvy, Bvux, Bkux, Bkvy) = grid
-
 
     # Averaging weight:
     weight = 1 / 2
@@ -61,7 +59,7 @@ function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
 
     Aν_uy = A2Dy * A2Dx
 
-    Aν_uy_bc_lr =(; Aν_uy_bc_lr..., B2D = A2Dy * (I(Npy + 2) ⊗ (A1D * Aν_uy_bc_lr.Btemp)))
+    Aν_uy_bc_lr = (; Aν_uy_bc_lr..., B2D = A2Dy * (I(Npy + 2) ⊗ (A1D * Aν_uy_bc_lr.Btemp)))
     Aν_uy_bc_lu = (; Aν_uy_bc_lu..., B2D = A2Dy * A2D * (Aν_uy_bc_lu.Btemp ⊗ I(Npx)))
 
     ## Nu to vx positions
@@ -112,9 +110,6 @@ function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
     # So ν at vy is given by:
     # (Aν_vy * k + yAν_vy)
 
-    ## Store in struct
-    @pack! setup.operators = Aν_ux, Aν_uy, Aν_vx, Aν_vy
-
     ## Get derivatives u_x, u_y, v_x and v_y at cell centers
     # Differencing velocity to ν-points
 
@@ -125,8 +120,7 @@ function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
     C1D = spdiagm(Npx, Npx + 1, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    Cux_k_bc =
-        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, hx[1], hx[end])
+    Cux_k_bc = bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, hx[1], hx[end])
 
     Cux_k = I(Npy) ⊗ (C1D * Cux_k_bc.B1D)
     Cux_k_bc = (; Cux_k_bc..., Bbc = I(Npy) ⊗ (C1D * Cux_k_bc.Btemp))
@@ -142,8 +136,7 @@ function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
     A1D = spdiagm(Npx, Npx + 1, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    Auy_k_bc =
-        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, hx[1], hx[end])
+    Auy_k_bc = bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, hx[1], hx[end])
 
     Auy_k = I(Npy) ⊗ (A1D * Auy_k_bc.B1D)
     Auy_k_bc = (; Auy_k_bc..., Bbc = I(Npy) ⊗ (A1D * Auy_k_bc.Btemp))
@@ -166,8 +159,7 @@ function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
     A1D = spdiagm(Npy, Npy + 1, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    Avx_k_bc =
-        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, hy[1], hy[end])
+    Avx_k_bc = bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, hy[1], hy[end])
     Avx_k = (A1D * Avx_k_bc.B1D) ⊗ I(Npx)
     Avx_k_bc = (; Avx_k_bc..., Bbc = (A1D * Avx_k_bc.Btemp) ⊗ I(Npx))
 
@@ -176,8 +168,7 @@ function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
     diag2 = 1 ./ gxdnew
     C1D = spdiagm(Npx, Npx + 2, 0 => -diag2, 2 => diag2)
 
-    Cvx_k_bc =
-        bc_general_stag(Npx + 2, Npx, Npx + 2 - Npx, hx[1], hx[end])
+    Cvx_k_bc = bc_general_stag(Npx + 2, Npx, Npx + 2 - Npx, hx[1], hx[end])
 
     Cvx_k = I(Npy) ⊗ (C1D * Cvx_k_bc.B1D)
     Cvx_k_bc = (; Cvx_k_bc..., Bbc = I(Npy) ⊗ (C1D * Cvx_k_bc.Btemp))
@@ -189,21 +180,18 @@ function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
     C1D = spdiagm(Npy, Npy + 1, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    Cvy_k_bc =
-        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, hy[1], hy[end])
+    Cvy_k_bc = bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, hy[1], hy[end])
 
     Cvy_k = (C1D * Cvy_k_bc.B1D) ⊗ I(Npx)
     Cvy_k_bc = (; Cvy_k_bc..., Bbc = (C1D * Cvy_k_bc.Btemp) ⊗ I(Npx))
 
 
     ## Store in struct
-    @pack! setup.operators = Cux_k, Cuy_k, Cvx_k, Cvy_k
-    @pack! setup.operators = Auy_k, Avx_k
-
-    setup
+    (; Aν_ux, Aν_uy, Aν_vx, Aν_vy, Cux_k, Cuy_k, Cvx_k, Cvy_k, Auy_k, Avx_k)
 end
 
 # TODO: 3D implementation
-function operator_turbulent_diffusion!(setup::Setup{T,3}) where {T}
-    error("Not implemented (3D)")
+function operator_turbulent_diffusion(grid::Grid{T,3}) where {T}
+    @warn "`operator_turbulent_diffusion` not implemented (3D)"
+    (;)
 end

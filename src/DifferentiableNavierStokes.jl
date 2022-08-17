@@ -51,10 +51,8 @@ include("operators/operator_averaging.jl")
 include("operators/operator_convection_diffusion.jl")
 include("operators/operator_divergence.jl")
 include("operators/operator_interpolation.jl")
-include("operators/operator_mesh.jl")
 include("operators/operator_postprocessing.jl")
 include("operators/operator_turbulent_diffusion.jl")
-include("operators/operator_viscosity.jl")
 
 # Time steppers
 include("momentum/momentumcache.jl")
@@ -133,7 +131,7 @@ export Logger, RealTimePlotter, VTKWriter, QuantityTracer
 export UnsteadyProblem
 
 # Setup
-export Grid, Operators, BC, Setup
+export Grid, Operators, Setup
 
 # 1D grids
 export stretched_grid, cosine_grid
@@ -142,13 +140,12 @@ export stretched_grid, cosine_grid
 export DirectPressureSolver, CGPressureSolver, FourierPressureSolver
 
 # Main driver
-export create_boundary_conditions,
-    build_operators!, create_initial_conditions, set_bc_vectors!, solve, get_velocity
+export build_operators, create_initial_conditions, set_bc_vectors!, solve, get_velocity
 
 export momentum!
 
 export plot_force,
-       plot_grid,
+    plot_grid,
     plot_pressure,
     plot_streamfunction,
     plot_velocity,

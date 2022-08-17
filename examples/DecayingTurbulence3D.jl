@@ -1,4 +1,4 @@
-# # Decaying Homogeneous Isotropic Turbulence 2D (DHIT)
+# # Decaying Homogeneous Isotropic Turbulence 3D (DHIT)
 #
 # This test case considers decaying homogeneous isotropic turbulence.
 
@@ -7,6 +7,12 @@ if isdefined(@__MODULE__, :LanguageServer)
     using .DifferentiableNavierStokes
 end
 
+using Revise
+using Hardanger
+using GLMakie
+colorscheme!("GruvboxDark")
+set_theme!(makie(gruvbox()))
+
 using FFTW
 using DifferentiableNavierStokes
 using GLMakie
@@ -14,35 +20,38 @@ using LaTeXStrings
 using Zygote
 
 # Case name for saving results
-name = "DecayingTurbulence2D"
+name = "DecayingTurbulence3D"
 
 # Floating point type for simulations
 T = Float64
 
 ## Grid
-N = 200
+N = 50
 x = stretched_grid(0, 1, N)
 y = stretched_grid(0, 1, N)
-grid = create_grid(x, y; T);
+z = stretched_grid(0, 1, N)
+grid = create_grid(x, y, z; T);
 
 plot_grid(grid)
 
-## Assemble operators
+## Build setup and assemble operators
 operators = build_operators(grid);
 
-## Body force
-bodyforce_u(x, y) = 0.0
-bodyforce_v(x, y) = 0.0
-force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
+## Forcing parameters
+bodyforce_u(x, y, z) = 0.0
+bodyforce_v(x, y, z) = 0.0
+bodyforce_w(x, y, z) = 0.0
+force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v, bodyforce_w)
+
+# Body force
 DifferentiableNavierStokes.build_force!(force, grid)
 
 ## Viscosity model
-viscosity_model = LaminarModel{T}(; Re = 10000)
+viscosity_model = LaminarModel{T}(; Re = 2000)
 # viscosity_model = MixingLengthModel{T}(; Re = 1000)
 # viscosity_model = SmagorinskyModel{T}(; Re = 1000)
 # viscosity_model = QRModel{T}(; Re = 1000)
 
-## Setup
 setup = Setup(; grid, operators, viscosity_model, force);
 
 ## Pressure solver
@@ -58,18 +67,21 @@ s = 5
 function create_spectrum(K)
     a =
         1e6 * [
-            1 / sqrt((2π)^2 * 2σ^2) *
-            exp(-((i - s)^2 + (j - s)^2) / 2σ^2) *
-            exp(-2π * im * rand()) for i = 1:K, j = 1:K
+            1 / sqrt((2π)^3 * 3σ^2) *
+            exp(-((i - s)^2 + (j - s)^2 + (k - s)^2) / 2σ^2) *
+            exp(-2π * im * rand()) for i = 1:K, j = 1:K, k = 1:K
         ]
     [
         a reverse(a; dims = 2)
-        reverse(a; dims = 1) reverse(a)
+        reverse(a; dims = 1) reverse(a; dims = (1, 2));;;
+        reverse(a; dims = 3) reverse(a; dims = (2, 3))
+        reverse(a; dims = (1, 3)) reverse(a)
     ]
 end
 u = real.(ifft(create_spectrum(K)))
 v = real.(ifft(create_spectrum(K)))
-V = [reshape(u, :); reshape(v, :)]
+w = real.(ifft(create_spectrum(K)))
+V = [reshape(u, :); reshape(v, :); reshape(w, :)]
 f = setup.operators.M * V
 p = zero(f)
 Δp = DifferentiableNavierStokes.pressure_poisson(pressure_solver, f)
@@ -87,21 +99,21 @@ V₀, p₀ = V, p
 ## Iteration processors
 nupdate = 1
 logger = Logger()
-plotter = RealTimePlotter(; nupdate, fieldname = :vorticity, type = heatmap)
-writer = VTKWriter(; nupdate = 10nupdate, dir = "output/$name", filename = "solution")
+plotter = RealTimePlotter(; nupdate = 100nupdate, fieldname = :vorticity, type = contour)
+writer = VTKWriter(; nupdate = 100nupdate, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate)
-# processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
+processors = [logger, plotter, writer, tracer]
+# processors = [logger, plotter, tracer]
 # processors = [logger]
 
 ## Time interval
-t_start, t_end = tlims = (0.0, 1.000)
+t_start, t_end = tlims = (0.0, 0.500)
 
 ## Solve unsteady problem
-# problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-problem = UnsteadyProblem(setup, V, p, tlims);
+problem = UnsteadyProblem(setup, V₀, p₀, tlims);
+# problem = UnsteadyProblem(setup, V, p, tlims);
 V, p, t =
-    @time solve(problem, RK44(); Δt = 0.001, processors, inplace = false, pressure_solver)
+    @time solve(problem, RK44(); Δt = 0.0001, processors, inplace = false, pressure_solver)
 
 function S(Re, V₀, p₀, tlims)
     viscosity_model = LaminarModel(Re)

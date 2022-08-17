@@ -5,6 +5,7 @@
         initial_velocity_v,
         [initial_velocity_w,]
         initial_pressure = nothing,
+        pressure_solver,
     )
 
 Create initial vectors. If `p_initial` is a function instead of `nothing`,
@@ -18,10 +19,11 @@ function create_initial_conditions(
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure = nothing,
+    pressure_solver,
 ) where {T}
-    (; grid, pressure_solver) = setup
+    (; grid, operators) = setup
     (; xu, yu, xv, yv, xpp, ypp, Ω⁻¹) = grid
-    (; G, M) = setup.operators
+    (; G, M) = operators
 
     t = 0.0
 
@@ -66,8 +68,9 @@ function create_initial_conditions(
     initial_velocity_v,
     initial_velocity_w,
     initial_pressure = nothing,
+    pressure_solver,
 ) where {T}
-    (; grid, pressure_solver) = setup
+    (; grid) = setup
     (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp, Ω⁻¹) = grid
     (; G, M) = setup.operators
 

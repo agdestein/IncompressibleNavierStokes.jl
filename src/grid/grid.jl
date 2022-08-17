@@ -3,7 +3,7 @@
 
 Nonuniform cartesian grid of dimension `N` and floating point type `T`.
 """
-Base.@kwdef mutable struct Grid{T,N}
+Base.@kwdef struct Grid{T,N}
     Nx::Int = 10                             # Number of x-volumes
     Ny::Int = 10                             # Number of y-volumes
     Nz::Int = 1                              # Number of z-volumes (if any)

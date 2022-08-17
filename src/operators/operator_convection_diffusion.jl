@@ -1,20 +1,18 @@
 """
-    operator_convection_diffusion!(setup)
+    operator_convection_diffusion(grid)
 
 Construct convection and diffusion operators.
 """
-function operator_convection_diffusion! end
+function operator_convection_diffusion end
 
 # 2D version
-function operator_convection_diffusion!(setup::Setup{T,2}) where {T}
-    (; grid, operators, viscosity_model) = setup
+function operator_convection_diffusion(grid::Grid{T,2}) where {T}
     (; Nx, Ny) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t) = grid
     (; hx, hy, hxi, hyi, hxd, hyd) = grid
     (; gxi, gyi, gxd, gyd) = grid
     (; Buvy, Bvux) = grid
-    (; Re) = viscosity_model
 
     ## Convection (differencing) operator Cu
 
@@ -89,18 +87,11 @@ function operator_convection_diffusion!(setup::Setup{T,2}) where {T}
     Sv_uy_bc_lu = (; Sv_uy_bc_lu..., Bbc = Sv_uy_bc_lu.Btemp ⊗ I(Nvx_in))
 
     # Boundary conditions left/right
-    Sv_uy_bc_lr =
-        bc_general_stag(Nvx_t, Nvx_in, Nvx_b, hx[1], hx[end])
+    Sv_uy_bc_lr = bc_general_stag(Nvx_t, Nvx_in, Nvx_b, hx[1], hx[end])
 
     # Take I2D into left/right operators for convenience
-    Sv_uy_bc_lr = (;
-        Sv_uy_bc_lr...,
-        B2D = S2D * (I(Nuy_t - 1) ⊗ Sv_uy_bc_lr.B1D),
-    )
-    Sv_uy_bc_lr = (;
-        Sv_uy_bc_lr...,
-        Bbc = S2D * (I(Nuy_t - 1) ⊗ Sv_uy_bc_lr.Btemp),
-    )
+    Sv_uy_bc_lr = (; Sv_uy_bc_lr..., B2D = S2D * (I(Nuy_t - 1) ⊗ Sv_uy_bc_lr.B1D))
+    Sv_uy_bc_lr = (; Sv_uy_bc_lr..., Bbc = S2D * (I(Nuy_t - 1) ⊗ Sv_uy_bc_lr.Btemp))
 
     # Resulting operator:
     Sv_uy = Sv_uy_bc_lr.B2D * Sv_uy_bc_lu.B2D
@@ -114,15 +105,13 @@ function operator_convection_diffusion!(setup::Setup{T,2}) where {T}
     S2D = S1D ⊗ I(Nvx_t - 1)
 
     # Boundary conditions low/up
-    Su_vx_bc_lu =
-        bc_general_stag(Nuy_t, Nuy_in, Nuy_b, hy[1], hy[end])
+    Su_vx_bc_lu = bc_general_stag(Nuy_t, Nuy_in, Nuy_b, hy[1], hy[end])
     Su_vx_bc_lu = (; Su_vx_bc_lu..., B2D = S2D * (Su_vx_bc_lu.B1D ⊗ I(Nvx_t - 1)))
     Su_vx_bc_lu = (; Su_vx_bc_lu..., Bbc = S2D * (Su_vx_bc_lu.Btemp ⊗ I(Nvx_t - 1)))
 
     # Boundary conditions left/right
     Nb = Nvx_in + 1 - Nux_in
-    Su_vx_bc_lr =
-        bc_general(Nvx_in + 1, Nux_in, Nb, hx[1], hx[end])
+    Su_vx_bc_lr = bc_general(Nvx_in + 1, Nux_in, Nb, hx[1], hx[end])
 
     Su_vx_bc_lr = (; Su_vx_bc_lr..., B2D = I(Nuy_in) ⊗ Su_vx_bc_lr.B1D)
     Su_vx_bc_lr = (; Su_vx_bc_lr..., Bbc = I(Nuy_in) ⊗ Su_vx_bc_lr.Btemp)
@@ -154,29 +143,31 @@ function operator_convection_diffusion!(setup::Setup{T,2}) where {T}
     Sv_vy_bc = (; Sv_vy_bc..., Bbc = (S1D * Sv_vy_bc.Btemp) ⊗ I(Nx))
 
     ## Assemble operators
-    if viscosity_model isa LaminarModel
-        Diffu = 1 / Re * (Dux * Su_ux + Duy * Su_uy)
-        Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy)
-        Diff = blockdiag(Diffu, Diffv)
-    end
+    Diffu = Dux * Su_ux + Duy * Su_uy
+    Diffv = Dvx * Sv_vx + Dvy * Sv_vy
+    Diff = blockdiag(Diffu, Diffv)
 
-    @pack! operators = Cux, Cuy, Cvx, Cvy
-    @pack! operators = Su_ux, Su_uy
-    @pack! operators = Sv_vx, Sv_vy
-    @pack! operators = Dux, Duy, Dvx, Dvy
-
-    if viscosity_model isa LaminarModel
-        @pack! operators = Diff
-    else
-        @pack! operators = Sv_uy, Su_vx
-    end
-
-    setup
+    (;
+        Cux,
+        Cuy,
+        Cvx,
+        Cvy,
+        Su_ux,
+        Su_uy,
+        Sv_vx,
+        Sv_vy,
+        Dux,
+        Duy,
+        Dvx,
+        Dvy,
+        Diff,
+        Sv_uy,
+        Su_vx,
+    )
 end
 
 # 3D version
-function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
-    (; grid, operators, viscosity_model) = setup
+function operator_convection_diffusion(grid::Grid{T,3}) where {T}
     (; Nx, Ny, Nz) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t) = grid
@@ -184,7 +175,6 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     (; hx, hy, hz, hxi, hyi, hzi, hxd, hyd, hzd) = grid
     (; gxi, gyi, gzi, gxd, gyd, gzd) = grid
     (; Bvux, Bwux, Buvy, Bwvy, Buwz, Bvwz) = grid
-    (; Re) = viscosity_model
 
     ## Convection (differencing) operator Cu
 
@@ -300,8 +290,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     S3D = I(Nz) ⊗ I(Nuy_t - 1) ⊗ S1D
 
     # Boundary conditions left/right
-    Sv_uy_bc_lr =
-        bc_general_stag(Nvx_t, Nvx_in, Nvx_b, hx[1], hx[end])
+    Sv_uy_bc_lr = bc_general_stag(Nvx_t, Nvx_in, Nvx_b, hx[1], hx[end])
 
     # Take I3D into left/right operators for convenience
     Sv_uy_bc_lr = (; Sv_uy_bc_lr..., B3D = S3D * (I(Nz) ⊗ I(Nuy_t - 1) ⊗ Sv_uy_bc_lr.B1D))
@@ -309,8 +298,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
 
     # Boundary conditions low/up
     Nb = Nuy_in + 1 - Nvy_in
-    Sv_uy_bc_lu =
-        bc_general(Nuy_in + 1, Nvy_in, Nb, hy[1], hy[end])
+    Sv_uy_bc_lu = bc_general(Nuy_in + 1, Nvy_in, Nb, hy[1], hy[end])
     Sv_uy_bc_lu = (; Sv_uy_bc_lu..., B3D = I(Nz) ⊗ Sv_uy_bc_lu.B1D ⊗ I(Nvx_in))
     Sv_uy_bc_lu = (; Sv_uy_bc_lu..., Bbc = I(Nz) ⊗ Sv_uy_bc_lu.Btemp ⊗ I(Nvx_in))
 
@@ -326,8 +314,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     S3D = I(Nz + 1) ⊗ I(Ny) ⊗ S1D
 
     # Boundary conditions left/right
-    Sw_uz_bc_lr =
-        bc_general_stag(Nwx_t, Nwx_in, Nwx_b, hx[1], hx[end])
+    Sw_uz_bc_lr = bc_general_stag(Nwx_t, Nwx_in, Nwx_b, hx[1], hx[end])
 
     # Take I3D into left/right operators for convenience
     Sw_uz_bc_lr = (; Sw_uz_bc_lr..., B3D = S3D * (I(Nz + 1) ⊗ I(Ny) ⊗ Sw_uz_bc_lr.B1D))
@@ -335,8 +322,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
 
     # Boundary conditions back/front
     Nb = Nuz_in + 1 - Nwz_in
-    Sw_uz_bc_bf =
-        bc_general(Nuz_in + 1, Nwz_in, Nb, hz[1], hz[end])
+    Sw_uz_bc_bf = bc_general(Nuz_in + 1, Nwz_in, Nb, hz[1], hz[end])
     Sw_uz_bc_bf = (; Sw_uz_bc_bf..., B3D = Sw_uz_bc_bf.B1D ⊗ I(Ny) ⊗ I(Nx))
     Sw_uz_bc_bf = (; Sw_uz_bc_bf..., Bbc = Sw_uz_bc_bf.Btemp ⊗ I(Ny) ⊗ I(Nx))
 
@@ -354,14 +340,12 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
 
     # Boundary conditions left/right
     Nb = Nvx_in + 1 - Nux_in
-    Su_vx_bc_lr =
-        bc_general(Nvx_in + 1, Nux_in, Nb, hx[1], hx[end])
+    Su_vx_bc_lr = bc_general(Nvx_in + 1, Nux_in, Nb, hx[1], hx[end])
     Su_vx_bc_lr = (; Su_vx_bc_lr..., B3D = I(Nz) ⊗ I(Ny) ⊗ Su_vx_bc_lr.B1D)
     Su_vx_bc_lr = (; Su_vx_bc_lr..., Bbc = I(Nz) ⊗ I(Ny) ⊗ Su_vx_bc_lr.Btemp)
 
     # Boundary conditions low/up
-    Su_vx_bc_lu =
-        bc_general_stag(Nuy_t, Nuy_in, Nuy_b, hy[1], hy[end])
+    Su_vx_bc_lu = bc_general_stag(Nuy_t, Nuy_in, Nuy_b, hy[1], hy[end])
     Su_vx_bc_lu = (; Su_vx_bc_lu..., B3D = S3D * (I(Nz) ⊗ Su_vx_bc_lu.B1D ⊗ I(Nx + 1)))
     Su_vx_bc_lu = (; Su_vx_bc_lu..., Bbc = S3D * (I(Nz) ⊗ Su_vx_bc_lu.Btemp ⊗ I(Nx + 1)))
 
@@ -409,15 +393,13 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     S3D = I(Nz + 1) ⊗ S1D ⊗ I(Nx)
 
     # Boundary conditions low/up
-    Sw_vz_bc_lu =
-        bc_general_stag(Nwy_t, Nwy_in, Nwy_b, hy[1], hy[end])
+    Sw_vz_bc_lu = bc_general_stag(Nwy_t, Nwy_in, Nwy_b, hy[1], hy[end])
     Sw_vz_bc_lu = (; Sw_vz_bc_lu..., B3D = S3D * (I(Nz + 1) ⊗ Sw_vz_bc_lu.B1D ⊗ I(Nx)))
     Sw_vz_bc_lu = (; Sw_vz_bc_lu..., Bbc = S3D * (I(Nz + 1) ⊗ Sw_vz_bc_lu.Btemp ⊗ I(Nx)))
 
     # Boundary conditions back/front
     Nb = Nvz_in + 1 - Nwz_in
-    Sw_vz_bc_bf =
-        bc_general(Nvz_in + 1, Nwz_in, Nb, hz[1], hz[end])
+    Sw_vz_bc_bf = bc_general(Nvz_in + 1, Nwz_in, Nb, hz[1], hz[end])
     Sw_vz_bc_bf = (; Sw_vz_bc_bf..., B3D = Sw_vz_bc_bf.B1D ⊗ I(Ny) ⊗ I(Nx))
     Sw_vz_bc_bf = (; Sw_vz_bc_bf..., Bbc = Sw_vz_bc_bf.Btemp ⊗ I(Ny) ⊗ I(Nx))
 
@@ -469,8 +451,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     S3D = S1D ⊗ I(Ny) ⊗ I(Nx + 1)
 
     # Boundary conditions back/front
-    Su_wx_bc_bf =
-        bc_general_stag(Nuz_t, Nuz_in, Nuz_b, hz[1], hz[end])
+    Su_wx_bc_bf = bc_general_stag(Nuz_t, Nuz_in, Nuz_b, hz[1], hz[end])
 
     # Take I3D into left/right operators for convenience
     Su_wx_bc_bf = (; Su_wx_bc_bf..., B3D = S3D * (Su_wx_bc_bf.B1D ⊗ I(Ny) ⊗ I(Nx + 1)))
@@ -478,8 +459,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
 
     # Boundary conditions left/right
     Nb = Nwx_in + 1 - Nux_in
-    Su_wx_bc_lr =
-        bc_general(Nwx_in + 1, Nux_in, Nb, hx[1], hx[end])
+    Su_wx_bc_lr = bc_general(Nwx_in + 1, Nux_in, Nb, hx[1], hx[end])
     Su_wx_bc_lr = (; Su_wx_bc_lr..., B3D = I(Nz) ⊗ I(Ny) ⊗ Su_wx_bc_lr.B1D)
     Su_wx_bc_lr = (; Su_wx_bc_lr..., Bbc = I(Nz) ⊗ I(Ny) ⊗ Su_wx_bc_lr.Btemp)
 
@@ -495,8 +475,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     S3D = S1D ⊗ I(Ny + 1) ⊗ I(Nx)
 
     # Boundary conditions back/front
-    Sv_wy_bc_bf =
-        bc_general_stag(Nvz_t, Nvz_in, Nvz_b, hz[1], hz[end])
+    Sv_wy_bc_bf = bc_general_stag(Nvz_t, Nvz_in, Nvz_b, hz[1], hz[end])
 
     # Take I3D into left/right operators for convenience
     Sv_wy_bc_bf = (; Sv_wy_bc_bf..., B3D = S3D * (Sv_wy_bc_bf.B1D ⊗ I(Ny + 1) ⊗ I(Nx)))
@@ -504,8 +483,7 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
 
     # Boundary conditions low/up
     Nb = Nwy_in + 1 - Nvy_in
-    Sv_wy_bc_lu =
-        bc_general(Nwy_in + 1, Nvy_in, Nb, hy[1], hy[end])
+    Sv_wy_bc_lu = bc_general(Nwy_in + 1, Nvy_in, Nb, hy[1], hy[end])
     Sv_wy_bc_lu = (; Sv_wy_bc_lu..., B3D = I(Nz) ⊗ Sv_wy_bc_lu.B1D ⊗ I(Nx))
     Sv_wy_bc_lu = (; Sv_wy_bc_lu..., Bbc = I(Nz) ⊗ Sv_wy_bc_lu.Btemp ⊗ I(Nx))
 
@@ -513,24 +491,45 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
     Sv_wy = Sv_wy_bc_bf.B3D * Sv_wy_bc_lu.B3D
 
     ## Assemble operators
-    if viscosity_model isa LaminarModel
-        Diffu = 1 / Re * (Dux * Su_ux + Duy * Su_uy + Duz * Su_uz)
-        Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy + Dvz * Sv_vz)
-        Diffw = 1 / Re * (Dwx * Sw_wx + Dwy * Sw_wy + Dwz * Sw_wz)
-        Diff = blockdiag(Diffu, Diffv, Diffw)
-    end
+    Diffu = Dux * Su_ux + Duy * Su_uy + Duz * Su_uz
+    Diffv = Dvx * Sv_vx + Dvy * Sv_vy + Dvz * Sv_vz
+    Diffw = Dwx * Sw_wx + Dwy * Sw_wy + Dwz * Sw_wz
+    Diff = blockdiag(Diffu, Diffv, Diffw)
 
-    @pack! operators = Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz
-    @pack! operators = Su_ux, Su_uy, Su_uz
-    @pack! operators = Sv_vx, Sv_vy, Sv_vz
-    @pack! operators = Sw_wx, Sw_wy, Sw_wz
-    @pack! operators = Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz
-
-    if viscosity_model isa LaminarModel
-        @pack! operators = Diff
-    else
-        @pack! operators = Sv_uy, Su_vx, Sw_uz, Su_wx, Sw_vz, Sv_wy
-    end
-
-    setup
+    (;
+        Cux,
+        Cuy,
+        Cuz,
+        Cvx,
+        Cvy,
+        Cvz,
+        Cwx,
+        Cwy,
+        Cwz,
+        Su_ux,
+        Su_uy,
+        Su_uz,
+        Sv_vx,
+        Sv_vy,
+        Sv_vz,
+        Sw_wx,
+        Sw_wy,
+        Sw_wz,
+        Dux,
+        Duy,
+        Duz,
+        Dvx,
+        Dvy,
+        Dvz,
+        Dwx,
+        Dwy,
+        Dwz,
+        Diff,
+        Sv_uy,
+        Su_vx,
+        Sw_uz,
+        Su_wx,
+        Sw_vz,
+        Sv_wy,
+    )
 end
