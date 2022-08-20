@@ -29,13 +29,6 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = C4ConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
-## Grid
-x = stretched_grid(0, 2π, 20)
-y = stretched_grid(0, 2π, 20)
-grid = create_grid(x, y; T);
-
-plot_grid(grid)
-
 ## Boundary conditions
 u_bc(x, y, t) = zero(x)
 v_bc(x, y, t) = zero(x)
@@ -49,6 +42,13 @@ bc = create_boundary_conditions(
     ),
     T,
 )
+
+## Grid
+x = stretched_grid(0, 2π, 20)
+y = stretched_grid(0, 2π, 20)
+grid = create_grid(x, y; bc, T);
+
+plot_grid(grid)
 
 ## Forcing parameters
 bodyforce_u(x, y) = 0

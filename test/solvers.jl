@@ -5,11 +5,6 @@
     viscosity_model = LaminarModel{T}(; Re)
     convection_model = NoRegConvectionModel{T}()
 
-    ## Grid
-    x = stretched_grid(0, 2π, 50)
-    y = stretched_grid(0, 2π, 50)
-    grid = create_grid(x, y; T)
-
     ## Boundary conditions
     u_bc(x, y, t) = zero(x)
     v_bc(x, y, t) = zero(x)
@@ -23,6 +18,11 @@
         ),
         T,
     )
+
+    ## Grid
+    x = stretched_grid(0, 2π, 50)
+    y = stretched_grid(0, 2π, 50)
+    grid = create_grid(x, y; bc, T)
 
     ## Forcing parameters
     bodyforce_u(x, y) = 0

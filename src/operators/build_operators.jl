@@ -6,9 +6,6 @@ Build discrete operators.
 function build_operators!(setup)
     (; viscosity_model) = setup
 
-    # Mesh
-    operator_mesh!(setup)
-
     # Averaging operators
     operator_averaging!(setup)
 

@@ -33,18 +33,10 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = C4ConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
-## Nonuniform grid -- refine near walls
-x = cosine_grid(0.0, 1.0, 25)
-y = stretched_grid(0.0, 1.0, 25, 0.95)
-z = stretched_grid(-0.2, 0.2, 10)
-grid = create_grid(x, y, z; T);
-
-plot_grid(grid)
-
 ## Boundary conditions
-u_bc(x, y, z, t) = y ≈ grid.ylims[2] ? 1.0 : 0.0
+u_bc(x, y, z, t) = y ≈ 1 ? 1.0 : 0.0
 v_bc(x, y, z, t) = 0.0
-w_bc(x, y, z, t) = y ≈ grid.ylims[2] ? 0.2 : 0.0
+w_bc(x, y, z, t) = y ≈ 1 ? 0.2 : 0.0
 bc = create_boundary_conditions(
     u_bc,
     v_bc,
@@ -70,6 +62,13 @@ bc = create_boundary_conditions(
     T,
 )
 
+## Nonuniform grid -- refine near walls
+x = cosine_grid(0.0, 1.0, 25)
+y = stretched_grid(0.0, 1.0, 25, 0.95)
+z = stretched_grid(-0.2, 0.2, 10)
+grid = create_grid(x, y, z; bc, T);
+
+plot_grid(grid)
 
 ## Forcing parameters
 bodyforce_u(x, y, z) = 0.0

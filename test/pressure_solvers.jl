@@ -7,11 +7,6 @@
     ## Convection model
     convection_model = NoRegConvectionModel{T}()
 
-    ## Grid
-    x = stretched_grid(0, 2π, 20)
-    y = stretched_grid(0, 2π, 20)
-    grid = create_grid(x, y; T)
-
     ## Boundary conditions
     u_bc(x, y, t) = 0.0
     v_bc(x, y, t) = 0.0
@@ -25,6 +20,11 @@
         ),
         T,
     )
+
+    ## Grid
+    x = stretched_grid(0, 2π, 20)
+    y = stretched_grid(0, 2π, 20)
+    grid = create_grid(x, y; bc, T)
 
     ## Forcing parameters
     bodyforce_u(x, y) = 0.0

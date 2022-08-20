@@ -30,13 +30,6 @@ convection_model = NoRegConvectionModel{T}()
 # convection_model = C4ConvectionModel{T}()
 # convection_model = LerayConvectionModel{T}()
 
-## Grid
-x = stretched_grid(0.0, 10.0, 200)
-y = stretched_grid(-2.0, 2.0, 80)
-grid = create_grid(x, y; T);
-
-plot_grid(grid)
-
 ## Boundary conditions
 f = 0.5
 u_bc(x, y, t) = x ≈ 0.0 ? cos(π / 6 * sin(f * t)) : 0.0
@@ -55,6 +48,13 @@ bc = create_boundary_conditions(
     ),
     T,
 )
+
+## Grid
+x = stretched_grid(0.0, 10.0, 200)
+y = stretched_grid(-2.0, 2.0, 80)
+grid = create_grid(x, y; bc, T);
+
+plot_grid(grid)
 
 ## Forcing parameters
 xc, yc = 2.0, 0.0 # Disk center

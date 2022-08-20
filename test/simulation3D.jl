@@ -16,17 +16,11 @@
     # convection_model = C4ConvectionModel{T}()
     # convection_model = LerayConvectionModel{T}()
 
-    ## Grid parameters
-    x = stretched_grid(0.0, 1.0, 25)
-    y = stretched_grid(0.0, 1.0, 25)
-    z = stretched_grid(-0.2, 0.2, 10)
-    grid = create_grid(x, y, z; T)
-
     ## Boundary conditions
     lid_vel = [1.0, 0.0, 0.2] # Lid velocity
-    u_bc(x, y, z, t) = y ≈ grid.ylims[2] ? lid_vel[1] : 0.0
+    u_bc(x, y, z, t) = y ≈ 1 ? lid_vel[1] : 0.0
     v_bc(x, y, z, t) = 0.0
-    w_bc(x, y, z, t) = y ≈ grid.ylims[2] ? lid_vel[3] : 0.0
+    w_bc(x, y, z, t) = y ≈ 1 ? lid_vel[3] : 0.0
     bc = create_boundary_conditions(
         u_bc,
         v_bc,
@@ -51,6 +45,12 @@
         ),
         T,
     )
+
+    ## Grid parameters
+    x = stretched_grid(0.0, 1.0, 25)
+    y = stretched_grid(0.0, 1.0, 25)
+    z = stretched_grid(-0.2, 0.2, 10)
+    grid = create_grid(x, y, z; bc, T)
 
     ## Forcing parameters
     bodyforce_u(x, y, z) = 0.0

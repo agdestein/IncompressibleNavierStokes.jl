@@ -3,14 +3,9 @@
     # Floating point type for simulations
     T = Float64
 
-    ## Grid parameters
-    x = stretched_grid(0.0, 1.0, 25)
-    y = stretched_grid(0.0, 1.0, 25)
-    grid = create_grid(x, y; T)
-
     ## Boundary conditions
     lid_vel = 1.0 # Lid velocity
-    u_bc(x, y, t) = y ≈ grid.ylims[2] ? lid_vel : 0.0
+    u_bc(x, y, t) = y ≈ 1 ? lid_vel : 0.0
     v_bc(x, y, t) = 0.0
     bc = create_boundary_conditions(
         u_bc,
@@ -25,6 +20,11 @@
         ),
         T,
     )
+
+    ## Grid parameters
+    x = stretched_grid(0.0, 1.0, 25)
+    y = stretched_grid(0.0, 1.0, 25)
+    grid = create_grid(x, y; bc, T)
 
     ## Forcing parameters
     bodyforce_u(x, y) = 0.0
