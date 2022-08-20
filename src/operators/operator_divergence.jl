@@ -132,13 +132,6 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
     # stress will be zero)
     G = -M'
 
-    ## Store in setup structure
-    @pack! operators = M, Mx_bc, My_bc, G
-    @pack! operators = Bup, Bvp
-
-    if order4
-        @pack! operators = Mx3, My3, Mx_bc3, My_bc3
-    end
 
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
@@ -147,7 +140,6 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
 
     # Laplace = div grad
     A = M * Diagonal(Ω⁻¹) * G
-    @pack! operators = A
 
     initialize!(pressure_solver, setup, A)
 
@@ -157,6 +149,14 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
         if any(≉(0; atol = 1e-10), sum(A; dims = 2))
             @warn "Pressure matrix: not all rowsums are zero!"
         end
+    end
+
+    @pack! operators = M, Mx_bc, My_bc, G
+    @pack! operators = Bup, Bvp
+    @pack! operators = A
+
+    if order4
+        @pack! operators = Mx3, My3, Mx_bc3, My_bc3
     end
 
     setup
@@ -268,10 +268,6 @@ function operator_divergence!(setup::Setup{T,3}) where {T}
     # stress will be zero)
     G = -M'
 
-    ## Store in setup structure
-    @pack! operators = M, Mx_bc, My_bc, Mz_bc, G
-    @pack! operators = Bup, Bvp, Bwp
-
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
     # if !is_steady(problem) && !isa(viscosity_model, KEpsilonModel)
@@ -281,7 +277,6 @@ function operator_divergence!(setup::Setup{T,3}) where {T}
 
     # Laplace = div grad
     A = M * Diagonal(Ω⁻¹) * G
-    @pack! operators = A
 
     initialize!(pressure_solver, setup, A)
 
@@ -292,6 +287,10 @@ function operator_divergence!(setup::Setup{T,3}) where {T}
             @warn "Pressure matrix: not all rowsums are zero!"
         end
     end
+
+    @pack! operators = M, Mx_bc, My_bc, Mz_bc, G
+    @pack! operators = Bup, Bvp, Bwp
+    @pack! operators = A
 
     setup
 end

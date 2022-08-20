@@ -81,7 +81,6 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     end
 
     yM = yMx + yMy
-    @pack! operators = yM
 
     # Time derivative of divergence
     if bc_unsteady
@@ -106,7 +105,6 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     else
         ydM = zeros(Np)
     end
-    @pack! operators = ydM
 
     ## Boundary conditions for pressure
 
@@ -125,7 +123,6 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     y_py = y1D_lo ⊗ (hx .* p_bc.y[1]) + y1D_up ⊗ (hx .* p_bc.y[2])
 
     y_p = [y_px; y_py]
-    @pack! operators = y_p
 
     ## Boundary conditions for averaging
     # Au_ux
@@ -144,8 +141,6 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     ybc = Av_vy_bc.ybc1 ⊗ vLo_i + Av_vy_bc.ybc2 ⊗ vUp_i
     yAv_vy = Av_vy_bc.Bbc * ybc
 
-    @pack! operators = yAu_ux, yAu_uy, yAv_vx, yAv_vy
-
     if order4
         # Au_ux
         ybc3 = uLe_i ⊗ Au_ux_bc3.ybc1 + uRi_i ⊗ Au_ux_bc3.ybc2
@@ -162,8 +157,6 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         # Av_vy
         ybc3 = Av_vy_bc3.ybc1 ⊗ vLo_i + Av_vy_bc3.ybc2 ⊗ vUp_i
         yAv_vy3 = Av_vy_bc3.Bbc * ybc3
-
-        @pack! operators = yAu_ux3, yAu_uy3, yAv_vx3, yAv_vy3
     end
 
     ## Boundary conditions for diffusion
@@ -188,7 +181,6 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
             yDiffu = 1 / Re * (Diffux_div * ySu_ux + Diffuy_div * ySu_uy)
             yDiffv = 1 / Re * (Diffvx_div * ySv_vx + Diffvy_div * ySv_vy)
             yDiff = [yDiffu; yDiffv]
-            @pack! operators = yDiff
         else
             error("fourth order turbulent diffusion not implemented")
         end
@@ -233,7 +225,6 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         yDiffu = 1 / Re * (Dux * ySu_ux + Duy * ySu_uy)
         yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy)
         yDiff = [yDiffu; yDiffv]
-        @pack! operators = yDiff
 
         Ωu⁻¹ = 1 ./ Ω[indu]
         Ωv⁻¹ = 1 ./ Ω[indv]
@@ -241,10 +232,6 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         # Diffusive terms in finite-difference setting, without viscosity
         yDiffu_f = Ωu⁻¹ .* (Dux * ySu_ux + Duy * ySu_uy)
         yDiffv_f = Ωv⁻¹ .* (Dvx * ySv_vx + Dvy * ySv_vy)
-
-        # Use values directly (see diffusion.jl and strain_tensor.jl)
-        @pack! operators = ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy
-        @pack! operators = yDiffu_f, yDiffv_f
     end
 
     ## Boundary conditions for interpolation
@@ -341,11 +328,6 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         yIv_vy3 = Iv_vy_bc3.Bbc * ybc3
     end
 
-    @pack! operators = yIu_ux, yIv_uy, yIu_vx, yIv_vy
-
-    if order4
-        @pack! operators = yIu_ux3, yIv_uy3, yIu_vx3, yIv_vy3
-    end
 
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         # Set BC for turbulent viscosity nu_t
@@ -397,8 +379,6 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         ybc = Aν_vy_bc.ybc1 ⊗ nuLo + Aν_vy_bc.ybc2 ⊗ nuUp
         yAν_vy = Aν_vy_bc.Bbc * ybc
 
-        @pack! operators = yAν_ux, yAν_uy, yAν_vx, yAν_vy
-
         # Set BC for getting du/dx, du/dy, dv/dx, dv/dy at cell centers
 
         uLo_p = u_bc.(xp, y[1], t)
@@ -425,7 +405,25 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
         ybc = Cvy_k_bc.ybc1 ⊗ vLo_i + Cvy_k_bc.ybc2 ⊗ vUp_i
         yCvy_k = Cvy_k_bc.Bbc * ybc
 
+        @pack! operators = yAν_ux, yAν_uy, yAν_vx, yAν_vy
         @pack! operators = yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k
+    end
+
+    @pack! operators = yM
+    @pack! operators = ydM
+    @pack! operators = y_p
+    @pack! operators = yAu_ux, yAu_uy, yAv_vx, yAv_vy
+    @pack! operators = yDiff
+    @pack! operators = yIu_ux, yIv_uy, yIu_vx, yIv_vy
+
+
+    if order4
+        @pack! operators = yAu_ux3, yAu_uy3, yAv_vx3, yAv_vy3
+        @pack! operators = yIu_ux3, yIv_uy3, yIu_vx3, yIv_vy3
+    else
+        # Use values directly (see diffusion.jl and strain_tensor.jl)
+        @pack! operators = ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy
+        @pack! operators = yDiffu_f, yDiffv_f
     end
 
     setup
@@ -535,7 +533,6 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     yMz = Mz_bc.Bbc * ybc
 
     yM = yMx + yMy + yMz
-    @pack! operators = yM
 
     # Time derivative of divergence
     if bc_unsteady
@@ -557,7 +554,6 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     else
         ydM = zeros(Np)
     end
-    @pack! operators = ydM
 
     ## Boundary conditions for pressure
 
@@ -584,7 +580,6 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     y_pz = y1D_ba ⊗ (p_bc.z[1] .* (hy ⊗ hx)) + y1D_fr ⊗ (p_bc.z[2] .* (hy ⊗ hx))
 
     y_p = [y_px; y_py; y_pz]
-    @pack! operators = y_p
 
     ## Boundary conditions for averaging
     # Au_ux
@@ -625,10 +620,6 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     # Aw_wz
     ybc = Aw_wz_bc.ybc1 ⊗ wBa_i + Aw_wz_bc.ybc2 ⊗ wFr_i
     yAw_wz = Aw_wz_bc.Bbc * ybc
-
-    @pack! operators = yAu_ux, yAu_uy, yAu_uz
-    @pack! operators = yAv_vx, yAv_vy, yAv_vz
-    @pack! operators = yAw_wx, yAw_wy, yAw_wz
 
     ## Bounary conditions for diffusion
 
@@ -747,7 +738,6 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy + Dvz * ySv_vz)
     yDiffw = 1 / Re * (Dwx * ySw_wx + Dwy * ySw_wy + Dwz * ySw_wz)
     yDiff = [yDiffu; yDiffv; yDiffw]
-    @pack! operators = yDiff
 
     Ωu⁻¹ = 1 ./ Ω[indu]
     Ωv⁻¹ = 1 ./ Ω[indv]
@@ -757,12 +747,6 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     yDiffu_f = Ωu⁻¹ .* (Dux * ySu_ux + Duy * ySu_uy + Duz * ySu_uz)
     yDiffv_f = Ωv⁻¹ .* (Dvx * ySv_vx + Dvy * ySv_vy + Dvz * ySv_vz)
     yDiffw_f = Ωw⁻¹ .* (Dwx * ySw_wx + Dwy * ySw_wy + Dwz * ySw_wz)
-
-    # Use values directly (see diffusion.jl and strain_tensor.jl)
-    @pack! operators =
-        ySu_ux, ySu_uy, ySu_uz, ySv_vx, ySv_vy, ySv_vz, ySw_wx, ySw_wy, ySw_wz
-    @pack! operators = ySu_vx, ySu_wx, ySv_uy, ySv_wy, ySw_uz, ySw_vz
-    @pack! operators = yDiffu_f, yDiffv_f, yDiffw_f
 
     ## Boundary conditions for interpolation
 
@@ -849,10 +833,6 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     ybc = Iw_wz_bc.ybc1 ⊗ wBa_i + Iw_wz_bc.ybc2 ⊗ wFr_i
     yIw_wz = Iw_wz_bc.Bbc * ybc
 
-    @pack! operators = yIu_ux, yIv_uy, yIw_uz
-    @pack! operators = yIu_vx, yIv_vy, yIw_vz
-    @pack! operators = yIu_wx, yIv_wy, yIw_wz
-
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         # Set bc for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
@@ -903,8 +883,6 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
         ybc = Aν_vy_bc.ybc1 ⊗ nuLo + Aν_vy_bc.ybc2 ⊗ nuUp
         yAν_vy = Aν_vy_bc.Bbc * ybc
 
-        @pack! operators = yAν_ux, yAν_uy, yAν_vx, yAν_vy
-
         # Set bc for getting du/dx, du/dy, dv/dx, dv/dy at cell centers
 
         uLo_p = u_bc.(xp, y[1], t)
@@ -931,8 +909,26 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
         ybc = Cvy_k_bc.ybc1 ⊗ vLo_i + Cvy_k_bc.ybc2 ⊗ vUp_i
         yCvy_k = Cvy_k_bc.Bbc * ybc
 
+        @pack! operators = yAν_ux, yAν_uy, yAν_vx, yAν_vy
         @pack! operators = yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k
     end
+
+    @pack! operators = yM
+    @pack! operators = ydM
+    @pack! operators = y_p
+    @pack! operators = yAu_ux, yAu_uy, yAu_uz
+    @pack! operators = yAv_vx, yAv_vy, yAv_vz
+    @pack! operators = yAw_wx, yAw_wy, yAw_wz
+    @pack! operators = yDiff
+
+    # Use values directly (see diffusion.jl and strain_tensor.jl)
+    @pack! operators =
+        ySu_ux, ySu_uy, ySu_uz, ySv_vx, ySv_vy, ySv_vz, ySw_wx, ySw_wy, ySw_wz
+    @pack! operators = ySu_vx, ySu_wx, ySv_uy, ySv_wy, ySw_uz, ySw_vz
+    @pack! operators = yDiffu_f, yDiffv_f, yDiffw_f
+    @pack! operators = yIu_ux, yIv_uy, yIw_uz
+    @pack! operators = yIu_vx, yIv_vy, yIw_vz
+    @pack! operators = yIu_wx, yIv_wy, yIw_wz
 
     setup
 end

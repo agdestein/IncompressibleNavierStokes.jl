@@ -161,7 +161,5 @@ Base.@kwdef mutable struct Grid{T,N}
     Ωvx3::Vector{T} = T[]
     Ωvy1::Vector{T} = T[]
     Ωvy3::Vector{T} = T[]
-
-
 end
 
