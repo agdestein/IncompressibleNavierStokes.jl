@@ -6,13 +6,8 @@ Process iteration.
 function process! end
 
 function process!(logger::Logger, stepper)
-    (; V, p, t, setup, cache, momentum_cache) = stepper
-    (; F) = cache
-
-    momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
-
-    @info "Iteration $(stepper.n)" t norm(F) maximum(F)
-
+    (; n, t) = stepper
+    @printf "Iteration %d\tt = %g\n" n t
     logger
 end
 
