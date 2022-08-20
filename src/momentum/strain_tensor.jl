@@ -93,8 +93,10 @@ function strain_tensor(V, setup::Setup{T,2}; getJacobian = false, get_S_abs = fa
         # S11 and S22 have already been trimmed down to this grid
 
         # S21 and S12 should be equal!
-        S12_p = interp2(y', x, S12_temp, yp', xp)
-        S21_p = interp2(y', x, S21_temp, yp', xp)
+        # FIXME: Find interpolation syntax
+        error("Interpolation not implemented")
+        # S12_p = interp2(y', x, S12_temp, yp', xp)
+        # S21_p = interp2(y', x, S21_temp, yp', xp)
 
         ## Invariants
         q = @. 1 / 2 * (S11_p[:]^2 + S12_p[:]^2 + S21_p[:]^2 + S22_p[:]^2)
