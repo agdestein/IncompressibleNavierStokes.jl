@@ -1,5 +1,11 @@
 """
-    solve(problem::SteadyStateProblem; processors = Processor[])
+    solve(
+        problem::SteadyStateProblem;
+        jacobian_type = :newton,
+        npicard = 2,
+        abstol = 1e-10,
+        maxiter = 10,
+    )
 
 Solve steady state problem of the Navier-Stokes equations.
 This saddlepoint system arises from linearization of the convective terms.
