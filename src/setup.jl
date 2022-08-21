@@ -1,5 +1,5 @@
 """
-    Setup(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
+    Setup(; viscosity_model, convection_model, grid, force, bc)
 
 Simulation setup.
 """
@@ -9,6 +9,5 @@ Base.@kwdef struct Setup{T,N}
     grid::Grid{T,N}
     operators::Operators{T} = Operators{T}()
     force::AbstractBodyForce{T}
-    pressure_solver::AbstractPressureSolver{T}
     bc::BC{T}
 end

@@ -13,9 +13,9 @@ Formulation:
 ```
 """
 function step!(stepper::OneLegStepper, Δt)
-    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
+    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, pressure_solver, cache, momentum_cache) = stepper
     (; p_add_solve, β) = method
-    (; grid, operators, bc, pressure_solver) = setup
+    (; grid, operators, bc) = setup
     (; G, M) = operators
     (; Ω⁻¹) = grid
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache
@@ -68,7 +68,7 @@ function step!(stepper::OneLegStepper, Δt)
 
     # Alternatively, do an additional Poisson solve
     if p_add_solve
-        pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+        pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
     end
 
     t = tₙ + Δtₙ

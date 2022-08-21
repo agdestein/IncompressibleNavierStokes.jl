@@ -64,14 +64,14 @@ bodyforce_u(x, y) = 0.0
 bodyforce_v(x, y) = 0.0
 force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
-## Pressure solver
-pressure_solver = DirectPressureSolver{T}()
-# pressure_solver = CGPressureSolver{T}()
-# pressure_solver = FourierPressureSolver{T}()
-
 ## Build setup and assemble operators
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc);
+setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, bc);
 build_operators!(setup);
+
+## Pressure solver
+pressure_solver = DirectPressureSolver{T}(setup)
+# pressure_solver = CGPressureSolver{T}(setup)
+# pressure_solver = FourierPressureSolver{T}(setup)
 
 ## Time interval
 t_start, t_end = tlims = (0.0, 300.0)
@@ -86,6 +86,7 @@ V₀, p₀ = create_initial_conditions(
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure,
+    pressure_solver,
 );
 
 
@@ -104,7 +105,7 @@ processors = [logger, plotter, writer, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = @time solve(problem, RK44P2(); Δt = 0.1, processors);
+V, p = @time solve(problem, RK44P2(); Δt = 0.1, processors, pressure_solver);
 
 
 ## Post-process

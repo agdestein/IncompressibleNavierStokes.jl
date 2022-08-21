@@ -118,7 +118,6 @@ include("problems/problems.jl")
 include("problems/is_steady.jl")
 
 # Solvers
-include("solvers/pressure/initialize_pressure.jl")
 include("solvers/pressure/pressure_poisson.jl")
 include("solvers/pressure/pressure_additional_solve.jl")
 include("solvers/get_timestep.jl")

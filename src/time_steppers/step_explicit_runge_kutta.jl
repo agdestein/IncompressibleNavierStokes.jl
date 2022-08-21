@@ -7,8 +7,8 @@ Dirichlet boundary points are not part of solution vector but are prescribed in 
 manner via the `u_bc` and `v_bc` functions.
 """
 function step!(stepper::ExplicitRungeKuttaStepper, Δt)
-    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
-    (; grid, operators, pressure_solver) = setup
+    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, pressure_solver, cache, momentum_cache) = stepper
+    (; grid, operators) = setup
     (; Ω⁻¹) = grid
     (; G, M, yM) = operators
     (; p_add_solve) = method
@@ -85,7 +85,7 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt)
 
     if setup.bc.bc_unsteady
         if p_add_solve
-            pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+            pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
         else
             # Standard method
             @views p .= kp[:, end]
@@ -93,7 +93,7 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt)
     else
         # For steady bc we do an additional pressure solve
         # That saves a pressure solve for i = 1 in the next time step
-        pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+        pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
     end
 
     t = tₙ + Δtₙ

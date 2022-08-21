@@ -3,6 +3,8 @@
 
 Initialize processor.
 """
+function initialize! end
+
 initialize!(logger::Logger, stepper) = logger
 
 # 2D real time plot

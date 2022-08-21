@@ -7,8 +7,8 @@ Unsteady Dirichlet boundary points are not part of solution vector but
 are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
 """
 function step!(stepper::ImplicitRungeKuttaStepper, Δt)
-    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
-    (; grid, operators, pressure_solver) = setup
+    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, pressure_solver, cache, momentum_cache) = stepper
+    (; grid, operators) = setup
     (; NV, Np, Ω⁻¹) = grid
     (; G, M) = operators
     (; p_add_solve, maxiter, abstol, newton_type) = method
@@ -172,7 +172,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
         @. V -= Δtₙ * Ω⁻¹ * Gp
 
         if p_add_solve
-            pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+            pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
         else
             # Standard method; take last pressure
             p .= pⱼ[(end - Np + 1):end]
@@ -180,7 +180,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     else
         # For steady bc we do an additional pressure solve
         # That saves a pressure solve for iter = 1 in the next time step
-        # pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+        # pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
 
         # Standard method; take pressure of last stage
         p .= pⱼ[(end - Np + 1):end]

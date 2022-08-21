@@ -41,15 +41,15 @@
     bodyforce_v(x, y) = 0.0
     force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
-    ## Pressure solver
-    pressure_solver = DirectPressureSolver{T}()
-    # pressure_solver = CGPressureSolver{T}()
-    # pressure_solver = FourierPressureSolver{T}()
-
     ## Build setup and assemble operators
     setup =
         Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
     build_operators!(setup)
+
+    ## Pressure solver
+    pressure_solver = DirectPressureSolver{T}(setup)
+    # pressure_solver = CGPressureSolver{T}(setup)
+    # pressure_solver = FourierPressureSolver{T}(setup)
 
     ## Time interval
     t_start, t_end = tlims = (0.0, 0.5)
@@ -64,6 +64,7 @@
         initial_velocity_u,
         initial_velocity_v,
         initial_pressure,
+        pressure_solver,
     )
 
     @testset "Steady state problem" begin
@@ -85,7 +86,7 @@
 
     @testset "Unsteady problem" begin
         problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-        V, p = solve(problem, RK44(); Δt = 0.01, processors)
+        V, p = solve(problem, RK44(); Δt = 0.01, pressure_solver, processors)
 
         # Check that solution did not explode
         @test all(!isnan, V)

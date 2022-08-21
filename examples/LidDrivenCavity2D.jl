@@ -83,18 +83,18 @@ bodyforce_u(x, y) = 0
 bodyforce_v(x, y) = 0
 force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
-# We also choos a pressure solver. The direct solver will precompute the LU decomposition of
-# the Poisson matrix.
-
-pressure_solver = DirectPressureSolver{T}()
-
 # We may now assemble our setup.
 
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
+setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, bc)
 
 # The discrete operators are built with the [`build_operators!`](@ref) function.
 
 build_operators!(setup)
+
+# We also choos a pressure solver. The direct solver will precompute the LU decomposition of
+# the Poisson matrix.
+
+pressure_solver = DirectPressureSolver{T}(setup)
 
 # We will solve for a time interval of ten seconds.
 
@@ -111,6 +111,7 @@ V₀, p₀ = create_initial_conditions(
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure,
+    pressure_solver,
 )
 
 
@@ -142,7 +143,7 @@ processors = [logger, plotter, writer, tracer]
 # A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
 # with a fixed time step.
 
-V, p = @time solve(problem, RK44(); Δt = 0.001, processors)
+V, p = @time solve(problem, RK44(); Δt = 0.001, processors, pressure_solver)
 
 
 # ## Postprocess

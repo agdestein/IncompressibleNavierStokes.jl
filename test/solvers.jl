@@ -29,13 +29,13 @@
     bodyforce_v(x, y) = 0
     force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
-    ## Pressure solver
-    pressure_solver = FourierPressureSolver{T}()
-
     ## Build setup and assemble operators
     setup =
         Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
     build_operators!(setup)
+
+    ## Pressure solver
+    pressure_solver = FourierPressureSolver{T}(setup)
 
     ## Time interval
     t_start, t_end = tlims = (0.0, 5.0)
@@ -50,6 +50,7 @@
         initial_velocity_u,
         initial_velocity_v,
         initial_pressure,
+        pressure_solver,
     )
 
     @testset "Steady state" begin
@@ -74,17 +75,17 @@
         problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 
         @testset "Explicit Runge Kutta" begin
-            V, p = solve(problem, RK44(); Δt = 0.01)
+            V, p = solve(problem, RK44(); Δt = 0.01, pressure_solver)
             @test norm(V - V_exact) / norm(V_exact) < 1e-4
         end
 
         @testset "Implicit Runge Kutta" begin
-            V, p = solve(problem, RIA2(); Δt = 0.01)
+            V, p = solve(problem, RIA2(); Δt = 0.01, pressure_solver)
             @test_broken norm(V - V_exact) / norm(V_exact) < 1e-3
         end
 
         @testset "One-leg beta method" begin
-            V, p = solve(problem, OneLegMethod{T}(); method_startup = RK44(), Δt = 0.01)
+            V, p = solve(problem, OneLegMethod{T}(); method_startup = RK44(), Δt = 0.01, pressure_solver)
             @test norm(V - V_exact) / norm(V_exact) < 1e-4
         end
 
@@ -94,6 +95,7 @@
                 AdamsBashforthCrankNicolsonMethod{T}();
                 method_startup = RK44(),
                 Δt = 0.01,
+                pressure_solver,
             )
             @test norm(V - V_exact) / norm(V_exact) < 1e-4
         end

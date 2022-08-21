@@ -31,22 +31,15 @@
     bodyforce_v(x, y) = 0.0
     force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
-    ## Pressure solver
-    pressure_solver = FourierPressureSolver{T}()
-
     ## Build setup and assemble operators
-    setup =
-        Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
+    setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, bc)
     build_operators!(setup)
     (; A) = setup.operators
 
-    direct = DirectPressureSolver{T}()
-    cg = CGPressureSolver{T}()
-    fourier = FourierPressureSolver{T}()
-
-    IncompressibleNavierStokes.initialize!(direct, setup, A)
-    IncompressibleNavierStokes.initialize!(cg, setup, A)
-    IncompressibleNavierStokes.initialize!(fourier, setup, A)
+    ## Pressure solver
+    direct = DirectPressureSolver{T}(setup)
+    cg = CGPressureSolver{T}(setup)
+    fourier = FourierPressureSolver{T}(setup)
 
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
     p_exact = reshape(initial_pressure.(grid.xpp, grid.ypp), :)

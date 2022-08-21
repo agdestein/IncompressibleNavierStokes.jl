@@ -1,10 +1,10 @@
 """
-    pressure_additional_solve!(V, p, t, setup)
+    pressure_additional_solve!(pressure_solver, V, p, t, setup)
 
 Convenience function for allocating momentum cache, `F`, `Δp`, and `f` before doing
 additional pressure solve.
 """
-function pressure_additional_solve!(V, p, t, setup)
+function pressure_additional_solve!(pressure_solver, V, p, t, setup)
     (; NV, Np) = setup.grid
 
     momentum_cache = MomentumCache(setup)
@@ -12,17 +12,17 @@ function pressure_additional_solve!(V, p, t, setup)
     Δp = zeros(Np)
     f = zeros(Np)
 
-    pressure_additional_solve!(V, p, t, setup, momentum_cache, F, f, Δp)
+    pressure_additional_solve!(pressure_solver, V, p, t, setup, momentum_cache, F, f, Δp)
 end
 
 """
-    pressure_additional_solve!(V, p, t, setup, momentum_cache, F, f)
+    pressure_additional_solve!(pressure_solver, V, p, t, setup, momentum_cache, F, f)
 
 Do additional pressure solve. This makes the pressure compatible with the velocity
 field, resulting in same order pressure as velocity.
 """
-function pressure_additional_solve!(V, p, t, setup, momentum_cache, F, f, Δp)
-    (; grid, operators, pressure_solver) = setup
+function pressure_additional_solve!(pressure_solver, V, p, t, setup, momentum_cache, F, f, Δp)
+    (; grid, operators) = setup
     (; Ω⁻¹) = grid
     (; M) = operators
 

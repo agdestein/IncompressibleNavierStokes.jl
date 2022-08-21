@@ -31,11 +31,6 @@
     bodyforce_v(x, y) = 0.0
     force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
 
-    ## Pressure solver
-    pressure_solver = DirectPressureSolver{T}()
-    # pressure_solver = CGPressureSolver{T}()
-    # pressure_solver = FourierPressureSolver{T}()
-
     ## Initial conditions
     initial_velocity_u(x, y) = 0.0
     initial_velocity_v(x, y) = 0.0
@@ -79,11 +74,13 @@
                 convection_model,
                 grid,
                 force,
-                pressure_solver,
                 bc,
             )
 
             build_operators!(setup)
+
+            ## Pressure solver
+            pressure_solver = DirectPressureSolver{T}(setup)
 
             V₀, p₀ = create_initial_conditions(
                 setup,
@@ -91,6 +88,7 @@
                 initial_velocity_u,
                 initial_velocity_v,
                 initial_pressure,
+                pressure_solver,
             )
 
             problem = SteadyStateProblem(setup, V₀, p₀)
@@ -101,7 +99,7 @@
             @test sum(abs, V) / length(V) < lid_vel broken = broken
 
             problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-            V, p = solve(problem, RK44(); Δt = 0.01, processors)
+            V, p = solve(problem, RK44(); Δt = 0.01, pressure_solver, processors)
 
             # Check that the average velocity is smaller than the lid velocity
             broken =
@@ -125,7 +123,6 @@
                 convection_model = noreg,
                 grid,
                 force,
-                pressure_solver,
                 bc,
             )
 

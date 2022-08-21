@@ -7,7 +7,7 @@ function operator_divergence! end
 
 # 2D version
 function operator_divergence!(setup::Setup{T,2}) where {T}
-    (; grid, operators, bc, pressure_solver) = setup
+    (; grid, operators, bc) = setup
     (; Npx, Npy) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t) = grid
@@ -141,8 +141,6 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
     # Laplace = div grad
     A = M * Diagonal(Ω⁻¹) * G
 
-    initialize!(pressure_solver, setup, A)
-
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions
     if all(≠(:pressure), (bc.u.x..., bc.v.y...))
@@ -164,7 +162,7 @@ end
 
 # 3D version
 function operator_divergence!(setup::Setup{T,3}) where {T}
-    (; grid, operators, bc, pressure_solver) = setup
+    (; grid, operators, bc) = setup
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuz_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t, Nvz_in) = grid
     (; Nwx_in, Nwy_in, Nwz_in, Nwz_b, Nwz_t) = grid
@@ -277,8 +275,6 @@ function operator_divergence!(setup::Setup{T,3}) where {T}
 
     # Laplace = div grad
     A = M * Diagonal(Ω⁻¹) * G
-
-    initialize!(pressure_solver, setup, A)
 
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions

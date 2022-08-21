@@ -22,6 +22,7 @@ Each `processor` is called after every `processor.nupdate` time step.
 function solve(
     problem::UnsteadyProblem,
     method;
+    pressure_solver,
     Δt = nothing,
     CFL = 1,
     n_adapt_Δt = 1,
@@ -44,7 +45,7 @@ function solve(
     end
 
     isadaptive && (Δt = 0)
-    stepper = TimeStepper(method_use, setup, V₀, p₀, t_start, Δt)
+    stepper = TimeStepper(method_use, setup, pressure_solver, V₀, p₀, t_start, Δt)
     isadaptive && (Δt = get_timestep(stepper, CFL))
 
     # Initialize BC arrays

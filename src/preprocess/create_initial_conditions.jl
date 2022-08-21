@@ -20,8 +20,9 @@ function create_initial_conditions(
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure = nothing,
+    pressure_solver,
 ) where {T}
-    (; grid, pressure_solver) = setup
+    (; grid) = setup
     (; xu, yu, xv, yv, xpp, ypp, Ω⁻¹) = grid
 
     # Boundary conditions
@@ -57,7 +58,7 @@ function create_initial_conditions(
     p = p[:]
 
     # For steady state computations, the initial guess is the provided initial condition
-    isnothing(initial_pressure) || pressure_additional_solve!(V, p, t, setup)
+    isnothing(initial_pressure) || pressure_additional_solve!(pressure_solver, V, p, t, setup)
 
     V, p
 end
@@ -70,8 +71,9 @@ function create_initial_conditions(
     initial_velocity_v,
     initial_velocity_w,
     initial_pressure = nothing,
+    pressure_solver,
 ) where {T}
-    (; grid, pressure_solver) = setup
+    (; grid) = setup
     (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp, Ω⁻¹) = grid
 
     # Boundary conditions
@@ -109,7 +111,7 @@ function create_initial_conditions(
     p = p[:]
 
     # For steady state computations, the initial guess is the provided initial condition
-    isnothing(initial_pressure) || pressure_additional_solve!(V, p, t, setup)
+    isnothing(initial_pressure) || pressure_additional_solve!(pressure_solver, V, p, t, setup)
 
     V, p
 end

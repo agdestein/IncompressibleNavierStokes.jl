@@ -31,19 +31,19 @@ function pressure_poisson!(solver::CGPressureSolver, p, f)
 end
 
 function pressure_poisson!(solver::FourierPressureSolver, p, f)
-    (; Â, f̂, p̂) = solver
+    (; Ahat, fhat, phat) = solver
 
-    f̂[:] = f
+    fhat[:] = f
 
     # Fourier transform of right hand side
-    fft!(f̂);
+    fft!(fhat);
 
     # Solve for coefficients in Fourier space
-    @. p̂ = -f̂ / Â;
+    @. phat = -fhat / Ahat
 
     # Transform back
-    ifft!(p̂)
-    @. p[:] = real(@view p̂[:])
+    ifft!(phat)
+    @. p[:] = real(@view phat[:])
 
     p
 end

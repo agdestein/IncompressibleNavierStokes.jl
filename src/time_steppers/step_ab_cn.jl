@@ -39,8 +39,8 @@ Note that, in constrast to explicit methods, the pressure from previous time ste
 influence on the accuracy of the velocity.
 """
 function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
-    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
-    (; convection_model, viscosity_model, grid, operators, pressure_solver) = setup
+    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, pressure_solver, cache, momentum_cache) = stepper
+    (; convection_model, viscosity_model, grid, operators) = setup
     (; NV, Ω⁻¹) = grid
     (; G, y_p, M, yM) = operators
     (; Diff, yDiff, y_p) = operators
@@ -131,7 +131,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     p .= pₙ .+ Δp
 
     if p_add_solve
-        pressure_additional_solve!(V, p, tₙ + Δt, setup, momentum_cache, F, f, Δp)
+        pressure_additional_solve!(pressure_solver, V, p, tₙ + Δt, setup, momentum_cache, F, f, Δp)
     end
 
     t = tₙ + Δtₙ
