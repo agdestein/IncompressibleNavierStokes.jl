@@ -69,14 +69,12 @@
 
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
-            operators = build_operators(grid, bc, viscosity_model)
-            setup = Setup{T,2}(;
+            setup = Setup(;
                 viscosity_model,
                 convection_model,
                 grid,
                 force,
                 bc,
-                operators,
             )
 
             ## Pressure solver
@@ -118,7 +116,7 @@
 
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
-            build_operators(grid, bc, viscosity_model)
+            Operators(grid, bc, viscosity_model)
         end
     end
 end

@@ -15,7 +15,7 @@ Base.@kwdef struct Logger <: Processor
 end
 
 """
-    RealTimePlotter(; nupdate, fieldname, type = contour)
+    RealTimePlotter(; nupdate, fieldname, type = heatmap)
 
 Plot the solution every `nupdate` time steps. Available fieldnames are:
 
@@ -33,7 +33,7 @@ Available plot `type`s are:
 Base.@kwdef mutable struct RealTimePlotter{F} <: Processor
     nupdate::Int = 1
     fieldname::Symbol = :vorticity
-    type::F = contour
+    type::F = heatmap
     field::Observable = Observable(nothing)
     lims::Observable = Observable(nothing)
 end

@@ -63,7 +63,6 @@ FourierPressureSolver
 
 ```@docs
 create_boundary_conditions
-build_operators
 create_initial_conditions
 set_bc_vectors!
 solve

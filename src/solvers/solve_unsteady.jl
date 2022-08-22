@@ -1,6 +1,7 @@
 """
     solve(
         problem::UnsteadyProblem, method;
+        pressure_solver = DirectPressureSolver(problem.setup),
         Δt = nothing,
         CFL = 1,
         n_adapt_Δt = 1,
@@ -22,7 +23,7 @@ Each `processor` is called after every `processor.nupdate` time step.
 function solve(
     problem::UnsteadyProblem,
     method;
-    pressure_solver,
+    pressure_solver = DirectPressureSolver(problem.setup),
     Δt = nothing,
     CFL = 1,
     n_adapt_Δt = 1,

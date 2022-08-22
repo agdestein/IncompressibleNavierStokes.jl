@@ -67,8 +67,7 @@ bodyforce_v(x, y) = 0.0
 force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 ## Build setup and assemble operators
-operators = build_operators(grid, bc, viscosity_model)
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, operators, force, bc)
+setup = Setup(; viscosity_model, convection_model, grid, force, bc)
 
 ## Pressure solver
 pressure_solver = DirectPressureSolver(setup)

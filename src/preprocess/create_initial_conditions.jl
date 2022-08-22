@@ -20,7 +20,7 @@ function create_initial_conditions(
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure = nothing,
-    pressure_solver,
+    pressure_solver = DirectPressureSolver(setup),
 ) where {T}
     (; grid) = setup
     (; xu, yu, xv, yv, xpp, ypp, Ω⁻¹) = grid
