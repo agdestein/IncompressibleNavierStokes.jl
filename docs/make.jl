@@ -61,5 +61,5 @@ makedocs(;
 deploydocs(;
     repo = "github.com/agdestein/IncompressibleNavierStokes.jl",
     devbranch = "main",
-    pushpreview = true,
+    push_preview = true,
 )
