@@ -29,7 +29,7 @@
     ## Forcing parameters
     bodyforce_u(x, y) = 0.0
     bodyforce_v(x, y) = 0.0
-    force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
+    force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
     ## Initial conditions
     initial_velocity_u(x, y) = 0.0

@@ -64,7 +64,7 @@ Cₜ = 0.01 # Thrust coefficient
 inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
 bodyforce_u(x, y) = -Cₜ * inside(x, y)
 bodyforce_v(x, y) = 0.0
-force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
+force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 ## Build setup and assemble operators
 setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, bc);

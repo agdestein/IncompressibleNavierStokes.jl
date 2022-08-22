@@ -84,7 +84,7 @@ inside(x, y, z) = abs(x - cx) ≤ δ / 2 && (y - cy)^2 + (z - cz)^2 ≤ (D / 2)^
 bodyforce_u(x, y, z) = -Cₜ * inside(x, y, z)
 bodyforce_v(x, y, z) = 0.0
 bodyforce_w(x, y, z) = 0.0
-force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v, bodyforce_w)
+force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
 
 ## Build setup and assemble operators
 setup = Setup{T,3}(; viscosity_model, convection_model, grid, force, bc);

@@ -81,7 +81,7 @@ plot_grid(grid)
 
 bodyforce_u(x, y) = 0
 bodyforce_v(x, y) = 0
-force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
+force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 # We may now assemble our setup.
 

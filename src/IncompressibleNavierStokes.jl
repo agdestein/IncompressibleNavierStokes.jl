@@ -28,15 +28,12 @@ include("grid/cosine_grid.jl")
 include("grid/create_grid.jl")
 include("grid/max_size.jl")
 
-# Force
-include("force/force.jl")
-include("force/build_force.jl")
-
 # Models
 include("models/viscosity_models.jl")
 include("models/convection_models.jl")
 
 # Types
+include("force/force.jl")
 include("boundary_conditions/boundary_conditions.jl")
 include("operators/operators.jl")
 include("setup.jl")
