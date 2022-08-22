@@ -58,7 +58,9 @@ function create_initial_conditions(
     p = p[:]
 
     # For steady state computations, the initial guess is the provided initial condition
-    isnothing(initial_pressure) || pressure_additional_solve!(pressure_solver, V, p, t, setup)
+    if isnothing(initial_pressure)
+        p = pressure_additional_solve(pressure_solver, V, p, t, setup)
+    end
 
     V, p
 end
@@ -111,7 +113,9 @@ function create_initial_conditions(
     p = p[:]
 
     # For steady state computations, the initial guess is the provided initial condition
-    isnothing(initial_pressure) || pressure_additional_solve!(pressure_solver, V, p, t, setup)
+    if isnothing(initial_pressure)
+        p = pressure_additional_solve(pressure_solver, V, p, t, setup)
+    end
 
     V, p
 end

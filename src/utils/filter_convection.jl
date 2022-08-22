@@ -4,8 +4,7 @@
 Construct filter for convective terms.
 """
 function filter_convection(u, diff_matrix, bc, α)
-    ū = similar(u)
-    filter_convection!(ū, u, diff_matrix, bc, α)
+    u + α * (diff_matrix * u + bc)
 end
 
 """
