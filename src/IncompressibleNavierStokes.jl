@@ -38,7 +38,6 @@ include("models/convection_models.jl")
 
 # Types
 include("boundary_conditions/boundary_conditions.jl")
-include("solvers/pressure/pressure_solvers.jl")
 include("operators/operators.jl")
 include("setup.jl")
 
@@ -118,6 +117,7 @@ include("problems/problems.jl")
 include("problems/is_steady.jl")
 
 # Solvers
+include("solvers/pressure/pressure_solvers.jl")
 include("solvers/pressure/pressure_poisson.jl")
 include("solvers/pressure/pressure_additional_solve.jl")
 include("solvers/get_timestep.jl")
