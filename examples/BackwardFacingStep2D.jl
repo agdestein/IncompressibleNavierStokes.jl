@@ -9,12 +9,6 @@ if isdefined(@__MODULE__, :LanguageServer)
     using .IncompressibleNavierStokes
 end
 
-using Revise
-using Hardanger
-using GLMakie
-colorscheme!("Catppuccin")
-set_theme!(makie(catppuccin()))
-
 using IncompressibleNavierStokes
 using GLMakie
 
@@ -64,8 +58,8 @@ bodyforce_v(x, y) = 0.0
 force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 ## Build setup and assemble operators
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, bc);
-build_operators!(setup);
+operators = build_operators(grid, bc, viscosity_model)
+setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, bc, operators)
 
 ## Pressure solver
 pressure_solver = DirectPressureSolver(setup)

@@ -1,5 +1,12 @@
-function ke_convection!(setup)
-    (; grid, bc) = setup
+"""
+    ke_convection(grid, bc)
+
+K-epsilon convection.
+"""
+function ke_convection end
+
+# 2D version
+function ke_convection(grid::Grid{T,2}, bc) where {T}
     (; Nx, Ny, x, y, xp, yp, hx, hy) = grid
     (; Npx, Npy, Nux_in, Nvy_in) = grid
     (; k_bc) = bc
@@ -78,18 +85,22 @@ function ke_convection!(setup)
     yAk_ky = kron(A1D * Btemp, sparse(I, Npx, Npx)) * ybc
     Ak_ky = kron(A1D * B1D, sparse(I, Npx, Npx))
 
+    # TODO: Return correct operators
+    (;
+        Ckx,
+        yIu_kx,
+        Iu_kx,
+        yAk_kx,
+        Ak_kx,
+        Cky,
+        yIv_ky,
+        Iv_ky,
+        yAk_ky,
+        Ak_ky,
+    )
+end
 
-    Ckx
-    yIu_kx
-    Iu_kx
-    yAk_kx
-    Ak_kx
-    Cky
-    yIv_ky
-    Iv_ky
-    yAk_ky
-    Ak_ky
-
-    # TODO: @pack! results
-    setup
+# 3D version
+function ke_convection(grid::Grid{T,3}, bc) where {T}
+    error("Not implemented")
 end

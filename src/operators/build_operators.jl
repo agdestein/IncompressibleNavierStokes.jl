@@ -1,33 +1,37 @@
 """
-    build_operators!(setup)
+    build_operators(grid, bc, viscosity_model)
 
 Build discrete operators.
 """
-function build_operators!(setup)
-    (; viscosity_model) = setup
-
+function build_operators(grid::Grid{T}, bc, viscosity_model) where {T}
     # Averaging operators
-    operator_averaging!(setup)
+    op_ave = operator_averaging(grid, bc)
 
     # Interpolation operators
-    operator_interpolation!(setup)
+    op_int = operator_interpolation(grid, bc)
 
-    # Divergence (u, v)-> p and gradient p->(u, v) operator
-    operator_divergence!(setup)
+    # Divergence (u, v) -> p and gradient p -> (u, v) operator
+    op_div = operator_divergence(grid, bc)
 
     # Convection operators on u- and v- centered volumes
-    operator_convection_diffusion!(setup)
-
-    # Turbulence
+    op_con = operator_convection_diffusion(grid, bc, viscosity_model)
 
     # Regularization modelling - this changes the convective term
-    operator_regularization!(setup)
+    op_reg = operator_regularization(grid, op_con)
 
     # Classical turbulence modelling via the diffusive term
-    operator_viscosity!(viscosity_model, setup)
+    op_vis = operator_viscosity(viscosity_model, grid, bc)
 
     # Post-processing
-    operator_postprocessing!(setup)
+    op_pos = operator_postprocessing(grid, bc)
 
-    setup
+    Operators{T}(;
+        op_ave...,
+        op_int...,
+        op_div...,
+        op_con...,
+        op_reg...,
+        op_vis...,
+        op_pos...,
+    )
 end

@@ -1,14 +1,12 @@
 """
-    operator_postprocessing!(setup)
+    operator_postprocessing(grid, bc)
 
 Construct postprocessing operators such as vorticity.
 """
-function operator_postprocessing! end
+function operator_postprocessing end
 
 # 2D version
-function operator_postprocessing!(setup::Setup{T,2}) where {T}
-    # Boundary conditions
-    (; grid, operators, bc) = setup
+function operator_postprocessing(grid::Grid{T,2}, bc) where {T}
     (; Nx, Ny, gx, gy, gxd, gyd) = grid
 
     if all(==(:periodic), (bc.u.x[1], bc.v.y[1]))
@@ -53,15 +51,11 @@ function operator_postprocessing!(setup::Setup{T,2}) where {T}
     Wu_uy = ∂y ⊗ repeat_x
     Wv_vx = repeat_y ⊗ ∂x
 
-    @pack! operators = Wv_vx, Wu_uy
-
-    setup
+    (; Wv_vx, Wu_uy)
 end
 
 # 3D version
-function operator_postprocessing!(setup::Setup{T,3}) where {T}
-    # Boundary conditions
-    (; grid, operators, bc) = setup
+function operator_postprocessing(grid::Grid{T,3}, bc) where {T}
     (; Nx, Ny, Nz, gx, gy, gz, gxd, gyd, gzd) = grid
 
     if all(==(:periodic), (bc.u.x[1], bc.v.y[1], bc.w.z[1]))
@@ -137,7 +131,5 @@ function operator_postprocessing!(setup::Setup{T,3}) where {T}
     Ww_wy = repeat_z ⊗ ∂y ⊗ average_x
     Ww_wx = repeat_z ⊗ average_y ⊗ ∂x
 
-    @pack! operators = Wu_uy, Wu_uz, Wv_vx, Wv_vz, Ww_wy, Ww_wx
-
-    setup
+    (; Wu_uy, Wu_uz, Wv_vx, Wv_vz, Ww_wy, Ww_wx)
 end

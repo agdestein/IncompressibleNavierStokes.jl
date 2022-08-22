@@ -1,4 +1,12 @@
-function ke_diffusion!(setup)
+"""
+    ke_diffusion(grid, bc)
+
+K-epsilon diffusion.
+"""
+function ke_diffusion end
+
+# 2D version
+function ke_diffusion(grid::Grid{T,2}, bc) where {T}
     # Nu_T = C_mu*(Akx*k)^2/(Aex*e)
     # Dkx*(Anu*nu+C_mu*(Akx*k)^2/(Aex*e)).*Skx*k
 
@@ -85,5 +93,12 @@ function ke_diffusion!(setup)
     Sey = kron(S1D * B1De, sparse(I, Npx, Npx))
     ySey = kron(S1D * Btempe, sparse(I, Npx, Npx)) * ybce
 
-    setup
+    # TODO: Return correct operators
+    (;
+    )
+end
+
+# 3D version
+function ke_diffusion(grid::Grid{T,3}, bc) where {T}
+    error("Not implemented")
 end

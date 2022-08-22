@@ -83,13 +83,13 @@ bodyforce_u(x, y) = 0
 bodyforce_v(x, y) = 0
 force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
+# The discrete operators are built with the [`build_operators`](@ref) function.
+
+operators = build_operators(grid, bc, viscosity_model)
+
 # We may now assemble our setup.
 
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, bc)
-
-# The discrete operators are built with the [`build_operators!`](@ref) function.
-
-build_operators!(setup)
+setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, bc, operators)
 
 # We also choos a pressure solver. The direct solver will precompute the LU decomposition of
 # the Poisson matrix.

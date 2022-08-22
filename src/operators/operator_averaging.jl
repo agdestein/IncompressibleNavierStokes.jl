@@ -1,13 +1,12 @@
 """
-    operator_averaging!(setup)
+    operator_averaging(grid, bc)
 
 Construct averaging operators.
 """
-function operator_averaging! end
+function operator_averaging end
 
 # 2D version
-function operator_averaging!(setup::Setup{T,2}) where {T}
-    (; bc, grid, operators) = setup
+function operator_averaging(grid::Grid{T,2}, bc) where {T}
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t) = grid
     (; hx, hy) = grid
@@ -143,18 +142,22 @@ function operator_averaging!(setup::Setup{T,2}) where {T}
         Av_vy_bc3 = (; Av_vy_bc3..., Bbc = (A1D3 * Av_vy_bc3.Btemp) ⊗ I(Nvx_in))
     end
 
-    ## Store in setup structure
-    @pack! operators = Au_ux, Au_uy, Av_vx, Av_vy, Au_ux_bc, Au_uy_bc, Av_vx_bc, Av_vy_bc
+    ## Group operators
+    operators = (; Au_ux, Au_uy, Av_vx, Av_vy, Au_ux_bc, Au_uy_bc, Av_vx_bc, Av_vy_bc)
 
     if order4
-        @pack! operators =
-            Au_ux3, Au_uy3, Av_vx3, Av_vy3, Au_ux_bc3, Au_uy_bc3, Av_vx_bc3, Av_vy_bc3
+        operators = (;
+            operators...,
+            Au_ux3, Au_uy3, Av_vx3, Av_vy3,
+            Au_ux_bc3, Au_uy_bc3, Av_vx_bc3, Av_vy_bc3,
+        )
     end
+
+    operators
 end
 
 # 3D version
-function operator_averaging!(setup::Setup{T,3}) where {T}
-    (; grid, operators, bc) = setup
+function operator_averaging(grid::Grid{T,3}, bc) where {T}
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t) = grid
     (; Nwx_in, Nwx_b, Nwx_t, Nwy_in, Nwy_b, Nwy_t, Nwz_in, Nwz_b, Nwz_t) = grid
@@ -283,13 +286,13 @@ function operator_averaging!(setup::Setup{T,3}) where {T}
     Aw_wz_bc = (; Aw_wz_bc..., Bbc = kron((A1D * Aw_wz_bc.Btemp), kron(I(Nwy_in), I(Nwx_in))))
 
 
-    ## Store in setup structure
-    @pack! operators = Au_ux, Au_uy, Au_uz
-    @pack! operators = Av_vx, Av_vy, Av_vz
-    @pack! operators = Aw_wx, Aw_wy, Aw_wz
-    @pack! operators = Au_ux_bc, Au_uy_bc, Au_uz_bc
-    @pack! operators = Av_vx_bc, Av_vy_bc, Av_vz_bc
-    @pack! operators = Aw_wx_bc, Aw_wy_bc, Aw_wz_bc
-
-    setup
+    ## Group operators
+    (;
+        Au_ux, Au_uy, Au_uz,
+        Av_vx, Av_vy, Av_vz,
+        Aw_wx, Aw_wy, Aw_wz,
+        Au_ux_bc, Au_uy_bc, Au_uz_bc,
+        Av_vx_bc, Av_vy_bc, Av_vz_bc,
+        Aw_wx_bc, Aw_wy_bc, Aw_wz_bc,
+    )
 end

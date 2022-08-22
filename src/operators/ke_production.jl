@@ -1,5 +1,12 @@
-# Differencing velocity to k-points
-function ke_production!(setup)
+"""
+    ke_production(grid, bc)
+
+Differencing velocity to k-points.
+"""
+function ke_convection end
+
+# 2D version
+function ke_production(grid::Grid{T,2}, bc) where {T}
     ## Du/dx
 
     # Differencing matrix
@@ -103,6 +110,12 @@ function ke_production!(setup)
 
     # Cvy_k * vₕ + yCvy_k
 
+    # TODO: Return correct operators
+    (;
+    )
+end
 
-    setup
+# 3D version
+function ke_production(grid::Grid{T,3}, bc) where {T}
+    error("Not implemented")
 end
