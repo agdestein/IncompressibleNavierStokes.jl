@@ -75,7 +75,7 @@ pressure_solver = DirectPressureSolver(setup)
 # pressure_solver = FourierPressureSolver(setup)
 
 ## Time interval
-t_start, t_end = tlims = (0.0, 4π)
+t_start, t_end = tlims = (0.0, 16π)
 
 ## Initial conditions (extend inflow)
 initial_velocity_u(x, y) = 1.0
@@ -98,14 +98,21 @@ V, p = @time solve(problem);
 
 ## Iteration processors
 logger = Logger(; nupdate = 1)
-plotter = RealTimePlotter(; nupdate = 5, fieldname = :velocity, type = contourf)
+plotter = RealTimePlotter(;
+    nupdate = 1,
+    fieldname = :vorticity,
+    type = heatmap,
+    # type = contour,
+    # type = contourf,
+)
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, plotter, writer, tracer]
+# processors = [logger, plotter, writer, tracer]
+processors = [logger, plotter, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = @time solve(problem, RK44P2(); Δt = 4π / 200, processors, pressure_solver);
+V, p = @time solve(problem, RK44P2(); pressure_solver, Δt = 4π / 200, processors);
 
 
 ## Post-process

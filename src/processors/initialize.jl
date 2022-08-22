@@ -55,7 +55,18 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,2}) wher
         lims = Observable(get_lims(f))
         ax, hm = heatmap(fig[1, 1], xf, yf, field; colorrange = lims)
     elseif type ∈ (contour, contourf)
-        lims = Observable(LinRange(get_lims(f)..., 10))
+        if ≈(extrema(f)..., rtol = 1e-10)
+            μ = mean(f)
+            a = μ - 1
+            b = μ + 1
+            f[1] += 1
+            f[end] -= 1
+            field[] = f
+        else
+            a, b = get_lims(f)
+        end
+        # lims = Observable(LinRange(a, b, 10))
+        lims = Observable((a, b))
         ax, hm = type(
             fig[1, 1],
             xf,
@@ -63,7 +74,8 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,2}) wher
             field;
             extendlow = :auto,
             extendhigh = :auto,
-            levels = lims,
+            levels = @lift(LinRange($(lims)..., 10)),
+            colorrange = lims,
         )
     else
         error("Unknown plot type")

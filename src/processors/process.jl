@@ -45,8 +45,20 @@ function process!(plotter::RealTimePlotter, stepper)
     if type == heatmap
         lims[] = get_lims(f, n)
     elseif type ∈ (contour, contourf)
-        lims[] = LinRange(get_lims(f, n)..., nlevel)
+        if ≈(extrema(f)..., rtol = 1e-10)
+            μ = mean(f)
+            a = μ - 1
+            b = μ + 1
+            f[1] += 1
+            f[end] -= 1
+            field[] = f
+        else
+            a, b = get_lims(f)
+        end
+        # lims[] = LinRange(a, b, nlevel)
+        lims[] = get_lims(f)
     end
+    sleep(0.001)
 
     plotter
 end
