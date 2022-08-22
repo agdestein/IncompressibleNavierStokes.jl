@@ -48,7 +48,7 @@ viscosity_model = LaminarModel{T}(; Re = 1000)
 #
 # We here take the simplest model.
 
-convection_model = NoRegConvectionModel{T}()
+convection_model = NoRegConvectionModel()
 
 # Dirichlet boundary conditions are specified as plain Julia functions. They are marked by
 # the `:dirichlet` symbol. Other possible BC types are `:periodic`, `:symmetric`, and `:pressure`.

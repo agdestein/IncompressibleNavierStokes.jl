@@ -3,7 +3,7 @@
 
     Re = 500
     viscosity_model = LaminarModel{T}(; Re)
-    convection_model = NoRegConvectionModel{T}()
+    convection_model = NoRegConvectionModel()
 
     ## Boundary conditions
     u_bc(x, y, t) = zero(x)

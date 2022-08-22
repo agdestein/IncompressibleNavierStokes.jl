@@ -24,10 +24,10 @@ viscosity_model = LaminarModel{T}(; Re = Inf)
 # viscosity_model = QRModel{T}(; Re = Inf)
 
 ## Convection model
-convection_model = NoRegConvectionModel{T}()
-# convection_model = C2ConvectionModel{T}()
-# convection_model = C4ConvectionModel{T}()
-# convection_model = LerayConvectionModel{T}()
+convection_model = NoRegConvectionModel()
+# convection_model = C2ConvectionModel()
+# convection_model = C4ConvectionModel()
+# convection_model = LerayConvectionModel()
 
 ## Boundary conditions
 u_bc(x, y, t) = 0.0

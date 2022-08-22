@@ -53,10 +53,10 @@
     qr = QRModel{T}(; Re)
 
     ## Convection models
-    noreg = NoRegConvectionModel{T}()
-    c2 = C2ConvectionModel{T}()
-    c4 = C4ConvectionModel{T}()
-    leray = LerayConvectionModel{T}()
+    noreg = NoRegConvectionModel()
+    c2 = C2ConvectionModel()
+    c4 = C4ConvectionModel()
+    leray = LerayConvectionModel()
 
     models = [
         (lam, noreg)
