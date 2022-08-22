@@ -118,6 +118,7 @@ include("solvers/pressure/pressure_poisson.jl")
 include("solvers/pressure/pressure_additional_solve.jl")
 include("solvers/get_timestep.jl")
 include("solvers/solve.jl")
+include("solvers/solve_animate.jl")
 
 # Utils
 include("utils/filter_convection.jl")
@@ -168,6 +169,7 @@ export DirectPressureSolver, CGPressureSolver, FourierPressureSolver
 # Main driver
 export create_boundary_conditions, create_initial_conditions, set_bc_vectors!,
     solve, get_velocity
+export solve_animate
 
 export momentum!
 

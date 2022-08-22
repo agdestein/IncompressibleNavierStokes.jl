@@ -58,7 +58,6 @@ function solve(
         process!(ps, stepper)
     end
 
-    # record(fig, "output/vorticity.mp4", 1:nt; framerate = 60) do n
     while stepper.t < t_end
         if stepper.n == nstartup && needs_startup_method(method)
             println("n = $(stepper.n): switching to primary ODE method ($method)")
