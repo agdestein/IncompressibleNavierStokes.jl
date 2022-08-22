@@ -35,7 +35,7 @@
     build_operators!(setup)
 
     ## Pressure solver
-    pressure_solver = FourierPressureSolver{T}(setup)
+    pressure_solver = FourierPressureSolver(setup)
 
     ## Time interval
     t_start, t_end = tlims = (0.0, 5.0)

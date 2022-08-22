@@ -94,7 +94,7 @@ build_operators!(setup)
 # We also choos a pressure solver. The direct solver will precompute the LU decomposition of
 # the Poisson matrix.
 
-pressure_solver = DirectPressureSolver{T}(setup)
+pressure_solver = DirectPressureSolver(setup)
 
 # We will solve for a time interval of ten seconds.
 

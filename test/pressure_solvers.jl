@@ -37,9 +37,9 @@
     (; A) = setup.operators
 
     ## Pressure solver
-    direct = DirectPressureSolver{T}(setup)
-    cg = CGPressureSolver{T}(setup)
-    fourier = FourierPressureSolver{T}(setup)
+    direct = DirectPressureSolver(setup)
+    cg = CGPressureSolver(setup)
+    fourier = FourierPressureSolver(setup)
 
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
     p_exact = reshape(initial_pressure.(grid.xpp, grid.ypp), :)

@@ -71,9 +71,9 @@ setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, bc);
 build_operators!(setup);
 
 ## Pressure solver
-pressure_solver = DirectPressureSolver{T}(setup)
-# pressure_solver = CGPressureSolver{T}(setup)
-# pressure_solver = FourierPressureSolver{T}(setup)
+pressure_solver = DirectPressureSolver(setup)
+# pressure_solver = CGPressureSolver(setup)
+# pressure_solver = FourierPressureSolver(setup)
 
 ## Time interval
 t_start, t_end = tlims = (0.0, 4π)

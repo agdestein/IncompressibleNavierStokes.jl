@@ -80,7 +80,7 @@
             build_operators!(setup)
 
             ## Pressure solver
-            pressure_solver = DirectPressureSolver{T}(setup)
+            pressure_solver = DirectPressureSolver(setup)
 
             V₀, p₀ = create_initial_conditions(
                 setup,
