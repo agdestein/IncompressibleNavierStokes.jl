@@ -81,11 +81,9 @@ V₀, p₀ = create_initial_conditions(
     pressure_solver,
 );
 
-
 # Solve steady state problem
 problem = SteadyStateProblem(setup, V₀, p₀);
 V, p = @time solve(problem);
-
 
 # Iteration processors
 logger = Logger(; nupdate = 1)
@@ -99,14 +97,21 @@ processors = [logger, plotter, tracer]
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = @time solve(problem, RK44(); inplace = true, Δt = 0.002, processors, pressure_solver);
 
-
 # Post-process
 plot_tracers(tracer)
 
+#-
+
 plot_pressure(setup, p)
+
+#-
 
 plot_velocity(setup, V, t_end)
 
+#-
+
 plot_vorticity(setup, V, tlims[2])
+
+#-
 
 plot_streamfunction(setup, V, tlims[2])

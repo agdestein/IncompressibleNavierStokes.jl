@@ -37,11 +37,11 @@ for examples of some typical workflows. More examples can be found in the
 
 ## Gallery
 
-| ![](assets/examples/Actuator2D.png)     | ![](assets/examples/BackwardFacingStep2D.png)                | ![](assets/examples/TaylorGreenVortex2D.png)                |
-|:---------------------------------------:|:-------------------------------------------------------------:|:-----------------------------------------------------------:|
-| [Actuator (2D)](examples/Actuator2D.jl) | [Backward Facing Step (2D)](examples/BackwardFacingStep2D.jl) | [Taylor-Green Vortex (2D)](examples/TaylorGreenVortex2D.jl) |
-| ![](assets/examples/Actuator3D.png)     | ![](assets/examples/BackwardFacingStep3D.png)                | ![](assets/examples/TaylorGreenVortex3D.png)                |
-| [Actuator (3D)](examples/Actuator3D.jl) | [Backward Facing Step (3D)](examples/BackwardFacingStep3D.jl) | [Taylor-Green Vortex (3D)](examples/TaylorGreenVortex3D.jl) |
+| ![](assets/examples/Actuator2D.png)     | ![](assets/examples/BackwardFacingStep2D.png)                 | ![](assets/examples/TaylorGreenVortex2D.png)                | ![](assets/examples/DecayingTurbulence2D.png)                |
+|:---------------------------------------:|:-------------------------------------------------------------:|:-----------------------------------------------------------:|:------------------------------------------------------------:|
+| [Actuator (2D)](examples/Actuator2D.jl) | [Backward Facing Step (2D)](examples/BackwardFacingStep2D.jl) | [Taylor-Green Vortex (2D)](examples/TaylorGreenVortex2D.jl) | [Decaying Turbulence (2D)](examples/DecayingTurbulence2D.jl) |
+| ![](assets/examples/Actuator3D.png)     | ![](assets/examples/BackwardFacingStep3D.png)                 | ![](assets/examples/TaylorGreenVortex3D.png)                | ![](assets/examples/DecayingTurbulence3D.png)                |
+| [Actuator (3D)](examples/Actuator3D.jl) | [Backward Facing Step (3D)](examples/BackwardFacingStep3D.jl) | [Taylor-Green Vortex (3D)](examples/TaylorGreenVortex3D.jl) | [Decaying Turbulence (3D)](examples/DecayingTurbulence3D.jl) |
 
 ## Demo
 

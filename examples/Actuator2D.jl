@@ -3,10 +3,10 @@
 # An unsteady inlet velocity profile at encounters a wind turbine blade in a wall-less
 # domain. The blade is modeled as a uniform body force on a thin rectangle.
 
-if isdefined(@__MODULE__, :LanguageServer)
-    include("../src/IncompressibleNavierStokes.jl")
-    using .IncompressibleNavierStokes
-end
+if isdefined(@__MODULE__, :LanguageServer)          #src
+    include("../src/IncompressibleNavierStokes.jl") #src
+    using .IncompressibleNavierStokes               #src
+end                                                 #src
 
 using IncompressibleNavierStokes
 
@@ -115,20 +115,30 @@ tracer = QuantityTracer(; nupdate = 1)
 ## processors = [logger, plotter, writer, tracer]
 processors = [logger, plotter, tracer]
 
-## Solve unsteady problem
+# Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = @time solve(problem, RK44P2(); pressure_solver, Δt = 4π / 200, processors);
 
 
-## Post-process
+# Post-process
 plot_tracers(tracer)
+
+#-
 
 plot_pressure(setup, p)
 
+#-
+
 plot_velocity(setup, V, t_end)
+
+#-
 
 plot_vorticity(setup, V, tlims[2])
 
+#-
+
 plot_streamfunction(setup, V, tlims[2])
+
+#-
 
 plot_force(setup, setup.force.F, t_end)

@@ -2,10 +2,10 @@
 #
 # Shear layer test case.
 
-if isdefined(@__MODULE__, :LanguageServer)
-    include("../src/IncompressibleNavierStokes.jl")
-    using .IncompressibleNavierStokes
-end
+if isdefined(@__MODULE__, :LanguageServer)          #src
+    include("../src/IncompressibleNavierStokes.jl") #src
+    using .IncompressibleNavierStokes               #src
+end                                                 #src
 
 using IncompressibleNavierStokes
 
@@ -109,7 +109,19 @@ V, p = @time solve(problem, RK44(); Δt = 0.1, processors, pressure_solver);
 
 ## Post-process
 plot_tracers(tracer)
+
+#-
+
 plot_pressure(setup, p)
+
+#-
+
 plot_velocity(setup, V, t_end)
+
+#-
+
 plot_vorticity(setup, V, tlims[2])
+
+#-
+
 plot_streamfunction(setup, V, tlims[2])

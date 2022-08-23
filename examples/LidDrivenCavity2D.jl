@@ -2,12 +2,10 @@
 #
 # This test case considers a box with a moving lid, where the velocity is initially at rest.
 
-# LSP indexing solution                                                          #src
-# https://github.com/julia-vscode/julia-vscode/issues/800#issuecomment-650085983 #src
-if isdefined(@__MODULE__, :LanguageServer)                                       #src
-    include("../src/IncompressibleNavierStokes.jl")                              #src
-    using .IncompressibleNavierStokes                                            #src
-end                                                                              #src
+if isdefined(@__MODULE__, :LanguageServer)          #src
+    include("../src/IncompressibleNavierStokes.jl") #src
+    using .IncompressibleNavierStokes               #src
+end                                                 #src
 
 # We start by loading IncompressibleNavierStokes.
 

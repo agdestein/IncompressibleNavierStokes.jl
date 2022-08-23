@@ -125,10 +125,18 @@ V, p = @time solve(problem, RK44(); Δt = 0.01, processors, pressure_solver)
 # Post-process
 plot_tracers(tracer)
 
+#-
+
 plot_pressure(setup, p; alpha = 0.05)
+
+#-
 
 plot_velocity(setup, V, t_end; alpha = 0.05)
 
+#-
+
 plot_vorticity(setup, V, tlims[2]; alpha = 0.05)
+
+#-
 
 ## plot_streamfunction(setup, V, tlims[2])

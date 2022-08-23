@@ -138,8 +138,23 @@ V, p = @time solve(problem, RK44P2(); inplace = true, Δt = 4π / 200, processor
 
 # Post-process
 plot_tracers(tracer)
+
+#-
+
 plot_pressure(setup, p)
+
+#-
+
 plot_velocity(setup, V, t_end)
+
+#-
+
 plot_vorticity(setup, V, tlims[2])
+
+#-
+
 plot_streamfunction(setup, V, tlims[2])
+
+#-
+
 plot_force(setup, setup.force.F, t_end)
