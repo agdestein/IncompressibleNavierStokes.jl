@@ -18,16 +18,16 @@ DocMeta.setdocmeta!(
 
 # Generate examples
 examples = [
-    "Actuator (2D)"             => "Actuator2D.jl",
-    # "Actuator (3D)"             => "Actuator3D.jl",
-    "BackwardFacingStep (2D)"   => "BackwardFacingStep2D.jl",
-    # "BackwardFacingStep (3D)"   => "BackwardFacingStep3D.jl",
-    "Lid-Driven Cavity (2D)"    => "LidDrivenCavity2D.jl",
-    # "Lid-Driven Cavity (3D)"    => "LidDrivenCavity3D.jl",
-    # "Planar Mixing (2D)"        => "PlanarMixing2D.jl",
-    # "ShearLayer (2D)"           => "ShearLayer2D.jl",
-    # "Taylor-Green Vortex (2D)"  => "TaylorGreenVortex2D.jl",
-    "Taylor-Green Vortex (3D)"  => "TaylorGreenVortex3D.jl",
+    "Actuator (2D)"             => "Actuator2D",
+    # "Actuator (3D)"             => "Actuator3D",
+    "BackwardFacingStep (2D)"   => "BackwardFacingStep2D",
+    # "BackwardFacingStep (3D)"   => "BackwardFacingStep3D",
+    "Lid-Driven Cavity (2D)"    => "LidDrivenCavity2D",
+    # "Lid-Driven Cavity (3D)"    => "LidDrivenCavity3D",
+    # "Planar Mixing (2D)"        => "PlanarMixing2D",
+    # "ShearLayer (2D)"           => "ShearLayer2D",
+    # "Taylor-Green Vortex (2D)"  => "TaylorGreenVortex2D",
+    "Taylor-Green Vortex (3D)"  => "TaylorGreenVortex3D",
 ]
 
 output = "generated"
