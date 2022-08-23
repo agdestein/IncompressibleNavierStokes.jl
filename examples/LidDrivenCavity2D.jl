@@ -134,7 +134,7 @@ problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 # `nupdate` iteration.
 
 logger = Logger(; nupdate = 1)
-plotter = RealTimePlotter(; nupdate = 50, fieldname = :vorticity, type = contourf)
+plotter = RealTimePlotter(; nupdate = 50, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 20, dir = "output/LidDrivenCavity2D")
 tracer = QuantityTracer(; nupdate = 10)
 ## processors = [logger, plotter, writer, tracer]
