@@ -92,7 +92,7 @@ logger = Logger(; nupdate = 1)
 plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity, type = contourf)
 writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 10)
-processors = [logger, plotter, writer, tracer]
+# processors = [logger, plotter, writer, tracer]
 processors = [logger, plotter, tracer]
 
 ## Solve unsteady problem

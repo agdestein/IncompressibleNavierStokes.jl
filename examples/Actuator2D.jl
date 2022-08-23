@@ -75,7 +75,7 @@ pressure_solver = DirectPressureSolver(setup)
 # pressure_solver = FourierPressureSolver(setup)
 
 ## Time interval
-t_start, t_end = tlims = (0.0, 16π)
+t_start, t_end = tlims = (0.0, 4π)
 
 ## Initial conditions (extend inflow)
 initial_velocity_u(x, y) = 1.0
