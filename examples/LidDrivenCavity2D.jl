@@ -2,16 +2,19 @@
 #
 # This test case considers a box with a moving lid, where the velocity is initially at rest.
 
-# LSP indexing solution                                                          #src
-# https://github.com/julia-vscode/julia-vscode/issues/800#issuecomment-650085983 #src
-if isdefined(@__MODULE__, :LanguageServer)                                       #src
-    include("../src/IncompressibleNavierStokes.jl")                              #src
-    using .IncompressibleNavierStokes                                            #src
-end                                                                              #src
+if isdefined(@__MODULE__, :LanguageServer)          #src
+    include("../src/IncompressibleNavierStokes.jl") #src
+    using .IncompressibleNavierStokes               #src
+end                                                 #src
 
-# We start by loading IncompressibleNavierStokes and a Makie plotting backend.
+# We start by loading IncompressibleNavierStokes.
 
 using IncompressibleNavierStokes
+
+# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
+# for plotting. `GLMakie` creates an interactive window (useful for real-time
+# plotting), but does not work when building this example on GitHub.
+# `CairoMakie` makes high-quality static vector-graphics plots.
 
 if haskey(ENV, "GITHUB_ACTIONS")
     using CairoMakie
@@ -55,7 +58,7 @@ convection_model = NoRegConvectionModel()
 
 u_bc(x, y, t) = y ≈ 1 ? 1.0 : 0.0
 v_bc(x, y, t) = zero(x)
-bc = create_boundary_conditions(
+boundary_conditions = BoundaryConditions(
     u_bc,
     v_bc;
     bc_unsteady = false,
@@ -71,7 +74,7 @@ bc = create_boundary_conditions(
 
 x = cosine_grid(0.0, 1.0, 50)
 y = stretched_grid(0.0, 1.0, 50, 0.95)
-grid = create_grid(x, y; bc, T)
+grid = Grid(x, y; boundary_conditions, T)
 
 # The grid may be visualized using the `plot_grid` function.
 
@@ -85,7 +88,7 @@ force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 # We may now assemble our setup and discrete operators.
 
-setup = Setup(; viscosity_model, convection_model, grid, force, bc)
+setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
 
 # We also choos a pressure solver. The direct solver will precompute the LU decomposition of
 # the Poisson matrix.
@@ -131,10 +134,11 @@ problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 # `nupdate` iteration.
 
 logger = Logger(; nupdate = 1)
-plotter = RealTimePlotter(; nupdate = 50, fieldname = :vorticity, type = contourf)
+plotter = RealTimePlotter(; nupdate = 50, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 20, dir = "output/LidDrivenCavity2D")
 tracer = QuantityTracer(; nupdate = 10)
-processors = [logger, plotter, writer, tracer]
+## processors = [logger, plotter, writer, tracer]
+processors = [logger, plotter, tracer]
 
 # A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
 # with a fixed time step.

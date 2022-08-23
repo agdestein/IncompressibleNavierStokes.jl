@@ -321,27 +321,27 @@ Base.@kwdef mutable struct Operators{T}
     yAv_vy3::Vector{T} = T[]
 end
 
-function Operators(grid::Grid{T}, bc, viscosity_model) where {T}
+function Operators(grid::Grid{T}, boundary_conditions, viscosity_model) where {T}
     # Averaging operators
-    op_ave = operator_averaging(grid, bc)
+    op_ave = operator_averaging(grid, boundary_conditions)
 
     # Interpolation operators
-    op_int = operator_interpolation(grid, bc)
+    op_int = operator_interpolation(grid, boundary_conditions)
 
     # Divergence (u, v) -> p and gradient p -> (u, v) operator
-    op_div = operator_divergence(grid, bc)
+    op_div = operator_divergence(grid, boundary_conditions)
 
     # Convection operators on u- and v- centered volumes
-    op_con = operator_convection_diffusion(grid, bc, viscosity_model)
+    op_con = operator_convection_diffusion(grid, boundary_conditions, viscosity_model)
 
     # Regularization modelling - this changes the convective term
     op_reg = operator_regularization(grid, op_con)
 
     # Classical turbulence modelling via the diffusive term
-    op_vis = operator_viscosity(viscosity_model, grid, bc)
+    op_vis = operator_viscosity(viscosity_model, grid, boundary_conditions)
 
     # Post-processing
-    op_pos = operator_postprocessing(grid, bc)
+    op_pos = operator_postprocessing(grid, boundary_conditions)
 
     Operators{T}(;
         op_ave...,

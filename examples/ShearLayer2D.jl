@@ -2,13 +2,18 @@
 #
 # Shear layer test case.
 
-if isdefined(@__MODULE__, :LanguageServer)
-    include("../src/IncompressibleNavierStokes.jl")
-    using .IncompressibleNavierStokes
-end
+if isdefined(@__MODULE__, :LanguageServer)          #src
+    include("../src/IncompressibleNavierStokes.jl") #src
+    using .IncompressibleNavierStokes               #src
+end                                                 #src
 
 using IncompressibleNavierStokes
-using GLMakie
+
+if haskey(ENV, "GITHUB_ACTIONS")
+    using CairoMakie
+else
+    using GLMakie
+end
 
 # Case name for saving results
 name = "ShearLayer2D"
@@ -32,7 +37,7 @@ convection_model = NoRegConvectionModel()
 ## Boundary conditions
 u_bc(x, y, t) = 0.0
 v_bc(x, y, t) = 0.0
-bc = create_boundary_conditions(
+boundary_conditions = BoundaryConditions(
     u_bc,
     v_bc;
     bc_unsteady = false,
@@ -46,7 +51,7 @@ bc = create_boundary_conditions(
 ## Grid
 x = stretched_grid(0.0, 2π, 40)
 y = stretched_grid(0.0, 2π, 40)
-grid = create_grid(x, y; bc, T, order4 = true);
+grid = Grid(x, y; boundary_conditions, T, order4 = true);
 
 # Plot grid
 plot_grid(grid)
@@ -57,7 +62,7 @@ bodyforce_v(x, y) = 0.0
 force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 ## Build setup and assemble operators
-setup = Setup(; viscosity_model, convection_model, grid, force, bc)
+setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
 
 ## Pressure solver
 pressure_solver = DirectPressureSolver(setup)
@@ -104,7 +109,19 @@ V, p = @time solve(problem, RK44(); Δt = 0.1, processors, pressure_solver);
 
 ## Post-process
 plot_tracers(tracer)
+
+#-
+
 plot_pressure(setup, p)
+
+#-
+
 plot_velocity(setup, V, t_end)
+
+#-
+
 plot_vorticity(setup, V, tlims[2])
+
+#-
+
 plot_streamfunction(setup, V, tlims[2])

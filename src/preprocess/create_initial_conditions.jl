@@ -38,6 +38,10 @@ function create_initial_conditions(
     v .= initial_velocity_v.(xv, yv)
     V = [u[:]; v[:]]
 
+    # Initial pressure: should in principle NOT be prescribed (will be calculated if p_initial)
+    isnothing(initial_pressure) || (p .= initial_pressure.(xpp, ypp))
+    p = p[:]
+
     # Kinetic energy and momentum of initial velocity field
     # Iteration 1 corresponds to t₀ = 0 (for unsteady simulations)
     maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
@@ -49,13 +53,9 @@ function create_initial_conditions(
         # Make velocity field divergence free
         (; G, M, yM) = setup.operators
         f = M * V + yM
-        Δp = pressure_poisson(pressure_solver, f, setup)
+        Δp = pressure_poisson(pressure_solver, f)
         V .-= Ω⁻¹ .* (G * Δp)
     end
-
-    # Initial pressure: should in principle NOT be prescribed (will be calculated if p_initial)
-    isnothing(initial_pressure) || (p .= initial_pressure.(xpp, ypp))
-    p = p[:]
 
     # For steady state computations, the initial guess is the provided initial condition
     if isnothing(initial_pressure)

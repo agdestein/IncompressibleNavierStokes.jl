@@ -10,7 +10,7 @@ See also [`step!`](@ref).
 function step(stepper::OneLegStepper, Δt)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; p_add_solve, β) = method
-    (; grid, operators, bc) = setup
+    (; grid, operators, boundary_conditions) = setup
     (; G, M) = operators
     (; Ω⁻¹) = grid
 
@@ -39,7 +39,7 @@ function step(stepper::OneLegStepper, Δt)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
-    bc.bc_unsteady && set_bc_vectors!(setup, tₙ + Δtₙ)
+    boundary_conditions.bc_unsteady && set_bc_vectors!(setup, tₙ + Δtₙ)
     (; yM) = operators
 
     # Adapt time step for pressure calculation
@@ -76,7 +76,7 @@ Do one time step using one-leg-β-method.
 function step!(stepper::OneLegStepper, Δt; cache, momentum_cache)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; p_add_solve, β) = method
-    (; grid, operators, bc) = setup
+    (; grid, operators, boundary_conditions) = setup
     (; G, M) = operators
     (; Ω⁻¹) = grid
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache
@@ -107,7 +107,7 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
-    bc.bc_unsteady && set_bc_vectors!(setup, tₙ + Δtₙ)
+    boundary_conditions.bc_unsteady && set_bc_vectors!(setup, tₙ + Δtₙ)
     (; yM) = operators
 
     # Adapt time step for pressure calculation

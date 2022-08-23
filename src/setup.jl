@@ -1,5 +1,12 @@
 """
-    Setup(; grid, operators, bc, viscosity_model, convection_model, force)
+    Setup(;
+        grid,
+        boundary_conditions,
+        viscosity_model,
+        convection_model = NoRegConvectionModel(),
+        force,
+        operators = Operators(grid, boundary_conditions, viscosity_model),
+    )
 
 Simulation setup.
 """
@@ -11,9 +18,9 @@ Base.@kwdef struct Setup{
     F<:AbstractBodyForce{T},
 }
     grid::Grid{T,N}
-    bc::BC{T}
+    boundary_conditions::BoundaryConditions{T}
     viscosity_model::V
     convection_model::C = NoRegConvectionModel()
     force::F
-    operators::Operators{T} = Operators(grid, bc, viscosity_model)
+    operators::Operators{T} = Operators(grid, boundary_conditions, viscosity_model)
 end

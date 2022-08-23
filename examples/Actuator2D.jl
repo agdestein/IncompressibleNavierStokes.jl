@@ -3,13 +3,18 @@
 # An unsteady inlet velocity profile at encounters a wind turbine blade in a wall-less
 # domain. The blade is modeled as a uniform body force on a thin rectangle.
 
-if isdefined(@__MODULE__, :LanguageServer)
-    include("../src/IncompressibleNavierStokes.jl")
-    using .IncompressibleNavierStokes
-end
+if isdefined(@__MODULE__, :LanguageServer)          #src
+    include("../src/IncompressibleNavierStokes.jl") #src
+    using .IncompressibleNavierStokes               #src
+end                                                 #src
 
 using IncompressibleNavierStokes
-using GLMakie
+
+if haskey(ENV, "GITHUB_ACTIONS")
+    using CairoMakie
+else
+    using GLMakie
+end
 
 # Case name for saving results
 name = "Actuator2D"
@@ -17,26 +22,26 @@ name = "Actuator2D"
 # Floating point type for simulations
 T = Float64
 
-## Viscosity model
+# Viscosity model
 viscosity_model = LaminarModel{T}(; Re = 100)
-# viscosity_model = KEpsilonModel{T}(; Re = 100)
-# viscosity_model = MixingLengthModel{T}(; Re = 100)
-# viscosity_model = SmagorinskyModel{T}(; Re = 100)
-# viscosity_model = QRModel{T}(; Re = 100)
+## viscosity_model = KEpsilonModel{T}(; Re = 100)
+## viscosity_model = MixingLengthModel{T}(; Re = 100)
+## viscosity_model = SmagorinskyModel{T}(; Re = 100)
+## viscosity_model = QRModel{T}(; Re = 100)
 
-## Convection model
+# Convection model
 convection_model = NoRegConvectionModel()
-# convection_model = C2ConvectionModel()
-# convection_model = C4ConvectionModel()
-# convection_model = LerayConvectionModel()
+## convection_model = C2ConvectionModel()
+## convection_model = C4ConvectionModel()
+## convection_model = LerayConvectionModel()
 
-## Boundary conditions
+# Boundary conditions
 f = 0.5
 u_bc(x, y, t) = x ≈ 0.0 ? cos(π / 6 * sin(f * t)) : 0.0
 v_bc(x, y, t) = x ≈ 0.0 ? sin(π / 6 * sin(f * t)) : 0.0
 dudt_bc(x, y, t) = x ≈ 0.0 ? -π / 6 * f * cos(f * t) * sin(π / 6 * sin(f * t)) : 0.0
 dvdt_bc(x, y, t) = x ≈ 0.0 ? π / 6 * f * cos(f * t) * cos(π / 6 * sin(f * t)) : 0.0
-bc = create_boundary_conditions(
+boundary_conditions = BoundaryConditions(
     u_bc,
     v_bc;
     dudt_bc,
@@ -49,14 +54,14 @@ bc = create_boundary_conditions(
     T,
 )
 
-## Grid
+# Grid
 x = stretched_grid(0.0, 10.0, 200)
 y = stretched_grid(-2.0, 2.0, 80)
-grid = create_grid(x, y; bc, T);
+grid = Grid(x, y; boundary_conditions, T);
 
 plot_grid(grid)
 
-## Forcing parameters
+# Forcing parameters
 xc, yc = 2.0, 0.0 # Disk center
 D = 1.0 # Disk diameter
 δ = 0.11 # Disk thickness
@@ -66,18 +71,18 @@ bodyforce_u(x, y) = -Cₜ * inside(x, y)
 bodyforce_v(x, y) = 0.0
 force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
-## Build setup and assemble operators
-setup = Setup(; viscosity_model, convection_model, grid, force, bc)
+# Build setup and assemble operators
+setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
 
-## Pressure solver
+# Pressure solver
 pressure_solver = DirectPressureSolver(setup)
-# pressure_solver = CGPressureSolver(setup)
-# pressure_solver = FourierPressureSolver(setup)
+## pressure_solver = CGPressureSolver(setup)
+## pressure_solver = FourierPressureSolver(setup)
 
-## Time interval
-t_start, t_end = tlims = (0.0, 16π)
+# Time interval
+t_start, t_end = tlims = (0.0, 4π)
 
-## Initial conditions (extend inflow)
+# Initial conditions (extend inflow)
 initial_velocity_u(x, y) = 1.0
 initial_velocity_v(x, y) = 0.0
 initial_pressure(x, y) = 0.0
@@ -91,34 +96,49 @@ V₀, p₀ = create_initial_conditions(
 );
 
 
-## Solve steady state problem
+# Solve steady state problem
 problem = SteadyStateProblem(setup, V₀, p₀);
 V, p = @time solve(problem);
 
 
-## Iteration processors
+# Iteration processors
 logger = Logger(; nupdate = 1)
 plotter = RealTimePlotter(;
     nupdate = 1,
     fieldname = :vorticity,
     type = heatmap,
-    # type = contour,
-    # type = contourf,
+    ## type = contour,
+    ## type = contourf,
 )
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
-# processors = [logger, plotter, writer, tracer]
+## processors = [logger, plotter, writer, tracer]
 processors = [logger, plotter, tracer]
 
-## Solve unsteady problem
+# Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = @time solve(problem, RK44P2(); pressure_solver, Δt = 4π / 200, processors);
 
 
-## Post-process
+# Post-process
 plot_tracers(tracer)
+
+#-
+
 plot_pressure(setup, p)
+
+#-
+
 plot_velocity(setup, V, t_end)
+
+#-
+
 plot_vorticity(setup, V, tlims[2])
+
+#-
+
 plot_streamfunction(setup, V, tlims[2])
+
+#-
+
 plot_force(setup, setup.force.F, t_end)

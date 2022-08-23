@@ -35,20 +35,26 @@ See the
 for examples of some typical workflows. More examples can be found in the
 `examples` directory.
 
+## Gallery
+
+| ![](assets/examples/Actuator2D.png)     | ![](assets/examples/BackwardFacingStep2D.png)                 | ![](assets/examples/TaylorGreenVortex2D.png)                | ![](assets/examples/DecayingTurbulence2D.png)                |
+|:---------------------------------------:|:-------------------------------------------------------------:|:-----------------------------------------------------------:|:------------------------------------------------------------:|
+| [Actuator (2D)](examples/Actuator2D.jl) | [Backward Facing Step (2D)](examples/BackwardFacingStep2D.jl) | [Taylor-Green Vortex (2D)](examples/TaylorGreenVortex2D.jl) | [Decaying Turbulence (2D)](examples/DecayingTurbulence2D.jl) |
+| ![](assets/examples/Actuator3D.png)     | ![](assets/examples/BackwardFacingStep3D.png)                 | ![](assets/examples/TaylorGreenVortex3D.png)                | ![](assets/examples/DecayingTurbulence3D.png)                |
+| [Actuator (3D)](examples/Actuator3D.jl) | [Backward Facing Step (3D)](examples/BackwardFacingStep3D.jl) | [Taylor-Green Vortex (3D)](examples/TaylorGreenVortex3D.jl) | [Decaying Turbulence (3D)](examples/DecayingTurbulence3D.jl) |
+
 ## Demo
 
-The following example code simulates an actuator using a negative body force on
-a small rectangle with an unsteady inflow.
+The following example code  using a negative body force on a small rectangle
+with an unsteady inflow. It simulates a wind turbine (actuator) under varying
+wind conditions.
 
 ```julia
 using IncompressibleNavierStokes
 using GLMakie
 
-# Floating point type for simulations
-T = Float64
-
 # Models
-viscosity_model = LaminarModel{T}(; Re = 100)
+viscosity_model = LaminarModel(; Re = 100.0)
 
 # Boundary conditions
 f = 0.5
@@ -56,7 +62,7 @@ u_bc(x, y, t) = x ≈ 0.0 ? cos(π / 6 * sin(f * t)) : 0.0
 v_bc(x, y, t) = x ≈ 0.0 ? sin(π / 6 * sin(f * t)) : 0.0
 dudt_bc(x, y, t) = x ≈ 0.0 ? -π / 6 * f * cos(f * t) * sin(π / 6 * sin(f * t)) : 0.0
 dvdt_bc(x, y, t) = x ≈ 0.0 ? π / 6 * f * cos(f * t) * cos(π / 6 * sin(f * t)) : 0.0
-bc = create_boundary_conditions(
+boundary_conditions = BoundaryConditions(
     u_bc,
     v_bc;
     dudt_bc,
@@ -66,13 +72,12 @@ bc = create_boundary_conditions(
         u = (; x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)),
         v = (; x = (:dirichlet, :symmetric), y = (:pressure, :pressure)),
     ),
-    T,
 )
 
 # Grid
 x = stretched_grid(0.0, 10.0, 200)
 y = stretched_grid(-2.0, 2.0, 80)
-grid = create_grid(x, y; bc, T);
+grid = Grid(x, y; boundary_conditions);
 
 # Body force
 xc, yc = 2.0, 0.0 # Disk center
@@ -85,7 +90,7 @@ bodyforce_v(x, y) = 0.0
 force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 # Build setup and assemble operators
-setup = Setup(; viscosity_model, grid, force, bc)
+setup = Setup(; viscosity_model, grid, force, boundary_conditions)
 
 # Time interval
 t_start, t_end = tlims = (0.0, 16π)

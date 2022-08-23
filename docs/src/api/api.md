@@ -4,12 +4,6 @@ CurrentModule = IncompressibleNavierStokes
 
 # API Reference
 
-## Grid
-
-```@docs
-create_grid
-```
-
 ## Force
 
 ```@docs
@@ -40,7 +34,7 @@ is_steady
 Grid
 Operators
 SolverSettings
-BC
+BoundaryConditions
 Setup
 ```
 
@@ -62,7 +56,6 @@ FourierPressureSolver
 ## Main driver
 
 ```@docs
-create_boundary_conditions
 create_initial_conditions
 set_bc_vectors!
 solve

@@ -8,7 +8,7 @@ are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
 """
 function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
-    (; grid, operators) = setup
+    (; grid, operators, boundary_conditions) = setup
     (; NV, Np, Ω⁻¹) = grid
     (; G, M) = operators
     (; A, b, c, p_add_solve, maxiter, abstol, newton_type) = method
@@ -41,7 +41,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache)
 
         # Boundary conditions at all the stage time steps to make the velocity field
         # uᵢ₊₁ at tᵢ₊₁ divergence-free (BC at tᵢ₊₁ needed)
-        if i == 1 || setup.bc.bc_unsteady
+        if i == 1 || boundary_conditions.bc_unsteady
             # Modify `yM`
             tᵢ = tⱼ[i]
             set_bc_vectors!(setup, tᵢ)
@@ -159,7 +159,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache)
     # Make V satisfy the incompressibility constraint at n+1; this is only needed when the
     # boundary conditions are time-dependent. For stiffly accurate methods, this can also
     # be skipped (e.g. Radau IIA) - this still needs to be implemented
-    if setup.bc.bc_unsteady
+    if boundary_conditions.bc_unsteady
         # Allocates new yM
         set_bc_vectors!(setup, tₙ + Δtₙ)
         (; yM) = setup.operators
@@ -178,7 +178,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache)
             p .= pⱼ[(end - Np + 1):end]
         end
     else
-        # For steady bc we do an additional pressure solve
+        # For steady BC we do an additional pressure solve
         # That saves a pressure solve for iter = 1 in the next time step
         # pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
 

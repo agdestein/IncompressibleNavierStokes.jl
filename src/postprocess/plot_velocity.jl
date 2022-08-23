@@ -29,6 +29,7 @@ function plot_velocity(setup::Setup{T,2}, V, t; kwargs...) where {T}
     limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
     cf = contourf!(ax, xp, yp, qp; extendlow = :auto, extendhigh = :auto, levels, kwargs...)
     Colorbar(fig[1,2], cf)
+    # Colorbar(fig[2,1], cf; vertical = false)
     fig
 end
 

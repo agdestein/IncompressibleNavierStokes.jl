@@ -53,17 +53,20 @@ end
 
 # Fourier, 2D version
 function FourierPressureSolver(setup::Setup{T,2}) where {T}
-    (; grid, bc, operators) = setup
+    (; grid, boundary_conditions, operators) = setup
     (; hx, hy, Npx, Npy) = grid
     (; A) = operators
 
-    if any(!isequal((:periodic, :periodic)), (bc.u.x, bc.v.y))
+    if any(
+        !isequal((:periodic, :periodic)),
+        (boundary_conditions.u.x, boundary_conditions.v.y),
+    )
         error("FourierPressureSolver only implemented for periodic boundary conditions")
     end
 
     Δx = hx[1]
     Δy = hy[1]
-    if any(≉(Δx), hx) || any(≉(Δy), hy)
+      if any(≉(Δx), hx) || any(≉(Δy), hy)
         error("FourierPressureSolver requires uniform grid along each dimension")
     end
 
@@ -73,10 +76,7 @@ function FourierPressureSolver(setup::Setup{T,2}) where {T}
     j = reshape(0:(Npy-1), 1, :)
 
     # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
-    Ahat = @. 4 * Δx * Δy * (
-        sin(i * π / Npx)^2 / Δx^2 +
-        sin(j * π / Npy)^2 / Δy^2
-    )
+    Ahat = @. 4 * Δx * Δy * (sin(i * π / Npx)^2 / Δx^2 + sin(j * π / Npy)^2 / Δy^2)
 
     # Pressure is determined up to constant, fix at 0
     Ahat[1] = 1
@@ -92,18 +92,21 @@ end
 
 # Fourier, 3D version
 function FourierPressureSolver(setup::Setup{T,3}) where {T}
-    (; grid, bc, operators) = setup
+    (; grid, boundary_conditions, operators) = setup
     (; hx, hy, hz, Npx, Npy, Npz) = grid
     (; A) = operators
 
-    if any(!isequal((:periodic, :periodic)), [bc.u.x, bc.v.y, bc.w.z])
+    if any(
+        !isequal((:periodic, :periodic)),
+        [boundary_conditions.u.x, boundary_conditions.v.y, boundary_conditions.w.z],
+    )
         error("FourierPressureSolver only implemented for periodic boundary conditions")
     end
 
     Δx = hx[1]
     Δy = hy[1]
     Δz = hz[1]
-    if any(≉(Δx), hx) || any(≉(Δy), hy) || any(≉(Δz), hz)
+       if any(≉(Δx), hx) || any(≉(Δy), hy) || any(≉(Δz), hz)
         error("FourierPressureSolver requires uniform grid along each dimension")
     end
 
@@ -114,11 +117,11 @@ function FourierPressureSolver(setup::Setup{T,3}) where {T}
     k = reshape(0:(Npz-1), 1, 1, :)
 
     # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
-    Ahat = @. 4 * Δx * Δy * Δz * (
-        sin(i * π / Npx)^2 / Δx^2 +
-        sin(j * π / Npy)^2 / Δy^2 +
-        sin(k * π / Npz)^2 / Δz^2
-    )
+    Ahat = @. 4 *
+       Δx *
+       Δy *
+       Δz *
+       (sin(i * π / Npx)^2 / Δx^2 + sin(j * π / Npy)^2 / Δy^2 + sin(k * π / Npz)^2 / Δz^2)
 
     # Pressure is determined up to constant, fix at 0
     Ahat[1] = 1
