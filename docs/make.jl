@@ -37,8 +37,8 @@ for e ∈ examples
     e = joinpath(@__DIR__, "..", "examples", "$(e.second).jl")
     o = joinpath(@__DIR__, "src", output)
     Literate.markdown(e, o)
-    Literate.notebook(e, o)
-    Literate.script(e, o)
+    # Literate.notebook(e, o)
+    # Literate.script(e, o)
 end
 
 makedocs(;
