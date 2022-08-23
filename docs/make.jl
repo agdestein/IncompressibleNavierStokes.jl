@@ -41,7 +41,7 @@ end
 
 makedocs(;
     modules = [IncompressibleNavierStokes],
-    authors = "Syver Døving Agdestein and contributors",
+    authors = "Syver Døving Agdestein, Benjamin Sanderse, and contributors",
     repo = "https://github.com/agdestein/IncompressibleNavierStokes.jl/blob/{commit}{path}#{line}",
     sitename = "IncompressibleNavierStokes.jl",
     format = Documenter.HTML(;
