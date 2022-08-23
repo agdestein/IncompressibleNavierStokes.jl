@@ -1,18 +1,20 @@
 """
     solve(
-        problem::UnsteadyProblem, method;
+        problem::UnsteadyProblem,
+        method;
         pressure_solver = DirectPressureSolver(problem.setup),
         Δt = nothing,
-        CFL = 1,
+        cfl = 1,
         n_adapt_Δt = 1,
-        processors = Processor[],
-        method_startup = nothing,
         nstartup = 1,
+        method_startup = nothing,
+        inplace = false,
+        processors = Processor[],
     )
 
 Solve unsteady problem using `method`.
 
-The time step is chosen every `n_adapt_Δt` iteration with CFL-number `CFL` if `Δt` is
+The time step is chosen every `n_adapt_Δt` iteration with CFL-number `cfl` if `Δt` is
 `nothing`.
 
 For methods that are not self-starting, `nstartup` startup iterations are performed with
@@ -25,11 +27,12 @@ function solve(
     method;
     pressure_solver = DirectPressureSolver(problem.setup),
     Δt = nothing,
-    CFL = 1,
+    cfl = 1,
     n_adapt_Δt = 1,
-    processors = Processor[],
-    method_startup = nothing,
     nstartup = 1,
+    method_startup = nothing,
+    inplace = false,
+    processors = Processor[],
 )
     (; setup, V₀, p₀, tlims) = problem
     
@@ -45,9 +48,23 @@ function solve(
         method_use = method
     end
 
-    isadaptive && (Δt = 0)
-    stepper = TimeStepper(method_use, setup, pressure_solver, V₀, p₀, t_start, Δt)
-    isadaptive && (Δt = get_timestep(stepper, CFL))
+    if inplace
+        cache = ode_method_cache(method_use, setup)
+        momentum_cache = MomentumCache(setup)
+    end
+
+    stepper = TimeStepper(;
+        method = method_use,
+        setup,
+        pressure_solver,
+        V = copy(V₀),
+        p = copy(p₀),
+        t = copy(t_start),
+        Vₙ = copy(V₀),
+        pₙ = copy(p₀),
+        tₙ = copy(t_start),
+    )
+    isadaptive && (Δt = get_timestep(stepper, cfl))
 
     # Initialize BC arrays
     set_bc_vectors!(setup, stepper.t)
@@ -62,15 +79,22 @@ function solve(
         if stepper.n == nstartup && needs_startup_method(method)
             println("n = $(stepper.n): switching to primary ODE method ($method)")
             stepper = change_time_stepper(stepper, method)
+            if inplace
+                cache = ode_method_cache(method, setup)
+            end
         end
 
         # Change timestep based on operators
         if isadaptive && rem(stepper.n, n_adapt_Δt) == 0 
-            Δt = get_timestep(stepper, CFL)
+            Δt = get_timestep(stepper, cfl)
         end
 
         # Perform a single time step with the time integration method
-        step!(stepper, Δt)
+        if inplace
+            stepper = step!(stepper, Δt; cache, momentum_cache)
+        else
+            stepper = step(stepper, Δt)
+        end
 
         # Process iteration results with each processor
         for ps ∈ processors

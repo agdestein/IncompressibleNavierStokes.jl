@@ -16,7 +16,7 @@ function pressure_additional_solve(pressure_solver, V, p, t, setup)
 
     # Momentum already contains G*p with the current p, we therefore effectively solve for
     # the pressure difference
-    F = momentum(V, p, t, setup)
+    F, = momentum(V, V, p, t, setup)
     f = M * (Ω⁻¹ .* F) + ydM
 
     Δp = pressure_poisson(pressure_solver, f)

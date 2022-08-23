@@ -78,8 +78,9 @@
         end
 
         @testset "Implicit Runge Kutta" begin
-            V, p = solve(problem, RIA2(); Δt = 0.01, pressure_solver)
+            V, p = solve(problem, RIA2(); Δt = 0.01, pressure_solver, inplace = true)
             @test_broken norm(V - V_exact) / norm(V_exact) < 1e-3
+            @test_broken solve(problem, RIA2(); Δt = 0.01, pressure_solver, inplace = false) isa Tuple
         end
 
         @testset "One-leg beta method" begin
@@ -88,12 +89,21 @@
         end
 
         @testset "Adams-Bashforth Crank-Nicolson" begin
+            @test_broken solve(
+                problem,
+                AdamsBashforthCrankNicolsonMethod{T}();
+                method_startup = RK44(),
+                Δt = 0.01,
+                pressure_solver,
+                inplace = false,
+            ) isa NamedTuple
             V, p = solve(
                 problem,
                 AdamsBashforthCrankNicolsonMethod{T}();
                 method_startup = RK44(),
                 Δt = 0.01,
                 pressure_solver,
+                inplace = true,
             )
             @test norm(V - V_exact) / norm(V_exact) < 1e-4
         end

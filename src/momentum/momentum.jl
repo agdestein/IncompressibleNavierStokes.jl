@@ -44,7 +44,7 @@ function momentum(
     b = bodyforce(force, t, setup)
 
     # Residual in Finite Volume form, including the pressure contribution
-    @. F = -c + d + b
+    F = @. -c + d + b
 
     # Nopressure = false is the most common situation, in which we return the entire
     # right-hand side vector

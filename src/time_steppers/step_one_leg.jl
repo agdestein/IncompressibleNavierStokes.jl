@@ -1,35 +1,97 @@
 """
-    step!(stepper::OneLegStepper, Δt)
+    step(stepper::OneLegStepper, Δt)
 
-Do one time step using one-leg-β-method following symmetry-preserving discretization of
-turbulent flow. See [Verstappen and Veldman (JCP 2003)] for details, or [Direct numerical
-simulation of turbulence at lower costs (Journal of Engineering Mathematics 1997)].
+Do one time step using one-leg-β-method.
 
-Formulation:
+Non-mutating/allocating/out-of-place version.
 
-```math
-\\frac{(\\beta + 1/2) u^{n+1} - 2 \\beta u^{n} + (\\beta - 1/2) u^{n-1}}{\\Delta t} = F((1 +
-\\beta) u^n - \\beta u^{n-1}).
-```
+See also [`step!`](@ref).
 """
-function step!(stepper::OneLegStepper, Δt)
-    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, pressure_solver, cache, momentum_cache) = stepper
+function step(stepper::OneLegStepper, Δt)
+    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; p_add_solve, β) = method
+    (; grid, operators, bc) = setup
+    (; G, M) = operators
+    (; Ω⁻¹) = grid
+
+    # Update current solution (does not depend on previous step size)
+    Δtₙ₋₁ = t - tₙ
+    n += 1
+    Vₙ₋₁ = Vₙ
+    pₙ₋₁ = pₙ
+    Vₙ = V
+    pₙ = p
+    tₙ = t
+    Δtₙ = Δt
+    @assert Δtₙ ≈ Δtₙ₋₁
+
+    # Intermediate ("offstep") velocities
+    t = tₙ + β * Δtₙ
+    V = @. (1 + β) * Vₙ - β * Vₙ₋₁
+    p = @. (1 + β) * pₙ - β * pₙ₋₁
+
+    # Right-hand side of the momentum equation
+    F, = momentum(V, V, p, t, setup)
+
+    # Take a time step with this right-hand side, this gives an intermediate velocity field
+    # (not divergence free)
+    V = @. (2β * Vₙ - (β - 1//2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1//2)
+
+    # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
+    # conditions at tₙ₊₁
+    bc.bc_unsteady && set_bc_vectors!(setup, tₙ + Δtₙ)
+    (; yM) = operators
+
+    # Adapt time step for pressure calculation
+    Δtᵦ = Δtₙ / (β + 1//2)
+
+    # Divergence of intermediate velocity field
+    f = (M * V + yM) / Δtᵦ
+
+    # Solve the Poisson equation for the pressure
+    Δp = pressure_poisson(pressure_solver, f)
+    GΔp = G * Δp
+
+    # Update velocity field
+    V = @. V - Δtᵦ * Ω⁻¹ * GΔp
+
+    # Update pressure (second order)
+    p = @. 2pₙ - pₙ₋₁ + 4 // 3 * Δp
+
+    # Alternatively, do an additional Poisson solve
+    if p_add_solve
+        p = pressure_additional_solve(pressure_solver, V, p, tₙ + Δtₙ, setup)
+    end
+
+    t = tₙ + Δtₙ
+
+    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+end
+
+"""
+    step!(stepper::OneLegStepper, Δt; cache, momentum_cache)
+
+Do one time step using one-leg-β-method.
+"""
+function step!(stepper::OneLegStepper, Δt; cache, momentum_cache)
+    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; p_add_solve, β) = method
     (; grid, operators, bc) = setup
     (; G, M) = operators
     (; Ω⁻¹) = grid
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache
 
-    Δt ≈ Δtₙ || error("One-leg-β-method requires constant time step")
 
     # Update current solution (does not depend on previous step size)
-    stepper.n += 1
+    Δtₙ₋₁ = t - tₙ
+    n += 1
     Vₙ₋₁ .= Vₙ
     pₙ₋₁ .= pₙ
     Vₙ .= V
     pₙ .= p
     tₙ = t
     Δtₙ = Δt
+    @assert Δtₙ ≈ Δtₙ₋₁
 
     # Intermediate ("offstep") velocities
     t = tₙ + β * Δtₙ
@@ -74,5 +136,5 @@ function step!(stepper::OneLegStepper, Δt)
     t = tₙ + Δtₙ
     @pack! stepper = t, tₙ, Δtₙ
 
-    stepper
+    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
 end

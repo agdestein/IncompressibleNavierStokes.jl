@@ -113,6 +113,8 @@ function convection_components(
             (Conv_ux_11 + Conv_uy_11) Conv_uy_12
             Conv_vx_21 (Conv_vx_22 + Conv_vy_22)
         ]
+    else
+        ∇c = nothing
     end
 
     c, ∇c
@@ -247,6 +249,8 @@ function convection_components(
             Conv_vx_21 (Conv_vx_22 + Conv_vy_22 + Conv_vz_22) Conv_vz_23
             Conv_wx_31 Conv_wy_32 (Conv_wx_33 + Conv_wy_33 + Conv_wz_33)
         ]
+    else
+        ∇c = nothing
     end
 
     c, ∇c
