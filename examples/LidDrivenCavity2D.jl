@@ -9,9 +9,14 @@ if isdefined(@__MODULE__, :LanguageServer)                                      
     using .IncompressibleNavierStokes                                            #src
 end                                                                              #src
 
-# We start by loading IncompressibleNavierStokes and a Makie plotting backend.
+# We start by loading IncompressibleNavierStokes.
 
 using IncompressibleNavierStokes
+
+# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
+# for plotting. `GLMakie` creates an interactive window (useful for real-time
+# plotting), but does not work when building this example on GitHub.
+# `CairoMakie` makes high-quality static vector-graphics plots.
 
 if haskey(ENV, "GITHUB_ACTIONS")
     using CairoMakie

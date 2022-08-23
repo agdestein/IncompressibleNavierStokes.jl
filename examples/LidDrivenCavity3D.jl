@@ -12,7 +12,12 @@ if isdefined(@__MODULE__, :LanguageServer)
 end
 
 using IncompressibleNavierStokes
-using GLMakie
+
+if haskey(ENV, "GITHUB_ACTIONS")
+    using CairoMakie
+else
+    using GLMakie
+end
 
 # Case name for saving results
 name = "LDC"
