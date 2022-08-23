@@ -1,15 +1,15 @@
 """
-    ke_viscosity(grid, bc)
+    ke_viscosity(grid, boundary_conditions)
 
 Average (turbulent) viscosity to cell faces.
 """
 function ke_viscosity end
 
 # 2D version
-function ke_viscosity(grid::Grid{T,2}, bc) where {T}
-	(; x, y, xp, yp, hx, hy) = grid
+function ke_viscosity(grid::Grid{T,2}, boundary_conditions) where {T}
+    (; x, y, xp, yp, hx, hy) = grid
     (; Nx, Ny, Npx, Npy, Nux_in, Nuy_in, Nvx_in, Nvy_in, Bvux, Buvy, Bkux, Bkvy) = grid
-    (; k_bc, e_bc) = bc
+    (; k_bc, e_bc) = boundary_conditions
 
     kLe = fill(k_bc.x[1], Ny + 1)
     kRi = fill(k_bc.x[2], Ny + 1)
@@ -21,15 +21,15 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
     eLo = fill(e_bc.y[1], Nx + 1)
     eUp = fill(e_bc.y[2], Nx + 1)
 
-	kLe = LinearInterpolation(y,kLe)(yp)
-	kRi = LinearInterpolation(y,kRi)(yp)
-	kLo = LinearInterpolation(x,kLo)(xp)
-	kUp = LinearInterpolation(x,kUp)(xp)
+    kLe = LinearInterpolation(y, kLe)(yp)
+    kRi = LinearInterpolation(y, kRi)(yp)
+    kLo = LinearInterpolation(x, kLo)(xp)
+    kUp = LinearInterpolation(x, kUp)(xp)
 
-	eLe = LinearInterpolation(y,eLe)(yp)
-	eRi = LinearInterpolation(y,eRi)(yp)
-	eLo = LinearInterpolation(x,eLo)(xp)
-	eUp = LinearInterpolation(x,eUp)(xp)
+    eLe = LinearInterpolation(y, eLe)(yp)
+    eRi = LinearInterpolation(y, eRi)(yp)
+    eLo = LinearInterpolation(x, eLo)(xp)
+    eUp = LinearInterpolation(x, eUp)(xp)
 
     # Averaging weight:
     weight = 1 / 2
@@ -40,8 +40,15 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
 
     ## K
     # Boundary conditions for k; mapping from Npx (k) points to Npx+2 points
-    B1D, Btemp, ybcl, ybcr =
-        bc_general_stag(Npx + 2, Npx, 2, bc.k.x[1], bc.k.x[2], hx[1], hx[end])
+    B1D, Btemp, ybcl, ybcr = bc_general_stag(
+        Npx + 2,
+        Npx,
+        2,
+        boundary_conditions.k.x[1],
+        boundary_conditions.k.x[2],
+        hx[1],
+        hx[end],
+    )
     # Then map back to Nux_in+1 points (ux-faces) with Bkux
 
     # Extend to 2D
@@ -51,8 +58,15 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
 
     ## Epsilon
     # In a similar way but with different boundary conditions
-    B1D, Btemp, ybcl, ybcr =
-        bc_general_stag(Npx + 2, Npx, 2, bc.e.x[1], bc.e.x[2], hx[1], hx[end])
+    B1D, Btemp, ybcl, ybcr = bc_general_stag(
+        Npx + 2,
+        Npx,
+        2,
+        boundary_conditions.e.x[1],
+        boundary_conditions.e.x[2],
+        hx[1],
+        hx[end],
+    )
     # Extend to 2D
     Ae_ux = kron(sparse(I, Nuy_in, Nuy_in), Bkux * A1D * B1D)
     ybc = kron(eLe, ybcl) + kron(eRi, ybcr)
@@ -69,8 +83,15 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
 
     ## K
     # Boundary conditions for k; mapping from Npx (k) points to Npx+2 points
-    B1D, Btemp, ybcl, ybcr =
-        bc_general_stag(Npx + 2, Npx, 2, bc.k.x[1], bc.k.x[2], hx[1], hx[end])
+    B1D, Btemp, ybcl, ybcr = bc_general_stag(
+        Npx + 2,
+        Npx,
+        2,
+        boundary_conditions.k.x[1],
+        boundary_conditions.k.x[2],
+        hx[1],
+        hx[end],
+    )
 
     # Then map to Nux_in points (like Iv_uy) with Bvux
 
@@ -81,9 +102,16 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
     ybc = kron(kLe_i, ybcl) + kron(kRi_i, ybcr)
     yAk_uy_lr = kron(sparse(I, Npy + 2, Npy + 2), Bvux * A1D * Btemp) * ybc
 
-    # Apply bc in y-direction
-    B2D, Btemp, ybcl, ybcu =
-        bc_general_stag(Npy + 2, Npy, 2, bc.k.y[1], bc.k.y[2], hy[1], hy[end])
+    # Apply BC in y-direction
+    B2D, Btemp, ybcl, ybcu = bc_general_stag(
+        Npy + 2,
+        Npy,
+        2,
+        boundary_conditions.k.y[1],
+        boundary_conditions.k.y[2],
+        hy[1],
+        hy[end],
+    )
     ybc = kron(Btemp * ybcl, kLo) + kron(Btemp * ybcu, kUp)
     yAk_uy_lu = A2D * ybc
 
@@ -100,8 +128,15 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
 
     ## Epsilon
     # In a similar way but with different boundary conditions
-    B1D, Btemp, ybcl, ybcr =
-        bc_general_stag(Npx + 2, Npx, 2, bc.e.x[1], bc.e.x[2], hx[1], hx[end])
+    B1D, Btemp, ybcl, ybcr = bc_general_stag(
+        Npx + 2,
+        Npx,
+        2,
+        boundary_conditions.e.x[1],
+        boundary_conditions.e.x[2],
+        hx[1],
+        hx[end],
+    )
 
     # Then map to Nux_in points (like Iv_uy) with Bvux
 
@@ -112,9 +147,16 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
     ybc = kron(eLe_i, ybcl) + kron(eRi_i, ybcr)
     yAe_uy_lr = kron(sparse(I, Npy + 2, Npy + 2), Bvux * A1D * Btemp) * ybc
 
-    # Apply bc in y-direction
-    B2D, Btemp, ybcl, ybcu =
-        bc_general_stag(Npy + 2, Npy, 2, bc.e.y[1], bc.e.y[2], hy[1], hy[end])
+    # Apply BC in y-direction
+    B2D, Btemp, ybcl, ybcu = bc_general_stag(
+        Npy + 2,
+        Npy,
+        2,
+        boundary_conditions.e.y[1],
+        boundary_conditions.e.y[2],
+        hy[1],
+        hy[end],
+    )
     ybc = kron(Btemp * ybcl, eLo) + kron(Btemp * ybcu, eUp)
     yAe_uy_lu = A2D * ybc
 
@@ -138,8 +180,15 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
 
     ## K
     # Boundary conditions for k; mapping from Npy (k) points to Npy+2 points
-    B1D, Btemp, ybcl, ybcu =
-        bc_general_stag(Npy + 2, Npy, 2, bc.k.y[1], bc.k.y[2], hy[1], hy[end])
+    B1D, Btemp, ybcl, ybcu = bc_general_stag(
+        Npy + 2,
+        Npy,
+        2,
+        boundary_conditions.k.y[1],
+        boundary_conditions.k.y[2],
+        hy[1],
+        hy[end],
+    )
 
     # Map to Nvy_in points (like Iu_vx) with Buvy
 
@@ -151,8 +200,15 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
     yAk_vx_lu = kron(Buvy * A1D * Btemp, sparse(I, Npx + 2, Npx + 2)) * ybc
 
     # Apply boundary conditions also in x-direction:
-    B2D, Btemp, ybcl, ybcr =
-        bc_general_stag(Npx + 2, Npx, 2, bc.k.x[1], bc.k.x[2], hx[1], hx[end])
+    B2D, Btemp, ybcl, ybcr = bc_general_stag(
+        Npx + 2,
+        Npx,
+        2,
+        boundary_conditions.k.x[1],
+        boundary_conditions.k.x[2],
+        hx[1],
+        hx[end],
+    )
     ybc = kron(kLe, Btemp * ybcl) + kron(kRi, Btemp * ybcr)
     yAk_vx_lr = A2D * ybc
 
@@ -169,8 +225,15 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
 
     ## Epsilon
     # In a similar way but with different boundary conditions
-    B1D, Btemp, ybcl, ybcu =
-        bc_general_stag(Npy + 2, Npy, 2, bc.e.y[1], bc.e.y[2], hy[1], hy[end])
+    B1D, Btemp, ybcl, ybcu = bc_general_stag(
+        Npy + 2,
+        Npy,
+        2,
+        boundary_conditions.e.y[1],
+        boundary_conditions.e.y[2],
+        hy[1],
+        hy[end],
+    )
 
     # Extend to 2D
     A2D = kron(Buvy * A1D * B1D, sparse(I, Npx + 2, Npx + 2))
@@ -180,8 +243,15 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
     yAe_vx_lu = kron(Buvy * A1D * Btemp, sparse(I, Npx + 2, Npx + 2)) * ybc
 
     # Apply boundary conditions also in x-direction:
-    B2D, Btemp, ybcl, ybcr =
-        bc_general_stag(Npx + 2, Npx, 2, bc.e.x[1], bc.e.x[2], hx[1], hx[end])
+    B2D, Btemp, ybcl, ybcr = bc_general_stag(
+        Npx + 2,
+        Npx,
+        2,
+        boundary_conditions.e.x[1],
+        boundary_conditions.e.x[2],
+        hx[1],
+        hx[end],
+    )
     ybc = kron(eLe, Btemp * ybcl) + kron(eRi, Btemp * ybcr)
     yAe_vx_lr = A2D * ybc
 
@@ -205,8 +275,15 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
 
     ## K
     # Boundary conditions; mapping from Npy (k) points to Npy+2 (vy faces) points
-    B1D, Btemp, ybcl, ybcu =
-        bc_general_stag(Npy + 2, Npy, 2, bc.k.y[1], bc.k.y[2], hy[1], hy[end])
+    B1D, Btemp, ybcl, ybcu = bc_general_stag(
+        Npy + 2,
+        Npy,
+        2,
+        boundary_conditions.k.y[1],
+        boundary_conditions.k.y[2],
+        hy[1],
+        hy[end],
+    )
 
     # Then map back to Nvy_in+1 points (vy-faces) with Bkvy
 
@@ -218,8 +295,15 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
 
     ## Epsilon
     # In a similar way but with different boundary conditions
-    B1D, Btemp, ybcl, ybcu =
-        bc_general_stag(Npy + 2, Npy, 2, bc.e.y[1], bc.e.y[2], hy[1], hy[end])
+    B1D, Btemp, ybcl, ybcu = bc_general_stag(
+        Npy + 2,
+        Npy,
+        2,
+        boundary_conditions.e.y[1],
+        boundary_conditions.e.y[2],
+        hy[1],
+        hy[end],
+    )
     # Extend to 2D
     Ae_vy = kron(Bkvy * A1D * B1D, sparse(I, Nvx_in, Nvx_in))
     ybc = kron(ybcl, eLo) + kron(ybcu, eUp)
@@ -239,7 +323,6 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
         yAk_uy,
         yAk_vx,
         yAk_vy,
-
         Ae_ux,
         Ae_uy,
         Ae_vx,
@@ -252,6 +335,6 @@ function ke_viscosity(grid::Grid{T,2}, bc) where {T}
 end
 
 # 3D version
-function ke_viscosity(grid::Grid{T,3}, bc) where {T}
+function ke_viscosity(grid::Grid{T,3}, boundary_conditions) where {T}
     error("Not implemented")
 end

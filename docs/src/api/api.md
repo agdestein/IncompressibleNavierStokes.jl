@@ -34,7 +34,7 @@ is_steady
 Grid
 Operators
 SolverSettings
-BC
+BoundaryConditions
 Setup
 ```
 

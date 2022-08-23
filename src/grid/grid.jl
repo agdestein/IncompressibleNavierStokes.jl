@@ -161,12 +161,12 @@ Base.@kwdef struct Grid{T,N}
 end
 
 """
-    Grid(x, y; bc, order4 = false, T = eltype(x))
+    Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
 
-Create nonuniform cartesian box mesh `x` × `y` with boundary conditions `bc`.
+Create nonuniform cartesian box mesh `x` × `y` with boundary conditions `boundary_conditions`.
 If `order4` is `true`, a fourth order mesh is created.
 """
-function Grid(x, y; bc, order4 = false, T = eltype(x))
+function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
     Nx = length(x) - 1
     Ny = length(y) - 1
     xlims = (x[1], x[end])
@@ -210,9 +210,9 @@ function Grid(x, y; bc, order4 = false, T = eltype(x))
     # x-dir
     Nux_b = 2               # Boundary points
     Nux_in = Nx + 1         # Inner points
-    Nux_in -= bc.u.x[1] ∈ [:dirichlet, :symmetric]
-    Nux_in -= bc.u.x[2] ∈ [:dirichlet, :symmetric]
-    Nux_in -= bc.u.x == (:periodic, :periodic)
+    Nux_in -= boundary_conditions.u.x[1] ∈ [:dirichlet, :symmetric]
+    Nux_in -= boundary_conditions.u.x[2] ∈ [:dirichlet, :symmetric]
+    Nux_in -= boundary_conditions.u.x == (:periodic, :periodic)
     Nux_t = Nux_in + Nux_b  # Total number
 
     # Y-dir
@@ -234,9 +234,9 @@ function Grid(x, y; bc, order4 = false, T = eltype(x))
     # Y-dir
     Nvy_b = 2               # Boundary points
     Nvy_in = Ny + 1         # Inner points
-    Nvy_in -= bc.v.y[1] ∈ [:dirichlet, :symmetric]
-    Nvy_in -= bc.v.y[2] ∈ [:dirichlet, :symmetric]
-    Nvy_in -= bc.v.y == (:periodic, :periodic)
+    Nvy_in -= boundary_conditions.v.y[1] ∈ [:dirichlet, :symmetric]
+    Nvy_in -= boundary_conditions.v.y[2] ∈ [:dirichlet, :symmetric]
+    Nvy_in -= boundary_conditions.v.y == (:periodic, :periodic)
     Nvy_t = Nvy_in + Nvy_b # Total number
 
     # Total number
@@ -249,7 +249,7 @@ function Grid(x, y; bc, order4 = false, T = eltype(x))
     if order4
         hx3 = zeros(Nx)
         hx3[2:end-1] = hx[1:end-2] + hx[2:end-1] + hx[3:end]
-        if bc.u.x[1] == :periodic && bc.u.x[2] == :periodic
+        if boundary_conditions.u.x[1] == :periodic && boundary_conditions.u.x[2] == :periodic
             hx3[1] = hx[end] + hx[1] + hx[2]
             hx3[end] = hx[end-1] + hx[end] + hx[1]
         else
@@ -259,7 +259,7 @@ function Grid(x, y; bc, order4 = false, T = eltype(x))
 
         hy3 = zeros(Ny)
         hy3[2:end-1] = hy[1:end-2] + hy[2:end-1] + hy[3:end]
-        if bc.v.y[1] == :periodic && bc.v.y[2] == :periodic
+        if boundary_conditions.v.y[1] == :periodic && boundary_conditions.v.y[2] == :periodic
             hy3[1] = hy[end] + hy[1] + hy[2]
             hy3[end] = hy[end-1] + hy[end] + hy[1]
         else
@@ -273,7 +273,7 @@ function Grid(x, y; bc, order4 = false, T = eltype(x))
         # Distance between pressure points
         gx3 = zeros(Nx + 1)
         gx3[3:Nx-1] = gx[2:end-3] + gx[3:end-2] + gx[4:end-1]
-        if bc.u.x[1] == :periodic && bc.u.x[2] == :periodic
+        if boundary_conditions.u.x[1] == :periodic && boundary_conditions.u.x[2] == :periodic
             gx3[1] = gx[end-1] + gx[end] + gx[1] + gx[2]
             gx3[2] = gx[end] + gx[1] + gx[2] + gx[3]
             gx3[end-1] = gx[end-2] + gx[end-1] + gx[end] + gx[1]
@@ -288,7 +288,7 @@ function Grid(x, y; bc, order4 = false, T = eltype(x))
         # Distance between pressure points
         gy3 = zeros(Ny + 1)
         gy3[3:Ny-1] = gy[2:end-3] + gy[3:end-2] + gy[4:end-1]
-        if bc.v.y[1] == :periodic && bc.v.y[2] == :periodic
+        if boundary_conditions.v.y[1] == :periodic && boundary_conditions.v.y[2] == :periodic
             gy3[1] = gy[end-1] + gy[end] + gy[1] + gy[2]
             gy3[2] = gy[end] + gy[1] + gy[2] + gy[3]
             gy3[end-1] = gy[end-2] + gy[end-1] + gy[end] + gy[1]
@@ -315,7 +315,7 @@ function Grid(x, y; bc, order4 = false, T = eltype(x))
     hxi = copy(hx)
 
     # Restrict Nx+2 to Nux_in+1 points
-    if bc.u.x == (:dirichlet, :dirichlet)
+    if boundary_conditions.u.x == (:dirichlet, :dirichlet)
         xin = x[2:end-1]
         hxd = copy(hx)
         gxi = gx[2:end-1]
@@ -328,22 +328,22 @@ function Grid(x, y; bc, order4 = false, T = eltype(x))
             gxd13 = [gx[2]; 2 * gx[1]; gx[2:end-1]; 2 * gx[end]; gx[end-1]]
             gxi3 = gx3[2:end-1]
         end
-    elseif bc.u.x == (:dirichlet, :pressure)
+    elseif boundary_conditions.u.x == (:dirichlet, :pressure)
         xin = x[2:end]
         hxd = [hx; hx[end]]
         gxi = gx[2:end]
         diagpos = 1
-    elseif bc.u.x == (:pressure, :dirichlet)
+    elseif boundary_conditions.u.x == (:pressure, :dirichlet)
         xin = x[1:end-1]
         hxd = [hx[1]; hx]
         gxi = gx[1:end-1]
         diagpos = 0
-    elseif bc.u.x == (:pressure, :pressure)
+    elseif boundary_conditions.u.x == (:pressure, :pressure)
         xin = x[1:end]
         hxd = [hx[1]; hx; hx[end]]
         gxi = copy(gx)
         diagpos = 0
-    elseif bc.u.x == (:periodic, :periodic)
+    elseif boundary_conditions.u.x == (:periodic, :periodic)
         xin = x[1:end-1]
         hxd = [hx[end]; hx]
         gxi = [gx[1] + gx[end]; gx[2:end-1]]
@@ -383,7 +383,7 @@ function Grid(x, y; bc, order4 = false, T = eltype(x))
 
 
     # Restrict Ny+2 to Nvy_in+1 points
-    if bc.v.y == (:dirichlet, :dirichlet)
+    if boundary_conditions.v.y == (:dirichlet, :dirichlet)
         yin = y[2:end-1]
         hyd = copy(hy)
         gyi = gy[2:end-1]
@@ -396,22 +396,22 @@ function Grid(x, y; bc, order4 = false, T = eltype(x))
             gyd13 = [gy[2]; 2 * gy[1]; gy[2:end-1]; 2 * gy[end]; gy[end-1]]
             gyi3 = gy3[2:end-1]
         end
-    elseif bc.v.y == (:dirichlet, :pressure)
+    elseif boundary_conditions.v.y == (:dirichlet, :pressure)
         yin = y[2:end]
         hyd = [hy; hy[end]]
         gyi = gy[2:end]
         diagpos = 1
-    elseif bc.v.y == (:pressure, :dirichlet)
+    elseif boundary_conditions.v.y == (:pressure, :dirichlet)
         yin = y[1:end-1]
         hyd = [hy[1]; hy]
         gyi = gy[1:end-1]
         diagpos = 0
-    elseif bc.v.y == (:pressure, :pressure)
+    elseif boundary_conditions.v.y == (:pressure, :pressure)
         yin = y[1:end]
         hyd = [hy[1]; hy; hy[end]]
         gyi = copy(gy)
         diagpos = 0
-    elseif bc.v.y == (:periodic, :periodic)
+    elseif boundary_conditions.v.y == (:periodic, :periodic)
         yin = y[1:end-1]
         hyd = [hy[end]; hy]
         gyi = [gy[1] + gy[end]; gy[2:end-1]]
@@ -562,12 +562,12 @@ function Grid(x, y; bc, order4 = false, T = eltype(x))
 end
 
 """
-    Grid(x, y; bc, order4 = false, T = eltype(x))
+    Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
 
-Create nonuniform cartesian box mesh `x` × `y` × `z` with boundary conditions `bc`.
+Create nonuniform cartesian box mesh `x` × `y` × `z` with boundary conditions `boundary_conditions`.
 If `order4` is `true`, a fourth order mesh is created.
 """
-function Grid(x, y, z; bc, order4 = false, T = eltype(x))
+function Grid(x, y, z; boundary_conditions, order4 = false, T = eltype(x))
     order4 && error("Fourth order grids not yet implemented for 3D")
 
     Nx = length(x) - 1
@@ -623,9 +623,9 @@ function Grid(x, y, z; bc, order4 = false, T = eltype(x))
     # x-dir
     Nux_b = 2               # Boundary points
     Nux_in = Nx + 1         # Inner points
-    Nux_in -= bc.u.x[1] ∈ [:dirichlet, :symmetric]
-    Nux_in -= bc.u.x[2] ∈ [:dirichlet, :symmetric]
-    Nux_in -= bc.u.x == (:periodic, :periodic)
+    Nux_in -= boundary_conditions.u.x[1] ∈ [:dirichlet, :symmetric]
+    Nux_in -= boundary_conditions.u.x[2] ∈ [:dirichlet, :symmetric]
+    Nux_in -= boundary_conditions.u.x == (:periodic, :periodic)
     Nux_t = Nux_in + Nux_b  # Total number
 
     # y-dir
@@ -651,9 +651,9 @@ function Grid(x, y, z; bc, order4 = false, T = eltype(x))
     # y-dir
     Nvy_b = 2               # Boundary points
     Nvy_in = Ny + 1         # Inner points
-    Nvy_in -= bc.v.y[1] ∈ [:dirichlet, :symmetric]
-    Nvy_in -= bc.v.y[2] ∈ [:dirichlet, :symmetric]
-    Nvy_in -= bc.v.y == (:periodic, :periodic)
+    Nvy_in -= boundary_conditions.v.y[1] ∈ [:dirichlet, :symmetric]
+    Nvy_in -= boundary_conditions.v.y[2] ∈ [:dirichlet, :symmetric]
+    Nvy_in -= boundary_conditions.v.y == (:periodic, :periodic)
     Nvy_t = Nvy_in + Nvy_b # Total number
 
     # z-dir
@@ -679,9 +679,9 @@ function Grid(x, y, z; bc, order4 = false, T = eltype(x))
     # z-dir
     Nwz_b = 2               # Boundary points
     Nwz_in = Nz + 1         # Inner points
-    Nwz_in -= bc.w.z[1] ∈ [:dirichlet, :symmetric]
-    Nwz_in -= bc.w.z[2] ∈ [:dirichlet, :symmetric]
-    Nwz_in -= bc.w.z == (:periodic, :periodic)
+    Nwz_in -= boundary_conditions.w.z[1] ∈ [:dirichlet, :symmetric]
+    Nwz_in -= boundary_conditions.w.z[2] ∈ [:dirichlet, :symmetric]
+    Nwz_in -= boundary_conditions.w.z == (:periodic, :periodic)
     Nwz_t = Nwz_in + Nwz_b  # Total number
 
     # Total number
@@ -706,11 +706,11 @@ function Grid(x, y, z; bc, order4 = false, T = eltype(x))
     hxd = [hx[1]; hx; hx[end]]
 
     # Restrict Nx+2 to Nux_in+1 points
-    bc.u.x == (:dirichlet, :dirichlet) && (diagpos = 1)
-    bc.u.x == (:dirichlet, :pressure) && (diagpos = 1)
-    bc.u.x == (:pressure, :dirichlet) && (diagpos = 0)
-    bc.u.x == (:pressure, :pressure) && (diagpos = 0)
-    bc.u.x == (:periodic, :periodic) && (diagpos = 0)
+    boundary_conditions.u.x == (:dirichlet, :dirichlet) && (diagpos = 1)
+    boundary_conditions.u.x == (:dirichlet, :pressure) && (diagpos = 1)
+    boundary_conditions.u.x == (:pressure, :dirichlet) && (diagpos = 0)
+    boundary_conditions.u.x == (:pressure, :pressure) && (diagpos = 0)
+    boundary_conditions.u.x == (:periodic, :periodic) && (diagpos = 0)
 
     Bmap = spdiagm(Nux_in + 1, Nx + 2, diagpos => ones(Nux_in + 1))
     Bmap_x_xin = spdiagm(Nux_in, Nx + 1, diagpos => ones(Nux_in))
@@ -718,7 +718,7 @@ function Grid(x, y, z; bc, order4 = false, T = eltype(x))
     gxi = Bmap_x_xin * gx
     xin = Bmap_x_xin * x
 
-    if bc.u.x == (:periodic, :periodic)
+    if boundary_conditions.u.x == (:periodic, :periodic)
         gxd[1] = (hx[1] + hx[end]) / 2
         gxd[end] = gxd[1]
         gxi[1] = gxd[1]
@@ -747,11 +747,11 @@ function Grid(x, y, z; bc, order4 = false, T = eltype(x))
     hyd = [hy[1]; hy; hy[end]]
 
     # Restrict Ny+2 to Nvy_in+1 points
-    bc.v.y == (:dirichlet, :dirichlet) && (diagpos = 1)
-    bc.v.y == (:dirichlet, :pressure) && (diagpos = 1)
-    bc.v.y == (:pressure, :dirichlet) && (diagpos = 0)
-    bc.v.y == (:pressure, :pressure) && (diagpos = 0)
-    bc.v.y == (:periodic, :periodic) && (diagpos = 0)
+    boundary_conditions.v.y == (:dirichlet, :dirichlet) && (diagpos = 1)
+    boundary_conditions.v.y == (:dirichlet, :pressure) && (diagpos = 1)
+    boundary_conditions.v.y == (:pressure, :dirichlet) && (diagpos = 0)
+    boundary_conditions.v.y == (:pressure, :pressure) && (diagpos = 0)
+    boundary_conditions.v.y == (:periodic, :periodic) && (diagpos = 0)
 
     Bmap = spdiagm(Nvy_in + 1, Ny + 2, diagpos => ones(Nvy_in + 1))
     Bmap_y_yin = spdiagm(Nvy_in, Ny + 1, diagpos => ones(Nvy_in))
@@ -760,7 +760,7 @@ function Grid(x, y, z; bc, order4 = false, T = eltype(x))
     gyi = Bmap_y_yin * gy
     yin = Bmap_y_yin * y
 
-    if bc.v.y == (:periodic, :periodic)
+    if boundary_conditions.v.y == (:periodic, :periodic)
         gyd[1] = (hy[1] + hy[end]) / 2
         gyd[end] = gyd[1]
         gyi[1] = gyd[1]
@@ -789,11 +789,11 @@ function Grid(x, y, z; bc, order4 = false, T = eltype(x))
     hzd = [hz[1]; hz; hz[end]]
 
     # Restrict Nz+2 to Nvz_in+1 points
-    bc.w.z == (:dirichlet, :dirichlet) && (diagpos = 1)
-    bc.w.z == (:dirichlet, :pressure) && (diagpos = 1)
-    bc.w.z == (:pressure, :dirichlet) && (diagpos = 0)
-    bc.w.z == (:pressure, :pressure) && (diagpos = 0)
-    bc.w.z == (:periodic, :periodic) && (diagpos = 0)
+    boundary_conditions.w.z == (:dirichlet, :dirichlet) && (diagpos = 1)
+    boundary_conditions.w.z == (:dirichlet, :pressure) && (diagpos = 1)
+    boundary_conditions.w.z == (:pressure, :dirichlet) && (diagpos = 0)
+    boundary_conditions.w.z == (:pressure, :pressure) && (diagpos = 0)
+    boundary_conditions.w.z == (:periodic, :periodic) && (diagpos = 0)
 
     shape = (Nwz_in + 1, Nz + 2)
     Bmap = spdiagm(shape..., diagpos => ones(Nwz_in + 1))
@@ -802,7 +802,7 @@ function Grid(x, y, z; bc, order4 = false, T = eltype(x))
     gzi = Bmap_z_zin * gz
     zin = Bmap_z_zin * z
 
-    if bc.w.z == (:periodic, :periodic)
+    if boundary_conditions.w.z == (:periodic, :periodic)
         gzd[1] = (hz[1] + hz[end]) / 2
         gzd[end] = gzd[1]
         gzi[1] = gzd[1]

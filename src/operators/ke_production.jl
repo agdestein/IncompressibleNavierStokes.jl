@@ -1,12 +1,12 @@
 """
-    ke_production(grid, bc)
+    ke_production(grid, boundary_conditions)
 
 Differencing velocity to k-points.
 """
 function ke_convection end
 
 # 2D version
-function ke_production(grid::Grid{T,2}, bc) where {T}
+function ke_production(grid::Grid{T,2}, boundary_conditions) where {T}
     ## Du/dx
 
     # Differencing matrix
@@ -14,8 +14,15 @@ function ke_production(grid::Grid{T,2}, bc) where {T}
     C1D = spdiagm(Npx, Npx + 1, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    B1D, Btemp, ybcl, ybcr =
-        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
+    B1D, Btemp, ybcl, ybcr = bc_general(
+        Npx + 1,
+        Nux_in,
+        Npx + 1 - Nux_in,
+        boundary_conditions.u.x[1],
+        boundary_conditions.u.x[2],
+        hx[1],
+        hx[end],
+    )
 
     Cux_k = kron(sparse(I, Npy, Npy), C1D * B1D)
     uLe_i = interp1(y, uLe, yp)
@@ -33,8 +40,15 @@ function ke_production(grid::Grid{T,2}, bc) where {T}
     A1D = spdiagm(Npx, Npx + 1, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    B1D, Btemp, ybcl, ybcr =
-        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
+    B1D, Btemp, ybcl, ybcr = bc_general(
+        Npx + 1,
+        Nux_in,
+        Npx + 1 - Nux_in,
+        boundary_conditions.u.x[1],
+        boundary_conditions.u.x[2],
+        hx[1],
+        hx[end],
+    )
     uLe_i = interp1(y, uLe, yp)
     uRi_i = interp1(y, uRi, yp)
     ybc = kron(uLe_i, ybcl) + kron(uRi_i, ybcr)
@@ -47,8 +61,15 @@ function ke_production(grid::Grid{T,2}, bc) where {T}
     diag2 = 1 ./ gydnew
     C1D = spdiagm(Npy, Npy + 2, 0 => -diag2, 1 => diag2)
 
-    B1D, Btemp, ybcl, ybcu =
-        bc_general_stag(Npy + 2, Npy, 2, bc.u.y[1], bc.u.y[2], hy[1], hy[end])
+    B1D, Btemp, ybcl, ybcu = bc_general_stag(
+        Npy + 2,
+        Npy,
+        2,
+        boundary_conditions.u.y[1],
+        boundary_conditions.u.y[2],
+        hy[1],
+        hy[end],
+    )
 
     Cuy_k = kron(C1D * B1D, sparse(I, Npx, Npx))
     uLo_i = interp1(x, uLo, xp)
@@ -67,8 +88,15 @@ function ke_production(grid::Grid{T,2}, bc) where {T}
     A1D = spdiagm(Npy, Npy + 1, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    B1D, Btemp, ybcl, ybcu =
-        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
+    B1D, Btemp, ybcl, ybcu = bc_general(
+        Npy + 1,
+        Nvy_in,
+        Npy + 1 - Nvy_in,
+        boundary_conditions.v.y[1],
+        boundary_conditions.v.y[2],
+        hy[1],
+        hy[end],
+    )
     vLo_i = interp1(x, vLo, xp)
     vUp_i = interp1(x, vUp, xp)
     ybc = kron(ybcl, vLo_i) + kron(ybcu, vUp_i)
@@ -80,8 +108,15 @@ function ke_production(grid::Grid{T,2}, bc) where {T}
     diag2 = 1 ./ gxdnew
     C1D = spdiagm(Npx, Npx + 2, 0 => -diag2, 1 => diag2)
 
-    B1D, Btemp, ybcl, ybcr =
-        bc_general_stag(Npx + 2, Npx, Npx + 2 - Npx, bc.v.x[1], bc.v.x[2], hx[1], hx[end])
+    B1D, Btemp, ybcl, ybcr = bc_general_stag(
+        Npx + 2,
+        Npx,
+        Npx + 2 - Npx,
+        boundary_conditions.v.x[1],
+        boundary_conditions.v.x[2],
+        hx[1],
+        hx[end],
+    )
 
     Cvx_k = kron(sparse(I, Npy, Npy), C1D * B1D)
     vLe_i = interp1(y, vLe, yp)
@@ -99,8 +134,15 @@ function ke_production(grid::Grid{T,2}, bc) where {T}
     C1D = spdiagm(Npy, Npy + 1, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    B1D, Btemp, ybcl, ybcu =
-        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
+    B1D, Btemp, ybcl, ybcu = bc_general(
+        Npy + 1,
+        Nvy_in,
+        Npy + 1 - Nvy_in,
+        boundary_conditions.v.y[1],
+        boundary_conditions.v.y[2],
+        hy[1],
+        hy[end],
+    )
 
     Cvy_k = kron(C1D * B1D, sparse(I, Npx, Npx))
     vLo_i = interp1(x, vLo, xp)
@@ -111,11 +153,10 @@ function ke_production(grid::Grid{T,2}, bc) where {T}
     # Cvy_k * vₕ + yCvy_k
 
     # TODO: Return correct operators
-    (;
-    )
+    (;)
 end
 
 # 3D version
-function ke_production(grid::Grid{T,3}, bc) where {T}
+function ke_production(grid::Grid{T,3}, boundary_conditions) where {T}
     error("Not implemented")
 end

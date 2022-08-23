@@ -1,18 +1,20 @@
 """
-    operator_divergence(grid, bc)
+    operator_divergence(grid, boundary_conditions)
 
 Construct divergence and gradient operator.
 """
 function operator_divergence end
 
 # 2D version
-function operator_divergence(grid::Grid{T,2}, bc) where {T}
+function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     (; Npx, Npy) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t) = grid
     (; hx, hy) = grid
     (; Ω⁻¹) = grid
     (; order4, α) = grid
+
+    bc = boundary_conditions
 
     if order4
         (; hxi3, hyi3) = grid
@@ -143,7 +145,7 @@ function operator_divergence(grid::Grid{T,2}, bc) where {T}
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions
     if all(≠(:pressure), (bc.u.x..., bc.v.y...))
-        if any(≉(0; atol = 1e-10), sum(A; dims = 2))
+         if any(≉(0; atol = 1e-10), sum(A; dims = 2))
             @warn "Pressure matrix: not all rowsums are zero!"
         end
     end
@@ -159,13 +161,15 @@ function operator_divergence(grid::Grid{T,2}, bc) where {T}
 end
 
 # 3D version
-function operator_divergence(grid::Grid{T,3}, bc) where {T}
+function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuz_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t, Nvz_in) = grid
     (; Nwx_in, Nwy_in, Nwz_in, Nwz_b, Nwz_t) = grid
     (; Npx, Npy, Npz) = grid
     (; hx, hy, hz) = grid
     (; Ω⁻¹) = grid
+
+    bc = boundary_conditions
 
     ## Divergence operator M
 
@@ -276,7 +280,7 @@ function operator_divergence(grid::Grid{T,3}, bc) where {T}
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions
     if all(≠(:pressure), (bc.u.x..., bc.v.y..., bc.w.z...))
-        if any(≉(0; atol = 1e-10), sum(A; dims = 2))
+         if any(≉(0; atol = 1e-10), sum(A; dims = 2))
             @warn "Pressure matrix: not all rowsums are zero!"
         end
     end

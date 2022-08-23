@@ -7,10 +7,10 @@ function plot_streamfunction end
 
 # 2D version
 function plot_streamfunction(setup::Setup{T,2}, V, t; kwargs...) where {T}
-    (; bc) = setup
-    (; x, y, xlims, ylims) = setup.grid
+    (; grid, boundary_conditions) = setup
+    (; x, y, xlims, ylims) = grid
 
-    if all(==(:periodic), (bc.u.x[1], bc.v.y[1]))
+    if all(==(:periodic), (boundary_conditions.u.x[1], boundary_conditions.v.y[1]))
         xψ = x
         yψ = y
     else

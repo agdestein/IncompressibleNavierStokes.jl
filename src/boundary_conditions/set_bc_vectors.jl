@@ -7,7 +7,7 @@ function set_bc_vectors! end
 
 # 2D version
 function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
-    (; grid, operators, bc, viscosity_model) = setup
+    (; grid, operators, boundary_conditions, viscosity_model) = setup
     (; Nux_in, Nvy_in, Np, Npx, Npy) = grid
     (; xin, yin, x, y, hx, hy, xp, yp) = grid
     (; Ω, indu, indv) = grid
@@ -21,8 +21,8 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     (; Aν_vy_bc) = operators
     (; Cux_k_bc, Cuy_k_bc, Cvx_k_bc, Cvy_k_bc, Auy_k_bc, Avx_k_bc) = operators
     (; Su_vx_bc_lr, Su_vx_bc_lu, Sv_uy_bc_lr, Sv_uy_bc_lu) = operators
-    (; u_bc, v_bc, dudt_bc, dvdt_bc) = bc
-    (; p_bc, bc_unsteady) = bc
+    (; u_bc, v_bc, dudt_bc, dvdt_bc) = boundary_conditions
+    (; p_bc, bc_unsteady) = boundary_conditions
     (; Re) = viscosity_model
 
     if order4
@@ -111,15 +111,15 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     # Left and right side
     y1D_le = zeros(Nux_in)
     y1D_ri = zeros(Nux_in)
-    bc.u.x[1] == :pressure && (y1D_le[1] = -1)
-    bc.u.x[2] == :pressure && (y1D_ri[end] = 1)
+    boundary_conditions.u.x[1] == :pressure && (y1D_le[1] = -1)
+    boundary_conditions.u.x[2] == :pressure && (y1D_ri[end] = 1)
     y_px = (hy .* p_bc.x[1]) ⊗ y1D_le + (hy .* p_bc.x[2]) ⊗ y1D_ri
 
     # Lower and upper side
     y1D_lo = zeros(Nvy_in)
     y1D_up = zeros(Nvy_in)
-    bc.v.y[1] == :pressure && (y1D_lo[1] = -1)
-    bc.v.y[2] == :pressure && (y1D_up[end] = 1)
+    boundary_conditions.v.y[1] == :pressure && (y1D_lo[1] = -1)
+    boundary_conditions.v.y[2] == :pressure && (y1D_up[end] = 1)
     y_py = y1D_lo ⊗ (hx .* p_bc.y[1]) + y1D_up ⊗ (hx .* p_bc.y[2])
 
     y_p = [y_px; y_py]
@@ -254,23 +254,23 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     yIv_uy = yIv_uy_lr + yIv_uy_lu
 
     if order4
-        if bc.v.y[1] == :dirichlet
+        if boundary_conditions.v.y[1] == :dirichlet
             vLe_ext = [2 * vLe[1] - vLe[2]; vLe]
             vRi_ext = [2 * vRi[1] - vRi[2]; vRi]
-        elseif bc.v.y[1] == :periodic
+        elseif boundary_conditions.v.y[1] == :periodic
             vLe_ext = [0; vLe]
             vRi_ext = [0; vRi]
-        elseif bc.v.y[1] == :pressure
+        elseif boundary_conditions.v.y[1] == :pressure
             vLe_ext = [vLe[2]; vLe]
             vRi_ext = [vRi[2]; vRi]
         end
-        if bc.v.y[2] == :dirichlet
+        if boundary_conditions.v.y[2] == :dirichlet
             vLe_ext = [vLe_ext; 2 * vLe[end] - vLe[end - 1]]
             vRi_ext = [vRi_ext; 2 * vRi[1] - vRi[2]]
-        elseif bc.v.y[2] == :periodic
+        elseif boundary_conditions.v.y[2] == :periodic
             vLe_ext = [vLe_ext; 0]
             vRi_ext = [vRi_ext; 0]
-        elseif bc.v.y[2] == :pressure
+        elseif boundary_conditions.v.y[2] == :pressure
             vLe_ext = [vLe_ext; vLe[end - 1]]
             vRi_ext = [vRi_ext; vRi[end - 1]]
         end
@@ -292,23 +292,23 @@ function set_bc_vectors!(setup::Setup{T,2}, t) where {T}
     yIu_vx = yIu_vx_lr + yIu_vx_lu
 
     if order4
-        if bc.u.x[1] == :dirichlet
+        if boundary_conditions.u.x[1] == :dirichlet
             uLo_ext = [2 * uLo[1] - uLo[2]; uLo]
             uUp_ext = [2 * uUp[1] - uUp[2]; uUp]
-        elseif bc.u.x[1] == :periodic
+        elseif boundary_conditions.u.x[1] == :periodic
             uLo_ext = [0; uLo]
             uUp_ext = [0; uUp]
-        elseif bc.u.x[1] == :pressure
+        elseif boundary_conditions.u.x[1] == :pressure
             uLo_ext = [uLo[2]; uLo]
             uUp_ext = [uUp[2]; uUp]
         end
-        if bc.u.x[2] == :dirichlet
+        if boundary_conditions.u.x[2] == :dirichlet
             uLo_ext = [uLo_ext; 2 * uLo[end] - uLo[end - 1]]
             uUp_ext = [uUp_ext; 2 * uUp[1] - uUp[2]]
-        elseif bc.u.x[2] == :periodic
+        elseif boundary_conditions.u.x[2] == :periodic
             uLo_ext = [uLo_ext; 0]
             uUp_ext = [uUp_ext; 0]
-        elseif bc.u.x[2] == :pressure
+        elseif boundary_conditions.u.x[2] == :pressure
             uLo_ext = [uLo_ext; uLo[end - 1]]
             uUp_ext = [uUp_ext; uUp[end - 1]]
         end
@@ -431,10 +431,10 @@ end
 
 # 3D version
 function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
-    (; grid, operators, bc, viscosity_model) = setup
+    (; grid, operators, boundary_conditions, viscosity_model) = setup
     (; Re) = viscosity_model
-    (; u_bc, v_bc, w_bc, dudt_bc, dvdt_bc, dwdt_bc) = bc
-    (; p_bc, bc_unsteady) = bc
+    (; u_bc, v_bc, w_bc, dudt_bc, dvdt_bc, dwdt_bc) = boundary_conditions
+    (; p_bc, bc_unsteady) = boundary_conditions
     (; Ω, indu, indv, indw) = grid
     (; Nz, Np, Npx, Npy, Npz) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = grid
@@ -560,23 +560,23 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     # Left and right side
     y1D_le = zeros(Nux_in)
     y1D_ri = zeros(Nux_in)
-    bc.u.x[1] == :pressure && (y1D_le[1] = -1)
-    bc.u.x[2] == :pressure && (y1D_ri[end] = 1)
+    boundary_conditions.u.x[1] == :pressure && (y1D_le[1] = -1)
+    boundary_conditions.u.x[2] == :pressure && (y1D_ri[end] = 1)
     y_px = (p_bc.x[1] .* (hz ⊗ hy)) ⊗ y1D_le + (p_bc.x[2] .* (hz ⊗ hy)) ⊗ y1D_ri
 
     # Lower and upper side (order of kron not correct, so reshape)
     y1D_lo = zeros(Nvy_in)
     y1D_up = zeros(Nvy_in)
-    bc.v.y[1] == :pressure && (y1D_lo[1] = -1)
-    bc.v.y[2] == :pressure && (y1D_up[end] = 1)
+    boundary_conditions.v.y[1] == :pressure && (y1D_lo[1] = -1)
+    boundary_conditions.v.y[2] == :pressure && (y1D_up[end] = 1)
     y_py = (p_bc.y[1] .* (hz ⊗ hx)) ⊗ y1D_lo + (p_bc.y[2] .* (hz ⊗ hx)) ⊗ y1D_up
     y_py = reshape(permutedims(reshape(y_py, Nvy_in, Nvx_in, Nvz_in), (2, 1, 3)), :)
 
     # Back and front side
     y1D_ba = zeros(Nwz_in)
     y1D_fr = zeros(Nwz_in)
-    bc.w.z[1] == :pressure && (y1D_ba[1] = -1)
-    bc.w.z[2] == :pressure && (y1D_fr[end] = 1)
+    boundary_conditions.w.z[1] == :pressure && (y1D_ba[1] = -1)
+    boundary_conditions.w.z[2] == :pressure && (y1D_fr[end] = 1)
     y_pz = y1D_ba ⊗ (p_bc.z[1] .* (hy ⊗ hx)) + y1D_fr ⊗ (p_bc.z[2] .* (hy ⊗ hx))
 
     y_p = [y_px; y_py; y_pz]

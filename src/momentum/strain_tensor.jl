@@ -6,14 +6,20 @@ Evaluate rate of strain tensor `S(V)` and its magnitude.
 function strain_tensor end
 
 # 2D version
-function strain_tensor(V, setup::Setup{T,2}; getJacobian = false, get_S_abs = false) where {T}
-    (; Nx, Ny, Nu, Nv, Np, indu, indv) = setup.grid
-    (; Nux_in, Nuy_in, Nvx_in, Nvy_in) = setup.grid
-    (; x, y, xp, yp) = setup.grid
-    (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
-    (; ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy) = setup.operators
-    (; Cux_k, Cuy_k, Cvx_k, Cvy_k, Auy_k, Avx_k) = setup.operators
-    (; yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k) = setup.operators
+function strain_tensor(
+    V,
+    setup::Setup{T,2};
+    getJacobian = false,
+    get_S_abs = false,
+) where {T}
+    (; grid, operators, boundary_conditions) = setup
+    (; Nx, Ny, Nu, Nv, Np, indu, indv) = grid
+    (; Nux_in, Nuy_in, Nvx_in, Nvy_in) = grid
+    (; x, y, xp, yp) = grid
+    (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = operators
+    (; ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy) = operators
+    (; Cux_k, Cuy_k, Cvx_k, Cvy_k, Auy_k, Avx_k) = operators
+    (; yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k) = operators
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
@@ -43,43 +49,45 @@ function strain_tensor(V, setup::Setup{T,2}; getJacobian = false, get_S_abs = fa
 
     if get_S_abs
         # Option 2b
-        bc = setup.bc
-        if bc.u.x == (:periodic, :periodic)
+        if boundary_conditions.u.x == (:periodic, :periodic)
             # "cut-off" the double points in case of periodic BC
             # For periodic boundary conditions S11(Npx+1, :) = S11(1, :)
             # So S11 has size (Npx+1)*Npy; the last row are "ghost" points equal to the
             # First points. we have S11 at positions ([xp[1] - 1/2*(hx[1]+hx[end]); xp], yp)
             S11_p = reshape(S11, Nux_in + 1, Nuy_in)
-            S11_p = S11_p(2:(Nux_in + 1), :) # B
+            S11_p = S11_p(2:(Nux_in+1), :) # B
 
             # S12 is defined on the corners: size Nux_in*(Nuy_in+1), positions (xin, y)
             # Get S12 and S21 at all corner points
             S12_temp = zeros(Nx + 1, Ny + 1)
             S12_temp[1:Nx, :] = reshape(S12, Nx, Ny + 1)
-            S12_temp[Nx + 1, :] = S12_temp[1, :]
-        elseif bc.u.x[1] == :dirichlet && bc.u.x[2] == :pressure
+            S12_temp[Nx+1, :] = S12_temp[1, :]
+        elseif boundary_conditions.u.x[1] == :dirichlet &&
+               boundary_conditions.u.x[2] == :pressure
             S11_p = reshape(S11, Nux_in + 1, Nuy_in)
             S11_p = S11_p[1:Nux_in, :] # Cut off last point
 
             # S12 is defined on the corners: size Nux_in*(Nuy_in+1), positions (xin, y)
             # Get S12 and S21 at all corner points
             S12_temp = zeros(Nx + 1, Ny + 1)
-            S12_temp[2:(Nx + 1), :] = reshape(S12, Nx, Ny + 1)
+            S12_temp[2:(Nx+1), :] = reshape(S12, Nx, Ny + 1)
             S12_temp[1, :] = S12_temp[2, :] # Copy from x[2] to x[1]; one could do this more accurately in principle by using the BC
         else
             error("BC not implemented in strain_tensor.jl")
         end
 
-        if bc.v.y[1] == :periodic && bc.v.y[2] == :periodic
+        if boundary_conditions.v.y[1] == :periodic &&
+           boundary_conditions.v.y[2] == :periodic
             # Similarly, S22(:, Npy+1) = S22(:, 1). positions (xp, [yp;yp[1]])
             S22_p = reshape(S22, Nvx_in, Nvy_in + 1)
-            S22_p = S22_p(:, 2:(Nvy_in + 1)) # Why not 1:Nvy_in?
+            S22_p = S22_p(:, 2:(Nvy_in+1)) # Why not 1:Nvy_in?
 
             # Similarly S21 is size (Nux_in+1)*Nuy_in, positions (x, yin)
             S21_temp = zeros(Nx + 1, Ny + 1)
             S21_temp[:, 1:Ny] = reshape(S21, Nx + 1, Ny)
-            S21_temp[:, Ny + 1] = S21_temp[:, 1]
-        elseif bc.v.y[1] == :pressure && bc.v.y[2] == :pressure
+            S21_temp[:, Ny+1] = S21_temp[:, 1]
+        elseif boundary_conditions.v.y[1] == :pressure &&
+               boundary_conditions.v.y[2] == :pressure
             S22_p = reshape(S22, Nvx_in, Nvy_in + 1)
             S22_p = S22_p(:, 2:Nvy_in)
 
@@ -138,6 +146,11 @@ function strain_tensor(V, setup::Setup{T,2}; getJacobian = false, get_S_abs = fa
 end
 
 # 3D version
-function strain_tensor(V, setup::Setup{T,3}; getJacobian = false, get_S_abs = false) where {T}
+function strain_tensor(
+    V,
+    setup::Setup{T,3};
+    getJacobian = false,
+    get_S_abs = false,
+) where {T}
     error("Not implemented (3D)")
 end

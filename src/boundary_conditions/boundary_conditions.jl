@@ -1,9 +1,9 @@
 """
-    BC{T}
+    BoundaryConditions{T}
 
 Boundary conditions with floating point type `T`.
 """
-Base.@kwdef mutable struct BC{T}
+Base.@kwdef mutable struct BoundaryConditions{T}
     bc_unsteady::Bool = false
     u::NamedTuple = (;)
     v::NamedTuple = (;)
@@ -23,7 +23,7 @@ Base.@kwdef mutable struct BC{T}
 end
 
 """
-    BC(u_bc, v_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
+    BoundaryConditions(u_bc, v_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
 
 Create discrete boundary condtions.
 
@@ -31,7 +31,7 @@ Values should either be scalars or vectors. All values `(u, v, p, k, e)` are
 defined at (x, y) locations, i.e. the corners of pressure volumes, so they
 cover the entire domain, including corners.
 """
-function BC(u_bc, v_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
+function BoundaryConditions(u_bc, v_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
     bc_type.u.x[1] ∈ (:dirichlet, :periodic, :pressure) || error("Wrong BC for u-left")
     bc_type.u.x[2] ∈ (:dirichlet, :periodic, :pressure) || error("Wrong BC for u-right")
     bc_type.u.y[1] ∈ (:dirichlet, :periodic, :symmetric) || error("Wrong BC for u-low")
@@ -50,11 +50,11 @@ function BC(u_bc, v_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
     k_bc = (; x = (zero(T), zero(T)), y = (zero(T), zero(T)))
     e_bc = (; x = (zero(T), zero(T)), y = (zero(T), zero(T)))
 
-    BC{T}(; bc_unsteady, bc_type..., u_bc, v_bc, p_bc, k_bc, e_bc, kwargs...)
+    BoundaryConditions{T}(; bc_unsteady, bc_type..., u_bc, v_bc, p_bc, k_bc, e_bc, kwargs...)
 end
 
 """
-    BC(u_bc, v_bc, w_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
+    BoundaryConditions(u_bc, v_bc, w_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
 
 Create discrete boundary condtions.
 
@@ -62,7 +62,7 @@ Values should either be scalars or vectors. All values `(u, v, p, k, e)` are
 defined at (x, y, z) locations, i.e. the corners of pressure volumes, so they
 cover the entire domain, including corners.
 """
-function BC(u_bc, v_bc, w_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
+function BoundaryConditions(u_bc, v_bc, w_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
     bc_type.u.x[1] ∈ (:dirichlet, :periodic, :pressure) || error("Wrong BC for u-left")
     bc_type.u.x[2] ∈ (:dirichlet, :periodic, :pressure) || error("Wrong BC for u-right")
     bc_type.u.y[1] ∈ (:dirichlet, :periodic, :symmetric) || error("Wrong BC for u-low")
@@ -92,5 +92,5 @@ function BC(u_bc, v_bc, w_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
     k_bc = (; x = (zero(T), zero(T)), y = (zero(T), zero(T)), z = (zero(T), zero(T)))
     e_bc = (; x = (zero(T), zero(T)), y = (zero(T), zero(T)), z = (zero(T), zero(T)))
 
-    BC{T}(; bc_unsteady, bc_type..., u_bc, v_bc, w_bc, p_bc, k_bc, e_bc, kwargs...)
+    BoundaryConditions{T}(; bc_unsteady, bc_type..., u_bc, v_bc, w_bc, p_bc, k_bc, e_bc, kwargs...)
 end

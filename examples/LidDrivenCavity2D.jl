@@ -55,7 +55,7 @@ convection_model = NoRegConvectionModel()
 
 u_bc(x, y, t) = y ≈ 1 ? 1.0 : 0.0
 v_bc(x, y, t) = zero(x)
-bc = BC(
+boundary_conditions = BoundaryConditions(
     u_bc,
     v_bc;
     bc_unsteady = false,
@@ -71,7 +71,7 @@ bc = BC(
 
 x = cosine_grid(0.0, 1.0, 50)
 y = stretched_grid(0.0, 1.0, 50, 0.95)
-grid = Grid(x, y; bc, T)
+grid = Grid(x, y; boundary_conditions, T)
 
 # The grid may be visualized using the `plot_grid` function.
 
@@ -85,7 +85,7 @@ force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 # We may now assemble our setup and discrete operators.
 
-setup = Setup(; viscosity_model, convection_model, grid, force, bc)
+setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
 
 # We also choos a pressure solver. The direct solver will precompute the LU decomposition of
 # the Poisson matrix.

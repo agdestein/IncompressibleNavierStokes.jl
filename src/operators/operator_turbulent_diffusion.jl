@@ -1,5 +1,5 @@
 """
-    operator_turbulent_diffusion(grid, bc)
+    operator_turbulent_diffusion(grid, boundary_conditions)
 
 Average (turbulent) viscosity to cell faces: from `ν` at `xp`, `yp` to `ν` at `ux`, `uy`,
 `vx`, `vy` locations.
@@ -9,7 +9,7 @@ See also `ke_viscosity.jl`.
 function operator_turbulent_diffusion end
 
 # 2D version
-function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
+function operator_turbulent_diffusion(grid::Grid{T,2}, boundary_conditions) where {T}
     (; Npx, Npy) = grid
     (; Nux_in, Nuy_in, Nvx_in, Nvy_in) = grid
     (; hx, hy, gxd, gyd) = grid
@@ -25,7 +25,15 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
     A1D = Bkux * A1D
 
     # Boundary conditions for ν; mapping from Npx (k) points to Npx+2 points
-    Aν_ux_bc = bc_general_stag(Npx + 2, Npx, 2, bc.ν.x[1], bc.ν.x[2], hx[1], hx[end])
+    Aν_ux_bc = bc_general_stag(
+        Npx + 2,
+        Npx,
+        2,
+        boundary_conditions.ν.x[1],
+        boundary_conditions.ν.x[2],
+        hx[1],
+        hx[end],
+    )
     # Then map back to Nux_in+1 points (ux-faces) with Bkux
 
     # Extend to 2D
@@ -48,19 +56,35 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
 
     # Boundary conditions for ν in x-direction;
     # Mapping from Npx (ν) points to Npx+2 points
-    Aν_uy_bc_lr = bc_general_stag(Npx + 2, Npx, 2, bc.ν.x[1], bc.ν.x[2], hx[1], hx[end])
+    Aν_uy_bc_lr = bc_general_stag(
+        Npx + 2,
+        Npx,
+        2,
+        boundary_conditions.ν.x[1],
+        boundary_conditions.ν.x[2],
+        hx[1],
+        hx[end],
+    )
 
     # Extend BC to 2D
     A2D = I(Npy + 2) ⊗ (A1D * Aν_uy_bc_lr.B1D)
 
-    # Apply bc in y-direction
-    Aν_uy_bc_lu = bc_general_stag(Npy + 2, Npy, 2, bc.ν.y[1], bc.ν.y[2], hy[1], hy[end])
+    # Apply BC in y-direction
+    Aν_uy_bc_lu = bc_general_stag(
+        Npy + 2,
+        Npy,
+        2,
+        boundary_conditions.ν.y[1],
+        boundary_conditions.ν.y[2],
+        hy[1],
+        hy[end],
+    )
 
     A2Dx = A2D * (Aν_uy_bc_lu.B1D ⊗ I(Npx))
 
     Aν_uy = A2Dy * A2Dx
 
-    Aν_uy_bc_lr =(; Aν_uy_bc_lr..., B2D = A2Dy * (I(Npy + 2) ⊗ (A1D * Aν_uy_bc_lr.Btemp)))
+    Aν_uy_bc_lr = (; Aν_uy_bc_lr..., B2D = A2Dy * (I(Npy + 2) ⊗ (A1D * Aν_uy_bc_lr.Btemp)))
     Aν_uy_bc_lu = (; Aν_uy_bc_lu..., B2D = A2Dy * A2D * (Aν_uy_bc_lu.Btemp ⊗ I(Npx)))
 
     ## Nu to vx positions
@@ -78,14 +102,30 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
 
     # Boundary conditions for ν in y-direction;
     # Mapping from Npy (ν) points to Npy+2 points
-    Aν_vx_bc_lu = bc_general_stag(Npy + 2, Npy, 2, bc.ν.y[1], bc.ν.y[2], hy[1], hy[end])
+    Aν_vx_bc_lu = bc_general_stag(
+        Npy + 2,
+        Npy,
+        2,
+        boundary_conditions.ν.y[1],
+        boundary_conditions.ν.y[2],
+        hy[1],
+        hy[end],
+    )
 
     # Extend BC to 2D
     A2D = (A1D * Aν_vx_bc_lu.B1D) ⊗ I(Npx + 2)
 
 
     # Apply boundary conditions also in x-direction:
-    Aν_vx_bc_lr = bc_general_stag(Npx + 2, Npx, 2, bc.ν.x[1], bc.ν.x[2], hx[1], hx[end])
+    Aν_vx_bc_lr = bc_general_stag(
+        Npx + 2,
+        Npx,
+        2,
+        boundary_conditions.ν.x[1],
+        boundary_conditions.ν.x[2],
+        hx[1],
+        hx[end],
+    )
 
     A2Dy = A2D * (I(Npy) ⊗ Aν_vx_bc_lr.B1D)
 
@@ -101,7 +141,15 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
     A1D = Bkvy * A1D
 
     # Boundary conditions for ν; mapping from Npy (ν) points to Npy+2 (vy faces) points
-    Aν_vy_bc = bc_general_stag(Npy + 2, Npy, 2, bc.ν.y[1], bc.ν.y[2], hy[1], hy[end])
+    Aν_vy_bc = bc_general_stag(
+        Npy + 2,
+        Npy,
+        2,
+        boundary_conditions.ν.y[1],
+        boundary_conditions.ν.y[2],
+        hy[1],
+        hy[end],
+    )
 
     # Extend to 2D
     Aν_vy = (A1D * Aν_vy_bc.B1D) ⊗ I(Nvx_in)
@@ -121,8 +169,15 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
     C1D = spdiagm(Npx, Npx + 1, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    Cux_k_bc =
-        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
+    Cux_k_bc = bc_general(
+        Npx + 1,
+        Nux_in,
+        Npx + 1 - Nux_in,
+        boundary_conditions.u.x[1],
+        boundary_conditions.u.x[2],
+        hx[1],
+        hx[end],
+    )
 
     Cux_k = I(Npy) ⊗ (C1D * Cux_k_bc.B1D)
     Cux_k_bc = (; Cux_k_bc..., Bbc = I(Npy) ⊗ (C1D * Cux_k_bc.Btemp))
@@ -138,8 +193,15 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
     A1D = spdiagm(Npx, Npx + 1, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    Auy_k_bc =
-        bc_general(Npx + 1, Nux_in, Npx + 1 - Nux_in, bc.u.x[1], bc.u.x[2], hx[1], hx[end])
+    Auy_k_bc = bc_general(
+        Npx + 1,
+        Nux_in,
+        Npx + 1 - Nux_in,
+        boundary_conditions.u.x[1],
+        boundary_conditions.u.x[2],
+        hx[1],
+        hx[end],
+    )
 
     Auy_k = I(Npy) ⊗ (A1D * Auy_k_bc.B1D)
     Auy_k_bc = (; Auy_k_bc..., Bbc = I(Npy) ⊗ (A1D * Auy_k_bc.Btemp))
@@ -149,7 +211,15 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
     diag2 = 1 ./ gydnew
     C1D = spdiagm(Npy, Npy + 2, 0 => -diag2, 2 => diag2)
 
-    Cuy_k_bc = bc_general_stag(Npy + 2, Npy, 2, bc.u.y[1], bc.u.y[2], hy[1], hy[end])
+    Cuy_k_bc = bc_general_stag(
+        Npy + 2,
+        Npy,
+        2,
+        boundary_conditions.u.y[1],
+        boundary_conditions.u.y[2],
+        hy[1],
+        hy[end],
+    )
 
     Cuy_k = (C1D * Cuy_k_bc.B1D) ⊗ I(Npx)
     Cuy_k_bc = (; Cuy_k_bc..., Bbc = (C1D * Cuy_k_bc.Btemp) ⊗ I(Npx))
@@ -162,8 +232,15 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
     A1D = spdiagm(Npy, Npy + 1, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
-    Avx_k_bc =
-        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
+    Avx_k_bc = bc_general(
+        Npy + 1,
+        Nvy_in,
+        Npy + 1 - Nvy_in,
+        boundary_conditions.v.y[1],
+        boundary_conditions.v.y[2],
+        hy[1],
+        hy[end],
+    )
     Avx_k = (A1D * Avx_k_bc.B1D) ⊗ I(Npx)
     Avx_k_bc = (; Avx_k_bc..., Bbc = (A1D * Avx_k_bc.Btemp) ⊗ I(Npx))
 
@@ -172,8 +249,15 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
     diag2 = 1 ./ gxdnew
     C1D = spdiagm(Npx, Npx + 2, 0 => -diag2, 2 => diag2)
 
-    Cvx_k_bc =
-        bc_general_stag(Npx + 2, Npx, Npx + 2 - Npx, bc.v.x[1], bc.v.x[2], hx[1], hx[end])
+    Cvx_k_bc = bc_general_stag(
+        Npx + 2,
+        Npx,
+        Npx + 2 - Npx,
+        boundary_conditions.v.x[1],
+        boundary_conditions.v.x[2],
+        hx[1],
+        hx[end],
+    )
 
     Cvx_k = I(Npy) ⊗ (C1D * Cvx_k_bc.B1D)
     Cvx_k_bc = (; Cvx_k_bc..., Bbc = I(Npy) ⊗ (C1D * Cvx_k_bc.Btemp))
@@ -185,8 +269,15 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
     C1D = spdiagm(Npy, Npy + 1, 0 => -diag1, 1 => diag1)
 
     # Boundary conditions
-    Cvy_k_bc =
-        bc_general(Npy + 1, Nvy_in, Npy + 1 - Nvy_in, bc.v.y[1], bc.v.y[2], hy[1], hy[end])
+    Cvy_k_bc = bc_general(
+        Npy + 1,
+        Nvy_in,
+        Npy + 1 - Nvy_in,
+        boundary_conditions.v.y[1],
+        boundary_conditions.v.y[2],
+        hy[1],
+        hy[end],
+    )
 
     Cvy_k = (C1D * Cvy_k_bc.B1D) ⊗ I(Npx)
     Cvy_k_bc = (; Cvy_k_bc..., Bbc = (C1D * Cvy_k_bc.Btemp) ⊗ I(Npx))
@@ -194,16 +285,32 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
 
     ## Group operators
     (;
-        Aν_ux, Aν_ux_bc,
-        Aν_uy, Aν_uy_bc_lr, Aν_uy_bc_lu,
-        Aν_vx, Aν_vx_bc_lr, Aν_vx_bc_lu,
-        Aν_vy, Aν_vy_bc,
-        Cux_k, Cux_k_bc, Cuy_k, Cuy_k_bc, Cvx_k, Cvx_k_bc, Cvy_k, Cvy_k_bc,
-        Auy_k, Auy_k_bc, Avx_k, Avx_k_bc,
+        Aν_ux,
+        Aν_ux_bc,
+        Aν_uy,
+        Aν_uy_bc_lr,
+        Aν_uy_bc_lu,
+        Aν_vx,
+        Aν_vx_bc_lr,
+        Aν_vx_bc_lu,
+        Aν_vy,
+        Aν_vy_bc,
+        Cux_k,
+        Cux_k_bc,
+        Cuy_k,
+        Cuy_k_bc,
+        Cvx_k,
+        Cvx_k_bc,
+        Cvy_k,
+        Cvy_k_bc,
+        Auy_k,
+        Auy_k_bc,
+        Avx_k,
+        Avx_k_bc,
     )
 end
 
 # TODO: 3D implementation
-function operator_turbulent_diffusion(grid::Grid{T,3}, bc) where {T}
+function operator_turbulent_diffusion(grid::Grid{T,3}, boundary_conditions) where {T}
     error("Not implemented (3D)")
 end

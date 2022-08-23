@@ -32,7 +32,7 @@ convection_model = NoRegConvectionModel()
 ## Boundary conditions
 u_bc(x, y, t) = 0.0
 v_bc(x, y, t) = 0.0
-bc = BC(
+boundary_conditions = BoundaryConditions(
     u_bc,
     v_bc;
     bc_unsteady = false,
@@ -46,7 +46,7 @@ bc = BC(
 ## Grid
 x = stretched_grid(0.0, 2π, 40)
 y = stretched_grid(0.0, 2π, 40)
-grid = Grid(x, y; bc, T, order4 = true);
+grid = Grid(x, y; boundary_conditions, T, order4 = true);
 
 # Plot grid
 plot_grid(grid)
@@ -57,7 +57,7 @@ bodyforce_v(x, y) = 0.0
 force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 ## Build setup and assemble operators
-setup = Setup(; viscosity_model, convection_model, grid, force, bc)
+setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
 
 ## Pressure solver
 pressure_solver = DirectPressureSolver(setup)

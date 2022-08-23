@@ -36,7 +36,7 @@ u_bc(x, y, t) = x ≈ 0.0 ? cos(π / 6 * sin(f * t)) : 0.0
 v_bc(x, y, t) = x ≈ 0.0 ? sin(π / 6 * sin(f * t)) : 0.0
 dudt_bc(x, y, t) = x ≈ 0.0 ? -π / 6 * f * cos(f * t) * sin(π / 6 * sin(f * t)) : 0.0
 dvdt_bc(x, y, t) = x ≈ 0.0 ? π / 6 * f * cos(f * t) * cos(π / 6 * sin(f * t)) : 0.0
-bc = BC(
+boundary_conditions = BoundaryConditions(
     u_bc,
     v_bc;
     dudt_bc,
@@ -52,7 +52,7 @@ bc = BC(
 ## Grid
 x = stretched_grid(0.0, 10.0, 200)
 y = stretched_grid(-2.0, 2.0, 80)
-grid = Grid(x, y; bc, T);
+grid = Grid(x, y; boundary_conditions, T);
 
 plot_grid(grid)
 
@@ -67,7 +67,7 @@ bodyforce_v(x, y) = 0.0
 force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 ## Build setup and assemble operators
-setup = Setup(; viscosity_model, convection_model, grid, force, bc)
+setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
 
 ## Pressure solver
 pressure_solver = DirectPressureSolver(setup)

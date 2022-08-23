@@ -27,11 +27,11 @@ function momentum(
     nopressure = false,
     newton_factor = false,
 )
-    (; viscosity_model, convection_model, force) = setup
+    (; viscosity_model, convection_model, force, boundary_conditions) = setup
 
     # Unsteady BC (y_p must be loaded after set_bc_vectors!)
     # TODO: preallocate y_p, and only update in set_bc
-    setup.bc.bc_unsteady && set_bc_vectors!(setup, t)
+    boundary_conditions.bc_unsteady && set_bc_vectors!(setup, t)
     (; G, y_p) = setup.operators
 
     # Convection
@@ -86,11 +86,11 @@ function momentum!(
     nopressure = false,
     newton_factor = false,
 )
-    (; viscosity_model, convection_model, force) = setup
+    (; viscosity_model, convection_model, force, boundary_conditions) = setup
 
     # Unsteady BC (y_p must be loaded after set_bc_vectors!)
     # TODO: preallocate y_p, and only update in set_bc
-    setup.bc.bc_unsteady && set_bc_vectors!(setup, t)
+    boundary_conditions.bc_unsteady && set_bc_vectors!(setup, t)
     (; G, y_p) = setup.operators
 
     # Store intermediate results in temporary variables
