@@ -1,44 +1,61 @@
 """
-    bodyforce!(F, ∇F V, t, setup; getJacobian = false)
-
-Compute body force `F` in momentum equations at velocity points.
-If `getJacobian`, also compute `∇F = ∂F/∂V`.
-"""
-function bodyforce!(F, ∇F, V, t, setup; getJacobian = false)
-    (; indu, indv, indw, xu, xv, xw, yu, yv, yw, zu, zv, zw) = setup.grid
-
-    if setup.force isa UnsteadyBodyForce
-        Fx, ∇Fx = setup.force.bodyforce_x.(xu, yu, zu, t)
-        Fy, ∇Fy = setup.force.bodyforce_y.(xv, yv, zv, t)
-        Fz, ∇Fz = setup.force.bodyforce_z.(xw, yw, zw, t)
-
-        F[indu] .= Fx
-        F[indv] .= Fy
-        F[indw] .= Fz
-        if getJacobian
-            ∇F[indu, :] = ∇Fx
-            ∇F[indv, :] = ∇Fy
-            ∇F[indw, :] = ∇Fz
-        end
-    else
-        F .= setup.force.F
-        getJacobian && (∇F .= 0)
-    end
-
-    F, ∇F
-end
-
-"""
     bodyforce(V, t, setup; getJacobian = false)
 
-Body force in momentum equations in Finite Volume setting, so integrated `dFx`, `dFy` are
-the Jacobians `∂Fx/∂V` and `∂Fy/∂V`.
+Compute body force `F` in momentum equations at velocity points.
+
+Non-mutating/allocating/out-of-place version.
+
+See also [`bodyforce!`](@ref).
 """
-function bodyforce(V, t, setup; getJacobian = false)
-    (; NV) = setup.grid
+function bodyforce end
 
-    F = zeros(NV)
-    ∇F = spzeros(NV, NV)
+bodyforce(force::SteadyBodyForce, t, setup) = force.F
 
-    bodyforce!(F, ∇F, V, t, setup; getJacobian)
+# 2D version
+function bodyforce(force::UnsteadyBodyForce, t, setup::Setup{T,2}) where {T}
+    (; indu, indv, xu, xv, yu, yv) = setup.grid
+    Fx = force.fu.(xu, yu, t)
+    Fy = force.fv.(xv, yv, t)
+    [Fx; Fy]
 end
+
+# 3D version
+function bodyforce(force::UnsteadyBodyForce, t, setup::Setup{T,3}) where {T}
+    (; indu, indv, indw, xu, xv, xw, yu, yv, yw, zu, zv, zw) = setup.grid
+    Fx = force.fu.(xu, yu, zu, t)
+    Fy = force.fv.(xv, yv, zv, t)
+    Fz = force.fw.(xw, yw, zw, t)
+    [Fx; Fy; Fz]
+end
+
+
+"""
+    bodyforce!(F, t, setup)
+
+Compute body force `F` in momentum equations at velocity points.
+
+Mutating/non-allocating/in-place version.
+
+See also [`bodyforce`](@ref).
+"""
+function bodyforce! end
+
+bodyforce!(force::SteadyBodyForce, F, t, setup) = (F .= force.F)
+
+# 2D version
+function bodyforce!(force::UnsteadyBodyForce, F, t, setup::Setup{T,2}) where {T}
+    (; indu, indv, xu, xv, yu, yv) = setup.grid
+    F[indu] .= force.fu.(xu, yu, t)
+    F[indv] .= force.fv.(xv, yv, t)
+    F
+end
+
+# 3D version
+function bodyforce!(force::UnsteadyBodyForce, F, t, setup::Setup{T,3}) where {T}
+    (; indu, indv, indw, xu, xv, xw, yu, yv, yw, zu, zv, zw) = setup.grid
+    F[indu] .= force.fu.(xu, yu, zu, t)
+    F[indv] .= force.fv.(xv, yv, zv, t)
+    F[indw] .= force.fw.(xw, yw, zw, t)
+    F
+end
+

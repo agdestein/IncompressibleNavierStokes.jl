@@ -1,13 +1,12 @@
 """
-    operator_regularization!(setup)
+    operator_regularization(grid)
 
 Build regularization matrices.
 """
-function operator_regularization! end
+function operator_regularization end
 
 # 2D version
-function operator_regularization!(setup::Setup{T,2}) where {T}
-    (; grid, operators) = setup
+function operator_regularization(grid::Grid{T,2}, operators) where {T}
     (; Ω, indu, indv) = grid
     (; Dux, Duy, Dvx, Dvy) = operators
     (; Su_ux, Su_uy, Sv_vx, Sv_vy) = operators
@@ -22,14 +21,11 @@ function operator_regularization!(setup::Setup{T,2}) where {T}
     Diffu_f = Diagonal(Ωu⁻¹) * (Dux * Su_ux + Duy * Su_uy)
     Diffv_f = Diagonal(Ωv⁻¹) * (Dvx * Sv_vx + Dvy * Sv_vy)
 
-    @pack! operators = Diffu_f, Diffv_f, α
-
-    setup
+    (; Diffu_f, Diffv_f, α)
 end
 
 # 3D version
-function operator_regularization!(setup::Setup{T,3}) where {T}
-    (; grid, operators) = setup
+function operator_regularization(grid::Grid{T,3}, operators) where {T}
     (; Ω, indu, indv, indw) = grid
     (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = operators
     (; Su_ux, Su_uy, Su_uz) = operators
@@ -48,7 +44,5 @@ function operator_regularization!(setup::Setup{T,3}) where {T}
     Diffv_f = Diagonal(Ωv⁻¹) * (Dvx * Sv_vx + Dvy * Sv_vy + Dvz * Sv_vz)
     Diffw_f = Diagonal(Ωw⁻¹) * (Dwx * Sw_wx + Dwy * Sw_wy + Dwz * Sw_wz)
 
-    @pack! operators = Diffu_f, Diffv_f, Diffw_f, α
-
-    setup
+    (; Diffu_f, Diffv_f, Diffw_f, α)
 end

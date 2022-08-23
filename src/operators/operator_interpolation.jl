@@ -1,13 +1,12 @@
 """
-    operator_interpolation!(setup)
+    operator_interpolation(grid, bc)
 
 Construct averaging operators.
 """
-function operator_interpolation! end
+function operator_interpolation end
 
 # 2D version
-function operator_interpolation!(setup::Setup{T,2}) where {T}
-    (; bc, grid, operators) = setup
+function operator_interpolation(grid::Grid{T,2}, bc) where {T}
     (; Nx, Ny) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t) = grid
@@ -385,22 +384,25 @@ function operator_interpolation!(setup::Setup{T,2}) where {T}
         Iv_vy_bc = (; Iv_vy_bc..., Bbc = (I1D * Iv_vy_bc.Btemp) ⊗ mat_hx)
     end
 
-    ## Store in setup structure
-    @pack! operators = Iu_ux, Iv_uy, Iu_vx, Iv_vy
-    @pack! operators = Iu_ux_bc, Iv_vy_bc
-    @pack! operators = Iv_uy_bc_lr, Iv_uy_bc_lu, Iu_vx_bc_lr, Iu_vx_bc_lu
+    ## Group operators
+    operators = (;
+        Iu_ux, Iv_uy, Iu_vx, Iv_vy,
+        Iu_ux_bc, Iv_vy_bc,
+        Iv_uy_bc_lr, Iv_uy_bc_lu, Iu_vx_bc_lr, Iu_vx_bc_lu,
+    )
+
     if order4
-        @pack! operators = Iu_ux3, Iv_uy3, Iu_vx3, Iv_vy3
-        @pack! operators =
-            Iu_ux_bc3, Iv_uy_bc_lr3, Iv_uy_bc_lu3, Iu_vx_bc_lr3, Iu_vx_bc_lu3, Iv_vy_bc3
+        operators = (; operators...,
+            Iu_ux3, Iv_uy3, Iu_vx3, Iv_vy3,
+            Iu_ux_bc3, Iv_uy_bc_lr3, Iv_uy_bc_lu3, Iu_vx_bc_lr3, Iu_vx_bc_lu3, Iv_vy_bc3,
+        )
     end
 
-    setup
+    operators
 end
 
 # 3D version
-function operator_interpolation!(setup::Setup{T,3}) where {T}
-    (; grid, operators, bc) = setup
+function operator_interpolation(grid::Grid{T,3}, bc) where {T}
     (; Nx, Ny, Nz) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t) = grid
@@ -629,14 +631,14 @@ function operator_interpolation!(setup::Setup{T,3}) where {T}
     Iw_wz_bc = (; Iw_wz_bc..., Bbc = (I1D * Iw_wz_bc.Btemp) ⊗ mat_hy ⊗ mat_hx)
 
 
-    ## Store in setup structure
-    @pack! operators = Iu_ux, Iv_uy, Iw_uz
-    @pack! operators = Iu_vx, Iv_vy, Iw_vz
-    @pack! operators = Iu_wx, Iv_wy, Iw_wz
-    @pack! operators = Iu_ux_bc, Iv_vy_bc, Iw_wz_bc
-    @pack! operators = Iv_uy_bc_lr, Iv_uy_bc_lu, Iu_vx_bc_lr, Iu_vx_bc_lu
-    @pack! operators = Iw_uz_bc_lr, Iw_uz_bc_bf, Iw_vz_bc_lu, Iw_vz_bc_bf
-    @pack! operators = Iu_wx_bc_lr, Iu_wx_bc_bf, Iv_wy_bc_lu, Iv_wy_bc_bf
-
-    setup
+    ## Group operators
+    (;
+        Iu_ux, Iv_uy, Iw_uz,
+        Iu_vx, Iv_vy, Iw_vz,
+        Iu_wx, Iv_wy, Iw_wz,
+        Iu_ux_bc, Iv_vy_bc, Iw_wz_bc,
+        Iv_uy_bc_lr, Iv_uy_bc_lu, Iu_vx_bc_lr, Iu_vx_bc_lu,
+        Iw_uz_bc_lr, Iw_uz_bc_bf, Iw_vz_bc_lu, Iw_vz_bc_bf,
+        Iu_wx_bc_lr, Iu_wx_bc_bf, Iv_wy_bc_lu, Iv_wy_bc_bf,
+    )
 end

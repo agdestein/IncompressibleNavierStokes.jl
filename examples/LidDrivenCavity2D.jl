@@ -48,23 +48,12 @@ viscosity_model = LaminarModel{T}(; Re = 1000)
 #
 # We here take the simplest model.
 
-convection_model = NoRegConvectionModel{T}()
-
-# We create a two-dimensional domain with a box of size `[1, 1]`. We add a slight scaling
-# factor of 95% to increase the precision near the moving lid.
-
-x = cosine_grid(0.0, 1.0, 50)
-y = stretched_grid(0.0, 1.0, 50, 0.95)
-grid = create_grid(x, y; T)
-
-# The grid may be visualized using the `plot_grid` function.
-
-plot_grid(grid)
+convection_model = NoRegConvectionModel()
 
 # Dirichlet boundary conditions are specified as plain Julia functions. They are marked by
 # the `:dirichlet` symbol. Other possible BC types are `:periodic`, `:symmetric`, and `:pressure`.
 
-u_bc(x, y, t) = y ≈ grid.ylims[2] ? 1.0 : 0.0
+u_bc(x, y, t) = y ≈ 1 ? 1.0 : 0.0
 v_bc(x, y, t) = zero(x)
 bc = create_boundary_conditions(
     u_bc,
@@ -77,24 +66,31 @@ bc = create_boundary_conditions(
     T,
 )
 
+# We create a two-dimensional domain with a box of size `[1, 1]`. We add a slight scaling
+# factor of 95% to increase the precision near the moving lid.
+
+x = cosine_grid(0.0, 1.0, 50)
+y = stretched_grid(0.0, 1.0, 50, 0.95)
+grid = create_grid(x, y; bc, T)
+
+# The grid may be visualized using the `plot_grid` function.
+
+plot_grid(grid)
+
 # The body forces are specified as plain Julia functions.
 
 bodyforce_u(x, y) = 0
 bodyforce_v(x, y) = 0
-force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
+force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
+
+# We may now assemble our setup and discrete operators.
+
+setup = Setup(; viscosity_model, convection_model, grid, force, bc)
 
 # We also choos a pressure solver. The direct solver will precompute the LU decomposition of
 # the Poisson matrix.
 
-pressure_solver = DirectPressureSolver{T}()
-
-# We may now assemble our setup.
-
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
-
-# The discrete operators are built with the [`build_operators!`](@ref) function.
-
-build_operators!(setup)
+pressure_solver = DirectPressureSolver(setup)
 
 # We will solve for a time interval of ten seconds.
 
@@ -111,6 +107,7 @@ V₀, p₀ = create_initial_conditions(
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure,
+    pressure_solver,
 )
 
 
@@ -142,7 +139,7 @@ processors = [logger, plotter, writer, tracer]
 # A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
 # with a fixed time step.
 
-V, p = @time solve(problem, RK44(); Δt = 0.001, processors)
+V, p = @time solve(problem, RK44(); Δt = 0.001, processors, pressure_solver)
 
 
 # ## Postprocess

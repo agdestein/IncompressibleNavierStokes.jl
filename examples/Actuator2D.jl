@@ -25,17 +25,10 @@ viscosity_model = LaminarModel{T}(; Re = 100)
 # viscosity_model = QRModel{T}(; Re = 100)
 
 ## Convection model
-convection_model = NoRegConvectionModel{T}()
-# convection_model = C2ConvectionModel{T}()
-# convection_model = C4ConvectionModel{T}()
-# convection_model = LerayConvectionModel{T}()
-
-## Grid
-x = stretched_grid(0.0, 10.0, 200)
-y = stretched_grid(-2.0, 2.0, 80)
-grid = create_grid(x, y; T);
-
-plot_grid(grid)
+convection_model = NoRegConvectionModel()
+# convection_model = C2ConvectionModel()
+# convection_model = C4ConvectionModel()
+# convection_model = LerayConvectionModel()
 
 ## Boundary conditions
 f = 0.5
@@ -56,6 +49,13 @@ bc = create_boundary_conditions(
     T,
 )
 
+## Grid
+x = stretched_grid(0.0, 10.0, 200)
+y = stretched_grid(-2.0, 2.0, 80)
+grid = create_grid(x, y; bc, T);
+
+plot_grid(grid)
+
 ## Forcing parameters
 xc, yc = 2.0, 0.0 # Disk center
 D = 1.0 # Disk diameter
@@ -64,19 +64,18 @@ Cₜ = 0.01 # Thrust coefficient
 inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
 bodyforce_u(x, y) = -Cₜ * inside(x, y)
 bodyforce_v(x, y) = 0.0
-force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
-
-## Pressure solver
-pressure_solver = DirectPressureSolver{T}()
-# pressure_solver = CGPressureSolver{T}()
-# pressure_solver = FourierPressureSolver{T}()
+force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 ## Build setup and assemble operators
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc);
-build_operators!(setup);
+setup = Setup(; viscosity_model, convection_model, grid, force, bc)
+
+## Pressure solver
+pressure_solver = DirectPressureSolver(setup)
+# pressure_solver = CGPressureSolver(setup)
+# pressure_solver = FourierPressureSolver(setup)
 
 ## Time interval
-t_start, t_end = tlims = (0.0, 4π)
+t_start, t_end = tlims = (0.0, 16π)
 
 ## Initial conditions (extend inflow)
 initial_velocity_u(x, y) = 1.0
@@ -88,6 +87,7 @@ V₀, p₀ = create_initial_conditions(
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure,
+    pressure_solver,
 );
 
 
@@ -98,14 +98,21 @@ V, p = @time solve(problem);
 
 ## Iteration processors
 logger = Logger(; nupdate = 1)
-plotter = RealTimePlotter(; nupdate = 5, fieldname = :velocity, type = contourf)
+plotter = RealTimePlotter(;
+    nupdate = 1,
+    fieldname = :vorticity,
+    type = heatmap,
+    # type = contour,
+    # type = contourf,
+)
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, plotter, writer, tracer]
+# processors = [logger, plotter, writer, tracer]
+processors = [logger, plotter, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = @time solve(problem, RK44P2(); Δt = 4π / 200, processors);
+V, p = @time solve(problem, RK44P2(); pressure_solver, Δt = 4π / 200, processors);
 
 
 ## Post-process

@@ -6,13 +6,8 @@ Process iteration.
 function process! end
 
 function process!(logger::Logger, stepper)
-    (; V, p, t, setup, cache, momentum_cache) = stepper
-    (; F) = cache
-
-    momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
-
-    @info "Iteration $(stepper.n)" t norm(F) maximum(F)
-
+    (; n, t) = stepper
+    @printf "Iteration %d\tt = %g\n" n t
     logger
 end
 
@@ -50,8 +45,20 @@ function process!(plotter::RealTimePlotter, stepper)
     if type == heatmap
         lims[] = get_lims(f, n)
     elseif type ∈ (contour, contourf)
-        lims[] = LinRange(get_lims(f, n)..., nlevel)
+        if ≈(extrema(f)..., rtol = 1e-10)
+            μ = mean(f)
+            a = μ - 1
+            b = μ + 1
+            f[1] += 1
+            f[end] -= 1
+            field[] = f
+        else
+            a, b = get_lims(f)
+        end
+        # lims[] = LinRange(a, b, nlevel)
+        lims[] = get_lims(f)
     end
+    sleep(0.001)
 
     plotter
 end

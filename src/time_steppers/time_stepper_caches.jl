@@ -14,9 +14,6 @@ Base.@kwdef struct ExplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
     ∇F::SparseMatrixCSC{T,Int}
     f::Vector{T}
     Δp::Vector{T}
-    A::Matrix{T}
-    b::Vector{T}
-    c::Vector{T}
 end
 
 Base.@kwdef struct ImplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
@@ -31,9 +28,6 @@ Base.@kwdef struct ImplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
     f::Vector{T}
     Δp::Vector{T}
     Gp::Vector{T}
-    A::Matrix{T}
-    b::Vector{T}
-    c::Vector{T}
     Is::SparseMatrixCSC{T,Int}
     Ω_sNV::SparseMatrixCSC{T,Int}
     A_ext::SparseMatrixCSC{T,Int}
@@ -131,13 +125,7 @@ function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup) where {T}
     # Get coefficients of RK method
     (; A, b, c) = method
 
-    # Shift Butcher tableau, as A[1, :] is always zero for explicit methods
-    A = [A[2:end, :]; b']
-
-    # Vector with time instances (1 is the time level of final step)
-    c = [c[2:end]; 1]
-
-    ExplicitRungeKuttaCache{T}(; kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp, A, b, c)
+    ExplicitRungeKuttaCache{T}(; kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
@@ -197,9 +185,6 @@ function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
         f,
         Δp,
         Gp,
-        A,
-        b,
-        c,
         Is,
         Ω_sNV,
         A_ext, b_ext, c_ext,

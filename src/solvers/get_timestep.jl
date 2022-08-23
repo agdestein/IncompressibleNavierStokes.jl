@@ -1,12 +1,12 @@
 """
-    get_timestep(stepper, CFL)
+    get_timestep(stepper, cfl)
 
 Estimate time step based on eigenvalues of operators, using Gershgorin.
 """
 function get_timestep end
 
 # 2D version
-function get_timestep(stepper::TimeStepper{M,T,2}, CFL) where {M,T}
+function get_timestep(stepper::TimeStepper{M,T,2}, cfl) where {M,T}
     (; setup, method, V) = stepper
     (; grid, operators) = setup
     (; NV, indu, indv, Ω⁻¹) = grid
@@ -45,14 +45,14 @@ function get_timestep(stepper::TimeStepper{M,T,2}, CFL) where {M,T}
         # Based on max. value of stability region
         Δt_diff = λ_diff_max(method) / λ_diff
 
-        Δt = CFL * min(Δt_conv, Δt_diff)
+        Δt = cfl * min(Δt_conv, Δt_diff)
     end
 
     Δt
 end
 
 # 3D version
-function get_timestep(stepper::TimeStepper{M,T,3}, CFL) where {M,T}
+function get_timestep(stepper::TimeStepper{M,T,3}, cfl) where {M,T}
     (; setup, method, V) = stepper
     (; grid, operators) = setup
     (; NV, indu, indv, indw, Ω⁻¹) = grid
@@ -100,7 +100,7 @@ function get_timestep(stepper::TimeStepper{M,T,3}, CFL) where {M,T}
         # Based on max. value of stability region
         Δt_diff = λ_diff_max(method) / λ_diff
 
-        Δt = CFL * min(Δt_conv, Δt_diff)
+        Δt = cfl * min(Δt_conv, Δt_diff)
     end
 
     Δt

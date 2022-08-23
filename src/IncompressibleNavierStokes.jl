@@ -10,6 +10,7 @@ using FFTW
 using Interpolations
 using IterativeSolvers
 using LinearAlgebra
+using Printf
 using SparseArrays
 using Statistics
 using UnPack
@@ -27,17 +28,13 @@ include("grid/cosine_grid.jl")
 include("grid/create_grid.jl")
 include("grid/max_size.jl")
 
-# Force
-include("force/force.jl")
-include("force/build_force.jl")
-
 # Models
 include("models/viscosity_models.jl")
 include("models/convection_models.jl")
 
 # Types
+include("force/force.jl")
 include("boundary_conditions/boundary_conditions.jl")
-include("solvers/pressure/pressure_solvers.jl")
 include("operators/operators.jl")
 include("setup.jl")
 
@@ -61,13 +58,11 @@ include("boundary_conditions/create_boundary_conditions.jl")
 include("boundary_conditions/set_bc_vectors.jl")
 
 # Operators
-include("operators/build_operators.jl")
 include("operators/interpolate_nu.jl")
 include("operators/operator_averaging.jl")
 include("operators/operator_convection_diffusion.jl")
 include("operators/operator_divergence.jl")
 include("operators/operator_interpolation.jl")
-include("operators/operator_mesh.jl")
 include("operators/operator_postprocessing.jl")
 include("operators/operator_regularization.jl")
 include("operators/operator_turbulent_diffusion.jl")
@@ -118,11 +113,12 @@ include("problems/problems.jl")
 include("problems/is_steady.jl")
 
 # Solvers
-include("solvers/pressure/initialize_pressure.jl")
+include("solvers/pressure/pressure_solvers.jl")
 include("solvers/pressure/pressure_poisson.jl")
 include("solvers/pressure/pressure_additional_solve.jl")
 include("solvers/get_timestep.jl")
 include("solvers/solve.jl")
+include("solvers/solve_animate.jl")
 
 # Utils
 include("utils/filter_convection.jl")
@@ -171,8 +167,9 @@ export stretched_grid, cosine_grid
 export DirectPressureSolver, CGPressureSolver, FourierPressureSolver
 
 # Main driver
-export create_boundary_conditions,
-    build_operators!, create_initial_conditions, set_bc_vectors!, solve, get_velocity
+export create_boundary_conditions, create_initial_conditions, set_bc_vectors!,
+    solve, get_velocity
+export solve_animate
 
 export momentum!
 

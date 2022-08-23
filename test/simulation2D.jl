@@ -11,19 +11,14 @@
     # viscosity_model = QRModel{T}(; Re = 1000)
 
     ## Convection model
-    convection_model = NoRegConvectionModel{T}()
-    # convection_model = C2ConvectionModel{T}()
-    # convection_model = C4ConvectionModel{T}()
-    # convection_model = LerayConvectionModel{T}()
-
-    ## Grid parameters
-    x = stretched_grid(0.0, 1.0, 25)
-    y = stretched_grid(0.0, 1.0, 25)
-    grid = create_grid(x, y; T)
+    convection_model = NoRegConvectionModel()
+    # convection_model = C2ConvectionModel()
+    # convection_model = C4ConvectionModel()
+    # convection_model = LerayConvectionModel()
 
     ## Boundary conditions
     lid_vel = 1.0 # Lid velocity
-    u_bc(x, y, t) = y ≈ grid.ylims[2] ? lid_vel : 0.0
+    u_bc(x, y, t) = y ≈ 1 ? lid_vel : 0.0
     v_bc(x, y, t) = 0.0
     bc = create_boundary_conditions(
         u_bc,
@@ -36,20 +31,23 @@
         T,
     )
 
+    ## Grid parameters
+    x = stretched_grid(0.0, 1.0, 25)
+    y = stretched_grid(0.0, 1.0, 25)
+    grid = create_grid(x, y; bc, T)
+
     ## Forcing parameters
     bodyforce_u(x, y) = 0.0
     bodyforce_v(x, y) = 0.0
-    force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
-
-    ## Pressure solver
-    pressure_solver = DirectPressureSolver{T}()
-    # pressure_solver = CGPressureSolver{T}()
-    # pressure_solver = FourierPressureSolver{T}()
+    force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
     ## Build setup and assemble operators
-    setup =
-        Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
-    build_operators!(setup)
+    setup = Setup(; viscosity_model, convection_model, grid, force, bc)
+
+    ## Pressure solver
+    pressure_solver = DirectPressureSolver(setup)
+    # pressure_solver = CGPressureSolver(setup)
+    # pressure_solver = FourierPressureSolver(setup)
 
     ## Time interval
     t_start, t_end = tlims = (0.0, 0.5)
@@ -64,6 +62,7 @@
         initial_velocity_u,
         initial_velocity_v,
         initial_pressure,
+        pressure_solver,
     )
 
     @testset "Steady state problem" begin
@@ -85,7 +84,7 @@
 
     @testset "Unsteady problem" begin
         problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-        V, p = solve(problem, RK44(); Δt = 0.01, processors)
+        V, p = solve(problem, RK44(); Δt = 0.01, pressure_solver, processors)
 
         # Check that solution did not explode
         @test all(!isnan, V)

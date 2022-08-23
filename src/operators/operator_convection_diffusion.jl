@@ -1,13 +1,12 @@
 """
-    operator_convection_diffusion!(setup)
+    operator_convection_diffusion(grid, bc, viscosity_model)
 
 Construct convection and diffusion operators.
 """
-function operator_convection_diffusion! end
+function operator_convection_diffusion end
 
 # 2D version
-function operator_convection_diffusion!(setup::Setup{T,2}) where {T}
-    (; grid, operators, bc, viscosity_model) = setup
+function operator_convection_diffusion(grid::Grid{T,2}, bc, viscosity_model) where {T}
     (; Nx, Ny) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t) = grid
@@ -436,32 +435,35 @@ function operator_convection_diffusion!(setup::Setup{T,2}) where {T}
         Diff = blockdiag(Diffu, Diffv)
     end
 
-    @pack! operators = Cux, Cuy, Cvx, Cvy
-    @pack! operators = Su_ux, Su_uy
-    @pack! operators = Sv_vx, Sv_vy
-    @pack! operators = Su_ux_bc, Su_uy_bc, Sv_vx_bc, Sv_vy_bc
-    @pack! operators = Dux, Duy, Dvx, Dvy
+    ## Group operators
+    operators = (;
+        Cux, Cuy, Cvx, Cvy,
+        Su_ux, Su_uy,
+        Sv_vx, Sv_vy,
+        Su_ux_bc, Su_uy_bc, Sv_vx_bc, Sv_vy_bc,
+        Dux, Duy, Dvx, Dvy,
+    )
 
     if viscosity_model isa LaminarModel
-        @pack! operators = Diff
+        operators = (; operators..., Diff)
     else
-        @pack! operators = Sv_uy, Su_vx
+        operators = (; operators..., Sv_uy, Su_vx)
     end
 
     if order4
-        @pack! operators = Cux3, Cuy3, Cvx3, Cvy3
-        @pack! operators = Su_ux_bc3, Su_uy_bc3, Sv_vx_bc3, Sv_vy_bc3
-        @pack! operators = Diffux_div, Diffuy_div, Diffvx_div, Diffvy_div
+        operators = (; operators..., Cux3, Cuy3, Cvx3, Cvy3,
+            Su_ux_bc3, Su_uy_bc3, Sv_vx_bc3, Sv_vy_bc3,
+            Diffux_div, Diffuy_div, Diffvx_div, Diffvy_div,
+        )
     else
-        @pack! operators = Su_vx_bc_lr, Su_vx_bc_lu, Sv_uy_bc_lr, Sv_uy_bc_lu
+        operators = (; operators..., Su_vx_bc_lr, Su_vx_bc_lu, Sv_uy_bc_lr, Sv_uy_bc_lu)
     end
 
-    setup
+    operators
 end
 
 # 3D version
-function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
-    (; grid, operators, bc, viscosity_model) = setup
+function operator_convection_diffusion(grid::Grid{T,3}, bc, viscosity_model) where {T}
     (; Nx, Ny, Nz) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t) = grid
@@ -805,24 +807,26 @@ function operator_convection_diffusion!(setup::Setup{T,3}) where {T}
         Diff = blockdiag(Diffu, Diffv, Diffw)
     end
 
-    @pack! operators = Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz
-    @pack! operators = Su_ux, Su_uy, Su_uz
-    @pack! operators = Sv_vx, Sv_vy, Sv_vz
-    @pack! operators = Sw_wx, Sw_wy, Sw_wz
-    @pack! operators = Su_ux_bc, Su_uy_bc, Su_uz_bc
-    @pack! operators = Sv_vx_bc, Sv_vy_bc, Sv_vz_bc
-    @pack! operators = Sw_wx_bc, Sw_wy_bc, Sw_wz_bc
-    @pack! operators = Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz
+    ## Group opearators
+    operators = (;
+        Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz,
+        Su_ux, Su_uy, Su_uz,
+        Sv_vx, Sv_vy, Sv_vz,
+        Sw_wx, Sw_wy, Sw_wz,
+        Su_ux_bc, Su_uy_bc, Su_uz_bc,
+        Sv_vx_bc, Sv_vy_bc, Sv_vz_bc,
+        Sw_wx_bc, Sw_wy_bc, Sw_wz_bc,
+        Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf,
+        Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf,
+        Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf,
+        Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz,
+    )
 
     if viscosity_model isa LaminarModel
-        @pack! operators = Diff
+        operators = (; operators..., Diff)
     else
-        @pack! operators = Sv_uy, Su_vx, Sw_uz, Su_wx, Sw_vz, Sv_wy
+        operators = (; operators..., Sv_uy, Su_vx, Sw_uz, Su_wx, Sw_vz, Sv_wy)
     end
 
-    @pack! operators = Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf
-    @pack! operators = Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf
-    @pack! operators = Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf
-
-    setup
+    operators
 end

@@ -28,23 +28,15 @@ viscosity_model = LaminarModel{T}(; Re = 1000)
 # viscosity_model = QRModel{T}(; Re = 1000)
 
 ## Convection model
-convection_model = NoRegConvectionModel{T}()
-# convection_model = C2ConvectionModel{T}()
-# convection_model = C4ConvectionModel{T}()
-# convection_model = LerayConvectionModel{T}()
-
-## Nonuniform grid -- refine near walls
-x = cosine_grid(0.0, 1.0, 25)
-y = stretched_grid(0.0, 1.0, 25, 0.95)
-z = stretched_grid(-0.2, 0.2, 10)
-grid = create_grid(x, y, z; T);
-
-plot_grid(grid)
+convection_model = NoRegConvectionModel()
+# convection_model = C2ConvectionModel()
+# convection_model = C4ConvectionModel()
+# convection_model = LerayConvectionModel()
 
 ## Boundary conditions
-u_bc(x, y, z, t) = y ≈ grid.ylims[2] ? 1.0 : 0.0
+u_bc(x, y, z, t) = y ≈ 1 ? 1.0 : 0.0
 v_bc(x, y, z, t) = 0.0
-w_bc(x, y, z, t) = y ≈ grid.ylims[2] ? 0.2 : 0.0
+w_bc(x, y, z, t) = y ≈ 1 ? 0.2 : 0.0
 bc = create_boundary_conditions(
     u_bc,
     v_bc,
@@ -70,21 +62,27 @@ bc = create_boundary_conditions(
     T,
 )
 
+## Nonuniform grid -- refine near walls
+x = cosine_grid(0.0, 1.0, 25)
+y = stretched_grid(0.0, 1.0, 25, 0.95)
+z = stretched_grid(-0.2, 0.2, 10)
+grid = create_grid(x, y, z; bc, T);
+
+plot_grid(grid)
 
 ## Forcing parameters
 bodyforce_u(x, y, z) = 0.0
 bodyforce_v(x, y, z) = 0.0
 bodyforce_w(x, y, z) = 0.0
-force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v, bodyforce_w)
-
-## Pressure solver
-pressure_solver = DirectPressureSolver{T}()
-# pressure_solver = CGPressureSolver{T}()
-# pressure_solver = FourierPressureSolver{T}()
+force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
 
 ## Build setup and assemble operators
-setup = Setup{T,3}(; viscosity_model, convection_model, grid, force, pressure_solver, bc);
-build_operators!(setup);
+setup = Setup(; viscosity_model, convection_model, grid, force, bc)
+
+## Pressure solver
+pressure_solver = DirectPressureSolver(setup)
+# pressure_solver = CGPressureSolver(setup)
+# pressure_solver = FourierPressureSolver(setup)
 
 ## Time interval
 t_start, t_end = tlims = (0.0, 10.0)
@@ -101,6 +99,7 @@ V₀, p₀ = create_initial_conditions(
     initial_velocity_v,
     initial_velocity_w,
     initial_pressure,
+    pressure_solver,
 );
 
 
@@ -118,7 +117,7 @@ processors = [logger, plotter, writer, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = @time solve(problem, RK44(); Δt = 0.01, processors)
+V, p = @time solve(problem, RK44(); Δt = 0.01, processors, pressure_solver)
 
 
 ## Post-process

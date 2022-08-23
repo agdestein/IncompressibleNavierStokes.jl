@@ -1,13 +1,12 @@
 """
-    operator_divergence!(setup)
+    operator_divergence(grid, bc)
 
 Construct divergence and gradient operator.
 """
-function operator_divergence! end
+function operator_divergence end
 
 # 2D version
-function operator_divergence!(setup::Setup{T,2}) where {T}
-    (; grid, operators, bc, pressure_solver) = setup
+function operator_divergence(grid::Grid{T,2}, bc) where {T}
     (; Npx, Npy) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t) = grid
@@ -132,13 +131,6 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
     # stress will be zero)
     G = -M'
 
-    ## Store in setup structure
-    @pack! operators = M, Mx_bc, My_bc, G
-    @pack! operators = Bup, Bvp
-
-    if order4
-        @pack! operators = Mx3, My3, Mx_bc3, My_bc3
-    end
 
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
@@ -147,9 +139,6 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
 
     # Laplace = div grad
     A = M * Diagonal(Ω⁻¹) * G
-    @pack! operators = A
-
-    initialize!(pressure_solver, setup, A)
 
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions
@@ -159,12 +148,18 @@ function operator_divergence!(setup::Setup{T,2}) where {T}
         end
     end
 
-    setup
+    ## Group operators
+    operators = (; M, Mx_bc, My_bc, G, Bup, Bvp, A)
+
+    if order4
+        operators = (; operators..., Mx3, My3, Mx_bc3, My_bc3)
+    end
+
+    operators
 end
 
 # 3D version
-function operator_divergence!(setup::Setup{T,3}) where {T}
-    (; grid, operators, bc, pressure_solver) = setup
+function operator_divergence(grid::Grid{T,3}, bc) where {T}
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuz_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t, Nvz_in) = grid
     (; Nwx_in, Nwy_in, Nwz_in, Nwz_b, Nwz_t) = grid
@@ -268,10 +263,6 @@ function operator_divergence!(setup::Setup{T,3}) where {T}
     # stress will be zero)
     G = -M'
 
-    ## Store in setup structure
-    @pack! operators = M, Mx_bc, My_bc, Mz_bc, G
-    @pack! operators = Bup, Bvp, Bwp
-
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
     # if !is_steady(problem) && !isa(viscosity_model, KEpsilonModel)
@@ -281,9 +272,6 @@ function operator_divergence!(setup::Setup{T,3}) where {T}
 
     # Laplace = div grad
     A = M * Diagonal(Ω⁻¹) * G
-    @pack! operators = A
-
-    initialize!(pressure_solver, setup, A)
 
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions
@@ -293,5 +281,6 @@ function operator_divergence!(setup::Setup{T,3}) where {T}
         end
     end
 
-    setup
+    ## Group operators
+    (; M, Mx_bc, My_bc, Mz_bc, G, Bup, Bvp, Bwp, A)
 end

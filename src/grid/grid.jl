@@ -3,7 +3,7 @@
 
 Nonuniform cartesian grid of dimension `N` and floating point type `T`.
 """
-Base.@kwdef mutable struct Grid{T,N}
+Base.@kwdef struct Grid{T,N}
     order4::Bool = false                     # Use 4th order in space (otherwise 2nd order)
     α::T = 81                                # Richardson extrapolation factor = 3^4
     β::T = 9 // 8                            # Interpolation factor
@@ -161,7 +161,5 @@ Base.@kwdef mutable struct Grid{T,N}
     Ωvx3::Vector{T} = T[]
     Ωvy1::Vector{T} = T[]
     Ωvy3::Vector{T} = T[]
-
-
 end
 

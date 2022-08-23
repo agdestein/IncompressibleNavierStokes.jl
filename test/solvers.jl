@@ -3,12 +3,7 @@
 
     Re = 500
     viscosity_model = LaminarModel{T}(; Re)
-    convection_model = NoRegConvectionModel{T}()
-
-    ## Grid
-    x = stretched_grid(0, 2π, 50)
-    y = stretched_grid(0, 2π, 50)
-    grid = create_grid(x, y; T)
+    convection_model = NoRegConvectionModel()
 
     ## Boundary conditions
     u_bc(x, y, t) = zero(x)
@@ -24,18 +19,21 @@
         T,
     )
 
+    ## Grid
+    x = stretched_grid(0, 2π, 50)
+    y = stretched_grid(0, 2π, 50)
+    grid = create_grid(x, y; bc, T)
+
     ## Forcing parameters
     bodyforce_u(x, y) = 0
     bodyforce_v(x, y) = 0
-    force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
-
-    ## Pressure solver
-    pressure_solver = FourierPressureSolver{T}()
+    force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
     ## Build setup and assemble operators
-    setup =
-        Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
-    build_operators!(setup)
+    setup = Setup(; viscosity_model, convection_model, grid, force, bc)
+
+    ## Pressure solver
+    pressure_solver = FourierPressureSolver(setup)
 
     ## Time interval
     t_start, t_end = tlims = (0.0, 5.0)
@@ -50,6 +48,7 @@
         initial_velocity_u,
         initial_velocity_v,
         initial_pressure,
+        pressure_solver,
     )
 
     @testset "Steady state" begin
@@ -74,26 +73,37 @@
         problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 
         @testset "Explicit Runge Kutta" begin
-            V, p = solve(problem, RK44(); Δt = 0.01)
+            V, p = solve(problem, RK44(); Δt = 0.01, pressure_solver)
             @test norm(V - V_exact) / norm(V_exact) < 1e-4
         end
 
         @testset "Implicit Runge Kutta" begin
-            V, p = solve(problem, RIA2(); Δt = 0.01)
+            V, p = solve(problem, RIA2(); Δt = 0.01, pressure_solver, inplace = true)
             @test_broken norm(V - V_exact) / norm(V_exact) < 1e-3
+            @test_broken solve(problem, RIA2(); Δt = 0.01, pressure_solver, inplace = false) isa Tuple
         end
 
         @testset "One-leg beta method" begin
-            V, p = solve(problem, OneLegMethod{T}(); method_startup = RK44(), Δt = 0.01)
+            V, p = solve(problem, OneLegMethod{T}(); method_startup = RK44(), Δt = 0.01, pressure_solver)
             @test norm(V - V_exact) / norm(V_exact) < 1e-4
         end
 
         @testset "Adams-Bashforth Crank-Nicolson" begin
+            @test_broken solve(
+                problem,
+                AdamsBashforthCrankNicolsonMethod{T}();
+                method_startup = RK44(),
+                Δt = 0.01,
+                pressure_solver,
+                inplace = false,
+            ) isa NamedTuple
             V, p = solve(
                 problem,
                 AdamsBashforthCrankNicolsonMethod{T}();
                 method_startup = RK44(),
                 Δt = 0.01,
+                pressure_solver,
+                inplace = true,
             )
             @test norm(V - V_exact) / norm(V_exact) < 1e-4
         end

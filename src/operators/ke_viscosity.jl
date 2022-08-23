@@ -1,10 +1,12 @@
 """
-    ke_viscosity!(setup)
+    ke_viscosity(grid, bc)
 
-Average (turbulent) viscosity to cell faces
+Average (turbulent) viscosity to cell faces.
 """
-function ke_viscosity!(setup)
-    (; grid, bc) = setup
+function ke_viscosity end
+
+# 2D version
+function ke_viscosity(grid::Grid{T,2}, bc) where {T}
 	(; x, y, xp, yp, hx, hy) = grid
     (; Nx, Ny, Npx, Npy, Nux_in, Nuy_in, Nvx_in, Nvy_in, Bvux, Buvy, Bkux, Bkvy) = grid
     (; k_bc, e_bc) = bc
@@ -227,25 +229,29 @@ function ke_viscosity!(setup)
     # So nu at vy is given by:
     # Cmu * (Ak_vy * k + yAk_vy).^2 / (Ae_vy * e + yAe_vy)
 
-    # TODO: @pack! correct parameters
-    Ak_ux
-    Ak_uy
-    Ak_vx
-    Ak_vy
-    yAk_ux
-    yAk_uy
-    yAk_vx
-    yAk_vy
+    # TODO: Return correct operators
+    (;
+        Ak_ux,
+        Ak_uy,
+        Ak_vx,
+        Ak_vy,
+        yAk_ux,
+        yAk_uy,
+        yAk_vx,
+        yAk_vy,
 
-    Ae_ux
-    Ae_uy
-    Ae_vx
-    Ae_vy
-    yAe_ux
-    yAe_uy
-    yAe_vx
-    yAe_vy
+        Ae_ux,
+        Ae_uy,
+        Ae_vx,
+        Ae_vy,
+        yAe_ux,
+        yAe_uy,
+        yAe_vx,
+        yAe_vy,
+    )
+end
 
-
-    setup
+# 3D version
+function ke_viscosity(grid::Grid{T,3}, bc) where {T}
+    error("Not implemented")
 end

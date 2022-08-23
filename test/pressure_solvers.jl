@@ -5,12 +5,7 @@
     viscosity_model = LaminarModel{T}(; Re = 1000)
 
     ## Convection model
-    convection_model = NoRegConvectionModel{T}()
-
-    ## Grid
-    x = stretched_grid(0, 2π, 20)
-    y = stretched_grid(0, 2π, 20)
-    grid = create_grid(x, y; T)
+    convection_model = NoRegConvectionModel()
 
     ## Boundary conditions
     u_bc(x, y, t) = 0.0
@@ -26,27 +21,24 @@
         T,
     )
 
+    ## Grid
+    x = stretched_grid(0, 2π, 20)
+    y = stretched_grid(0, 2π, 20)
+    grid = create_grid(x, y; bc, T)
+
     ## Forcing parameters
     bodyforce_u(x, y) = 0.0
     bodyforce_v(x, y) = 0.0
-    force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
-
-    ## Pressure solver
-    pressure_solver = FourierPressureSolver{T}()
+    force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
     ## Build setup and assemble operators
-    setup =
-        Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
-    build_operators!(setup)
+    setup = Setup(; viscosity_model, convection_model, grid, force, bc)
     (; A) = setup.operators
 
-    direct = DirectPressureSolver{T}()
-    cg = CGPressureSolver{T}()
-    fourier = FourierPressureSolver{T}()
-
-    IncompressibleNavierStokes.initialize!(direct, setup, A)
-    IncompressibleNavierStokes.initialize!(cg, setup, A)
-    IncompressibleNavierStokes.initialize!(fourier, setup, A)
+    ## Pressure solver
+    direct = DirectPressureSolver(setup)
+    cg = CGPressureSolver(setup)
+    fourier = FourierPressureSolver(setup)
 
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
     p_exact = reshape(initial_pressure.(grid.xpp, grid.ypp), :)

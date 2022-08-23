@@ -51,15 +51,19 @@ makedocs(;
         "Theory" => [
             "Theory" => "theory/theory.md",
             "Operators" => "theory/operators.md",
-            "Reduced Order Models" => "theory/rom.md",
-            "Immersed Boundary Method" => "theory/ibm.md",
+            # "Reduced Order Models" => "theory/rom.md",
+            # "Immersed Boundary Method" => "theory/ibm.md",
         ],
-        "API Reference" => "api.md",
+        "API Reference" => [
+            "API" => "api/api.md",
+            "Time steppers" => "api/time_steppers.md",
+            "Full list" => "api/all_functions.md",
+        ],
     ],
 )
 
 deploydocs(;
     repo = "github.com/agdestein/IncompressibleNavierStokes.jl",
     devbranch = "main",
-    pushpreview = true,
+    push_preview = true,
 )

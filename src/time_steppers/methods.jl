@@ -11,6 +11,39 @@ abstract type AbstractODEMethod{T} end
 IMEX AB-CN: Adams-Bashforth for explicit convection (parameters `α₁` and `α₂`) and
 Crank-Nicolson for implicit diffusion (implicitness `θ`).
 The method is second order for `θ = 1/2`.
+
+Adams-Bashforth for convection and Crank-Nicolson for diffusion
+formulation:
+
+```math
+\\begin{align*}
+(\\mathbf{u}^{n+1} - \\mathbf{u}^n) / Δt & =
+    -(\\alpha_1 \\mathbf{c}^n + \\alpha_2 \\mathbf{c}^{n-1}) \\\\
+    & + \\theta \\mathbf{d}^{n+1} + (1-\\theta) \\mathbf{d}^n \\\\
+    & + \\theta \\mathbf{F}^{n+1} + (1-\\theta) \\mathbf{F}^n \\\\
+    & + \\theta \\mathbf{BC}^{n+1} + (1-\\theta) \\mathbf{BC}^n \\\\
+    & - \\mathbf{G} \\mathbf{p} + \\mathbf{y}_p
+\\end{align*}
+```
+
+where BC are boundary conditions of diffusion. This is rewritten as:
+
+```math
+\\begin{align*}
+(\\frac{1}{\\Delta t} \\mathbf{I} - \\theta \\mathbf{D}) \\mathbf{u}^{n+1} & =
+    (\\frac{1}{\\Delta t} \\mathbf{I} - (1 - \\theta) \\mathbf{D}) \\mathbf{u}^{n} \\\\
+    & - (\\alpha_1 \\mathbf{c}^n + \\alpha_2 \\mathbf{c}^{n-1}) \\\\
+    & + \\theta \\mathbf{F}^{n+1} + (1-\\theta) \\mathbf{F}^{n} \\\\
+    & + \\theta \\mathbf{BC}^{n+1} + (1-\\theta) \\mathbf{BC}^{n} \\\\
+    & - \\mathbf{G} \\mathbf{p} + \\mathbf{y}_p
+\\end{align*}
+```
+
+The LU decomposition of the LHS matrix is precomputed in `operator_convection_diffusion.jl`.
+
+Note that, in constrast to explicit methods, the pressure from previous time steps has an
+influence on the accuracy of the velocity.
+
 """
 Base.@kwdef struct AdamsBashforthCrankNicolsonMethod{T} <: AbstractODEMethod{T}
     α₁::T = 3 // 2
@@ -22,7 +55,16 @@ end
 """
     OneLegMethod(; β = 1 // 2, p_add_solve = true)
 
-Explicit one-leg β-method.
+Explicit one-leg β-method following symmetry-preserving discretization of
+turbulent flow. See [Verstappen and Veldman (JCP 2003)] for details, or [Direct numerical
+simulation of turbulence at lower costs (Journal of Engineering Mathematics 1997)].
+
+Formulation:
+
+```math
+\\frac{(\\beta + 1/2) u^{n+1} - 2 \\beta u^{n} + (\\beta - 1/2) u^{n-1}}{\\Delta t} = F((1 +
+\\beta) u^n - \\beta u^{n-1}).
+```
 """
 Base.@kwdef struct OneLegMethod{T} <: AbstractODEMethod{T}
     β::T = 1 // 2
@@ -105,6 +147,10 @@ function runge_kutta_method(A, b, c, r; kwargs...)
     c = convert(Vector{T}, c)
     r = convert(T, r)
     if isexplicit
+        # Shift Butcher tableau, as A[1, :] is always zero for explicit methods
+        A = [A[2:end, :]; b']
+        # Vector with time instances (1 is the time level of final step)
+        c = [c[2:end]; 1]
         ExplicitRungeKuttaMethod(; A, b, c, r, kwargs...)
     else
         ImplicitRungeKuttaMethod(; A, b, c, r, kwargs...)

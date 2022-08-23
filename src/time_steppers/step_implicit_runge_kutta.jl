@@ -6,20 +6,20 @@ Do one time step for implicit Runge-Kutta method.
 Unsteady Dirichlet boundary points are not part of solution vector but
 are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
 """
-function step!(stepper::ImplicitRungeKuttaStepper, Δt)
-    (; method, V, p, t, Vₙ, pₙ, tₙ, Δtₙ, setup, cache, momentum_cache) = stepper
-    (; grid, operators, pressure_solver) = setup
+function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache)
+    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; grid, operators) = setup
     (; NV, Np, Ω⁻¹) = grid
     (; G, M) = operators
-    (; p_add_solve, maxiter, abstol, newton_type) = method
+    (; A, b, c, p_add_solve, maxiter, abstol, newton_type) = method
     (; Vtotₙ, ptotₙ, Qⱼ, Fⱼ, ∇Fⱼ, fⱼ, F, ∇F, f, Δp, Gp) = cache
     (; Mtot, yMtot, Ωtot, dfmom, Z) = cache
-    (; A, b, c, Ω_sNV, A_ext, b_ext) = cache
+    (; Ω_sNV, A_ext, b_ext) = cache
 
     is_patterned = stepper.n > 1
 
     # Update current solution (does not depend on previous step size)
-    stepper.n += 1
+    n += 1
     Vₙ .= V
     pₙ .= p
     tₙ = t
@@ -66,7 +66,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     pⱼ .= ptotₙ
 
     # Initialize right-hand side for all stages
-    momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, cache, momentum_cache)
+    momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, cache, momentum_cache; nstage = s)
 
     fmomⱼ = @view fⱼ[ind_Vⱼ]
     fmassⱼ = @view fⱼ[ind_pⱼ]
@@ -172,7 +172,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
         @. V -= Δtₙ * Ω⁻¹ * Gp
 
         if p_add_solve
-            pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+            pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
         else
             # Standard method; take last pressure
             p .= pⱼ[(end - Np + 1):end]
@@ -180,16 +180,15 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt)
     else
         # For steady bc we do an additional pressure solve
         # That saves a pressure solve for iter = 1 in the next time step
-        # pressure_additional_solve!(V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+        # pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
 
         # Standard method; take pressure of last stage
         p .= pⱼ[(end - Np + 1):end]
     end
 
     t = tₙ + Δtₙ
-    @pack! stepper = t, tₙ, Δtₙ
 
-    stepper
+    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
 end
 
 """
@@ -207,12 +206,13 @@ function momentum_allstage!(
     setup,
     cache,
     momentum_cache;
+    nstage,
     getJacobian = false,
 )
     (; NV, Np) = setup.grid
-    (; c, ∇F) = cache
+    (; ∇F) = cache
 
-    for i = 1:length(c)
+    for i = 1:nstage
         # Indices for current stage
         ind_Vᵢ = (1:NV) .+ NV * (i - 1)
         ind_pᵢ = (1:Np) .+ Np * (i - 1)

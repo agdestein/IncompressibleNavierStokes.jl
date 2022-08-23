@@ -1,16 +1,15 @@
 """
-    operator_turbulent_diffusion!(setup)
+    operator_turbulent_diffusion(grid, bc)
 
 Average (turbulent) viscosity to cell faces: from `ν` at `xp`, `yp` to `ν` at `ux`, `uy`,
 `vx`, `vy` locations.
 
 See also `ke_viscosity.jl`.
 """
-function operator_turbulent_diffusion! end
+function operator_turbulent_diffusion end
 
 # 2D version
-function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
-    (; grid, operators, bc) = setup
+function operator_turbulent_diffusion(grid::Grid{T,2}, bc) where {T}
     (; Npx, Npy) = grid
     (; Nux_in, Nuy_in, Nvx_in, Nvy_in) = grid
     (; hx, hy, gxd, gyd) = grid
@@ -112,12 +111,6 @@ function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
     # So ν at vy is given by:
     # (Aν_vy * k + yAν_vy)
 
-    ## Store in struct
-    @pack! setup.operators = Aν_ux, Aν_ux_bc
-    @pack! setup.operators = Aν_uy, Aν_uy_bc_lr, Aν_uy_bc_lu
-    @pack! setup.operators = Aν_vx, Aν_vx_bc_lr, Aν_vx_bc_lu
-    @pack! setup.operators = Aν_vy, Aν_vy_bc
-
     ## Get derivatives u_x, u_y, v_x and v_y at cell centers
     # Differencing velocity to ν-points
 
@@ -199,15 +192,18 @@ function operator_turbulent_diffusion!(setup::Setup{T,2}) where {T}
     Cvy_k_bc = (; Cvy_k_bc..., Bbc = (C1D * Cvy_k_bc.Btemp) ⊗ I(Npx))
 
 
-    ## Store in struct
-    @pack! setup.operators =
-        Cux_k, Cux_k_bc, Cuy_k, Cuy_k_bc, Cvx_k, Cvx_k_bc, Cvy_k, Cvy_k_bc
-    @pack! setup.operators = Auy_k, Auy_k_bc, Avx_k, Avx_k_bc
-
-    setup
+    ## Group operators
+    (;
+        Aν_ux, Aν_ux_bc,
+        Aν_uy, Aν_uy_bc_lr, Aν_uy_bc_lu,
+        Aν_vx, Aν_vx_bc_lr, Aν_vx_bc_lu,
+        Aν_vy, Aν_vy_bc,
+        Cux_k, Cux_k_bc, Cuy_k, Cuy_k_bc, Cvx_k, Cvx_k_bc, Cvy_k, Cvy_k_bc,
+        Auy_k, Auy_k_bc, Avx_k, Avx_k_bc,
+    )
 end
 
 # TODO: 3D implementation
-function operator_turbulent_diffusion!(setup::Setup{T,3}) where {T}
+function operator_turbulent_diffusion(grid::Grid{T,3}, bc) where {T}
     error("Not implemented (3D)")
 end

@@ -3,14 +3,9 @@
     # Floating point type for simulations
     T = Float64
 
-    ## Grid parameters
-    x = stretched_grid(0.0, 1.0, 25)
-    y = stretched_grid(0.0, 1.0, 25)
-    grid = create_grid(x, y; T)
-
     ## Boundary conditions
     lid_vel = 1.0 # Lid velocity
-    u_bc(x, y, t) = y ≈ grid.ylims[2] ? lid_vel : 0.0
+    u_bc(x, y, t) = y ≈ 1 ? lid_vel : 0.0
     v_bc(x, y, t) = 0.0
     bc = create_boundary_conditions(
         u_bc,
@@ -26,15 +21,15 @@
         T,
     )
 
+    ## Grid parameters
+    x = stretched_grid(0.0, 1.0, 25)
+    y = stretched_grid(0.0, 1.0, 25)
+    grid = create_grid(x, y; bc, T)
+
     ## Forcing parameters
     bodyforce_u(x, y) = 0.0
     bodyforce_v(x, y) = 0.0
-    force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
-
-    ## Pressure solver
-    pressure_solver = DirectPressureSolver{T}()
-    # pressure_solver = CGPressureSolver{T}()
-    # pressure_solver = FourierPressureSolver{T}()
+    force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
     ## Initial conditions
     initial_velocity_u(x, y) = 0.0
@@ -58,10 +53,10 @@
     qr = QRModel{T}(; Re)
 
     ## Convection models
-    noreg = NoRegConvectionModel{T}()
-    c2 = C2ConvectionModel{T}()
-    c4 = C4ConvectionModel{T}()
-    leray = LerayConvectionModel{T}()
+    noreg = NoRegConvectionModel()
+    c2 = C2ConvectionModel()
+    c4 = C4ConvectionModel()
+    leray = LerayConvectionModel()
 
     models = [
         (lam, noreg)
@@ -74,16 +69,16 @@
 
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
-            setup = Setup{T,2}(;
+            setup = Setup(;
                 viscosity_model,
                 convection_model,
                 grid,
                 force,
-                pressure_solver,
                 bc,
             )
 
-            build_operators!(setup)
+            ## Pressure solver
+            pressure_solver = DirectPressureSolver(setup)
 
             V₀, p₀ = create_initial_conditions(
                 setup,
@@ -91,6 +86,7 @@
                 initial_velocity_u,
                 initial_velocity_v,
                 initial_pressure,
+                pressure_solver,
             )
 
             problem = SteadyStateProblem(setup, V₀, p₀)
@@ -101,7 +97,7 @@
             @test sum(abs, V) / length(V) < lid_vel broken = broken
 
             problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-            V, p = solve(problem, RK44(); Δt = 0.01, processors)
+            V, p = solve(problem, RK44(); Δt = 0.01, pressure_solver, processors)
 
             # Check that the average velocity is smaller than the lid velocity
             broken =
@@ -120,16 +116,7 @@
 
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
-            setup = Setup{T,2}(;
-                viscosity_model = kϵ,
-                convection_model = noreg,
-                grid,
-                force,
-                pressure_solver,
-                bc,
-            )
-
-            @test_broken build_operators!(setup) isa Setup
+            Operators(grid, bc, viscosity_model)
         end
     end
 end

@@ -26,21 +26,13 @@ viscosity_model = LaminarModel{T}(; Re = 3000)
 # viscosity_model = QRModel{T}(; Re = 2000)
 
 ## Convection model
-convection_model = NoRegConvectionModel{T}()
-# convection_model = C2ConvectionModel{T}()
-# convection_model = C4ConvectionModel{T}()
-# convection_model = LerayConvectionModel{T}()
-
-## Grid
-x = stretched_grid(0, 10, 160)
-y = stretched_grid(-0.5, 0.5, 16)
-z = stretched_grid(-0.25, 0.25, 8)
-grid = create_grid(x, y, z; T);
-
-plot_grid(grid)
+convection_model = NoRegConvectionModel()
+# convection_model = C2ConvectionModel()
+# convection_model = C4ConvectionModel()
+# convection_model = LerayConvectionModel()
 
 ## Boundary conditions
-u_bc(x, y, z, t) = x ≈ grid.xlims[1] && y ≥ 0 ? 24y * (1 / 2 - y) : 0.0
+u_bc(x, y, z, t) = x ≈ 0 && y ≥ 0 ? 24y * (1 / 2 - y) : 0.0
 v_bc(x, y, z, t) = 0.0
 w_bc(x, y, z, t) = 0.0
 bc = create_boundary_conditions(
@@ -68,20 +60,27 @@ bc = create_boundary_conditions(
     T,
 )
 
+## Grid
+x = stretched_grid(0, 10, 160)
+y = stretched_grid(-0.5, 0.5, 16)
+z = stretched_grid(-0.25, 0.25, 8)
+grid = create_grid(x, y, z; bc, T);
+
+plot_grid(grid)
+
 ## Forcing parameters
 bodyforce_u(x, y, z) = 0.0
 bodyforce_v(x, y, z) = 0.0
 bodyforce_w(x, y, z) = 0.0
-force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v, bodyforce_w)
-
-## Pressure solver
-pressure_solver = DirectPressureSolver{T}()
-# pressure_solver = CGPressureSolver{T}()
-# pressure_solver = FourierPressureSolver{T}()
+force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
 
 ## Build setup and assemble operators
-setup = Setup{T,3}(; viscosity_model, convection_model, grid, force, pressure_solver, bc);
-build_operators!(setup);
+setup = Setup(; viscosity_model, convection_model, grid, force, bc)
+
+## Pressure solver
+pressure_solver = DirectPressureSolver(setup)
+# pressure_solver = CGPressureSolver(setup)
+# pressure_solver = FourierPressureSolver(setup)
 
 ## Time interval
 t_start, t_end = tlims = (0.0, 25.0)
@@ -98,6 +97,7 @@ V₀, p₀ = create_initial_conditions(
     initial_velocity_v,
     initial_velocity_w,
     initial_pressure,
+    pressure_solver,
 );
 
 
@@ -115,7 +115,7 @@ processors = [logger, plotter, writer, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = @time solve(problem, RK44(); Δt = 0.01, processors);
+V, p = @time solve(problem, RK44(); Δt = 0.01, processors, pressure_solver);
 
 
 ## Post-process
