@@ -87,7 +87,7 @@ function solve_animate(
             end
 
             # Perform a single time step with the time integration method
-            step!(stepper, Δt; cache, momentum_cache)
+            stepper = step!(stepper, Δt; cache, momentum_cache)
         end
 
         process!(animator, stepper)
