@@ -10,15 +10,9 @@ T = Float64
 
 viscosity_model = LaminarModel{T}(; Re = 1000)
 
-convection_model = NoRegConvectionModel{T}()
+convection_model = NoRegConvectionModel()
 
-x = cosine_grid(0.0, 1.0, 50)
-y = stretched_grid(0.0, 1.0, 50, 0.95)
-grid = create_grid(x, y; T)
-
-plot_grid(grid)
-
-u_bc(x, y, t) = y ≈ grid.ylims[2] ? 1.0 : 0.0
+u_bc(x, y, t) = y ≈ 1 ? 1.0 : 0.0
 v_bc(x, y, t) = zero(x)
 bc = create_boundary_conditions(
     u_bc,
@@ -31,15 +25,19 @@ bc = create_boundary_conditions(
     T,
 )
 
+x = cosine_grid(0.0, 1.0, 50)
+y = stretched_grid(0.0, 1.0, 50, 0.95)
+grid = create_grid(x, y; bc, T)
+
+plot_grid(grid)
+
 bodyforce_u(x, y) = 0
 bodyforce_v(x, y) = 0
-force = SteadyBodyForce{T}(; bodyforce_u, bodyforce_v)
+force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
-pressure_solver = DirectPressureSolver{T}()
+setup = Setup(; viscosity_model, convection_model, grid, force, bc)
 
-setup = Setup{T,2}(; viscosity_model, convection_model, grid, force, pressure_solver, bc)
-
-build_operators!(setup)
+pressure_solver = DirectPressureSolver(setup)
 
 t_start, t_end = tlims = (0.0, 10.0)
 
@@ -52,6 +50,7 @@ V₀, p₀ = create_initial_conditions(
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure,
+    pressure_solver,
 )
 
 problem = SteadyStateProblem(setup, V₀, p₀)
@@ -65,7 +64,7 @@ writer = VTKWriter(; nupdate = 20, dir = "output/LidDrivenCavity2D")
 tracer = QuantityTracer(; nupdate = 10)
 processors = [logger, plotter, writer, tracer]
 
-V, p = @time solve(problem, RK44(); Δt = 0.001, processors)
+V, p = @time solve(problem, RK44(); Δt = 0.001, processors, pressure_solver)
 
 plot_tracers(tracer)
 
