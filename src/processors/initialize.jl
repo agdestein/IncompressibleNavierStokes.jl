@@ -142,9 +142,16 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,3}) wher
     if type ∈ (contour, contourf)
         type == contour && (type! = contour!)
         type == contourf && (type! = contourf!)
-        lims = Observable(LinRange(get_lims(f, 3)..., 10))
+        # lims = Observable(LinRange(get_lims(f, 3)..., 10))
+        lims = Observable(get_lims(f, 3))
         ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect = :data)
-        hm = type!(ax, xf, yf, zf, field; levels = lims, shading = false, alpha = 0.05)
+        hm = type!(
+            ax, xf, yf, zf, field;
+            levels = @lift(LinRange($(lims)..., 10)),
+            colorrange = lims,
+            shading = false,
+            alpha = 0.05,
+        )
     else
         error("Unknown plot type")
     end

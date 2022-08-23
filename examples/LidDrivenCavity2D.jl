@@ -139,7 +139,8 @@ logger = Logger(; nupdate = 1)
 plotter = RealTimePlotter(; nupdate = 50, fieldname = :vorticity, type = contourf)
 writer = VTKWriter(; nupdate = 20, dir = "output/LidDrivenCavity2D")
 tracer = QuantityTracer(; nupdate = 10)
-processors = [logger, plotter, writer, tracer]
+## processors = [logger, plotter, writer, tracer]
+processors = [logger, plotter, tracer]
 
 # A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
 # with a fixed time step.

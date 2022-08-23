@@ -49,8 +49,8 @@ boundary_conditions = BoundaryConditions(
 )
 
 ## Grid
-x = stretched_grid(0, 2π, 20)
-y = stretched_grid(0, 2π, 20)
+x = stretched_grid(0, 2π, 100)
+y = stretched_grid(0, 2π, 100)
 grid = Grid(x, y; boundary_conditions, T);
 
 plot_grid(grid)
@@ -69,7 +69,7 @@ setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditi
 pressure_solver = FourierPressureSolver(setup)
 
 ## Time interval
-t_start, t_end = tlims = (0.0, 50.0)
+t_start, t_end = tlims = (0.0, 5.0)
 
 ## Initial conditions
 initial_velocity_u(x, y) = -sin(x)cos(y)
@@ -95,7 +95,8 @@ logger = Logger()
 plotter = RealTimePlotter(; nupdate = 10, fieldname = :vorticity)
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, plotter, writer, tracer]
+# processors = [logger, plotter, writer, tracer]
+processors = [logger, plotter, tracer]
 
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
@@ -107,4 +108,4 @@ plot_tracers(tracer)
 plot_pressure(setup, p)
 plot_velocity(setup, V, t_end)
 plot_vorticity(setup, V, tlims[2])
-plot_streamfunction(setup, V, tlims[2])
+# plot_streamfunction(setup, V, tlims[2])
