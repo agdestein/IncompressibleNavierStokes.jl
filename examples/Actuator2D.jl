@@ -36,7 +36,7 @@ u_bc(x, y, t) = x ≈ 0.0 ? cos(π / 6 * sin(f * t)) : 0.0
 v_bc(x, y, t) = x ≈ 0.0 ? sin(π / 6 * sin(f * t)) : 0.0
 dudt_bc(x, y, t) = x ≈ 0.0 ? -π / 6 * f * cos(f * t) * sin(π / 6 * sin(f * t)) : 0.0
 dvdt_bc(x, y, t) = x ≈ 0.0 ? π / 6 * f * cos(f * t) * cos(π / 6 * sin(f * t)) : 0.0
-bc = create_boundary_conditions(
+bc = BC(
     u_bc,
     v_bc;
     dudt_bc,
@@ -52,7 +52,7 @@ bc = create_boundary_conditions(
 ## Grid
 x = stretched_grid(0.0, 10.0, 200)
 y = stretched_grid(-2.0, 2.0, 80)
-grid = create_grid(x, y; bc, T);
+grid = Grid(x, y; bc, T);
 
 plot_grid(grid)
 

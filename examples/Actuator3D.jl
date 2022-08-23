@@ -39,7 +39,7 @@ dudt_bc(x, y, z, t) =
 dvdt_bc(x, y, z, t) =
     x ≈ grid.xlims[1] ? π / 6 * f * cos(f * t) * cos(π / 6 * sin(f * t)) : 0.0
 dwdt_bc(x, y, z, t) = 0.0
-bc = create_boundary_conditions(
+bc = BC(
     u_bc,
     v_bc,
     w_bc;
@@ -71,7 +71,7 @@ bc = create_boundary_conditions(
 x = stretched_grid(0.0, 6.0, 30)
 y = stretched_grid(-2.0, 2.0, 40)
 z = stretched_grid(-2.0, 2.0, 40)
-grid = create_grid(x, y, z; bc, T);
+grid = Grid(x, y, z; bc, T);
 
 plot_grid(grid)
 

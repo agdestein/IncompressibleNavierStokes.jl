@@ -34,7 +34,7 @@ convection_model = NoRegConvectionModel()
 ## Boundary conditions
 u_bc(x, y, t) = x ≈ 0 && y ≥ 0 ? 24y * (1 / 2 - y) : 0.0
 v_bc(x, y, t) = 0.0
-bc = create_boundary_conditions(
+bc = BC(
     u_bc,
     v_bc;
     bc_unsteady = false,
@@ -48,7 +48,7 @@ bc = create_boundary_conditions(
 ## Grid
 x = stretched_grid(0.0, 10.0, 300)
 y = cosine_grid(-0.5, 0.5, 50)
-grid = create_grid(x, y; bc, T);
+grid = Grid(x, y; bc, T);
 
 plot_grid(grid)
 

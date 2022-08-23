@@ -55,7 +55,7 @@ convection_model = NoRegConvectionModel()
 
 u_bc(x, y, t) = y ≈ 1 ? 1.0 : 0.0
 v_bc(x, y, t) = zero(x)
-bc = create_boundary_conditions(
+bc = BC(
     u_bc,
     v_bc;
     bc_unsteady = false,
@@ -71,7 +71,7 @@ bc = create_boundary_conditions(
 
 x = cosine_grid(0.0, 1.0, 50)
 y = stretched_grid(0.0, 1.0, 50, 0.95)
-grid = create_grid(x, y; bc, T)
+grid = Grid(x, y; bc, T)
 
 # The grid may be visualized using the `plot_grid` function.
 

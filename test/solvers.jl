@@ -8,7 +8,7 @@
     ## Boundary conditions
     u_bc(x, y, t) = zero(x)
     v_bc(x, y, t) = zero(x)
-    bc = create_boundary_conditions(
+    bc = BC(
         u_bc,
         v_bc;
         bc_unsteady = false,
@@ -22,7 +22,7 @@
     ## Grid
     x = stretched_grid(0, 2π, 50)
     y = stretched_grid(0, 2π, 50)
-    grid = create_grid(x, y; bc, T)
+    grid = Grid(x, y; bc, T)
 
     ## Forcing parameters
     bodyforce_u(x, y) = 0

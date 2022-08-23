@@ -35,7 +35,7 @@ convection_model = NoRegConvectionModel()
 u_bc(x, y, z, t) = x ≈ 0 && y ≥ 0 ? 24y * (1 / 2 - y) : 0.0
 v_bc(x, y, z, t) = 0.0
 w_bc(x, y, z, t) = 0.0
-bc = create_boundary_conditions(
+bc = BC(
     u_bc,
     v_bc,
     w_bc;
@@ -64,7 +64,7 @@ bc = create_boundary_conditions(
 x = stretched_grid(0, 10, 160)
 y = stretched_grid(-0.5, 0.5, 16)
 z = stretched_grid(-0.25, 0.25, 8)
-grid = create_grid(x, y, z; bc, T);
+grid = Grid(x, y, z; bc, T);
 
 plot_grid(grid)
 

@@ -21,7 +21,7 @@
     u_bc(x, y, z, t) = y ≈ 1 ? lid_vel[1] : 0.0
     v_bc(x, y, z, t) = 0.0
     w_bc(x, y, z, t) = y ≈ 1 ? lid_vel[3] : 0.0
-    bc = create_boundary_conditions(
+    bc = BC(
         u_bc,
         v_bc,
         w_bc;
@@ -50,7 +50,7 @@
     x = stretched_grid(0.0, 1.0, 25)
     y = stretched_grid(0.0, 1.0, 25)
     z = stretched_grid(-0.2, 0.2, 10)
-    grid = create_grid(x, y, z; bc, T)
+    grid = Grid(x, y, z; bc, T)
 
     ## Forcing parameters
     bodyforce_u(x, y, z) = 0.0

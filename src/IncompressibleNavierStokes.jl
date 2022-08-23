@@ -25,7 +25,6 @@ include("grid/grid.jl")
 include("grid/get_dimension.jl")
 include("grid/stretched_grid.jl")
 include("grid/cosine_grid.jl")
-include("grid/create_grid.jl")
 include("grid/max_size.jl")
 
 # Models
@@ -54,7 +53,6 @@ include("boundary_conditions/bc_int_mixed2.jl")
 include("boundary_conditions/bc_int_mixed_stag2.jl")
 include("boundary_conditions/bc_int_mixed_stag3.jl")
 include("boundary_conditions/bc_vort3.jl")
-include("boundary_conditions/create_boundary_conditions.jl")
 include("boundary_conditions/set_bc_vectors.jl")
 
 # Operators
@@ -141,7 +139,6 @@ include("postprocess/save_vtk.jl")
 export @pack!
 
 # Grid
-export create_grid
 export get_dimension
 
 # Force
@@ -167,8 +164,7 @@ export stretched_grid, cosine_grid
 export DirectPressureSolver, CGPressureSolver, FourierPressureSolver
 
 # Main driver
-export create_boundary_conditions, create_initial_conditions, set_bc_vectors!,
-    solve, get_velocity
+export create_initial_conditions, set_bc_vectors!, solve, get_velocity
 export solve_animate
 
 export momentum!

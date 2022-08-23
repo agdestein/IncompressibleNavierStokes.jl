@@ -20,7 +20,7 @@
     lid_vel = 1.0 # Lid velocity
     u_bc(x, y, t) = y ≈ 1 ? lid_vel : 0.0
     v_bc(x, y, t) = 0.0
-    bc = create_boundary_conditions(
+    bc = BC(
         u_bc,
         v_bc;
         bc_unsteady = false,
@@ -34,7 +34,7 @@
     ## Grid parameters
     x = stretched_grid(0.0, 1.0, 25)
     y = stretched_grid(0.0, 1.0, 25)
-    grid = create_grid(x, y; bc, T)
+    grid = Grid(x, y; bc, T)
 
     ## Forcing parameters
     bodyforce_u(x, y) = 0.0

@@ -39,7 +39,7 @@ u_bc(x, y, t) = 1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos
 v_bc(x, y, t) = 0.0
 dudt_bc(x, y, t) = sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * ω * cos(ω * t))
 dvdt_bc(x, y, t) = 0.0
-bc = create_boundary_conditions(
+bc = BC(
     u_bc,
     v_bc;
     dudt_bc,
@@ -55,7 +55,7 @@ bc = create_boundary_conditions(
 ## Grid
 x = stretched_grid(0.0, 256.0, 1024)
 y = stretched_grid(-32.0, 32.0, 256)
-grid = create_grid(x, y; bc, T, order4 = false);
+grid = Grid(x, y; bc, T, order4 = false);
 
 plot_grid(grid)
 
