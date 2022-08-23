@@ -32,6 +32,9 @@ viscosity_model = LaminarModel{T}(; Re = 3000)
 
 # Convection model
 convection_model = NoRegConvectionModel()
+## convection_model = C2ConvectionModel()
+## convection_model = C4ConvectionModel()
+## convection_model = LerayConvectionModel()
 
 # Boundary conditions
 u_bc(x, y, t) = x ≈ 0 && y ≥ 0 ? 24y * (1 / 2 - y) : 0.0

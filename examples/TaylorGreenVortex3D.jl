@@ -29,7 +29,7 @@ viscosity_model = LaminarModel{T}(; Re = 2000)
 ## viscosity_model = QRModel{T}(; Re = 1000)
 
 # Convection model
-convection_model = NoRegConvectionModel{T}()
+convection_model = NoRegConvectionModel()
 ## convection_model = C2ConvectionModel()
 ## convection_model = C4ConvectionModel()
 ## convection_model = LerayConvectionModel()
