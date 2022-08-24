@@ -1,3 +1,10 @@
+"""
+    plot_force(setup, F, t; kwargs...)
+
+Plot body force.
+"""
+function plot_force end
+
 # 2D version
 function plot_force(setup::Setup{T,2}, F, t; kwargs...) where {T}
     (; xp, yp, xlims, ylims) = setup.grid

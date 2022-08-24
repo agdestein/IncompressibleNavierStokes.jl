@@ -51,7 +51,11 @@ struct FourierPressureSolver{T,N} <: AbstractPressureSolver{T}
     fhat::Array{Complex{T},N}
 end
 
-# Fourier, 2D version
+"""
+    FourierPressureSolver(setup)
+
+Build Fourier pressure solver from setup.
+"""
 function FourierPressureSolver(setup::Setup{T,2}) where {T}
     (; grid, boundary_conditions, operators) = setup
     (; hx, hy, Npx, Npy) = grid
@@ -90,7 +94,11 @@ function FourierPressureSolver(setup::Setup{T,2}) where {T}
     FourierPressureSolver{T,2}(Ahat, phat, fhat)
 end
 
-# Fourier, 3D version
+"""
+    FourierPressureSolver(setup)
+
+Build Fourier pressure solver from setup.
+"""
 function FourierPressureSolver(setup::Setup{T,3}) where {T}
     (; grid, boundary_conditions, operators) = setup
     (; hx, hy, hz, Npx, Npy, Npz) = grid

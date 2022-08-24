@@ -1,16 +1,16 @@
 """
-    Processor
+    AbstractProcessor
 
 Abstract iteration processor.
 """
-abstract type Processor end
+abstract type AbstractProcessor end
 
 """
     Logger(nupdate)
 
 Print time stepping information after every time step.
 """
-Base.@kwdef struct Logger <: Processor
+Base.@kwdef struct Logger <: AbstractProcessor
     nupdate::Int = 1
 end
 
@@ -30,7 +30,7 @@ Available plot `type`s are:
 - `contour`,
 - `contourf`.
 """
-Base.@kwdef mutable struct RealTimePlotter{F} <: Processor
+Base.@kwdef mutable struct RealTimePlotter{F} <: AbstractProcessor
     nupdate::Int = 1
     fieldname::Symbol = :vorticity
     type::F = heatmap
@@ -44,7 +44,7 @@ end
 Write the solution every `nupdate` time steps to a VTK file. The resulting Paraview data
 collection file is stored in `"\$dir/\$filename.pvd"`.
 """
-Base.@kwdef mutable struct VTKWriter <: Processor
+Base.@kwdef mutable struct VTKWriter <: AbstractProcessor
     nupdate::Int = 1
     dir::String = "output"
     filename::String = "solution"
@@ -57,7 +57,7 @@ end
 Store scalar quantities (maximum divergence, momentum, kinetic energy) every `nupdate` time
 steps.
 """
-Base.@kwdef mutable struct QuantityTracer <: Processor
+Base.@kwdef mutable struct QuantityTracer <: AbstractProcessor
     nupdate::Int = 1
     t::Vector{Float64} = zeros(0)
     maxdiv::Vector{Float64} = zeros(0)

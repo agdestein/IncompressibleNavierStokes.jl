@@ -3,7 +3,7 @@
 
 Differencing velocity to k-points.
 """
-function ke_convection end
+function ke_production end
 
 # 2D version
 function ke_production(grid::Grid{T,2}, boundary_conditions) where {T}

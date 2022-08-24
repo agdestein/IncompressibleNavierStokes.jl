@@ -1,3 +1,8 @@
+"""
+    AbstractConvectionModel
+
+Abstract convection model.
+"""
 abstract type AbstractConvectionModel end
 
 """

@@ -1,10 +1,15 @@
 """
     AbstractODEMethodCache
 
-Time stepper cache.
+ODE method cache.
 """
 abstract type AbstractODEMethodCache{T} end
 
+"""
+    ExplicitRungeKuttaCache(; kwargs...)
+
+Explicit Runge-Kutta cache.
+"""
 Base.@kwdef struct ExplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
     kV::Matrix{T}
     kp::Matrix{T}
@@ -16,6 +21,11 @@ Base.@kwdef struct ExplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
     Δp::Vector{T}
 end
 
+"""
+    ImplicitRungeKuttaCache(; kwargs...)
+
+Implicit Runge-Kutta cache.
+"""
 Base.@kwdef struct ImplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
     Vtotₙ::Vector{T}
     ptotₙ::Vector{T}
@@ -41,6 +51,11 @@ Base.@kwdef struct ImplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
     Z::SparseMatrixCSC{T,Int}
 end
 
+"""
+    AdamsBashforthCrankNicolsonCache(; kwargs...)
+
+Adams-Bashforth Crank-Nicolson cache.
+"""
 Base.@kwdef mutable struct AdamsBashforthCrankNicolsonCache{T} <: AbstractODEMethodCache{T}
     cₙ::Vector{T}
     cₙ₋₁::Vector{T}
@@ -58,6 +73,11 @@ Base.@kwdef mutable struct AdamsBashforthCrankNicolsonCache{T} <: AbstractODEMet
     Δt::T
 end
 
+"""
+    OneLegCache(; kwargs...)
+
+One-leg cache.
+"""
 Base.@kwdef struct OneLegCache{T} <: AbstractODEMethodCache{T}
     Vₙ₋₁::Vector{T}
     pₙ₋₁::Vector{T}

@@ -321,6 +321,11 @@ Base.@kwdef mutable struct Operators{T}
     yAv_vy3::Vector{T} = T[]
 end
 
+"""
+    Operators(grid, boundary_conditions, viscosity_model)
+
+Build operators.
+"""
 function Operators(grid::Grid{T}, boundary_conditions, viscosity_model) where {T}
     # Averaging operators
     op_ave = operator_averaging(grid, boundary_conditions)

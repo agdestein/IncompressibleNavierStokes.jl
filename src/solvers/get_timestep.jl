@@ -35,7 +35,7 @@ function get_timestep(stepper::TimeStepper{M,T,2}, cfl) where {M,T}
 
         # Based on max. value of stability region (not a very good indication
         # For the methods that do not include the imaginary axis)
-        Δt_conv = λ_conv_max(method) / λ_conv
+        Δt_conv = lambda_conv_max(method) / λ_conv
 
         ## Diffusive part
         test = Diagonal(Ω⁻¹) * Diff
@@ -43,7 +43,7 @@ function get_timestep(stepper::TimeStepper{M,T,2}, cfl) where {M,T}
         λ_diff = maximum(sum_diff)
 
         # Based on max. value of stability region
-        Δt_diff = λ_diff_max(method) / λ_diff
+        Δt_diff = lambda_diff_max(method) / λ_diff
 
         Δt = cfl * min(Δt_conv, Δt_diff)
     end
@@ -90,7 +90,7 @@ function get_timestep(stepper::TimeStepper{M,T,3}, cfl) where {M,T}
 
         # Based on max. value of stability region (not a very good indication
         # For the methods that do not include the imaginary axis)
-        Δt_conv = λ_conv_max(method) / λ_conv
+        Δt_conv = lambda_conv_max(method) / λ_conv
 
         ## Diffusive part
         test = Diagonal(Ω⁻¹) * Diff
@@ -98,7 +98,7 @@ function get_timestep(stepper::TimeStepper{M,T,3}, cfl) where {M,T}
         λ_diff = maximum(sum_diff)
 
         # Based on max. value of stability region
-        Δt_diff = λ_diff_max(method) / λ_diff
+        Δt_diff = lambda_diff_max(method) / λ_diff
 
         Δt = cfl * min(Δt_conv, Δt_diff)
     end

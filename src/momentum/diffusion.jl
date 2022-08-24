@@ -45,7 +45,7 @@ function diffusion(
     # To compute the diffusion, we need ν_t at ux, uy, vx and vy locations
     # This means we have to reverse the process of strain_tensor.m: go
     # from pressure points back to the ux, uy, vx, vy locations
-    ν_t_ux, ν_t_uy, ν_t_vx, ν_t_vy = interpolate_ν(ν_t, setup)
+    ν_t_ux, ν_t_uy, ν_t_vx, ν_t_vy = interpolate_nu(ν_t, setup)
 
     # Now the total diffusive terms (laminar + turbulent) is as follows
     # Note that the factor 2 is because
@@ -151,7 +151,7 @@ function diffusion!(
     # To compute the diffusion, we need ν_t at ux, uy, vx and vy locations
     # This means we have to reverse the process of strain_tensor.m: go
     # from pressure points back to the ux, uy, vx, vy locations
-    ν_t_ux, ν_t_uy, ν_t_vx, ν_t_vy = interpolate_ν(ν_t, setup)
+    ν_t_ux, ν_t_uy, ν_t_vx, ν_t_vy = interpolate_nu(ν_t, setup)
 
     # Now the total diffusive terms (laminar + turbulent) is as follows
     # Note that the factor 2 is because

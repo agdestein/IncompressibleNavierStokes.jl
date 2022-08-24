@@ -63,8 +63,7 @@ makedocs(;
         ],
         "API Reference" => [
             "API" => "api/api.md",
-            "Time steppers" => "api/time_steppers.md",
-            "Full list" => "api/all_functions.md",
+            "Runge-Kutta methods" => "api/tableaux.md",
         ],
     ],
 )

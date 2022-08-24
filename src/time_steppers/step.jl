@@ -1,8 +1,4 @@
-"""
-    step!(stepper, Δt)
-
-Take a step of size `Δt` with the given time stepper.
-"""
+function step end
 function step! end
 
 include("step_ab_cn.jl")
