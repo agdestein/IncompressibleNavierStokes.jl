@@ -1,14 +1,18 @@
 """
     solve_animate(
-        problem::UnsteadyProblem, method;
+        problem::UnsteadyProblem,
+        method;
         pressure_solver = DirectPressureSolver(problem.setup),
         Δt = nothing,
         cfl = 1,
         n_adapt_Δt = 1,
-        processors = Processor[],
         method_startup = nothing,
         nstartup = 1,
         animator = RealTimePlotter(),
+        filename = "vorticity.gif",
+        nframe = 200,
+        nsubframe = 4,
+        framerate = 20,
     )
 
 Solve unsteady problem using `method`.
@@ -31,7 +35,7 @@ function solve_animate(
     method_startup = nothing,
     nstartup = 1,
     animator = RealTimePlotter(),
-    filename = "output/vorticity.gif",
+    filename = "vorticity.gif",
     nframe = 200,
     nsubframe = 4,
     framerate = 20,

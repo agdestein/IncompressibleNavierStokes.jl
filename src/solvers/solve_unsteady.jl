@@ -9,7 +9,7 @@
         nstartup = 1,
         method_startup = nothing,
         inplace = false,
-        processors = Processor[],
+        processors = [],
     )
 
 Solve unsteady problem using `method`.
@@ -32,7 +32,7 @@ function solve(
     nstartup = 1,
     method_startup = nothing,
     inplace = false,
-    processors = Processor[],
+    processors = [],
 )
     (; setup, V₀, p₀, tlims) = problem
     
