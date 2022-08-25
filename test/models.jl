@@ -40,9 +40,8 @@
     t_start, t_end = tlims = (0.0, 0.5)
 
     # Iteration processors
-    logger = Logger()
     tracer = QuantityTracer()
-    processors = [logger, tracer]
+    processors = [tracer]
 
     # Viscosity models
     Re = 1000

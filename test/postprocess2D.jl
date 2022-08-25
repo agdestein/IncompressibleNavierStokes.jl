@@ -31,7 +31,7 @@
     force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
     # Build setup and assemble operators
-    setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
+    setup = Setup(; viscosity_model, grid, force, boundary_conditions)
 
     # Pressure solver
     pressure_solver = FourierPressureSolver(setup)

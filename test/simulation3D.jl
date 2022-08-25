@@ -88,9 +88,8 @@
     end
 
     # Iteration processors
-    logger = Logger()
     tracer = QuantityTracer()
-    processors = [logger, tracer]
+    processors = [tracer]
 
     @testset "Unsteady problem" begin
         problem = UnsteadyProblem(setup, V₀, p₀, tlims)
