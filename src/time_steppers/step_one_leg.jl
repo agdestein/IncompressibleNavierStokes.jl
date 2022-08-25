@@ -134,7 +134,6 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache)
     end
 
     t = tₙ + Δtₙ
-    @pack! stepper = t, tₙ, Δtₙ
 
     TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
 end
