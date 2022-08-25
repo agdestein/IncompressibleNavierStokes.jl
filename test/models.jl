@@ -3,7 +3,7 @@
     # Floating point type for simulations
     T = Float64
 
-    ## Boundary conditions
+    # Boundary conditions
     lid_vel = 1.0 # Lid velocity
     u_bc(x, y, t) = y ≈ 1 ? lid_vel : 0.0
     v_bc(x, y, t) = 0.0
@@ -21,30 +21,30 @@
         T,
     )
 
-    ## Grid parameters
+    # Grid parameters
     x = stretched_grid(0.0, 1.0, 25)
     y = stretched_grid(0.0, 1.0, 25)
     grid = Grid(x, y; boundary_conditions, T)
 
-    ## Forcing parameters
+    # Forcing parameters
     bodyforce_u(x, y) = 0.0
     bodyforce_v(x, y) = 0.0
     force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
-    ## Initial conditions
+    # Initial conditions
     initial_velocity_u(x, y) = 0.0
     initial_velocity_v(x, y) = 0.0
     initial_pressure(x, y) = 0.0
 
-    ## Time interval
+    # Time interval
     t_start, t_end = tlims = (0.0, 0.5)
 
-    ## Iteration processors
+    # Iteration processors
     logger = Logger()
     tracer = QuantityTracer()
     processors = [logger, tracer]
 
-    ## Viscosity models
+    # Viscosity models
     Re = 1000
     lam = LaminarModel{T}(; Re)
     kϵ = KEpsilonModel{T}(; Re)
@@ -52,7 +52,7 @@
     smag = SmagorinskyModel{T}(; Re)
     qr = QRModel{T}(; Re)
 
-    ## Convection models
+    # Convection models
     noreg = NoRegConvectionModel()
     c2 = C2ConvectionModel()
     c4 = C4ConvectionModel()
@@ -77,7 +77,7 @@
                 boundary_conditions,
             )
 
-            ## Pressure solver
+            # Pressure solver
             pressure_solver = DirectPressureSolver(setup)
 
             V₀, p₀ = create_initial_conditions(

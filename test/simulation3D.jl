@@ -3,20 +3,13 @@
     # Floating point type for simulations
     T = Float64
 
-    ## Viscosity model
+    # Viscosity model
     viscosity_model = LaminarModel{T}(; Re = 1000)
-    # viscosity_model = KEpsilonModel{T}(; Re = 1000)
-    # viscosity_model = MixingLengthModel{T}(; Re = 1000)
-    # viscosity_model = SmagorinskyModel{T}(; Re = 1000)
-    # viscosity_model = QRModel{T}(; Re = 1000)
 
-    ## Convection model
+    # Convection model
     convection_model = NoRegConvectionModel()
-    # convection_model = C2ConvectionModel()
-    # convection_model = C4ConvectionModel()
-    # convection_model = LerayConvectionModel()
 
-    ## Boundary conditions
+    # Boundary conditions
     lid_vel = [1.0, 0.0, 0.2] # Lid velocity
     u_bc(x, y, z, t) = y ≈ 1 ? lid_vel[1] : 0.0
     v_bc(x, y, z, t) = 0.0
@@ -46,30 +39,28 @@
         T,
     )
 
-    ## Grid parameters
+    # Grid parameters
     x = stretched_grid(0.0, 1.0, 25)
     y = stretched_grid(0.0, 1.0, 25)
     z = stretched_grid(-0.2, 0.2, 10)
     grid = Grid(x, y, z; boundary_conditions, T)
 
-    ## Forcing parameters
+    # Forcing parameters
     bodyforce_u(x, y, z) = 0.0
     bodyforce_v(x, y, z) = 0.0
     bodyforce_w(x, y, z) = 0.0
     force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
 
-    ## Build setup and assemble operators
+    # Build setup and assemble operators
     setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
 
-    ## Pressure solver
+    # Pressure solver
     pressure_solver = DirectPressureSolver(setup)
-    # pressure_solver = CGPressureSolver(setup)
-    # pressure_solver = FourierPressureSolver(setup)
 
-    ## Time interval
+    # Time interval
     t_start, t_end = tlims = (0.0, 0.5)
 
-    ## Initial conditions
+    # Initial conditions
     initial_velocity_u(x, y, z) = 0.0
     initial_velocity_v(x, y, z) = 0.0
     initial_velocity_w(x, y, z) = 0.0
@@ -96,7 +87,7 @@
         @test sum(abs, V) / length(V) < norm(lid_vel)
     end
 
-    ## Iteration processors
+    # Iteration processors
     logger = Logger()
     tracer = QuantityTracer()
     processors = [logger, tracer]
