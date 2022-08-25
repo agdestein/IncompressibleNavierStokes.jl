@@ -70,6 +70,10 @@ inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
 bodyforce_u(x, y) = -Cₜ * inside(x, y)
 bodyforce_v(x, y) = 0.0
 force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
+box = (
+    [xc - δ / 2, xc - δ / 2, xc + δ / 2, xc + δ / 2, xc - δ / 2],
+    [yc + D / 2, yc - D / 2, yc - D / 2, yc + D / 2, yc + D / 2],
+)
 
 # Build setup and assemble operators
 setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
@@ -100,7 +104,6 @@ V₀, p₀ = create_initial_conditions(
 problem = SteadyStateProblem(setup, V₀, p₀);
 V, p = @time solve(problem);
 
-
 # Iteration processors
 logger = Logger(; nupdate = 1)
 plotter = RealTimePlotter(;
@@ -119,26 +122,35 @@ processors = [logger, plotter, tracer]
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = @time solve(problem, RK44P2(); pressure_solver, Δt = 4π / 200, processors);
 
-
 # Post-process
 plot_tracers(tracer)
 
 #-
 
-plot_pressure(setup, p)
+fig = plot_pressure(setup, p)
+lines!(box...; color = :red)
+fig
 
 #-
 
-plot_velocity(setup, V, t_end)
+fig = plot_velocity(setup, V, t_end)
+lines!(box...; color = :red)
+fig
 
 #-
 
-plot_vorticity(setup, V, tlims[2])
+fig = plot_vorticity(setup, V, tlims[2])
+lines!(box...; color = :red)
+fig
 
 #-
 
-plot_streamfunction(setup, V, tlims[2])
+fig = plot_streamfunction(setup, V, tlims[2])
+lines!(box...; color = :red)
+fig
 
 #-
 
-plot_force(setup, setup.force.F, t_end)
+fig = plot_force(setup, setup.force.F, t_end)
+lines!(box...; color = :red)
+fig
