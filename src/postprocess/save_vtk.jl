@@ -1,5 +1,5 @@
 """
-    save_vtk(V, p, filename = "output/solution")
+    save_vtk(V, p, t, filename = "output/solution")
 
 Save velocity and pressure field to a VTK file.
 """

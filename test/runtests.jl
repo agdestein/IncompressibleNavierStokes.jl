@@ -5,11 +5,12 @@ if isdefined(@__MODULE__, :LanguageServer)
     using .IncompressibleNavierStokes
 end
 
+using Aqua
+using CairoMakie
 using IncompressibleNavierStokes
 using LinearAlgebra
 using Statistics
 using Test
-using Aqua
 
 @testset "IncompressibleNavierStokes" begin
     include("grid.jl")
@@ -18,6 +19,7 @@ using Aqua
     include("solvers.jl")
     include("simulation2D.jl")
     include("simulation3D.jl")
+    include("postprocess.jl")
 
     @testset "Aqua" begin
         Aqua.test_all(
