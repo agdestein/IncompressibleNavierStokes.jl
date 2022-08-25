@@ -19,7 +19,8 @@ using Test
     include("solvers.jl")
     include("simulation2D.jl")
     include("simulation3D.jl")
-    include("postprocess.jl")
+    include("postprocess2D.jl")
+    include("postprocess3D.jl")
 
     @testset "Aqua" begin
         Aqua.test_all(
