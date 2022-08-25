@@ -33,7 +33,7 @@ Available plot `type`s are:
 Base.@kwdef mutable struct RealTimePlotter{F} <: AbstractProcessor
     nupdate::Int = 1
     fieldname::Symbol = :vorticity
-    type::F = heatmap
+    type::F = contour
     field::Observable = Observable(nothing)
     lims::Observable = Observable(nothing)
 end

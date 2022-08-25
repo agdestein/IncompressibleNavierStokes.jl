@@ -66,7 +66,7 @@
     @testset "VTK files" begin
         @test isfile("output/solution2D.pvd")
         @test isfile("output/solution2D_t=0p0.vtr")
-        
+
         save_vtk(V, p, t_end, setup, "output/field2D")
         @test isfile("output/field2D.vtr")
     end
@@ -79,6 +79,18 @@
         @test plot_vorticity(setup, V, t_end) isa Figure
         @test_broken plot_streamfunction(setup, V, t_end) isa Figure
         @test plot_force(setup, setup.force.F, t_end) isa Figure
+    end
+
+    @testset "Animate" begin
+        V, p = solve_animate(
+            problem,
+            RK44();
+            Δt = 4π / 200,
+            filename = "output/vorticity.gif",
+            nframe = 10,
+            nsubframe = 4,
+        )
+        @test isfile("output/vorticity.gif")
     end
 
 end

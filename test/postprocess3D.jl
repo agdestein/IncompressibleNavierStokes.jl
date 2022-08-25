@@ -99,4 +99,16 @@
         @test plot_force(setup, setup.force.F, t_end) isa Makie.FigureAxisPlot
     end
 
+    @testset "Animate" begin
+        V, p = solve_animate(
+            problem,
+            RK44();
+            Δt = 4π / 200,
+            filename = "output/vorticity.gif",
+            nframe = 10,
+            nsubframe = 4,
+        )
+        @test isfile("output/vorticity.gif")
+    end
+
 end
