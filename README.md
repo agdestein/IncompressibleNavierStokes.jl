@@ -2,8 +2,8 @@
 
 # IncompressibleNavierStokes
 
-| Documentation | Workflows | Code coverage | Code quality assurance |
-| :-----------: | :-------: | :-----------: | :--------------------: |
+| Documentation | Workflows | Code coverage | Quality assurance |
+| :-----------: | :-------: | :-----------: | :---------------: |
 | [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://agdestein.github.io/IncompressibleNavierStokes.jl/stable) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://agdestein.github.io/IncompressibleNavierStokes.jl/dev) | [![Build Status](https://github.com/agdestein/IncompressibleNavierStokes.jl/workflows/CI/badge.svg)](https://github.com/agdestein/IncompressibleNavierStokes.jl/actions) | [![Coverage](https://codecov.io/gh/agdestein/IncompressibleNavierStokes.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/agdestein/IncompressibleNavierStokes.jl) | [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl) |
 
 This package implements energy-conserving solvers for the incompressible Navier-Stokes
@@ -14,7 +14,7 @@ equations on a staggered cartesian grid. It is based on the Matlab package
 ## Installation
 
 To install IncompressibleNavierStokes, open up a Julia-REPL, type `]` to get
-into `Pkg`-mode, and type:
+into Pkg-mode, and type:
 
 ```sh
 add IncompressibleNavierStokes
@@ -62,15 +62,15 @@ v_bc(x, y, t) = x ≈ 0.0 ? sin(π / 6 * sin(f * t)) : 0.0
 dudt_bc(x, y, t) = x ≈ 0.0 ? -π / 6 * f * cos(f * t) * sin(π / 6 * sin(f * t)) : 0.0
 dvdt_bc(x, y, t) = x ≈ 0.0 ? π / 6 * f * cos(f * t) * cos(π / 6 * sin(f * t)) : 0.0
 boundary_conditions = BoundaryConditions(
-u_bc,
-v_bc;
-dudt_bc,
-dvdt_bc,
-bc_unsteady = true,
-bc_type = (;
-u = (; x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)),
-v = (; x = (:dirichlet, :symmetric), y = (:pressure, :pressure)),
-),
+    u_bc,
+    v_bc;
+    dudt_bc,
+    dvdt_bc,
+    bc_unsteady = true,
+    bc_type = (;
+        u = (; x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)),
+        v = (; x = (:dirichlet, :symmetric), y = (:pressure, :pressure)),
+    ),
 )
 
 # Grid
@@ -99,19 +99,19 @@ initial_velocity_u(x, y) = 1.0
 initial_velocity_v(x, y) = 0.0
 initial_pressure(x, y) = 0.0
 V₀, p₀ = create_initial_conditions(
-setup,
-t_start;
-initial_velocity_u,
-initial_velocity_v,
-initial_pressure,
+    setup,
+    t_start;
+    initial_velocity_u,
+    initial_velocity_v,
+    initial_pressure,
 );
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 V, p = solve_animate(
-problem, RK44P2();
-Δt = 4π / 200,
-filename = "vorticity.gif",
+    problem, RK44P2();
+    Δt = 4π / 200,
+    filename = "vorticity.gif",
 )
 ```
 

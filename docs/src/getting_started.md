@@ -1,7 +1,7 @@
 # Getting Started
 
 To install IncompressibleNavierStokes, open up a Julia-REPL, type `]` to get
-into `Pkg`-mode, and type:
+into Pkg-mode, and type:
 
 ```sh
 add IncompressibleNavierStokes
