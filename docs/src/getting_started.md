@@ -1,13 +1,10 @@
 # Getting Started
 
-This package is currently not registered in the [General
-Registry](https://github.com/JuliaRegistries/General). To install
-IncompressibleNavierStokes, run the following commands in a terminal:
+To install IncompressibleNavierStokes, open up a Julia-REPL, type `]` to get
+into `Pkg`-mode, and type:
 
 ```sh
-git clone https://github.com/agdestein/IncompressibleNavierStokes.jl
-cd IncompressibleNavierStokes
-julia --project -e 'using Pkg; Pkg.instantiate()'
+add IncompressibleNavierStokes
 ```
 
-which will download the package and install all dependencies.
+which will install the package and all dependencies to your local environment.

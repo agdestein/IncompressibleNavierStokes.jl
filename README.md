@@ -15,19 +15,11 @@ equations on a staggered cartesian grid. It is based on the Matlab package
 
 ## Installation
 
-To install IncompressibleNavierStokes, clone the repository:
+To install IncompressibleNavierStokes, open up a Julia-REPL, type `]` to get
+into `Pkg`-mode, and type:
 
 ```sh
-git clone https://github.com/agdestein/IncompressibleNavierStokes.jl
-```
-
-Then run the following command to install all dependencies from the [General
-registry](https://github.com/JuliaRegistries/General) (as specified in
-`Project.toml`):
-
-```sh
-cd IncompressibleNavierStokes
-julia --project -e 'using Pkg; Pkg.instantiate()'
+add IncompressibleNavierStokes
 ```
 
 See the
