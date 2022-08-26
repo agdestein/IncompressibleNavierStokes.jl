@@ -1,7 +1,7 @@
 """
     Grid{T,N}()
 
-Nonuniform cartesian grid of dimension `N` and floating point type `T`.
+Nonuniform Cartesian grid of dimension `N` and floating point type `T`.
 """
 Base.@kwdef struct Grid{T,N}
     order4::Bool = false                     # Use 4th order in space (otherwise 2nd order)
@@ -163,7 +163,7 @@ end
 """
     Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
 
-Create nonuniform cartesian box mesh `x` × `y` with boundary conditions `boundary_conditions`.
+Create nonuniform Cartesian box mesh `x` × `y` with boundary conditions `boundary_conditions`.
 If `order4` is `true`, a fourth order mesh is created.
 """
 function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
@@ -564,7 +564,7 @@ end
 """
     Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
 
-Create nonuniform cartesian box mesh `x` × `y` × `z` with boundary conditions `boundary_conditions`.
+Create nonuniform Cartesian box mesh `x` × `y` × `z` with boundary conditions `boundary_conditions`.
 If `order4` is `true`, a fourth order mesh is created.
 """
 function Grid(x, y, z; boundary_conditions, order4 = false, T = eltype(x))
