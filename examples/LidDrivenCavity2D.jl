@@ -90,8 +90,8 @@ force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
 
-# We also choos a pressure solver. The direct solver will precompute the LU decomposition of
-# the Poisson matrix.
+# We also choose a pressure solver. The direct solver will precompute the LU
+# decomposition of the Poisson matrix.
 
 pressure_solver = DirectPressureSolver(setup)
 

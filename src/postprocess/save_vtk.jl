@@ -1,7 +1,10 @@
 """
-    save_vtk(V, p, t, filename = "output/solution")
+    save_vtk(V, p, t, setup, filename = "output/solution")
 
 Save velocity and pressure field to a VTK file.
+
+In the case of a 2D setup, the velocity field is saved as a 3D vector with a
+z-component of zero, as this seems to be preferred by ParaView.
 """
 function save_vtk(V, p, t, setup, filename = "output/solution")
     (; xp, yp, zp) = setup.grid

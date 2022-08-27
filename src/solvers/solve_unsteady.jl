@@ -103,7 +103,7 @@ function solve(
         end
     end
 
-    finalize!.(processors)
+    foreach(finalize!, processors)
 
     (; V, p) = stepper
     V, p
