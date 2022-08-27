@@ -9,9 +9,9 @@ function get_streamfunction end
 function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
     (; grid, operators, boundary_conditions) = setup
     (; u_bc, v_bc) = boundary_conditions
-    (; indu, indv, Nux_in, Nvx_in, Nx, Ny) = setup.grid
-    (; hx, hy, x, y, xp, yp) = setup.grid
-    (; Wv_vx, Wu_uy) = setup.operators
+    (; indu, indv, Nux_in, Nvx_in, Nx, Ny) = grid
+    (; hx, hy, x, y, xp, yp) = grid
+    (; Wv_vx, Wu_uy) = operators
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]

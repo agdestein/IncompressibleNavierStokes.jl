@@ -1,5 +1,5 @@
 """
-    step(stepper::ExplicitRungeKuttaStepper, Δt)
+    step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
 
 Perform one time step for the general explicit Runge-Kutta method (ERK).
 
@@ -10,11 +10,12 @@ Non-mutating/allocating/out-of-place version.
 
 See also [`step!`](@ref).
 """
-function step(stepper::ExplicitRungeKuttaStepper, Δt)
+function step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
+    (; bc_unsteady) = boundary_conditions
     (; Ω⁻¹) = grid
-    (; G, M, yM) = operators
+    (; G, M) = operators
     (; A, b, c, p_add_solve) = method
 
     # Update current solution (does not depend on previous step size)
@@ -42,9 +43,9 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt)
     for i = 1:nstage
         # Right-hand side for tᵢ based on current velocity field uₕ, vₕ at level i. This
         # includes force evaluation at tᵢ and pressure gradient. Boundary conditions will be
-        # set through set_bc_vectors! inside momentum. The pressure p is not important here,
+        # set through `get_bc_vectors` inside momentum. The pressure p is not important here,
         # it will be removed again in the next step
-        F, ∇F = momentum(V, V, p, tᵢ, setup)
+        F, ∇F = momentum(V, V, p, tᵢ, setup; bc_vectors)
 
         # Store right-hand side of stage i
         # Remove the -G*p contribution (but not y_p)
@@ -57,10 +58,10 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt)
 
         # Boundary conditions at tᵢ₊₁
         tᵢ = tₙ + c[i] * Δtₙ
-        if boundary_conditions.bc_unsteady
-            set_bc_vectors!(setup, tᵢ)
-            (; yM) = setup.operators
+        if isnothing(bc_vectors) || bc_unsteady
+            bc_vectors = get_bc_vectors(setup, tᵢ)
         end
+        (; yM) = bc_vectors
 
         # Divergence of intermediate velocity field
         f = (M * (Vₙ / Δtₙ + V) + yM / Δtₙ) / c[i]
@@ -81,8 +82,8 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt)
 
     # For steady bc we do an additional pressure solve
     # That saves a pressure solve for i = 1 in the next time step
-    if !boundary_conditions.bc_unsteady || p_add_solve
-        p = pressure_additional_solve(pressure_solver, V, p, tₙ + Δtₙ, setup)
+    if !bc_unsteady || p_add_solve
+        p = pressure_additional_solve(pressure_solver, V, p, tₙ + Δtₙ, setup; bc_vectors)
     end
 
     t = tₙ + Δtₙ
@@ -91,7 +92,7 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt)
 end
 
 """
-    step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache)
+    step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
 
 Perform one time step for the general explicit Runge-Kutta method (ERK).
 
@@ -102,11 +103,12 @@ Mutating/non-allocating/in-place version.
 
 See also [`step`](@ref).
 """
-function step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache)
+function step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
+    (; bc_unsteady) = boundary_conditions
     (; Ω⁻¹) = grid
-    (; G, M, yM) = operators
+    (; G, M) = operators
     (; A, b, c, p_add_solve) = method
     (; kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f) = cache
 
@@ -134,9 +136,9 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache)
     for i = 1:nstage
         # Right-hand side for tᵢ based on current velocity field uₕ, vₕ at level i. This
         # includes force evaluation at tᵢ and pressure gradient. Boundary conditions will be
-        # set through set_bc_vectors! inside momentum. The pressure p is not important here,
+        # set through `get_bc_vectors` inside momentum. The pressure p is not important here,
         # it will be removed again in the next step
-        momentum!(F, ∇F, V, V, p, tᵢ, setup, momentum_cache)
+        momentum!(F, ∇F, V, V, p, tᵢ, setup, momentum_cache; bc_vectors)
 
         # Store right-hand side of stage i
         # Remove the -G*p contribution (but not y_p)
@@ -151,10 +153,10 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache)
 
         # Boundary conditions at tᵢ₊₁
         tᵢ = tₙ + c[i] * Δtₙ
-        if boundary_conditions.bc_unsteady
-            set_bc_vectors!(setup, tᵢ)
-            (; yM) = setup.operators
+        if isnothing(bc_vectors) || bc_unsteady
+            bc_vectors = get_bc_vectors(setup, tᵢ)
         end
+        (; yM) = bc_vectors
 
         # Divergence of intermediate velocity field
         @. Vtemp2 = Vₙ / Δtₙ + Vtemp
@@ -178,8 +180,8 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache)
 
     # For steady bc we do an additional pressure solve
     # That saves a pressure solve for i = 1 in the next time step
-    if !boundary_conditions.bc_unsteady || p_add_solve
-        pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+    if !bc_unsteady || p_add_solve
+        pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp; bc_vectors)
     end
 
     t = tₙ + Δtₙ

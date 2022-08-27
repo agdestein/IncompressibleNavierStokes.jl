@@ -22,11 +22,13 @@ function create_initial_conditions(
     initial_pressure = nothing,
     pressure_solver = DirectPressureSolver(setup),
 ) where {T}
-    (; grid) = setup
+    (; grid, operators) = setup
     (; xu, yu, xv, yv, xpp, ypp, Ω⁻¹) = grid
+    (; G, M) = operators
 
     # Boundary conditions
-    set_bc_vectors!(setup, t)
+    bc_vectors = get_bc_vectors(setup, t)
+    (; yM) = bc_vectors
 
     # Allocate velocity and pressure
     u = zero(xu)
@@ -44,14 +46,13 @@ function create_initial_conditions(
 
     # Kinetic energy and momentum of initial velocity field
     # Iteration 1 corresponds to t₀ = 0 (for unsteady simulations)
-    maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
+    maxdiv, umom, vmom, k = compute_conservation(V, t, setup; bc_vectors)
 
     if maxdiv > 1e-12
         @warn "Initial velocity field not (discretely) divergence free: $maxdiv.\n" *
               "Performing additional projection."
 
         # Make velocity field divergence free
-        (; G, M, yM) = setup.operators
         f = M * V + yM
         Δp = pressure_poisson(pressure_solver, f)
         V .-= Ω⁻¹ .* (G * Δp)
@@ -77,9 +78,11 @@ function create_initial_conditions(
 ) where {T}
     (; grid) = setup
     (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp, Ω⁻¹) = grid
+    (; G, M) = setup.operators
 
     # Boundary conditions
-    set_bc_vectors!(setup, t)
+    bc_vectors = get_bc_vectors(setup, t)
+    (; yM) = bc_vectors
 
     # Allocate velocity and pressure
     u = zero(xu)
@@ -95,14 +98,13 @@ function create_initial_conditions(
 
     # Kinetic energy and momentum of initial velocity field
     # Iteration 1 corresponds to t₀ = 0 (for unsteady simulations)
-    maxdiv, umom, vmom, wmom, k = compute_conservation(V, t, setup)
+    maxdiv, umom, vmom, wmom, k = compute_conservation(V, t, setup; bc_vectors)
 
     if maxdiv > 1e-12
         @warn "Initial velocity field not (discretely) divergence free: $maxdiv.\n" *
               "Performing additional projection."
 
         # Make velocity field divergence free
-        (; G, M, yM) = setup.operators
         f = M * V + yM
         Δp = pressure_poisson(pressure_solver, f, setup)
         V .-= Ω⁻¹ .* (G * Δp)

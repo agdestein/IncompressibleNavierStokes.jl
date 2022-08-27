@@ -1,5 +1,5 @@
 """
-    convection(model, V, ϕ, setup; getJacobian = false)
+    convection(model, V, ϕ, setup; bc_vectors, getJacobian = false)
 
 Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`, using the convection
 model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
@@ -15,16 +15,17 @@ function convection(
     V,
     ϕ,
     setup;
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 )
     (; order4, α) = setup.grid
 
     # No regularization
-    c, ∇c = convection_components(V, ϕ, setup; getJacobian, newton_factor, order4 = false)
+    c, ∇c = convection_components(V, ϕ, setup; bc_vectors, getJacobian, newton_factor, order4 = false)
 
     if order4
-        c3, ∇c3 = convection_components(V, ϕ, setup; getJacobian, newton_factor, order4)
+        c3, ∇c3 = convection_components(V, ϕ, setup; bc_vectors, getJacobian, newton_factor, order4)
         c = @. α * c - c3
         getJacobian && (∇c = @. α * ∇c - ∇c3)
     end
@@ -38,12 +39,14 @@ function convection(
     V,
     ϕ,
     setup::Setup{T,2};
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, M, yM, α) = operators
+    (; Diffu_f, Diffv_f, M, α) = operators
+    (; yDiffu_f, yDiffv_f, yM) = bc_vectors
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
@@ -63,7 +66,7 @@ function convection(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    c, ∇c = convection_components(V̄, ϕ̄, setup; getJacobian, newton_factor)
+    c, ∇c = convection_components(V̄, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -82,12 +85,14 @@ function convection(
     V,
     ϕ,
     setup::Setup{T,3};
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, Diffw_f, yDiffw_f, M, yM, α) = operators
+    (; Diffu_f, Diffv_f, Diffw_f, M, α) = operators
+    (; yDiffu_f, yDiffv_f, yDiffw_f, yM) = bc_vectors
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
@@ -111,7 +116,7 @@ function convection(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    c, ∇c = convection_components(V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
+    c, ∇c = convection_components(V̄, ϕ̄, setup, cache; bc_vectors, getJacobian, newton_factor)
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -132,12 +137,14 @@ function convection(
     V,
     ϕ,
     setup::Setup{T,2};
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, M, yM, α) = operators
+    (; Diffu_f, Diffv_f, M, α) = operators
+    (; yDiffu_f, yDiffv_f, yM) = bc_vectors
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
@@ -166,9 +173,9 @@ function convection(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * V̄ + yM))
 
-    c, ∇c = convection_components(V̄, ϕ̄, setup; getJacobian, newton_factor)
-    c2, ∇c2 = convection_components(ΔV, ϕ̄, setup; getJacobian, newton_factor)
-    c3, ∇c3 = convection_components(V̄, Δϕ, setup; getJacobian, newton_factor)
+    c, ∇c = convection_components(V̄, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
+    c2, ∇c2 = convection_components(ΔV, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
+    c3, ∇c3 = convection_components(V̄, Δϕ, setup; bc_vectors, getJacobian, newton_factor)
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -193,12 +200,14 @@ function convection(
     V,
     ϕ,
     setup::Setup{T,3};
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, Diffw_f, yDiffw_f, M, yM, α) = operators
+    (; Diffu_f, Diffv_f, Diffw_f, M, α) = operators
+    (; yDiffu_f, yDiffv_f, yDiffw_f, yM) = bc_vectors
     (; c2, ∇c2, c3, ∇c3) = cache
 
     uₕ = @view V[indu]
@@ -232,9 +241,9 @@ function convection(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * V̄ + yM))
 
-    c, ∇c = convection_components(V̄, ϕ̄, setup; getJacobian, newton_factor)
-    c2, ∇c2 = convection_components(ΔV, ϕ̄, setup; getJacobian, newton_factor)
-    c3, ∇c3 = convection_components(V̄, Δϕ, setup; getJacobian, newton_factor)
+    c, ∇c = convection_components(V̄, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
+    c2, ∇c2 = convection_components(ΔV, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
+    c3, ∇c3 = convection_components(V̄, Δϕ, setup; bc_vectors, getJacobian, newton_factor)
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -263,12 +272,14 @@ function convection(
     V,
     ϕ,
     setup::Setup{T,2};
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, M, yM, α) = operators
+    (; Diffu_f, Diffv_f, M, α) = operators
+    (; yDiffu_f, yDiffv_f, yM) = bc_vectors
 
     ϕu = @view ϕ[indu]
     ϕv = @view ϕ[indv]
@@ -285,7 +296,7 @@ function convection(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    convection_components(V, ϕ̄, setup; getJacobian, newton_factor)
+    convection_components(V, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
 end
 
 # 3D version
@@ -296,13 +307,15 @@ function convection(
     V,
     ϕ,
     setup::Setup{T,3},
+    bc_vectors,
     cache;
     getJacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, Diffw_f, yDiffw_f, M, yM, α) = operators
+    (; Diffu_f, Diffv_f, Diffw_f, M, α) = operators
+    (; yDiffu_f, yDiffv_f, yDiffw_f, yM) = bc_vectors
 
     ϕu = @view ϕ[indu]
     ϕv = @view ϕ[indv]
@@ -321,11 +334,11 @@ function convection(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    convection_components(V, ϕ̄, setup; getJacobian, newton_factor)
+    convection_components(V, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
 end
 
 """
-    convection!(model, c, ∇c, V, ϕ, setup, cache; getJacobian = false)
+    convection!(model, c, ∇c, V, ϕ, setup, cache; bc_vectors, getJacobian = false)
 
 Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`, using the convection
 model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
@@ -344,6 +357,7 @@ function convection!(
     ϕ,
     setup,
     cache;
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 )
@@ -351,10 +365,10 @@ function convection!(
     (; c3, ∇c3) = cache
 
     # No regularization
-    convection_components!(c, ∇c, V, ϕ, setup, cache; getJacobian, newton_factor, order4 = false)
+    convection_components!(c, ∇c, V, ϕ, setup, cache; bc_vectors, getJacobian, newton_factor, order4 = false)
 
     if order4
-        convection_components!(c3, ∇c3, V, ϕ, setup, cache; getJacobian, newton_factor, order4)
+        convection_components!(c3, ∇c3, V, ϕ, setup, cache; bc_vectors, getJacobian, newton_factor, order4)
         @. c = α * c - c3
         getJacobian && (@. ∇c = α * ∇c - ∇c3)
     end
@@ -371,12 +385,14 @@ function convection!(
     ϕ,
     setup::Setup{T,2},
     cache;
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, M, yM, α) = operators
+    (; Diffu_f, Diffv_f, M, α) = operators
+    (; yDiffu_f, yDiffv_f, yM) = bc_vectors
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -399,7 +415,7 @@ function convection!(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
+    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; bc_vectors, getJacobian, newton_factor)
 
     cu .= filter_convection(cu, Diffu_f, yDiffu_f, α)
     cv .= filter_convection(cv, Diffv_f, yDiffv_f, α)
@@ -416,12 +432,14 @@ function convection!(
     ϕ,
     setup::Setup{T,3},
     cache;
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, Diffw_f, yDiffw_f, M, yM, α) = operators
+    (; Diffu_f, Diffv_f, Diffw_f, M, α) = operators
+    (; yDiffu_f, yDiffv_f, yDiffw_f, yM) = bc_vectors
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -449,7 +467,7 @@ function convection!(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
+    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; bc_vectors, getJacobian, newton_factor)
 
     cu .= filter_convection(cu, Diffu_f, yDiffu_f, α)
     cv .= filter_convection(cv, Diffv_f, yDiffv_f, α)
@@ -467,12 +485,14 @@ function convection!(
     ϕ,
     setup::Setup{T,2},
     cache;
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, M, yM, α) = operators
+    (; Diffu_f, Diffv_f, M, α) = operators
+    (; yDiffu_f, yDiffv_f, yM) = bc_vectors
     (; c2, ∇c2, c3, ∇c3) = cache
 
     cu = @view c[indu]
@@ -509,19 +529,9 @@ function convection!(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * V̄ + yM))
 
-    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
-    convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache; getJacobian, newton_factor)
-    convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian, newton_factor)
-
-    # TODO: consider inner loop parallelization
-    # @sync begin
-    #     @spawn convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian,
-    #     newton_factor)
-    #     @spawn convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache, getJacobian,
-    #     newton_factor)
-    #     @spawn convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian,
-    #     newton_factor)
-    # end
+    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; bc_vectors, getJacobian, newton_factor)
+    convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache; bc_vectors, getJacobian, newton_factor)
+    convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; bc_vectors, getJacobian, newton_factor)
 
     cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
     cv .+= filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α)
@@ -538,12 +548,14 @@ function convection!(
     ϕ,
     setup::Setup{T,3},
     cache;
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, Diffw_f, yDiffw_f, M, yM, α) = operators
+    (; Diffu_f, Diffv_f, Diffw_f, M, α) = operators
+    (; yDiffu_f, yDiffv_f, yDiffw_f, yM) = bc_vectors
     (; c2, ∇c2, c3, ∇c3) = cache
 
     cu = @view c[indu]
@@ -589,19 +601,9 @@ function convection!(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * V̄ + yM))
 
-    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; getJacobian, newton_factor)
-    convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache; getJacobian, newton_factor)
-    convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; getJacobian, newton_factor)
-
-    # TODO: consider inner loop parallelization
-    # @sync begin
-    #     @spawn convection_components!(c, ∇c, V̄, ϕ̄, setup, cache, getJacobian,
-    #     newton_factor)
-    #     @spawn convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache, getJacobian,
-    #     newton_factor)
-    #     @spawn convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache, getJacobian,
-    #     newton_factor)
-    # end
+    convection_components!(c, ∇c, V̄, ϕ̄, setup, cache; bc_vectors, getJacobian, newton_factor)
+    convection_components!(c2, ∇c2, ΔV, ϕ̄, setup, cache; bc_vectors, getJacobian, newton_factor)
+    convection_components!(c3, ∇c3, V̄, Δϕ, setup, cache; bc_vectors, getJacobian, newton_factor)
 
     cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
     cv .+= filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α)
@@ -619,12 +621,14 @@ function convection!(
     ϕ,
     setup::Setup{T,2},
     cache;
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, M, yM, α) = operators
+    (; Diffu_f, Diffv_f, M, α) = operators
+    (; yDiffu_f, yDiffv_f, yM) = bc_vectors
 
     ϕu = @view ϕ[indu]
     ϕv = @view ϕ[indv]
@@ -641,7 +645,7 @@ function convection!(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    convection_components!(c, ∇c, V, ϕ̄, setup, cache; getJacobian, newton_factor)
+    convection_components!(c, ∇c, V, ϕ̄, setup, cache; bc_vectors, getJacobian, newton_factor)
 
     c, ∇c
 end
@@ -655,12 +659,14 @@ function convection!(
     ϕ,
     setup::Setup{T,3},
     cache;
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
-    (; Diffu_f, yDiffu_f, Diffv_f, yDiffv_f, Diffw_f, yDiffw_f, M, yM, α) = operators
+    (; Diffu_f, Diffv_f, Diffw_f, M, α) = operators
+    (; yDiffu_f, yDiffv_f, yDiffw_f, yM) = bc_vectors
 
     ϕu = @view ϕ[indu]
     ϕv = @view ϕ[indv]
@@ -679,7 +685,7 @@ function convection!(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    convection_components!(c, ∇c, V, ϕ̄, setup, cache; getJacobian, newton_factor)
+    convection_components!(c, ∇c, V, ϕ̄, setup, cache; bc_vectors, getJacobian, newton_factor)
 
     c, ∇c
 end

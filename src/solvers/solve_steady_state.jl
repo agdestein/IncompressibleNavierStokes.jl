@@ -21,7 +21,7 @@ function solve(
 )
     (; setup, V₀, p₀) = problem
     (; NV, Np) = setup.grid
-    (; G, M, yM) = setup.operators
+    (; G, M) = setup.operators
 
     # Temporary variables
     momentum_cache = MomentumCache(setup)
@@ -43,10 +43,11 @@ function solve(
     newton_factor = false
 
     # Initialize BC arrays
-    set_bc_vectors!(setup, t)
+    bc_vectors = get_bc_vectors(setup, t)
+    (; yM) = bc_vectors
 
     # Residual of momentum equations at start
-    momentum!(F, ∇F, V, V, p, t, setup, momentum_cache)
+    momentum!(F, ∇F, V, V, p, t, setup, momentum_cache; bc_vectors)
     maxres = maximum(abs.(F))
 
     println("Initial momentum residual = $maxres")
@@ -65,7 +66,7 @@ function solve(
             newton_factor = true
         end
 
-        momentum!(F, ∇F, V, V, p, t, setup, momentum_cache; getJacobian = true, newton_factor)
+        momentum!(F, ∇F, V, V, p, t, setup, momentum_cache; bc_vectors, getJacobian = true, newton_factor)
 
         fmass = M * V + yM
         f = [-F; fmass]
@@ -82,9 +83,9 @@ function solve(
         p .+= Δp
 
         # Calculate mass, momentum and energy
-        # maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
+        # maxdiv, umom, vmom, k = compute_conservation(V, t, setup; bc_vectors)
 
-        momentum!(F, ∇F, V, V, p, t, setup, momentum_cache)
+        momentum!(F, ∇F, V, V, p, t, setup, momentum_cache; bc_vectors)
         maxres = maximum(abs.(F))
 
         println(": momentum residual = $maxres")

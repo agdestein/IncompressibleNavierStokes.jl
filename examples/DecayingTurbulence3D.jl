@@ -109,15 +109,16 @@ f = setup.operators.M * V
 p = zero(f)
 
 # Boundary conditions
-set_bc_vectors!(setup, 0.0)
+bc_vectors = get_bc_vectors(setup, 0.0)
+(; yM) = bc_vectors
 
 # Make velocity field divergence free
 (; Ω⁻¹) = setup.grid
-(; G, M, yM) = setup.operators
+(; G, M) = setup.operators
 f = M * V + yM
 Δp = IncompressibleNavierStokes.pressure_poisson(pressure_solver, f)
 V .-= Ω⁻¹ .* (G * Δp)
-p = IncompressibleNavierStokes.pressure_additional_solve(pressure_solver, V, p, 0.0, setup)
+p = IncompressibleNavierStokes.pressure_additional_solve(pressure_solver, V, p, 0.0, setup; bc_vectors)
 
 V₀, p₀ = V, p
 
@@ -138,11 +139,12 @@ problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p, = solve(problem, RK44(); Δt = 0.001, processors, inplace = true, pressure_solver)
 
 k = 1:K
-u = reshape(V[grid.indu], N, N)
-v = reshape(V[grid.indv], N, N)
-e = u .^ 2 .+ v .^ 2
-ehat = fft(e)[k, k]
-kk = sqrt.(k .^ 2 .+ (k') .^ 2)
+u = reshape(V[grid.indu], N, N, N)
+v = reshape(V[grid.indv], N, N, N)
+w = reshape(V[grid.indw], N, N, N)
+e = u .^ 2 .+ v .^ 2 .+ w .^ 2
+ehat = fft(e)[k, k, k]
+kk = sqrt.(k .^ 2 .+ reshape(k, 1, :) .^ 2 .+ reshape(k, 1, 1, :) .^ 2)
 
 fig = Figure()
 ax = Axis(fig[1, 1]; xlabel = L"k", ylabel = L"\hat{e}(k)", xscale = log10, yscale = log10)

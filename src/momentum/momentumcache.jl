@@ -81,10 +81,11 @@ Base.@kwdef struct MomentumCache{T}
 end
 
 function MomentumCache(setup)
-    (; Nu, Nv, Nw, NV, order4) = setup.grid
-    (; yIu_ux, yIv_uy, yIw_uz, yIu_vx, yIv_vy, yIw_vz, yIu_wx, yIv_wy, yIw_wz) = setup.operators
+    (; grid, operators) = setup
+    (; Nu, Nv, Nw, NV, order4) = grid
+    (; Iu_ux, Iv_uy, Iw_uz, Iu_vx, Iv_vy, Iw_vz, Iu_wx, Iv_wy, Iw_wz) = operators
 
-    T = eltype(yIu_ux)
+    T = eltype(Iu_ux)
 
     Gp = zeros(T, NV)
     c = zeros(T, NV)
@@ -98,41 +99,41 @@ function MomentumCache(setup)
     ∇d = spzeros(T, NV, NV)
     ∇b = spzeros(T, NV, NV)
 
-    u_ux = zeros(T, length(yIu_ux))
-    ū_ux = zeros(T, length(yIu_ux))
-    uū_ux = zeros(T, length(yIu_ux))
+    u_ux = zeros(T, size(Iu_ux, 1))
+    ū_ux = zeros(T, size(Iu_ux, 1))
+    uū_ux = zeros(T, size(Iu_ux, 1))
 
-    u_uy = zeros(T, length(yIv_uy))
-    v̄_uy = zeros(T, length(yIv_uy))
-    uv̄_uy = zeros(T, length(yIv_uy))
+    u_uy = zeros(T, size(Iv_uy, 1))
+    v̄_uy = zeros(T, size(Iv_uy, 1))
+    uv̄_uy = zeros(T, size(Iv_uy, 1))
 
-    u_uz = zeros(T, length(yIw_uz))
-    w̄_uz = zeros(T, length(yIw_uz))
-    uw̄_uz = zeros(T, length(yIw_uz))
+    u_uz = zeros(T, size(Iw_uz, 1))
+    w̄_uz = zeros(T, size(Iw_uz, 1))
+    uw̄_uz = zeros(T, size(Iw_uz, 1))
 
-    v_vx = zeros(T, length(yIu_vx))
-    ū_vx = zeros(T, length(yIu_vx))
-    vū_vx = zeros(T, length(yIu_vx))
+    v_vx = zeros(T, size(Iu_vx, 1))
+    ū_vx = zeros(T, size(Iu_vx, 1))
+    vū_vx = zeros(T, size(Iu_vx, 1))
 
-    v_vy = zeros(T, length(yIv_vy))
-    v̄_vy = zeros(T, length(yIv_vy))
-    vv̄_vy = zeros(T, length(yIv_vy))
+    v_vy = zeros(T, size(Iv_vy, 1))
+    v̄_vy = zeros(T, size(Iv_vy, 1))
+    vv̄_vy = zeros(T, size(Iv_vy, 1))
 
-    v_vz = zeros(T, length(yIw_vz))
-    w̄_vz = zeros(T, length(yIw_vz))
-    vw̄_vz = zeros(T, length(yIw_vz))
+    v_vz = zeros(T, size(Iw_vz, 1))
+    w̄_vz = zeros(T, size(Iw_vz, 1))
+    vw̄_vz = zeros(T, size(Iw_vz, 1))
 
-    w_wx = zeros(T, length(yIu_wx))
-    ū_wx = zeros(T, length(yIu_wx))
-    wū_wx = zeros(T, length(yIu_wx))
+    w_wx = zeros(T, size(Iu_wx, 1))
+    ū_wx = zeros(T, size(Iu_wx, 1))
+    wū_wx = zeros(T, size(Iu_wx, 1))
 
-    w_wy = zeros(T, length(yIv_wy))
-    v̄_wy = zeros(T, length(yIv_wy))
-    wv̄_wy = zeros(T, length(yIv_wy))
+    w_wy = zeros(T, size(Iv_wy, 1))
+    v̄_wy = zeros(T, size(Iv_wy, 1))
+    wv̄_wy = zeros(T, size(Iv_wy, 1))
 
-    w_wz = zeros(T, length(yIw_wz))
-    w̄_wz = zeros(T, length(yIw_wz))
-    ww̄_wz = zeros(T, length(yIw_wz))
+    w_wz = zeros(T, size(Iw_wz, 1))
+    w̄_wz = zeros(T, size(Iw_wz, 1))
+    ww̄_wz = zeros(T, size(Iw_wz, 1))
 
     ∂uū∂x = zeros(T, Nu)
     ∂uv̄∂y = zeros(T, Nu)

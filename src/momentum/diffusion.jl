@@ -1,5 +1,5 @@
 """
-    diffusion!(model, V, setup; getJacobian = false)
+    diffusion!(model, V, setup; bc_vectors, getJacobian = false)
 
 Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V` using viscosity model `model`.
 
@@ -9,8 +9,9 @@ See also [`diffusion!`](@ref).
 """
 function diffusion end
 
-function diffusion(::LaminarModel, V, setup; getJacobian = false)
-    (; Diff, yDiff) = setup.operators
+function diffusion(::LaminarModel, V, setup; bc_vectors, getJacobian = false)
+    (; Diff) = setup.operators
+    (; yDiff) = bc_vectors
 
     d = Diff * V + yDiff
 
@@ -28,16 +29,18 @@ function diffusion(
     model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
     V,
     setup::Setup{T,2};
+    bc_vectors,
     getJacobian = false,
 ) where {T}
     (; indu, indv, indw) = setup.grid
     (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
     (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
     (; Aν_ux, Aν_uy, Aν_vx, Aν_vy) = setup.operators
+    (; yAν_ux, yAν_uy, yAν_vx, yAν_vy) = bc_vectors
 
     # Get components of strain tensor and its magnitude;
     # The magnitude S_abs is evaluated at pressure points
-    S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v = strain_tensor(V, setup; getJacobian)
+    S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v = strain_tensor(V, setup; bc_vectors, getJacobian)
 
     # Turbulent viscosity at all pressure points
     ν_t = turbulent_viscosity(model, setup, S_abs)
@@ -45,13 +48,17 @@ function diffusion(
     # To compute the diffusion, we need ν_t at ux, uy, vx and vy locations
     # This means we have to reverse the process of strain_tensor.m: go
     # from pressure points back to the ux, uy, vx, vy locations
-    ν_t_ux, ν_t_uy, ν_t_vx, ν_t_vy = interpolate_nu(ν_t, setup)
+    ν_t_ux = Aν_ux * ν_t + yAν_ux
+    ν_t_uy = Aν_uy * ν_t + yAν_uy
+    ν_t_vx = Aν_vx * ν_t + yAν_vx
+    ν_t_vy = Aν_vy * ν_t + yAν_vy
 
     # Now the total diffusive terms (laminar + turbulent) is as follows
     # Note that the factor 2 is because
     # Tau = 2*(ν+ν_t)*S(u), with S(u) = 1/2*(∇u + (∇u)^T)
 
-    ν = 1 / model.Re # Molecular viscosity
+    # Molecular viscosity
+    ν = 1 / model.Re
 
     du = Dux * (2 .* (ν .+ ν_t_ux) .* S11[:]) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12[:])
     dv = Dvx * (2 .* (ν .+ ν_t_vx) .* S21[:]) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22[:])
@@ -97,24 +104,26 @@ function diffusion(
     model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
     V,
     setup::Setup{T,3};
+    bc_vectors,
     getJacobian = false,
 ) where {T}
     error("Not implemented")
 end
 
-function diffusion(model::KEpsilonModel, V, setup; getJacobian = false)
+function diffusion(model::KEpsilonModel, V, setup; bc_vectors, getJacobian = false)
     error("Not implemented")
 end
 
 """
-    diffusion!(model, d, ∇d, V, setup; getJacobian = false)
+    diffusion!(model, d, ∇d, V, setup; bc_vectors, getJacobian = false)
 
 Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V` using viscosity model `model`.
 """
 function diffusion! end
 
-function diffusion!(::LaminarModel, d, ∇d, V, setup; getJacobian = false)
-    (; Diff, yDiff) = setup.operators
+function diffusion!(::LaminarModel, d, ∇d, V, setup; bc_vectors, getJacobian = false)
+    (; Diff) = setup.operators
+    (; yDiff) = bc_vectors
 
     # d = Diff * V + yDiff
     mul!(d, Diff, V)
@@ -131,33 +140,39 @@ function diffusion!(
     ∇d,
     V,
     setup;
+    bc_vectors,
     getJacobian = false,
 )
     (; indu, indv, indw) = setup.grid
     (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
     (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
     (; Aν_ux, Aν_uy, Aν_vx, Aν_vy) = setup.operators
+    (; yAν_ux, yAν_uy, yAν_vx, yAν_vy) = bc_vectors
 
     du = @view d[indu]
     dv = @view d[indv]
 
     # Get components of strain tensor and its magnitude;
     # The magnitude S_abs is evaluated at pressure points
-    S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v = strain_tensor(V, setup; getJacobian)
+    S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v = strain_tensor(V, setup; bc_vectors, getJacobian)
 
     # Turbulent viscosity at all pressure points
     ν_t = turbulent_viscosity(model, setup, S_abs)
 
     # To compute the diffusion, we need ν_t at ux, uy, vx and vy locations
-    # This means we have to reverse the process of strain_tensor.m: go
+    # This means we have to reverse the process of `strain_tensor`: go
     # from pressure points back to the ux, uy, vx, vy locations
-    ν_t_ux, ν_t_uy, ν_t_vx, ν_t_vy = interpolate_nu(ν_t, setup)
+    ν_t_ux = Aν_ux * ν_t + yAν_ux
+    ν_t_uy = Aν_uy * ν_t + yAν_uy
+    ν_t_vx = Aν_vx * ν_t + yAν_vx
+    ν_t_vy = Aν_vy * ν_t + yAν_vy
 
     # Now the total diffusive terms (laminar + turbulent) is as follows
     # Note that the factor 2 is because
     # Tau = 2*(ν+ν_t)*S(u), with S(u) = 1/2*(∇u + (∇u)^T)
 
-    ν = 1 / model.Re # Molecular viscosity
+    # Molecular viscosity
+    ν = 1 / model.Re
 
     du .= Dux * (2 .* (ν .+ ν_t_ux) .* S11[:]) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12[:])
     dv .= Dvx * (2 .* (ν .+ ν_t_vx) .* S21[:]) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22[:])
@@ -194,6 +209,6 @@ function diffusion!(
     d, ∇d
 end
 
-function diffusion!(model::KEpsilonModel, d, ∇d, V, setup; getJacobian = false)
+function diffusion!(model::KEpsilonModel, d, ∇d, V, setup; bc_vectors, getJacobian = false)
     error("k-e implementation in diffusion.jl not finished")
 end

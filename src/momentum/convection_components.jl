@@ -1,6 +1,7 @@
 """
     convection_components(
         V, ϕ, setup;
+        bc_vectors,
         getJacobian = false,
         newton_factor = false,
         order4 = false,
@@ -19,6 +20,7 @@ function convection_components(
     V,
     ϕ,
     setup::Setup{T,2};
+    bc_vectors,
     getJacobian = false,
     newton_factor = false,
     order4 = false,
@@ -36,26 +38,26 @@ function convection_components(
         Av_vx = operators.Av_vx3
         Av_vy = operators.Av_vy3
 
-        yAu_ux = operators.yAu_ux3
-        yAu_uy = operators.yAu_uy3
-        yAv_vx = operators.yAv_vx3
-        yAv_vy = operators.yAv_vy3
-
         Iu_ux = operators.Iu_ux3
         Iv_uy = operators.Iv_uy3
         Iu_vx = operators.Iu_vx3
         Iv_vy = operators.Iv_vy3
 
-        yIu_ux = operators.yIu_ux3
-        yIv_uy = operators.yIv_uy3
-        yIu_vx = operators.yIu_vx3
-        yIv_vy = operators.yIv_vy3
+        yAu_ux = bc_vectors.yAu_ux3
+        yAu_uy = bc_vectors.yAu_uy3
+        yAv_vx = bc_vectors.yAv_vx3
+        yAv_vy = bc_vectors.yAv_vy3
+
+        yIu_ux = bc_vectors.yIu_ux3
+        yIv_uy = bc_vectors.yIv_uy3
+        yIu_vx = bc_vectors.yIu_vx3
+        yIv_vy = bc_vectors.yIv_vy3
     else
         (; Cux, Cuy, Cvx, Cvy) = operators
         (; Au_ux, Au_uy, Av_vx, Av_vy) = operators
-        (; yAu_ux, yAu_uy, yAv_vx, yAv_vy) = operators
         (; Iu_ux, Iv_uy, Iu_vx, Iv_vy) = operators
-        (; yIu_ux, yIv_uy, yIu_vx, yIv_vy) = operators
+        (; yAu_ux, yAu_uy, yAv_vx, yAv_vy) = bc_vectors
+        (; yIu_ux, yIv_uy, yIu_vx, yIv_vy) = bc_vectors
     end
 
     (; indu, indv) = grid
@@ -122,30 +124,35 @@ end
 
 # 3D version
 function convection_components(
-        V,
-        ϕ,
-        setup::Setup{T,3};
-        getJacobian = false,
-        newton_factor = false,
-        order4 = false,
+    V,
+    ϕ,
+    setup::Setup{T,3};
+    bc_vectors,
+    getJacobian = false,
+    newton_factor = false,
+    order4 = false,
 ) where {T}
     order4 && error("order4 not implemented for 3D")
 
     (; grid, operators) = setup
+    (; indu, indv, indw) = grid
     (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz) = operators
+
     (; Au_ux, Au_uy, Au_uz) = operators
     (; Av_vx, Av_vy, Av_vz) = operators
     (; Aw_wx, Aw_wy, Aw_wz) = operators
-    (; yAu_ux, yAu_uy, yAu_uz) = operators
-    (; yAv_vx, yAv_vy, yAv_vz) = operators
-    (; yAw_wx, yAw_wy, yAw_wz) = operators
+
     (; Iu_ux, Iv_uy, Iw_uz) = operators
     (; Iu_vx, Iv_vy, Iw_vz) = operators
     (; Iu_wx, Iv_wy, Iw_wz) = operators
-    (; yIu_ux, yIv_uy, yIw_uz) = operators
-    (; yIu_vx, yIv_vy, yIw_vz) = operators
-    (; yIu_wx, yIv_wy, yIw_wz) = operators
-    (; indu, indv, indw) = grid
+
+    (; yAu_ux, yAu_uy, yAu_uz) = bc_vectors
+    (; yAv_vx, yAv_vy, yAv_vz) = bc_vectors
+    (; yAw_wx, yAw_wy, yAw_wz) = bc_vectors
+
+    (; yIu_ux, yIv_uy, yIw_uz) = bc_vectors
+    (; yIu_vx, yIv_vy, yIw_vz) = bc_vectors
+    (; yIu_wx, yIv_wy, yIw_wz) = bc_vectors
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
@@ -259,6 +266,7 @@ end
 """
     convection_components!(
         c, ∇c, V, ϕ, setup, cache;
+        bc_vectors,
         getJacobian = false,
         newton_factor = false,
         order4 = false,
@@ -274,15 +282,16 @@ function convection_components! end
 
 # 2D version
 function convection_components!(
-        c,
-        ∇c,
-        V,
-        ϕ,
-        setup::Setup{T,2},
-        cache;
-        getJacobian = false,
-        newton_factor = false,
-        order4 = false,
+    c,
+    ∇c,
+    V,
+    ϕ,
+    setup::Setup{T,2},
+    cache;
+    bc_vectors,
+    getJacobian = false,
+    newton_factor = false,
+    order4 = false,
 ) where {T}
     (; grid, operators) = setup
 
@@ -297,26 +306,26 @@ function convection_components!(
         Av_vx = operators.Av_vx3
         Av_vy = operators.Av_vy3
 
-        yAu_ux = operators.yAu_ux3
-        yAu_uy = operators.yAu_uy3
-        yAv_vx = operators.yAv_vx3
-        yAv_vy = operators.yAv_vy3
-
         Iu_ux = operators.Iu_ux3
         Iv_uy = operators.Iv_uy3
         Iu_vx = operators.Iu_vx3
         Iv_vy = operators.Iv_vy3
 
-        yIu_ux = operators.yIu_ux3
-        yIv_uy = operators.yIv_uy3
-        yIu_vx = operators.yIu_vx3
-        yIv_vy = operators.yIv_vy3
+        yAu_ux = bc_vectors.yAu_ux3
+        yAu_uy = bc_vectors.yAu_uy3
+        yAv_vx = bc_vectors.yAv_vx3
+        yAv_vy = bc_vectors.yAv_vy3
+
+        yIu_ux = bc_vectors.yIu_ux3
+        yIv_uy = bc_vectors.yIv_uy3
+        yIu_vx = bc_vectors.yIu_vx3
+        yIv_vy = bc_vectors.yIv_vy3
     else
         (; Cux, Cuy, Cvx, Cvy) = operators
         (; Au_ux, Au_uy, Av_vx, Av_vy) = operators
-        (; yAu_ux, yAu_uy, yAv_vx, yAv_vy) = operators
         (; Iu_ux, Iv_uy, Iu_vx, Iv_vy) = operators
-        (; yIu_ux, yIv_uy, yIu_vx, yIv_vy) = operators
+        (; yAu_ux, yAu_uy, yAv_vx, yAv_vy) = bc_vectors
+        (; yIu_ux, yIv_uy, yIu_vx, yIv_vy) = bc_vectors
     end
 
     (; indu, indv) = grid
@@ -432,6 +441,7 @@ function convection_components!(
         ϕ,
         setup::Setup{T,3},
         cache;
+        bc_vectors,
         getJacobian = false,
         newton_factor = false,
         order4 = false,
@@ -439,20 +449,25 @@ function convection_components!(
     order4 && error("order4 not implemented for 3D")
 
     (; grid, operators) = setup
+    (; indu, indv, indw) = grid
     (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz) = operators
+
     (; Au_ux, Au_uy, Au_uz) = operators
     (; Av_vx, Av_vy, Av_vz) = operators
     (; Aw_wx, Aw_wy, Aw_wz) = operators
-    (; yAu_ux, yAu_uy, yAu_uz) = operators
-    (; yAv_vx, yAv_vy, yAv_vz) = operators
-    (; yAw_wx, yAw_wy, yAw_wz) = operators
+
     (; Iu_ux, Iv_uy, Iw_uz) = operators
     (; Iu_vx, Iv_vy, Iw_vz) = operators
     (; Iu_wx, Iv_wy, Iw_wz) = operators
-    (; yIu_ux, yIv_uy, yIw_uz) = operators
-    (; yIu_vx, yIv_vy, yIw_vz) = operators
-    (; yIu_wx, yIv_wy, yIw_wz) = operators
-    (; indu, indv, indw) = grid
+
+    (; yAu_ux, yAu_uy, yAu_uz) = bc_vectors
+    (; yAv_vx, yAv_vy, yAv_vz) = bc_vectors
+    (; yAw_wx, yAw_wy, yAw_wz) = bc_vectors
+
+    (; yIu_ux, yIv_uy, yIw_uz) = bc_vectors
+    (; yIu_vx, yIv_vy, yIw_vz) = bc_vectors
+    (; yIu_wx, yIv_wy, yIw_wz) = bc_vectors
+
     (; u_ux, ū_ux, uū_ux, u_uy, v̄_uy, uv̄_uy, u_uz, w̄_uz, uw̄_uz) = cache
     (; v_vx, ū_vx, vū_vx, v_vy, v̄_vy, vv̄_vy, v_vz, w̄_vz, vw̄_vz) = cache
     (; w_wx, ū_wx, wū_wx, w_wy, v̄_wy, wv̄_wy, w_wz, w̄_wz, ww̄_wz) = cache

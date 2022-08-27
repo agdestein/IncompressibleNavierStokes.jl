@@ -1,12 +1,12 @@
 """
-    get_timestep(stepper, cfl)
+    get_timestep(stepper, cfl; bc_vectors)
 
 Estimate time step based on eigenvalues of operators, using Gershgorin.
 """
 function get_timestep end
 
 # 2D version
-function get_timestep(stepper::TimeStepper{M,T,2}, cfl) where {M,T}
+function get_timestep(stepper::TimeStepper{M,T,2}, cfl; bc_vectors) where {M,T}
     (; setup, method, V) = stepper
     (; grid, operators) = setup
     (; NV, indu, indv, Ω⁻¹) = grid
@@ -14,7 +14,7 @@ function get_timestep(stepper::TimeStepper{M,T,2}, cfl) where {M,T}
     (; Cux, Cuy, Cvx, Cvy) = operators
     (; Au_ux, Au_uy, Av_vx, Av_vy) = operators
     (; Iu_ux, Iu_vx, Iv_uy, Iv_vy) = operators
-    (; yIu_ux, yIu_vx, yIv_uy, yIv_vy) = operators
+    (; yIu_ux, yIu_vx, yIv_uy, yIv_vy) = bc_vectors
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
@@ -52,7 +52,7 @@ function get_timestep(stepper::TimeStepper{M,T,2}, cfl) where {M,T}
 end
 
 # 3D version
-function get_timestep(stepper::TimeStepper{M,T,3}, cfl) where {M,T}
+function get_timestep(stepper::TimeStepper{M,T,3}, cfl; bc_vectors) where {M,T}
     (; setup, method, V) = stepper
     (; grid, operators) = setup
     (; NV, indu, indv, indw, Ω⁻¹) = grid
@@ -60,9 +60,9 @@ function get_timestep(stepper::TimeStepper{M,T,3}, cfl) where {M,T}
     (; Cux, Cuy, Cuz, Cvx, Cvy, Cvz, Cwx, Cwy, Cwz) = operators
     (; Au_ux, Au_uy, Au_uz, Av_vx, Av_vy, Av_vz, Aw_wx, Aw_wy, Aw_wz) = operators
     (; Iu_ux, Iu_vx, Iu_wx, Iv_uy, Iv_vy, Iv_wy, Iw_uz, Iw_vz, Iw_wz) = operators
-    (; yIu_ux, yIu_vx, yIu_wx) = operators
-    (; yIv_uy, yIv_vy, yIv_wy) = operators
-    (; yIw_uz, yIw_vz, yIw_wz) = operators
+    (; yIu_ux, yIu_vx, yIu_wx) = bc_vectors
+    (; yIv_uy, yIv_vy, yIv_wy) = bc_vectors
+    (; yIw_uz, yIw_vz, yIw_wz) = bc_vectors
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]

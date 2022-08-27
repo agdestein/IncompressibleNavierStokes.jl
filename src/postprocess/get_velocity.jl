@@ -8,11 +8,13 @@ function get_velocity end
 
 # 2D version
 function get_velocity(V, t, setup::Setup{T,2}) where {T}
-    # Evaluate boundary conditions at current time
-    set_bc_vectors!(setup, t)
+    (; grid, operators) = setup
+    (; Npx, Npy, indu, indv) = grid
+    (; Au_ux, Av_vy, Bup, Bvp) = operators
 
-    (; Au_ux, yAu_ux, Av_vy, yAv_vy, Bup, Bvp) = setup.operators
-    (; Npx, Npy, indu, indv) = setup.grid
+    # Evaluate boundary conditions at current time
+    bc_vectors = get_bc_vectors(setup, t)
+    (; yAu_ux, yAv_vy) = bc_vectors
 
     uh = @view V[indu]
     vh = @view V[indv]
@@ -25,11 +27,13 @@ end
 
 # 3D version
 function get_velocity(V, t, setup::Setup{T,3}) where {T}
-    # Evaluate boundary conditions at current time
-    set_bc_vectors!(setup, t)
+    (; grid, operators) = setup
+    (; Au_ux, Av_vy, Aw_wz, Bup, Bvp, Bwp) = operators
+    (; Npx, Npy, Npz, indu, indv, indw) = grid
 
-    (; Au_ux, yAu_ux, Av_vy, yAv_vy, Aw_wz, yAw_wz, Bup, Bvp, Bwp) = setup.operators
-    (; Npx, Npy, Npz, indu, indv, indw) = setup.grid
+    # Evaluate boundary conditions at current time
+    bc_vectors = get_bc_vectors(setup, t)
+    (; yAu_ux, yAv_vy, yAw_wz) = bc_vectors
 
     uh = @view V[indu]
     vh = @view V[indv]

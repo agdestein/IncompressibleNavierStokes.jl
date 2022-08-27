@@ -13,7 +13,7 @@ Setup
 
 ```@docs
 BoundaryConditions
-set_bc_vectors!
+get_bc_vectors
 ```
 
 ## Force
@@ -81,7 +81,6 @@ turbulent_viscosity
 
 ```@docs
 Operators
-interpolate_nu
 ke_convection
 ke_diffusion
 ke_production

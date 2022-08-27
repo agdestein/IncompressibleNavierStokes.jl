@@ -1,5 +1,5 @@
 """
-    step(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
+    step(stepper::AdamsBashforthCrankNicolsonStepper, Δt; bc_vectors = nothing)
 
 Perform one time step with Adams-Bashforth for convection and Crank-Nicolson for diffusion.
 
@@ -10,16 +10,20 @@ Non-mutating/allocating/out-of-place version.
 
 See also [`step!`](@ref).
 """
-function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
+function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt; bc_vectors = nothing)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) = setup
+    (; bc_unsteady) = boundary_conditions
     (; NV, Ω⁻¹) = grid
-    (; G, y_p, M, yM) = operators
-    (; Diff, yDiff, y_p) = operators
+    (; G, M) = operators
+    (; Diff) = operators
     (; p_add_solve, α₁, α₂, θ) = method
 
     # For the first time step, this might be necessary
-    cₙ, = convection(convection_model, Vₙ, Vₙ, setup)
+    if isnothing(bc_vectors) || bc_unsteady
+        bc_vectors = get_bc_vectors(setup, tₙ)
+    end
+    cₙ, = convection(convection_model, Vₙ, Vₙ, setup; bc_vectors)
 
     # Advance one step
     Δtₙ₋₁ = t - tₙ
@@ -32,10 +36,10 @@ function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     @assert Δtₙ ≈ Δtₙ₋₁
 
     # Unsteady BC at current time
-    if boundary_conditions.bc_unsteady
-        set_bc_vectors!(setup, tₙ)
-        (; yDiff) = setup.operators
+    if isnothing(bc_vectors) || bc_unsteady
+        bc_vectors = get_bc_vectors(setup, tₙ)
     end
+    (; yDiff) = bc_vectors
 
     yDiffₙ = yDiff
 
@@ -43,13 +47,14 @@ function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     bₙ = bodyforce(force, tₙ, setup)
 
     # Convection of current solution
-    cₙ, = convection(convection_model, Vₙ, Vₙ, setup)
+    cₙ, = convection(convection_model, Vₙ, Vₙ, setup; bc_vectors)
 
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
-    if boundary_conditions.bc_unsteady
-        set_bc_vectors!(setup, tₙ + Δt)
-        (; yDiff, y_p) = setup.operators
+    if isnothing(bc_vectors) || bc_unsteady
+        bc_vectors = get_bc_vectors(setup, tₙ + Δt)
     end
+    (; yDiff, y_p) = bc_vectors
+
     bₙ₊₁ = bodyforce(force, tₙ + Δt, setup)
 
     yDiffₙ₊₁ = yDiff
@@ -76,10 +81,10 @@ function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     end
 
     # Make the velocity field `uₙ₊₁` at `tₙ₊₁` divergence-free (need BC at `tₙ₊₁`)
-    if boundary_conditions.bc_unsteady
-        set_bc_vectors!(setup, tₙ + Δt)
-        (; yM) = setup.operators
+    if isnothing(bc_vectors) || bc_unsteady
+        bc_vectors = get_bc_vectors(setup, tₙ + Δt)
     end
+    (; yM) = bc_vectors
 
     # Boundary condition for Δp between time steps (!= 0 if fluctuating outlet pressure)
     y_Δp = zeros(NV)
@@ -97,7 +102,7 @@ function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
     p = pₙ .+ Δp
 
     if p_add_solve
-        p = pressure_additional_solve(pressure_solver, V, p, tₙ + Δt, setup)
+        p = pressure_additional_solve(pressure_solver, V, p, tₙ + Δt, setup; bc_vectors)
     end
 
     t = tₙ + Δtₙ
@@ -106,7 +111,7 @@ function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt)
 end
 
 """
-    step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum_cache)
+    step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
 
 Perform one time step with Adams-Bashforth for convection and Crank-Nicolson for diffusion.
 
@@ -117,18 +122,22 @@ Mutating/non-allocating/in-place version.
 
 See also [`step`](@ref).
 """
-function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum_cache)
+function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) = setup
+    (; bc_unsteady) = boundary_conditions
     (; NV, Ω⁻¹) = grid
-    (; G, y_p, M, yM) = operators
-    (; Diff, yDiff, y_p) = operators
+    (; G, M) = operators
+    (; Diff) = operators
     (; p_add_solve, α₁, α₂, θ) = method
     (; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact) = cache
     (; d, ∇d) = momentum_cache
 
     # For the first time step, this might be necessary
-    convection!(convection_model, cₙ, nothing, Vₙ, Vₙ, setup, momentum_cache)
+    if isnothing(bc_vectors) || bc_unsteady
+        bc_vectors = get_bc_vectors(setup, tₙ)
+    end
+    convection!(convection_model, cₙ, nothing, Vₙ, Vₙ, setup, momentum_cache; bc_vectors)
 
     # Advance one step
     Δtₙ₋₁ = t - tₙ
@@ -141,10 +150,10 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum
     @assert Δtₙ ≈ Δtₙ₋₁
 
     # Unsteady BC at current time
-    if boundary_conditions.bc_unsteady
-        set_bc_vectors!(setup, tₙ)
-        (; yDiff) = setup.operators
+    if isnothing(bc_vectors) || bc_unsteady
+        bc_vectors = get_bc_vectors(setup, tₙ)
     end
+    (; yDiff) = bc_vectors
 
     yDiffₙ .= yDiff
 
@@ -152,13 +161,13 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum
     bodyforce!(force, bₙ, tₙ, setup)
 
     # Convection of current solution
-    convection!(convection_model, cₙ, nothing, Vₙ, Vₙ, setup, momentum_cache)
+    convection!(convection_model, cₙ, nothing, Vₙ, Vₙ, setup, momentum_cache; bc_vectors)
 
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
-    if boundary_conditions.bc_unsteady
-        set_bc_vectors!(setup, tₙ + Δt)
-        (; yDiff, y_p) = setup.operators
+    if isnothing(bc_vectors) || bc_unsteady
+        bc_vectors = get_bc_vectors(setup, tₙ + Δt)
     end
+    (; yDiff, y_p) = bc_vectors
     bodyforce!(force, bₙ₊₁, tₙ + Δt, setup)
 
     yDiffₙ₊₁ .= yDiff
@@ -191,10 +200,10 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum
     end
 
     # Make the velocity field `uₙ₊₁` at `tₙ₊₁` divergence-free (need BC at `tₙ₊₁`)
-    if boundary_conditions.bc_unsteady
-        set_bc_vectors!(setup, tₙ + Δt)
-        (; yM) = setup.operators
+    if isnothing(bc_vectors) || bc_unsteady
+        bc_vectors = get_bc_vectors(setup, tₙ + Δt)
     end
+    (; yM) = bc_vectors
 
     # Boundary condition for Δp between time steps (!= 0 if fluctuating outlet pressure)
     y_Δp = zeros(NV)
@@ -212,7 +221,7 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum
     p .= pₙ .+ Δp
 
     if p_add_solve
-        pressure_additional_solve!(pressure_solver, V, p, tₙ + Δt, setup, momentum_cache, F, f, Δp)
+        pressure_additional_solve!(pressure_solver, V, p, tₙ + Δt, setup, momentum_cache, F, f, Δp; bc_vectors)
     end
 
     t = tₙ + Δtₙ

@@ -13,9 +13,12 @@ end
 
 function process!(plotter::RealTimePlotter, stepper)
     (; setup, V, p, t) = stepper
-    (; Npx, Npy, Npz) = setup.grid
+    (; grid) = setup
+    (; Npx, Npy, Npz) = grid
     (; field, lims, fieldname, type) = plotter
-    N = get_dimension(setup.grid)
+
+    N = get_dimension(grid)
+
     if fieldname == :velocity
         vels = get_velocity(V, t, setup)
         f = map((vels...) -> √sum(vel -> vel^2, vels), vels...)
@@ -65,8 +68,10 @@ end
 
 function process!(writer::VTKWriter, stepper)
     (; setup, V, p, t) = stepper
-    (; xp, yp, zp) = setup.grid
-    N = get_dimension(setup.grid)
+    (; grid) = setup
+    (; xp, yp, zp) = grid
+
+    N = get_dimension(grid)
     if N == 2
         coords = (xp, yp)
     elseif N == 3

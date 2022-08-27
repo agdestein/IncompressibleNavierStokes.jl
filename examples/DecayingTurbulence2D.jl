@@ -94,15 +94,16 @@ f = setup.operators.M * V
 p = zero(f)
 
 # Boundary conditions
-set_bc_vectors!(setup, 0.0)
+bc_vectors = get_bc_vectors(setup, 0.0)
+(; yM) = bc_vectors
 
 # Make velocity field divergence free
 (; Ω⁻¹) = setup.grid
-(; G, M, yM) = setup.operators
+(; G, M) = setup.operators
 f = M * V + yM
 Δp = IncompressibleNavierStokes.pressure_poisson(pressure_solver, f)
 V .-= Ω⁻¹ .* (G * Δp)
-p = IncompressibleNavierStokes.pressure_additional_solve(pressure_solver, V, p, 0.0, setup)
+p = IncompressibleNavierStokes.pressure_additional_solve(pressure_solver, V, p, 0.0, setup; bc_vectors)
 
 V₀, p₀ = V, p
 

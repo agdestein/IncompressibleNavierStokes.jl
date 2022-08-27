@@ -70,7 +70,7 @@ function solve_animate(
     isadaptive && (Δt = get_timestep(stepper, cfl))
 
     # Initialize BC arrays
-    set_bc_vectors!(setup, stepper.t)
+    bc_vectors = get_bc_vectors(setup, stepper.t)
 
     initialize!(animator, stepper)
     process!(animator, stepper)
@@ -87,11 +87,11 @@ function solve_animate(
 
             # Change timestep based on operators
             if isadaptive && rem(stepper.n, n_adapt_Δt) == 0 
-                Δt = get_timestep(stepper, cfl)
+                Δt = get_timestep(stepper, cfl; bc_vectors)
             end
 
             # Perform a single time step with the time integration method
-            stepper = step!(stepper, Δt; cache, momentum_cache)
+            stepper = step!(stepper, Δt; cache, momentum_cache, bc_vectors)
         end
 
         process!(animator, stepper)

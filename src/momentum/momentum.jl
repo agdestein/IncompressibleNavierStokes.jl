@@ -1,21 +1,21 @@
 """
     momentum(
         V, ϕ, p, t, setup;
+        bc_vectors = nothing,
         getJacobian = false,
         nopressure = false,
         newton_factor = false,
     )
 
+Calculate RHS of momentum equations and, optionally, Jacobian with respect to velocity field.
 
-Calculate rhs of momentum equations and, optionally, Jacobian with respect to velocity field.
-
-- `V`: velocity field
-- `ϕ`: convected field: e.g. ``\\frac{\\partial (\\phi_x V)}{\\partial x} + \\frac{\\partial
-  (\\phi_y V)}{\\partial y}``; usually `ϕ = V` (so `ϕx = u`, `ϕy = v`)
-- `p`: pressure
-- `getJacobian`: return `∇F = ∂F/∂V`
-- `nopressure`: exclude pressure gradient; in this case input argument `p` is not used
-- `newton_factor`
+  - `V`: velocity field
+  - `ϕ`: convected field: e.g. ``\\frac{\\partial (\\phi_x V)}{\\partial x} + \\frac{\\partial (\\phi_y V)}{\\partial y}``; usually `ϕ = V` (so `ϕx = u`, `ϕy = v`)
+  - `p`: pressure
+  - `bc_vectors`: boundary condition vectors `y`
+  - `getJacobian`: return `∇F = ∂F/∂V`
+  - `nopressure`: exclude pressure gradient; in this case input argument `p` is not used
+  - `newton_factor`
 
 Non-mutating/allocating/out-of-place version.
 
@@ -23,22 +23,25 @@ See also [`momentum!`](@ref).
 """
 function momentum(
     V, ϕ, p, t, setup;
+    bc_vectors = nothing,
     getJacobian = false,
     nopressure = false,
     newton_factor = false,
 )
-    (; viscosity_model, convection_model, force, boundary_conditions) = setup
+    (; viscosity_model, convection_model, force, boundary_conditions, operators) = setup
+    (; G) = operators
 
-    # Unsteady BC (y_p must be loaded after set_bc_vectors!)
-    # TODO: preallocate y_p, and only update in set_bc
-    boundary_conditions.bc_unsteady && set_bc_vectors!(setup, t)
-    (; G, y_p) = setup.operators
+    # Unsteady BC
+    if isnothing(bc_vectors) || boundary_conditions.bc_unsteady
+        bc_vectors = get_bc_vectors(setup, t)
+    end
+    (; y_p) = bc_vectors
 
     # Convection
-    c, ∇c = convection(convection_model, V, ϕ, setup; getJacobian, newton_factor)
+    c, ∇c = convection(convection_model, V, ϕ, setup; bc_vectors, getJacobian, newton_factor)
 
     # Diffusion
-    d, ∇d = diffusion(viscosity_model, V, setup; getJacobian)
+    d, ∇d = diffusion(viscosity_model, V, setup; bc_vectors, getJacobian)
 
     # Body force
     b = bodyforce(force, t, setup)
@@ -68,39 +71,49 @@ end
 
 Calculate rhs of momentum equations and, optionally, Jacobian with respect to velocity field.
 
-- `V`: velocity field
-- `ϕ`: convected field: e.g. ``\\frac{\\partial (\\phi_x V)}{\\partial x} + \\frac{\\partial
-  (\\phi_y V)}{\\partial y}``; usually `ϕ = V` (so `ϕx = u`, `ϕy = v`)
-- `p`: pressure
-- `getJacobian`: return `∇F = ∂F/∂V`
-- `nopressure`: exclude pressure gradient; in this case input argument `p` is not used
-- `newton_factor`
+  - `V`: velocity field
+  - `ϕ`: convected field: e.g. ``\\frac{\\partial (\\phi_x V)}{\\partial x} + \\frac{\\partial (\\phi_y V)}{\\partial y}``; usually `ϕ = V` (so `ϕx = u`, `ϕy = v`)
+  - `p`: pressure
+  - `bc_vectors`: boundary condition vectors `y`
+  - `getJacobian`: return `∇F = ∂F/∂V`
+  - `nopressure`: exclude pressure gradient; in this case input argument `p` is not used
+  - `newton_factor`
 
 Mutating/non-allocating/in-place version.
 
 See also [`momentum`](@ref).
 """
 function momentum!(
-    F, ∇F, V, ϕ, p, t, setup, cache;
+    F,
+    ∇F,
+    V,
+    ϕ,
+    p,
+    t,
+    setup,
+    cache;
+    bc_vectors = nothing,
     getJacobian = false,
     nopressure = false,
     newton_factor = false,
 )
-    (; viscosity_model, convection_model, force, boundary_conditions) = setup
+    (; viscosity_model, convection_model, force, boundary_conditions, operators) = setup
+    (; G) = setup.operators
 
-    # Unsteady BC (y_p must be loaded after set_bc_vectors!)
-    # TODO: preallocate y_p, and only update in set_bc
-    boundary_conditions.bc_unsteady && set_bc_vectors!(setup, t)
-    (; G, y_p) = setup.operators
+    # Unsteady BC
+    if isnothing(bc_vectors) || boundary_conditions.bc_unsteady
+        bc_vectors = get_bc_vectors(setup, t)
+    end
+    (; y_p) = bc_vectors
 
     # Store intermediate results in temporary variables
     (; c, ∇c, d, ∇d, b, Gp) = cache
 
     # Convection
-    convection!(convection_model, c, ∇c, V, ϕ, setup, cache; getJacobian, newton_factor)
+    convection!(convection_model, c, ∇c, V, ϕ, setup, cache; bc_vectors, getJacobian, newton_factor)
 
     # Diffusion
-    diffusion!(viscosity_model, d, ∇d, V, setup; getJacobian)
+    diffusion!(viscosity_model, d, ∇d, V, setup; bc_vectors, getJacobian)
 
     # Body force
     bodyforce!(force, b, t, setup)

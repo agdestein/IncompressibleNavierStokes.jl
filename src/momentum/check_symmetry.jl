@@ -6,13 +6,13 @@ Check symmetry of convection operator.
 `flag = 0`: no symmetry error
 `flag = 1`: symmetry error
 """
-function check_symmetry(V, t, setup, ϵ = 1e-14)
+function check_symmetry(V, t, setup, ϵ = 1e-14; bc_vectors)
     (; grid, operators, boundary_conditions) = setup
     (; indu, indv) = grid
     (; Cux, Cuy, Cvx, Cvy) = operators
     (; Au_ux, Au_uy, Av_vx, Av_vy) = operators
     (; Iu_ux, Iv_uy, Iu_vx, Iv_vy) = operators
-    (; yIu_ux, yIv_uy, yIu_vx, yIv_vy) = operators
+    (; yIu_ux, yIv_uy, yIu_vx, yIv_vy) = bc_vectors
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]

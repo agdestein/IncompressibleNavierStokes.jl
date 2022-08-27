@@ -53,10 +53,9 @@ include("boundary_conditions/bc_int_mixed2.jl")
 include("boundary_conditions/bc_int_mixed_stag2.jl")
 include("boundary_conditions/bc_int_mixed_stag3.jl")
 include("boundary_conditions/bc_vort3.jl")
-include("boundary_conditions/set_bc_vectors.jl")
+include("boundary_conditions/get_bc_vectors.jl")
 
 # Operators
-include("operators/interpolate_nu.jl")
 include("operators/operator_averaging.jl")
 include("operators/operator_convection_diffusion.jl")
 include("operators/operator_divergence.jl")
@@ -164,7 +163,7 @@ export stretched_grid, cosine_grid
 export DirectPressureSolver, CGPressureSolver, FourierPressureSolver
 
 # Main driver
-export create_initial_conditions, set_bc_vectors!, solve, get_velocity
+export create_initial_conditions, get_bc_vectors, solve, get_velocity
 export solve_animate
 
 export momentum!

@@ -1,16 +1,16 @@
 """
-    compute_conservation(V, t, setup)
+    compute_conservation(V, t, setup; bc_vectors = nothing)
 
 Compute mass, momentum and energy conservation properties of velocity field.
 """
 function compute_conservation end
 
 # 2D version
-function compute_conservation(V, t, setup::Setup{T,2}) where {T}
+function compute_conservation(V, t, setup::Setup{T,2}; bc_vectors = nothing) where {T}
     (; grid, operators, boundary_conditions) = setup
     (; indu, indv, Ω, x, y, xp, yp, hx, hy, gx, gy) = grid
-    (; M, yM) = operators
-    (; u_bc, v_bc) = boundary_conditions
+    (; M) = operators
+    (; bc_unsteady, u_bc, v_bc) = boundary_conditions
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
@@ -18,7 +18,11 @@ function compute_conservation(V, t, setup::Setup{T,2}) where {T}
     Ωu = @view Ω[indu]
     Ωv = @view Ω[indv]
 
-    boundary_conditions.bc_unsteady && set_bc_vectors!(setup, t)
+    if isnothing(bc_vectors) || bc_unsteady
+        bc_vectors = get_bc_vectors(setup, t)
+    end
+    (; yM) = bc_vectors
+
     uLe_i = reshape(u_bc.(x[1], yp, t), :)
     uRi_i = reshape(u_bc.(x[end], yp, t), :)
     vLo_i = reshape(v_bc.(xp, y[1], t), :)
@@ -50,11 +54,11 @@ function compute_conservation(V, t, setup::Setup{T,2}) where {T}
 end
 
 # 3D version
-function compute_conservation(V, t, setup::Setup{T,3}) where {T}
+function compute_conservation(V, t, setup::Setup{T,3}; bc_vectors = nothing) where {T}
     (; grid, operators, boundary_conditions) = setup
-    (; indu, indv, indw, Ω, x, y, z, xp, yp, zp, hx, hy, hz, gx, gy, gz) = setup.grid
-    (; M, yM) = setup.operators
-    (; u_bc, v_bc, w_bc) = setup.boundary_conditions
+    (; indu, indv, indw, Ω, x, y, z, xp, yp, zp, hx, hy, hz, gx, gy, gz) = grid
+    (; M) = operators
+    (; bc_unsteady, u_bc, v_bc, w_bc) = boundary_conditions
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
@@ -64,7 +68,11 @@ function compute_conservation(V, t, setup::Setup{T,3}) where {T}
     Ωv = @view Ω[indv]
     Ωw = @view Ω[indw]
 
-    boundary_conditions.bc_unsteady && set_bc_vectors!(setup, t)
+    if isnothing(bc_vectors) || bc_unsteady
+        bc_vectors = get_bc_vectors(setup, t)
+    end
+    (; yM) = bc_vectors
+
     uLe_i = reshape(u_bc.(x[1], yp, zp', t), :)
     uRi_i = reshape(u_bc.(x[end], yp, zp', t), :)
     vLo_i = reshape(v_bc.(xp, y[1], zp', t), :)

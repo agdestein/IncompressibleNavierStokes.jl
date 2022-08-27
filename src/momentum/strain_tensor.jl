@@ -1,5 +1,5 @@
 """
-    strain_tensor(V, setup; getJacobian = false, get_S_abs = false)
+    strain_tensor(V, setup; bc_vectors, getJacobian = false, get_S_abs = false)
 
 Evaluate rate of strain tensor `S(V)` and its magnitude.
 """
@@ -9,6 +9,7 @@ function strain_tensor end
 function strain_tensor(
     V,
     setup::Setup{T,2};
+    bc_vectors,
     getJacobian = false,
     get_S_abs = false,
 ) where {T}
@@ -17,9 +18,9 @@ function strain_tensor(
     (; Nux_in, Nuy_in, Nvx_in, Nvy_in) = grid
     (; x, y, xp, yp) = grid
     (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = operators
-    (; ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy) = operators
     (; Cux_k, Cuy_k, Cvx_k, Cvy_k, Auy_k, Avx_k) = operators
-    (; yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k) = operators
+    (; ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy) = bc_vectors
+    (; yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k) = bc_vectors
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
@@ -149,6 +150,7 @@ end
 function strain_tensor(
     V,
     setup::Setup{T,3};
+    bc_vectors,
     getJacobian = false,
     get_S_abs = false,
 ) where {T}
