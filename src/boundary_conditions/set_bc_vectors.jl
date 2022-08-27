@@ -908,9 +908,6 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
 
         ybc = Cvy_k_bc.ybc1 ⊗ vLo_i + Cvy_k_bc.ybc2 ⊗ vUp_i
         yCvy_k = Cvy_k_bc.Bbc * ybc
-
-        @pack! operators = yAν_ux, yAν_uy, yAν_vx, yAν_vy
-        @pack! operators = yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k
     end
 
     @pack! operators = yM
@@ -929,6 +926,11 @@ function set_bc_vectors!(setup::Setup{T,3}, t) where {T}
     @pack! operators = yIu_ux, yIv_uy, yIw_uz
     @pack! operators = yIu_vx, yIv_vy, yIw_vz
     @pack! operators = yIu_wx, yIv_wy, yIw_wz
+
+    if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
+        @pack! operators = yAν_ux, yAν_uy, yAν_vx, yAν_vy
+        @pack! operators = yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k
+    end
 
     setup
 end

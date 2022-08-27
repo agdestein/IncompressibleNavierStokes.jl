@@ -133,6 +133,107 @@ Base.@kwdef mutable struct Operators{T}
     Ww_wy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Ww_wx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
+    Cux_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Cuy_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Cvx_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Cvy_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+
+    Cux_k_bc::NamedTuple = (;)
+    Cuy_k_bc::NamedTuple = (;)
+    Cuz_k_bc::NamedTuple = (;)
+    Cvx_k_bc::NamedTuple = (;)
+    Cvy_k_bc::NamedTuple = (;)
+    Cvz_k_bc::NamedTuple = (;)
+    Cwx_k_bc::NamedTuple = (;)
+    Cwy_k_bc::NamedTuple = (;)
+    Cwz_k_bc::NamedTuple = (;)
+
+    Auy_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Auz_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Avx_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Avz_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Awx_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Awy_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+
+    Auy_k_bc::NamedTuple = (;)
+    Auz_k_bc::NamedTuple = (;)
+    Avx_k_bc::NamedTuple = (;)
+    Avz_k_bc::NamedTuple = (;)
+    Awx_k_bc::NamedTuple = (;)
+    Awy_k_bc::NamedTuple = (;)
+
+    A::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+
+    Aν_ux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aν_uy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aν_uz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aν_vx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aν_vy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aν_vz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aν_wx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aν_wy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aν_wz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Aν_ux_bc::NamedTuple = (;)
+    Aν_vy_bc::NamedTuple = (;)
+    Aν_wz_bc::NamedTuple = (;)
+    Aν_uy_bc_lr::NamedTuple = (;)
+    Aν_uy_bc_lu::NamedTuple = (;)
+    Aν_uz_bc_lr::NamedTuple = (;)
+    Aν_uz_bc_bf::NamedTuple = (;)
+    Aν_vx_bc_lr::NamedTuple = (;)
+    Aν_vx_bc_lu::NamedTuple = (;)
+    Aν_vz_bc_lu::NamedTuple = (;)
+    Aν_vz_bc_bf::NamedTuple = (;)
+    Aν_wx_bc_lr::NamedTuple = (;)
+    Aν_wx_bc_bf::NamedTuple = (;)
+    Aν_wy_bc_lu::NamedTuple = (;)
+    Aν_wy_bc_bf::NamedTuple = (;)
+
+    Au_ux3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Au_uy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Av_vx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Av_vy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Au_ux_bc3::NamedTuple = (;)
+    Au_uy_bc3::NamedTuple = (;)
+    Av_vx_bc3::NamedTuple = (;)
+    Av_vy_bc3::NamedTuple = (;)
+
+    Iu_ux3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Iv_uy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Iu_vx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Iv_vy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+
+    Iu_ux_bc3::NamedTuple = (;)
+    Iv_uy_bc_lr3::NamedTuple = (;)
+    Iv_uy_bc_lu3::NamedTuple = (;)
+    Iu_vx_bc_lr3::NamedTuple = (;)
+    Iu_vx_bc_lu3::NamedTuple = (;)
+    Iv_vy_bc3::NamedTuple = (;)
+
+    Mx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    My3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Mx_bc3::NamedTuple = (;)
+    My_bc3::NamedTuple = (;)
+
+    Cux3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Cuy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Cvx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Cvy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+
+    Su_ux_bc3::NamedTuple = (;)
+    Su_uy_bc3::NamedTuple = (;)
+    Sv_vx_bc3::NamedTuple = (;)
+    Sv_vy_bc3::NamedTuple = (;)
+
+    Diffu_f::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Diffv_f::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Diffw_f::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+
+    Diffux_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Diffuy_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Diffvx_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+    Diffvy_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
+
     yM::Vector{T} = T[]
     y_p::Vector{T} = T[]
 
@@ -176,63 +277,7 @@ Base.@kwdef mutable struct Operators{T}
     ySw_uz::Vector{T} = T[]
     ySw_vz::Vector{T} = T[]
 
-    Cux_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Cuy_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Cvx_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Cvy_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-
-    Cux_k_bc::NamedTuple = (;)
-    Cuy_k_bc::NamedTuple = (;)
-    Cuz_k_bc::NamedTuple = (;)
-    Cvx_k_bc::NamedTuple = (;)
-    Cvy_k_bc::NamedTuple = (;)
-    Cvz_k_bc::NamedTuple = (;)
-    Cwx_k_bc::NamedTuple = (;)
-    Cwy_k_bc::NamedTuple = (;)
-    Cwz_k_bc::NamedTuple = (;)
-
-    Auy_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Auz_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Avx_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Avz_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Awx_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Awy_k::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-
-    Auy_k_bc::NamedTuple = (;)
-    Auz_k_bc::NamedTuple = (;)
-    Avx_k_bc::NamedTuple = (;)
-    Avz_k_bc::NamedTuple = (;)
-    Awx_k_bc::NamedTuple = (;)
-    Awy_k_bc::NamedTuple = (;)
-
-    A::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-
     ydM::Vector{T} = T[]
-
-    Aν_ux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Aν_uy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Aν_uz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Aν_vx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Aν_vy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Aν_vz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Aν_wx::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Aν_wy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Aν_wz::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Aν_ux_bc::NamedTuple = (;)
-    Aν_vy_bc::NamedTuple = (;)
-    Aν_wz_bc::NamedTuple = (;)
-    Aν_uy_bc_lr::NamedTuple = (;)
-    Aν_uy_bc_lu::NamedTuple = (;)
-    Aν_uz_bc_lr::NamedTuple = (;)
-    Aν_uz_bc_bf::NamedTuple = (;)
-    Aν_vx_bc_lr::NamedTuple = (;)
-    Aν_vx_bc_lu::NamedTuple = (;)
-    Aν_vz_bc_lu::NamedTuple = (;)
-    Aν_vz_bc_bf::NamedTuple = (;)
-    Aν_wx_bc_lr::NamedTuple = (;)
-    Aν_wx_bc_bf::NamedTuple = (;)
-    Aν_wy_bc_lu::NamedTuple = (;)
-    Aν_wy_bc_bf::NamedTuple = (;)
 
     yAν_ux::Vector{T} = T[]
     yAν_uy::Vector{T} = T[]
@@ -261,54 +306,9 @@ Base.@kwdef mutable struct Operators{T}
     yAwx_k::Vector{T} = T[]
     yAwy_k::Vector{T} = T[]
 
-
-    Au_ux3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Au_uy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Av_vx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Av_vy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Au_ux_bc3::NamedTuple = (;)
-    Au_uy_bc3::NamedTuple = (;)
-    Av_vx_bc3::NamedTuple = (;)
-    Av_vy_bc3::NamedTuple = (;)
-
-    Iu_ux3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Iv_uy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Iu_vx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Iv_vy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-
-    Iu_ux_bc3::NamedTuple = (;)
-    Iv_uy_bc_lr3::NamedTuple = (;)
-    Iv_uy_bc_lu3::NamedTuple = (;)
-    Iu_vx_bc_lr3::NamedTuple = (;)
-    Iu_vx_bc_lu3::NamedTuple = (;)
-    Iv_vy_bc3::NamedTuple = (;)
-
-    Mx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    My3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Mx_bc3::NamedTuple = (;)
-    My_bc3::NamedTuple = (;)
-
-    Cux3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Cuy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Cvx3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Cvy3::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-
-    Su_ux_bc3::NamedTuple = (;)
-    Su_uy_bc3::NamedTuple = (;)
-    Sv_vx_bc3::NamedTuple = (;)
-    Sv_vy_bc3::NamedTuple = (;)
-
-    Diffu_f::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Diffv_f::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Diffw_f::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     yDiffu_f::Vector{T} = T[]
     yDiffv_f::Vector{T} = T[]
     yDiffw_f::Vector{T} = T[]
-
-    Diffux_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Diffuy_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Diffvx_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
-    Diffvy_div::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
 
     yIu_ux3::Vector{T} = T[]
     yIv_uy3::Vector{T} = T[]
