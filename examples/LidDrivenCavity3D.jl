@@ -105,11 +105,9 @@ V₀, p₀ = create_initial_conditions(
     pressure_solver,
 );
 
-
 # Solve steady state problem
 problem = SteadyStateProblem(setup, V₀, p₀);
 V, p = @time solve(problem; npicard = 5, maxiter = 15);
-
 
 # Iteration processors
 logger = Logger()
@@ -121,7 +119,6 @@ processors = [logger, plotter, writer, tracer]
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = @time solve(problem, RK44(); Δt = 0.01, processors, pressure_solver)
-
 
 # Post-process
 plot_tracers(tracer)

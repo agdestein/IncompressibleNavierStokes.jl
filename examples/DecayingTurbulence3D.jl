@@ -45,16 +45,21 @@ boundary_conditions = BoundaryConditions(
     w_bc;
     bc_unsteady = false,
     bc_type = (;
-        u = (; x = (:periodic, :periodic), y = (:periodic, :periodic),
-    z = (:periodic, :periodic),
+        u = (;
+            x = (:periodic, :periodic),
+            y = (:periodic, :periodic),
+            z = (:periodic, :periodic),
         ),
-        v = (; x = (:periodic, :periodic), y = (:periodic, :periodic),
-    z = (:periodic, :periodic),
+        v = (;
+            x = (:periodic, :periodic),
+            y = (:periodic, :periodic),
+            z = (:periodic, :periodic),
         ),
-        w = (; x = (:periodic, :periodic),
-    y = (:periodic, :periodic),
-    z = (:periodic, :periodic),
-    ),
+        w = (;
+            x = (:periodic, :periodic),
+            y = (:periodic, :periodic),
+            z = (:periodic, :periodic),
+        ),
     ),
     T,
 )
@@ -95,10 +100,8 @@ function create_spectrum(K)
             exp(-2π * im * rand()) for i = 1:K, j = 1:K, k = 1:K
         ]
     [
-        a reverse(a; dims = 2)
-        reverse(a; dims = 1) reverse(a; dims = (1, 2));;;
-        reverse(a; dims = 3) reverse(a; dims = (2, 3))
-        reverse(a; dims = (1, 3)) reverse(a)
+        a reverse(a; dims = 2); reverse(a; dims = 1) reverse(a; dims = (1, 2));;;
+        reverse(a; dims = 3) reverse(a; dims = (2, 3)); reverse(a; dims = (1, 3)) reverse(a)
     ]
 end
 u = real.(ifft(create_spectrum(K)))
@@ -118,7 +121,14 @@ bc_vectors = get_bc_vectors(setup, 0.0)
 f = M * V + yM
 Δp = IncompressibleNavierStokes.pressure_poisson(pressure_solver, f)
 V .-= Ω⁻¹ .* (G * Δp)
-p = IncompressibleNavierStokes.pressure_additional_solve(pressure_solver, V, p, 0.0, setup; bc_vectors)
+p = IncompressibleNavierStokes.pressure_additional_solve(
+    pressure_solver,
+    V,
+    p,
+    0.0,
+    setup;
+    bc_vectors,
+)
 
 V₀, p₀ = V, p
 

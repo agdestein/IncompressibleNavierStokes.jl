@@ -156,4 +156,3 @@ function runge_kutta_method(A, b, c, r; kwargs...)
         ImplicitRungeKuttaMethod(; A, b, c, r, kwargs...)
     end
 end
-

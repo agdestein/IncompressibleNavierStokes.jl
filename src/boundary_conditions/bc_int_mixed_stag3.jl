@@ -6,7 +6,6 @@ function bc_int_mixed_stag3(Nt, Nin, Nb, bc1, bc2, h1, h2)
     # Btemp = Bb*(Bbc*Bb)^(-1)
     # Bb, Bin and Bbc depend on type of bc (Neumann/Dirichlet/periodic)
 
-
     # val1 and val2 can be scalars or vectors with either the value or the
     # derivative
 
@@ -27,7 +26,6 @@ function bc_int_mixed_stag3(Nt, Nin, Nb, bc1, bc2, h1, h2)
         Bbc = spzeros(Nb, Nt)
         ybc1_1D = zeros(Nb)
         ybc2_1D = zeros(Nb)
-
 
         if Nb == 4
             # normal situation, 2 boundary points

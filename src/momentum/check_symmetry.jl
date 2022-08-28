@@ -31,10 +31,12 @@ function check_symmetry(V, t, setup, ϵ = 1e-14; bc_vectors)
 
     flag = 0
     if symmetry_error > ϵ
-        if boundary_conditions.u.x[1] != :pressure && boundary_conditions.u.x[2] != :pressure
+        if boundary_conditions.u.x[1] != :pressure &&
+           boundary_conditions.u.x[2] != :pressure
             flag = 1
         end
-        if boundary_conditions.v.y[1] != :pressure && boundary_conditions.v.y[2] != :pressure
+        if boundary_conditions.v.y[1] != :pressure &&
+           boundary_conditions.v.y[2] != :pressure
             flag = 1
         end
     end

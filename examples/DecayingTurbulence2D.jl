@@ -103,7 +103,14 @@ bc_vectors = get_bc_vectors(setup, 0.0)
 f = M * V + yM
 Δp = IncompressibleNavierStokes.pressure_poisson(pressure_solver, f)
 V .-= Ω⁻¹ .* (G * Δp)
-p = IncompressibleNavierStokes.pressure_additional_solve(pressure_solver, V, p, 0.0, setup; bc_vectors)
+p = IncompressibleNavierStokes.pressure_additional_solve(
+    pressure_solver,
+    V,
+    p,
+    0.0,
+    setup;
+    bc_vectors,
+)
 
 V₀, p₀ = V, p
 

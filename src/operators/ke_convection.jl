@@ -67,7 +67,6 @@ function ke_convection(grid::Grid{T,2}, boundary_conditions) where {T}
     yAk_kx = kron(sparse(I, Npy, Npy), A1D * Btemp) * ybc
     Ak_kx = kron(sparse(I, Npy, Npy), A1D * B1D)
 
-
     ## Y-direction
 
     # Differencing matrix

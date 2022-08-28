@@ -332,7 +332,6 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
         yIv_vy3 = Iv_vy_bc3.Bbc * ybc3
     end
 
-
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         # Set BC for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
@@ -415,31 +414,57 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
         yM,
         ydM,
         y_p,
-        yAu_ux, yAu_uy, yAv_vx, yAv_vy,
+        yAu_ux,
+        yAu_uy,
+        yAv_vx,
+        yAv_vy,
         yDiff,
-        yIu_ux, yIv_uy, yIu_vx, yIv_vy,
+        yIu_ux,
+        yIv_uy,
+        yIu_vx,
+        yIv_vy,
     )
 
     if order4
         bc_vectors = (;
             bc_vectors...,
-            yAu_ux3, yAu_uy3, yAv_vx3, yAv_vy3,
-            yIu_ux3, yIv_uy3, yIu_vx3, yIv_vy3,
+            yAu_ux3,
+            yAu_uy3,
+            yAv_vx3,
+            yAv_vy3,
+            yIu_ux3,
+            yIv_uy3,
+            yIu_vx3,
+            yIv_vy3,
         )
     else
         # Use values directly (see diffusion.jl and strain_tensor.jl)
         bc_vectors = (;
             bc_vectors...,
-            ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy,
-            yDiffu_f, yDiffv_f,
+            ySu_ux,
+            ySu_uy,
+            ySu_vx,
+            ySv_vx,
+            ySv_vy,
+            ySv_uy,
+            yDiffu_f,
+            yDiffv_f,
         )
     end
 
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         bc_vectors = (;
             bc_vectors...,
-            yAν_ux, yAν_uy, yAν_vx, yAν_vy,
-            yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k,
+            yAν_ux,
+            yAν_uy,
+            yAν_vx,
+            yAν_vy,
+            yCux_k,
+            yCuy_k,
+            yCvx_k,
+            yCvy_k,
+            yAuy_k,
+            yAvx_k,
         )
     end
 
@@ -491,7 +516,6 @@ function get_bc_vectors(setup::Setup{T,3}, t) where {T}
     (; Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf) = operators
     (; Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf) = operators
     (; Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf) = operators
-
 
     # TODO: Split up function into allocating part (constructor?) and mutating `update!`
 
@@ -935,23 +959,58 @@ function get_bc_vectors(setup::Setup{T,3}, t) where {T}
         yM,
         ydM,
         y_p,
-        yAu_ux, yAu_uy, yAu_uz,
-        yAv_vx, yAv_vy, yAv_vz,
-        yAw_wx, yAw_wy, yAw_wz,
+        yAu_ux,
+        yAu_uy,
+        yAu_uz,
+        yAv_vx,
+        yAv_vy,
+        yAv_vz,
+        yAw_wx,
+        yAw_wy,
+        yAw_wz,
         yDiff,
-        ySu_ux, ySu_uy, ySu_uz, ySv_vx, ySv_vy, ySv_vz, ySw_wx, ySw_wy, ySw_wz,
-        ySu_vx, ySu_wx, ySv_uy, ySv_wy, ySw_uz, ySw_vz,
-        yDiffu_f, yDiffv_f, yDiffw_f,
-        yIu_ux, yIv_uy, yIw_uz,
-        yIu_vx, yIv_vy, yIw_vz,
-        yIu_wx, yIv_wy, yIw_wz,
+        ySu_ux,
+        ySu_uy,
+        ySu_uz,
+        ySv_vx,
+        ySv_vy,
+        ySv_vz,
+        ySw_wx,
+        ySw_wy,
+        ySw_wz,
+        ySu_vx,
+        ySu_wx,
+        ySv_uy,
+        ySv_wy,
+        ySw_uz,
+        ySw_vz,
+        yDiffu_f,
+        yDiffv_f,
+        yDiffw_f,
+        yIu_ux,
+        yIv_uy,
+        yIw_uz,
+        yIu_vx,
+        yIv_vy,
+        yIw_vz,
+        yIu_wx,
+        yIv_wy,
+        yIw_wz,
     )
 
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         bc_vectors = (;
             bc_vectors...,
-            yAν_ux, yAν_uy, yAν_vx, yAν_vy,
-            yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k,
+            yAν_ux,
+            yAν_uy,
+            yAν_vx,
+            yAν_vy,
+            yCux_k,
+            yCuy_k,
+            yCvx_k,
+            yCvy_k,
+            yAuy_k,
+            yAvx_k,
         )
     end
 

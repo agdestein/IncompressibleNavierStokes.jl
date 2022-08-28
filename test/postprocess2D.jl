@@ -92,5 +92,4 @@
         )
         @test isfile("output/vorticity.gif")
     end
-
 end

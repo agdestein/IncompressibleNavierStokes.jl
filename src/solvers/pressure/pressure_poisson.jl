@@ -70,7 +70,7 @@ function pressure_poisson!(solver::FourierPressureSolver, p, f)
     fhat[:] = f
 
     # Fourier transform of right hand side
-    fft!(fhat);
+    fft!(fhat)
 
     # Solve for coefficients in Fourier space
     @. phat = -fhat / Ahat

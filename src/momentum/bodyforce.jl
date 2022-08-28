@@ -28,7 +28,6 @@ function bodyforce(force::UnsteadyBodyForce, t, setup::Setup{T,3}) where {T}
     [Fx; Fy; Fz]
 end
 
-
 """
     bodyforce!(force, F, t, setup)
 
@@ -58,4 +57,3 @@ function bodyforce!(force::UnsteadyBodyForce, F, t, setup::Setup{T,3}) where {T}
     F[indw] .= force.fw.(xw, yw, zw, t)
     F
 end
-

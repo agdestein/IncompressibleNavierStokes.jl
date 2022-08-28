@@ -72,10 +72,8 @@ function ke_viscosity(grid::Grid{T,2}, boundary_conditions) where {T}
     ybc = kron(eLe, ybcl) + kron(eRi, ybcr)
     yAe_ux = kron(sparse(I, Nuy_in, Nuy_in), Bkux * A1D * Btemp) * ybc
 
-
     # So nu at ux is given by:
     # Cmu * (Ak_ux * k + yAk_ux).^2 / (Ae_ux * e + yAe_ux)
-
 
     ## Nu to uy positions
     diag1 = weight * ones(Npx + 1)
@@ -125,7 +123,6 @@ function ke_viscosity(grid::Grid{T,2}, boundary_conditions) where {T}
     Ak_uy = A2Dy * A2Dx
     yAk_uy = A2Dy * (yAk_uy_lu + yAk_uy_lr)
 
-
     ## Epsilon
     # In a similar way but with different boundary conditions
     B1D, Btemp, ybcl, ybcr = bc_general_stag(
@@ -172,7 +169,6 @@ function ke_viscosity(grid::Grid{T,2}, boundary_conditions) where {T}
 
     # So nu at uy is given by:
     # Cmu * (Ak_uy * k + yAk_uy).^2 / (Ae_uy * e + yAe_uy)
-
 
     ## Nu to vx positions
     diag1 = weight * ones(Npy + 1)
@@ -222,7 +218,6 @@ function ke_viscosity(grid::Grid{T,2}, boundary_conditions) where {T}
     Ak_vx = A2Dx * A2Dy
     yAk_vx = A2Dx * (yAk_vx_lr + yAk_vx_lu)
 
-
     ## Epsilon
     # In a similar way but with different boundary conditions
     B1D, Btemp, ybcl, ybcu = bc_general_stag(
@@ -265,10 +260,8 @@ function ke_viscosity(grid::Grid{T,2}, boundary_conditions) where {T}
     Ae_vx = A2Dx * A2Dy
     yAe_vx = A2Dx * (yAe_vx_lr + yAe_vx_lu)
 
-
     # So nu at vx is given by:
     # Cmu * (Ak_vx * k + yAk_vx).^2 / (Ae_vx * e + yAe_vx)
-
 
     ## Nu to vy positions
     A1D = sparse(I, Npy + 2, Npy + 2)
@@ -292,7 +285,6 @@ function ke_viscosity(grid::Grid{T,2}, boundary_conditions) where {T}
     ybc = kron(ybcl, kLo) + kron(ybcu, kUp)
     yAk_vy = kron(Bkvy * A1D * Btemp, sparse(I, Nvx_in, Nvx_in)) * ybc
 
-
     ## Epsilon
     # In a similar way but with different boundary conditions
     B1D, Btemp, ybcl, ybcu = bc_general_stag(
@@ -308,7 +300,6 @@ function ke_viscosity(grid::Grid{T,2}, boundary_conditions) where {T}
     Ae_vy = kron(Bkvy * A1D * B1D, sparse(I, Nvx_in, Nvx_in))
     ybc = kron(ybcl, eLo) + kron(ybcu, eUp)
     yAe_vy = kron(Bkvy * A1D * Btemp, sparse(I, Nvx_in, Nvx_in)) * ybc
-
 
     # So nu at vy is given by:
     # Cmu * (Ak_vy * k + yAk_vy).^2 / (Ae_vy * e + yAe_vy)

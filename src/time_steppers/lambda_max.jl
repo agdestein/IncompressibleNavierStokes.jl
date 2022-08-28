@@ -8,7 +8,6 @@ function lambda_diff_max end
 lambda_diff_max(::AbstractODEMethod) = 1
 lambda_diff_max(m::OneLegMethod) = 4 * m.β / (2 * m.β + 1)
 
-
 """
     lambda_conv_max(method)
 

@@ -43,14 +43,23 @@ function BoundaryConditions(u_bc, v_bc; T = Float64, bc_unsteady, bc_type, kwarg
     bc_type.v.y[2] ∈ (:dirichlet, :periodic, :pressure) || error("Wrong BC for v-up")
 
     # Pressure (for boundaries marked with `:pressure`)
-    p∞ = zero(T) 
+    p∞ = zero(T)
     p_bc = (; x = (p∞, p∞), y = (p∞, p∞))
 
     # K-eps values
     k_bc = (; x = (zero(T), zero(T)), y = (zero(T), zero(T)))
     e_bc = (; x = (zero(T), zero(T)), y = (zero(T), zero(T)))
 
-    BoundaryConditions{T}(; bc_unsteady, bc_type..., u_bc, v_bc, p_bc, k_bc, e_bc, kwargs...)
+    BoundaryConditions{T}(;
+        bc_unsteady,
+        bc_type...,
+        u_bc,
+        v_bc,
+        p_bc,
+        k_bc,
+        e_bc,
+        kwargs...,
+    )
 end
 
 """
@@ -92,5 +101,15 @@ function BoundaryConditions(u_bc, v_bc, w_bc; T = Float64, bc_unsteady, bc_type,
     k_bc = (; x = (zero(T), zero(T)), y = (zero(T), zero(T)), z = (zero(T), zero(T)))
     e_bc = (; x = (zero(T), zero(T)), y = (zero(T), zero(T)), z = (zero(T), zero(T)))
 
-    BoundaryConditions{T}(; bc_unsteady, bc_type..., u_bc, v_bc, w_bc, p_bc, k_bc, e_bc, kwargs...)
+    BoundaryConditions{T}(;
+        bc_unsteady,
+        bc_type...,
+        u_bc,
+        v_bc,
+        w_bc,
+        p_bc,
+        k_bc,
+        e_bc,
+        kwargs...,
+    )
 end

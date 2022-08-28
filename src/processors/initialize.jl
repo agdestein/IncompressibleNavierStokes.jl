@@ -146,7 +146,11 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,3}) wher
         lims = Observable(get_lims(f, 3))
         ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect = :data)
         hm = type!(
-            ax, xf, yf, zf, field;
+            ax,
+            xf,
+            yf,
+            zf,
+            field;
             levels = @lift(LinRange($(lims)..., 10)),
             colorrange = lims,
             shading = false,

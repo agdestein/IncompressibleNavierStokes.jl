@@ -27,7 +27,6 @@ function operator_convection_diffusion(
         (; Ωux1, Ωux3, Ωuy1, Ωuy3, Ωvx1, Ωvx3, Ωvy1, Ωvy3) = grid
     end
 
-
     ## Convection (differencing) operator Cu
 
     # Calculates difference from pressure points to velocity points
@@ -669,7 +668,6 @@ function operator_convection_diffusion(
     Su_uz = (S1D * Su_uz_bc.B1D) ⊗ I(Nuy_in) ⊗ I(Nux_in)
     Su_uz_bc = (; Su_uz_bc..., Bbc = (S1D * Su_uz_bc.Btemp) ⊗ I(Nuy_in) ⊗ I(Nux_in))
 
-
     ## Sv_uy: evaluate vx at uy; same as Iv_uy except for mesh sizes and -diag diag
     diag1 = 1 ./ gxd
     S1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => -diag1, 1 => diag1)
@@ -749,7 +747,6 @@ function operator_convection_diffusion(
 
     # Resulting operator:
     Sw_uz = Sw_uz_bc_lr.B3D * Sw_uz_bc_bf.B3D
-
 
     ## Diffusion operator (stress tensor), v-component: similar to averaging!
 
@@ -846,7 +843,6 @@ function operator_convection_diffusion(
     Sv_vz = (S1D * Sv_vz_bc.B1D) ⊗ I(Nvy_in) ⊗ I(Nvx_in)
     Sv_vz_bc = (; Sv_vz_bc..., Bbc = (S1D * Sv_vz_bc.Btemp) ⊗ I(Nvy_in) ⊗ I(Nvx_in))
 
-
     ## Sw_vz: evaluate wy at vz location
     diag1 = 1 ./ gyd
     S1D = spdiagm(Nwy_t - 1, Nwy_t, 0 => -diag1, 1 => diag1)
@@ -882,7 +878,6 @@ function operator_convection_diffusion(
 
     # Resulting operator:
     Sw_vz = Sw_vz_bc_lu.B3D * Sw_vz_bc_bf.B3D
-
 
     ## Diffusion operator (stress tensor), w-component: similar to averaging, but with mesh sizes
 

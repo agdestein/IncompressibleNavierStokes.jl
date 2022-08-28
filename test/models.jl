@@ -68,13 +68,8 @@
 
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
-            setup = Setup(;
-                viscosity_model,
-                convection_model,
-                grid,
-                force,
-                boundary_conditions,
-            )
+            setup =
+                Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
 
             # Pressure solver
             pressure_solver = DirectPressureSolver(setup)

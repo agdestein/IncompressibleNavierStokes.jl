@@ -124,7 +124,6 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     end
     M = [Mx My]
 
-
     ## Gradient operator G
 
     # Like in the continuous case, grad = -div^T
@@ -132,7 +131,6 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     # on the ouflow boundary is properly taken into account in y_p (often this
     # stress will be zero)
     G = -M'
-
 
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
@@ -145,7 +143,7 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions
     if all(≠(:pressure), (bc.u.x..., bc.v.y...))
-         if any(≉(0; atol = 1e-10), sum(A; dims = 2))
+        if any(≉(0; atol = 1e-10), sum(A; dims = 2))
             @warn "Pressure matrix: not all rowsums are zero!"
         end
     end
@@ -280,7 +278,7 @@ function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions
     if all(≠(:pressure), (bc.u.x..., bc.v.y..., bc.w.z...))
-         if any(≉(0; atol = 1e-10), sum(A; dims = 2))
+        if any(≉(0; atol = 1e-10), sum(A; dims = 2))
             @warn "Pressure matrix: not all rowsums are zero!"
         end
     end

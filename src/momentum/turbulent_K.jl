@@ -9,9 +9,9 @@ turbulent_K(model::SmagorinskyModel, setup) = model.C_s^2 * max_size(setup.grid)
 
 function turbulent_K(::QRModel, setup)
     (; α) = setup.grid
-    Δ = max_size(setup.grid) 
+    Δ = max_size(setup.grid)
     C_d = Δ^2 / 8
-    C_d * 1//2 * (1 - α / C_d)^2
+    C_d * 1 // 2 * (1 - α / C_d)^2
 end
 
 turbulent_K(model::MixingLengthModel, setup) = model.lm^2

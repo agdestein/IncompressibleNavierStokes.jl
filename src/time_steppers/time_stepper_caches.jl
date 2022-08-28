@@ -114,8 +114,22 @@ function ode_method_cache(::AdamsBashforthCrankNicolsonMethod{T}, setup) where {
     Δt = 0
     Diff_fact = cholesky(spzeros(0, 0))
 
-    AdamsBashforthCrankNicolsonCache{T}(; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ,
-                                        yDiffₙ₊₁, Gpₙ, Diff_fact, Δt)
+    AdamsBashforthCrankNicolsonCache{T}(;
+        cₙ,
+        cₙ₋₁,
+        F,
+        f,
+        Δp,
+        Rr,
+        b,
+        bₙ,
+        bₙ₊₁,
+        yDiffₙ,
+        yDiffₙ₊₁,
+        Gpₙ,
+        Diff_fact,
+        Δt,
+    )
 end
 
 function ode_method_cache(::OneLegMethod{T}, setup) where {T}
@@ -207,8 +221,14 @@ function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
         Gp,
         Is,
         Ω_sNV,
-        A_ext, b_ext, c_ext,
-        Gtot, Mtot, yMtot, Ωtot,
-        dfmom, Z
+        A_ext,
+        b_ext,
+        c_ext,
+        Gtot,
+        Mtot,
+        yMtot,
+        Ωtot,
+        dfmom,
+        Z,
     )
 end

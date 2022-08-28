@@ -99,7 +99,6 @@ V₀, p₀ = create_initial_conditions(
     pressure_solver,
 );
 
-
 # Solve steady state problem
 problem = SteadyStateProblem(setup, V₀, p₀);
 V, p = @time solve(problem);

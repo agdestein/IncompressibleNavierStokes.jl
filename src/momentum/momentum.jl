@@ -22,7 +22,11 @@ Non-mutating/allocating/out-of-place version.
 See also [`momentum!`](@ref).
 """
 function momentum(
-    V, ϕ, p, t, setup;
+    V,
+    ϕ,
+    p,
+    t,
+    setup;
     bc_vectors = nothing,
     getJacobian = false,
     nopressure = false,
@@ -38,7 +42,8 @@ function momentum(
     (; y_p) = bc_vectors
 
     # Convection
-    c, ∇c = convection(convection_model, V, ϕ, setup; bc_vectors, getJacobian, newton_factor)
+    c, ∇c =
+        convection(convection_model, V, ϕ, setup; bc_vectors, getJacobian, newton_factor)
 
     # Diffusion
     d, ∇d = diffusion(viscosity_model, V, setup; bc_vectors, getJacobian)
@@ -110,7 +115,18 @@ function momentum!(
     (; c, ∇c, d, ∇d, b, Gp) = cache
 
     # Convection
-    convection!(convection_model, c, ∇c, V, ϕ, setup, cache; bc_vectors, getJacobian, newton_factor)
+    convection!(
+        convection_model,
+        c,
+        ∇c,
+        V,
+        ϕ,
+        setup,
+        cache;
+        bc_vectors,
+        getJacobian,
+        newton_factor,
+    )
 
     # Diffusion
     diffusion!(viscosity_model, d, ∇d, V, setup; bc_vectors, getJacobian)

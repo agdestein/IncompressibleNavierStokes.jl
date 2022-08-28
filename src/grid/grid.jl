@@ -223,7 +223,6 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
     # Total number
     Nu = Nux_in * Nuy_in
 
-
     ## v-volumes
 
     # X-dir
@@ -249,7 +248,8 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
     if order4
         hx3 = zeros(Nx)
         hx3[2:end-1] = hx[1:end-2] + hx[2:end-1] + hx[3:end]
-        if boundary_conditions.u.x[1] == :periodic && boundary_conditions.u.x[2] == :periodic
+        if boundary_conditions.u.x[1] == :periodic &&
+           boundary_conditions.u.x[2] == :periodic
             hx3[1] = hx[end] + hx[1] + hx[2]
             hx3[end] = hx[end-1] + hx[end] + hx[1]
         else
@@ -259,7 +259,8 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
 
         hy3 = zeros(Ny)
         hy3[2:end-1] = hy[1:end-2] + hy[2:end-1] + hy[3:end]
-        if boundary_conditions.v.y[1] == :periodic && boundary_conditions.v.y[2] == :periodic
+        if boundary_conditions.v.y[1] == :periodic &&
+           boundary_conditions.v.y[2] == :periodic
             hy3[1] = hy[end] + hy[1] + hy[2]
             hy3[end] = hy[end-1] + hy[end] + hy[1]
         else
@@ -273,7 +274,8 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
         # Distance between pressure points
         gx3 = zeros(Nx + 1)
         gx3[3:Nx-1] = gx[2:end-3] + gx[3:end-2] + gx[4:end-1]
-        if boundary_conditions.u.x[1] == :periodic && boundary_conditions.u.x[2] == :periodic
+        if boundary_conditions.u.x[1] == :periodic &&
+           boundary_conditions.u.x[2] == :periodic
             gx3[1] = gx[end-1] + gx[end] + gx[1] + gx[2]
             gx3[2] = gx[end] + gx[1] + gx[2] + gx[3]
             gx3[end-1] = gx[end-2] + gx[end-1] + gx[end] + gx[1]
@@ -288,7 +290,8 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
         # Distance between pressure points
         gy3 = zeros(Ny + 1)
         gy3[3:Ny-1] = gy[2:end-3] + gy[3:end-2] + gy[4:end-1]
-        if boundary_conditions.v.y[1] == :periodic && boundary_conditions.v.y[2] == :periodic
+        if boundary_conditions.v.y[1] == :periodic &&
+           boundary_conditions.v.y[2] == :periodic
             gy3[1] = gy[end-1] + gy[end] + gy[1] + gy[2]
             gy3[2] = gy[end] + gy[1] + gy[2] + gy[3]
             gy3[end-1] = gy[end-2] + gy[end-1] + gy[end] + gy[1]
@@ -369,7 +372,6 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
     # Map from Npx+2 points to Nux_t-1 points (ux faces)
     Bkux = copy(Bmap)
 
-
     ## Y-direction
 
     # Gyi: integration and gyd: differentiation
@@ -380,7 +382,6 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
     # Hyi: integration and hyd: differentiation
     # Map to find suitable size
     hyi = copy(hy)
-
 
     # Restrict Ny+2 to Nvy_in+1 points
     if boundary_conditions.v.y == (:dirichlet, :dirichlet)
@@ -528,33 +529,82 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
 
     ## Store quantities in the structure
     params = (;
-        Npx, Npy, Np,
-        Nux_in, Nux_b, Nux_t,
-        Nuy_in, Nuy_b, Nuy_t,
-        Nvx_in, Nvx_b, Nvx_t,
-        Nvy_in, Nvy_b, Nvy_t,
-        Nu, Nv, NV,
-        Ωp, Ω, Ω⁻¹,
-        Ωux, Ωvx, Ωuy, Ωvy,
-        hxi, hyi, hxd, hyd,
-        gxi, gyi, gxd, gyd,
-        Buvy, Bvux, Bkux, Bkvy,
-        xin, yin,
-        xu, yu, xv, yv,
-        xpp, ypp,
-        indu, indv, indV, indp,
+        Npx,
+        Npy,
+        Np,
+        Nux_in,
+        Nux_b,
+        Nux_t,
+        Nuy_in,
+        Nuy_b,
+        Nuy_t,
+        Nvx_in,
+        Nvx_b,
+        Nvx_t,
+        Nvy_in,
+        Nvy_b,
+        Nvy_t,
+        Nu,
+        Nv,
+        NV,
+        Ωp,
+        Ω,
+        Ω⁻¹,
+        Ωux,
+        Ωvx,
+        Ωuy,
+        Ωvy,
+        hxi,
+        hyi,
+        hxd,
+        hyd,
+        gxi,
+        gyi,
+        gxd,
+        gyd,
+        Buvy,
+        Bvux,
+        Bkux,
+        Bkvy,
+        xin,
+        yin,
+        xu,
+        yu,
+        xv,
+        yv,
+        xpp,
+        ypp,
+        indu,
+        indv,
+        indV,
+        indp,
     )
 
     if order4
         params = (;
             params...,
-            hx3, hy3,
-            hxi3, hyi3,
-            gxi3, gyi3,
-            hxd13, hxd3, hyd13, hyd3,
-            gxd13, gxd3, gyd13, gyd3,
-            Ωux1, Ωux3, Ωuy1, Ωuy3,
-            Ωvx1, Ωvx3, Ωvy1, Ωvy3,
+            hx3,
+            hy3,
+            hxi3,
+            hyi3,
+            gxi3,
+            gyi3,
+            hxd13,
+            hxd3,
+            hyd13,
+            hyd3,
+            gxd13,
+            gxd3,
+            gyd13,
+            gyd3,
+            Ωux1,
+            Ωux3,
+            Ωuy1,
+            Ωuy3,
+            Ωvx1,
+            Ωvx3,
+            Ωvy1,
+            Ωvy3,
         )
     end
 
@@ -686,7 +736,6 @@ function Grid(x, y, z; boundary_conditions, order4 = false, T = eltype(x))
 
     # Total number
     Nw = Nwx_in * Nwy_in * Nwz_in
-
 
     # Total number of velocity points
     NV = Nu + Nv + Nw
@@ -861,29 +910,102 @@ function Grid(x, y, z; boundary_conditions, order4 = false, T = eltype(x))
 
     Grid{T,3}(;
         order4,
-        Nx, Ny, Nz,
-        xlims, ylims, zlims,
-        x, y, z,
-        xp, yp, zp,
-        hx, hy, hz,
-        gx, gy, gz,
-        Npx, Npy, Npz, Np,
-        Nux_in, Nux_b, Nux_t,
-        Nuy_in, Nuy_b, Nuy_t,
-        Nuz_in, Nuz_b, Nuz_t,
-        Nvx_in, Nvx_b, Nvx_t,
-        Nvy_in, Nvy_b, Nvy_t,
-        Nvz_in, Nvz_b, Nvz_t,
-        Nwx_in, Nwx_b, Nwx_t,
-        Nwy_in, Nwy_b, Nwy_t,
-        Nwz_in, Nwz_b, Nwz_t,
-        Nu, Nv, Nw, NV,
-        Ωp, Ω, Ω⁻¹,
-        hxi, hyi, hzi, hxd, hyd, hzd,
-        gxi, gyi, gzi, gxd, gyd, gzd,
-        Buvy, Bvux, Buwz, Bwux, Bvwz, Bwvy, Bkux, Bkvy, Bkwz,
-        xin, yin, zin,
-        xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp,
-        indu, indv, indw, indV, indp,
+        Nx,
+        Ny,
+        Nz,
+        xlims,
+        ylims,
+        zlims,
+        x,
+        y,
+        z,
+        xp,
+        yp,
+        zp,
+        hx,
+        hy,
+        hz,
+        gx,
+        gy,
+        gz,
+        Npx,
+        Npy,
+        Npz,
+        Np,
+        Nux_in,
+        Nux_b,
+        Nux_t,
+        Nuy_in,
+        Nuy_b,
+        Nuy_t,
+        Nuz_in,
+        Nuz_b,
+        Nuz_t,
+        Nvx_in,
+        Nvx_b,
+        Nvx_t,
+        Nvy_in,
+        Nvy_b,
+        Nvy_t,
+        Nvz_in,
+        Nvz_b,
+        Nvz_t,
+        Nwx_in,
+        Nwx_b,
+        Nwx_t,
+        Nwy_in,
+        Nwy_b,
+        Nwy_t,
+        Nwz_in,
+        Nwz_b,
+        Nwz_t,
+        Nu,
+        Nv,
+        Nw,
+        NV,
+        Ωp,
+        Ω,
+        Ω⁻¹,
+        hxi,
+        hyi,
+        hzi,
+        hxd,
+        hyd,
+        hzd,
+        gxi,
+        gyi,
+        gzi,
+        gxd,
+        gyd,
+        gzd,
+        Buvy,
+        Bvux,
+        Buwz,
+        Bwux,
+        Bvwz,
+        Bwvy,
+        Bkux,
+        Bkvy,
+        Bkwz,
+        xin,
+        yin,
+        zin,
+        xu,
+        yu,
+        zu,
+        xv,
+        yv,
+        zv,
+        xw,
+        yw,
+        zw,
+        xpp,
+        ypp,
+        zpp,
+        indu,
+        indv,
+        indw,
+        indV,
+        indp,
     )
 end

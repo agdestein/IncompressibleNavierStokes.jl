@@ -58,8 +58,8 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
     iter = 0
 
     # Index in global solution vector
-    ind_Vⱼ = 1:(NV * s)
-    ind_pⱼ = (NV * s + 1):((NV + Np) * s)
+    ind_Vⱼ = 1:(NV*s)
+    ind_pⱼ = (NV*s+1):((NV+Np)*s)
 
     # Vtot contains all stages and is ordered as [u₁; v₁; u₂; v₂; ...; uₛ; vₛ];
     # Starting guess for intermediate stages
@@ -101,7 +101,8 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
             ΔQⱼ = Z_fact \ fⱼ
         elseif newton_type == :full
             # Full Newton
-            Fⱼ, ∇Fⱼ = momentum_allstage(Vⱼ, Vⱼ, pⱼ, tⱼ, setup; bc_vectors, getJacobian = true)
+            Fⱼ, ∇Fⱼ =
+                momentum_allstage(Vⱼ, Vⱼ, pⱼ, tⱼ, setup; bc_vectors, getJacobian = true)
 
             # Update iteration matrix
             mul!(dfmom, A_ext, ∇Fⱼ)
@@ -144,10 +145,17 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
         V = @. V - Δtₙ * Ω⁻¹ * Gp
 
         if p_add_solve
-            p = pressure_additional_solve(pressure_solver, V, p, tₙ + Δtₙ, setup; bc_vectors)
+            p = pressure_additional_solve(
+                pressure_solver,
+                V,
+                p,
+                tₙ + Δtₙ,
+                setup;
+                bc_vectors,
+            )
         else
             # Standard method; take last pressure
-            p = pⱼ[(end - Np + 1):end]
+            p = pⱼ[(end-Np+1):end]
         end
     else
         # For steady BC we do an additional pressure solve
@@ -155,7 +163,7 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
         # pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
 
         # Standard method; take pressure of last stage
-        p = pⱼ[(end - Np + 1):end]
+        p = pⱼ[(end-Np+1):end]
     end
 
     t = tₙ + Δtₙ
@@ -175,7 +183,13 @@ Mutating/non-allocating/in-place version.
 
 See also [`step`](@ref).
 """
-function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
+function step!(
+    stepper::ImplicitRungeKuttaStepper,
+    Δt;
+    cache,
+    momentum_cache,
+    bc_vectors = nothing,
+)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
@@ -223,8 +237,8 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache, b
     iter = 0
 
     # Index in global solution vector
-    ind_Vⱼ = 1:(NV * s)
-    ind_pⱼ = (NV * s + 1):((NV + Np) * s)
+    ind_Vⱼ = 1:(NV*s)
+    ind_pⱼ = (NV*s+1):((NV+Np)*s)
 
     # Vtot contains all stages and is ordered as [u₁; v₁; u₂; v₂; ...; uₛ; vₛ];
     # Starting guess for intermediate stages
@@ -235,7 +249,19 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache, b
     pⱼ .= ptotₙ
 
     # Initialize right-hand side for all stages
-    momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, cache, momentum_cache; bc_vectors, nstage = s)
+    momentum_allstage!(
+        Fⱼ,
+        ∇Fⱼ,
+        Vⱼ,
+        Vⱼ,
+        pⱼ,
+        tⱼ,
+        setup,
+        cache,
+        momentum_cache;
+        bc_vectors,
+        nstage = s,
+    )
 
     fmomⱼ = @view fⱼ[ind_Vⱼ]
     fmassⱼ = @view fⱼ[ind_pⱼ]
@@ -252,7 +278,18 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache, b
 
     if newton_type == :approximate
         # Approximate Newton (Jacobian is based on current solution Vₙ)
-        momentum!(F, ∇F, Vₙ, Vₙ, pₙ, tₙ, setup, momentum_cache; bc_vectors, getJacobian = true)
+        momentum!(
+            F,
+            ∇F,
+            Vₙ,
+            Vₙ,
+            pₙ,
+            tₙ,
+            setup,
+            momentum_cache;
+            bc_vectors,
+            getJacobian = true,
+        )
 
         # Update iteration matrix, which is now fixed during iterations
         if is_patterned
@@ -310,7 +347,18 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache, b
         iter += 1
 
         # Evaluate RHS for next iteration and check residual based on computed Vⱼ, pⱼ
-        momentum_allstage!(Fⱼ, ∇Fⱼ, Vⱼ, Vⱼ, pⱼ, tⱼ, setup, cache, momentum_cache; bc_vectors)
+        momentum_allstage!(
+            Fⱼ,
+            ∇Fⱼ,
+            Vⱼ,
+            Vⱼ,
+            pⱼ,
+            tⱼ,
+            setup,
+            cache,
+            momentum_cache;
+            bc_vectors,
+        )
         mul!(fmomⱼ, A_ext, Fⱼ)
         @. fmomⱼ -= (Ωtot * Vⱼ - Ωtot * Vtotₙ) / Δtₙ
         # fmomⱼ = -(Ωtot .* Vⱼ - Ωtot .* Vtotₙ) / Δtₙ + A_ext * Fⱼ
@@ -342,10 +390,21 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache, b
         @. V -= Δtₙ * Ω⁻¹ * Gp
 
         if p_add_solve
-            pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp; bc_vectors)
+            pressure_additional_solve!(
+                pressure_solver,
+                V,
+                p,
+                tₙ + Δtₙ,
+                setup,
+                momentum_cache,
+                F,
+                f,
+                Δp;
+                bc_vectors,
+            )
         else
             # Standard method; take last pressure
-            p .= pⱼ[(end - Np + 1):end]
+            p .= pⱼ[(end-Np+1):end]
         end
     else
         # For steady BC we do an additional pressure solve
@@ -353,7 +412,7 @@ function step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache, b
         # pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
 
         # Standard method; take pressure of last stage
-        p .= pⱼ[(end - Np + 1):end]
+        p .= pⱼ[(end-Np+1):end]
     end
 
     t = tₙ + Δtₙ
@@ -370,16 +429,7 @@ Non-mutating/allocating/out-of-place version.
 
 See also [`momentum_allstage!`](@ref).
 """
-function momentum_allstage(
-    Vⱼ,
-    ϕⱼ,
-    pⱼ,
-    tⱼ,
-    setup;
-    bc_vectors,
-    nstage,
-    getJacobian = false,
-)
+function momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, getJacobian = false)
     (; NV, Np) = setup.grid
 
     ∇Fⱼ = spzeros(0, 0)

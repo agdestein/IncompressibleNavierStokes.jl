@@ -103,7 +103,13 @@ Mutating/non-allocating/in-place version.
 
 See also [`step`](@ref).
 """
-function step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
+function step!(
+    stepper::ExplicitRungeKuttaStepper,
+    Δt;
+    cache,
+    momentum_cache,
+    bc_vectors = nothing,
+)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
@@ -181,7 +187,18 @@ function step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache, b
     # For steady bc we do an additional pressure solve
     # That saves a pressure solve for i = 1 in the next time step
     if !bc_unsteady || p_add_solve
-        pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp; bc_vectors)
+        pressure_additional_solve!(
+            pressure_solver,
+            V,
+            p,
+            tₙ + Δtₙ,
+            setup,
+            momentum_cache,
+            F,
+            f,
+            Δp;
+            bc_vectors,
+        )
     end
 
     t = tₙ + Δtₙ

@@ -66,7 +66,19 @@ function solve(
             newton_factor = true
         end
 
-        momentum!(F, ∇F, V, V, p, t, setup, momentum_cache; bc_vectors, getJacobian = true, newton_factor)
+        momentum!(
+            F,
+            ∇F,
+            V,
+            V,
+            p,
+            t,
+            setup,
+            momentum_cache;
+            bc_vectors,
+            getJacobian = true,
+            newton_factor,
+        )
 
         fmass = M * V + yM
         f = [-F; fmass]
@@ -77,7 +89,7 @@ function solve(
         # bicgstabl!(Δq, Z, f)
 
         ΔV = @view Δq[1:NV]
-        Δp = @view Δq[(NV + 1):end]
+        Δp = @view Δq[(NV+1):end]
 
         V .+= ΔV
         p .+= Δp

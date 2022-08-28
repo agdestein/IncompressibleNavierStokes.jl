@@ -32,7 +32,18 @@ end
 Do additional pressure solve. This makes the pressure compatible with the velocity
 field, resulting in same order pressure as velocity.
 """
-function pressure_additional_solve!(pressure_solver, V, p, t, setup, momentum_cache, F, f, Δp; bc_vectors)
+function pressure_additional_solve!(
+    pressure_solver,
+    V,
+    p,
+    t,
+    setup,
+    momentum_cache,
+    F,
+    f,
+    Δp;
+    bc_vectors,
+)
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; Ω⁻¹) = grid
