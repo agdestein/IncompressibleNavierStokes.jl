@@ -100,10 +100,8 @@ function create_spectrum(K)
             exp(-2π * im * rand()) for i = 1:K, j = 1:K, k = 1:K
         ]
     [
-        a reverse(a; dims = 2)
-        reverse(a; dims = 1) reverse(a; dims = (1, 2))
-        reverse(a; dims = 3) reverse(a; dims = (2, 3))
-        reverse(a; dims = (1, 3)) reverse(a)
+        a reverse(a; dims = 2); reverse(a; dims = 1) reverse(a; dims = (1, 2));;;
+        reverse(a; dims = 3) reverse(a; dims = (2, 3)); reverse(a; dims = (1, 3)) reverse(a)
     ]
 end
 u = real.(ifft(create_spectrum(K)))
