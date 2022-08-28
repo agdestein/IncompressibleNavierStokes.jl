@@ -113,7 +113,6 @@ V₀, p₀ = create_initial_conditions(
     pressure_solver,
 )
 
-
 # ## Solve problems
 #
 # There are many different problems. They can all be solved by calling the [`solve`](@ref)
@@ -144,7 +143,6 @@ processors = [logger, plotter, tracer]
 # with a fixed time step.
 
 V, p = @time solve(problem, RK44(); Δt = 0.001, processors, pressure_solver)
-
 
 # ## Postprocess
 #

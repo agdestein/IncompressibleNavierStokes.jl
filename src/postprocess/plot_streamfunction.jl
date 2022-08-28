@@ -14,8 +14,8 @@ function plot_streamfunction(setup::Setup{T,2}, V, t; kwargs...) where {T}
         xψ = x
         yψ = y
     else
-        xψ = x[2:(end - 1)]
-        yψ = y[2:(end - 1)]
+        xψ = x[2:(end-1)]
+        yψ = y[2:(end-1)]
     end
 
     # Get fields
@@ -46,7 +46,7 @@ function plot_streamfunction(setup::Setup{T,2}, V, t; kwargs...) where {T}
         # levels,
         kwargs...,
     )
-    Colorbar(fig[1,2], cf)
+    Colorbar(fig[1, 2], cf)
     # save("output/streamfunction.png", fig, pt_per_unit = 2)
 
     fig

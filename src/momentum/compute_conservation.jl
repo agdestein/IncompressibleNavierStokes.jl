@@ -46,9 +46,11 @@ function compute_conservation(V, t, setup::Setup{T,2}; bc_vectors = nothing) whe
 
     # Add boundary contributions in case of Dirichlet BC
     boundary_conditions.u.x[1] == :dirichlet && (k += 1 / 2 * sum(uLe_i .^ 2 .* hy) * gx[1])
-    boundary_conditions.u.x[2] == :dirichlet && (k += 1 / 2 * sum(uRi_i .^ 2 .* hy) * gx[end])
+    boundary_conditions.u.x[2] == :dirichlet &&
+        (k += 1 / 2 * sum(uRi_i .^ 2 .* hy) * gx[end])
     boundary_conditions.v.y[1] == :dirichlet && (k += 1 / 2 * sum(vLo_i .^ 2 .* hx) * gy[1])
-    boundary_conditions.v.y[2] == :dirichlet && (k += 1 / 2 * sum(vUp_i .^ 2 .* hx) * gy[end])
+    boundary_conditions.v.y[2] == :dirichlet &&
+        (k += 1 / 2 * sum(vUp_i .^ 2 .* hx) * gy[end])
 
     maxdiv, umom, vmom, k
 end
@@ -100,12 +102,18 @@ function compute_conservation(V, t, setup::Setup{T,3}; bc_vectors = nothing) whe
     k = 1 / 2 * sum(Ω .* V .^ 2)
 
     # Add boundary contributions in case of Dirichlet BC
-    boundary_conditions.u.x[1] == :dirichlet && (k += 1 / 2 * sum(uLe_i .^ 2 .* (hz ⊗ hy)) * gx[1])
-    boundary_conditions.u.x[2] == :dirichlet && (k += 1 / 2 * sum(uRi_i .^ 2 .* (hz ⊗ hy)) * gx[end])
-    boundary_conditions.v.y[1] == :dirichlet && (k += 1 / 2 * sum(vLo_i .^ 2 .* (hz ⊗ hx)) * gy[1])
-    boundary_conditions.v.y[2] == :dirichlet && (k += 1 / 2 * sum(vUp_i .^ 2 .* (hz ⊗ hx)) * gy[end])
-    boundary_conditions.w.z[1] == :dirichlet && (k += 1 / 2 * sum(wBa_i .^ 2 .* (hy ⊗ hx)) * gz[1])
-    boundary_conditions.w.z[2] == :dirichlet && (k += 1 / 2 * sum(wFr_i .^ 2 .* (hy ⊗ hx)) * gz[end])
+    boundary_conditions.u.x[1] == :dirichlet &&
+        (k += 1 / 2 * sum(uLe_i .^ 2 .* (hz ⊗ hy)) * gx[1])
+    boundary_conditions.u.x[2] == :dirichlet &&
+        (k += 1 / 2 * sum(uRi_i .^ 2 .* (hz ⊗ hy)) * gx[end])
+    boundary_conditions.v.y[1] == :dirichlet &&
+        (k += 1 / 2 * sum(vLo_i .^ 2 .* (hz ⊗ hx)) * gy[1])
+    boundary_conditions.v.y[2] == :dirichlet &&
+        (k += 1 / 2 * sum(vUp_i .^ 2 .* (hz ⊗ hx)) * gy[end])
+    boundary_conditions.w.z[1] == :dirichlet &&
+        (k += 1 / 2 * sum(wBa_i .^ 2 .* (hy ⊗ hx)) * gz[1])
+    boundary_conditions.w.z[2] == :dirichlet &&
+        (k += 1 / 2 * sum(wFr_i .^ 2 .* (hy ⊗ hx)) * gz[end])
 
     maxdiv, umom, vmom, wmom, k
 end

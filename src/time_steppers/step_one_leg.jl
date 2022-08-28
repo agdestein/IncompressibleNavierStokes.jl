@@ -36,7 +36,7 @@ function step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
 
     # Take a time step with this right-hand side, this gives an intermediate velocity field
     # (not divergence free)
-    V = @. (2β * Vₙ - (β - 1//2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1//2)
+    V = @. (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1 // 2)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
@@ -46,7 +46,7 @@ function step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
     (; yM) = bc_vectors
 
     # Adapt time step for pressure calculation
-    Δtᵦ = Δtₙ / (β + 1//2)
+    Δtᵦ = Δtₙ / (β + 1 // 2)
 
     # Divergence of intermediate velocity field
     f = (M * V + yM) / Δtᵦ
@@ -85,7 +85,6 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = 
     (; Ω⁻¹) = grid
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache
 
-
     # Update current solution (does not depend on previous step size)
     Δtₙ₋₁ = t - tₙ
     n += 1
@@ -107,7 +106,7 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = 
 
     # Take a time step with this right-hand side, this gives an intermediate velocity field
     # (not divergence free)
-    @. V = (2β * Vₙ - (β - 1//2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1//2)
+    @. V = (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1 // 2)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
@@ -117,7 +116,7 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = 
     (; yM) = bc_vectors
 
     # Adapt time step for pressure calculation
-    Δtᵦ = Δtₙ / (β + 1//2)
+    Δtᵦ = Δtₙ / (β + 1 // 2)
 
     # Divergence of intermediate velocity field
     f .= yM
@@ -136,7 +135,18 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = 
 
     # Alternatively, do an additional Poisson solve
     if p_add_solve
-        pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp; bc_vectors)
+        pressure_additional_solve!(
+            pressure_solver,
+            V,
+            p,
+            tₙ + Δtₙ,
+            setup,
+            momentum_cache,
+            F,
+            f,
+            Δp;
+            bc_vectors,
+        )
     end
 
     t = tₙ + Δtₙ

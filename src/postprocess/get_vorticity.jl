@@ -50,7 +50,6 @@ function get_vorticity(V, t, setup::Setup{T,3}) where {T}
     vorticity!(ω, V, t, setup)
 end
 
-
 """
     vorticity!(ω, V, t, setup)
 

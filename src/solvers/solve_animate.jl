@@ -41,7 +41,7 @@ function solve_animate(
     framerate = 20,
 )
     (; setup, V₀, p₀, tlims) = problem
-    
+
     t_start, t_end = tlims
     isadaptive = isnothing(Δt)
 
@@ -86,7 +86,7 @@ function solve_animate(
             end
 
             # Change timestep based on operators
-            if isadaptive && rem(stepper.n, n_adapt_Δt) == 0 
+            if isadaptive && rem(stepper.n, n_adapt_Δt) == 0
                 Δt = get_timestep(stepper, cfl; bc_vectors)
             end
 

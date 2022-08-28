@@ -15,7 +15,6 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, boundary_conditions) wher
     (; hx, hy, gxd, gyd) = grid
     (; Buvy, Bvux, Bkux, Bkvy) = grid
 
-
     # Averaging weight:
     weight = 1 / 2
 
@@ -39,7 +38,6 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, boundary_conditions) wher
     # Extend to 2D
     Aν_ux = I(Nuy_in) ⊗ (A1D * Aν_ux_bc.B1D)
     Aν_ux_bc = (; Aν_ux_bc..., Bbc = I(Nuy_in) ⊗ (A1D * Aν_ux_bc.Btemp))
-
 
     ## Nu to uy positions
 
@@ -99,7 +97,6 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, boundary_conditions) wher
     A1Dx = spdiagm(Npx + 1, Npx + 2, 0 => diag1, 1 => diag1)
     A2Dx = kron(I(Nvy_in), A1Dx)
 
-
     # Boundary conditions for ν in y-direction;
     # Mapping from Npy (ν) points to Npy+2 points
     Aν_vx_bc_lu = bc_general_stag(
@@ -114,7 +111,6 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, boundary_conditions) wher
 
     # Extend BC to 2D
     A2D = (A1D * Aν_vx_bc_lu.B1D) ⊗ I(Npx + 2)
-
 
     # Apply boundary conditions also in x-direction:
     Aν_vx_bc_lr = bc_general_stag(
@@ -133,7 +129,6 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, boundary_conditions) wher
 
     Aν_vx_bc_lu = (; Aν_vx_bc_lu..., B2D = A2Dx * ((A1D * Aν_vx_bc_lu.Btemp) ⊗ I(Npx + 2)))
     Aν_vx_bc_lr = (; Aν_vx_bc_lr..., B2D = A2Dx * A2D * (I(Npy) ⊗ Aν_vx_bc_lr.Btemp))
-
 
     ## Nu to vy positions
     A1D = I(Npy + 2)
@@ -154,7 +149,6 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, boundary_conditions) wher
     # Extend to 2D
     Aν_vy = (A1D * Aν_vy_bc.B1D) ⊗ I(Nvx_in)
     Aν_vy_bc = (; Aν_vy_bc..., Bbc = ((A1D * Aν_vy_bc.Btemp) ⊗ I(Nvx_in)))
-
 
     # So ν at vy is given by:
     # (Aν_vy * k + yAν_vy)
@@ -183,7 +177,6 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, boundary_conditions) wher
     Cux_k_bc = (; Cux_k_bc..., Bbc = I(Npy) ⊗ (C1D * Cux_k_bc.Btemp))
 
     # Cux_k*uₕ+yCux_k;
-
 
     ## Du/dy
 
@@ -281,7 +274,6 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, boundary_conditions) wher
 
     Cvy_k = (C1D * Cvy_k_bc.B1D) ⊗ I(Npx)
     Cvy_k_bc = (; Cvy_k_bc..., Bbc = (C1D * Cvy_k_bc.Btemp) ⊗ I(Npx))
-
 
     ## Group operators
     (;

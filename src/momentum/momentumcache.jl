@@ -61,23 +61,23 @@ Base.@kwdef struct MomentumCache{T}
     ∂wv̄∂y::Vector{T}
     ∂ww̄∂z::Vector{T}
 
-    Conv_ux_11::SparseMatrixCSC{T, Int}
-    Conv_uy_11::SparseMatrixCSC{T, Int}
-    Conv_uz_11::SparseMatrixCSC{T, Int}
-    Conv_uy_12::SparseMatrixCSC{T, Int}
-    Conv_uz_13::SparseMatrixCSC{T, Int}
+    Conv_ux_11::SparseMatrixCSC{T,Int}
+    Conv_uy_11::SparseMatrixCSC{T,Int}
+    Conv_uz_11::SparseMatrixCSC{T,Int}
+    Conv_uy_12::SparseMatrixCSC{T,Int}
+    Conv_uz_13::SparseMatrixCSC{T,Int}
 
-    Conv_vx_21::SparseMatrixCSC{T, Int}
-    Conv_vx_22::SparseMatrixCSC{T, Int}
-    Conv_vy_22::SparseMatrixCSC{T, Int}
-    Conv_vz_22::SparseMatrixCSC{T, Int}
-    Conv_vz_23::SparseMatrixCSC{T, Int}
+    Conv_vx_21::SparseMatrixCSC{T,Int}
+    Conv_vx_22::SparseMatrixCSC{T,Int}
+    Conv_vy_22::SparseMatrixCSC{T,Int}
+    Conv_vz_22::SparseMatrixCSC{T,Int}
+    Conv_vz_23::SparseMatrixCSC{T,Int}
 
-    Conv_wx_31::SparseMatrixCSC{T, Int}
-    Conv_wy_32::SparseMatrixCSC{T, Int}
-    Conv_wx_33::SparseMatrixCSC{T, Int}
-    Conv_wy_33::SparseMatrixCSC{T, Int}
-    Conv_wz_33::SparseMatrixCSC{T, Int}
+    Conv_wx_31::SparseMatrixCSC{T,Int}
+    Conv_wy_32::SparseMatrixCSC{T,Int}
+    Conv_wx_33::SparseMatrixCSC{T,Int}
+    Conv_wy_33::SparseMatrixCSC{T,Int}
+    Conv_wz_33::SparseMatrixCSC{T,Int}
 end
 
 function MomentumCache(setup)
@@ -145,7 +145,7 @@ function MomentumCache(setup)
     ∂wv̄∂y = zeros(T, Nw)
     ∂ww̄∂z = zeros(T, Nw)
 
-    Conv_ux_11  = spzeros(T, Nu, Nu)
+    Conv_ux_11 = spzeros(T, Nu, Nu)
     Conv_uy_11 = spzeros(T, Nu, Nu)
     Conv_uz_11 = spzeros(T, Nu, Nu)
     Conv_uy_12 = spzeros(T, Nu, Nv)
@@ -175,43 +175,33 @@ function MomentumCache(setup)
         ∇c3,
         ∇d,
         ∇b,
-
         u_ux,
         ū_ux,
         uū_ux,
-
         u_uy,
         v̄_uy,
         uv̄_uy,
-
         u_uz,
         w̄_uz,
         uw̄_uz,
-
         v_vx,
         ū_vx,
         vū_vx,
-
         v_vy,
         v̄_vy,
         vv̄_vy,
-
         v_vz,
         w̄_vz,
         vw̄_vz,
-
         w_wx,
         ū_wx,
         wū_wx,
-
         w_wy,
         v̄_wy,
         wv̄_wy,
-
         w_wz,
         w̄_wz,
         ww̄_wz,
-
         ∂uū∂x,
         ∂uv̄∂y,
         ∂uw̄∂z,
@@ -221,19 +211,16 @@ function MomentumCache(setup)
         ∂wū∂x,
         ∂wv̄∂y,
         ∂ww̄∂z,
-
         Conv_ux_11,
         Conv_uy_11,
         Conv_uz_11,
         Conv_uy_12,
         Conv_uz_13,
-
         Conv_vx_21,
         Conv_vx_22,
         Conv_vy_22,
         Conv_vz_22,
         Conv_vz_23,
-
         Conv_wx_31,
         Conv_wy_32,
         Conv_wx_33,
@@ -241,4 +228,3 @@ function MomentumCache(setup)
         Conv_wz_33,
     )
 end
-

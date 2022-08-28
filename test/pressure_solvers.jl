@@ -51,7 +51,8 @@
     # Test that in-place and out-of-place versions give same result
     @test p_direct ≈ IncompressibleNavierStokes.pressure_poisson!(direct, zero(p_exact), f)
     @test p_cg ≈ IncompressibleNavierStokes.pressure_poisson!(cg, zero(p_exact), f)
-    @test p_fourier ≈ IncompressibleNavierStokes.pressure_poisson!(fourier, zero(p_exact), f)
+    @test p_fourier ≈
+          IncompressibleNavierStokes.pressure_poisson!(fourier, zero(p_exact), f)
 
     # Test that solvers compute the exact pressure
     @test_broken p_direct ≈ p_exact # `A` is really badly conditioned

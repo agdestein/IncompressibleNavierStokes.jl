@@ -69,7 +69,6 @@ include("operators/ke_diffusion.jl")
 include("operators/ke_viscosity.jl")
 include("operators/operator_viscosity.jl")
 
-
 # Time steppers
 include("momentum/momentumcache.jl")
 include("time_steppers/methods.jl")
@@ -91,7 +90,6 @@ include("processors/processors.jl")
 include("processors/initialize.jl")
 include("processors/process.jl")
 include("processors/finalize.jl")
-
 
 # Momentum equation
 include("momentum/bodyforce.jl")
@@ -169,7 +167,7 @@ export solve_animate
 export momentum!
 
 export plot_force,
-       plot_grid,
+    plot_grid,
     plot_pressure,
     plot_streamfunction,
     plot_velocity,

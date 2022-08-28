@@ -28,7 +28,7 @@ function plot_velocity(setup::Setup{T,2}, V, t; kwargs...) where {T}
     )
     limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
     cf = contourf!(ax, xp, yp, qp; extendlow = :auto, extendhigh = :auto, levels, kwargs...)
-    Colorbar(fig[1,2], cf)
+    Colorbar(fig[1, 2], cf)
     # Colorbar(fig[2,1], cf; vertical = false)
     fig
 end
@@ -41,8 +41,8 @@ function plot_velocity(setup::Setup{T,3}, V, t; kwargs...) where {T}
     # up, vp, wp = get_velocity(V, t, setup)
     # qp = map((u, v, w) -> √sum(u^2 + v^2 + w^2), up, vp, wp)
     qp = reshape(V[indu], size(xu))
-    xp, yp, zp = xu[:,1,1], yu[1,:,1], zu[1,1,:]
-    
+    xp, yp, zp = xu[:, 1, 1], yu[1, :, 1], zu[1, 1, :]
+
     # Levels
     μ, σ = mean(qp), std(qp)
     levels = LinRange(μ - 3σ, μ + 3σ, 10)

@@ -22,7 +22,7 @@ examples = [
     # "Actuator (3D)" => "Actuator3D",
     "Backward Facing Step (2D)" => "BackwardFacingStep2D",
     # "Backward Facing Step (3D)" => "BackwardFacingStep3D",
-    "Decaying Turbulunce (2D)"  => "DecayingTurbulence2D",
+    "Decaying Turbulunce (2D)" => "DecayingTurbulence2D",
     # "Decaying Turbulunce (3D)" => "DecayingTurbulence3D",
     "Lid-Driven Cavity (2D)" => "LidDrivenCavity2D",
     # "Lid-Driven Cavity (3D)" => "LidDrivenCavity3D",
@@ -61,10 +61,8 @@ makedocs(;
             # "Reduced Order Models" => "theory/rom.md",
             # "Immersed Boundary Method" => "theory/ibm.md",
         ],
-        "API Reference" => [
-            "API" => "api/api.md",
-            "Runge-Kutta methods" => "api/tableaux.md",
-        ],
+        "API Reference" =>
+            ["API" => "api/api.md", "Runge-Kutta methods" => "api/tableaux.md"],
     ],
 )
 

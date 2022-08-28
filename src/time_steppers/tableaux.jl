@@ -8,7 +8,6 @@ Original (MATLAB) by David Ketcheson, extended by Benjamin Sanderse.
 # Default SSP coefficient
 # r = 0
 
-
 ## ================Explicit Methods=========================
 
 """
@@ -192,7 +191,6 @@ function DOPRI6(; kwargs...)
     runge_kutta_method(A, b, c, r; kwargs...)
 end
 
-
 ## ================Implicit Methods=========================
 
 """
@@ -261,7 +259,6 @@ function ISSPs3(s = 2; kwargs...)
     runge_kutta_method(A, b, c, r; kwargs...)
 end
 
-
 ## ===================Half explicit methods========================
 
 """
@@ -308,7 +305,6 @@ function HEM5(; kwargs...)
     c = sum(eachcol(A))
     runge_kutta_method(A, b, c, r; kwargs...)
 end
-
 
 ## ================Classical Methods=========================
 
@@ -561,7 +557,6 @@ function CHC5(; kwargs...)
     runge_kutta_method(A, b, c, r; kwargs...)
 end
 
-
 ## ==================Miscellaneous Methods================
 
 """
@@ -694,7 +689,6 @@ function RK44P2(; kwargs...)
     runge_kutta_method(A, b, c, r; kwargs...)
 end
 
-
 ## ===================DSRK Methods========================
 
 """
@@ -742,7 +736,6 @@ function DSRK3(; kwargs...)
     r = 0
     runge_kutta_method(A, b, c, r; kwargs...)
 end
-
 
 ## ==================="Non-SSP" Methods of Wong & Spiteri========================
 

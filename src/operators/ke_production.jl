@@ -79,7 +79,6 @@ function ke_production(grid::Grid{T,2}, boundary_conditions) where {T}
 
     # Cuy_k*(Auy_k*uₕ+yAuy_k) + yCuy_k;
 
-
     ## Dv/dx
 
     # Average to k-positions (in y-dir)
@@ -125,7 +124,6 @@ function ke_production(grid::Grid{T,2}, boundary_conditions) where {T}
     yCvx_k = kron(sparse(I, Npy, Npy), C1D * Btemp) * ybc
 
     # Cvx_k*(Avx_k*vₕ+yAvx_k) + yCvx_k;
-
 
     ## Dv/dy
 

@@ -40,7 +40,8 @@ Ū = 1.0
 ϵ = (0.082Ū, 0.012Ū)
 n = (0.4π, 0.3π)
 ω = (0.22, 0.11)
-u_bc(x, y, t) = 1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * sin(ω * t))
+u_bc(x, y, t) =
+    1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * sin(ω * t))
 v_bc(x, y, t) = 0.0
 dudt_bc(x, y, t) = sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * ω * cos(ω * t))
 dvdt_bc(x, y, t) = 0.0
@@ -93,11 +94,9 @@ V₀, p₀ = create_initial_conditions(
     pressure_solver,
 );
 
-
 ## Solve steady state problem
 problem = SteadyStateProblem(setup, V₀, p₀);
 V, p = @time solve(problem);
-
 
 ## Iteration processors
 logger = Logger(; nupdate = 1)
@@ -110,7 +109,6 @@ processors = [logger, plotter, writer, tracer]
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = @time solve(problem, RK44P2(); Δt = 0.1, processors, pressure_solver);
-
 
 ## Post-process
 plot_tracers(tracer)

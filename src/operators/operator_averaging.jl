@@ -204,7 +204,6 @@ function operator_averaging(grid::Grid{T,3}, boundary_conditions) where {T}
     # Averaging weight:
     weight = 1 / 2
 
-
     ## Averaging operators, u-component
 
     ## Au_ux: evaluate u at ux location
@@ -226,7 +225,6 @@ function operator_averaging(grid::Grid{T,3}, boundary_conditions) where {T}
     Au_ux = I(Nuz_in) ⊗ I(Nuy_in) ⊗ (A1D * Au_ux_bc.B1D)
     Au_ux_bc = (; Au_ux_bc..., Bbc = I(Nuz_in) ⊗ I(Nuy_in) ⊗ (A1D * Au_ux_bc.Btemp))
 
-
     ## Au_uy: evaluate u at uy location
     diag1 = weight * ones(Nuy_t - 1)
     A1D = spdiagm(Nuy_t - 1, Nuy_t, 0 => diag1, 1 => diag1)
@@ -246,7 +244,6 @@ function operator_averaging(grid::Grid{T,3}, boundary_conditions) where {T}
     Au_uy = I(Nuz_in) ⊗ (A1D * Au_uy_bc.B1D) ⊗ I(Nux_in)
     Au_uy_bc = (; Au_uy_bc..., Bbc = I(Nuz_in) ⊗ (A1D * Au_uy_bc.Btemp) ⊗ I(Nux_in))
 
-
     ## Au_uz: evaluate u at uz location
     diag1 = weight * ones(Nuz_t - 1)
     A1D = spdiagm(Nuz_t - 1, Nuz_t, 0 => diag1, 1 => diag1)
@@ -265,7 +262,6 @@ function operator_averaging(grid::Grid{T,3}, boundary_conditions) where {T}
     # Extend to 3D
     Au_uz = (A1D * Au_uz_bc.B1D) ⊗ I(Nuy_in) ⊗ I(Nux_in)
     Au_uz_bc = (; Au_uz_bc..., Bbc = (A1D * Au_uz_bc.Btemp) ⊗ I(Nuy_in) ⊗ I(Nux_in))
-
 
     ## Averaging operators, v-component
 
@@ -326,7 +322,6 @@ function operator_averaging(grid::Grid{T,3}, boundary_conditions) where {T}
     Av_vz = (A1D * Av_vz_bc.B1D) ⊗ I(Nvy_in) ⊗ I(Nvx_in)
     Av_vz_bc = (; Av_vz_bc..., Bbc = (A1D * Av_vz_bc.Btemp) ⊗ I(Nvy_in) ⊗ I(Nvx_in))
 
-
     ## Averaging operators, w-component
 
     ## Aw_wx: evaluate w at wx location
@@ -386,7 +381,6 @@ function operator_averaging(grid::Grid{T,3}, boundary_conditions) where {T}
     Aw_wz = (A1D * Aw_wz_bc.B1D) ⊗ I(Nwy_in) ⊗ I(Nwx_in)
     Aw_wz_bc =
         (; Aw_wz_bc..., Bbc = kron((A1D * Aw_wz_bc.Btemp), kron(I(Nwy_in), I(Nwx_in))))
-
 
     ## Group operators
     (;

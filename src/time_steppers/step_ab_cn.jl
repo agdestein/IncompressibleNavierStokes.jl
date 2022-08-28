@@ -12,7 +12,8 @@ See also [`step!`](@ref).
 """
 function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt; bc_vectors = nothing)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
-    (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) = setup
+    (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) =
+        setup
     (; bc_unsteady) = boundary_conditions
     (; NV, Ω⁻¹) = grid
     (; G, M) = operators
@@ -122,9 +123,16 @@ Mutating/non-allocating/in-place version.
 
 See also [`step`](@ref).
 """
-function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
+function step!(
+    stepper::AdamsBashforthCrankNicolsonStepper,
+    Δt;
+    cache,
+    momentum_cache,
+    bc_vectors = nothing,
+)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
-    (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) = setup
+    (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) =
+        setup
     (; bc_unsteady) = boundary_conditions
     (; NV, Ω⁻¹) = grid
     (; G, M) = operators
@@ -221,7 +229,18 @@ function step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum
     p .= pₙ .+ Δp
 
     if p_add_solve
-        pressure_additional_solve!(pressure_solver, V, p, tₙ + Δt, setup, momentum_cache, F, f, Δp; bc_vectors)
+        pressure_additional_solve!(
+            pressure_solver,
+            V,
+            p,
+            tₙ + Δt,
+            setup,
+            momentum_cache,
+            F,
+            f,
+            Δp;
+            bc_vectors,
+        )
     end
 
     t = tₙ + Δtₙ

@@ -350,7 +350,6 @@ function operator_interpolation(grid::Grid{T,2}, boundary_conditions) where {T}
         Iu_ux = mat_hy ⊗ (I1D * Iu_ux_bc.B1D)
         Iu_ux_bc = (; Iu_ux_bc..., Bbc = mat_hy ⊗ (I1D * Iu_ux_bc.Btemp))
 
-
         ## Iv_uy
         diag1 = fill(weight, Nvx_t - 1)
         I1D = spdiagm(Nvx_t - 1, Nvx_t, 0 => diag1, 1 => diag1)
@@ -521,7 +520,6 @@ function operator_interpolation(grid::Grid{T,3}, boundary_conditions) where {T}
         mat_hz2 = spdiagm(Nz + 2, Nz + 2, [hz[1]; hz; hz[end]])
     end
 
-
     ## Interpolation operators, u-component
 
     ## Iu_ux
@@ -542,7 +540,6 @@ function operator_interpolation(grid::Grid{T,3}, boundary_conditions) where {T}
     # Extend to 3D
     Iu_ux = mat_hz ⊗ mat_hy ⊗ (I1D * Iu_ux_bc.B1D)
     Iu_ux_bc = (; Iu_ux_bc..., Bbc = mat_hz ⊗ mat_hy ⊗ (I1D * Iu_ux_bc.Btemp))
-
 
     ## Iv_uy
     diag1 = fill(weight, Nvx_t - 1)
@@ -586,7 +583,6 @@ function operator_interpolation(grid::Grid{T,3}, boundary_conditions) where {T}
     # Resulting operator:
     Iv_uy = Iv_uy_bc_lr.B3D * Iv_uy_bc_lu.B3D
 
-
     ## Iw_uz
     diag1 = fill(weight, Nwx_t - 1)
     I1D = spdiagm(Nwx_t - 1, Nwx_t, 0 => diag1, 1 => diag1)
@@ -627,8 +623,6 @@ function operator_interpolation(grid::Grid{T,3}, boundary_conditions) where {T}
 
     # Resulting operator:
     Iw_uz = Iw_uz_bc_lr.B3D * Iw_uz_bc_bf.B3D
-
-
 
     ## Interpolation operators, v-component
 
@@ -729,8 +723,6 @@ function operator_interpolation(grid::Grid{T,3}, boundary_conditions) where {T}
     # Resulting operator:
     Iw_vz = Iw_vz_bc_lu.B3D * Iw_vz_bc_bf.B3D
 
-
-
     ## Interpolation operators, w-component
 
     ## Iu_wx
@@ -829,7 +821,6 @@ function operator_interpolation(grid::Grid{T,3}, boundary_conditions) where {T}
     # Extend to 3D
     Iw_wz = (I1D * Iw_wz_bc.B1D) ⊗ mat_hy ⊗ mat_hx
     Iw_wz_bc = (; Iw_wz_bc..., Bbc = (I1D * Iw_wz_bc.Btemp) ⊗ mat_hy ⊗ mat_hx)
-
 
     ## Group operators
     (;

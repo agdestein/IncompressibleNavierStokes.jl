@@ -112,8 +112,8 @@ function convection_components(
         Conv_vy_22 = C1 * Av_vy .+ C2 * Iv_vy
 
         ∇c = [
-            (Conv_ux_11 + Conv_uy_11) Conv_uy_12
-            Conv_vx_21 (Conv_vx_22 + Conv_vy_22)
+            (Conv_ux_11+Conv_uy_11) Conv_uy_12
+            Conv_vx_21 (Conv_vx_22+Conv_vy_22)
         ]
     else
         ∇c = nothing
@@ -252,9 +252,9 @@ function convection_components(
 
         ## Jacobian
         ∇c = [
-            (Conv_ux_11 + Conv_uy_11 + Conv_uz_11) Conv_uy_12 Conv_uz_13
-            Conv_vx_21 (Conv_vx_22 + Conv_vy_22 + Conv_vz_22) Conv_vz_23
-            Conv_wx_31 Conv_wy_32 (Conv_wx_33 + Conv_wy_33 + Conv_wz_33)
+            (Conv_ux_11+Conv_uy_11+Conv_uz_11) Conv_uy_12 Conv_uz_13
+            Conv_vx_21 (Conv_vx_22+Conv_vy_22+Conv_vz_22) Conv_vz_23
+            Conv_wx_31 Conv_wy_32 (Conv_wx_33+Conv_wy_33+Conv_wz_33)
         ]
     else
         ∇c = nothing
@@ -435,16 +435,16 @@ end
 
 # 3D version
 function convection_components!(
-        c,
-        ∇c,
-        V,
-        ϕ,
-        setup::Setup{T,3},
-        cache;
-        bc_vectors,
-        getJacobian = false,
-        newton_factor = false,
-        order4 = false,
+    c,
+    ∇c,
+    V,
+    ϕ,
+    setup::Setup{T,3},
+    cache;
+    bc_vectors,
+    getJacobian = false,
+    newton_factor = false,
+    order4 = false,
 ) where {T}
     order4 && error("order4 not implemented for 3D")
 

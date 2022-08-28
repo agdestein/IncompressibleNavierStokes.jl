@@ -19,7 +19,7 @@ Two-dimensional steady body force `f(x, y) = [fu(x, y), fv(x, y)]`.
 """
 function SteadyBodyForce(fu, fv, grid::Grid{T,2}) where {T}
     (; NV, indu, indv, xu, yu, xv, yv) = grid
-    F = zeros(T, NV) 
+    F = zeros(T, NV)
     F[indu] .= reshape(fu.(xu, yu), :)
     F[indv] .= reshape(fv.(xv, yv), :)
     SteadyBodyForce(fu, fv, nothing, F)
@@ -32,7 +32,7 @@ Three-dimensional steady body force `f(x, y, z) = [fu(x, y, z), fv(x, y, z), fw(
 """
 function SteadyBodyForce(fu, fv, fw, grid::Grid{T,3}) where {T}
     (; NV, indu, indv, indw, xu, yu, zu, xv, yv, zv, xw, yw, zw) = grid
-    F = zeros(T, NV) 
+    F = zeros(T, NV)
     F[indu] .= reshape(fu.(xu, yu, zu), :)
     F[indv] .= reshape(fv.(xv, yv, zv), :)
     F[indw] .= reshape(fw.(xw, yw, zw), :)
@@ -58,7 +58,7 @@ Two-dimensional unsteady body force `f(x, y, t) = [fu(x, y, t), fv(x, y, t)]`.
 """
 function UnsteadyBodyForce(fu, fv, grid::Grid{T,2}) where {T}
     (; NV) = grid
-    F = zeros(T, NV) 
+    F = zeros(T, NV)
     SteadyBodyForce(fu, fv, nothing, F)
 end
 
@@ -70,6 +70,6 @@ fw(x, y, z, t)]`.
 """
 function UnsteadyBodyForce(fu, fv, fw, grid::Grid{T,3}) where {T}
     (; NV) = grid
-    F = zeros(T, NV) 
+    F = zeros(T, NV)
     SteadyBodyForce(fu, fv, fw, F)
 end

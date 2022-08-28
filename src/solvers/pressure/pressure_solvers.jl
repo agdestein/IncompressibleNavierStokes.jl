@@ -70,7 +70,7 @@ function FourierPressureSolver(setup::Setup{T,2}) where {T}
 
     Δx = hx[1]
     Δy = hy[1]
-      if any(≉(Δx), hx) || any(≉(Δy), hy)
+    if any(≉(Δx), hx) || any(≉(Δy), hy)
         error("FourierPressureSolver requires uniform grid along each dimension")
     end
 
@@ -114,7 +114,7 @@ function FourierPressureSolver(setup::Setup{T,3}) where {T}
     Δx = hx[1]
     Δy = hy[1]
     Δz = hz[1]
-       if any(≉(Δx), hx) || any(≉(Δy), hy) || any(≉(Δz), hz)
+    if any(≉(Δx), hx) || any(≉(Δy), hy) || any(≉(Δz), hz)
         error("FourierPressureSolver requires uniform grid along each dimension")
     end
 

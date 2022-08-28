@@ -40,7 +40,8 @@ function diffusion(
 
     # Get components of strain tensor and its magnitude;
     # The magnitude S_abs is evaluated at pressure points
-    S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v = strain_tensor(V, setup; bc_vectors, getJacobian)
+    S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v =
+        strain_tensor(V, setup; bc_vectors, getJacobian)
 
     # Turbulent viscosity at all pressure points
     ν_t = turbulent_viscosity(model, setup, S_abs)
@@ -154,7 +155,8 @@ function diffusion!(
 
     # Get components of strain tensor and its magnitude;
     # The magnitude S_abs is evaluated at pressure points
-    S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v = strain_tensor(V, setup; bc_vectors, getJacobian)
+    S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v =
+        strain_tensor(V, setup; bc_vectors, getJacobian)
 
     # Turbulent viscosity at all pressure points
     ν_t = turbulent_viscosity(model, setup, S_abs)

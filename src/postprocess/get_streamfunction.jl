@@ -28,19 +28,19 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
     end
     ψLe = cumsum(hy .* u1)
     ψUpLe = ψLe[end]
-    ψLe = ψLe[1:(end - 1)]
+    ψLe = ψLe[1:(end-1)]
 
     # v = -d ψ / dx; integrate left->right
     if boundary_conditions.v.y[2] == :dirichlet
         v1 = v_bc.(xp, y[end], t)
     elseif boundary_conditions.v.y[2] == :pressure
-        v1 = vₕ[(end - Nvx_in + 1):end]
+        v1 = vₕ[(end-Nvx_in+1):end]
     elseif boundary_conditions.v.y[2] == :periodic
         v1 = vₕ[1:Nvx_in]
     end
     ψUp = ψUpLe .- cumsum(hx .* v1)
     ψUpRi = ψUp[end]
-    ψUp = ψUp[1:(end - 1)]
+    ψUp = ψUp[1:(end-1)]
 
     # u = d ψ / dy; integrate up->lo
     if boundary_conditions.u.x[2] == :dirichlet
@@ -52,7 +52,7 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
     end
     ψRi = ψUpRi .- cumsum(hy[end:-1:1] .* u2[end:-1:1])
     ψLoRi = ψRi[end]
-    ψRi = ψRi[(end - 1):-1:1]
+    ψRi = ψRi[(end-1):-1:1]
 
     # v = -d ψ / dx; integrate right->left
     if boundary_conditions.v.y[1] == :dirichlet
@@ -62,15 +62,13 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
     end
     ψLo = ψLoRi .+ cumsum(hx[end:-1:1] .* v2[end:-1:1])
     ψLoLe = ψLo[end]
-    ψLo = ψLo[(end - 1):-1:1]
+    ψLo = ψLo[(end-1):-1:1]
 
     abs(ψLoLe) > 1e-12 && @warn "Contour integration of ψ not consistent" abs(ψLoLe)
-
 
     # Solve del^2 ψ = -ω
     # Only dirichlet boundary conditions because we calculate streamfunction at
     # Inner points only
-
 
     # X-direction
     diag = 1 ./ hx
@@ -81,7 +79,6 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
     Q2Dx = I(Ny - 1) ⊗ (Q1D * Qx_bc.B1D)
     yQx = (I(Ny - 1) ⊗ (Q1D * Qx_bc.Btemp)) * (ψLe ⊗ Qx_bc.ybc1 + ψRi ⊗ Qx_bc.ybc2)
 
-
     # Y-direction
     diag = 1 ./ hy
     Q1D = spdiagm(Ny, Ny + 1, 0 => -diag, 1 => diag)
@@ -90,7 +87,6 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
     # Extend to 2D
     Q2Dy = (Q1D * Qy_bc.B1D) ⊗ I(Nx - 1)
     yQy = ((Q1D * Qy_bc.Btemp) ⊗ I(Nx - 1)) * (Qy_bc.ybc1 ⊗ ψLo + Qy_bc.ybc2 ⊗ ψUp)
-
 
     # FIXME: Dimension error in periodic case
     # @show size(Wv_vx) size(Q2Dx) size(Wu_uy) size(Q2Dy)

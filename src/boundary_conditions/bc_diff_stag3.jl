@@ -6,7 +6,6 @@ function bc_diff_stag3(Nt, Nin, Nb, bc1, bc2, h1, h2)
     # Btemp = Bb*(Bbc*Bb)^(-1)
     # Bb, Bin and Bbc depend on type of bc (Neumann/Dirichlet/periodic)
 
-
     # Val1 and val2 can be scalars or vectors with either the value or the
     # Derivative
     # (ghost) points on staggered locations (pressure lines)
