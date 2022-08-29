@@ -59,7 +59,7 @@ Two-dimensional unsteady body force `f(x, y, t) = [fu(x, y, t), fv(x, y, t)]`.
 function UnsteadyBodyForce(fu, fv, grid::Grid{T,2}) where {T}
     (; NV) = grid
     F = zeros(T, NV)
-    SteadyBodyForce(fu, fv, nothing, F)
+    UnteadyBodyForce(fu, fv, nothing, F)
 end
 
 """
@@ -71,5 +71,5 @@ fw(x, y, z, t)]`.
 function UnsteadyBodyForce(fu, fv, fw, grid::Grid{T,3}) where {T}
     (; NV) = grid
     F = zeros(T, NV)
-    SteadyBodyForce(fu, fv, fw, F)
+    UnsteadyBodyForce(fu, fv, fw, F)
 end
