@@ -21,6 +21,7 @@ add IncompressibleNavierStokes
 ```
 
 which will install the package and all dependencies to your local environment.
+Note that IncompressibleNavierStokes requires Julia version `1.7` or above.
 
 See the
 [Documentation](https://agdestein.github.io/IncompressibleNavierStokes.jl/dev/generated/LidDrivenCavity2D/)
