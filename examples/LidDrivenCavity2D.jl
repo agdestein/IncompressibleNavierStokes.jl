@@ -1,34 +1,28 @@
-# # Lid-Driven Cavity case (LDC)
-#
-# This test case considers a box with a moving lid, where the velocity is initially at rest.
-
+# Little LSP hack to get function signatures, go    #src
+# to definition etc.                                #src
 if isdefined(@__MODULE__, :LanguageServer)          #src
     include("../src/IncompressibleNavierStokes.jl") #src
     using .IncompressibleNavierStokes               #src
 end                                                 #src
 
-# We start by loading IncompressibleNavierStokes.
+# # Lid-Driven Cavity - 3D
+#
+# In this example we consider a box with a moving lid. The velocity is initially at rest. The
+# solution should reach at steady state equilibrium after a certain time. The same steady
+# state should be obtained when solving a `SteadyStateProblem`.
 
-using IncompressibleNavierStokes
-
+# We start by loading packages.
 # A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
 # for plotting. `GLMakie` creates an interactive window (useful for real-time
 # plotting), but does not work when building this example on GitHub.
 # `CairoMakie` makes high-quality static vector-graphics plots.
 
-if haskey(ENV, "GITHUB_ACTIONS")
-    using CairoMakie
-else
-    using GLMakie
-end
+#md using CairoMakie
+using GLMakie #!md
+using IncompressibleNavierStokes
 
-# ## Build problem
-
-# We may choose the floating point type for the simulations. Replacing `Float64` with
-# `Float32` will not necessarilily speed up the simulations, but requires half as much
-# memory.
-
-T = Float64
+# Case name for saving results
+name = "LidDrivenCavity2D"
 
 # Available viscosity models are:
 #
@@ -39,99 +33,57 @@ T = Float64
 # - [`QRModel`](@ref).
 #
 # They all take a Reynolds number as a parameter. Here we choose a moderate Reynolds number.
-
-viscosity_model = LaminarModel{T}(; Re = 1000)
-
-# Available convection models are:
-#
-# - [`NoRegConvectionModel`](@ref),
-# - [`C2ConvectionModel`](@ref),
-# - [`C4ConvectionModel`](@ref), and
-# - [`LerayConvectionModel`](@ref).
-#
-# We here take the simplest model.
-
-convection_model = NoRegConvectionModel()
+viscosity_model = LaminarModel(; Re = 1000.0)
 
 # Dirichlet boundary conditions are specified as plain Julia functions. They are marked by
 # the `:dirichlet` symbol. Other possible BC types are `:periodic`, `:symmetric`, and `:pressure`.
-
-u_bc(x, y, t) = y ≈ 1 ? 1.0 : 0.0
-v_bc(x, y, t) = zero(x)
-boundary_conditions = BoundaryConditions(
-    u_bc,
-    v_bc;
-    bc_unsteady = false,
-    bc_type = (;
-        u = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-        v = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-    ),
-    T,
+u_bc(x, y, t) = y ≈ 1.0 ? 1.0 : 0.0
+v_bc(x, y, t) = 0.0
+bc_type = (;
+    u = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
+    v = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
 )
 
-# We create a two-dimensional domain with a box of size `[1, 1]`. We add a slight scaling
-# factor of 95% to increase the precision near the moving lid.
-
+# We create a two-dimensional domain with a box of size `[1, 1]`. The grid is
+# created as a Cartesian product between two vectors. We add a refinement near
+# the walls.
 x = cosine_grid(0.0, 1.0, 50)
-y = stretched_grid(0.0, 1.0, 50, 0.95)
-grid = Grid(x, y; boundary_conditions, T)
+y = cosine_grid(0.0, 1.0, 50)
+plot_grid(x, y, z)
 
-# The grid may be visualized using the `plot_grid` function.
-
-plot_grid(grid)
-
-# The body forces are specified as plain Julia functions.
-
-bodyforce_u(x, y) = 0
-bodyforce_v(x, y) = 0
-force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
-
-# We may now assemble our setup and discrete operators.
-
-setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
-
-# We also choose a pressure solver. The direct solver will precompute the LU
-# decomposition of the Poisson matrix.
-
-pressure_solver = DirectPressureSolver(setup)
+# Build setup and assemble operators
+setup = Setup(x, y, z; viscosity_model, u_bc, v_bc, w_bc);
 
 # We will solve for a time interval of ten seconds.
-
 t_start, t_end = tlims = (0.0, 10.0)
 
 # The initial conditions are defined as plain Julia functions.
-
-initial_velocity_u(x, y) = 0
-initial_velocity_v(x, y) = 0
-initial_pressure(x, y) = 0
+initial_velocity_u(x, y) = 0.0
+initial_velocity_v(x, y) = 0.0
+initial_pressure(x, y) = 0.0
 V₀, p₀ = create_initial_conditions(
     setup,
     t_start;
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure,
-    pressure_solver,
 )
 
 # ## Solve problems
 #
-# There are many different problems. They can all be solved by calling the [`solve`](@ref)
-# function.
-#
+# Problems can be solved solved by calling the [`solve`](@ref) function.
+
 # A [`SteadyStateProblem`](@ref) is for computing a state where the right hand side of the
 # momentum equation is zero.
-
 problem = SteadyStateProblem(setup, V₀, p₀)
-V, p = @time solve(problem)
+V, p = solve(problem)
 
 # For this test case, the same steady state may be obtained by solving an
 # [`UnsteadyProblem`](@ref) for a sufficiently long time.
-
 problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 
 # We may also define a list of iteration processors. They are processed after every
 # `nupdate` iteration.
-
 logger = Logger(; nupdate = 1)
 plotter = RealTimePlotter(; nupdate = 50, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 20, dir = "output/LidDrivenCavity2D")
@@ -141,29 +93,29 @@ processors = [logger, plotter, tracer]
 
 # A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
 # with a fixed time step.
+V, p = solve(problem, RK44(); Δt = 0.001, processors)
 
-V, p = @time solve(problem, RK44(); Δt = 0.001, processors, pressure_solver)
-
-# ## Postprocess
+# ## Post-process
 #
-# The `tracer` object contains a history of some quantities related to the momentum and
-# energy.
+# We may visualize or export the computed fields `(V, p)`
 
+# Export fields to VTK. The file `output/solution.vtr` may be opened for visulization
+# in [ParaView](https://www.paraview.org/).
+save_vtk(V, p, t_end, setup, "output/solution")
+
+# The `tracer` object contains a history of some quantities related to the
+# momentum and energy.
 plot_tracers(tracer)
 
-# We may also plot the final pressure field,
-
+# Plot pressure
 plot_pressure(setup, p)
 
-# velocity field,
-
+# Plot velocity
 plot_velocity(setup, V, t_end)
 
-# vorticity field,
-
+# Plot vorticity (with custom levels)
 levels = [-7, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 7]
-plot_vorticity(setup, V, tlims[2]; levels)
+plot_vorticity(setup, V, t_end; levels)
 
-# or streamfunction.
-
-plot_streamfunction(setup, V, tlims[2])
+# Plot streamfunction
+plot_streamfunction(setup, V, t_end)

@@ -1,94 +1,51 @@
-# # Decaying Homogeneous Isotropic Turbulence 2D (DHIT)
-#
-# This test case considers decaying homogeneous isotropic turbulence.
-
+# Little LSP hack to get function signatures, go    #src
+# to definition etc.                                #src
 if isdefined(@__MODULE__, :LanguageServer)          #src
     include("../src/IncompressibleNavierStokes.jl") #src
     using .IncompressibleNavierStokes               #src
 end                                                 #src
 
+# # Decaying Homogeneous Isotropic Turbulence - 3D
+#
+# In this example we consider decaying homogeneous isotropic turbulence. The
+# initial velocity field is created randomly, but with a specific energy
+# spectrum. Due to viscous dissipation, the turbulent features eventually group
+# to form larger visible eddies.
+
+# We start by loading packages.
+# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
+# for plotting. `GLMakie` creates an interactive window (useful for real-time
+# plotting), but does not work when building this example on GitHub.
+# `CairoMakie` makes high-quality static vector-graphics plots.
+
 using FFTW
+#md using CairoMakie
+using GLMakie #!md
 using IncompressibleNavierStokes
 using LaTeXStrings
-
-if haskey(ENV, "GITHUB_ACTIONS")
-    using CairoMakie
-else
-    using GLMakie
-end
 
 # Case name for saving results
 name = "DecayingTurbulence3D"
 
-# Floating point type for simulations
-T = Float64
-
 # Viscosity model
-viscosity_model = LaminarModel{T}(; Re = 10000)
-## viscosity_model = MixingLengthModel{T}(; Re = 1000)
-## viscosity_model = SmagorinskyModel{T}(; Re = 1000)
-## viscosity_model = QRModel{T}(; Re = 1000)
+viscosity_model = LaminarModel(; Re = 1e4)
 
-# Convection model
-convection_model = NoRegConvectionModel()
-## convection_model = C2ConvectionModel()
-## convection_model = C4ConvectionModel()
-## convection_model = LerayConvectionModel()
-
-# Boundary conditions
-u_bc(x, y, z, t) = zero(x)
-v_bc(x, y, z, t) = zero(x)
-w_bc(x, y, z, t) = zero(x)
-boundary_conditions = BoundaryConditions(
-    u_bc,
-    v_bc,
-    w_bc;
-    bc_unsteady = false,
-    bc_type = (;
-        u = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
-        v = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
-        w = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
-    ),
-    T,
-)
-
-# Grid
-N = 50
-x = stretched_grid(0, 1, N)
-y = stretched_grid(0, 1, N)
-z = stretched_grid(0, 1, N)
-grid = Grid(x, y, z; boundary_conditions, T);
-
-plot_grid(grid)
-
-# Forcing parameters
-bodyforce_u(x, y, z) = 0.0
-bodyforce_v(x, y, z) = 0.0
-bodyforce_w(x, y, z) = 0.0
-force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
+# A 3D grid is a Cartesian product of three vectors
+n = 50
+x = LinRange(0.0, 1.0, n + 1)
+y = LinRange(0.0, 1.0, n + 1)
+z = LinRange(0.0, 1.0, n + 1)
+plot_grid(x, y, z)
 
 # Build setup and assemble operators
-setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
+setup = Setup(x, y, z; viscosity_model);
 
-# Pressure solver
-## pressure_solver = DirectPressureSolver(setup)
-## pressure_solver = CGPressureSolver(setup; maxiter = 500, abstol = 1e-8)
+# Since the grid is uniform and identical for x, y, and z, we may use a
+# specialized Fourier pressure solver
 pressure_solver = FourierPressureSolver(setup)
 
 # Initial conditions
-K = N ÷ 2
+K = n ÷ 2
 σ = 30
 ## σ = 10
 s = 5
@@ -128,26 +85,46 @@ V₀, p₀ = V, p
 # Iteration processors
 nupdate = 1
 logger = Logger()
-plotter = RealTimePlotter(; nupdate = 10nupdate, fieldname = :vorticity, type = contour)
+plotter = RealTimePlotter(; nupdate = 1nupdate, fieldname = :vorticity)
 writer = VTKWriter(; nupdate = 100nupdate, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate)
 ## processors = [logger, plotter, writer, tracer]
 processors = [logger, plotter, tracer]
 
 # Time interval
-t_start, t_end = tlims = (0.0, 0.500)
+t_start, t_end = tlims = (0.0, 0.100)
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p, = solve(problem, RK44(); Δt = 0.001, processors, inplace = true, pressure_solver)
+V, p, = solve(problem, RK44(); Δt = 0.001, processors, pressure_solver, inplace = true)
 
+# ## Post-process
+#
+# We may visualize or export the computed fields `(V, p)`
+
+# Export to VTK
+save_vtk(V, p, t_end, setup, "output/solution")
+
+# Plot tracers
+plot_tracers(tracer)
+
+# Plot pressure
+plot_pressure(setup, p)
+
+# Plot velocity
+plot_velocity(setup, V, t_end)
+
+# Plot vorticity
+plot_vorticity(setup, V, t_end)
+
+# Plot energy spectrum
 k = 1:K
-u = reshape(V[grid.indu], N, N, N)
-v = reshape(V[grid.indv], N, N, N)
-w = reshape(V[grid.indw], N, N, N)
+u = reshape(V[grid.indu], n, n, n)
+v = reshape(V[grid.indv], n, n, n)
+w = reshape(V[grid.indw], n, n, n)
 e = u .^ 2 .+ v .^ 2 .+ w .^ 2
 ehat = fft(e)[k, k, k]
-kk = sqrt.(k .^ 2 .+ reshape(k, 1, :) .^ 2 .+ reshape(k, 1, 1, :) .^ 2)
+kk = [sqrt(kx^2 + ky^2 + kz^2) for kx ∈ k, ky ∈ k, kz ∈ k]
 
 fig = Figure()
 ax = Axis(fig[1, 1]; xlabel = L"k", ylabel = L"\hat{e}(k)", xscale = log10, yscale = log10)
@@ -158,22 +135,3 @@ lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = L"k^{-5/3}")
 lines!(ax, krange, 1e7 * krange .^ (-3); label = L"k^{-3}")
 axislegend(ax)
 fig
-
-# Post-process
-plot_tracers(tracer)
-
-#-
-
-plot_pressure(setup, p)
-
-#-
-
-plot_velocity(setup, V, t_end)
-
-#-
-
-plot_vorticity(setup, V, tlims[2])
-
-#-
-
-## plot_streamfunction(setup, V, tlims[2])

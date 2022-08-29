@@ -167,7 +167,6 @@ export momentum, momentum!
 
 export create_initial_conditions, get_bc_vectors, get_velocity
 
-
 export plot_force,
     plot_grid,
     plot_pressure,

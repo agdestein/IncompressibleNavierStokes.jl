@@ -1,63 +1,17 @@
-@testset "Postprocess 2D" begin
+@testset "Postprocess 3D" begin
+    n = 10
+    x = LinRange(0, 2π, n)
+    y = LinRange(0, 2π, n)
+    z = LinRange(0, 2π, n)
+    setup = Setup(x, y, z)
 
-    # Taylor-Green vortex case (TG).
-
-    # Viscosity model
-    viscosity_model = LaminarModel(; Re = 2000.0)
-
-    # Boundary conditions
-    u_bc(x, y, z, t) = zero(x)
-    v_bc(x, y, z, t) = zero(x)
-    w_bc(x, y, z, t) = zero(x)
-    boundary_conditions = BoundaryConditions(
-        u_bc,
-        v_bc,
-        w_bc;
-        bc_unsteady = false,
-        bc_type = (;
-            u = (;
-                x = (:periodic, :periodic),
-                y = (:periodic, :periodic),
-                z = (:periodic, :periodic),
-            ),
-            v = (;
-                x = (:periodic, :periodic),
-                y = (:periodic, :periodic),
-                z = (:periodic, :periodic),
-            ),
-            w = (;
-                x = (:periodic, :periodic),
-                y = (:periodic, :periodic),
-                z = (:periodic, :periodic),
-            ),
-        ),
-    )
-
-    # Grid
-    x = stretched_grid(0, 2π, 10)
-    y = stretched_grid(0, 2π, 10)
-    z = stretched_grid(0, 2π, 10)
-    grid = Grid(x, y, z; boundary_conditions)
-
-    @test plot_grid(grid) isa Makie.Figure
+    @test plot_grid(setup.grid) isa Makie.Figure
     @test plot_grid(x, y, z) isa Makie.Figure
 
-    # Forcing parameters
-    bodyforce_u(x, y, z) = 0.0
-    bodyforce_v(x, y, z) = 0.0
-    bodyforce_w(x, y, z) = 0.0
-    force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
-
-    # Build setup and assemble operators
-    setup = Setup(; viscosity_model, grid, force, boundary_conditions)
-
-    # Pressure solver
     pressure_solver = FourierPressureSolver(setup)
 
-    # Time interval
     t_start, t_end = tlims = (0.0, 1.0)
 
-    # Initial conditions
     initial_velocity_u(x, y, z) = sin(x)cos(y)cos(z)
     initial_velocity_v(x, y, z) = -cos(x)sin(y)cos(z)
     initial_velocity_w(x, y, z) = 0.0
@@ -74,7 +28,7 @@
 
     # Iteration processors
     logger = Logger()
-    plotter = RealTimePlotter(; nupdate = 5, type = contour, fieldname = :vorticity)
+    plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
     writer = VTKWriter(; nupdate = 5, dir = "output", filename = "solution3D")
     tracer = QuantityTracer(; nupdate = 1)
     processors = [logger, plotter, writer, tracer]
@@ -91,7 +45,6 @@
     end
 
     @testset "Plot fields" begin
-        typeof(plot_pressure(setup, p))
         @test plot_tracers(tracer) isa Figure
         @test plot_pressure(setup, p) isa Makie.FigureAxisPlot
         @test plot_velocity(setup, V, t_end) isa Makie.FigureAxisPlot
@@ -105,10 +58,11 @@
             problem,
             RK44();
             Δt = 4π / 200,
-            filename = "output/vorticity.gif",
+            pressure_solver,
+            filename = "output/vorticity3D.gif",
             nframe = 10,
             nsubframe = 4,
         )
-        @test isfile("output/vorticity.gif")
+        @test isfile("output/vorticity3D.gif")
     end
 end
