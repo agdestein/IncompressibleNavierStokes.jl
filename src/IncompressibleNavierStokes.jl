@@ -146,10 +146,8 @@ export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
 export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors
-export Logger, RealTimePlotter, VTKWriter, QuantityTracer
-
-# Problems
-export SteadyStateProblem, UnsteadyProblem, is_steady
+export AbstractProcessor, Logger, RealTimePlotter, VTKWriter, QuantityTracer
+export initialize!, process!, finalize!
 
 # Setup
 export Grid, Operators, BoundaryConditions, Setup
@@ -159,12 +157,16 @@ export stretched_grid, cosine_grid
 
 # Pressure solvers
 export DirectPressureSolver, CGPressureSolver, FourierPressureSolver
+export pressure_poisson,
+    pressure_poisson!, pressure_additional_solve, pressure_additional_solve!
 
-# Main driver
-export create_initial_conditions, get_bc_vectors, solve, get_velocity
-export solve_animate
+# Problems
+export SteadyStateProblem, UnsteadyProblem, is_steady
+export solve, solve_animate
+export momentum, momentum!
 
-export momentum!
+export create_initial_conditions, get_bc_vectors, get_velocity
+
 
 export plot_force,
     plot_grid,
