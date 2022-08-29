@@ -3,7 +3,7 @@
 
 Boundary conditions with floating point type `T`.
 """
-Base.@kwdef mutable struct BoundaryConditions{T,U,V,W,DU,DV,DW}
+Base.@kwdef struct BoundaryConditions{T,U,V,W,DU,DV,DW}
     bc_unsteady::Bool = false
     u::NamedTuple = (;)
     v::NamedTuple = (;)
