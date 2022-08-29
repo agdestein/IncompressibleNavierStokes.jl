@@ -22,8 +22,10 @@
     x = stretched_grid(0, 2π, 10)
     y = stretched_grid(0, 2π, 10)
     grid = Grid(x, y; boundary_conditions)
-
+ 
     @test plot_grid(grid) isa Makie.FigureAxisPlot
+    @test plot_grid(x, y) isa Makie.FigureAxisPlot
+
 
     # Forcing parameters
     bodyforce_u(x, y) = 0

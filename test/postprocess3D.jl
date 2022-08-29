@@ -40,6 +40,7 @@
     grid = Grid(x, y, z; boundary_conditions)
 
     @test plot_grid(grid) isa Makie.Figure
+    @test plot_grid(x, y, z) isa Makie.Figure
 
     # Forcing parameters
     bodyforce_u(x, y, z) = 0.0

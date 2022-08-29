@@ -1,12 +1,16 @@
 """
+    plot_grid(x, y)
+    plot_grid(x, y, z)
     plot_grid(grid)
 
 Plot nonuniform Cartesian grid.
 """
 function plot_grid end
 
-function plot_grid(grid::Grid{T,2}) where {T}
-    (; x, y) = grid
+plot_grid(g::Grid{T,2}) where {T} = plot_grid(g.x, g.y)
+plot_grid(g::Grid{T,3}) where {T} = plot_grid(g.x, g.y, g.z)
+
+function plot_grid(x, y)
     wireframe(
         x,
         y,
@@ -15,8 +19,7 @@ function plot_grid(grid::Grid{T,2}) where {T}
     )
 end
 
-function plot_grid(grid::Grid{T,3}) where {T}
-    (; x, y, z) = grid
+function plot_grid(x, y, z)
     nx, ny, nz = length(x), length(y), length(z)
     # x = repeat(x, 1, ny, nz)
     # y = repeat(reshape(y, 1, :, 1), nx, 1, nz)
