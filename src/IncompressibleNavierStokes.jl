@@ -69,6 +69,11 @@ include("operators/ke_diffusion.jl")
 include("operators/ke_viscosity.jl")
 include("operators/operator_viscosity.jl")
 
+# Pressure solvers
+include("solvers/pressure/pressure_solvers.jl")
+include("solvers/pressure/pressure_poisson.jl")
+include("solvers/pressure/pressure_additional_solve.jl")
+
 # Time steppers
 include("momentum/momentumcache.jl")
 include("time_steppers/methods.jl")
@@ -108,9 +113,6 @@ include("problems/problems.jl")
 include("problems/is_steady.jl")
 
 # Solvers
-include("solvers/pressure/pressure_solvers.jl")
-include("solvers/pressure/pressure_poisson.jl")
-include("solvers/pressure/pressure_additional_solve.jl")
 include("solvers/get_timestep.jl")
 include("solvers/solve.jl")
 include("solvers/solve_animate.jl")

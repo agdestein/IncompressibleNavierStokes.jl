@@ -6,12 +6,13 @@ Simulation setup.
 struct Setup{
     T,
     N,
+    B<:BoundaryConditions{T},
     V<:AbstractViscosityModel{T},
     C<:AbstractConvectionModel,
     F<:AbstractBodyForce{T},
 }
     grid::Grid{T,N}
-    boundary_conditions::BoundaryConditions{T}
+    boundary_conditions::B
     viscosity_model::V
     convection_model::C
     force::F
@@ -46,11 +47,10 @@ function Setup(
         v_bc;
         dudt_bc,
         dvdt_bc,
-        bc_unsteady = isnothing(dudt_bc),
         bc_type,
         T = eltype(x),
     )
-    grid = Grid(x, y; boundary_conditions, order4, T)
+    grid = Grid(x, y; boundary_conditions, order4)
     if steady_force
         force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
     else
@@ -107,7 +107,6 @@ function Setup(
         dudt_bc,
         dvdt_bc,
         dwdt_bc,
-        bc_unsteady = isnothing(dudt_bc),
         bc_type,
         T = eltype(x),
     )
