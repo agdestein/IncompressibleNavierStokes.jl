@@ -80,7 +80,7 @@
         @test plot_velocity(setup, V, t_end) isa Figure
         @test plot_vorticity(setup, V, t_end) isa Figure
         @test_broken plot_streamfunction(setup, V, t_end) isa Figure
-        @test plot_force(setup, setup.force.F, t_end) isa Figure
+        @test plot_force(setup, t_end) isa Figure
     end
 
     @testset "Animate" begin

@@ -150,6 +150,6 @@ fig
 
 #-
 
-fig = plot_force(setup, setup.force.F, t_end)
+fig = plot_force(setup, t_end)
 lines!(box...; color = :red)
 fig

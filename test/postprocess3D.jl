@@ -97,7 +97,7 @@
         @test plot_velocity(setup, V, t_end) isa Makie.FigureAxisPlot
         @test plot_vorticity(setup, V, tlims[2]) isa Makie.FigureAxisPlot
         @test_broken plot_streamfunction(setup, V, tlims[2]) isa Makie.FigureAxisPlot
-        @test plot_force(setup, setup.force.F, t_end) isa Makie.FigureAxisPlot
+        @test plot_force(setup, t_end) isa Makie.FigureAxisPlot
     end
 
     @testset "Animate" begin

@@ -161,4 +161,4 @@ plot_streamfunction(setup, V, tlims[2])
 
 #-
 
-plot_force(setup, setup.force.F, t_end)
+plot_force(setup, t_end)
