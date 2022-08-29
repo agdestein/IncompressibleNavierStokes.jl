@@ -34,10 +34,10 @@ viscosity_model = LaminarModel(; Re = 1e4)
 n = 200
 x = LinRange(0.0, 1.0, n)
 y = LinRange(0.0, 1.0, n)
-plot_grid(x, y, z)
+plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; viscosity_model);
+setup = Setup(x, y; viscosity_model);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
 # Fourier pressure solver

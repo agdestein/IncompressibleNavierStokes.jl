@@ -50,7 +50,7 @@
 
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
-            setup = Setup(x, y; viscosity_model, convection_model, u_bc, v_bc, bc_type);
+            setup = Setup(x, y; viscosity_model, convection_model, u_bc, v_bc, bc_type)
             setup.boundary_conditions.v
 
             V₀, p₀ = create_initial_conditions(

@@ -42,14 +42,8 @@ function Setup(
     bodyforce_v = (x, y) -> 0.0,
     steady_force = true,
 )
-    boundary_conditions = BoundaryConditions(
-        u_bc,
-        v_bc;
-        dudt_bc,
-        dvdt_bc,
-        bc_type,
-        T = eltype(x),
-    )
+    boundary_conditions =
+        BoundaryConditions(u_bc, v_bc; dudt_bc, dvdt_bc, bc_type, T = eltype(x))
     grid = Grid(x, y; boundary_conditions, order4)
     if steady_force
         force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
