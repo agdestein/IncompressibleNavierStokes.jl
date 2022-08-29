@@ -1,4 +1,5 @@
-@testset "Taylor-Green vortex" begin
+@testset "Solvers" begin
+    T = Float64
     Re = 500.0
     viscosity_model = LaminarModel(; Re)
 
