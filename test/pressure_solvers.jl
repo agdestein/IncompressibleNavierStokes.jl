@@ -11,7 +11,7 @@
     fourier = FourierPressureSolver(setup)
 
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
-    p_exact = reshape(initial_pressure.(grid.xpp, grid.ypp), :)
+    p_exact = reshape(initial_pressure.(setup.grid.xpp, setup.grid.ypp), :)
     f = A * p_exact
 
     p_direct = pressure_poisson(direct, f)

@@ -37,8 +37,8 @@ function create_initial_conditions(
     p = zero(xpp)[:]
 
     # Initial velocities
-    u .= initial_velocity_u.(xu, yu)
-    v .= initial_velocity_v.(xv, yv)
+    u .= initial_velocity_u.(xu, yu)[:]
+    v .= initial_velocity_v.(xv, yv)[:]
     V = [u[:]; v[:]]
 
     # Kinetic energy and momentum of initial velocity field
@@ -59,7 +59,7 @@ function create_initial_conditions(
     if isnothing(initial_pressure)
         p = pressure_additional_solve(pressure_solver, V, p, t, setup)
     else
-        p .= initial_pressure.(xpp, ypp)
+        p .= initial_pressure.(xpp, ypp)[:]
     end
 
     V, p
@@ -90,9 +90,9 @@ function create_initial_conditions(
     p = zero(xpp)[:]
 
     # Initial velocities
-    u .= initial_velocity_u.(xu, yu, zu)
-    v .= initial_velocity_v.(xv, yv, zv)
-    w .= initial_velocity_w.(xw, yw, zw)
+    u .= initial_velocity_u.(xu, yu, zu)[:]
+    v .= initial_velocity_v.(xv, yv, zv)[:]
+    w .= initial_velocity_w.(xw, yw, zw)[:]
     V = [u; v; w]
 
     # Kinetic energy and momentum of initial velocity field
@@ -113,7 +113,7 @@ function create_initial_conditions(
     if isnothing(initial_pressure)
         p = pressure_additional_solve(pressure_solver, V, p, t, setup)
     else
-        p .= initial_pressure.(xpp, ypp, zpp)
+        p .= initial_pressure.(xpp, ypp, zpp)[:]
     end
 
     V, p

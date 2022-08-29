@@ -5,10 +5,13 @@
     bc_type = (;
         u = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
         v = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
+        ν = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
+        k = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
+        e = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
     )
 
-    x = cosine_grid(0.0, 1.0, 25)
-    y = cosine_grid(0.0, 1.0, 25)
+    x = LinRange(0.0, 1.0, 25)
+    y = LinRange(0.0, 1.0, 25)
 
     initial_velocity_u(x, y) = 0.0
     initial_velocity_v(x, y) = 0.0
@@ -22,12 +25,13 @@
     processors = [tracer]
 
     # Viscosity models
+    T = Float64
     Re = 1000.0
-    lam = LaminarModel(; Re)
-    kϵ = KEpsilonModel(; Re)
-    ml = MixingLengthModel(; Re)
-    smag = SmagorinskyModel(; Re)
-    qr = QRModel(; Re)
+    lam = LaminarModel{T}(; Re)
+    kϵ = KEpsilonModel{T}(; Re)
+    ml = MixingLengthModel{T}(; Re)
+    smag = SmagorinskyModel{T}(; Re)
+    qr = QRModel{T}(; Re)
 
     # Convection models
     noreg = NoRegConvectionModel()
@@ -46,7 +50,8 @@
 
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
-            setup = Setup(a, b; viscosity_model, convection_model, u_bc, v_bc, bc_type)
+            setup = Setup(x, y; viscosity_model, convection_model, u_bc, v_bc, bc_type);
+            setup.boundary_conditions.v
 
             V₀, p₀ = create_initial_conditions(
                 setup,
@@ -83,7 +88,7 @@
 
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
-            setup = Setup(a, b; viscosity_model, convection_model, u_bc, v_bc, bc_type)
+            setup = Setup(x, y; viscosity_model, convection_model, u_bc, v_bc, bc_type)
         end
     end
 end

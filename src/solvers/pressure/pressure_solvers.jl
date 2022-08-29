@@ -1,5 +1,5 @@
 """
-    PressureSolver
+    AbstractPressureSolver
 
 Pressure solver for the Poisson equation.
 """

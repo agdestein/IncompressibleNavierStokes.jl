@@ -22,11 +22,11 @@
         ),
     )
 
-    x = cosine_grid(0.0, 1.0, 25)
-    y = cosine_grid(0.0, 1.0, 25)
+    x = LinRange(0.0, 1.0, 25)
+    y = LinRange(0.0, 1.0, 25)
     z = LinRange(-0.2, 0.2, 10)
 
-    setup = Setup(x, y, z, u_bc, v_bc, w_bc, bc_type)
+    setup = Setup(x, y, z; u_bc, v_bc, w_bc, bc_type)
 
     t_start, t_end = tlims = (0.0, 0.5)
 
