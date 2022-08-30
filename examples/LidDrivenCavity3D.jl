@@ -57,7 +57,7 @@ z = stretched_grid(-0.2, 0.2, 10)
 plot_grid(x, y, z)
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; viscosity_model, u_bc, v_bc, w_bc);
+setup = Setup(x, y, z; viscosity_model, u_bc, v_bc, w_bc, bc_type);
 
 # Time interval
 t_start, t_end = tlims = (0.0, 0.2)
@@ -90,7 +90,8 @@ processors = [logger, plotter, tracer]
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver)
+V, p = solve(problem, RK44(); Δt = 0.01, processors)
+#hide current_figure()
 
 # ## Post-process
 #
@@ -112,4 +113,4 @@ plot_velocity(setup, V, t_end)
 plot_vorticity(setup, V, t_end)
 
 # Plot streamfunction
-plot_streamfunction(setup, V, t_end)
+## plot_streamfunction(setup, V, t_end)

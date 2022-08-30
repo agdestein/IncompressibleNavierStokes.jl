@@ -40,7 +40,7 @@ setup = Setup(x, y, z; viscosity_model);
 pressure_solver = FourierPressureSolver(setup)
 
 # Time interval
-t_start, t_end = tlims = (0.0, 10.0)
+t_start, t_end = tlims = (0.0, 5.0)
 
 # Initial conditions
 initial_velocity_u(x, y, z) = sin(x)cos(y)cos(z)
@@ -67,11 +67,12 @@ plotter = RealTimePlotter(; nupdate = 10, fieldname = :vorticity, type = contour
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
 ## processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
+processors = [plotter, tracer]
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver, inplace = true)
+#hide current_figure()
 
 # ## Post-process
 #

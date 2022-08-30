@@ -50,50 +50,52 @@ with an unsteady inflow. It simulates a wind turbine (actuator) under varying
 wind conditions.
 
 ```julia
-using IncompressibleNavierStokes
 using GLMakie
+using IncompressibleNavierStokes
 
-# Models
+# Viscosity model
 viscosity_model = LaminarModel(; Re = 100.0)
 
-# Boundary conditions
-f = 0.5
-u_bc(x, y, t) = x ≈ 0.0 ? cos(π / 6 * sin(f * t)) : 0.0
-v_bc(x, y, t) = x ≈ 0.0 ? sin(π / 6 * sin(f * t)) : 0.0
-dudt_bc(x, y, t) = x ≈ 0.0 ? -π / 6 * f * cos(f * t) * sin(π / 6 * sin(f * t)) : 0.0
-dvdt_bc(x, y, t) = x ≈ 0.0 ? π / 6 * f * cos(f * t) * cos(π / 6 * sin(f * t)) : 0.0
-boundary_conditions = BoundaryConditions(
-    u_bc,
-    v_bc;
-    dudt_bc,
-    dvdt_bc,
-    bc_unsteady = true,
-    bc_type = (;
-        u = (; x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)),
-        v = (; x = (:dirichlet, :symmetric), y = (:pressure, :pressure)),
-    ),
+# Boundary conditions: Unsteady BC requires time derivatives
+u_bc(x, y, t) = x ≈ 0.0 ? cos(π / 6 * sin(π / 6 * t)) : 0.0
+v_bc(x, y, t) = x ≈ 0.0 ? sin(π / 6 * sin(π / 6 * t)) : 0.0
+dudt_bc(x, y, t) = x ≈ 0.0 ? -(π / 6)^2 * cos(π / 6 * t) * sin(π / 6 * sin(π / 6 * t)) : 0.0
+dvdt_bc(x, y, t) = x ≈ 0.0 ? (π / 6)^2 * cos(π / 6 * t) * cos(π / 6 * sin(π / 6 * t)) : 0.0
+bc_type = (;
+    u = (; x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)),
+    v = (; x = (:dirichlet, :symmetric), y = (:pressure, :pressure)),
 )
 
-# Grid
+# A 2D grid is a Cartesian product of two vectors
 x = stretched_grid(0.0, 10.0, 200)
 y = stretched_grid(-2.0, 2.0, 80)
-grid = Grid(x, y; boundary_conditions);
 
-# Body force
+# Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
 xc, yc = 2.0, 0.0 # Disk center
-D = 1.0 # Disk diameter
-δ = 0.11 # Disk thickness
-Cₜ = 0.01 # Thrust coefficient
+D = 1.0           # Disk diameter
+δ = 0.11          # Disk thickness
+Cₜ = 5e-4         # Thrust coefficient
+cₜ = Cₜ / (D * δ)
 inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
-bodyforce_u(x, y) = -Cₜ * inside(x, y)
+bodyforce_u(x, y) = -cₜ * inside(x, y)
 bodyforce_v(x, y) = 0.0
-force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
 
 # Build setup and assemble operators
-setup = Setup(; viscosity_model, grid, force, boundary_conditions)
+setup = Setup(
+    x,
+    y;
+    viscosity_model,
+    u_bc,
+    v_bc,
+    dudt_bc,
+    dvdt_bc,
+    bc_type,
+    bodyforce_u,
+    bodyforce_v,
+);
 
 # Time interval
-t_start, t_end = tlims = (0.0, 16π)
+t_start, t_end = tlims = (0.0, 12.0)
 
 # Initial conditions (extend inflow)
 initial_velocity_u(x, y) = 1.0
@@ -107,11 +109,11 @@ V₀, p₀ = create_initial_conditions(
     initial_pressure,
 );
 
-# Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 V, p = solve_animate(
-    problem, RK44P2();
-    Δt = 4π / 200,
+    problem,
+    RK44P2();
+    Δt = 0.05,
     filename = "vorticity.gif",
 )
 ```

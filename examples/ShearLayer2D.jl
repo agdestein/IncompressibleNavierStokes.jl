@@ -68,6 +68,7 @@ processors = [logger, plotter, tracer]
 ## Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = solve(problem, RK44(); Δt = 0.1, processors, inplace = true);
+#hide current_figure()
 
 # ## Post-process
 #

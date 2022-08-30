@@ -41,7 +41,7 @@ bc_type = (;
 n = 40
 x = stretched_grid(0.0, 10.0, 5n)
 y = stretched_grid(-2.0, 2.0, 2n)
-plot_grid(x, y, z)
+plot_grid(x, y)
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
 xc, yc = 2.0, 0.0 # Disk center
@@ -52,11 +52,6 @@ cₜ = Cₜ / (D * δ)
 inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
 bodyforce_u(x, y) = -cₜ * inside(x, y)
 bodyforce_v(x, y) = 0.0
-force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
-box = (
-    [xc - δ / 2, xc - δ / 2, xc + δ / 2, xc + δ / 2, xc - δ / 2],
-    [yc + D / 2, yc - D / 2, yc - D / 2, yc + D / 2, yc + D / 2],
-)
 
 # Build setup and assemble operators
 setup = Setup(
@@ -102,10 +97,17 @@ processors = [logger, plotter, tracer]
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = solve(problem, RK44P2(); Δt = 0.05, processors, inplace = true);
+#hide current_figure()
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(V, p)`
+# We may visualize or export the computed fields `(V, p)`.
+
+# We create a box to visualize the actuator.
+box = (
+    [xc - δ / 2, xc - δ / 2, xc + δ / 2, xc + δ / 2, xc - δ / 2],
+    [yc + D / 2, yc - D / 2, yc - D / 2, yc + D / 2, yc + D / 2],
+)
 
 # Export to VTK
 save_vtk(V, p, t_end, setup, "output/solution")

@@ -120,7 +120,8 @@ processors = [logger, plotter, tracer]
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve(problem, RK44P2(); inplace = true, Δt = 0.05, processors);
+V, p = solve(problem, RK44P2(); Δt = 0.05, processors, inplace = true);
+#hide current_figure()
 
 # ## Post-process
 #
@@ -142,7 +143,7 @@ plot_velocity(setup, V, t_end)
 plot_vorticity(setup, V, t_end)
 
 # Plot streamfunction
-plot_streamfunction(setup, V, t_end)
+## plot_streamfunction(setup, V, t_end)
 
 # Plot force
 plot_force(setup, t_end)

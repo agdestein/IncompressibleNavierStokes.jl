@@ -97,6 +97,7 @@ t_start, t_end = tlims = (0.0, 0.100)
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p, = solve(problem, RK44(); Δt = 0.001, processors, pressure_solver, inplace = true)
+#hide current_figure()
 
 # ## Post-process
 #
@@ -119,9 +120,9 @@ plot_vorticity(setup, V, t_end)
 
 # Plot energy spectrum
 k = 1:K
-u = reshape(V[grid.indu], n, n, n)
-v = reshape(V[grid.indv], n, n, n)
-w = reshape(V[grid.indw], n, n, n)
+u = reshape(V[setup.grid.indu], n, n, n)
+v = reshape(V[setup.grid.indv], n, n, n)
+w = reshape(V[setup.grid.indw], n, n, n)
 e = u .^ 2 .+ v .^ 2 .+ w .^ 2
 ehat = fft(e)[k, k, k]
 kk = [sqrt(kx^2 + ky^2 + kz^2) for kx ∈ k, ky ∈ k, kz ∈ k]

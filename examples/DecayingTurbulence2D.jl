@@ -32,8 +32,8 @@ viscosity_model = LaminarModel(; Re = 1e4)
 
 # A 2D grid is a Cartesian product of two vectors
 n = 200
-x = LinRange(0.0, 1.0, n)
-y = LinRange(0.0, 1.0, n)
+x = LinRange(0.0, 1.0, n + 1)
+y = LinRange(0.0, 1.0, n + 1)
 plot_grid(x, y)
 
 # Build setup and assemble operators
@@ -88,7 +88,7 @@ plotter = RealTimePlotter(; nupdate, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 10nupdate, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate)
 ## processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
+processors = [plotter, tracer]
 
 # Time interval
 t_start, t_end = tlims = (0.0, 1.0)
@@ -96,6 +96,7 @@ t_start, t_end = tlims = (0.0, 1.0)
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p, = solve(problem, RK44(); Δt = 0.001, processors, pressure_solver, inplace = true)
+#hide current_figure()
 
 # ## Post-process
 #
@@ -118,8 +119,8 @@ plot_vorticity(setup, V, t_end)
 
 # Plot energy spectrum
 k = 1:K
-u = reshape(V[grid.indu], n, n)
-v = reshape(V[grid.indv], n, n)
+u = reshape(V[setup.grid.indu], n, n)
+v = reshape(V[setup.grid.indv], n, n)
 e = u .^ 2 .+ v .^ 2
 ehat = fft(e)[k, k]
 kk = [sqrt(kx^2 + ky^2) for kx ∈ k, ky ∈ k]

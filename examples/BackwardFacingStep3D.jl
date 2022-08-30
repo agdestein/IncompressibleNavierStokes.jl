@@ -91,6 +91,7 @@ processors = [logger, plotter, tracer]
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = solve(problem, RK44(); Δt = 0.01, processors, inplace = true);
+#hide current_figure()
 
 # ## Post-process
 #
@@ -112,4 +113,4 @@ plot_velocity(setup, V, t_end)
 plot_vorticity(setup, V, t_end)
 
 # Plot streamfunction
-plot_streamfunction(setup, V, t_end)
+## plot_streamfunction(setup, V, t_end)

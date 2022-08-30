@@ -43,7 +43,7 @@ y = cosine_grid(-0.5, 0.5, 50)
 plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = Setup(x, y; viscosity_model, u_bc, v_bc);
+setup = Setup(x, y; viscosity_model, u_bc, v_bc, bc_type);
 
 # Time interval
 t_start, t_end = tlims = (0.0, 7.0)
@@ -70,11 +70,12 @@ plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 10)
 ## processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
+processors = [plotter, tracer]
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = solve(problem, RK44(); Δt = 0.002, processors, inplace = true);
+#hide current_figure()
 
 # ## Post-process
 #

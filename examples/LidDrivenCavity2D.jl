@@ -7,9 +7,10 @@ end                                                 #src
 
 # # Lid-Driven Cavity - 3D
 #
-# In this example we consider a box with a moving lid. The velocity is initially at rest. The
-# solution should reach at steady state equilibrium after a certain time. The same steady
-# state should be obtained when solving a `SteadyStateProblem`.
+# In this example we consider a box with a moving lid. The velocity is
+# initially at rest. The solution should reach at steady state equilibrium
+# after a certain time. The same steady state should be obtained when solving a
+# `SteadyStateProblem`.
 
 # We start by loading packages.
 # A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
@@ -32,11 +33,13 @@ name = "LidDrivenCavity2D"
 # - [`SmagorinskyModel`](@ref), and
 # - [`QRModel`](@ref).
 #
-# They all take a Reynolds number as a parameter. Here we choose a moderate Reynolds number.
+# They all take a Reynolds number as a parameter. Here we choose a moderate
+# Reynolds number.
 viscosity_model = LaminarModel(; Re = 1000.0)
 
-# Dirichlet boundary conditions are specified as plain Julia functions. They are marked by
-# the `:dirichlet` symbol. Other possible BC types are `:periodic`, `:symmetric`, and `:pressure`.
+# Dirichlet boundary conditions are specified as plain Julia functions. They
+# are marked by the `:dirichlet` symbol. Other possible BC types are
+# `:periodic`, `:symmetric`, and `:pressure`.
 u_bc(x, y, t) = y ≈ 1.0 ? 1.0 : 0.0
 v_bc(x, y, t) = 0.0
 bc_type = (;
@@ -47,12 +50,12 @@ bc_type = (;
 # We create a two-dimensional domain with a box of size `[1, 1]`. The grid is
 # created as a Cartesian product between two vectors. We add a refinement near
 # the walls.
-x = cosine_grid(0.0, 1.0, 50)
-y = cosine_grid(0.0, 1.0, 50)
-plot_grid(x, y, z)
+x = cosine_grid(0.0, 1.0, 40)
+y = cosine_grid(0.0, 1.0, 40)
+plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; viscosity_model, u_bc, v_bc, w_bc);
+setup = Setup(x, y; viscosity_model, u_bc, v_bc, bc_type);
 
 # We will solve for a time interval of ten seconds.
 t_start, t_end = tlims = (0.0, 10.0)
@@ -84,7 +87,7 @@ problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 
 # We may also define a list of iteration processors. They are processed after every
 # `nupdate` iteration.
-logger = Logger(; nupdate = 1)
+logger = Logger(; nupdate = 1000)
 plotter = RealTimePlotter(; nupdate = 50, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 20, dir = "output/LidDrivenCavity2D")
 tracer = QuantityTracer(; nupdate = 10)
@@ -94,6 +97,7 @@ processors = [logger, plotter, tracer]
 # A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
 # with a fixed time step.
 V, p = solve(problem, RK44(); Δt = 0.001, processors)
+#hide current_figure()
 
 # ## Post-process
 #
