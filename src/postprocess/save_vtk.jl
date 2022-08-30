@@ -7,6 +7,9 @@ In the case of a 2D setup, the velocity field is saved as a 3D vector with a
 z-component of zero, as this seems to be preferred by ParaView.
 """
 function save_vtk(V, p, t, setup, filename = "output/solution")
+    parts = split(filename, "/")
+    path = join(parts[1:end-1], "/")
+    isdir(path) || mkpath(path)
     (; xp, yp, zp) = setup.grid
     N = get_dimension(setup.grid)
     if N == 2
