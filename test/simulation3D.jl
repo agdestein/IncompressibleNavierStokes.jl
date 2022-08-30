@@ -1,66 +1,35 @@
 # Run a typical simulation: Lid-Driven Cavity case (LDC)
 @testset "Simulation 3D" begin
-    # Floating point type for simulations
-    T = Float64
-
-    # Viscosity model
-    viscosity_model = LaminarModel{T}(; Re = 1000)
-
-    # Convection model
-    convection_model = NoRegConvectionModel()
-
-    # Boundary conditions
     lid_vel = [1.0, 0.0, 0.2] # Lid velocity
-    u_bc(x, y, z, t) = y ≈ 1 ? lid_vel[1] : 0.0
+    u_bc(x, y, z, t) = y ≈ 1.0 ? lid_vel[1] : 0.0
     v_bc(x, y, z, t) = 0.0
-    w_bc(x, y, z, t) = y ≈ 1 ? lid_vel[3] : 0.0
-    boundary_conditions = BoundaryConditions(
-        u_bc,
-        v_bc,
-        w_bc;
-        bc_unsteady = false,
-        bc_type = (;
-            u = (;
-                x = (:dirichlet, :dirichlet),
-                y = (:dirichlet, :dirichlet),
-                z = (:dirichlet, :dirichlet),
-            ),
-            v = (;
-                x = (:dirichlet, :dirichlet),
-                y = (:dirichlet, :dirichlet),
-                z = (:dirichlet, :dirichlet),
-            ),
-            w = (;
-                x = (:dirichlet, :dirichlet),
-                y = (:dirichlet, :dirichlet),
-                z = (:dirichlet, :dirichlet),
-            ),
+    w_bc(x, y, z, t) = y ≈ 1.0 ? lid_vel[3] : 0.0
+    bc_type = (;
+        u = (;
+            x = (:dirichlet, :dirichlet),
+            y = (:dirichlet, :dirichlet),
+            z = (:dirichlet, :dirichlet),
         ),
-        T,
+        v = (;
+            x = (:dirichlet, :dirichlet),
+            y = (:dirichlet, :dirichlet),
+            z = (:dirichlet, :dirichlet),
+        ),
+        w = (;
+            x = (:dirichlet, :dirichlet),
+            y = (:dirichlet, :dirichlet),
+            z = (:dirichlet, :dirichlet),
+        ),
     )
 
-    # Grid parameters
-    x = stretched_grid(0.0, 1.0, 25)
-    y = stretched_grid(0.0, 1.0, 25)
-    z = stretched_grid(-0.2, 0.2, 10)
-    grid = Grid(x, y, z; boundary_conditions, T)
+    x = LinRange(0.0, 1.0, 25)
+    y = LinRange(0.0, 1.0, 25)
+    z = LinRange(-0.2, 0.2, 10)
 
-    # Forcing parameters
-    bodyforce_u(x, y, z) = 0.0
-    bodyforce_v(x, y, z) = 0.0
-    bodyforce_w(x, y, z) = 0.0
-    force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
+    setup = Setup(x, y, z; u_bc, v_bc, w_bc, bc_type)
 
-    # Build setup and assemble operators
-    setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
-
-    # Pressure solver
-    pressure_solver = DirectPressureSolver(setup)
-
-    # Time interval
     t_start, t_end = tlims = (0.0, 0.5)
 
-    # Initial conditions
     initial_velocity_u(x, y, z) = 0.0
     initial_velocity_v(x, y, z) = 0.0
     initial_velocity_w(x, y, z) = 0.0
@@ -72,7 +41,6 @@
         initial_velocity_v,
         initial_velocity_w,
         initial_pressure,
-        pressure_solver,
     )
 
     @testset "Steady state problem" begin
@@ -93,7 +61,7 @@
 
     @testset "Unsteady problem" begin
         problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-        V, p = @time solve(problem, RK44(); Δt = 0.01, pressure_solver, processors)
+        V, p = @time solve(problem, RK44(); Δt = 0.01, processors)
 
         # Check that solution did not explode
         @test all(!isnan, V)

@@ -1,94 +1,66 @@
-# # Lid-Driven Cavity case (LDC)
-#
-# This test case considers a box with a moving lid. The velocity is initially at rest. The
-# solution should reach at steady state equilibrium after a certain time. The same steady
-# state should be obtained when solving a `SteadyStateProblem`.
-
+# Little LSP hack to get function signatures, go    #src
+# to definition etc.                                #src
 if isdefined(@__MODULE__, :LanguageServer)          #src
     include("../src/IncompressibleNavierStokes.jl") #src
     using .IncompressibleNavierStokes               #src
 end                                                 #src
 
+# # Lid-Driven Cavity - 3D
+#
+# In this example we consider a box with a moving lid. The velocity is initially at rest. The
+# solution should reach at steady state equilibrium after a certain time. The same steady
+# state should be obtained when solving a `SteadyStateProblem`.
+
+# We start by loading packages.
+# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
+# for plotting. `GLMakie` creates an interactive window (useful for real-time
+# plotting), but does not work when building this example on GitHub.
+# `CairoMakie` makes high-quality static vector-graphics plots.
+
+#md using CairoMakie
+using GLMakie #!md
 using IncompressibleNavierStokes
 
-if haskey(ENV, "GITHUB_ACTIONS")
-    using CairoMakie
-else
-    using GLMakie
-end
-
 # Case name for saving results
-name = "LDC"
-
-# Floating point type for simulations
-T = Float64
+name = "LidDrivenCavity3D"
 
 # Viscosity model
-viscosity_model = LaminarModel{T}(; Re = 1000)
-## viscosity_model = KEpsilonModel{T}(; Re = 1000)
-## viscosity_model = MixingLengthModel{T}(; Re = 1000)
-## viscosity_model = SmagorinskyModel{T}(; Re = 1000)
-## viscosity_model = QRModel{T}(; Re = 1000)
+viscosity_model = LaminarModel(; Re = 1000.0)
 
-# Convection model
-convection_model = NoRegConvectionModel()
-## convection_model = C2ConvectionModel()
-## convection_model = C4ConvectionModel()
-## convection_model = LerayConvectionModel()
-
-# Boundary conditions
-u_bc(x, y, z, t) = y ≈ 1 ? 1.0 : 0.0
+# Boundary conditions: horizontal movement of the top lid
+u_bc(x, y, z, t) = y ≈ 1.0 ? 1.0 : 0.0
 v_bc(x, y, z, t) = 0.0
-w_bc(x, y, z, t) = y ≈ 1 ? 0.2 : 0.0
-boundary_conditions = BoundaryConditions(
-    u_bc,
-    v_bc,
-    w_bc;
-    bc_unsteady = false,
-    bc_type = (;
-        u = (;
-            x = (:dirichlet, :dirichlet),
-            y = (:dirichlet, :dirichlet),
-            z = (:periodic, :periodic),
-        ),
-        v = (;
-            x = (:dirichlet, :dirichlet),
-            y = (:dirichlet, :dirichlet),
-            z = (:periodic, :periodic),
-        ),
-        w = (;
-            x = (:dirichlet, :dirichlet),
-            y = (:dirichlet, :dirichlet),
-            z = (:periodic, :periodic),
-        ),
+w_bc(x, y, z, t) = y ≈ 1.0 ? 0.2 : 0.0
+bc_type = (;
+    u = (;
+        x = (:dirichlet, :dirichlet),
+        y = (:dirichlet, :dirichlet),
+        z = (:periodic, :periodic),
     ),
-    T,
+    v = (;
+        x = (:dirichlet, :dirichlet),
+        y = (:dirichlet, :dirichlet),
+        z = (:periodic, :periodic),
+    ),
+    w = (;
+        x = (:dirichlet, :dirichlet),
+        y = (:dirichlet, :dirichlet),
+        z = (:periodic, :periodic),
+    ),
 )
 
-# Nonuniform grid -- refine near walls
+# A 3D grid is a Cartesian product of three vectors. Here we refine the grid
+# near the walls.
 x = cosine_grid(0.0, 1.0, 25)
 y = stretched_grid(0.0, 1.0, 25, 0.95)
 z = stretched_grid(-0.2, 0.2, 10)
-grid = Grid(x, y, z; boundary_conditions, T);
-
-plot_grid(grid)
-
-# Forcing parameters
-bodyforce_u(x, y, z) = 0.0
-bodyforce_v(x, y, z) = 0.0
-bodyforce_w(x, y, z) = 0.0
-force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
+plot_grid(x, y, z)
 
 # Build setup and assemble operators
-setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
-
-# Pressure solver
-pressure_solver = DirectPressureSolver(setup)
-## pressure_solver = CGPressureSolver(setup)
-## pressure_solver = FourierPressureSolver(setup)
+setup = Setup(x, y, z; viscosity_model, u_bc, v_bc, w_bc);
 
 # Time interval
-t_start, t_end = tlims = (0.0, 10.0)
+t_start, t_end = tlims = (0.0, 0.2)
 
 # Initial conditions
 initial_velocity_u(x, y, z) = 0.0
@@ -102,39 +74,42 @@ V₀, p₀ = create_initial_conditions(
     initial_velocity_v,
     initial_velocity_w,
     initial_pressure,
-    pressure_solver,
 );
 
 # Solve steady state problem
 problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = @time solve(problem; npicard = 5, maxiter = 15);
+V, p = solve(problem; npicard = 5, maxiter = 15);
 
 # Iteration processors
 logger = Logger()
-plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
+plotter = RealTimePlotter(; nupdate = 1, fieldname = :velocity)
 writer = VTKWriter(; nupdate = 5, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
-processors = [logger, plotter, writer, tracer]
+# processors = [logger, plotter, writer, tracer]
+processors = [logger, plotter, tracer]
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = @time solve(problem, RK44(); Δt = 0.01, processors, pressure_solver)
+V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver)
 
-# Post-process
+# ## Post-process
+#
+# We may visualize or export the computed fields `(V, p)`
+
+# Export to VTK
+save_vtk(V, p, t_end, setup, "output/solution")
+
+# Plot tracers
 plot_tracers(tracer)
 
-#-
-
+# Plot pressure
 plot_pressure(setup, p)
 
-#-
-
+# Plot velocity
 plot_velocity(setup, V, t_end)
 
-#-
+# Plot vorticity
+plot_vorticity(setup, V, t_end)
 
-plot_vorticity(setup, V, tlims[2])
-
-#-
-
-plot_streamfunction(setup, V, tlims[2])
+# Plot streamfunction
+plot_streamfunction(setup, V, t_end)

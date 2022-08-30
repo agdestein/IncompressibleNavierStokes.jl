@@ -6,6 +6,7 @@
         initial_velocity_v,
         [initial_velocity_w,]
         initial_pressure = nothing,
+        pressure_solver = DirectPressureSolver(setup),
     )
 
 Create initial vectors at starting time `t`. If `p_initial` is a function instead of
@@ -31,18 +32,14 @@ function create_initial_conditions(
     (; yM) = bc_vectors
 
     # Allocate velocity and pressure
-    u = zero(xu)
-    v = zero(xv)
-    p = zero(xpp)
+    u = zero(xu)[:]
+    v = zero(xv)[:]
+    p = zero(xpp)[:]
 
     # Initial velocities
-    u .= initial_velocity_u.(xu, yu)
-    v .= initial_velocity_v.(xv, yv)
+    u .= initial_velocity_u.(xu, yu)[:]
+    v .= initial_velocity_v.(xv, yv)[:]
     V = [u[:]; v[:]]
-
-    # Initial pressure: should in principle NOT be prescribed (will be calculated if p_initial)
-    isnothing(initial_pressure) || (p .= initial_pressure.(xpp, ypp))
-    p = p[:]
 
     # Kinetic energy and momentum of initial velocity field
     # Iteration 1 corresponds to t₀ = 0 (for unsteady simulations)
@@ -58,9 +55,11 @@ function create_initial_conditions(
         V .-= Ω⁻¹ .* (G * Δp)
     end
 
-    # For steady state computations, the initial guess is the provided initial condition
+    # Initial pressure: should in principle NOT be prescribed (will be calculated if p_initial)
     if isnothing(initial_pressure)
         p = pressure_additional_solve(pressure_solver, V, p, t, setup)
+    else
+        p .= initial_pressure.(xpp, ypp)[:]
     end
 
     V, p
@@ -74,7 +73,7 @@ function create_initial_conditions(
     initial_velocity_v,
     initial_velocity_w,
     initial_pressure = nothing,
-    pressure_solver,
+    pressure_solver = DirectPressureSolver(setup),
 ) where {T}
     (; grid) = setup
     (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp, Ω⁻¹) = grid
@@ -85,16 +84,16 @@ function create_initial_conditions(
     (; yM) = bc_vectors
 
     # Allocate velocity and pressure
-    u = zero(xu)
-    v = zero(xv)
-    w = zero(xw)
-    p = zero(xpp)
+    u = zero(xu)[:]
+    v = zero(xv)[:]
+    w = zero(xw)[:]
+    p = zero(xpp)[:]
 
     # Initial velocities
-    u .= initial_velocity_u.(xu, yu, zu)
-    v .= initial_velocity_v.(xv, yv, zv)
-    w .= initial_velocity_w.(xw, yw, zw)
-    V = [u[:]; v[:]; w[:]]
+    u .= initial_velocity_u.(xu, yu, zu)[:]
+    v .= initial_velocity_v.(xv, yv, zv)[:]
+    w .= initial_velocity_w.(xw, yw, zw)[:]
+    V = [u; v; w]
 
     # Kinetic energy and momentum of initial velocity field
     # Iteration 1 corresponds to t₀ = 0 (for unsteady simulations)
@@ -111,12 +110,10 @@ function create_initial_conditions(
     end
 
     # Initial pressure: should in principle NOT be prescribed (will be calculated if p_initial)
-    isnothing(initial_pressure) || (p .= initial_pressure.(xpp, ypp, zpp))
-    p = p[:]
-
-    # For steady state computations, the initial guess is the provided initial condition
     if isnothing(initial_pressure)
         p = pressure_additional_solve(pressure_solver, V, p, t, setup)
+    else
+        p .= initial_pressure.(xpp, ypp, zpp)[:]
     end
 
     V, p

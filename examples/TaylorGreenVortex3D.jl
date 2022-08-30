@@ -1,88 +1,42 @@
-# # Taylor-Green vortex case (TG).
-#
-# This test case considers the Taylor-Green vortex.
-
+# Little LSP hack to get function signatures, go    #src
+# to definition etc.                                #src
 if isdefined(@__MODULE__, :LanguageServer)          #src
     include("../src/IncompressibleNavierStokes.jl") #src
     using .IncompressibleNavierStokes               #src
 end                                                 #src
 
-using IncompressibleNavierStokes
+# # Taylor-Green vortex - 3D
+#
+# In this example we consider the Taylor-Green vortex.
 
-if haskey(ENV, "GITHUB_ACTIONS")
-    using CairoMakie
-else
-    using GLMakie
-end
+# We start by loading packages.
+# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
+# for plotting. `GLMakie` creates an interactive window (useful for real-time
+# plotting), but does not work when building this example on GitHub.
+# `CairoMakie` makes high-quality static vector-graphics plots.
+
+#md using CairoMakie
+using GLMakie #!md
+using IncompressibleNavierStokes
 
 # Case name for saving results
 name = "TaylorGreenVortex3D"
 
-# Floating point type for simulations
-T = Float64
-
 # Viscosity model
-viscosity_model = LaminarModel{T}(; Re = 2000)
-## viscosity_model = KEpsilonModel{T}(; Re = 1000)
-## viscosity_model = MixingLengthModel{T}(; Re = 1000)
-## viscosity_model = SmagorinskyModel{T}(; Re = 1000)
-## viscosity_model = QRModel{T}(; Re = 1000)
+viscosity_model = LaminarModel(; Re = 2000.0)
 
-# Convection model
-convection_model = NoRegConvectionModel()
-## convection_model = C2ConvectionModel()
-## convection_model = C4ConvectionModel()
-## convection_model = LerayConvectionModel()
-
-# Boundary conditions
-u_bc(x, y, z, t) = 0.0
-v_bc(x, y, z, t) = 0.0
-w_bc(x, y, z, t) = 0.0
-boundary_conditions = BoundaryConditions(
-    u_bc,
-    v_bc,
-    w_bc;
-    bc_unsteady = false,
-    bc_type = (;
-        u = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
-        v = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
-        w = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
-    ),
-    T,
-)
-
-# Grid
-x = stretched_grid(0, 2π, 20)
-y = stretched_grid(0, 2π, 20)
-z = stretched_grid(0, 2π, 20)
-grid = Grid(x, y, z; boundary_conditions, T);
-
-plot_grid(grid)
-
-# Forcing parameters
-bodyforce_u(x, y, z) = 0.0
-bodyforce_v(x, y, z) = 0.0
-bodyforce_w(x, y, z) = 0.0
-force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
+# A 3D grid is a Cartesian product of three vectors
+n = 20
+x = LinRange(0, 2π, n + 1)
+y = LinRange(0, 2π, n + 1)
+z = LinRange(0, 2π, n + 1)
+plot_grid(x, y, z)
 
 # Build setup and assemble operators
-setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
+setup = Setup(x, y, z; viscosity_model);
 
-# Pressure solver
-## pressure_solver = DirectPressureSolver(setup)
-## pressure_solver = CGPressureSolver(setup)
+# Since the grid is uniform and identical for x, y, and z, we may use a
+# specialized Fourier pressure solver
 pressure_solver = FourierPressureSolver(setup)
 
 # Time interval
@@ -105,7 +59,7 @@ V₀, p₀ = create_initial_conditions(
 
 # Solve steady state problem
 problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = @time solve(problem; npicard = 6)
+V, p = solve(problem; npicard = 6)
 
 # Iteration processors
 logger = Logger()
@@ -117,23 +71,26 @@ processors = [logger, plotter, tracer]
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = @time solve(problem, RK44(); Δt = 0.01, processors, pressure_solver)
+V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver, inplace = true)
 
-# Post-process
+# ## Post-process
+#
+# We may visualize or export the computed fields `(V, p)`
+
+# Export to VTK
+save_vtk(V, p, t_end, setup, "output/solution")
+
+# Plot tracers
 plot_tracers(tracer)
 
-#-
-
+# Plot pressure
 plot_pressure(setup, p; alpha = 0.05)
 
-#-
-
+# Plot velocity
 plot_velocity(setup, V, t_end; alpha = 0.05)
 
-#-
+# Plot vorticity
+plot_vorticity(setup, V, t_end; alpha = 0.05)
 
-plot_vorticity(setup, V, tlims[2]; alpha = 0.05)
-
-#-
-
-## plot_streamfunction(setup, V, tlims[2])
+# Plot streamfunction
+## plot_streamfunction(setup, V, t_end)

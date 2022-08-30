@@ -1,44 +1,17 @@
-@testset "Taylor-Green vortex" begin
+@testset "Solvers" begin
     T = Float64
+    Re = 500.0
+    viscosity_model = LaminarModel(; Re)
 
-    Re = 500
-    viscosity_model = LaminarModel{T}(; Re)
-    convection_model = NoRegConvectionModel()
+    n = 50
+    x = LinRange(0, 2π, n + 1)
+    y = stretched_grid(0, 2π, n + 1)
+    setup = Setup(x, y; viscosity_model)
 
-    # Boundary conditions
-    u_bc(x, y, t) = zero(x)
-    v_bc(x, y, t) = zero(x)
-    boundary_conditions = BoundaryConditions(
-        u_bc,
-        v_bc;
-        bc_unsteady = false,
-        bc_type = (;
-            u = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
-            v = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
-        ),
-        T,
-    )
-
-    # Grid
-    x = stretched_grid(0, 2π, 50)
-    y = stretched_grid(0, 2π, 50)
-    grid = Grid(x, y; boundary_conditions, T)
-
-    # Forcing parameters
-    bodyforce_u(x, y) = 0
-    bodyforce_v(x, y) = 0
-    force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
-
-    # Build setup and assemble operators
-    setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
-
-    # Pressure solver
     pressure_solver = FourierPressureSolver(setup)
 
-    # Time interval
     t_start, t_end = tlims = (0.0, 5.0)
 
-    # Initial conditions
     initial_velocity_u(x, y) = cos(x)sin(y)
     initial_velocity_v(x, y) = -sin(x)cos(y)
     initial_pressure(x, y) = -1 / 4 * (cos(2x) + cos(2y))
@@ -54,8 +27,8 @@
     @testset "Steady state" begin
         problem = SteadyStateProblem(setup, V₀, p₀)
         V, p = solve(problem)
-        uₕ = V[grid.indu]
-        vₕ = V[grid.indv]
+        uₕ = V[setup.grid.indu]
+        vₕ = V[setup.grid.indv]
         @test norm(uₕ .- mean(uₕ)) / mean(uₕ) < 1e-8
         @test norm(vₕ .- mean(vₕ)) / mean(vₕ) < 1e-8
     end
@@ -64,7 +37,7 @@
     F(t) = exp(-2t / Re)
     u(x, y, t) = initial_velocity_u(x, y) * F(t)
     v(x, y, t) = initial_velocity_v(x, y) * F(t)
-    (; xu, yu, xv, yv) = grid
+    (; xu, yu, xv, yv) = setup.grid
     uₕ = u.(xu, yu, t_end)
     vₕ = v.(xv, yv, t_end)
     V_exact = [uₕ[:]; vₕ[:]]

@@ -1,40 +1,31 @@
-# # Planar mixing case
-#
-# Planar mixing test case.
-
+# Little LSP hack to get function signatures, go    #src
+# to definition etc.                                #src
 if isdefined(@__MODULE__, :LanguageServer)          #src
     include("../src/IncompressibleNavierStokes.jl") #src
     using .IncompressibleNavierStokes               #src
 end                                                 #src
 
-using IncompressibleNavierStokes
+# # Planar mixing - 2D
+#
+# Planar mixing example.
 
-if haskey(ENV, "GITHUB_ACTIONS")
-    using CairoMakie
-else
-    using GLMakie
-end
+# We start by loading packages.
+# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
+# for plotting. `GLMakie` creates an interactive window (useful for real-time
+# plotting), but does not work when building this example on GitHub.
+# `CairoMakie` makes high-quality static vector-graphics plots.
+
+#md using CairoMakie
+using GLMakie #!md
+using IncompressibleNavierStokes
 
 # Case name for saving results
 name = "PlanarMixing2D"
 
-# Floating point type for simulations
-T = Float64
+# Viscosity model
+viscosity_model = LaminarModel(; Re = 500.0)
 
-## Viscosity model
-viscosity_model = LaminarModel{T}(; Re = 500)
-# viscosity_model = KEpsilonModel{T}(; Re = 500)
-# viscosity_model = MixingLengthModel{T}(; Re = 500)
-# viscosity_model = SmagorinskyModel{T}(; Re = 500)
-# viscosity_model = QRModel{T}(; Re = 500)
-
-## Convection model
-convection_model = NoRegConvectionModel()
-# convection_model = C2ConvectionModel()
-# convection_model = C4ConvectionModel()
-# convection_model = LerayConvectionModel()
-
-## Boundary conditions ΔU = 1.0
+# Boundary conditions: Unsteady BC requires time derivatives
 ΔU = 1.0
 Ū = 1.0
 ϵ = (0.082Ū, 0.012Ū)
@@ -45,38 +36,18 @@ u_bc(x, y, t) =
 v_bc(x, y, t) = 0.0
 dudt_bc(x, y, t) = sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * ω * cos(ω * t))
 dvdt_bc(x, y, t) = 0.0
-boundary_conditions = BoundaryConditions(
-    u_bc,
-    v_bc;
-    dudt_bc,
-    dvdt_bc,
-    bc_unsteady = true,
-    bc_type = (;
-        u = (; x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)),
-        v = (; x = (:dirichlet, :symmetric), y = (:pressure, :pressure)),
-    ),
-    T,
+bc_type = (;
+    u = (; x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)),
+    v = (; x = (:dirichlet, :symmetric), y = (:pressure, :pressure)),
 )
 
-## Grid
+# A 2D grid is a Cartesian product of two vectors
 x = stretched_grid(0.0, 256.0, 1024)
 y = stretched_grid(-32.0, 32.0, 256)
-grid = Grid(x, y; boundary_conditions, T, order4 = false);
+plot_grid(x, y)
 
-plot_grid(grid)
-
-## Forcing parameters
-bodyforce_u(x, y) = 0.0
-bodyforce_v(x, y) = 0.0
-force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
-
-## Build setup and assemble operators
-setup = Setup(; viscosity_model, convection_model, grid, force, boundary_conditions)
-
-## Pressure solver
-pressure_solver = DirectPressureSolver(setup)
-# pressure_solver = CGPressureSolver(setup)
-# pressure_solver = FourierPressureSolver(setup)
+# Build setup and assemble operators
+setup = Setup(x, y; viscosity_model, u_bc, v_bc, dudt_bc, dvdt_bc, bc_type);
 
 ## Time interval
 t_start, t_end = tlims = (0.0, 300.0)
@@ -91,40 +62,42 @@ V₀, p₀ = create_initial_conditions(
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure,
-    pressure_solver,
 );
 
 ## Solve steady state problem
 problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = @time solve(problem);
+V, p = solve(problem);
 
 ## Iteration processors
 logger = Logger(; nupdate = 1)
 plotter = RealTimePlotter(; nupdate = 10, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 10)
-processors = [logger, plotter, writer, tracer]
-# , lims = (-0.8, 0.02)
+## processors = [logger, plotter, writer, tracer]
+processors = [logger, plotter, tracer]
 
-## Solve unsteady problem
+# Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = @time solve(problem, RK44P2(); Δt = 0.1, processors, pressure_solver);
+V, p = solve(problem, RK44P2(); Δt = 0.1, processors, inplace = true);
 
-## Post-process
+# ## Post-process
+#
+# We may visualize or export the computed fields `(V, p)`
+
+# Export to VTK
+save_vtk(V, p, t_end, setup, "output/solution")
+
+# Plot tracers
 plot_tracers(tracer)
 
-#-
-
+# Plot pressure
 plot_pressure(setup, p)
 
-#-
-
+# Plot velocity
 plot_velocity(setup, V, t_end)
 
-#-
+# Plot vorticity
+plot_vorticity(setup, V, t_end)
 
-plot_vorticity(setup, V, tlims[2]);
-
-#-
-
-plot_streamfunction(setup, V, tlims[2])
+# Plot streamfunction
+plot_streamfunction(setup, V, t_end)

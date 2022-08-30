@@ -1,14 +1,16 @@
 """
-    plot_force(setup, F, t; kwargs...)
+    plot_force(setup, t; kwargs...)
 
 Plot body force.
 """
 function plot_force end
 
 # 2D version
-function plot_force(setup::Setup{T,2}, F, t; kwargs...) where {T}
-    (; xp, yp, xlims, ylims) = setup.grid
-    (; xu, yu, zu, indu, xlims, ylims) = setup.grid
+function plot_force(setup::Setup{T,2}, t; kwargs...) where {T}
+    (; grid, force) = setup
+    (; xp, yp, xlims, ylims) = grid
+    (; xu, yu, zu, indu, xlims, ylims) = grid
+    (; F) = force
 
     Fp = reshape(F[indu], size(xu))
     # TODO: norm of F instead of Fu
@@ -28,8 +30,10 @@ function plot_force(setup::Setup{T,2}, F, t; kwargs...) where {T}
 end
 
 # 3D version
-function plot_force(setup::Setup{T,3}, F, t; kwargs...) where {T}
-    (; xu, yu, zu, indu) = setup.grid
+function plot_force(setup::Setup{T,3}, t; kwargs...) where {T}
+    (; grid, force) = setup
+    (; xu, yu, zu, indu) = grid
+    (; F) = force
 
     # Get force at pressure points
     # up, vp, wp = get_velocity(V, t, setup)

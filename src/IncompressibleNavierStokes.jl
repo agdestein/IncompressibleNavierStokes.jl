@@ -69,6 +69,11 @@ include("operators/ke_diffusion.jl")
 include("operators/ke_viscosity.jl")
 include("operators/operator_viscosity.jl")
 
+# Pressure solvers
+include("solvers/pressure/pressure_solvers.jl")
+include("solvers/pressure/pressure_poisson.jl")
+include("solvers/pressure/pressure_additional_solve.jl")
+
 # Time steppers
 include("momentum/momentumcache.jl")
 include("time_steppers/methods.jl")
@@ -108,9 +113,6 @@ include("problems/problems.jl")
 include("problems/is_steady.jl")
 
 # Solvers
-include("solvers/pressure/pressure_solvers.jl")
-include("solvers/pressure/pressure_poisson.jl")
-include("solvers/pressure/pressure_additional_solve.jl")
 include("solvers/get_timestep.jl")
 include("solvers/solve.jl")
 include("solvers/solve_animate.jl")
@@ -146,10 +148,8 @@ export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
 export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors
-export Logger, RealTimePlotter, VTKWriter, QuantityTracer
-
-# Problems
-export SteadyStateProblem, UnsteadyProblem, is_steady
+export AbstractProcessor, Logger, RealTimePlotter, VTKWriter, QuantityTracer
+export initialize!, process!, finalize!
 
 # Setup
 export Grid, Operators, BoundaryConditions, Setup
@@ -159,12 +159,15 @@ export stretched_grid, cosine_grid
 
 # Pressure solvers
 export DirectPressureSolver, CGPressureSolver, FourierPressureSolver
+export pressure_poisson,
+    pressure_poisson!, pressure_additional_solve, pressure_additional_solve!
 
-# Main driver
-export create_initial_conditions, get_bc_vectors, solve, get_velocity
-export solve_animate
+# Problems
+export SteadyStateProblem, UnsteadyProblem, is_steady
+export solve, solve_animate
+export momentum, momentum!
 
-export momentum!
+export create_initial_conditions, get_bc_vectors, get_velocity
 
 export plot_force,
     plot_grid,
