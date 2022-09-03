@@ -1,4 +1,3 @@
-# TODO: Find method for autogenerating obvious/repetitive function signatures in docstrings
 """
     IncompressibleNavierStokes
 

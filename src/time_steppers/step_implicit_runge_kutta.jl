@@ -81,7 +81,7 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
 
     if newton_type == :approximate
         # Approximate Newton (Jacobian is based on current solution Vₙ)
-        F, ∇F = momentum!(Vₙ, Vₙ, pₙ, tₙ, setup; bc_vectors, getJacobian = true)
+        F, ∇F = momentum!(Vₙ, Vₙ, pₙ, tₙ, setup; bc_vectors, get_jacobian = true)
 
         # Update iteration matrix, which is now fixed during iterations
         dfmom = Ω_sNV ./ Δtₙ .- kron(A, ∇F)
@@ -102,7 +102,7 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
         elseif newton_type == :full
             # Full Newton
             Fⱼ, ∇Fⱼ =
-                momentum_allstage(Vⱼ, Vⱼ, pⱼ, tⱼ, setup; bc_vectors, getJacobian = true)
+                momentum_allstage(Vⱼ, Vⱼ, pⱼ, tⱼ, setup; bc_vectors, get_jacobian = true)
 
             # Update iteration matrix
             mul!(dfmom, A_ext, ∇Fⱼ)
@@ -288,7 +288,7 @@ function step!(
             setup,
             momentum_cache;
             bc_vectors,
-            getJacobian = true,
+            get_jacobian = true,
         )
 
         # Update iteration matrix, which is now fixed during iterations
@@ -327,7 +327,7 @@ function step!(
                 cache,
                 momentum_cache;
                 bc_vectors,
-                getJacobian = true,
+                get_jacobian = true,
             )
 
             # Update iteration matrix
@@ -421,7 +421,7 @@ function step!(
 end
 
 """
-    momentum_allstage(V, C, p, t, setup; getJacobian = false)
+    momentum_allstage(V, C, p, t, setup; get_jacobian = false)
 
 Call momentum for multiple `(V, p)` pairs, as required in implicit RK methods.
 
@@ -429,7 +429,7 @@ Non-mutating/allocating/out-of-place version.
 
 See also [`momentum_allstage!`](@ref).
 """
-function momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, getJacobian = false)
+function momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, get_jacobian = false)
     (; NV, Np) = setup.grid
 
     ∇Fⱼ = spzeros(0, 0)
@@ -446,9 +446,9 @@ function momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, g
         t = tⱼ[i]
 
         # Compute residual and Jacobian for this stage
-        F, ∇F = momentum(V, ϕ, p, t, setup; bc_vectors, getJacobian)
+        F, ∇F = momentum(V, ϕ, p, t, setup; bc_vectors, get_jacobian)
 
-        if getJacobian
+        if get_jacobian
             # ∇Fⱼ[ind_Vᵢ, ind_Vᵢ] = ∇F
             ∇Fⱼ = blockdiag(∇Fⱼ, ∇F)
         end
@@ -458,7 +458,7 @@ function momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, g
 end
 
 """
-    momentum_allstage!(F, ∇F, V, C, p, t, setup, cache, momentum_cache; getJacobian = false)
+    momentum_allstage!(F, ∇F, V, C, p, t, setup, cache, momentum_cache; get_jacobian = false)
 
 Call momentum for multiple `(V, p)` pairs, as required in implicit RK methods.
 
@@ -478,7 +478,7 @@ function momentum_allstage!(
     momentum_cache;
     bc_vectors,
     nstage,
-    getJacobian = false,
+    get_jacobian = false,
 )
     (; NV, Np) = setup.grid
     (; ∇F) = cache
@@ -496,9 +496,9 @@ function momentum_allstage!(
         t = tⱼ[i]
 
         # Compute residual and Jacobian for this stage
-        momentum!(F, ∇F, V, ϕ, p, t, setup, momentum_cache; bc_vectors, getJacobian)
+        momentum!(F, ∇F, V, ϕ, p, t, setup, momentum_cache; bc_vectors, get_jacobian)
 
-        if getJacobian
+        if get_jacobian
             ∇Fⱼ[ind_Vᵢ, ind_Vᵢ] = ∇F
         end
     end

@@ -76,7 +76,7 @@ function solve(
             setup,
             momentum_cache;
             bc_vectors,
-            getJacobian = true,
+            get_jacobian = true,
             newton_factor,
         )
 

@@ -1,5 +1,5 @@
 """
-    strain_tensor(V, setup; bc_vectors, getJacobian = false, get_S_abs = false)
+    strain_tensor(V, setup; bc_vectors, get_jacobian = false, get_S_abs = false)
 
 Evaluate rate of strain tensor `S(V)` and its magnitude.
 """
@@ -10,7 +10,7 @@ function strain_tensor(
     V,
     setup::Setup{T,2};
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     get_S_abs = false,
 ) where {T}
     (; grid, operators, boundary_conditions) = setup
@@ -130,7 +130,7 @@ function strain_tensor(
         S_abs = @. sqrt(2 * S11_p^2 + 2 * S22_p^2 + 2 * S12_p^2 + 2 * S21_p^2)
 
         # Jacobian of S_abs wrt u and v
-        if getJacobian
+        if get_jacobian
             eps = 1e-14
             Sabs_inv = spdiagm(1 ./ (2 .* S_abs .+ eps))
             Jacu =
@@ -151,7 +151,7 @@ function strain_tensor(
     V,
     setup::Setup{T,3};
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     get_S_abs = false,
 ) where {T}
     error("Not implemented (3D)")

@@ -77,7 +77,7 @@ function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt; bc_vectors = not
         V = Diff_fact \ Rr
     else
         # Get `∇d` since `Diff` is not constant
-        d, ∇d = diffusion(V, t, setup; getJacobian = true)
+        d, ∇d = diffusion(V, t, setup; get_jacobian = true)
         V = ∇d \ Rr
     end
 
@@ -203,7 +203,7 @@ function step!(
         ldiv!(V, Diff_fact, Rr)
     else
         # Get `∇d` since `Diff` is not constant
-        diffusion!(d, ∇d, V, t, setup; getJacobian = true)
+        diffusion!(d, ∇d, V, t, setup; get_jacobian = true)
         V .= ∇d \ Rr
     end
 

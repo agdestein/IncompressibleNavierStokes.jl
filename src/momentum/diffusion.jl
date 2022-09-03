@@ -1,5 +1,5 @@
 """
-    diffusion!(model, V, setup; bc_vectors, getJacobian = false)
+    diffusion!(model, V, setup; bc_vectors, get_jacobian = false)
 
 Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V` using viscosity model `model`.
 
@@ -9,13 +9,13 @@ See also [`diffusion!`](@ref).
 """
 function diffusion end
 
-function diffusion(::LaminarModel, V, setup; bc_vectors, getJacobian = false)
+function diffusion(::LaminarModel, V, setup; bc_vectors, get_jacobian = false)
     (; Diff) = setup.operators
     (; yDiff) = bc_vectors
 
     d = Diff * V + yDiff
 
-    if getJacobian
+    if get_jacobian
         ∇d = Diff
     else
         ∇d = nothing
@@ -30,7 +30,7 @@ function diffusion(
     V,
     setup::Setup{T,2};
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
 ) where {T}
     (; indu, indv, indw) = setup.grid
     (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
@@ -41,7 +41,7 @@ function diffusion(
     # Get components of strain tensor and its magnitude;
     # The magnitude S_abs is evaluated at pressure points
     S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v =
-        strain_tensor(V, setup; bc_vectors, getJacobian)
+        strain_tensor(V, setup; bc_vectors, get_jacobian)
 
     # Turbulent viscosity at all pressure points
     ν_t = turbulent_viscosity(model, setup, S_abs)
@@ -64,7 +64,7 @@ function diffusion(
     du = Dux * (2 .* (ν .+ ν_t_ux) .* S11[:]) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12[:])
     dv = Dvx * (2 .* (ν .+ ν_t_vx) .* S21[:]) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22[:])
 
-    if getJacobian
+    if get_jacobian
         # Freeze ν_t, i.e. we skip the derivative of ν_t wrt V in the Jacobian
         Jacu1 =
             Dux * 2 * spdiagm(ν .+ ν_t_ux) * Su_ux +
@@ -106,23 +106,23 @@ function diffusion(
     V,
     setup::Setup{T,3};
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
 ) where {T}
     error("Not implemented")
 end
 
-function diffusion(model::KEpsilonModel, V, setup; bc_vectors, getJacobian = false)
+function diffusion(model::KEpsilonModel, V, setup; bc_vectors, get_jacobian = false)
     error("Not implemented")
 end
 
 """
-    diffusion!(model, d, ∇d, V, setup; bc_vectors, getJacobian = false)
+    diffusion!(model, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
 
 Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V` using viscosity model `model`.
 """
 function diffusion! end
 
-function diffusion!(::LaminarModel, d, ∇d, V, setup; bc_vectors, getJacobian = false)
+function diffusion!(::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
     (; Diff) = setup.operators
     (; yDiff) = bc_vectors
 
@@ -130,7 +130,7 @@ function diffusion!(::LaminarModel, d, ∇d, V, setup; bc_vectors, getJacobian =
     mul!(d, Diff, V)
     d .+= yDiff
 
-    getJacobian && (∇d .= Diff)
+    get_jacobian && (∇d .= Diff)
 
     d, ∇d
 end
@@ -142,7 +142,7 @@ function diffusion!(
     V,
     setup;
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
 )
     (; indu, indv, indw) = setup.grid
     (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
@@ -156,7 +156,7 @@ function diffusion!(
     # Get components of strain tensor and its magnitude;
     # The magnitude S_abs is evaluated at pressure points
     S11, S12, S21, S22, S_abs, S_abs_u, S_abs_v =
-        strain_tensor(V, setup; bc_vectors, getJacobian)
+        strain_tensor(V, setup; bc_vectors, get_jacobian)
 
     # Turbulent viscosity at all pressure points
     ν_t = turbulent_viscosity(model, setup, S_abs)
@@ -179,7 +179,7 @@ function diffusion!(
     du .= Dux * (2 .* (ν .+ ν_t_ux) .* S11[:]) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12[:])
     dv .= Dvx * (2 .* (ν .+ ν_t_vx) .* S21[:]) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22[:])
 
-    if getJacobian
+    if get_jacobian
         # Freeze ν_t, i.e. we skip the derivative of ν_t wrt V in the Jacobian
         Jacu1 =
             Dux * 2 * spdiagm(ν .+ ν_t_ux) * Su_ux +
@@ -211,6 +211,6 @@ function diffusion!(
     d, ∇d
 end
 
-function diffusion!(model::KEpsilonModel, d, ∇d, V, setup; bc_vectors, getJacobian = false)
+function diffusion!(model::KEpsilonModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
     error("k-e implementation in diffusion.jl not finished")
 end

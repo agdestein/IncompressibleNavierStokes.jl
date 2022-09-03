@@ -1,5 +1,5 @@
 """
-    convection(model, V, ϕ, setup; bc_vectors, getJacobian = false)
+    convection(model, V, ϕ, setup; bc_vectors, get_jacobian = false)
 
 Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`, using the convection
 model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
@@ -16,7 +16,7 @@ function convection(
     ϕ,
     setup;
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 )
     (; order4, α) = setup.grid
@@ -27,7 +27,7 @@ function convection(
         ϕ,
         setup;
         bc_vectors,
-        getJacobian,
+        get_jacobian,
         newton_factor,
         order4 = false,
     )
@@ -38,12 +38,12 @@ function convection(
             ϕ,
             setup;
             bc_vectors,
-            getJacobian,
+            get_jacobian,
             newton_factor,
             order4,
         )
         c = @. α * c - c3
-        getJacobian && (∇c = @. α * ∇c - ∇c3)
+        get_jacobian && (∇c = @. α * ∇c - ∇c3)
     end
 
     c, ∇c
@@ -56,7 +56,7 @@ function convection(
     ϕ,
     setup::Setup{T,2};
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
@@ -82,7 +82,7 @@ function convection(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    c, ∇c = convection_components(V̄, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
+    c, ∇c = convection_components(V̄, ϕ̄, setup; bc_vectors, get_jacobian, newton_factor)
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -102,7 +102,7 @@ function convection(
     ϕ,
     setup::Setup{T,3};
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
@@ -133,7 +133,7 @@ function convection(
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
     c, ∇c =
-        convection_components(V̄, ϕ̄, setup, cache; bc_vectors, getJacobian, newton_factor)
+        convection_components(V̄, ϕ̄, setup, cache; bc_vectors, get_jacobian, newton_factor)
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -155,7 +155,7 @@ function convection(
     ϕ,
     setup::Setup{T,2};
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
@@ -190,9 +190,9 @@ function convection(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * V̄ + yM))
 
-    c, ∇c = convection_components(V̄, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
-    c2, ∇c2 = convection_components(ΔV, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
-    c3, ∇c3 = convection_components(V̄, Δϕ, setup; bc_vectors, getJacobian, newton_factor)
+    c, ∇c = convection_components(V̄, ϕ̄, setup; bc_vectors, get_jacobian, newton_factor)
+    c2, ∇c2 = convection_components(ΔV, ϕ̄, setup; bc_vectors, get_jacobian, newton_factor)
+    c3, ∇c3 = convection_components(V̄, Δϕ, setup; bc_vectors, get_jacobian, newton_factor)
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -218,7 +218,7 @@ function convection(
     ϕ,
     setup::Setup{T,3};
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
@@ -258,9 +258,9 @@ function convection(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * V̄ + yM))
 
-    c, ∇c = convection_components(V̄, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
-    c2, ∇c2 = convection_components(ΔV, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
-    c3, ∇c3 = convection_components(V̄, Δϕ, setup; bc_vectors, getJacobian, newton_factor)
+    c, ∇c = convection_components(V̄, ϕ̄, setup; bc_vectors, get_jacobian, newton_factor)
+    c2, ∇c2 = convection_components(ΔV, ϕ̄, setup; bc_vectors, get_jacobian, newton_factor)
+    c3, ∇c3 = convection_components(V̄, Δϕ, setup; bc_vectors, get_jacobian, newton_factor)
 
     cu = @view c[indu]
     cv = @view c[indv]
@@ -290,7 +290,7 @@ function convection(
     ϕ,
     setup::Setup{T,2};
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
@@ -313,7 +313,7 @@ function convection(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    convection_components(V, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
+    convection_components(V, ϕ̄, setup; bc_vectors, get_jacobian, newton_factor)
 end
 
 # 3D version
@@ -326,7 +326,7 @@ function convection(
     setup::Setup{T,3},
     bc_vectors,
     cache;
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
@@ -351,11 +351,11 @@ function convection(
     # Divergence of filtered velocity field; should be zero!
     maxdiv_f = maximum(abs.(M * ϕ̄ + yM))
 
-    convection_components(V, ϕ̄, setup; bc_vectors, getJacobian, newton_factor)
+    convection_components(V, ϕ̄, setup; bc_vectors, get_jacobian, newton_factor)
 end
 
 """
-    convection!(model, c, ∇c, V, ϕ, setup, cache; bc_vectors, getJacobian = false)
+    convection!(model, c, ∇c, V, ϕ, setup, cache; bc_vectors, get_jacobian = false)
 
 Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`, using the convection
 model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
@@ -375,7 +375,7 @@ function convection!(
     setup,
     cache;
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 )
     (; order4, α) = setup.grid
@@ -390,7 +390,7 @@ function convection!(
         setup,
         cache;
         bc_vectors,
-        getJacobian,
+        get_jacobian,
         newton_factor,
         order4 = false,
     )
@@ -404,12 +404,12 @@ function convection!(
             setup,
             cache;
             bc_vectors,
-            getJacobian,
+            get_jacobian,
             newton_factor,
             order4,
         )
         @. c = α * c - c3
-        getJacobian && (@. ∇c = α * ∇c - ∇c3)
+        get_jacobian && (@. ∇c = α * ∇c - ∇c3)
     end
 
     c, ∇c
@@ -425,7 +425,7 @@ function convection!(
     setup::Setup{T,2},
     cache;
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
@@ -462,7 +462,7 @@ function convection!(
         setup,
         cache;
         bc_vectors,
-        getJacobian,
+        get_jacobian,
         newton_factor,
     )
 
@@ -482,7 +482,7 @@ function convection!(
     setup::Setup{T,3},
     cache;
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
@@ -524,7 +524,7 @@ function convection!(
         setup,
         cache;
         bc_vectors,
-        getJacobian,
+        get_jacobian,
         newton_factor,
     )
 
@@ -545,7 +545,7 @@ function convection!(
     setup::Setup{T,2},
     cache;
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
@@ -596,7 +596,7 @@ function convection!(
         setup,
         cache;
         bc_vectors,
-        getJacobian,
+        get_jacobian,
         newton_factor,
     )
     convection_components!(
@@ -607,7 +607,7 @@ function convection!(
         setup,
         cache;
         bc_vectors,
-        getJacobian,
+        get_jacobian,
         newton_factor,
     )
     convection_components!(
@@ -618,7 +618,7 @@ function convection!(
         setup,
         cache;
         bc_vectors,
-        getJacobian,
+        get_jacobian,
         newton_factor,
     )
 
@@ -638,7 +638,7 @@ function convection!(
     setup::Setup{T,3},
     cache;
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
@@ -698,7 +698,7 @@ function convection!(
         setup,
         cache;
         bc_vectors,
-        getJacobian,
+        get_jacobian,
         newton_factor,
     )
     convection_components!(
@@ -709,7 +709,7 @@ function convection!(
         setup,
         cache;
         bc_vectors,
-        getJacobian,
+        get_jacobian,
         newton_factor,
     )
     convection_components!(
@@ -720,7 +720,7 @@ function convection!(
         setup,
         cache;
         bc_vectors,
-        getJacobian,
+        get_jacobian,
         newton_factor,
     )
 
@@ -741,7 +741,7 @@ function convection!(
     setup::Setup{T,2},
     cache;
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
@@ -772,7 +772,7 @@ function convection!(
         setup,
         cache;
         bc_vectors,
-        getJacobian,
+        get_jacobian,
         newton_factor,
     )
 
@@ -789,7 +789,7 @@ function convection!(
     setup::Setup{T,3},
     cache;
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
 ) where {T}
     (; grid, operators) = setup
@@ -822,7 +822,7 @@ function convection!(
         setup,
         cache;
         bc_vectors,
-        getJacobian,
+        get_jacobian,
         newton_factor,
     )
 

@@ -2,7 +2,7 @@
     convection_components(
         V, ϕ, setup;
         bc_vectors,
-        getJacobian = false,
+        get_jacobian = false,
         newton_factor = false,
         order4 = false,
     )
@@ -21,7 +21,7 @@ function convection_components(
     ϕ,
     setup::Setup{T,2};
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
     order4 = false,
 ) where {T}
@@ -90,7 +90,7 @@ function convection_components(
 
     c = [cu; cv]
 
-    if getJacobian
+    if get_jacobian
         ## Convective terms, u-component
         C1 = Cux * Diagonal(ū_ux)
         C2 = Cux * Diagonal(u_ux) * newton_factor
@@ -128,7 +128,7 @@ function convection_components(
     ϕ,
     setup::Setup{T,3};
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
     order4 = false,
 ) where {T}
@@ -204,7 +204,7 @@ function convection_components(
 
     c = [cu; cv; cw]
 
-    if getJacobian
+    if get_jacobian
         ## Convective terms, u-component
         C1 = Cux * Diagonal(ū_ux)
         C2 = Cux * Diagonal(u_ux) * newton_factor
@@ -267,7 +267,7 @@ end
     convection_components!(
         c, ∇c, V, ϕ, setup, cache;
         bc_vectors,
-        getJacobian = false,
+        get_jacobian = false,
         newton_factor = false,
         order4 = false,
     )
@@ -289,7 +289,7 @@ function convection_components!(
     setup::Setup{T,2},
     cache;
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
     order4 = false,
 ) where {T}
@@ -403,7 +403,7 @@ function convection_components!(
     @. cu = ∂uū∂x + ∂uv̄∂y
     @. cv = ∂vū∂x + ∂vv̄∂y
 
-    if getJacobian
+    if get_jacobian
         ## Convective terms, u-component
         C1 = Cux * Diagonal(ū_ux)
         C2 = Cux * Diagonal(u_ux) * newton_factor
@@ -442,7 +442,7 @@ function convection_components!(
     setup::Setup{T,3},
     cache;
     bc_vectors,
-    getJacobian = false,
+    get_jacobian = false,
     newton_factor = false,
     order4 = false,
 ) where {T}
@@ -562,7 +562,7 @@ function convection_components!(
     @. cv = ∂vū∂x + ∂vv̄∂y + ∂vw̄∂z
     @. cw = ∂wū∂x + ∂wv̄∂y + ∂ww̄∂z
 
-    if getJacobian
+    if get_jacobian
         ## Convective terms, u-component
         C1 = Cux * Diagonal(ū_ux)
         C2 = Cux * Diagonal(u_ux) * newton_factor

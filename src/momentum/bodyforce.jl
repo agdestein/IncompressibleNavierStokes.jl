@@ -1,5 +1,5 @@
 """
-    bodyforce(force, V, t, setup; getJacobian = false)
+    bodyforce(force, V, t, setup; get_jacobian = false)
 
 Compute body force `F` in momentum equations at velocity points.
 
