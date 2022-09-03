@@ -32,9 +32,12 @@ Ū = 1.0
 n = (0.4π, 0.3π)
 ω = (0.22, 0.11)
 u_bc(x, y, t) =
-    1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * sin(ω * t))
+    x ≈ 0.0 ?
+    1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * sin(ω * t)) :
+    0.0
 v_bc(x, y, t) = 0.0
-dudt_bc(x, y, t) = sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * ω * cos(ω * t))
+dudt_bc(x, y, t) =
+    x ≈ 0.0 ? sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * ω * cos(ω * t)) : 0.0
 dvdt_bc(x, y, t) = 0.0
 bc_type = (;
     u = (; x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)),
@@ -49,11 +52,11 @@ plot_grid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; viscosity_model, u_bc, v_bc, dudt_bc, dvdt_bc, bc_type);
 
-## Time interval
+# Time interval
 t_start, t_end = tlims = (0.0, 300.0)
 
-## Initial conditions
-initial_velocity_u(x, y) = u_bc(x, y, 0.0)
+# Initial conditions
+initial_velocity_u(x, y) = u_bc(0.0, y, 0.0)
 initial_velocity_v(x, y) = 0.0
 initial_pressure(x, y) = 0.0
 V₀, p₀ = create_initial_conditions(
@@ -70,7 +73,7 @@ V, p = solve(problem);
 
 ## Iteration processors
 logger = Logger(; nupdate = 1)
-plotter = RealTimePlotter(; nupdate = 10, fieldname = :vorticity, type = heatmap)
+plotter = RealTimePlotter(; nupdate = 1, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 10)
 ## processors = [logger, plotter, writer, tracer]
