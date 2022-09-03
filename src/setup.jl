@@ -20,7 +20,23 @@ struct Setup{
 end
 
 """
-    Setup(x, y)
+    Setup(
+        x, y;
+        viscosity_model = LaminarModel(; Re = 1000.0),
+        convection_model = NoRegConvectionModel(),
+        u_bc = (x, y, t) -> 0.0,
+        v_bc = (x, y, t) -> 0.0,
+        dudt_bc = nothing,
+        dvdt_bc = nothing,
+        bc_type = (;
+            u = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
+            v = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
+        ),
+        order4 = false,
+        bodyforce_u = (x, y) -> 0.0,
+        bodyforce_v = (x, y) -> 0.0,
+        steady_force = true,
+    )
 
 Create 2D setup.
 """
@@ -55,7 +71,39 @@ function Setup(
 end
 
 """
-    Setup(x, y, z)
+    Setup(
+        x, y, z;
+        viscosity_model = LaminarModel(; Re = 1000.0),
+        convection_model = NoRegConvectionModel(),
+        u_bc = (x, y, w, t) -> 0.0,
+        v_bc = (x, y, w, t) -> 0.0,
+        w_bc = (x, y, w, t) -> 0.0,
+        dudt_bc = nothing,
+        dvdt_bc = nothing,
+        dwdt_bc = nothing,
+        bc_type = (;
+            u = (;
+                x = (:periodic, :periodic),
+                y = (:periodic, :periodic),
+                z = (:periodic, :periodic),
+            ),
+            v = (;
+                x = (:periodic, :periodic),
+                y = (:periodic, :periodic),
+                z = (:periodic, :periodic),
+            ),
+            w = (;
+                x = (:periodic, :periodic),
+                y = (:periodic, :periodic),
+                z = (:periodic, :periodic),
+            ),
+        ),
+        order4 = false,
+        bodyforce_u = (x, y, z) -> 0.0,
+        bodyforce_v = (x, y, z) -> 0.0,
+        bodyforce_w = (x, y, z) -> 0.0,
+        steady_force = true,
+    )
 
 Create 3D setup.
 """
