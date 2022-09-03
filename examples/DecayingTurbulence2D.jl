@@ -8,10 +8,10 @@ end                                                 #src
 # # Decaying Homogeneous Isotropic Turbulence - 2D
 #
 # In this example we consider decaying homogeneous isotropic turbulence,
-# similar to the cases considered in [Kochov2021](@cite) and [Kurz2022](@cite).
-# The initial velocity field is created randomly, but with a specific energy
-# spectrum. Due to viscous dissipation, the turbulent features eventually group
-# to form larger visible eddies.
+# similar to the cases considered in [Kochkov2021](@cite) and
+# [Kurz2022](@cite). The initial velocity field is created randomly, but with a
+# specific energy spectrum. Due to viscous dissipation, the turbulent features
+# eventually group to form larger visible eddies.
 
 # We start by loading packages.
 # A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
