@@ -42,8 +42,8 @@ bc_type = (;
 )
 
 # A 2D grid is a Cartesian product of two vectors
-x = stretched_grid(0.0, 256.0, 1024)
-y = stretched_grid(-32.0, 32.0, 256)
+x = LinRange(0.0, 256.0, 1024)
+y = LinRange(-32.0, 32.0, 256)
 plot_grid(x, y)
 
 # Build setup and assemble operators

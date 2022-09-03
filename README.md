@@ -67,8 +67,8 @@ bc_type = (;
 )
 
 # A 2D grid is a Cartesian product of two vectors
-x = stretched_grid(0.0, 10.0, 200)
-y = stretched_grid(-2.0, 2.0, 80)
+x = LinRange(0.0, 10.0, 200)
+y = LinRange(-2.0, 2.0, 80)
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
 xc, yc = 2.0, 0.0 # Disk center

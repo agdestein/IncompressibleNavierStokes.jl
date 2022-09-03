@@ -1,7 +1,7 @@
 @testset "Pressure solvers" begin
     n = 20
-    x = stretched_grid(0, 2π, n)
-    y = stretched_grid(0, 2π, n)
+    x = LinRange(0, 2π, n)
+    y = LinRange(0, 2π, n)
     setup = Setup(x, y)
     (; A) = setup.operators
 

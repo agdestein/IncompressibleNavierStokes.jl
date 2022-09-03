@@ -5,7 +5,7 @@
 
     n = 50
     x = LinRange(0, 2π, n + 1)
-    y = stretched_grid(0, 2π, n + 1)
+    y = LinRange(0, 2π, n + 1)
     setup = Setup(x, y; viscosity_model)
 
     pressure_solver = FourierPressureSolver(setup)

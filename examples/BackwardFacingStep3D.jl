@@ -51,9 +51,9 @@ bc_type = (;
 )
 
 # A 3D grid is a Cartesian product of three vectors
-x = stretched_grid(0, 10, 160)
-y = stretched_grid(-0.5, 0.5, 16)
-z = stretched_grid(-0.25, 0.25, 8)
+x = LinRange(0, 10, 160)
+y = LinRange(-0.5, 0.5, 16)
+z = LinRange(-0.25, 0.25, 8)
 plot_grid(x, y, z)
 
 # Build setup and assemble operators

@@ -55,9 +55,9 @@ bc_type = (;
 )
 
 # A 3D grid is a Cartesian product of three vectors
-x = stretched_grid(0.0, 6.0, 30)
-y = stretched_grid(-2.0, 2.0, 40)
-z = stretched_grid(-2.0, 2.0, 40)
+x = LinRange(0.0, 6.0, 30)
+y = LinRange(-2.0, 2.0, 40)
+z = LinRange(-2.0, 2.0, 40)
 plot_grid(x, y, z)
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a short cylinder

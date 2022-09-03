@@ -38,7 +38,7 @@ bc_type = (;
 
 # A 2D grid is a Cartesian product of two vectors. Here we refine the grid near
 # the walls.
-x = stretched_grid(0.0, 10.0, 300)
+x = LinRange(0.0, 10.0, 300)
 y = cosine_grid(-0.5, 0.5, 50)
 plot_grid(x, y)
 

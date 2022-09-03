@@ -53,7 +53,7 @@ bc_type = (;
 # near the walls.
 x = cosine_grid(0.0, 1.0, 25)
 y = stretched_grid(0.0, 1.0, 25, 0.95)
-z = stretched_grid(-0.2, 0.2, 10)
+z = LinRange(-0.2, 0.2, 10)
 plot_grid(x, y, z)
 
 # Build setup and assemble operators
