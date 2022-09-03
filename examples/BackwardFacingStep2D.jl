@@ -70,7 +70,7 @@ plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 10)
 ## processors = [logger, plotter, writer, tracer]
-processors = [plotter, tracer]
+processors = [logger, plotter, tracer]
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);

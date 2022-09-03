@@ -45,15 +45,17 @@ bc_type = (;
 )
 
 # A 2D grid is a Cartesian product of two vectors
-x = LinRange(0.0, 256.0, 1024)
-y = LinRange(-32.0, 32.0, 256)
+n = 64
+## n = 256
+x = LinRange(0.0, 256.0, 4n)
+y = LinRange(-32.0, 32.0, n)
 plot_grid(x, y)
 
 # Build setup and assemble operators
 setup = Setup(x, y; viscosity_model, u_bc, v_bc, dudt_bc, dvdt_bc, bc_type);
 
 # Time interval
-t_start, t_end = tlims = (0.0, 300.0)
+t_start, t_end = tlims = (0.0, 100.0)
 
 # Initial conditions
 initial_velocity_u(x, y) = u_bc(0.0, y, 0.0)
@@ -67,11 +69,7 @@ V₀, p₀ = create_initial_conditions(
     initial_pressure,
 );
 
-## Solve steady state problem
-problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = solve(problem);
-
-## Iteration processors
+# Iteration processors
 logger = Logger(; nupdate = 1)
 plotter = RealTimePlotter(; nupdate = 1, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")

@@ -67,7 +67,7 @@ plotter = RealTimePlotter(; nupdate = 10, fieldname = :vorticity, type = contour
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
 ## processors = [logger, plotter, writer, tracer]
-processors = [plotter, tracer]
+processors = [logger, plotter, tracer]
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);

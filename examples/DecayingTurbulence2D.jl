@@ -89,7 +89,7 @@ plotter = RealTimePlotter(; nupdate, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 10nupdate, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate)
 ## processors = [logger, plotter, writer, tracer]
-processors = [plotter, tracer]
+processors = [logger, plotter, tracer]
 
 # Time interval
 t_start, t_end = tlims = (0.0, 1.0)

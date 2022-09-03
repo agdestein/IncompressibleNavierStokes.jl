@@ -82,10 +82,6 @@ V₀, p₀ = create_initial_conditions(
     initial_pressure,
 );
 
-# Solve steady state problem
-problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = solve(problem);
-
 # Iteration processors
 logger = Logger(; nupdate = 1)
 plotter = RealTimePlotter(; nupdate = 1, fieldname = :vorticity, type = heatmap)
