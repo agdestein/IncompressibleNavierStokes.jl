@@ -26,7 +26,7 @@ Note that IncompressibleNavierStokes requires Julia version `1.7` or above.
 See the
 [Documentation](https://agdestein.github.io/IncompressibleNavierStokes.jl/dev/generated/LidDrivenCavity2D/)
 for examples of some typical workflows. More examples can be found in the
-`examples` directory.
+[`examples`](examples) directory.
 
 ## Gallery
 
