@@ -72,7 +72,7 @@ processors = [plotter, tracer]
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver, inplace = true)
-#hide current_figure()
+#md current_figure()
 
 # ## Post-process
 #

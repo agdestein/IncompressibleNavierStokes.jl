@@ -97,7 +97,7 @@ t_start, t_end = tlims = (0.0, 0.100)
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
 V, p, = solve(problem, RK44(); Δt = 0.001, processors, pressure_solver, inplace = true)
-#hide current_figure()
+#md current_figure()
 
 # ## Post-process
 #

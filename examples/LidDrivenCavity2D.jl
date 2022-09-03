@@ -5,12 +5,12 @@ if isdefined(@__MODULE__, :LanguageServer)          #src
     using .IncompressibleNavierStokes               #src
 end                                                 #src
 
-# # Lid-Driven Cavity - 3D
+# # Lid-Driven Cavity - 2D
 #
 # In this example we consider a box with a moving lid. The velocity is
 # initially at rest. The solution should reach at steady state equilibrium
 # after a certain time. The same steady state should be obtained when solving a
-# `SteadyStateProblem`.
+# [`SteadyStateProblem`](@ref).
 
 # We start by loading packages.
 # A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
@@ -97,7 +97,7 @@ processors = [logger, plotter, tracer]
 # A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
 # with a fixed time step.
 V, p = solve(problem, RK44(); Δt = 0.001, processors)
-#hide current_figure()
+#md current_figure()
 
 # ## Post-process
 #
