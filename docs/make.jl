@@ -8,6 +8,7 @@ end
 using IncompressibleNavierStokes
 using Literate
 using Documenter
+using DocumenterCitations
 
 DocMeta.setdocmeta!(
     IncompressibleNavierStokes,
@@ -15,6 +16,8 @@ DocMeta.setdocmeta!(
     :(using IncompressibleNavierStokes);
     recursive = true,
 )
+
+bib = CitationBibliography(joinpath(@__DIR__, "references.bib"))
 
 # Generate examples
 examples = [
@@ -26,7 +29,7 @@ examples = [
     # "Decaying Turbulunce (3D)" => "DecayingTurbulence3D",
     "Lid-Driven Cavity (2D)" => "LidDrivenCavity2D",
     # "Lid-Driven Cavity (3D)" => "LidDrivenCavity3D",
-    # "Planar Mixing (2D)" => "PlanarMixing2D",
+    "Planar Mixing (2D)" => "PlanarMixing2D",
     "Shear Layer (2D)" => "ShearLayer2D",
     # "Taylor-Green Vortex (2D)" => "TaylorGreenVortex2D",
     "Taylor-Green Vortex (3D)" => "TaylorGreenVortex3D",
@@ -41,7 +44,8 @@ for e ∈ examples
     # Literate.script(e, o)
 end
 
-makedocs(;
+makedocs(
+    bib;
     modules = [IncompressibleNavierStokes],
     authors = "Syver Døving Agdestein, Benjamin Sanderse, and contributors",
     repo = "https://github.com/agdestein/IncompressibleNavierStokes.jl/blob/{commit}{path}#{line}",
@@ -58,11 +62,12 @@ makedocs(;
         "Theory" => [
             "Theory" => "theory/theory.md",
             "Operators" => "theory/operators.md",
-            # "Reduced Order Models" => "theory/rom.md",
+            "Reduced Order Models" => "theory/rom.md",
             # "Immersed Boundary Method" => "theory/ibm.md",
         ],
         "API Reference" =>
             ["API" => "api/api.md", "Runge-Kutta methods" => "api/tableaux.md"],
+        "References" => "references.md",
     ],
 )
 

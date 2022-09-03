@@ -7,7 +7,7 @@ end                                                 #src
 
 # # Planar mixing - 2D
 #
-# Planar mixing example.
+# Planar mixing example, as presented in [List2022](@cite).
 
 # We start by loading packages.
 # A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed

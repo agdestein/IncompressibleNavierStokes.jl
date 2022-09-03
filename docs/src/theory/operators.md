@@ -14,3 +14,6 @@ The discretized Navier-Stokes equations are given by
 \mathbf{f} - (\mathbf{G} \mathbf{p}(t) + \mathbf{y}_{\mathbf{G}})
 \end{align*}
 ```
+
+For more information on the discretization, see [Sanderse2012](@cite),
+[Sanderse2013](@cite), [Sanderse2014](@cite).
