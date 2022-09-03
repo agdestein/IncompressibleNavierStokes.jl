@@ -26,7 +26,7 @@ name = "ShearLayer2D"
 viscosity_model = LaminarModel(; Re = Inf)
 
 # A 2D grid is a Cartesian product of two vectors
-n = 50
+n = 100
 x = LinRange(0, 2π, n + 1)
 y = LinRange(0, 2π, n + 1)
 plot_grid(x, y)
@@ -34,15 +34,15 @@ plot_grid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; viscosity_model);
 
-## Time interval
+# Time interval
 t_start, t_end = tlims = (0.0, 8.0)
 
-## Initial conditions
-# we add 1 to u in order to make global momentum conservation less trivial
+# Initial conditions: We add 1 to u in order to make global momentum
+# conservation less trivial
 d = π / 15
 e = 0.05
 initial_velocity_u(x, y) = y ≤ π ? tanh((y - π / 2) / d) : tanh((3π / 2 - y) / d)
-# initial_velocity_u(x, y) = 1.0 + (y ≤ π ? tanh((y - π / 2) / d) : tanh((3π / 2 - y) / d))
+## initial_velocity_u(x, y) = 1.0 + (y ≤ π ? tanh((y - π / 2) / d) : tanh((3π / 2 - y) / d))
 initial_velocity_v(x, y) = e * sin(x)
 initial_pressure(x, y) = 0.0
 V₀, p₀ = create_initial_conditions(
@@ -53,21 +53,21 @@ V₀, p₀ = create_initial_conditions(
     initial_pressure,
 );
 
-## Solve steady state problem
+# Solve steady state problem
 problem = SteadyStateProblem(setup, V₀, p₀);
 V, p = solve(problem);
 
-## Iteration processors
+# Iteration processors
 logger = Logger(; nupdate = 1)
 plotter = RealTimePlotter(; nupdate = 1, fieldname = :vorticity, type = heatmap)
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 1)
-# processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
+## processors = [logger, plotter, writer, tracer]
+processors = [plotter, tracer]
 
-## Solve unsteady problem
+# Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve(problem, RK44(); Δt = 0.1, processors, inplace = true);
+V, p = solve(problem, RK44(); Δt = 0.01, processors, inplace = true);
 #hide current_figure()
 
 # ## Post-process

@@ -27,7 +27,7 @@ examples = [
     "Lid-Driven Cavity (2D)" => "LidDrivenCavity2D",
     # "Lid-Driven Cavity (3D)" => "LidDrivenCavity3D",
     # "Planar Mixing (2D)" => "PlanarMixing2D",
-    # "Shear Layer (2D)" => "ShearLayer2D",
+    "Shear Layer (2D)" => "ShearLayer2D",
     # "Taylor-Green Vortex (2D)" => "TaylorGreenVortex2D",
     "Taylor-Green Vortex (3D)" => "TaylorGreenVortex3D",
 ]
