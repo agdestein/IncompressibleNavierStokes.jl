@@ -5,6 +5,7 @@
 /docs/build/
 /docs/src/generated/
 *output/
+*notebooks/
 examples/test.jl
 
 # Vim swap
