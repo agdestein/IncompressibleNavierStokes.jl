@@ -85,14 +85,16 @@ V, p = solve(problem)
 # [`UnsteadyProblem`](@ref) for a sufficiently long time.
 problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 
-# We may also define a list of iteration processors. They are processed after every
-# `nupdate` iteration.
+# Iteration processors
 logger = Logger(; nupdate = 1000)
-plotter = RealTimePlotter(; nupdate = 50, fieldname = :vorticity, type = heatmap)
-writer = VTKWriter(; nupdate = 20, dir = "output/LidDrivenCavity2D")
+observer = StateObserver(50, V₀, p₀, t_start)
+writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 10)
-## processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
+## processors = [logger, observer, tracer, writer]
+processors = [logger, observer, tracer]
+
+# Real time plot
+real_time_plot(observer, setup)
 
 # A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
 # with a fixed time step.

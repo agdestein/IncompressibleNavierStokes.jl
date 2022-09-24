@@ -11,61 +11,6 @@ function process!(logger::Logger, stepper)
     logger
 end
 
-function process!(plotter::RealTimePlotter, stepper)
-    (; setup, V, p, t) = stepper
-    (; grid) = setup
-    (; Npx, Npy, Npz) = grid
-    (; field, lims, fieldname, type) = plotter
-
-    N = get_dimension(grid)
-
-    if fieldname == :velocity
-        vels = get_velocity(V, t, setup)
-        f = map((vels...) -> √sum(vel -> vel^2, vels), vels...)
-        n = 3.0
-    elseif fieldname == :vorticity
-        # Use preallocated field
-        f = vorticity!(field[], V, t, setup)
-        n = 3.0
-    elseif fieldname == :streamfunction
-        f = get_streamfunction(V, t, setup)
-        n = 3.0
-    elseif fieldname == :pressure
-        f = copy(p)
-        if N == 2
-            f = reshape(f, Npx, Npy)
-        elseif N == 3
-            f = reshape(f, Npx, Npy, Npz)
-        end
-        n = 5.0
-    end
-
-    field[] = f
-
-    N == 2 && (n = 1.5)
-    # nlevel = N == 2 ? 10 : N == 3 ? 5 : error()
-    nlevel = 10
-    if type == heatmap
-        lims[] = get_lims(f, n)
-    elseif type ∈ (contour, contourf)
-        if ≈(extrema(f)..., rtol = 1e-10)
-            μ = mean(f)
-            a = μ - 1
-            b = μ + 1
-            f[1] += 1
-            f[end] -= 1
-            field[] = f
-        else
-            a, b = get_lims(f)
-        end
-        # lims[] = LinRange(a, b, nlevel)
-        lims[] = get_lims(f)
-    end
-    sleep(0.001)
-
-    plotter
-end
-
 function process!(o::StateObserver, stepper) 
     (; V, p, t) = stepper
     o.state[] = (V, p, t)

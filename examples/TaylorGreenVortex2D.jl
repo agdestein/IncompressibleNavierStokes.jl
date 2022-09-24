@@ -60,11 +60,14 @@ V, p = solve(problem; npicard = 2);
 
 # Iteration processors
 logger = Logger()
-plotter = RealTimePlotter(; nupdate = 1, fieldname = :vorticity)
+observer = StateObserver(1, V₀, p₀, t_start)
 writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer(; nupdate = 1)
-## processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
+tracer = QuantityTracer()
+## processors = [logger, observer, tracer, writer]
+processors = [logger, observer, tracer]
+
+# Real time plot
+real_time_plot(observer, setup)
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);

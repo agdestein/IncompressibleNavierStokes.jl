@@ -26,12 +26,14 @@
     )
 
     # Iteration processors
-    logger = Logger()
-    plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
-    writer = VTKWriter(; nupdate = 5, dir = "output", filename = "solution2D")
+    logger = Logger(; nupdate = 1)
+    observer = StateObserver(5, V₀, p₀, t_start)
+    writer = VTKWriter(; nupdate = 5, dir = "output/$name", filename = "solution")
     tracer = QuantityTracer(; nupdate = 1)
-    observer = StateObserver(1, V₀, p₀, t_start)
-    processors = [logger, plotter, writer, tracer, observer]
+    processors = [logger, observer, tracer, writer]
+
+    # Real time plot
+    rtp = real_time_plot(observer, setup)
 
     # Lift observable (kinetic energy history)
     (; Ωp) = setup.grid

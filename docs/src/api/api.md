@@ -131,12 +131,13 @@ is_steady
 ```@docs
 AbstractProcessor
 Logger
-RealTimePlotter
 VTKWriter
 QuantityTracer
+StateObserver
 initialize!
 process!
 finalize!
+real_time_plot
 ```
 
 ## Solvers

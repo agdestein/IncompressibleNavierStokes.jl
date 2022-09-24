@@ -8,7 +8,7 @@
         n_adapt_Δt = 1,
         method_startup = nothing,
         nstartup = 1,
-        animator = RealTimePlotter(),
+        observer = nothing,
         filename = "vorticity.gif",
         nframe = 200,
         nsubframe = 4,
@@ -25,7 +25,8 @@ CFL-number `cfl` .
 For methods that are not self-starting, `nstartup` startup iterations are performed with
 `method_startup`.
 
-Each `processor` is called after every `processor.nupdate` time step.
+If `observer = nothing`, a default real time plot is animated.
+Otherwise, a figure depending on the observable `observer.state` is animated.
 """
 function solve_animate(
     problem::UnsteadyProblem,
@@ -36,7 +37,7 @@ function solve_animate(
     n_adapt_Δt = 1,
     method_startup = nothing,
     nstartup = 1,
-    animator = RealTimePlotter(),
+    observer = nothing,
     filename = "vorticity.gif",
     nframe = 200,
     nsubframe = 4,
@@ -79,9 +80,13 @@ function solve_animate(
     # Initialize BC arrays
     bc_vectors = get_bc_vectors(setup, stepper.t)
 
-    initialize!(animator, stepper)
-    process!(animator, stepper)
+    initialize!(observer, stepper)
 
+    if isnothing(observer)
+        # Use default real time plot
+        observer = StateObserver(1, V₀, p₀, t_start)
+        real_time_plot(observer, setup)
+    end
     fig = current_figure()
 
     record(fig, filename, 1:nframe; framerate) do frame
@@ -106,7 +111,7 @@ function solve_animate(
             stepper = step!(stepper, Δt; cache, momentum_cache, bc_vectors)
         end
 
-        process!(animator, stepper)
+        process!(observer, stepper)
     end
 
     (; V, p) = stepper

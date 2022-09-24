@@ -82,11 +82,14 @@ V, p = solve(problem);
 
 # Iteration processors
 logger = Logger(; nupdate = 10)
-plotter = RealTimePlotter(; nupdate = 50, fieldname = :velocity)
+observer = StateObserver(50, V₀, p₀, t_start)
 writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 25)
-## processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
+## processors = [logger, observer, tracer, writer]
+processors = [logger, observer, tracer]
+
+# Real time plot
+real_time_plot(observer, setup)
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);

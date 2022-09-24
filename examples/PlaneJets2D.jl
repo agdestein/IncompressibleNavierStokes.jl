@@ -95,16 +95,8 @@ V₀, p₀ = create_initial_conditions(
 );
 V, p = V₀, p₀
 
-# Iteration processors
-logger = Logger(; nupdate = 1)
-plotter = RealTimePlotter(; nupdate = 1, fieldname = :vorticity, type = heatmap)
-writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer(; nupdate = 10)
-## processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
-
+# Real time plot: Streamwise average and spectrum
 o = StateObserver(1, V₀, p₀, t_start)
-processors = [logger, o]
 (; indu, yu, yin, Nux_in, Nuy_in) = setup.grid
 
 umean = @lift begin
@@ -159,6 +151,17 @@ scatter!(ax, k, E₀; label = "y = $(yin[n₀])")
 scatter!(ax, k, E₁; label = "y = $(yin[n₁])")
 axislegend(ax; position = :lb)
 fig
+
+# Real time plot: Other option, just plot field
+observer = StateObserver(1, V₀, p₀, t_start)
+real_time_plot(observer, setup)
+
+# Iteration processors
+logger = Logger()
+writer = VTKWriter(; nupdate = 1, dir = "output/$name", filename = "solution")
+tracer = QuantityTracer()
+## processors = [logger, observer, tracer, writer]
+processors = [logger, observer, tracer]
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V, p, tlims);
