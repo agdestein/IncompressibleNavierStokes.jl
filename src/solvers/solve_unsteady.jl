@@ -97,7 +97,7 @@ function solve(
             end
 
             # Make sure not to step past `t_end`
-            Δt = min(Δt, t_end - t)
+            Δt = min(Δt, t_end - stepper.t)
         end
 
         # Perform a single time step with the time integration method
