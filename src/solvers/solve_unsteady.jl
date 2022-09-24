@@ -14,8 +14,10 @@
 
 Solve unsteady problem using `method`.
 
-The time step is chosen every `n_adapt_Δt` iteration with CFL-number `cfl` if `Δt` is
-`nothing`.
+If `Δt` is a real number, it is rounded such that `(t_end - t_start) / Δt` is
+an integer.
+If `Δt = nothing`, the time step is chosen every `n_adapt_Δt` iteration with
+CFL-number `cfl` .
 
 For methods that are not self-starting, `nstartup` startup iterations are performed with
 `method_startup`.
@@ -38,6 +40,10 @@ function solve(
 
     t_start, t_end = tlims
     isadaptive = isnothing(Δt)
+    if !isadaptive
+        nstep = round(Int, (t_end - t_start) / Δt)
+        Δt = (t_end - t_start) / nstep
+    end
 
     # For methods that need a velocity field at n-1 the first time step
     # (e.g. AB-CN, oneleg beta) use ERK or IRK
@@ -84,9 +90,14 @@ function solve(
             end
         end
 
-        # Change timestep based on operators
-        if isadaptive && rem(stepper.n, n_adapt_Δt) == 0
-            Δt = get_timestep(stepper, cfl; bc_vectors)
+        if isadaptive
+            if rem(stepper.n, n_adapt_Δt) == 0
+                # Change timestep based on operators
+                Δt = get_timestep(stepper, cfl; bc_vectors)
+            end
+
+            # Make sure not to step past `t_end`
+            Δt = min(Δt, t_end - t)
         end
 
         # Perform a single time step with the time integration method
