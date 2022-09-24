@@ -111,13 +111,13 @@ end
 ehist = lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))
 
 # Plot energy spectrum
-k = 1:(K - 1)
+k = 1:(K-1)
 kk = reshape([sqrt(kx^2 + ky^2) for kx ∈ k, ky ∈ k], :)
 ehat = @lift begin
     V, p, t = $(observer.state)
     up, vp = get_velocity(V, t, setup)
     e = up .^ 2 .+ vp .^ 2
-    reshape(abs.(fft(e)[k .+ 1, k .+ 1]), :)
+    reshape(abs.(fft(e)[k.+1, k.+1]), :)
 end
 espec = Figure()
 ax =
