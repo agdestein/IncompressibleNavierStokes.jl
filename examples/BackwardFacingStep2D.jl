@@ -65,12 +65,15 @@ problem = SteadyStateProblem(setup, V₀, p₀);
 V, p = solve(problem);
 
 # Iteration processors
-logger = Logger(; nupdate = 1)
-plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity, type = heatmap)
+logger = Logger()
+observer = StateObserver(5, V₀, p₀, t_start)
 writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
 tracer = QuantityTracer(; nupdate = 10)
-## processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
+## processors = [logger, observer, tracer, writer]
+processors = [logger, observer, tracer]
+
+# Real time plot
+real_time_plot(observer, setup)
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);

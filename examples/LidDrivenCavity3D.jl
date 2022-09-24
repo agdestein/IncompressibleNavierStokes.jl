@@ -52,7 +52,7 @@ bc_type = (;
 # A 3D grid is a Cartesian product of three vectors. Here we refine the grid
 # near the walls.
 x = cosine_grid(0.0, 1.0, 25)
-y = stretched_grid(0.0, 1.0, 25, 0.95)
+y = cosine_grid(0.0, 1.0, 25)
 z = LinRange(-0.2, 0.2, 10)
 plot_grid(x, y, z)
 
@@ -82,15 +82,18 @@ V, p = solve(problem; npicard = 5, maxiter = 15);
 
 # Iteration processors
 logger = Logger()
-plotter = RealTimePlotter(; nupdate = 1, fieldname = :velocity)
+observer = StateObserver(1, V₀, p₀, t_start)
 writer = VTKWriter(; nupdate = 5, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer(; nupdate = 1)
-# processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
+tracer = QuantityTracer()
+## processors = [logger, observer, tracer, writer]
+processors = [logger, observer, tracer]
+
+# Real time plot
+real_time_plot(observer, setup)
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve(problem, RK44(); Δt = 0.01, processors)
+V, p = solve(problem, RK44(); Δt = 0.001, processors)
 #md current_figure()
 
 # ## Post-process

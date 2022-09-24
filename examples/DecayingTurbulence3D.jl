@@ -84,13 +84,15 @@ p = pressure_additional_solve(pressure_solver, V, p, 0.0, setup; bc_vectors)
 V₀, p₀ = V, p
 
 # Iteration processors
-nupdate = 1
 logger = Logger()
-plotter = RealTimePlotter(; nupdate = 1nupdate, fieldname = :vorticity)
-writer = VTKWriter(; nupdate = 100nupdate, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer(; nupdate)
-## processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
+observer = StateObserver(1, V₀, p₀, t_start)
+writer = VTKWriter(; nupdate = 100, dir = "output/$name", filename = "solution")
+tracer = QuantityTracer()
+## processors = [logger, observer, tracer, writer]
+processors = [logger, observer, tracer]
+
+# Real time plot
+real_time_plot(observer, setup)
 
 # Time interval
 t_start, t_end = tlims = (0.0, 0.100)

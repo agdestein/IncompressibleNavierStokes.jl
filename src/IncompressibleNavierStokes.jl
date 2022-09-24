@@ -94,6 +94,7 @@ include("processors/processors.jl")
 include("processors/initialize.jl")
 include("processors/process.jl")
 include("processors/finalize.jl")
+include("processors/real_time_plot.jl")
 
 # Momentum equation
 include("momentum/bodyforce.jl")
@@ -147,8 +148,9 @@ export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
 export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors
-export AbstractProcessor, Logger, RealTimePlotter, VTKWriter, QuantityTracer
+export AbstractProcessor, Logger, StateObserver, VTKWriter, QuantityTracer
 export initialize!, process!, finalize!
+export real_time_plot
 
 # Setup
 export Grid, Operators, BoundaryConditions, Setup

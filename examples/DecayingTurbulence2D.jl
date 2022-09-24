@@ -83,13 +83,25 @@ p = pressure_additional_solve(pressure_solver, V, p, 0.0, setup; bc_vectors)
 V₀, p₀ = V, p
 
 # Iteration processors
-nupdate = 1
 logger = Logger()
-plotter = RealTimePlotter(; nupdate, fieldname = :vorticity, type = heatmap)
-writer = VTKWriter(; nupdate = 10nupdate, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer(; nupdate)
-## processors = [logger, plotter, writer, tracer]
-processors = [logger, plotter, tracer]
+observer = StateObserver(1, V₀, p₀, t_start)
+writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
+tracer = QuantityTracer()
+## processors = [logger, observer, tracer, writer]
+processors = [logger, observer, tracer]
+
+# Real time plot
+real_time_plot(observer, setup)
+
+o = StateObserver(1, V, p, t_start)
+_points = Point2f[]
+points = @lift begin
+    V, p, t = $(o.state)
+    E = sum(abs2, V)
+    push!(_points, Point2f(t, E))
+end
+lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))
+processors = [o]
 
 # Time interval
 t_start, t_end = tlims = (0.0, 1.0)
@@ -126,6 +138,10 @@ e = u .^ 2 .+ v .^ 2
 ehat = fft(e)[k, k]
 kk = [sqrt(kx^2 + ky^2) for kx ∈ k, ky ∈ k]
 
+using SmoothingSplines
+
+spl = fit(SmoothingSpline, kk[:], abs.(ehat[:]), 250.0) # λ=250.0
+
 fig = Figure()
 ax = Axis(fig[1, 1]; xlabel = L"k", ylabel = L"\hat{e}(k)", xscale = log10, yscale = log10)
 ## ylims!(ax, (1e-20, 1))
@@ -133,5 +149,6 @@ scatter!(ax, kk[:], abs.(ehat[:]); label = "Kinetic energy")
 krange = LinRange(extrema(kk)..., 100)
 lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = L"k^{-5/3}")
 lines!(ax, krange, 1e7 * krange .^ (-3); label = L"k^{-3}")
+lines!(ax, krange, [predict(spl, k) for k ∈ krange]; label = "Spline")
 axislegend(ax)
 fig

@@ -26,15 +26,38 @@
     )
 
     # Iteration processors
-    logger = Logger()
-    plotter = RealTimePlotter(; nupdate = 5, fieldname = :vorticity)
+    logger = Logger(; nupdate = 1)
+    observer = StateObserver(1, V₀, p₀, t_start)
     writer = VTKWriter(; nupdate = 5, dir = "output", filename = "solution2D")
     tracer = QuantityTracer(; nupdate = 1)
-    processors = [logger, plotter, writer, tracer]
+    processors = [logger, observer, tracer, writer]
+
+    # Real time plot
+    rtp = real_time_plot(observer, setup)
+
+    # Lift observable (kinetic energy history)
+    (; Ωp) = setup.grid
+    _E = zeros(0)
+    E = @lift begin
+        V, p, t = $(observer.state)
+        up, vp = get_velocity(V, t, setup)
+        up = reshape(up, :)
+        vp = reshape(vp, :)
+        push!(_E, up' * Diagonal(Ωp) * up + vp' * Diagonal(Ωp) * vp)
+    end
 
     # Solve unsteady problem
     problem = UnsteadyProblem(setup, V₀, p₀, tlims)
     V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver)
+
+    @testset "State observer" begin
+        # 1 from @lift
+        # 1 from initial process!
+        # 100 time steps
+        @test length(_E) == 102
+        @test _E[1] ≈ _E[2]
+        @test all(<(0), diff(_E[2:end]))
+    end
 
     @testset "VTK files" begin
         @test isfile("output/solution2D.pvd")
