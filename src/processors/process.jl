@@ -11,7 +11,7 @@ function process!(logger::Logger, stepper)
     logger
 end
 
-function process!(o::StateObserver, stepper) 
+function process!(o::StateObserver, stepper)
     (; V, p, t) = stepper
     o.state[] = (V, p, t)
 end

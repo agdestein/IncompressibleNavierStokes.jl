@@ -107,7 +107,7 @@ umean = @lift begin
 end
 
 K = Nux_in ÷ 2
-k = 1:(K - 1)
+k = 1:(K-1)
 
 # Find energy spectrum where y = 0
 n₀ = Nuy_in ÷ 2
@@ -115,7 +115,7 @@ E₀ = @lift begin
     V, p, t = $(o.state)
     u = V[indu]
     u_y = reshape(u, size(yu))[:, n₀]
-    abs.(fft(u_y .^ 2))[k .+ 1]
+    abs.(fft(u_y .^ 2))[k.+1]
 end
 
 # Find energy spectrum where y = 1
@@ -124,7 +124,7 @@ E₁ = @lift begin
     V, p, t = $(o.state)
     u = V[indu]
     u_y = reshape(u, size(yu))[:, n₁]
-    abs.(fft(u_y .^ 2))[k .+ 1]
+    abs.(fft(u_y .^ 2))[k.+1]
 end
 
 fig = Figure()

@@ -7,7 +7,7 @@ function initialize! end
 
 initialize!(logger::Logger, stepper) = logger
 
-function initialize!(o::StateObserver, stepper) 
+function initialize!(o::StateObserver, stepper)
     (; V, p, t) = stepper
     o.state[] = (V, p, t)
 end

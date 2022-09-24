@@ -44,19 +44,19 @@ function real_time_plot(
             xf = x
             yf = y
         else
-            xf = x[2:(end - 1)]
-            yf = y[2:(end - 1)]
+            xf = x[2:(end-1)]
+            yf = y[2:(end-1)]
         end
     elseif fieldname == :streamfunction
         if boundary_conditions.u.x[1] == :periodic
             xf = x
         else
-            xf = x[2:(end - 1)]
+            xf = x[2:(end-1)]
         end
         if boundary_conditions.v.y[1] == :periodic
             yf = y
         else
-            yf = y[2:(end - 1)]
+            yf = y[2:(end-1)]
         end
     elseif fieldname == :pressure
         error("Not implemented")
@@ -172,20 +172,20 @@ function real_time_plot(
             yf = y
             zf = y
         else
-            xf = x[2:(end - 1)]
-            yf = y[2:(end - 1)]
-            zf = z[2:(end - 1)]
+            xf = x[2:(end-1)]
+            yf = y[2:(end-1)]
+            zf = z[2:(end-1)]
         end
     elseif fieldname == :streamfunction
         if boundary_conditions.u.x[1] == :periodic
             xf = x
         else
-            xf = x[2:(end - 1)]
+            xf = x[2:(end-1)]
         end
         if boundary_conditions.v.y[1] == :periodic
             yf = y
         else
-            yf = y[2:(end - 1)]
+            yf = y[2:(end-1)]
         end
     elseif fieldname == :pressure
         xf, yf, zf = xp, yp, zp
