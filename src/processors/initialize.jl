@@ -94,6 +94,11 @@ function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,2}) wher
     plotter
 end
 
+function initialize!(o::StateObserver, stepper) 
+    (; V, p, t) = stepper
+    o.state[] = (V, p, t)
+end
+
 # 3D real time plot
 function initialize!(plotter::RealTimePlotter, stepper::TimeStepper{M,T,3}) where {M,T}
     (; V, p, t, setup) = stepper

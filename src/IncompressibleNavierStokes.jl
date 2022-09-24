@@ -147,7 +147,7 @@ export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
 export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors
-export AbstractProcessor, Logger, RealTimePlotter, VTKWriter, QuantityTracer
+export AbstractProcessor, Logger, RealTimePlotter, StateObserver, VTKWriter, QuantityTracer
 export initialize!, process!, finalize!
 
 # Setup

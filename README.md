@@ -16,7 +16,7 @@ equations on a staggered Cartesian grid. It is based on the Matlab package
 To install IncompressibleNavierStokes, open up a Julia-REPL, type `]` to get
 into Pkg-mode, and type:
 
-```sh
+```
 add IncompressibleNavierStokes
 ```
 

@@ -66,6 +66,11 @@ function process!(plotter::RealTimePlotter, stepper)
     plotter
 end
 
+function process!(o::StateObserver, stepper) 
+    (; V, p, t) = stepper
+    o.state[] = (V, p, t)
+end
+
 function process!(writer::VTKWriter, stepper)
     (; setup, V, p, t) = stepper
     (; grid) = setup
