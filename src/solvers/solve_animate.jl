@@ -80,14 +80,14 @@ function solve_animate(
     # Initialize BC arrays
     bc_vectors = get_bc_vectors(setup, stepper.t)
 
-    initialize!(observer, stepper)
-
     if isnothing(observer)
         # Use default real time plot
         observer = StateObserver(1, V₀, p₀, t_start)
         real_time_plot(observer, setup)
     end
     fig = current_figure()
+
+    initialize!(observer, stepper)
 
     record(fig, filename, 1:nframe; framerate) do frame
         for subframe = 1:nsubframe

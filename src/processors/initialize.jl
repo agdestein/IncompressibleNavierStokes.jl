@@ -6,11 +6,7 @@ Initialize processor.
 function initialize! end
 
 initialize!(logger::Logger, stepper) = logger
-
-function initialize!(o::StateObserver, stepper)
-    (; V, p, t) = stepper
-    o.state[] = (V, p, t)
-end
+initialize!(observer::StateObserver, stepper) = observer
 
 function initialize!(writer::VTKWriter, stepper)
     (; dir, filename) = writer

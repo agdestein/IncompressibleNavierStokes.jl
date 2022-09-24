@@ -27,7 +27,7 @@
 
     # Iteration processors
     logger = Logger(; nupdate = 1)
-    observer = StateObserver(5, V₀, p₀, t_start)
+    observer = StateObserver(1, V₀, p₀, t_start)
     writer = VTKWriter(; nupdate = 5, dir = "output", filename = "solution2D")
     tracer = QuantityTracer(; nupdate = 1)
     processors = [logger, observer, tracer, writer]
@@ -51,9 +51,12 @@
     V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver)
 
     @testset "State observer" begin
-        # First @lift, initialize!, and after each of the 100 time steps
+        # 1 from @lift
+        # 1 from initial process!
+        # 100 time steps
         @test length(_E) == 102
-        @test all(<(0), diff(_E))
+        @test _E[1] ≈ _E[2]
+        @test all(<(0), diff(_E[2:end]))
     end
 
     @testset "VTK files" begin
