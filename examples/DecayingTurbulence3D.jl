@@ -83,6 +83,9 @@ p = pressure_additional_solve(pressure_solver, V, p, 0.0, setup; bc_vectors)
 
 V₀, p₀ = V, p
 
+# Time interval
+t_start, t_end = tlims = (0.0, 0.1)
+
 # Iteration processors
 logger = Logger()
 observer = StateObserver(1, V₀, p₀, t_start)
@@ -92,15 +95,53 @@ tracer = QuantityTracer()
 processors = [logger, observer, tracer]
 
 # Real time plot
-real_time_plot(observer, setup)
+rtp = real_time_plot(observer, setup)
 
-# Time interval
-t_start, t_end = tlims = (0.0, 0.100)
+# Plot energy history
+(; Ωp) = setup.grid
+_points = Point2f[]
+points = @lift begin
+    V, p, t = $(observer.state)
+    up, vp, wp = get_velocity(V, t, setup)
+    up = reshape(up, :)
+    vp = reshape(vp, :)
+    wp = reshape(wp, :)
+    E = sum(@. Ωp * (up^2 + vp^2 + wp^2))
+    push!(_points, Point2f(t, E))
+end
+ehist = lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))
+
+# Plot energy spectrum
+k = 1:(K - 1)
+kk = reshape([sqrt(kx^2 + ky^2 + kz^2) for kx ∈ k, ky ∈ k, kz ∈ k], :)
+ehat = @lift begin
+    V, p, t = $(observer.state)
+    up, vp, wp = get_velocity(V, t, setup)
+    e = @. up^2 + vp^2 + wp^2
+    reshape(abs.(fft(e)[k .+ 1, k .+ 1, k .+ 1]), :)
+end
+espec = Figure()
+ax =
+    Axis(espec[1, 1]; xlabel = L"k", ylabel = L"\hat{e}(k)", xscale = log10, yscale = log10)
+## ylims!(ax, (1e-20, 1))
+scatter!(ax, kk, ehat; label = "Kinetic energy")
+krange = LinRange(extrema(kk)..., 100)
+lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = L"k^{-5/3}", color = :red)
+axislegend(ax)
+espec
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p, = solve(problem, RK44(); Δt = 0.001, processors, pressure_solver, inplace = true)
-#md current_figure()
+V, p = solve(problem, RK44(); Δt = 0.001, processors, pressure_solver, inplace = true);
+
+# Real time plot
+rtp
+
+# Energy history
+ehist
+
+# Energy spectrum
+espec
 
 # ## Post-process
 #
@@ -120,22 +161,3 @@ plot_velocity(setup, V, t_end)
 
 # Plot vorticity
 plot_vorticity(setup, V, t_end)
-
-# Plot energy spectrum
-k = 1:K
-u = reshape(V[setup.grid.indu], n, n, n)
-v = reshape(V[setup.grid.indv], n, n, n)
-w = reshape(V[setup.grid.indw], n, n, n)
-e = u .^ 2 .+ v .^ 2 .+ w .^ 2
-ehat = fft(e)[k, k, k]
-kk = [sqrt(kx^2 + ky^2 + kz^2) for kx ∈ k, ky ∈ k, kz ∈ k]
-
-fig = Figure()
-ax = Axis(fig[1, 1]; xlabel = L"k", ylabel = L"\hat{e}(k)", xscale = log10, yscale = log10)
-## ylims!(ax, (1e-20, 1))
-scatter!(ax, kk[:], abs.(ehat[:]); label = "Kinetic energy")
-krange = LinRange(extrema(kk)..., 100)
-lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = L"k^{-5/3}")
-lines!(ax, krange, 1e7 * krange .^ (-3); label = L"k^{-3}")
-axislegend(ax)
-fig
