@@ -14,7 +14,7 @@ Base.@kwdef struct Logger <: AbstractProcessor
     nupdate::Int = 1
 end
 
-raw"""
+"""
     StateObserver(nupdate, V, p, t)
 
 Observe time, velocity and pressure field.
@@ -31,7 +31,7 @@ For example, to plot the total kinetic energy evolution, given the state
 o = StateObserver(1, V, p, t)
 _points = Point2f[]
 points = @lift begin
-    V, p, t = $(o.state)
+    V, p, t = \$(o.state)
     E = sum(abs2, V)
     push!(_points, Point2f(t, E))
 end
