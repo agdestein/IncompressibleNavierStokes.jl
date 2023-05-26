@@ -1,7 +1,7 @@
 name = "IncompressibleNavierStokes"
 uuid = "5e318141-6589-402b-868d-77d7df8c442e"
 authors = ["Syver Døving Agdestein, Benjamin Sanderse, and contributors"]
-version = "0.2.0"
+version = "0.3.0"
 
 [deps]
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
