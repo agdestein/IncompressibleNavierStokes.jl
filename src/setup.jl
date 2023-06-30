@@ -1,25 +1,4 @@
 """
-    Setup(grid, boundary_conditions, viscosity_model, convection_model, force, operators)
-
-Simulation setup.
-"""
-struct Setup{
-    T,
-    N,
-    B<:BoundaryConditions{T},
-    V<:AbstractViscosityModel{T},
-    C<:AbstractConvectionModel,
-    F<:AbstractBodyForce{T},
-}
-    grid::Grid{T,N}
-    boundary_conditions::B
-    viscosity_model::V
-    convection_model::C
-    force::F
-    operators::Operators{T}
-end
-
-"""
     Setup(
         x, y;
         viscosity_model = LaminarModel(; Re = 1000.0),
@@ -67,7 +46,7 @@ function Setup(
         force = UnsteadyBodyForce(bodyforce_u, bodyforce_v, grid)
     end
     operators = Operators(grid, boundary_conditions, viscosity_model)
-    Setup(grid, boundary_conditions, viscosity_model, convection_model, force, operators)
+    (; grid, boundary_conditions, viscosity_model, convection_model, force, operators)
 end
 
 """
@@ -113,9 +92,9 @@ function Setup(
     z;
     viscosity_model = LaminarModel(; Re = 1000.0),
     convection_model = NoRegConvectionModel(),
-    u_bc = (x, y, w, t) -> 0.0,
-    v_bc = (x, y, w, t) -> 0.0,
-    w_bc = (x, y, w, t) -> 0.0,
+    u_bc = (x, y, w, t) -> 0,
+    v_bc = (x, y, w, t) -> 0,
+    w_bc = (x, y, w, t) -> 0,
     dudt_bc = nothing,
     dvdt_bc = nothing,
     dwdt_bc = nothing,
@@ -137,9 +116,9 @@ function Setup(
         ),
     ),
     order4 = false,
-    bodyforce_u = (x, y, z) -> 0.0,
-    bodyforce_v = (x, y, z) -> 0.0,
-    bodyforce_w = (x, y, z) -> 0.0,
+    bodyforce_u = (x, y, z) -> 0,
+    bodyforce_v = (x, y, z) -> 0,
+    bodyforce_w = (x, y, z) -> 0,
     steady_force = true,
 )
     boundary_conditions = BoundaryConditions(
@@ -159,5 +138,5 @@ function Setup(
         force = UnsteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
     end
     operators = Operators(grid, boundary_conditions, viscosity_model)
-    Setup(grid, boundary_conditions, viscosity_model, convection_model, force, operators)
+    (; grid, boundary_conditions, viscosity_model, convection_model, force, operators)
 end

@@ -62,7 +62,7 @@ function UnsteadyBodyForce(fu, fv, grid)
     (; NV, xu) = grid
     T = eltype(xu)
     F = zeros(T, NV)
-    UnteadyBodyForce(fu, fv, nothing, F)
+    UnsteadyBodyForce(fu, fv, nothing, F)
 end
 
 """

@@ -144,7 +144,7 @@ export initialize!, process!, finalize!
 export real_time_plot, energy_history_plot, energy_spectrum_plot
 
 # Setup
-export Grid, Operators, BoundaryConditions, Setup
+export Setup
 
 # 1D grids
 export stretched_grid, cosine_grid
