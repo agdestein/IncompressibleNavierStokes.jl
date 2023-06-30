@@ -267,7 +267,7 @@ function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
 
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
-    # if !is_steady(problem) && !isa(viscosity_model, KEpsilonModel)
+    # if !is_steady(problem)
     # Note that the matrix for the pressure is constant in time.
     # Only the right hand side vector changes, so the pressure matrix can be set up
     # outside the time-stepping-loop.

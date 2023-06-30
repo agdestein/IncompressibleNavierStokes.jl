@@ -62,10 +62,6 @@ include("operators/operator_interpolation.jl")
 include("operators/operator_postprocessing.jl")
 include("operators/operator_regularization.jl")
 include("operators/operator_turbulent_diffusion.jl")
-include("operators/ke_production.jl")
-include("operators/ke_convection.jl")
-include("operators/ke_diffusion.jl")
-include("operators/ke_viscosity.jl")
 include("operators/operator_viscosity.jl")
 
 # Pressure solvers
@@ -144,7 +140,7 @@ export get_dimension
 export SteadyBodyForce, UnsteadyBodyForce
 
 # Models
-export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
+export LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
 export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors

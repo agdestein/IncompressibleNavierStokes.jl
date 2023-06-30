@@ -28,7 +28,6 @@
     T = Float64
     Re = 1000.0
     lam = LaminarModel{T}(; Re)
-    kϵ = KEpsilonModel{T}(; Re)
     ml = MixingLengthModel{T}(; Re)
     smag = SmagorinskyModel{T}(; Re)
     qr = QRModel{T}(; Re)
@@ -84,7 +83,7 @@
         end
     end
 
-    unfinished_models = [(kϵ, noreg), (lam, leray)]
+    unfinished_models = [(lam, leray)]
 
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin

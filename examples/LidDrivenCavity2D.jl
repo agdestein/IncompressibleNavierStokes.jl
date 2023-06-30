@@ -28,7 +28,6 @@ name = "LidDrivenCavity2D"
 # Available viscosity models are:
 #
 # - [`LaminarModel`](@ref),
-# - [`KEpsilonModel`](@ref),
 # - [`MixingLengthModel`](@ref),
 # - [`SmagorinskyModel`](@ref), and
 # - [`QRModel`](@ref).

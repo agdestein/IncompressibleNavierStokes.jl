@@ -38,7 +38,6 @@ stretched_grid
 ```@docs
 AbstractViscosityModel
 LaminarModel
-KEpsilonModel
 MixingLengthModel
 SmagorinskyModel
 QRModel
@@ -81,10 +80,6 @@ turbulent_viscosity
 
 ```@docs
 Operators
-ke_convection
-ke_diffusion
-ke_production
-ke_viscosity
 operator_averaging
 operator_convection_diffusion
 operator_divergence

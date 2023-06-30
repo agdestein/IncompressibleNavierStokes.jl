@@ -3,8 +3,6 @@
 
 Average (turbulent) viscosity to cell faces: from `ν` at `xp`, `yp` to `ν` at `ux`, `uy`,
 `vx`, `vy` locations.
-
-See also `ke_viscosity.jl`.
 """
 function operator_turbulent_diffusion end
 

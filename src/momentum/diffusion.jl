@@ -111,10 +111,6 @@ function diffusion(
     error("Not implemented")
 end
 
-function diffusion(model::KEpsilonModel, V, setup; bc_vectors, get_jacobian = false)
-    error("Not implemented")
-end
-
 """
     diffusion!(model, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
 
@@ -209,8 +205,4 @@ function diffusion!(
     end
 
     d, ∇d
-end
-
-function diffusion!(model::KEpsilonModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
-    error("k-e implementation in diffusion.jl not finished")
 end
