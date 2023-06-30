@@ -150,7 +150,7 @@ export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvecti
 # Processors
 export AbstractProcessor, Logger, StateObserver, VTKWriter, QuantityTracer
 export initialize!, process!, finalize!
-export real_time_plot
+export real_time_plot, energy_history_plot, energy_spectrum_plot
 
 # Setup
 export Grid, Operators, BoundaryConditions, Setup
@@ -168,7 +168,7 @@ export SteadyStateProblem, UnsteadyProblem, is_steady
 export solve, solve_animate
 export momentum, momentum!
 
-export create_initial_conditions, get_bc_vectors, get_velocity
+export create_initial_conditions, random_field, get_bc_vectors, get_velocity
 
 export plot_force,
     plot_grid,

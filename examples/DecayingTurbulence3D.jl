@@ -47,41 +47,14 @@ pressure_solver = FourierPressureSolver(setup)
 
 # Initial conditions
 K = n ÷ 2
-σ = 30
-## σ = 10
-s = 5
-function create_spectrum(K)
-    a =
-        1e6 * [
-            1 / sqrt((2π)^3 * 3σ^2) *
-            exp(-((i - s)^2 + (j - s)^2 + (k - s)^2) / 2σ^2) *
-            exp(-2π * im * rand()) for i = 1:K, j = 1:K, k = 1:K
-        ]
-    [
-        a reverse(a; dims = 2); reverse(a; dims = 1) reverse(a; dims = (1, 2));;;
-        reverse(a; dims = 3) reverse(a; dims = (2, 3)); reverse(a; dims = (1, 3)) reverse(a)
-    ]
-end
-u = real.(ifft(create_spectrum(K)))
-v = real.(ifft(create_spectrum(K)))
-w = real.(ifft(create_spectrum(K)))
-V = [reshape(u, :); reshape(v, :); reshape(w, :)]
-f = setup.operators.M * V
-p = zero(f)
-
-# Boundary conditions
-bc_vectors = get_bc_vectors(setup, 0.0)
-(; yM) = bc_vectors
-
-# Make velocity field divergence free
-(; Ω⁻¹) = setup.grid
-(; G, M) = setup.operators
-f = M * V + yM
-Δp = pressure_poisson(pressure_solver, f)
-V .-= Ω⁻¹ .* (G * Δp)
-p = pressure_additional_solve(pressure_solver, V, p, 0.0, setup; bc_vectors)
-
-V₀, p₀ = V, p
+V₀, p₀ = random_field(
+    setup, K;
+    A = 1e6,
+    σ = 30,
+    ## σ = 10,
+    s = 5,
+    pressure_solver,
+)
 
 # Time interval
 t_start, t_end = tlims = (0.0, 0.1)
@@ -98,37 +71,10 @@ processors = [logger, observer, tracer]
 rtp = real_time_plot(observer, setup)
 
 # Plot energy history
-(; Ωp) = setup.grid
-_points = Point2f[]
-points = @lift begin
-    V, p, t = $(observer.state)
-    up, vp, wp = get_velocity(V, t, setup)
-    up = reshape(up, :)
-    vp = reshape(vp, :)
-    wp = reshape(wp, :)
-    E = sum(@. Ωp * (up^2 + vp^2 + wp^2))
-    push!(_points, Point2f(t, E))
-end
-ehist = lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))
+ehist = energy_history_plot(observer, setup)
 
 # Plot energy spectrum
-k = 1:(K-1)
-kk = reshape([sqrt(kx^2 + ky^2 + kz^2) for kx ∈ k, ky ∈ k, kz ∈ k], :)
-ehat = @lift begin
-    V, p, t = $(observer.state)
-    up, vp, wp = get_velocity(V, t, setup)
-    e = @. up^2 + vp^2 + wp^2
-    reshape(abs.(fft(e)[k.+1, k.+1, k.+1]), :)
-end
-espec = Figure()
-ax =
-    Axis(espec[1, 1]; xlabel = L"k", ylabel = L"\hat{e}(k)", xscale = log10, yscale = log10)
-## ylims!(ax, (1e-20, 1))
-scatter!(ax, kk, ehat; label = "Kinetic energy")
-krange = LinRange(extrema(kk)..., 100)
-lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = L"k^{-5/3}", color = :red)
-axislegend(ax)
-espec
+espec = energy_spectrum_plot(observer, setup, K)
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);

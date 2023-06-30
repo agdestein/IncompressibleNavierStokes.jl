@@ -228,3 +228,101 @@ function real_time_plot(
 
     fig
 end
+
+"""
+    energy_history_plot(o, setup)
+
+Create energy history plot, with a history point added every time `o` is updated.
+"""
+function energy_history_plot end
+
+
+function energy_history_plot(
+    o::StateObserver,
+    setup::Setup{T,2};
+) where {T}
+    (; Ωp) = setup.grid
+    _points = Point2f[]
+    points = @lift begin
+        V, p, t = $(o.state)
+        up, vp = get_velocity(V, t, setup)
+        up = reshape(up, :)
+        vp = reshape(vp, :)
+        E = up' * Diagonal(Ωp) * up + vp' * Diagonal(Ωp) * vp
+        push!(_points, Point2f(t, E))
+    end
+    lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))
+end
+
+function energy_history_plot(
+    o::StateObserver,
+    setup::Setup{T,3};
+) where {T}
+    (; Ωp) = setup.grid
+    _points = Point2f[]
+    points = @lift begin
+        V, p, t = $(o.state)
+        up, vp, wp = get_velocity(V, t, setup)
+        up = reshape(up, :)
+        vp = reshape(vp, :)
+        wp = reshape(wp, :)
+        E = sum(@. Ωp * (up^2 + vp^2 + wp^2))
+        push!(_points, Point2f(t, E))
+    end
+    lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))
+end
+
+"""
+    energy_spectrum_plot(o, setup, K)
+
+Create energy spectrum plot, redrawn every time `o` is updated.
+"""
+function energy_spectrum_plot end
+
+function energy_spectrum_plot(
+    o::StateObserver,
+    setup::Setup{T,2},
+    K,
+) where {T}
+    k = 1:(K-1)
+    kk = reshape([sqrt(kx^2 + ky^2) for kx ∈ k, ky ∈ k], :)
+    ehat = @lift begin
+        V, p, t = $(o.state)
+        up, vp = get_velocity(V, t, setup)
+        e = up .^ 2 .+ vp .^ 2
+        reshape(abs.(fft(e)[k.+1, k.+1]), :)
+    end
+    espec = Figure()
+    ax =
+        Axis(espec[1, 1]; xlabel = L"k", ylabel = L"\hat{e}(k)", xscale = log10, yscale = log10)
+    ## ylims!(ax, (1e-20, 1))
+    scatter!(ax, kk, ehat; label = "Kinetic energy")
+    krange = LinRange(extrema(kk)..., 100)
+    lines!(ax, krange, 1e7 * krange .^ (-3); label = L"k^{-3}", color = :red)
+    axislegend(ax)
+    espec
+end
+
+function energy_spectrum_plot(
+    o::StateObserver,
+    setup::Setup{T,3},
+    K,
+) where {T}
+    k = 1:(K-1)
+    kk = reshape([sqrt(kx^2 + ky^2 + kz^2) for kx ∈ k, ky ∈ k, kz ∈ k], :)
+    ehat = @lift begin
+        V, p, t = $(o.state)
+        up, vp, wp = get_velocity(V, t, setup)
+        e = @. up^2 + vp^2 + wp^2
+        reshape(abs.(fft(e)[k.+1, k.+1, k.+1]), :)
+    end
+    espec = Figure()
+    ax =
+        Axis(espec[1, 1]; xlabel = L"k", ylabel = L"\hat{e}(k)", xscale = log10, yscale = log10)
+    ## ylims!(ax, (1e-20, 1))
+    scatter!(ax, kk, ehat; label = "Kinetic energy")
+    krange = LinRange(extrema(kk)..., 100)
+    lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = L"k^{-5/3}", color = :red)
+    axislegend(ax)
+    espec
+end
