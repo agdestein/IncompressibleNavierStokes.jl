@@ -12,7 +12,7 @@ function operator_regularization(grid::Grid{T,2}, operators) where {T}
     (; Su_ux, Su_uy, Sv_vx, Sv_vy) = operators
 
     Δ = max_size(grid)
-    α = 1 / 16 * Δ^2
+    α_reg = 1 / 16 * Δ^2
 
     Ωu⁻¹ = 1 ./ Ω[indu]
     Ωv⁻¹ = 1 ./ Ω[indv]
@@ -21,7 +21,7 @@ function operator_regularization(grid::Grid{T,2}, operators) where {T}
     Diffu_f = Diagonal(Ωu⁻¹) * (Dux * Su_ux + Duy * Su_uy)
     Diffv_f = Diagonal(Ωv⁻¹) * (Dvx * Sv_vx + Dvy * Sv_vy)
 
-    (; Diffu_f, Diffv_f, α)
+    (; Diffu_f, Diffv_f, α_reg)
 end
 
 # 3D version
@@ -33,7 +33,7 @@ function operator_regularization(grid::Grid{T,3}, operators) where {T}
     (; Sw_wx, Sw_wy, Sw_wz) = operators
 
     Δ = max_size(grid)
-    α = 1 / 16 * Δ^2
+    α_reg = 1 / 16 * Δ^2
 
     Ωu⁻¹ = 1 ./ Ω[indu]
     Ωv⁻¹ = 1 ./ Ω[indv]
@@ -44,5 +44,5 @@ function operator_regularization(grid::Grid{T,3}, operators) where {T}
     Diffv_f = Diagonal(Ωv⁻¹) * (Dvx * Sv_vx + Dvy * Sv_vy + Dvz * Sv_vz)
     Diffw_f = Diagonal(Ωw⁻¹) * (Dwx * Sw_wx + Dwy * Sw_wy + Dwz * Sw_wz)
 
-    (; Diffu_f, Diffv_f, Diffw_f, α)
+    (; Diffu_f, Diffv_f, Diffw_f, α_reg)
 end

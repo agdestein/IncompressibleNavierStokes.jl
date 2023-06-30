@@ -4,7 +4,7 @@
 Discrete operators.
 """
 Base.@kwdef struct Operators{T}
-    α::T = 0
+    α_reg::T = 0
 
     Au_ux::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
     Au_uy::SparseMatrixCSC{T,Int} = spzeros(T, 0, 0)
