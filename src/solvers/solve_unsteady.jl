@@ -59,7 +59,7 @@ function solve(
         momentum_cache = MomentumCache(setup)
     end
 
-    stepper = TimeStepper(;
+    stepper = (;
         method = method_use,
         setup,
         pressure_solver,
@@ -84,7 +84,7 @@ function solve(
     while stepper.t < t_end
         if stepper.n == nstartup && needs_startup_method(method)
             println("n = $(stepper.n): switching to primary ODE method ($method)")
-            stepper = change_time_stepper(stepper, method)
+            stepper = (; stepper..., method)
             if inplace
                 cache = ode_method_cache(method, setup)
             end

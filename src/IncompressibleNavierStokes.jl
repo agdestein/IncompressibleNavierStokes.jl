@@ -75,8 +75,6 @@ include("time_steppers/methods.jl")
 include("time_steppers/tableaux.jl")
 include("time_steppers/nstage.jl")
 include("time_steppers/time_stepper_caches.jl")
-include("time_steppers/time_steppers.jl")
-include("time_steppers/change_time_stepper.jl")
 include("time_steppers/step.jl")
 include("time_steppers/isexplicit.jl")
 include("time_steppers/needs_startup_method.jl")
@@ -132,9 +130,6 @@ include("postprocess/save_vtk.jl")
 
 # Reexport
 export @pack!
-
-# Grid
-export get_dimension
 
 # Force
 export SteadyBodyForce, UnsteadyBodyForce

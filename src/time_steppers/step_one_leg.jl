@@ -1,14 +1,5 @@
-"""
-    step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
-
-Do one time step using one-leg-β-method.
-
-Non-mutating/allocating/out-of-place version.
-
-See also [`step!`](@ref).
-"""
-function step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+function step(method::OneLegMethod, stepper, Δt; bc_vectors = nothing)
+    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; p_add_solve, β) = method
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
@@ -68,16 +59,11 @@ function step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
 end
 
-"""
-    step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
-
-Do one time step using one-leg-β-method.
-"""
-function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache, bc_vectors = nothing)
+    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; p_add_solve, β) = method
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
@@ -151,5 +137,5 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = 
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
 end

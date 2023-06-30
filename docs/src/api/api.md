@@ -166,15 +166,6 @@ OneLegMethod
 ExplicitRungeKuttaMethod
 ImplicitRungeKuttaMethod
 
-TimeStepper
-
-AbstractODEMethodCache
-ExplicitRungeKuttaCache
-ImplicitRungeKuttaCache
-AdamsBashforthCrankNicolsonCache
-OneLegCache
-
-change_time_stepper
 isexplicit
 lambda_conv_max
 lambda_diff_max

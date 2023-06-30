@@ -1,17 +1,5 @@
-"""
-    step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
-
-Perform one time step for the general explicit Runge-Kutta method (ERK).
-
-Dirichlet boundary points are not part of solution vector but are prescribed in a strong
-manner via the `u_bc` and `v_bc` functions.
-
-Non-mutating/allocating/out-of-place version.
-
-See also [`step!`](@ref).
-"""
-function step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+function step(method::ExplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothing)
+    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; Ω) = grid
@@ -88,29 +76,18 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
 end
 
-"""
-    step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
-
-Perform one time step for the general explicit Runge-Kutta method (ERK).
-
-Dirichlet boundary points are not part of solution vector but are prescribed in a strong
-manner via the `u_bc` and `v_bc` functions.
-
-Mutating/non-allocating/in-place version.
-
-See also [`step`](@ref).
-"""
 function step!(
-    stepper::ExplicitRungeKuttaStepper,
+    method::ExplicitRungeKuttaMethod,
+    stepper,
     Δt;
     cache,
     momentum_cache,
     bc_vectors = nothing,
 )
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; Ω) = grid
@@ -203,5 +180,5 @@ function step!(
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
 end

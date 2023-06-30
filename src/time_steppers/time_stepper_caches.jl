@@ -1,91 +1,3 @@
-"""
-    AbstractODEMethodCache
-
-ODE method cache.
-"""
-abstract type AbstractODEMethodCache{T} end
-
-"""
-    ExplicitRungeKuttaCache(; kwargs...)
-
-Explicit Runge-Kutta cache.
-"""
-Base.@kwdef struct ExplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
-    kV::Matrix{T}
-    kp::Matrix{T}
-    Vtemp::Vector{T}
-    Vtemp2::Vector{T}
-    F::Vector{T}
-    ∇F::SparseMatrixCSC{T,Int}
-    f::Vector{T}
-    Δp::Vector{T}
-end
-
-"""
-    ImplicitRungeKuttaCache(; kwargs...)
-
-Implicit Runge-Kutta cache.
-"""
-Base.@kwdef struct ImplicitRungeKuttaCache{T} <: AbstractODEMethodCache{T}
-    Vtotₙ::Vector{T}
-    ptotₙ::Vector{T}
-    Qⱼ::Vector{T}
-    Fⱼ::Vector{T}
-    ∇Fⱼ::SparseMatrixCSC{T,Int}
-    fⱼ::Vector{T}
-    F::Vector{T}
-    ∇F::SparseMatrixCSC{T,Int}
-    f::Vector{T}
-    Δp::Vector{T}
-    Gp::Vector{T}
-    Is::SparseMatrixCSC{T,Int}
-    Ω_sNV::SparseMatrixCSC{T,Int}
-    A_ext::SparseMatrixCSC{T,Int}
-    b_ext::SparseMatrixCSC{T,Int}
-    c_ext::SparseMatrixCSC{T,Int}
-    Gtot::SparseMatrixCSC{T,Int}
-    Mtot::SparseMatrixCSC{T,Int}
-    yMtot::Vector{T}
-    Ωtot::Vector{T}
-    dfmom::SparseMatrixCSC{T,Int}
-    Z::SparseMatrixCSC{T,Int}
-end
-
-"""
-    AdamsBashforthCrankNicolsonCache(; kwargs...)
-
-Adams-Bashforth Crank-Nicolson cache.
-"""
-Base.@kwdef mutable struct AdamsBashforthCrankNicolsonCache{T} <: AbstractODEMethodCache{T}
-    cₙ::Vector{T}
-    cₙ₋₁::Vector{T}
-    F::Vector{T}
-    f::Vector{T}
-    Δp::Vector{T}
-    Rr::Vector{T}
-    b::Vector{T}
-    bₙ::Vector{T}
-    bₙ₊₁::Vector{T}
-    yDiffₙ::Vector{T}
-    yDiffₙ₊₁::Vector{T}
-    Gpₙ::Vector{T}
-    Diff_fact::Factorization{T}
-    Δt::T
-end
-
-"""
-    OneLegCache(; kwargs...)
-
-One-leg cache.
-"""
-Base.@kwdef struct OneLegCache{T} <: AbstractODEMethodCache{T}
-    Vₙ₋₁::Vector{T}
-    pₙ₋₁::Vector{T}
-    F::Vector{T}
-    f::Vector{T}
-    Δp::Vector{T}
-    GΔp::Vector{T}
-end
 
 """
     ode_method_cache(method, setup)
@@ -114,7 +26,7 @@ function ode_method_cache(::AdamsBashforthCrankNicolsonMethod{T}, setup) where {
     Δt = 0
     Diff_fact = cholesky(spzeros(0, 0))
 
-    AdamsBashforthCrankNicolsonCache{T}(;
+    (;
         cₙ,
         cₙ₋₁,
         F,
@@ -140,7 +52,7 @@ function ode_method_cache(::OneLegMethod{T}, setup) where {T}
     f = zeros(T, Np)
     Δp = zeros(T, Np)
     GΔp = zeros(T, NV)
-    OneLegCache{T}(; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp)
+    (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp)
 end
 
 function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup) where {T}
@@ -159,7 +71,7 @@ function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup) where {T}
     # Get coefficients of RK method
     (; A, b, c) = method
 
-    ExplicitRungeKuttaCache{T}(; kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp)
+    (; kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
@@ -207,7 +119,7 @@ function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
     Z2 = spzeros(T, s * Np, s * Np)
     Z = [dfmom Gtot; Mtot Z2]
 
-    ImplicitRungeKuttaCache{T}(;
+    (;
         Vtotₙ,
         ptotₙ,
         Qⱼ,

@@ -64,7 +64,7 @@ function solve_animate(
 
     cache = ode_method_cache(method_use, setup)
     momentum_cache = MomentumCache(setup)
-    stepper = TimeStepper(;
+    stepper = (;
         method = method_use,
         setup,
         pressure_solver,
@@ -94,7 +94,7 @@ function solve_animate(
             if stepper.n == nstartup && needs_startup_method(method)
                 println("n = $(stepper.n): switching to primary ODE method ($method)")
                 cache = ode_method_cache(method, setup)
-                stepper = change_time_stepper(stepper, method)
+                stepper = (; stepper..., method)
             end
 
             if isadaptive

@@ -1,18 +1,6 @@
-"""
-    step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
-
-Do one time step for implicit Runge-Kutta method.
-
-Unsteady Dirichlet boundary points are not part of solution vector but
-are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
-
-Non-mutating/allocating/out-of-place version.
-
-See also [`step!`](@ref).
-"""
-function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
+function step(method::ImplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothing)
     # TODO: Implement out-of-place IRK
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; NV, Np, Ω) = grid
@@ -168,23 +156,12 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
 end
 
-"""
-    step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
-
-Do one time step for implicit Runge-Kutta method.
-
-Unsteady Dirichlet boundary points are not part of solution vector but
-are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
-
-Mutating/non-allocating/in-place version.
-
-See also [`step`](@ref).
-"""
 function step!(
-    stepper::ImplicitRungeKuttaStepper,
+    method::ImplicitRungeKuttaMethod,
+    stepper,
     Δt;
     cache,
     momentum_cache,
@@ -417,7 +394,7 @@ function step!(
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
 end
 
 """

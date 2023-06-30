@@ -1,17 +1,5 @@
-"""
-    step(stepper::AdamsBashforthCrankNicolsonStepper, Δt; bc_vectors = nothing)
-
-Perform one time step with Adams-Bashforth for convection and Crank-Nicolson for diffusion.
-
-Output includes convection terms at `tₙ`, which will be used in next time step
-in the Adams-Bashforth part of the method.
-
-Non-mutating/allocating/out-of-place version.
-
-See also [`step!`](@ref).
-"""
-function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt; bc_vectors = nothing)
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt; bc_vectors = nothing)
+    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) =
         setup
     (; bc_unsteady) = boundary_conditions
@@ -108,29 +96,18 @@ function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt; bc_vectors = not
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
 end
 
-"""
-    step!(stepper::AdamsBashforthCrankNicolsonStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
-
-Perform one time step with Adams-Bashforth for convection and Crank-Nicolson for diffusion.
-
-Output includes convection terms at `tₙ`, which will be used in next time step
-in the Adams-Bashforth part of the method.
-
-Mutating/non-allocating/in-place version.
-
-See also [`step`](@ref).
-"""
 function step!(
-    stepper::AdamsBashforthCrankNicolsonStepper,
+    method::AdamsBashforthCrankNicolsonMethod,
+    stepper,
     Δt;
     cache,
     momentum_cache,
     bc_vectors = nothing,
 )
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) =
         setup
     (; bc_unsteady) = boundary_conditions
@@ -245,5 +222,5 @@ function step!(
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
 end
