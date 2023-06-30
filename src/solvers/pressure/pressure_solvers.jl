@@ -75,11 +75,11 @@ function FourierPressureSolver(setup::Setup{T,2}) where {T}
     end
 
     # Fourier transform of the discretization
-    # Assuming uniform grid, although Δx, Δy and Δz do not need to be the same
+    # Assuming uniform grid, although Δx and Δy do not need to be the same
     i = 0:(Npx-1)
     j = reshape(0:(Npy-1), 1, :)
 
-    # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
+    # Scale with Δx*Δy, since we solve the PDE in integrated form
     Ahat = @. 4 * Δx * Δy * (sin(i * π / Npx)^2 / Δx^2 + sin(j * π / Npy)^2 / Δy^2)
 
     # Pressure is determined up to constant, fix at 0

@@ -1,7 +1,7 @@
 """
     operator_interpolation(grid, boundary_conditions)
 
-Construct averaging operators.
+Construct interpolation operators.
 """
 function operator_interpolation end
 
