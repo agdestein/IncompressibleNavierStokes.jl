@@ -19,9 +19,9 @@ end
 function process!(writer::VTKWriter, stepper)
     (; setup, V, p, t) = stepper
     (; grid) = setup
-    (; xp, yp, zp) = grid
+    (; dimension, xp, yp, zp) = grid
 
-    N = get_dimension(grid)
+    N = dimension()
     if N == 2
         coords = (xp, yp)
     elseif N == 3
@@ -46,7 +46,7 @@ end
 
 function process!(tracer::QuantityTracer, stepper)
     (; V, t, setup) = stepper
-    N = get_dimension(setup.grid)
+    N = setup.grid.dimension()
     if N == 2
         maxdiv, umom, vmom, k = compute_conservation(V, t, setup)
     elseif N == 3

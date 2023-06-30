@@ -4,6 +4,8 @@
 Nonuniform Cartesian grid of dimension `N` and floating point type `T`.
 """
 Base.@kwdef struct Grid{T,N}
+    dimension::Dimension{N} = Dimension(0)
+
     order4::Bool = false                     # Use 4th order in space (otherwise 2nd order)
     α::T = 81                                # Richardson extrapolation factor = 3^4
     β::T = 9 // 8                            # Interpolation factor
@@ -166,6 +168,8 @@ Create nonuniform Cartesian box mesh `x` × `y` with boundary conditions `bounda
 If `order4` is `true`, a fourth order mesh is created.
 """
 function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
+    dimension = Dimension(2)
+
     α = 81
 
     Nx = length(x) - 1
@@ -606,7 +610,7 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
         )
     end
 
-    Grid{T,2}(; α, order4, Nx, Ny, xlims, ylims, x, y, xp, yp, hx, hy, gx, gy, params...)
+    Grid{T,2}(; dimension, α, order4, Nx, Ny, xlims, ylims, x, y, xp, yp, hx, hy, gx, gy, params...)
 end
 
 """
@@ -616,6 +620,8 @@ Create nonuniform Cartesian box mesh `x` × `y` × `z` with boundary conditions 
 If `order4` is `true`, a fourth order mesh is created.
 """
 function Grid(x, y, z; boundary_conditions, order4 = false, T = eltype(x))
+    dimension = Dimension(3)
+
     order4 && error("Fourth order grids not yet implemented for 3D")
     α = 81
 
@@ -907,6 +913,7 @@ function Grid(x, y, z; boundary_conditions, order4 = false, T = eltype(x))
     indp = NV .+ (1:Np)
 
     Grid{T,3}(;
+        dimension,
         order4,
         Nx,
         Ny,

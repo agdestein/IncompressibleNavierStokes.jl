@@ -11,7 +11,7 @@ function save_vtk(V, p, t, setup, filename = "output/solution")
     path = join(parts[1:end-1], "/")
     isdir(path) || mkpath(path)
     (; xp, yp, zp) = setup.grid
-    N = get_dimension(setup.grid)
+    N = setup.grid.dimension()
     if N == 2
         coords = (xp, yp)
     elseif N == 3

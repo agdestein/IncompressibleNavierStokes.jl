@@ -20,8 +20,8 @@ using Makie
 const ⊗ = kron
 
 # Grid
+include("grid/dimension.jl")
 include("grid/grid.jl")
-include("grid/get_dimension.jl")
 include("grid/stretched_grid.jl")
 include("grid/cosine_grid.jl")
 include("grid/max_size.jl")
