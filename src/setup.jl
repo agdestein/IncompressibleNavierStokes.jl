@@ -12,9 +12,8 @@
             v = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
         ),
         order4 = false,
-        bodyforce_u = (x, y) -> 0.0,
-        bodyforce_v = (x, y) -> 0.0,
-        steady_force = true,
+        bodyforce_u = (x, y) -> 0,
+        bodyforce_v = (x, y) -> 0,
     )
 
 Create 2D setup.
@@ -24,8 +23,8 @@ function Setup(
     y;
     viscosity_model = LaminarModel(; Re = 1000.0),
     convection_model = NoRegConvectionModel(),
-    u_bc = (x, y, t) -> 0.0,
-    v_bc = (x, y, t) -> 0.0,
+    u_bc = (x, y, t) -> 0,
+    v_bc = (x, y, t) -> 0,
     dudt_bc = nothing,
     dvdt_bc = nothing,
     bc_type = (;
@@ -33,18 +32,14 @@ function Setup(
         v = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
     ),
     order4 = false,
-    bodyforce_u = (x, y) -> 0.0,
-    bodyforce_v = (x, y) -> 0.0,
+    bodyforce_u = (x, y) -> 0,
+    bodyforce_v = (x, y) -> 0,
     steady_force = true,
 )
     boundary_conditions =
         BoundaryConditions(u_bc, v_bc; dudt_bc, dvdt_bc, bc_type, T = eltype(x))
     grid = Grid(x, y; boundary_conditions, order4)
-    if steady_force
-        force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
-    else
-        force = UnsteadyBodyForce(bodyforce_u, bodyforce_v, grid)
-    end
+    force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
     operators = Operators(grid, boundary_conditions, viscosity_model)
     (; grid, boundary_conditions, viscosity_model, convection_model, force, operators)
 end
@@ -78,10 +73,9 @@ end
             ),
         ),
         order4 = false,
-        bodyforce_u = (x, y, z) -> 0.0,
-        bodyforce_v = (x, y, z) -> 0.0,
-        bodyforce_w = (x, y, z) -> 0.0,
-        steady_force = true,
+        bodyforce_u = (x, y, z) -> 0,
+        bodyforce_v = (x, y, z) -> 0,
+        bodyforce_w = (x, y, z) -> 0,
     )
 
 Create 3D setup.
@@ -119,7 +113,6 @@ function Setup(
     bodyforce_u = (x, y, z) -> 0,
     bodyforce_v = (x, y, z) -> 0,
     bodyforce_w = (x, y, z) -> 0,
-    steady_force = true,
 )
     boundary_conditions = BoundaryConditions(
         u_bc,
@@ -132,11 +125,7 @@ function Setup(
         T = eltype(x),
     )
     grid = Grid(x, y, z; boundary_conditions, order4)
-    if steady_force
-        force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
-    else
-        force = UnsteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
-    end
+    force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
     operators = Operators(grid, boundary_conditions, viscosity_model)
     (; grid, boundary_conditions, viscosity_model, convection_model, force, operators)
 end

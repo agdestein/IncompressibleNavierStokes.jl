@@ -33,7 +33,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt; bc_vector
     yDiffₙ = yDiff
 
     # Evaluate boundary conditions and force at starting point
-    bₙ = bodyforce(force, tₙ, setup)
+    bₙ = force
 
     # Convection of current solution
     cₙ, = convection(convection_model, Vₙ, Vₙ, setup; bc_vectors)
@@ -44,7 +44,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt; bc_vector
     end
     (; yDiff, y_p) = bc_vectors
 
-    bₙ₊₁ = bodyforce(force, tₙ + Δt, setup)
+    bₙ₊₁ = force
 
     yDiffₙ₊₁ = yDiff
 
@@ -143,7 +143,7 @@ function step!(
     yDiffₙ .= yDiff
 
     # Evaluate boundary conditions and force at starting point
-    bodyforce!(force, bₙ, tₙ, setup)
+    bₙ = force
 
     # Convection of current solution
     convection!(convection_model, cₙ, nothing, Vₙ, Vₙ, setup, momentum_cache; bc_vectors)
@@ -153,7 +153,7 @@ function step!(
         bc_vectors = get_bc_vectors(setup, tₙ + Δt)
     end
     (; yDiff, y_p) = bc_vectors
-    bodyforce!(force, bₙ₊₁, tₙ + Δt, setup)
+    bₙ₊₁ = force
 
     yDiffₙ₊₁ .= yDiff
 

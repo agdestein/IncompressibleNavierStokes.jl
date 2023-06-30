@@ -1,11 +1,13 @@
 """
-    Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
+    Grid(x, y; boundary_conditions, order4 = false)
 
 Create nonuniform Cartesian box mesh `x` × `y` with boundary conditions `boundary_conditions`.
 If `order4` is `true`, a fourth order mesh is created.
 """
-function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
+function Grid(x, y; boundary_conditions, order4 = false)
     dimension = Dimension(2)
+
+    T = eltype(x)
 
     α = 81
 
@@ -451,13 +453,15 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
 end
 
 """
-    Grid(x, y, z; boundary_conditions, order4 = false, T = eltype(x))
+    Grid(x, y, z; boundary_conditions, order4 = false)
 
 Create nonuniform Cartesian box mesh `x` × `y` × `z` with boundary conditions `boundary_conditions`.
 If `order4` is `true`, a fourth order mesh is created.
 """
-function Grid(x, y, z; boundary_conditions, order4 = false, T = eltype(x))
+function Grid(x, y, z; boundary_conditions, order4 = false)
     dimension = Dimension(3)
+
+    T = eltype(x)
 
     order4 && error("Fourth order grids not yet implemented for 3D")
     α = 81

@@ -20,7 +20,6 @@ get_bc_vectors
 
 ```@docs
 SteadyBodyForce
-UnsteadyBodyForce
 ```
 
 ## Grid
@@ -57,8 +56,6 @@ LerayConvectionModel
 
 ```@docs
 MomentumCache
-bodyforce
-bodyforce!
 check_symmetry
 compute_conservation
 convection

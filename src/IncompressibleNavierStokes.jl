@@ -91,7 +91,6 @@ include("processors/finalize.jl")
 include("processors/real_time_plot.jl")
 
 # Momentum equation
-include("momentum/bodyforce.jl")
 include("momentum/compute_conservation.jl")
 include("momentum/check_symmetry.jl")
 include("momentum/convection_components.jl")
