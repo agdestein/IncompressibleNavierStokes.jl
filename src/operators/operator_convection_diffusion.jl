@@ -9,7 +9,6 @@ function operator_convection_diffusion end
 function operator_convection_diffusion(
     grid::Grid{T,2},
     boundary_conditions,
-    viscosity_model,
 ) where {T}
     (; Nx, Ny) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t) = grid
@@ -18,7 +17,6 @@ function operator_convection_diffusion(
     (; gxi, gyi, gxd, gyd) = grid
     (; Buvy, Bvux) = grid
     (; order4, α) = grid
-    (; Re) = viscosity_model
 
     if order4
         (; hxi3, hyi3, gxi3, gyi3, hxd13, hxd3, hyd13, hyd3) = grid
@@ -463,14 +461,14 @@ function operator_convection_diffusion(
         Diffvx_div = (α * Dvx - Dvx3) * Diagonal(1 ./ Ωvx)
         Diffvy_div = (α * Dvy - Dvy3) * Diagonal(1 ./ Ωvy)
         Diffu =
-            1 / Re * Diffux_div * (α * Su_ux - Su_ux3) +
-            1 / Re * Diffuy_div * (α * Su_uy - Su_uy3)
+            Diffux_div * (α * Su_ux - Su_ux3) +
+            Diffuy_div * (α * Su_uy - Su_uy3)
         Diffv =
-            1 / Re * Diffvx_div * (α * Sv_vx - Sv_vx3) +
-            1 / Re * Diffvy_div * (α * Sv_vy - Sv_vy3)
+            Diffvx_div * (α * Sv_vx - Sv_vx3) +
+            Diffvy_div * (α * Sv_vy - Sv_vy3)
     else
-        Diffu = 1 / Re * (Dux * Su_ux + Duy * Su_uy)
-        Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy)
+        Diffu = Dux * Su_ux + Duy * Su_uy
+        Diffv = Dvx * Sv_vx + Dvy * Sv_vy
     end
     Diff = blockdiag(Diffu, Diffv)
 
@@ -524,7 +522,6 @@ end
 function operator_convection_diffusion(
     grid::Grid{T,3},
     boundary_conditions,
-    viscosity_model,
 ) where {T}
     (; Nx, Ny, Nz) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = grid
@@ -533,7 +530,6 @@ function operator_convection_diffusion(
     (; hx, hy, hz, hxi, hyi, hzi, hxd, hyd, hzd) = grid
     (; gxi, gyi, gzi, gxd, gyd, gzd) = grid
     (; Bvux, Bwux, Buvy, Bwvy, Buwz, Bvwz) = grid
-    (; Re) = viscosity_model
 
     ## Convection (differencing) operator Cu
 
@@ -1014,9 +1010,9 @@ function operator_convection_diffusion(
     Sv_wy = Sv_wy_bc_bf.B3D * Sv_wy_bc_lu.B3D
 
     ## Assemble operators
-    Diffu = 1 / Re * (Dux * Su_ux + Duy * Su_uy + Duz * Su_uz)
-    Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy + Dvz * Sv_vz)
-    Diffw = 1 / Re * (Dwx * Sw_wx + Dwy * Sw_wy + Dwz * Sw_wz)
+    Diffu = Dux * Su_ux + Duy * Su_uy + Duz * Su_uz
+    Diffv = Dvx * Sv_vx + Dvy * Sv_vy + Dvz * Sv_vz
+    Diffw = Dwx * Sw_wx + Dwy * Sw_wy + Dwz * Sw_wz
     Diff = blockdiag(Diffu, Diffv, Diffw)
 
     ## Group opearators

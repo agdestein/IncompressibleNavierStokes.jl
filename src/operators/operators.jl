@@ -251,7 +251,7 @@ function Operators(grid::Grid{T}, boundary_conditions, viscosity_model) where {T
     op_div = operator_divergence(grid, boundary_conditions)
 
     # Convection operators on u- and v- centered volumes
-    op_con = operator_convection_diffusion(grid, boundary_conditions, viscosity_model)
+    op_con = operator_convection_diffusion(grid, boundary_conditions)
 
     # Regularization modelling - this changes the convective term
     op_reg = operator_regularization(grid, op_con)

@@ -182,8 +182,8 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
         ySv_vy = α * Sv_vy_bc.Bbc * ybc1 - Sv_vy_bc3.Bbc * ybc3
 
         if viscosity_model isa LaminarModel
-            yDiffu = 1 / Re * (Diffux_div * ySu_ux + Diffuy_div * ySu_uy)
-            yDiffv = 1 / Re * (Diffvx_div * ySv_vx + Diffvy_div * ySv_vy)
+            yDiffu = Diffux_div * ySu_ux + Diffuy_div * ySu_uy
+            yDiffv = Diffvx_div * ySv_vx + Diffvy_div * ySv_vy
             yDiff = [yDiffu; yDiffv]
         else
             error("fourth order turbulent diffusion not implemented")
@@ -226,8 +226,8 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
         ybc = Sv_vy_bc.ybc1 ⊗ vLo_i + Sv_vy_bc.ybc2 ⊗ vUp_i
         ySv_vy = Sv_vy_bc.Bbc * ybc
 
-        yDiffu = 1 / Re * (Dux * ySu_ux + Duy * ySu_uy)
-        yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy)
+        yDiffu = Dux * ySu_ux + Duy * ySu_uy
+        yDiffv = Dvx * ySv_vx + Dvy * ySv_vy
         yDiff = [yDiffu; yDiffv]
 
         Ωu⁻¹ = 1 ./ Ω[indu]
@@ -777,9 +777,9 @@ function get_bc_vectors(setup::Setup{T,3}, t) where {T}
     # Sv_wy
     ySv_wy = ySv_wy_bf + ySv_wy_lu
 
-    yDiffu = 1 / Re * (Dux * ySu_ux + Duy * ySu_uy + Duz * ySu_uz)
-    yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy + Dvz * ySv_vz)
-    yDiffw = 1 / Re * (Dwx * ySw_wx + Dwy * ySw_wy + Dwz * ySw_wz)
+    yDiffu = Dux * ySu_ux + Duy * ySu_uy + Duz * ySu_uz
+    yDiffv = Dvx * ySv_vx + Dvy * ySv_vy + Dvz * ySv_vz
+    yDiffw = Dwx * ySw_wx + Dwy * ySw_wy + Dwz * ySw_wz
     yDiff = [yDiffu; yDiffv; yDiffw]
 
     Ωu⁻¹ = 1 ./ Ω[indu]

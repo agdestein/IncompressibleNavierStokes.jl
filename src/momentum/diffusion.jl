@@ -9,14 +9,15 @@ See also [`diffusion!`](@ref).
 """
 function diffusion end
 
-function diffusion(::LaminarModel, V, setup; bc_vectors, get_jacobian = false)
+function diffusion(m::LaminarModel, V, setup; bc_vectors, get_jacobian = false)
+    (; Re) = m
     (; Diff) = setup.operators
     (; yDiff) = bc_vectors
 
-    d = Diff * V + yDiff
+    d = 1 ./ Re .* (Diff * V .+ yDiff)
 
     if get_jacobian
-        ∇d = Diff
+        ∇d = 1 / Re * Diff
     else
         ∇d = nothing
     end
@@ -118,15 +119,16 @@ Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V` using vi
 """
 function diffusion! end
 
-function diffusion!(::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
+function diffusion!(m::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
+    (; Re) = m
     (; Diff) = setup.operators
     (; yDiff) = bc_vectors
 
-    # d = Diff * V + yDiff
+    # d = 1 ./ Re .* (Diff * V .+ yDiff)
     mul!(d, Diff, V)
-    d .+= yDiff
+    @. d = 1 / Re * (d + yDiff)
 
-    get_jacobian && (∇d .= Diff)
+    get_jacobian && (@. ∇d = 1 / Re * Diff)
 
     d, ∇d
 end
