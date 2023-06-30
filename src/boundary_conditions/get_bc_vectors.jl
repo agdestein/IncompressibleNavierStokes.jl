@@ -332,6 +332,49 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
         yIv_vy3 = Iv_vy_bc3.Bbc * ybc3
     end
 
+    ## Group BC vectors
+    bc_vectors = (;
+        yM,
+        ydM,
+        y_p,
+        yAu_ux,
+        yAu_uy,
+        yAv_vx,
+        yAv_vy,
+        yDiff,
+        yIu_ux,
+        yIv_uy,
+        yIu_vx,
+        yIv_vy,
+    )
+
+    if order4
+        bc_vectors = (;
+            bc_vectors...,
+            yAu_ux3,
+            yAu_uy3,
+            yAv_vx3,
+            yAv_vy3,
+            yIu_ux3,
+            yIv_uy3,
+            yIu_vx3,
+            yIv_vy3,
+        )
+    else
+        # Use values directly (see diffusion.jl and strain_tensor.jl)
+        bc_vectors = (;
+            bc_vectors...,
+            ySu_ux,
+            ySu_uy,
+            ySu_vx,
+            ySv_vx,
+            ySv_vy,
+            ySv_uy,
+            yDiffu_f,
+            yDiffv_f,
+        )
+    end
+
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         # Set BC for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
@@ -407,52 +450,7 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
 
         ybc = Cvy_k_bc.ybc1 ⊗ vLo_i + Cvy_k_bc.ybc2 ⊗ vUp_i
         yCvy_k = Cvy_k_bc.Bbc * ybc
-    end
 
-    ## Group BC vectors
-    bc_vectors = (;
-        yM,
-        ydM,
-        y_p,
-        yAu_ux,
-        yAu_uy,
-        yAv_vx,
-        yAv_vy,
-        yDiff,
-        yIu_ux,
-        yIv_uy,
-        yIu_vx,
-        yIv_vy,
-    )
-
-    if order4
-        bc_vectors = (;
-            bc_vectors...,
-            yAu_ux3,
-            yAu_uy3,
-            yAv_vx3,
-            yAv_vy3,
-            yIu_ux3,
-            yIv_uy3,
-            yIu_vx3,
-            yIv_vy3,
-        )
-    else
-        # Use values directly (see diffusion.jl and strain_tensor.jl)
-        bc_vectors = (;
-            bc_vectors...,
-            ySu_ux,
-            ySu_uy,
-            ySu_vx,
-            ySv_vx,
-            ySv_vy,
-            ySv_uy,
-            yDiffu_f,
-            yDiffv_f,
-        )
-    end
-
-    if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         bc_vectors = (;
             bc_vectors...,
             yAν_ux,
@@ -878,6 +876,51 @@ function get_bc_vectors(setup::Setup{T,3}, t) where {T}
     ybc = Iw_wz_bc.ybc1 ⊗ wBa_i + Iw_wz_bc.ybc2 ⊗ wFr_i
     yIw_wz = Iw_wz_bc.Bbc * ybc
 
+    # Group vectors
+    bc_vectors = (;
+        yM,
+        ydM,
+        y_p,
+        yAu_ux,
+        yAu_uy,
+        yAu_uz,
+        yAv_vx,
+        yAv_vy,
+        yAv_vz,
+        yAw_wx,
+        yAw_wy,
+        yAw_wz,
+        yDiff,
+        ySu_ux,
+        ySu_uy,
+        ySu_uz,
+        ySv_vx,
+        ySv_vy,
+        ySv_vz,
+        ySw_wx,
+        ySw_wy,
+        ySw_wz,
+        ySu_vx,
+        ySu_wx,
+        ySv_uy,
+        ySv_wy,
+        ySw_uz,
+        ySw_vz,
+        yDiffu_f,
+        yDiffv_f,
+        yDiffw_f,
+        yIu_ux,
+        yIv_uy,
+        yIw_uz,
+        yIu_vx,
+        yIv_vy,
+        yIw_vz,
+        yIu_wx,
+        yIv_wy,
+        yIw_wz,
+    )
+
+
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         # Set bc for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
@@ -953,52 +996,7 @@ function get_bc_vectors(setup::Setup{T,3}, t) where {T}
 
         ybc = Cvy_k_bc.ybc1 ⊗ vLo_i + Cvy_k_bc.ybc2 ⊗ vUp_i
         yCvy_k = Cvy_k_bc.Bbc * ybc
-    end
 
-    bc_vectors = (;
-        yM,
-        ydM,
-        y_p,
-        yAu_ux,
-        yAu_uy,
-        yAu_uz,
-        yAv_vx,
-        yAv_vy,
-        yAv_vz,
-        yAw_wx,
-        yAw_wy,
-        yAw_wz,
-        yDiff,
-        ySu_ux,
-        ySu_uy,
-        ySu_uz,
-        ySv_vx,
-        ySv_vy,
-        ySv_vz,
-        ySw_wx,
-        ySw_wy,
-        ySw_wz,
-        ySu_vx,
-        ySu_wx,
-        ySv_uy,
-        ySv_wy,
-        ySw_uz,
-        ySw_vz,
-        yDiffu_f,
-        yDiffv_f,
-        yDiffw_f,
-        yIu_ux,
-        yIv_uy,
-        yIw_uz,
-        yIu_vx,
-        yIv_vy,
-        yIw_vz,
-        yIu_wx,
-        yIv_wy,
-        yIw_wz,
-    )
-
-    if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         bc_vectors = (;
             bc_vectors...,
             yAν_ux,

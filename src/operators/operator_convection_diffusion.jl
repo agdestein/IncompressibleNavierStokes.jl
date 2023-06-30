@@ -457,24 +457,22 @@ function operator_convection_diffusion(
     end
 
     ## Assemble operators
-    if viscosity_model isa LaminarModel
-        if order4
-            Diffux_div = (α * Dux - Dux3) * Diagonal(1 ./ Ωux)
-            Diffuy_div = (α * Duy - Duy3) * Diagonal(1 ./ Ωuy)
-            Diffvx_div = (α * Dvx - Dvx3) * Diagonal(1 ./ Ωvx)
-            Diffvy_div = (α * Dvy - Dvy3) * Diagonal(1 ./ Ωvy)
-            Diffu =
-                1 / Re * Diffux_div * (α * Su_ux - Su_ux3) +
-                1 / Re * Diffuy_div * (α * Su_uy - Su_uy3)
-            Diffv =
-                1 / Re * Diffvx_div * (α * Sv_vx - Sv_vx3) +
-                1 / Re * Diffvy_div * (α * Sv_vy - Sv_vy3)
-        else
-            Diffu = 1 / Re * (Dux * Su_ux + Duy * Su_uy)
-            Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy)
-        end
-        Diff = blockdiag(Diffu, Diffv)
+    if order4
+        Diffux_div = (α * Dux - Dux3) * Diagonal(1 ./ Ωux)
+        Diffuy_div = (α * Duy - Duy3) * Diagonal(1 ./ Ωuy)
+        Diffvx_div = (α * Dvx - Dvx3) * Diagonal(1 ./ Ωvx)
+        Diffvy_div = (α * Dvy - Dvy3) * Diagonal(1 ./ Ωvy)
+        Diffu =
+            1 / Re * Diffux_div * (α * Su_ux - Su_ux3) +
+            1 / Re * Diffuy_div * (α * Su_uy - Su_uy3)
+        Diffv =
+            1 / Re * Diffvx_div * (α * Sv_vx - Sv_vx3) +
+            1 / Re * Diffvy_div * (α * Sv_vy - Sv_vy3)
+    else
+        Diffu = 1 / Re * (Dux * Su_ux + Duy * Su_uy)
+        Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy)
     end
+    Diff = blockdiag(Diffu, Diffv)
 
     ## Group operators
     operators = (;
@@ -494,13 +492,10 @@ function operator_convection_diffusion(
         Duy,
         Dvx,
         Dvy,
+        Diff,
+        Sv_uy,
+        Su_vx,
     )
-
-    if viscosity_model isa LaminarModel
-        operators = (; operators..., Diff)
-    else
-        operators = (; operators..., Sv_uy, Su_vx)
-    end
 
     if order4
         operators = (;
@@ -1019,15 +1014,13 @@ function operator_convection_diffusion(
     Sv_wy = Sv_wy_bc_bf.B3D * Sv_wy_bc_lu.B3D
 
     ## Assemble operators
-    if viscosity_model isa LaminarModel
-        Diffu = 1 / Re * (Dux * Su_ux + Duy * Su_uy + Duz * Su_uz)
-        Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy + Dvz * Sv_vz)
-        Diffw = 1 / Re * (Dwx * Sw_wx + Dwy * Sw_wy + Dwz * Sw_wz)
-        Diff = blockdiag(Diffu, Diffv, Diffw)
-    end
+    Diffu = 1 / Re * (Dux * Su_ux + Duy * Su_uy + Duz * Su_uz)
+    Diffv = 1 / Re * (Dvx * Sv_vx + Dvy * Sv_vy + Dvz * Sv_vz)
+    Diffw = 1 / Re * (Dwx * Sw_wx + Dwy * Sw_wy + Dwz * Sw_wz)
+    Diff = blockdiag(Diffu, Diffv, Diffw)
 
     ## Group opearators
-    operators = (;
+    (;
         Cux,
         Cuy,
         Cuz,
@@ -1076,13 +1069,12 @@ function operator_convection_diffusion(
         Dwx,
         Dwy,
         Dwz,
+        Diff,
+        Sv_uy,
+        Su_vx,
+        Sw_uz,
+        Su_wx,
+        Sw_vz,
+        Sv_wy,
     )
-
-    if viscosity_model isa LaminarModel
-        operators = (; operators..., Diff)
-    else
-        operators = (; operators..., Sv_uy, Su_vx, Sw_uz, Su_wx, Sw_vz, Sv_wy)
-    end
-
-    operators
 end
