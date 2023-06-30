@@ -15,7 +15,7 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
-    (; NV, Np, Ω⁻¹) = grid
+    (; NV, Np, Ω) = grid
     (; G, M) = operators
     (; A, b, c, p_add_solve, maxiter, abstol, newton_type) = method
 
@@ -129,7 +129,7 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
     end
 
     # Solution at new time step with b-coefficients of RK method
-    V = Vₙ .+ Δtₙ .* Ω⁻¹ .* (b_ext * Fⱼ)
+    V = Vₙ .+ Δtₙ ./ Ω .* (b_ext * Fⱼ)
 
     # Make V satisfy the incompressibility constraint at n+1; this is only needed when the
     # boundary conditions are time-dependent. For stiffly accurate methods, this can also
@@ -142,7 +142,7 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
         p = pressure_poisson!(pressure_solver, f)
 
         mul!(Gp, G, p)
-        V = @. V - Δtₙ * Ω⁻¹ * Gp
+        V = @. V - Δtₙ / Ω * Gp
 
         if p_add_solve
             p = pressure_additional_solve(
@@ -193,7 +193,7 @@ function step!(
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
-    (; NV, Np, Ω⁻¹) = grid
+    (; NV, Np, Ω) = grid
     (; G, M) = operators
     (; A, b, c, p_add_solve, maxiter, abstol, newton_type) = method
     (; Vtotₙ, ptotₙ, Qⱼ, Fⱼ, ∇Fⱼ, fⱼ, F, ∇F, f, Δp, Gp) = cache
@@ -371,8 +371,8 @@ function step!(
 
     # Solution at new time step with b-coefficients of RK method
     mul!(V, b_ext, Fⱼ)
-    @. V = Vₙ + Δtₙ * Ω⁻¹ * V
-    # V .= Vₙ .+ Δtₙ .* Ω⁻¹ .* (b_ext * Fⱼ)
+    @. V = Vₙ + Δtₙ / Ω * V
+    # V .= Vₙ .+ Δtₙ ./ Ω .* (b_ext * Fⱼ)
 
     # Make V satisfy the incompressibility constraint at n+1; this is only needed when the
     # boundary conditions are time-dependent. For stiffly accurate methods, this can also
@@ -387,7 +387,7 @@ function step!(
         pressure_poisson!(pressure_solver, p, f)
 
         mul!(Gp, G, p)
-        @. V -= Δtₙ * Ω⁻¹ * Gp
+        @. V -= Δtₙ / Ω * Gp
 
         if p_add_solve
             pressure_additional_solve!(

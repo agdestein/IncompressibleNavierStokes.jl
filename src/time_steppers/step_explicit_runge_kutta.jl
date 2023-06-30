@@ -14,7 +14,7 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
     (; G, M) = operators
     (; A, b, c, p_add_solve) = method
 
@@ -49,7 +49,7 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
 
         # Store right-hand side of stage i
         # Remove the -G*p contribution (but not y_p)
-        kVᵢ = Ω⁻¹ .* (F + G * p)
+        kVᵢ = 1 ./ Ω .* (F + G * p)
         kV = [kV kVᵢ]
 
         # Update velocity current stage by sum of Fᵢ's until this stage, weighted
@@ -77,7 +77,7 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
         Gp = G * p
 
         # Update velocity current stage, which is now divergence free
-        V = @. Vₙ + Δtₙ * (V - c[i] * Ω⁻¹ * Gp)
+        V = @. Vₙ + Δtₙ * (V - c[i] / Ω * Gp)
     end
 
     # For steady bc we do an additional pressure solve
@@ -113,7 +113,7 @@ function step!(
     (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
     (; G, M) = operators
     (; A, b, c, p_add_solve) = method
     (; kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f) = cache
@@ -150,8 +150,8 @@ function step!(
         # Remove the -G*p contribution (but not y_p)
         kVᵢ = @view kV[:, i]
         mul!(kVᵢ, G, p)
-        @. kVᵢ = Ω⁻¹ * (F + kVᵢ)
-        # kVᵢ .= Ω⁻¹ .* (F + G * p)
+        @. kVᵢ = 1 ./ Ω * (F + kVᵢ)
+        # kVᵢ .= 1 ./ Ω .* (F + G * p)
 
         # Update velocity current stage by sum of Fᵢ's until this stage, weighted
         # with Butcher tableau coefficients. This gives uᵢ₊₁, and for i=s gives uᵢ₊₁
@@ -181,7 +181,7 @@ function step!(
         mul!(Vtemp2, G, p)
 
         # Update velocity current stage, which is now divergence free
-        @. V = Vₙ + Δtₙ * (Vtemp - c[i] * Ω⁻¹ * Vtemp2)
+        @. V = Vₙ + Δtₙ * (Vtemp - c[i] / Ω * Vtemp2)
     end
 
     # For steady bc we do an additional pressure solve

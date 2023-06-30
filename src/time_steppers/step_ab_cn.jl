@@ -15,7 +15,7 @@ function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt; bc_vectors = not
     (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) =
         setup
     (; bc_unsteady) = boundary_conditions
-    (; NV, Ω⁻¹) = grid
+    (; NV, Ω) = grid
     (; G, M) = operators
     (; Diff) = operators
     (; p_add_solve, α₁, α₂, θ) = method
@@ -69,7 +69,7 @@ function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt; bc_vectors = not
     d = Diff * V
 
     # Right hand side of the momentum equation update
-    Rr = @. Vₙ + Ω⁻¹ * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + yDiff + b - Gpₙ)
+    Rr = @. Vₙ + 1 / Ω * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + yDiff + b - Gpₙ)
 
     # Implicit time-stepping for diffusion
     if viscosity_model isa LaminarModel
@@ -97,7 +97,7 @@ function step(stepper::AdamsBashforthCrankNicolsonStepper, Δt; bc_vectors = not
     Δp = pressure_poisson(pressure_solver, f)
 
     # Update velocity field
-    V -= Δt .* Ω⁻¹ .* (G * Δp .+ y_Δp)
+    V -= Δt ./ Ω .* (G * Δp .+ y_Δp)
 
     # First order pressure:
     p = pₙ .+ Δp
@@ -134,7 +134,7 @@ function step!(
     (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) =
         setup
     (; bc_unsteady) = boundary_conditions
-    (; NV, Ω⁻¹) = grid
+    (; NV, Ω) = grid
     (; G, M) = operators
     (; Diff) = operators
     (; p_add_solve, α₁, α₂, θ) = method
@@ -190,14 +190,14 @@ function step!(
     mul!(d, Diff, V)
 
     # Right hand side of the momentum equation update
-    @. Rr = Vₙ + Ω⁻¹ * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + yDiff + b - Gpₙ)
+    @. Rr = Vₙ + 1 ./ Ω * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + yDiff + b - Gpₙ)
 
     # Implicit time-stepping for diffusion
     if viscosity_model isa LaminarModel
         # Use precomputed LU decomposition
         if Δt ≉ cache.Δt
             # Time step has changed, recompute LU decomposition
-            Diff_fact = lu(I(NV) - θ * Δt * Diagonal(Ω⁻¹) * Diff)
+            Diff_fact = lu(I(NV) - θ * Δt * Diagonal(1 ./ Ω) * Diff)
             @pack! cache = Diff_fact, Δt
         end
         ldiv!(V, Diff_fact, Rr)
@@ -223,7 +223,7 @@ function step!(
     pressure_poisson!(pressure_solver, Δp, f)
 
     # Update velocity field
-    V .-= Δt .* Ω⁻¹ .* (G * Δp .+ y_Δp)
+    V .-= Δt ./ Ω .* (G * Δp .+ y_Δp)
 
     # First order pressure:
     p .= pₙ .+ Δp

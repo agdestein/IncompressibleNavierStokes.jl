@@ -11,7 +11,7 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     (; Nux_in, Nux_b, Nux_t, Nuy_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t) = grid
     (; hx, hy) = grid
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
     (; order4, α) = grid
 
     bc = boundary_conditions
@@ -138,7 +138,7 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     # Only the right hand side vector changes, so the pressure matrix can be set up outside the time-stepping-loop.
 
     # Laplace = div grad
-    A = M * Diagonal(Ω⁻¹) * G
+    A = M * Diagonal(1 ./ Ω) * G
 
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions
@@ -165,7 +165,7 @@ function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
     (; Nwx_in, Nwy_in, Nwz_in, Nwz_b, Nwz_t) = grid
     (; Npx, Npy, Npz) = grid
     (; hx, hy, hz) = grid
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
 
     bc = boundary_conditions
 
@@ -273,7 +273,7 @@ function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
     # outside the time-stepping-loop.
 
     # Laplace = div grad
-    A = M * Diagonal(Ω⁻¹) * G
+    A = M * Diagonal(1 ./ Ω) * G
 
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions

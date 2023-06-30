@@ -7,7 +7,7 @@ field, resulting in same order pressure as velocity.
 function pressure_additional_solve(pressure_solver, V, p, t, setup; bc_vectors = nothing)
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
     (; M) = operators
 
     # Get updated BC for ydM (time derivative of BC in ydM)
@@ -20,7 +20,7 @@ function pressure_additional_solve(pressure_solver, V, p, t, setup; bc_vectors =
     # Momentum already contains G*p with the current p, we therefore effectively solve for
     # the pressure difference
     F, = momentum(V, V, p, t, setup; bc_vectors)
-    f = M * (Ω⁻¹ .* F) + ydM
+    f = M * (1 ./ Ω .* F) + ydM
 
     Δp = pressure_poisson(pressure_solver, f)
     p .+ Δp
@@ -46,7 +46,7 @@ function pressure_additional_solve!(
 )
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
     (; M) = operators
 
     # Get updated BC for ydM (time derivative of BC in ydM)
@@ -60,8 +60,8 @@ function pressure_additional_solve!(
     # the pressure difference
     momentum!(F, nothing, V, V, p, t, setup, momentum_cache; bc_vectors)
 
-    # f = M * (Ω⁻¹ .* F) + ydM
-    @. F = Ω⁻¹ .* F
+    # f = M * (1 ./ Ω .* F) + ydM
+    @. F = 1 ./ Ω .* F
     mul!(f, M, F)
     @. f = f + ydM
 

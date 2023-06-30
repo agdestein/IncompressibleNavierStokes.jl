@@ -24,7 +24,7 @@ function create_initial_conditions(
     pressure_solver = DirectPressureSolver(setup),
 ) where {T}
     (; grid, operators) = setup
-    (; xu, yu, xv, yv, xpp, ypp, Ω⁻¹) = grid
+    (; xu, yu, xv, yv, xpp, ypp, Ω) = grid
     (; G, M) = operators
 
     # Boundary conditions
@@ -52,7 +52,7 @@ function create_initial_conditions(
         # Make velocity field divergence free
         f = M * V + yM
         Δp = pressure_poisson(pressure_solver, f)
-        V .-= Ω⁻¹ .* (G * Δp)
+        V .-= 1 ./ Ω .* (G * Δp)
     end
 
     # Initial pressure: should in principle NOT be prescribed (will be calculated if p_initial)
@@ -76,7 +76,7 @@ function create_initial_conditions(
     pressure_solver = DirectPressureSolver(setup),
 ) where {T}
     (; grid) = setup
-    (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp, Ω⁻¹) = grid
+    (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp, Ω) = grid
     (; G, M) = setup.operators
 
     # Boundary conditions
@@ -106,7 +106,7 @@ function create_initial_conditions(
         # Make velocity field divergence free
         f = M * V + yM
         Δp = pressure_poisson(pressure_solver, f, setup)
-        V .-= Ω⁻¹ .* (G * Δp)
+        V .-= 1 ./ Ω .* (G * Δp)
     end
 
     # Initial pressure: should in principle NOT be prescribed (will be calculated if p_initial)
@@ -171,7 +171,7 @@ function random_field(
     s = 5,
     pressure_solver = DirectPressureSolver(setup),
 ) where {T}
-    (; Ω⁻¹) = setup.grid
+    (; Ω) = setup.grid
     (; G, M) = setup.operators
 
     u = real.(ifft(create_spectrum_2(K, A, σ, s)))
@@ -187,7 +187,7 @@ function random_field(
     # Make velocity field divergence free
     f = M * V + yM
     Δp = pressure_poisson(pressure_solver, f)
-    V .-= Ω⁻¹ .* (G * Δp)
+    V .-= 1 ./ Ω .* (G * Δp)
     p = pressure_additional_solve(pressure_solver, V, p, T(0), setup; bc_vectors)
 
     V, p
@@ -202,7 +202,7 @@ function random_field(
     s = 5,
     pressure_solver = DirectPressureSolver(setup),
 ) where {T}
-    (; Ω⁻¹) = setup.grid
+    (; Ω) = setup.grid
     (; G, M) = setup.operators
 
     u = real.(ifft(create_spectrum_3(K, A, σ, s)))
@@ -219,7 +219,7 @@ function random_field(
     # Make velocity field divergence free
     f = M * V + yM
     Δp = pressure_poisson(pressure_solver, f)
-    V .-= Ω⁻¹ .* (G * Δp)
+    V .-= 1 ./ Ω .* (G * Δp)
     p = pressure_additional_solve(pressure_solver, V, p, T(0), setup; bc_vectors)
 
     V, p

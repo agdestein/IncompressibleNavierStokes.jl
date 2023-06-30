@@ -66,7 +66,6 @@ Base.@kwdef struct Grid{T,N}
 
     Ωp::Vector{T} = T[]
     Ω::Vector{T} = T[]
-    Ω⁻¹::Vector{T} = T[]
 
     # For order4
     Ωux::Vector{T} = T[]
@@ -463,7 +462,6 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
     Ωvy = hyd ⊗ hxi
 
     Ω = [Ωu; Ωv]
-    Ω⁻¹ = 1 ./ Ω
 
     if order4
         # Differencing for second order operators on the fourth order mesh
@@ -499,7 +497,6 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
         Ωu = α * Ωu1 - Ωu3
         Ωv = α * Ωv1 - Ωv3
         Ω = [Ωu; Ωv]
-        Ω⁻¹ = 1 ./ Ω
 
         Ωux = @. α * Ωux1 - Ωux3
         Ωuy = @. α * Ωuy1 - Ωuy3
@@ -551,7 +548,6 @@ function Grid(x, y; boundary_conditions, order4 = false, T = eltype(x))
         NV,
         Ωp,
         Ω,
-        Ω⁻¹,
         Ωux,
         Ωvx,
         Ωuy,
@@ -885,7 +881,6 @@ function Grid(x, y, z; boundary_conditions, order4 = false, T = eltype(x))
 
     # Total volumes
     Ω = [Ωu; Ωv; Ωw]
-    Ω⁻¹ = 1 ./ Ω
 
     # Metrics that can be useful for initialization:
     xu = reshape(ones(Nuz_in) ⊗ ones(Nuy_in) ⊗ xin, Nux_in, Nuy_in, Nuz_in)
@@ -968,7 +963,6 @@ function Grid(x, y, z; boundary_conditions, order4 = false, T = eltype(x))
         NV,
         Ωp,
         Ω,
-        Ω⁻¹,
         hxi,
         hyi,
         hzi,

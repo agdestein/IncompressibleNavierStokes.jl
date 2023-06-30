@@ -13,7 +13,7 @@ function step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; G, M) = operators
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
 
     # Update current solution (does not depend on previous step size)
     Δtₙ₋₁ = t - tₙ
@@ -36,7 +36,7 @@ function step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
 
     # Take a time step with this right-hand side, this gives an intermediate velocity field
     # (not divergence free)
-    V = @. (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1 // 2)
+    V = @. (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δtₙ / Ω * F) / (β + 1 // 2)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
@@ -56,7 +56,7 @@ function step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
     GΔp = G * Δp
 
     # Update velocity field
-    V = @. V - Δtᵦ * Ω⁻¹ * GΔp
+    V = @. V - Δtᵦ / Ω * GΔp
 
     # Update pressure (second order)
     p = @. 2pₙ - pₙ₋₁ + 4 // 3 * Δp
@@ -82,7 +82,7 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = 
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; G, M) = operators
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache
 
     # Update current solution (does not depend on previous step size)
@@ -106,7 +106,7 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = 
 
     # Take a time step with this right-hand side, this gives an intermediate velocity field
     # (not divergence free)
-    @. V = (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1 // 2)
+    @. V = (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δtₙ / Ω * F) / (β + 1 // 2)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
@@ -128,7 +128,7 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = 
     mul!(GΔp, G, Δp)
 
     # Update velocity field
-    @. V -= Δtᵦ * Ω⁻¹ * GΔp
+    @. V -= Δtᵦ / Ω * GΔp
 
     # Update pressure (second order)
     @. p = 2pₙ - pₙ₋₁ + 4 // 3 * Δp
