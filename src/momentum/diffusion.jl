@@ -51,7 +51,7 @@ function diffusion(
     ν_t = turbulent_viscosity(model, setup, S_abs)
 
     # To compute the diffusion, we need ν_t at ux, uy, vx and vy locations
-    # This means we have to reverse the process of strain_tensor.m: go
+    # This means we have to reverse the process of `strain_tensor`: go
     # from pressure points back to the ux, uy, vx, vy locations
     ν_t_ux = Aν_ux * ν_t + yAν_ux
     ν_t_uy = Aν_uy * ν_t + yAν_uy
