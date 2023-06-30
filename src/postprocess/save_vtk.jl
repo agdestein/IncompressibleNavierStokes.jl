@@ -18,7 +18,7 @@ function save_vtk(V, p, t, setup, filename = "output/solution")
         coords = (xp, yp, zp)
     end
     vtk_grid(filename, coords...) do vtk
-        vels = get_velocity(V, t, setup)
+        vels = get_velocity(setup, V, t)
         if N == 2
             # ParaView prefers 3D vectors. Add zero z-component.
             wp = zeros(size(vels[1]))

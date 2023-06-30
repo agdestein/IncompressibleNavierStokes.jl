@@ -1,5 +1,5 @@
 """
-    operator_turbulent_diffusion(grid, boundary_conditions)
+    operator_turbulent_diffusion(dimension, grid, boundary_conditions)
 
 Average (turbulent) viscosity to cell faces: from `ν` at `xp`, `yp` to `ν` at `ux`, `uy`,
 `vx`, `vy` locations.
@@ -7,7 +7,7 @@ Average (turbulent) viscosity to cell faces: from `ν` at `xp`, `yp` to `ν` at 
 function operator_turbulent_diffusion end
 
 # 2D version
-function operator_turbulent_diffusion(grid::Grid{T,2}, boundary_conditions) where {T}
+function operator_turbulent_diffusion(::Dimension{2}, grid, boundary_conditions)
     (; Npx, Npy) = grid
     (; Nux_in, Nuy_in, Nvx_in, Nvy_in) = grid
     (; hx, hy, gxd, gyd) = grid
@@ -301,6 +301,6 @@ function operator_turbulent_diffusion(grid::Grid{T,2}, boundary_conditions) wher
 end
 
 # TODO: 3D implementation
-function operator_turbulent_diffusion(grid::Grid{T,3}, boundary_conditions) where {T}
+function operator_turbulent_diffusion(::Dimension{3}, grid, boundary_conditions)
     error("Not implemented (3D)")
 end

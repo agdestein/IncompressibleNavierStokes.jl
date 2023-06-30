@@ -26,9 +26,9 @@ UnsteadyBodyForce
 ## Grid
 
 ```@docs
+dimension
 Grid
 cosine_grid
-get_dimension
 max_size
 stretched_grid
 ```

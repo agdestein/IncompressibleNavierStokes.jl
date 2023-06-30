@@ -5,7 +5,6 @@
     z = LinRange(0, 2π, n)
     setup = Setup(x, y, z)
 
-    @test plot_grid(setup.grid) isa Makie.Figure
     @test plot_grid(x, y, z) isa Makie.Figure
 
     pressure_solver = FourierPressureSolver(setup)

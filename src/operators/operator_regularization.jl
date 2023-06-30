@@ -1,12 +1,12 @@
 """
-    operator_regularization(grid)
+    operator_regularization(dimension, grid, operators)
 
 Build regularization matrices.
 """
 function operator_regularization end
 
 # 2D version
-function operator_regularization(grid::Grid{T,2}, operators) where {T}
+function operator_regularization(::Dimension{2}, grid, operators)
     (; Ω, indu, indv) = grid
     (; Dux, Duy, Dvx, Dvy) = operators
     (; Su_ux, Su_uy, Sv_vx, Sv_vy) = operators
@@ -25,7 +25,7 @@ function operator_regularization(grid::Grid{T,2}, operators) where {T}
 end
 
 # 3D version
-function operator_regularization(grid::Grid{T,3}, operators) where {T}
+function operator_regularization(::Dimension{3}, grid, operators)
     (; Ω, indu, indv, indw) = grid
     (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = operators
     (; Su_ux, Su_uy, Su_uz) = operators

@@ -1,12 +1,12 @@
 """
-    operator_interpolation(grid, boundary_conditions)
+    operator_interpolation(dimension, grid, boundary_conditions)
 
 Construct interpolation operators.
 """
 function operator_interpolation end
 
 # 2D version
-function operator_interpolation(grid::Grid{T,2}, boundary_conditions) where {T}
+function operator_interpolation(::Dimension{2}, grid, boundary_conditions)
     (; Nx, Ny) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t) = grid
@@ -487,7 +487,7 @@ function operator_interpolation(grid::Grid{T,2}, boundary_conditions) where {T}
 end
 
 # 3D version
-function operator_interpolation(grid::Grid{T,3}, boundary_conditions) where {T}
+function operator_interpolation(::Dimension{3}, grid, boundary_conditions)
     (; Nx, Ny, Nz) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t) = grid

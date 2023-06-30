@@ -5,8 +5,10 @@ Plot streamfunction.
 """
 function plot_streamfunction end
 
+plot_streamfunction(setup, V, t; kwargs...) = plot_streamfunction(setup.grid.dimension, setup, V, t; kwargs...)
+
 # 2D version
-function plot_streamfunction(setup::Setup{T,2}, V, t; kwargs...) where {T}
+function plot_streamfunction(::Dimension{2}, setup, V, t; kwargs...)
     (; grid, boundary_conditions) = setup
     (; x, y, xlims, ylims) = grid
 
@@ -19,7 +21,7 @@ function plot_streamfunction(setup::Setup{T,2}, V, t; kwargs...) where {T}
     end
 
     # Get fields
-    ψ = get_streamfunction(V, t, setup)
+    ψ = get_streamfunction(setup, V, t)
 
     # Levels
     μ, σ = mean(ψ), std(ψ)
@@ -53,6 +55,6 @@ function plot_streamfunction(setup::Setup{T,2}, V, t; kwargs...) where {T}
 end
 
 # 3D version
-function plot_streamfunction(setup::Setup{T,3}, V, t; kwargs...) where {T}
+function plot_streamfunction(::Dimension{3}, setup, V, t; kwargs...)
     error("Not implemented (3D)")
 end

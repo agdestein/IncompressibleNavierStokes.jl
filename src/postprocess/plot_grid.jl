@@ -7,17 +7,12 @@ Plot nonuniform Cartesian grid.
 """
 function plot_grid end
 
-plot_grid(g::Grid{T,2}) where {T} = plot_grid(g.x, g.y)
-plot_grid(g::Grid{T,3}) where {T} = plot_grid(g.x, g.y, g.z)
-
-function plot_grid(x, y)
-    wireframe(
-        x,
-        y,
-        zeros(length(x), length(y));
-        axis = (; aspect = DataAspect(), xlabel = "x", ylabel = "y"),
-    )
-end
+plot_grid(x, y) = wireframe(
+    x,
+    y,
+    zeros(length(x), length(y));
+    axis = (; aspect = DataAspect(), xlabel = "x", ylabel = "y"),
+)
 
 function plot_grid(x, y, z)
     nx, ny, nz = length(x), length(y), length(z)

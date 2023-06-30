@@ -5,8 +5,10 @@ Plot body force.
 """
 function plot_force end
 
+plot_force(setup, t; kwargs...) = plot_force(setup.grid.dimension, setup, t; kwargs...)
+
 # 2D version
-function plot_force(setup::Setup{T,2}, t; kwargs...) where {T}
+function plot_force(::Dimension{2}, setup, t; kwargs...)
     (; grid, force) = setup
     (; xp, yp, xlims, ylims) = grid
     (; xu, yu, zu, indu, xlims, ylims) = grid
@@ -30,13 +32,13 @@ function plot_force(setup::Setup{T,2}, t; kwargs...) where {T}
 end
 
 # 3D version
-function plot_force(setup::Setup{T,3}, t; kwargs...) where {T}
+function plot_force(::Dimension{3}, setup, t; kwargs...)
     (; grid, force) = setup
     (; xu, yu, zu, indu) = grid
     (; F) = force
 
     # Get force at pressure points
-    # up, vp, wp = get_velocity(V, t, setup)
+    # up, vp, wp = get_velocity(setup, V, t)
     # qp = map((u, v, w) -> √sum(u^2 + v^2 + w^2), up, vp, wp)
     Fp = reshape(F[indu], size(xu))
     # TODO: norm of F instead of Fu

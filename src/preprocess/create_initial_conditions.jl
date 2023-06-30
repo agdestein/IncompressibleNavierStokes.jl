@@ -16,13 +16,13 @@ function create_initial_conditions end
 
 # 2D version
 function create_initial_conditions(
-    setup::Setup{T,2},
+    setup,
     t;
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure = nothing,
     pressure_solver = DirectPressureSolver(setup),
-) where {T}
+)
     (; grid, operators) = setup
     (; xu, yu, xv, yv, xpp, ypp, Ω) = grid
     (; G, M) = operators
@@ -67,14 +67,14 @@ end
 
 # 3D version
 function create_initial_conditions(
-    setup::Setup{T,3},
+    setup,
     t;
     initial_velocity_u,
     initial_velocity_v,
     initial_velocity_w,
     initial_pressure = nothing,
     pressure_solver = DirectPressureSolver(setup),
-) where {T}
+)
     (; grid) = setup
     (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp, Ω) = grid
     (; G, M) = setup.operators
@@ -162,9 +162,12 @@ Create random field.
 """
 function random_field end
 
+random_field(setup, K; kwargs...) = random_field(setup.grid.dimension, setup, K; kwargs...)
+
 # 2D version
 function random_field(
-    setup::Setup{T,2},
+    ::Dimension{2},
+    setup,
     K;
     A = convert(eltype(setup.grid.x), 1e6),
     σ = convert(eltype(setup.grid.x), 30),
@@ -195,7 +198,8 @@ end
 
 # 3D version
 function random_field(
-    setup::Setup{T,3},
+    ::Dimension{3},
+    setup,
     K;
     A = convert(eltype(setup.grid.x), 1e6),
     σ = convert(eltype(setup.grid.x), 30),

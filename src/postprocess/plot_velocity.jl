@@ -5,12 +5,14 @@ Plot velocity.
 """
 function plot_velocity end
 
+plot_velocity(setup, V, t; kwargs...) = plot_velocity(setup.grid.dimension, setup, V, t; kwargs...)
+
 # 2D version
-function plot_velocity(setup::Setup{T,2}, V, t; kwargs...) where {T}
+function plot_velocity(::Dimension{2}, setup, V, t; kwargs...)
     (; xp, yp, xlims, ylims) = setup.grid
 
     # Get velocity at pressure points
-    up, vp = get_velocity(V, t, setup)
+    up, vp = get_velocity(setup, V, t)
     qp = map((u, v) -> √(u^2 + v^2), up, vp)
 
     # Levels
@@ -34,11 +36,11 @@ function plot_velocity(setup::Setup{T,2}, V, t; kwargs...) where {T}
 end
 
 # 3D version
-function plot_velocity(setup::Setup{T,3}, V, t; kwargs...) where {T}
+function plot_velocity(::Dimension{3}, setup, V, t; kwargs...)
     (; xu, yu, zu, indu) = setup.grid
 
     # Get velocity at pressure points
-    # up, vp, wp = get_velocity(V, t, setup)
+    # up, vp, wp = get_velocity(setup, V, t)
     # qp = map((u, v, w) -> √sum(u^2 + v^2 + w^2), up, vp, wp)
     qp = reshape(V[indu], size(xu))
     xp, yp, zp = xu[:, 1, 1], yu[1, :, 1], zu[1, 1, :]

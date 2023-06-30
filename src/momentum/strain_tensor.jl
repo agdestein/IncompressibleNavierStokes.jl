@@ -5,14 +5,26 @@ Evaluate rate of strain tensor `S(V)` and its magnitude.
 """
 function strain_tensor end
 
+strain_tensor(
+    V,
+    setup;
+    kwargs...,
+) = strain_tensor(
+    setup.grid.dimension,
+    V,
+    setup;
+    kwargs...,
+)
+
 # 2D version
 function strain_tensor(
+    ::Dimension{2},
     V,
-    setup::Setup{T,2};
+    setup;
     bc_vectors,
     get_jacobian = false,
     get_S_abs = false,
-) where {T}
+)
     (; grid, operators, boundary_conditions) = setup
     (; Nx, Ny, Nu, Nv, Np, indu, indv) = grid
     (; Nux_in, Nuy_in, Nvx_in, Nvy_in) = grid
@@ -148,11 +160,12 @@ end
 
 # 3D version
 function strain_tensor(
+    ::Dimension{2},
     V,
-    setup::Setup{T,3};
+    setup;
     bc_vectors,
     get_jacobian = false,
     get_S_abs = false,
-) where {T}
+)
     error("Not implemented (3D)")
 end

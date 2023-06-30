@@ -5,8 +5,10 @@ Get boundary condition vectors.
 """
 function get_bc_vectors end
 
+get_bc_vectors(setup, t) = get_bc_vectors(setup.grid.dimension, setup, t)
+
 # 2D version
-function get_bc_vectors(setup::Setup{T,2}, t) where {T}
+function get_bc_vectors(::Dimension{2}, setup, t)
     (; grid, operators, boundary_conditions, viscosity_model) = setup
 
     (; Nux_in, Nvy_in, Np, Npx, Npy) = grid
@@ -470,7 +472,7 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
 end
 
 # 3D version
-function get_bc_vectors(setup::Setup{T,3}, t) where {T}
+function get_bc_vectors(::Dimension{3}, setup, t)
     (; grid, operators, boundary_conditions, viscosity_model) = setup
 
     (; Re) = viscosity_model

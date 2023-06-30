@@ -1,12 +1,12 @@
 """
-    operator_postprocessing(grid, boundary_conditions)
+    operator_postprocessing(dimension, grid, boundary_conditions)
 
 Construct postprocessing operators such as vorticity.
 """
 function operator_postprocessing end
 
 # 2D version
-function operator_postprocessing(grid::Grid{T,2}, boundary_conditions) where {T}
+function operator_postprocessing(::Dimension{2}, grid, boundary_conditions)
     (; Nx, Ny, gx, gy, gxd, gyd) = grid
 
     if all(==(:periodic), (boundary_conditions.u.x[1], boundary_conditions.v.y[1]))
@@ -55,7 +55,7 @@ function operator_postprocessing(grid::Grid{T,2}, boundary_conditions) where {T}
 end
 
 # 3D version
-function operator_postprocessing(grid::Grid{T,3}, boundary_conditions) where {T}
+function operator_postprocessing(::Dimension{3}, grid, boundary_conditions)
     (; Nx, Ny, Nz, gx, gy, gz, gxd, gyd, gzd) = grid
 
     if all(

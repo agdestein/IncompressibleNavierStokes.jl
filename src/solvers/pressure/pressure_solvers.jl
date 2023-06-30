@@ -12,14 +12,16 @@ Direct pressure solver using a LU decomposition.
 """
 struct DirectPressureSolver{T,F<:Factorization{T}} <: AbstractPressureSolver{T}
     A_fact::F
-    function DirectPressureSolver(setup::Setup{T}) where {T}
+    function DirectPressureSolver(setup)
+        (; A) = setup.operators
+        T = eltype(A)
         fact = factorize(setup.operators.A)
         new{T,typeof(fact)}(fact)
     end
 end
 
 """
-    CGPressureSolver(abstol, reltol, maxiter)
+    CGPressureSolver(setup; [abstol], [reltol], [maxiter])
 
 Conjugate gradients iterative pressure solver.
 """
@@ -29,22 +31,17 @@ struct CGPressureSolver{T} <: AbstractPressureSolver{T}
     reltol::T
     maxiter::Int
     function CGPressureSolver(
-        setup::Setup{T};
+        setup;
         abstol = 0,
-        reltol = √eps(T),
-        maxiter = nothing,
-    ) where {T}
+        reltol = √eps(eltype(setup.operators.A)),
+        maxiter = size(setup.operators.A, 2),
+    )
         (; A) = setup.operators
-        isnothing(maxiter) && (maxiter = size(A, 2))
+        T = eltype(A)
         new{T}(A, abstol, reltol, maxiter)
     end
 end
 
-"""
-    FourierPressureSolver()
-
-Fourier transform pressure solver for periodic domains.
-"""
 struct FourierPressureSolver{T,N} <: AbstractPressureSolver{T}
     Ahat::Array{Complex{T},N}
     phat::Array{Complex{T},N}
@@ -56,9 +53,12 @@ end
 
 Build Fourier pressure solver from setup.
 """
-function FourierPressureSolver(setup::Setup{T,2}) where {T}
+FourierPressureSolver(setup) = FourierPressureSolver(setup.grid.dimension, setup)
+
+function FourierPressureSolver(::Dimension{2}, setup)
     (; grid, boundary_conditions) = setup
     (; hx, hy, Npx, Npy) = grid
+    T = eltype(hx)
 
     if any(
         !isequal((:periodic, :periodic)),
@@ -79,7 +79,7 @@ function FourierPressureSolver(setup::Setup{T,2}) where {T}
     j = reshape(0:(Npy-1), 1, :)
 
     # Scale with Δx*Δy, since we solve the PDE in integrated form
-    Ahat = @. 4 * Δx * Δy * (sin(i * π / Npx)^2 / Δx^2 + sin(j * π / Npy)^2 / Δy^2)
+    Ahat = @. 4 * Δx * Δy * (sin(i * T(π) / Npx)^2 / Δx^2 + sin(j * T(π) / Npy)^2 / Δy^2)
 
     # Pressure is determined up to constant, fix at 0
     Ahat[1] = 1
@@ -93,14 +93,10 @@ function FourierPressureSolver(setup::Setup{T,2}) where {T}
     FourierPressureSolver{T,2}(Ahat, phat, fhat)
 end
 
-"""
-    FourierPressureSolver(setup)
-
-Build Fourier pressure solver from setup.
-"""
-function FourierPressureSolver(setup::Setup{T,3}) where {T}
+function FourierPressureSolver(::Dimension{3}, setup)
     (; grid, boundary_conditions) = setup
     (; hx, hy, hz, Npx, Npy, Npz) = grid
+    T = eltype(hx)
 
     if any(
         !isequal((:periodic, :periodic)),
@@ -124,10 +120,14 @@ function FourierPressureSolver(setup::Setup{T,3}) where {T}
 
     # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
     Ahat = @. 4 *
-       Δx *
-       Δy *
-       Δz *
-       (sin(i * π / Npx)^2 / Δx^2 + sin(j * π / Npy)^2 / Δy^2 + sin(k * π / Npz)^2 / Δz^2)
+        Δx *
+        Δy *
+        Δz *
+       (
+           sin(i * T(π) / Npx)^2 / Δx^2 +
+           sin(j * T(π) / Npy)^2 / Δy^2 +
+           sin(k * T(π) / Npz)^2 / Δz^2
+       )
 
     # Pressure is determined up to constant, fix at 0
     Ahat[1] = 1

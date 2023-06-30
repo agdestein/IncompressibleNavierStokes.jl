@@ -5,8 +5,10 @@ Plot pressure.
 """
 function plot_pressure end
 
+plot_pressure(setup, p; kwargs...) = plot_pressure(setup.grid.dimension, setup, p; kwargs...)
+
 # 2D version
-function plot_pressure(setup::Setup{T,2}, p; kwargs...) where {T}
+function plot_pressure(::Dimension{2}, setup, p; kwargs...)
     (; Nx, Ny, Npx, Npy, xp, yp, xlims, ylims) = setup.grid
 
     # Reshape
@@ -37,7 +39,7 @@ function plot_pressure(setup::Setup{T,2}, p; kwargs...) where {T}
 end
 
 # 3D version
-function plot_pressure(setup::Setup{T,3}, p; kwargs...) where {T}
+function plot_pressure(::Dimension{3}, setup, p; kwargs...)
     (; Nx, Ny, Nz, Npx, Npy, Npz, xp, yp, zp) = setup.grid
 
     # Reshape

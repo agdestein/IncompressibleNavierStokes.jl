@@ -15,16 +15,30 @@ See also [`convection_components!`](@ref).
 """
 function convection_components end
 
-# 2D version
-function convection_components(
+convection_components(
     V,
     ϕ,
-    setup::Setup{T,2};
+    setup;
+    kwargs...,
+) = convection_components(
+    setup.grid.dimension,
+    V,
+    ϕ,
+    setup;
+    kwargs...,
+)
+
+# 2D version
+function convection_components(
+    ::Dimension{2},
+    V,
+    ϕ,
+    setup;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
     order4 = false,
-) where {T}
+)
     (; grid, operators) = setup
 
     if order4
@@ -124,14 +138,15 @@ end
 
 # 3D version
 function convection_components(
+    ::Dimension{3},
     V,
     ϕ,
-    setup::Setup{T,3};
+    setup;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
     order4 = false,
-) where {T}
+)
     order4 && error("order4 not implemented for 3D")
 
     (; grid, operators) = setup
@@ -280,19 +295,39 @@ See also [`convection_components`](@ref).
 """
 function convection_components! end
 
-# 2D version
-function convection_components!(
+convection_components!(
     c,
     ∇c,
     V,
     ϕ,
-    setup::Setup{T,2},
+    setup,
+    cache;
+    kwargs...,
+) = convection_components!(
+    setup.grid.dimension,
+    c,
+    ∇c,
+    V,
+    ϕ,
+    setup,
+    cache;
+    kwargs...,
+)
+
+# 2D version
+function convection_components!(
+    ::Dimension{2},
+    c,
+    ∇c,
+    V,
+    ϕ,
+    setup,
     cache;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
     order4 = false,
-) where {T}
+)
     (; grid, operators) = setup
 
     if order4
@@ -435,17 +470,18 @@ end
 
 # 3D version
 function convection_components!(
+    ::Dimension{3},
     c,
     ∇c,
     V,
     ϕ,
-    setup::Setup{T,3},
+    setup,
     cache;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
     order4 = false,
-) where {T}
+)
     order4 && error("order4 not implemented for 3D")
 
     (; grid, operators) = setup

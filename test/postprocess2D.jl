@@ -5,7 +5,6 @@
 
     setup = Setup(x, y)
 
-    @test plot_grid(setup.grid) isa Makie.FigureAxisPlot
     @test plot_grid(x, y) isa Makie.FigureAxisPlot
 
     pressure_solver = FourierPressureSolver(setup)
@@ -40,7 +39,7 @@
     _E = zeros(0)
     E = @lift begin
         V, p, t = $(observer.state)
-        up, vp = get_velocity(V, t, setup)
+        up, vp = get_velocity(setup, V, t)
         up = reshape(up, :)
         vp = reshape(vp, :)
         push!(_E, up' * Diagonal(Ωp) * up + vp' * Diagonal(Ωp) * vp)

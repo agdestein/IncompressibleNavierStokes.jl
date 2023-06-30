@@ -5,8 +5,10 @@ Plot vorticity field.
 """
 function plot_vorticity end
 
+plot_vorticity(setup, V, t; kwargs...) = plot_vorticity(setup.grid.dimension, setup, V, t; kwargs...)
+
 # 2D version
-function plot_vorticity(setup, V, t; kwargs...)
+function plot_vorticity(::Dimension{2}, setup, V, t; kwargs...)
     (; grid, boundary_conditions) = setup
     (; x, y, xlims, ylims) = grid
 
@@ -19,7 +21,7 @@ function plot_vorticity(setup, V, t; kwargs...)
     end
 
     # Get fields
-    ω = get_vorticity(V, t, setup)
+    ω = get_vorticity(setup, V, t)
 
     # Levels
     μ, σ = mean(ω), std(ω)
@@ -45,7 +47,7 @@ function plot_vorticity(setup, V, t; kwargs...)
 end
 
 # 3D version
-function plot_vorticity(setup::Setup{T,3}, V, t; kwargs...) where {T}
+function plot_vorticity(::Dimension{3}, setup, V, t; kwargs...)
     (; grid, boundary_conditions) = setup
     (; x, y, z) = grid
 
@@ -66,7 +68,7 @@ function plot_vorticity(setup::Setup{T,3}, V, t; kwargs...) where {T}
         zω = z[2:(end-1)]
     end
 
-    ω = get_vorticity(V, t, setup)
+    ω = get_vorticity(setup, V, t)
 
     # Levels
     μ, σ = mean(ω), std(ω)

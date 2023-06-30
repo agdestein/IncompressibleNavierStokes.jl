@@ -9,10 +9,12 @@ See also [`bodyforce!`](@ref).
 """
 function bodyforce end
 
-bodyforce(force::SteadyBodyForce, t, setup) = force.F
+bodyforce(force, t, setup) = bodyforce(setup.grid.dimension, force, t, setup)
+
+bodyforce(dimension, force::SteadyBodyForce, t, setup) = force.F
 
 # 2D version
-function bodyforce(force::UnsteadyBodyForce, t, setup::Setup{T,2}) where {T}
+function bodyforce(::Dimension{2}, force::UnsteadyBodyForce, t, setup)
     (; indu, indv, xu, xv, yu, yv) = setup.grid
     Fx = force.fu.(xu, yu, t)
     Fy = force.fv.(xv, yv, t)
@@ -20,7 +22,7 @@ function bodyforce(force::UnsteadyBodyForce, t, setup::Setup{T,2}) where {T}
 end
 
 # 3D version
-function bodyforce(force::UnsteadyBodyForce, t, setup::Setup{T,3}) where {T}
+function bodyforce(::Dimension{3}, force::UnsteadyBodyForce, t, setup)
     (; indu, indv, indw, xu, xv, xw, yu, yv, yw, zu, zv, zw) = setup.grid
     Fx = force.fu.(xu, yu, zu, t)
     Fy = force.fv.(xv, yv, zv, t)
@@ -39,18 +41,20 @@ See also [`bodyforce`](@ref).
 """
 function bodyforce! end
 
-bodyforce!(force::SteadyBodyForce, F, t, setup) = (F .= force.F)
+bodyforce!(force, F, t, setup) = bodyforce!(setup.grid.dimension, force, t, F, setup)
+
+bodyforce!(dimension, force::SteadyBodyForce, F, t, setup) = (F .= force.F)
 
 # 2D version
-function bodyforce!(force::UnsteadyBodyForce, F, t, setup::Setup{T,2}) where {T}
-    (; indu, indv, xu, xv, yu, yv) = setup.grid
+function bodyforce!(::Dimension{2}, force::UnsteadyBodyForce, F, t, setup)
+    (; indu, indv, xu, xv, yu, yv) = setup.gri
     F[indu] .= force.fu.(xu, yu, t)
     F[indv] .= force.fv.(xv, yv, t)
     F
 end
 
 # 3D version
-function bodyforce!(force::UnsteadyBodyForce, F, t, setup::Setup{T,3}) where {T}
+function bodyforce!(::Dimension{3}, force::UnsteadyBodyForce, F, t, setup)
     (; indu, indv, indw, xu, xv, xw, yu, yv, yw, zu, zv, zw) = setup.grid
     F[indu] .= force.fu.(xu, yu, zu, t)
     F[indv] .= force.fv.(xv, yv, zv, t)

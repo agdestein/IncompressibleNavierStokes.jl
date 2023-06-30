@@ -1,12 +1,12 @@
 """
-    operator_divergence(grid, boundary_conditions)
+    operator_divergence(dimension, grid, boundary_conditions)
 
 Construct divergence and gradient operator.
 """
 function operator_divergence end
 
 # 2D version
-function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
+function operator_divergence(::Dimension{2}, grid, boundary_conditions)
     (; Npx, Npy) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t) = grid
@@ -159,7 +159,7 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
 end
 
 # 3D version
-function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
+function operator_divergence(::Dimension{3}, grid, boundary_conditions)
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuz_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t, Nvz_in) = grid
     (; Nwx_in, Nwy_in, Nwz_in, Nwz_b, Nwz_t) = grid

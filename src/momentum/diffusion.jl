@@ -9,7 +9,9 @@ See also [`diffusion!`](@ref).
 """
 function diffusion end
 
-function diffusion(m::LaminarModel, V, setup; bc_vectors, get_jacobian = false)
+diffusion(m, V, setup; kwargs...) = diffusion(setup.grid.dimension, m, V, setup; kwargs...)
+
+function diffusion(dimension, m::LaminarModel, V, setup; bc_vectors, get_jacobian = false)
     (; Re) = m
     (; Diff) = setup.operators
     (; yDiff) = bc_vectors
@@ -27,12 +29,13 @@ end
 
 # 2D version
 function diffusion(
+    ::Dimension{2},
     model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
     V,
-    setup::Setup{T,2};
+    setup;
     bc_vectors,
     get_jacobian = false,
-) where {T}
+)
     (; indu, indv, indw) = setup.grid
     (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
     (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
@@ -103,12 +106,13 @@ end
 
 # 3D version
 function diffusion(
+    ::Dimension{2},
     model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
     V,
-    setup::Setup{T,3};
+    setup;
     bc_vectors,
     get_jacobian = false,
-) where {T}
+)
     error("Not implemented")
 end
 
@@ -119,7 +123,9 @@ Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V` using vi
 """
 function diffusion! end
 
-function diffusion!(m::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
+diffusion!(m, d, ∇d, V, setup; kwargs...) = diffusion(setup.grid.dimension, m, d, ∇d, V, setup; kwargs...)
+
+function diffusion!(dimension, m::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
     (; Re) = m
     (; Diff) = setup.operators
     (; yDiff) = bc_vectors
@@ -133,7 +139,9 @@ function diffusion!(m::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian
     d, ∇d
 end
 
+# 2D version
 function diffusion!(
+    ::Dimension{2},
     model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
     d,
     ∇d,
@@ -207,4 +215,18 @@ function diffusion!(
     end
 
     d, ∇d
+end
+
+# 3D version
+function diffusion!(
+    ::Dimension{3},
+    model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
+    d,
+    ∇d,
+    V,
+    setup;
+    bc_vectors,
+    get_jacobian = false,
+)
+    error("Not implemented")
 end
