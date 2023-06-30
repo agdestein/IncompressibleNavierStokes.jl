@@ -57,9 +57,8 @@ end
 Build Fourier pressure solver from setup.
 """
 function FourierPressureSolver(setup::Setup{T,2}) where {T}
-    (; grid, boundary_conditions, operators) = setup
+    (; grid, boundary_conditions) = setup
     (; hx, hy, Npx, Npy) = grid
-    (; A) = operators
 
     if any(
         !isequal((:periodic, :periodic)),
@@ -100,9 +99,8 @@ end
 Build Fourier pressure solver from setup.
 """
 function FourierPressureSolver(setup::Setup{T,3}) where {T}
-    (; grid, boundary_conditions, operators) = setup
+    (; grid, boundary_conditions) = setup
     (; hx, hy, hz, Npx, Npy, Npz) = grid
-    (; A) = operators
 
     if any(
         !isequal((:periodic, :periodic)),

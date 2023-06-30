@@ -23,7 +23,6 @@ using FFTW
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
-using LaTeXStrings
 
 # Case name for saving results
 name = "DecayingTurbulence3D"
