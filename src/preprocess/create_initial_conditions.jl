@@ -1,10 +1,10 @@
 """
     create_initial_conditions(
         setup,
-        t;
         initial_velocity_u,
         initial_velocity_v,
         [initial_velocity_w,]
+        t;
         initial_pressure = nothing,
         pressure_solver = DirectPressureSolver(setup),
     )
@@ -17,9 +17,9 @@ function create_initial_conditions end
 # 2D version
 function create_initial_conditions(
     setup,
-    t;
     initial_velocity_u,
     initial_velocity_v,
+    t;
     initial_pressure = nothing,
     pressure_solver = DirectPressureSolver(setup),
 )
@@ -68,10 +68,10 @@ end
 # 3D version
 function create_initial_conditions(
     setup,
-    t;
     initial_velocity_u,
     initial_velocity_v,
     initial_velocity_w,
+    t;
     initial_pressure = nothing,
     pressure_solver = DirectPressureSolver(setup),
 )
@@ -173,9 +173,11 @@ function random_field(
     σ = convert(eltype(setup.grid.x), 30),
     s = 5,
     pressure_solver = DirectPressureSolver(setup),
-) where {T}
+)
     (; Ω) = setup.grid
     (; G, M) = setup.operators
+
+    T = eltype(setup.grid.x)
 
     u = real.(ifft(create_spectrum_2(K, A, σ, s)))
     v = real.(ifft(create_spectrum_2(K, A, σ, s)))
@@ -205,9 +207,11 @@ function random_field(
     σ = convert(eltype(setup.grid.x), 30),
     s = 5,
     pressure_solver = DirectPressureSolver(setup),
-) where {T}
+)
     (; Ω) = setup.grid
     (; G, M) = setup.operators
+
+    T = eltype(setup.grid.x)
 
     u = real.(ifft(create_spectrum_3(K, A, σ, s)))
     v = real.(ifft(create_spectrum_3(K, A, σ, s)))

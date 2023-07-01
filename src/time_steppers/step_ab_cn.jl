@@ -62,6 +62,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt; bc_vector
     # Implicit time-stepping for diffusion
     if viscosity_model isa LaminarModel
         # Use precomputed LU decomposition
+        # FIXME: Put Diff_fact in stepper
         V = Diff_fact \ Rr
     else
         # Get `∇d` since `Diff` is not constant
@@ -172,12 +173,12 @@ function step!(
     # Implicit time-stepping for diffusion
     if viscosity_model isa LaminarModel
         # Use precomputed LU decomposition
-        if Δt ≉ cache.Δt
+        if Δt ≉  cache.Δt
             # Time step has changed, recompute LU decomposition
-            Diff_fact = lu(I(NV) - θ * Δt * Diagonal(1 ./ Ω) * Diff)
-            @pack! cache = Diff_fact, Δt
+            Diff_fact[] = lu(I(NV) - θ * Δt * Diagonal(1 ./ Ω) * Diff)
+            cache.Δt[] = Δt
         end
-        ldiv!(V, Diff_fact, Rr)
+        ldiv!(V, Diff_fact[], Rr)
     else
         # Get `∇d` since `Diff` is not constant
         diffusion!(d, ∇d, V, t, setup; get_jacobian = true)

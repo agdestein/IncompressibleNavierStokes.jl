@@ -23,7 +23,6 @@ using FFTW
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
-using LaTeXStrings
 using LinearAlgebra
 
 # Case name for saving results

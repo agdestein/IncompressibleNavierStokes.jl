@@ -65,6 +65,7 @@ function solve_animate(
     cache = ode_method_cache(method_use, setup)
     momentum_cache = MomentumCache(setup)
     stepper = (;
+        n = 0,
         method = method_use,
         setup,
         pressure_solver,

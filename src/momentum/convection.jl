@@ -1,5 +1,10 @@
 """
-    convection(model, V, ϕ, setup; bc_vectors, get_jacobian = false)
+    convection(
+        model, V, ϕ, setup;
+        bc_vectors,
+        get_jacobian = false,
+        newton_factor = false,
+    )
 
 Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`, using the convection
 model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
@@ -10,20 +15,8 @@ See also [`convection!`](@ref).
 """
 function convection end
 
-convection(
-    m,
-    V,
-    ϕ,
-    setup;
-    kwargs...,
-) = convection(
-    setup.grid.dimension,
-    m,
-    V,
-    ϕ,
-    setup;
-    kwargs...,
-)
+convection(m, V, ϕ, setup; kwargs...) =
+    convection(setup.grid.dimension, m, V, ϕ, setup; kwargs...)
 
 function convection(
     dimension,
@@ -377,7 +370,12 @@ function convection(
 end
 
 """
-    convection!(model, c, ∇c, V, ϕ, setup, cache; bc_vectors, get_jacobian = false)
+    convection!(
+        model, c, ∇c, V, ϕ, setup, cache;
+        bc_vectors,
+        get_jacobian = false,
+        newton_factor = false,
+    )
 
 Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`, using the convection
 model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
@@ -388,27 +386,8 @@ See also [`convection`](@ref).
 """
 function convection! end
 
-convection!(
-    dimension,
-    m,
-    c,
-    ∇c,
-    V,
-    ϕ,
-    setup,
-    cache;
-    kwargs...,
-) = convection!(
-    setup.grid.dimension,
-    m,
-    c,
-    ∇c,
-    V,
-    ϕ,
-    setup,
-    cache;
-    kwargs...,
-)
+convection!(m, c, ∇c, V, ϕ, setup, cache; kwargs...) =
+    convection!(setup.grid.dimension, m, c, ∇c, V, ϕ, setup, cache; kwargs...)
 
 function convection!(
     dimension,

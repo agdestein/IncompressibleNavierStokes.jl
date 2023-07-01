@@ -8,7 +8,7 @@ function compute_conservation end
 compute_conservation(V, t, setup; bc_vectors = nothing) = compute_conservation(setup.grid.dimension, V, t, setup; bc_vectors = nothing)
 
 # 2D version
-function compute_conservation(::Dimension{2}, V, t, setup; bc_vectors = nothing) where {T}
+function compute_conservation(::Dimension{2}, V, t, setup; bc_vectors = nothing)
     (; grid, operators, boundary_conditions) = setup
     (; indu, indv, Ω, x, y, xp, yp, hx, hy, gx, gy) = grid
     (; M) = operators

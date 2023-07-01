@@ -60,6 +60,7 @@ function solve(
     end
 
     stepper = (;
+        n = 0,
         method = method_use,
         setup,
         pressure_solver,

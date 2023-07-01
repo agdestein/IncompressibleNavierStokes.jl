@@ -11,7 +11,7 @@ function diffusion end
 
 diffusion(m, V, setup; kwargs...) = diffusion(setup.grid.dimension, m, V, setup; kwargs...)
 
-function diffusion(dimension, m::LaminarModel, V, setup; bc_vectors, get_jacobian = false)
+function diffusion(m::LaminarModel, V, setup; bc_vectors, get_jacobian = false)
     (; Re) = m
     (; Diff) = setup.operators
     (; yDiff) = bc_vectors
@@ -106,7 +106,7 @@ end
 
 # 3D version
 function diffusion(
-    ::Dimension{2},
+    ::Dimension{3},
     model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
     V,
     setup;
@@ -125,7 +125,7 @@ function diffusion! end
 
 diffusion!(m, d, ∇d, V, setup; kwargs...) = diffusion(setup.grid.dimension, m, d, ∇d, V, setup; kwargs...)
 
-function diffusion!(dimension, m::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
+function diffusion!(m::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
     (; Re) = m
     (; Diff) = setup.operators
     (; yDiff) = bc_vectors

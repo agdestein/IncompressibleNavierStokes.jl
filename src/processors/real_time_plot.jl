@@ -149,7 +149,7 @@ function real_time_plot(
     fieldname = :vorticity,
     sleeptime = 0.001,
     alpha = 0.05,
-) where {T}
+)
     (; boundary_conditions, grid) = setup
     (; xlims, ylims, x, y, z, xp, yp, zp) = grid
 
@@ -287,11 +287,11 @@ function energy_spectrum_plot(
     end
     espec = Figure()
     ax =
-        Axis(espec[1, 1]; xlabel = L"k", ylabel = L"\hat{e}(k)", xscale = log10, yscale = log10)
+        Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
     ## ylims!(ax, (1e-20, 1))
     scatter!(ax, kk, ehat; label = "Kinetic energy")
     krange = LinRange(extrema(kk)..., 100)
-    lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = L"k^{-5/3}", color = :red)
+    lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = "\$k^{-5/3}\$", color = :red)
     axislegend(ax)
     espec
 end

@@ -6,13 +6,11 @@ Energy-conserving solvers for the incompressible Navier-Stokes equations.
 module IncompressibleNavierStokes
 
 using FFTW
-using Interpolations
 using IterativeSolvers
 using LinearAlgebra
 using Printf
 using SparseArrays
 using Statistics
-using UnPack
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 using Makie
 
@@ -126,9 +124,6 @@ include("postprocess/plot_vorticity.jl")
 include("postprocess/plot_streamfunction.jl")
 include("postprocess/plot_tracers.jl")
 include("postprocess/save_vtk.jl")
-
-# Reexport
-export @pack!
 
 # Force
 export SteadyBodyForce, UnsteadyBodyForce

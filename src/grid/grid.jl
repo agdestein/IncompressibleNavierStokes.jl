@@ -10,6 +10,7 @@ function Grid(x, y; boundary_conditions, order4 = false)
     T = eltype(x)
 
     α = 81
+    β = T(9 // 8)
 
     Nx = length(x) - 1
     Ny = length(y) - 1
@@ -449,7 +450,7 @@ function Grid(x, y; boundary_conditions, order4 = false)
         )
     end
 
-    (; dimension, α, order4, Nx, Ny, xlims, ylims, x, y, xp, yp, hx, hy, gx, gy, params...)
+    (; dimension, α, β, order4, Nx, Ny, xlims, ylims, x, y, xp, yp, hx, hy, gx, gy, params...)
 end
 
 """
@@ -465,6 +466,7 @@ function Grid(x, y, z; boundary_conditions, order4 = false)
 
     order4 && error("Fourth order grids not yet implemented for 3D")
     α = 81
+    β = T(9 // 8)
 
     Nx = length(x) - 1
     Ny = length(y) - 1
@@ -757,6 +759,7 @@ function Grid(x, y, z; boundary_conditions, order4 = false)
         dimension,
         order4,
         α,
+        β,
         Nx,
         Ny,
         Nz,

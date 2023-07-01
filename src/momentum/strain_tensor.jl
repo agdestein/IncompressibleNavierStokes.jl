@@ -160,7 +160,7 @@ end
 
 # 3D version
 function strain_tensor(
-    ::Dimension{2},
+    ::Dimension{3},
     V,
     setup;
     bc_vectors,

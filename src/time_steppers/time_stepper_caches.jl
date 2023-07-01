@@ -23,8 +23,8 @@ function ode_method_cache(::AdamsBashforthCrankNicolsonMethod{T}, setup) where {
     Gpₙ = zeros(T, NV)
 
     # Compute factorization at first time step (guaranteed since Δt > 0)
-    Δt = 0
-    Diff_fact = cholesky(spzeros(0, 0))
+    Δt = Ref(T(0))
+    Diff_fact = Ref(cholesky(spzeros(0, 0)))
 
     (;
         cₙ,

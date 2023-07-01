@@ -22,8 +22,6 @@ function get_bc_vectors(::Dimension{2}, setup, t)
     (; Iu_ux_bc, Iv_uy_bc_lr, Iv_uy_bc_lu) = operators
     (; Iu_vx_bc_lr, Iu_vx_bc_lu, Iv_vy_bc) = operators
     (; Mx_bc, My_bc) = operators
-    (; Aν_vy_bc) = operators
-    (; Cux_k_bc, Cuy_k_bc, Cvx_k_bc, Cvy_k_bc, Auy_k_bc, Avx_k_bc) = operators
     (; Su_vx_bc_lr, Su_vx_bc_lu, Sv_uy_bc_lr, Sv_uy_bc_lu) = operators
 
     (; u_bc, v_bc, dudt_bc, dvdt_bc) = boundary_conditions
@@ -378,6 +376,9 @@ function get_bc_vectors(::Dimension{2}, setup, t)
     end
 
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
+        (; Aν_vy_bc) = operators
+        (; Cux_k_bc, Cuy_k_bc, Cvx_k_bc, Cvy_k_bc, Auy_k_bc, Avx_k_bc) = operators
+
         # Set BC for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
         # In all other cases, homogeneous (zero) Neumann conditions are used
@@ -922,8 +923,8 @@ function get_bc_vectors(::Dimension{3}, setup, t)
         yIw_wz,
     )
 
-
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
+
         # Set bc for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
         # In all other cases, homogeneous (zero) Neumann conditions are used
