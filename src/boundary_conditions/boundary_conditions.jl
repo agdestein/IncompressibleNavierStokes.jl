@@ -36,10 +36,8 @@ function BoundaryConditions(
         bc_type...,
         u_bc,
         v_bc,
-        w_bc = nothing,
         dudt_bc,
         dvdt_bc,
-        dwdt_bc = nothing,
         p_bc,
         kwargs...,
     )

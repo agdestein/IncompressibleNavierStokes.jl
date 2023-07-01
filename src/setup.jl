@@ -1,10 +1,10 @@
 """
     Setup(
         x, y;
-        viscosity_model = LaminarModel(; Re = 1000.0),
+        viscosity_model = LaminarModel(; Re = 1000),
         convection_model = NoRegConvectionModel(),
-        u_bc = (x, y, t) -> 0.0,
-        v_bc = (x, y, t) -> 0.0,
+        u_bc = (x, y, t) -> 0,
+        v_bc = (x, y, t) -> 0,
         dudt_bc = nothing,
         dvdt_bc = nothing,
         bc_type = (;
@@ -21,7 +21,7 @@ Create 2D setup.
 function Setup(
     x,
     y;
-    viscosity_model = LaminarModel(; Re = 1000.0),
+    viscosity_model = LaminarModel(; Re = convert(eltype(x), 1000)),
     convection_model = NoRegConvectionModel(),
     u_bc = (x, y, t) -> 0,
     v_bc = (x, y, t) -> 0,
@@ -47,7 +47,7 @@ end
 """
     Setup(
         x, y, z;
-        viscosity_model = LaminarModel(; Re = 1000.0),
+        viscosity_model = LaminarModel(; Re = 1000),
         convection_model = NoRegConvectionModel(),
         u_bc = (x, y, w, t) -> 0.0,
         v_bc = (x, y, w, t) -> 0.0,
@@ -84,7 +84,7 @@ function Setup(
     x,
     y,
     z;
-    viscosity_model = LaminarModel(; Re = 1000.0),
+    viscosity_model = LaminarModel(; Re = convert(eltype(x), 1000)),
     convection_model = NoRegConvectionModel(),
     u_bc = (x, y, w, t) -> 0,
     v_bc = (x, y, w, t) -> 0,

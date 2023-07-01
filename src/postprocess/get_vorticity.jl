@@ -20,7 +20,7 @@ function get_vorticity(::Dimension{2}, setup, V, t)
         Nωy = Ny - 1
     end
 
-    ω = zeros(Nωx, Nωy)
+    ω = zeros(eltype(V), Nωx, Nωy)
 
     vorticity!(ω, setup, V, t)
 end
@@ -47,7 +47,7 @@ function get_vorticity(::Dimension{3}, setup, V, t)
         Nωz = Nz - 1
     end
 
-    ω = zeros(Nωx, Nωy, Nωz)
+    ω = zeros(eltype(V), Nωx, Nωy, Nωz)
 
     vorticity!(ω, setup, V, t)
 end
@@ -68,6 +68,8 @@ function vorticity!(::Dimension{2}, ω, setup, V, t)
     (; indu, indv, Nux_in, Nvy_in, Nx, Ny) = grid
     (; Wv_vx, Wu_uy) = operators
 
+    T = eltype(V)
+
     uₕ = @view V[indu]
     vₕ = @view V[indv]
     ω_flat = reshape(ω, length(ω))
@@ -80,14 +82,14 @@ function vorticity!(::Dimension{2}, ω, setup, V, t)
         diagpos = 0
         boundary_conditions.u.x[1] == :pressure && (diagpos = 1)
         boundary_conditions.u.x[1] == :periodic && (diagpos = 1)
-        B1D = spdiagm(Nx - 1, Nux_in, diagpos => ones(Nx - 1))
+        B1D = spdiagm(Nx - 1, Nux_in, diagpos => ones(T, Nx - 1))
         B2D = I(Ny) ⊗ B1D
         uₕ_in = B2D * uₕ
 
         diagpos = 0
         boundary_conditions.v.y[1] == :pressure && (diagpos = 1)
         boundary_conditions.v.y[1] == :periodic && (diagpos = 1)
-        B1D = spdiagm(Ny - 1, Nvy_in, diagpos => ones(Ny - 1))
+        B1D = spdiagm(Ny - 1, Nvy_in, diagpos => ones(T, Ny - 1))
         B2D = B1D ⊗ I(Nx)
         vₕ_in = B2D * vₕ
     end
@@ -105,6 +107,8 @@ function vorticity!(::Dimension{3}, ω, setup, V, t)
     (; indu, indv, indw, Nux_in, Nvy_in, Nwz_in, Nx, Ny, Nz) = grid
     (; Wu_uy, Wu_uz, Wv_vx, Wv_vz, Ww_wx, Ww_wy) = operators
 
+    T = eltype(V)
+
     uₕ = @view V[indu]
     vₕ = @view V[indv]
     wₕ = @view V[indw]
@@ -121,21 +125,21 @@ function vorticity!(::Dimension{3}, ω, setup, V, t)
         diagpos = 0
         boundary_conditions.u.x[1] == :pressure && (diagpos = 1)
         boundary_conditions.u.x == (:periodic, :periodic) && (diagpos = 1)
-        B1D = spdiagm(Nx - 1, Nux_in, diagpos => ones(Nx - 1))
+        B1D = spdiagm(Nx - 1, Nux_in, diagpos => ones(T, Nx - 1))
         B2D = I(Nz) ⊗ I(Ny) ⊗ B1D
         uₕ_in = B2D * uₕ
 
         diagpos = 0
         boundary_conditions.v.y[1] == :pressure && (diagpos = 1)
         boundary_conditions.v.y == (:periodic, :periodic) && (diagpos = 1)
-        B1D = spdiagm(Ny - 1, Nvy_in, diagpos => ones(Ny - 1))
+        B1D = spdiagm(Ny - 1, Nvy_in, diagpos => ones(T, Ny - 1))
         B2D = I(Nz) ⊗ B1D ⊗ I(Nx)
         vₕ_in = B2D * vₕ
 
         diagpos = 0
         boundary_conditions.w.z[1] == :pressure && (diagpos = 1)
         boundary_conditions.w.z == (:periodic, :periodic) && (diagpos = 1)
-        B1D = spdiagm(Nz - 1, Nwz_in, diagpos => ones(Nz - 1))
+        B1D = spdiagm(Nz - 1, Nwz_in, diagpos => ones(T, Nz - 1))
         B2D = B1D ⊗ I(Ny) ⊗ I(Nx)
         wₕ_in = B2D * wₕ
     end

@@ -38,6 +38,8 @@ function get_bc_vectors(::Dimension{2}, setup, t)
         (; Mx_bc3, My_bc3) = operators
     end
 
+    T = typeof(t)
+
     # TODO: Split function into allocating part (constructor?) and mutating `update!`
 
     ## Get BC values
@@ -107,21 +109,21 @@ function get_bc_vectors(::Dimension{2}, setup, t)
 
         ydM = ydMx + ydMy
     else
-        ydM = zeros(Np)
+        ydM = zeros(T, Np)
     end
 
     ## Boundary conditions for pressure
 
     # Left and right side
-    y1D_le = zeros(Nux_in)
-    y1D_ri = zeros(Nux_in)
+    y1D_le = zeros(T, Nux_in)
+    y1D_ri = zeros(T, Nux_in)
     boundary_conditions.u.x[1] == :pressure && (y1D_le[1] = -1)
     boundary_conditions.u.x[2] == :pressure && (y1D_ri[end] = 1)
     y_px = (hy .* p_bc.x[1]) ⊗ y1D_le + (hy .* p_bc.x[2]) ⊗ y1D_ri
 
     # Lower and upper side
-    y1D_lo = zeros(Nvy_in)
-    y1D_up = zeros(Nvy_in)
+    y1D_lo = zeros(T, Nvy_in)
+    y1D_up = zeros(T, Nvy_in)
     boundary_conditions.v.y[1] == :pressure && (y1D_lo[1] = -1)
     boundary_conditions.v.y[2] == :pressure && (y1D_up[end] = 1)
     y_py = y1D_lo ⊗ (hx .* p_bc.y[1]) + y1D_up ⊗ (hx .* p_bc.y[2])
@@ -382,10 +384,10 @@ function get_bc_vectors(::Dimension{2}, setup, t)
         # Set BC for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
         # In all other cases, homogeneous (zero) Neumann conditions are used
-        nuLe = zeros(Npy)
-        nuRi = zeros(Npy)
-        nuLo = zeros(Npx)
-        nuUp = zeros(Npx)
+        nuLe = zeros(T, Npy)
+        nuRi = zeros(T, Npy)
+        nuLo = zeros(T, Npx)
+        nuUp = zeros(T, Npx)
 
         ## Nu_ux
         (; Aν_ux_bc) = operators
@@ -518,6 +520,8 @@ function get_bc_vectors(::Dimension{3}, setup, t)
     (; Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf) = operators
     (; Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf) = operators
 
+    T = typeof(t)
+
     # TODO: Split up function into allocating part (constructor?) and mutating `update!`
 
     ## Get bc values
@@ -598,29 +602,29 @@ function get_bc_vectors(::Dimension{3}, setup, t)
 
         ydM = ydMx + ydMy + ydMz
     else
-        ydM = zeros(Np)
+        ydM = zeros(T, Np)
     end
 
     ## Boundary conditions for pressure
 
     # Left and right side
-    y1D_le = zeros(Nux_in)
-    y1D_ri = zeros(Nux_in)
+    y1D_le = zeros(T, Nux_in)
+    y1D_ri = zeros(T, Nux_in)
     boundary_conditions.u.x[1] == :pressure && (y1D_le[1] = -1)
     boundary_conditions.u.x[2] == :pressure && (y1D_ri[end] = 1)
     y_px = (p_bc.x[1] .* (hz ⊗ hy)) ⊗ y1D_le + (p_bc.x[2] .* (hz ⊗ hy)) ⊗ y1D_ri
 
     # Lower and upper side (order of kron not correct, so reshape)
-    y1D_lo = zeros(Nvy_in)
-    y1D_up = zeros(Nvy_in)
+    y1D_lo = zeros(T, Nvy_in)
+    y1D_up = zeros(T, Nvy_in)
     boundary_conditions.v.y[1] == :pressure && (y1D_lo[1] = -1)
     boundary_conditions.v.y[2] == :pressure && (y1D_up[end] = 1)
     y_py = (p_bc.y[1] .* (hz ⊗ hx)) ⊗ y1D_lo + (p_bc.y[2] .* (hz ⊗ hx)) ⊗ y1D_up
     y_py = reshape(permutedims(reshape(y_py, Nvy_in, Nvx_in, Nvz_in), (2, 1, 3)), :)
 
     # Back and front side
-    y1D_ba = zeros(Nwz_in)
-    y1D_fr = zeros(Nwz_in)
+    y1D_ba = zeros(T, Nwz_in)
+    y1D_fr = zeros(T, Nwz_in)
     boundary_conditions.w.z[1] == :pressure && (y1D_ba[1] = -1)
     boundary_conditions.w.z[2] == :pressure && (y1D_fr[end] = 1)
     y_pz = y1D_ba ⊗ (p_bc.z[1] .* (hy ⊗ hx)) + y1D_fr ⊗ (p_bc.z[2] .* (hy ⊗ hx))
@@ -928,10 +932,10 @@ function get_bc_vectors(::Dimension{3}, setup, t)
         # Set bc for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
         # In all other cases, homogeneous (zero) Neumann conditions are used
-        nuLe = zeros(Npy)
-        nuRi = zeros(Npy)
-        nuLo = zeros(Npx)
-        nuUp = zeros(Npx)
+        nuLe = zeros(T, Npy)
+        nuRi = zeros(T, Npy)
+        nuLo = zeros(T, Npx)
+        nuUp = zeros(T, Npx)
 
         ## Nu_ux
         (; Aν_ux_bc) = operators

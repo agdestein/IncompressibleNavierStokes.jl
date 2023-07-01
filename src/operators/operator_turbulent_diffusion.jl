@@ -13,8 +13,10 @@ function operator_turbulent_diffusion(::Dimension{2}, grid, boundary_conditions)
     (; hx, hy, gxd, gyd) = grid
     (; Buvy, Bvux, Bkux, Bkvy) = grid
 
+    T = eltype(hx)
+
     # Averaging weight:
-    weight = 1 / 2
+    weight = T(1 / 2)
 
     ## Nu to ux positions
 
@@ -40,13 +42,13 @@ function operator_turbulent_diffusion(::Dimension{2}, grid, boundary_conditions)
     ## Nu to uy positions
 
     # Average in x-direction
-    diag1 = weight * ones(Npx + 1)
+    diag1 = fill(weight, Npx + 1)
     A1D = spdiagm(Npx + 1, Npx + 2, 0 => diag1, 1 => diag1)
     # Then map to Nux_in points (like Iv_uy) with Bvux
     A1D = Bvux * A1D
 
     # Calculate average in y-direction; no boundary conditions
-    diag1 = weight * ones(Npy + 1)
+    diag1 = fill(weight, Npy + 1)
     A1Dy = spdiagm(Npy + 1, Npy + 2, 0 => diag1, 1 => diag1)
     A2Dy = A1Dy ⊗ I(Nux_in)
 
@@ -84,14 +86,14 @@ function operator_turbulent_diffusion(::Dimension{2}, grid, boundary_conditions)
     Aν_uy_bc_lu = (; Aν_uy_bc_lu..., B2D = A2Dy * A2D * (Aν_uy_bc_lu.Btemp ⊗ I(Npx)))
 
     ## Nu to vx positions
-    diag1 = weight * ones(Npy + 1)
+    diag1 = fill(weight, Npy + 1)
     A1D = spdiagm(Npy + 1, Npy + 2, 0 => diag1, 1 => diag1)
 
     # Map to Nvy_in points (like Iu_vx) with Buvy
     A1D = Buvy * A1D
 
     # Calculate average in x-direction; no boundary conditions
-    diag1 = weight * ones(Npx + 1)
+    diag1 = fill(weight, Npx + 1)
     A1Dx = spdiagm(Npx + 1, Npx + 2, 0 => diag1, 1 => diag1)
     A2Dx = kron(I(Nvy_in), A1Dx)
 
@@ -179,8 +181,8 @@ function operator_turbulent_diffusion(::Dimension{2}, grid, boundary_conditions)
     ## Du/dy
 
     # Average to k-positions (in x-dir)
-    weight = 1 / 2
-    diag1 = weight * ones(Npx)
+    weight = T(1 / 2)
+    diag1 = fill(weight, Npx)
     A1D = spdiagm(Npx, Npx + 1, 0 => diag1, 1 => diag1)
 
     # Boundary conditions
@@ -218,8 +220,8 @@ function operator_turbulent_diffusion(::Dimension{2}, grid, boundary_conditions)
     ## Dv/dx
 
     # Average to k-positions (in y-dir)
-    weight = 1 / 2
-    diag1 = weight * ones(Npy)
+    weight = T(1 / 2)
+    diag1 = fill(weight, Npy)
     A1D = spdiagm(Npy, Npy + 1, 0 => diag1, 1 => diag1)
 
     # Boundary conditions

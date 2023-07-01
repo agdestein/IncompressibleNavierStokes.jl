@@ -8,6 +8,8 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt; bc_vector
     (; Diff) = operators
     (; p_add_solve, α₁, α₂, θ) = method
 
+    T = typeof(Δt)
+
     # For the first time step, this might be necessary
     if isnothing(bc_vectors) || bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ)
@@ -77,7 +79,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt; bc_vector
     (; yM) = bc_vectors
 
     # Boundary condition for Δp between time steps (!= 0 if fluctuating outlet pressure)
-    y_Δp = zeros(NV)
+    y_Δp = zeros(T, NV)
 
     # Divergence of `Ru` and `Rv` is directly calculated with `M`
     f = (M * V + yM) / Δt - M * y_Δp
@@ -118,6 +120,8 @@ function step!(
     (; p_add_solve, α₁, α₂, θ) = method
     (; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ, Diff_fact) = cache
     (; d, ∇d) = momentum_cache
+
+    T = typeof(Δt)
 
     # For the first time step, this might be necessary
     if isnothing(bc_vectors) || bc_unsteady
@@ -192,7 +196,7 @@ function step!(
     (; yM) = bc_vectors
 
     # Boundary condition for Δp between time steps (!= 0 if fluctuating outlet pressure)
-    y_Δp = zeros(NV)
+    y_Δp = zeros(T, NV)
 
     # Divergence of `Ru` and `Rv` is directly calculated with `M`
     f = (M * V + yM) / Δt - M * y_Δp

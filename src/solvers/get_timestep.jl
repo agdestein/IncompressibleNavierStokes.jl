@@ -18,6 +18,8 @@ function get_timestep(::Dimension{2}, stepper, cfl; bc_vectors)
     (; Iu_ux, Iu_vx, Iv_uy, Iv_vy) = operators
     (; yIu_ux, yIu_vx, yIv_uy, yIv_vy) = bc_vectors
 
+    T = eltype(V)
+
     uₕ = @view V[indu]
     vₕ = @view V[indv]
 
@@ -32,7 +34,7 @@ function get_timestep(::Dimension{2}, stepper, cfl; bc_vectors)
             Cvy * spdiagm(Iv_vy * vₕ + yIv_vy) * Av_vy
         C = blockdiag(Cu, Cv)
         test = spdiagm(1 ./ Ω) * C
-        sum_conv = abs.(test) * ones(NV) - diag(abs.(test)) - diag(test)
+        sum_conv = abs.(test) * ones(T, NV) - diag(abs.(test)) - diag(test)
         λ_conv = maximum(sum_conv)
 
         # Based on max. value of stability region (not a very good indication
@@ -41,7 +43,7 @@ function get_timestep(::Dimension{2}, stepper, cfl; bc_vectors)
 
         ## Diffusive part
         test = Diagonal(1 ./ Ω) * Diff
-        sum_diff = abs.(test) * ones(NV) - diag(abs.(test)) - diag(test)
+        sum_diff = abs.(test) * ones(T, NV) - diag(abs.(test)) - diag(test)
         λ_diff = maximum(sum_diff)
 
         # Based on max. value of stability region
@@ -66,6 +68,8 @@ function get_timestep(::Dimension{3}, stepper, cfl; bc_vectors)
     (; yIv_uy, yIv_vy, yIv_wy) = bc_vectors
     (; yIw_uz, yIw_vz, yIw_wz) = bc_vectors
 
+    T = eltype(V)
+
     uₕ = @view V[indu]
     vₕ = @view V[indv]
     wₕ = @view V[indw]
@@ -87,7 +91,7 @@ function get_timestep(::Dimension{3}, stepper, cfl; bc_vectors)
             Cwz * spdiagm(Iw_wz * wₕ + yIw_wz) * Aw_wz
         C = blockdiag(Cu, Cv, Cw)
         test = spdiagm(1 ./ Ω) * C
-        sum_conv = abs.(test) * ones(NV) - diag(abs.(test)) - diag(test)
+        sum_conv = abs.(test) * ones(T, NV) - diag(abs.(test)) - diag(test)
         λ_conv = maximum(sum_conv)
 
         # Based on max. value of stability region (not a very good indication
@@ -96,7 +100,7 @@ function get_timestep(::Dimension{3}, stepper, cfl; bc_vectors)
 
         ## Diffusive part
         test = Diagonal(1 ./ Ω) * Diff
-        sum_diff = abs.(test) * ones(NV) - diag(abs.(test)) - diag(test)
+        sum_diff = abs.(test) * ones(T, NV) - diag(abs.(test)) - diag(test)
         λ_diff = maximum(sum_diff)
 
         # Based on max. value of stability region

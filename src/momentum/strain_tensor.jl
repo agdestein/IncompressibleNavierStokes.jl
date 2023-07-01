@@ -34,6 +34,8 @@ function strain_tensor(
     (; ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy) = bc_vectors
     (; yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k) = bc_vectors
 
+    T = eltype(V)
+
     uₕ = @view V[indu]
     vₕ = @view V[indv]
 
@@ -72,7 +74,7 @@ function strain_tensor(
 
             # S12 is defined on the corners: size Nux_in*(Nuy_in+1), positions (xin, y)
             # Get S12 and S21 at all corner points
-            S12_temp = zeros(Nx + 1, Ny + 1)
+            S12_temp = zeros(T, Nx + 1, Ny + 1)
             S12_temp[1:Nx, :] = reshape(S12, Nx, Ny + 1)
             S12_temp[Nx+1, :] = S12_temp[1, :]
         elseif boundary_conditions.u.x[1] == :dirichlet &&
@@ -82,7 +84,7 @@ function strain_tensor(
 
             # S12 is defined on the corners: size Nux_in*(Nuy_in+1), positions (xin, y)
             # Get S12 and S21 at all corner points
-            S12_temp = zeros(Nx + 1, Ny + 1)
+            S12_temp = zeros(T, Nx + 1, Ny + 1)
             S12_temp[2:(Nx+1), :] = reshape(S12, Nx, Ny + 1)
             S12_temp[1, :] = S12_temp[2, :] # Copy from x[2] to x[1]; one could do this more accurately in principle by using the BC
         else
@@ -96,7 +98,7 @@ function strain_tensor(
             S22_p = S22_p(:, 2:(Nvy_in+1)) # Why not 1:Nvy_in?
 
             # Similarly S21 is size (Nux_in+1)*Nuy_in, positions (x, yin)
-            S21_temp = zeros(Nx + 1, Ny + 1)
+            S21_temp = zeros(T, Nx + 1, Ny + 1)
             S21_temp[:, 1:Ny] = reshape(S21, Nx + 1, Ny)
             S21_temp[:, Ny+1] = S21_temp[:, 1]
         elseif boundary_conditions.v.y[1] == :pressure &&
@@ -150,8 +152,8 @@ function strain_tensor(
             Jacv =
                 Sabs_inv * (4 * spdiagm(S12_p) * Cvx_k * Avx_k + 4 * spdiagm(S22_p) * Cvy_k)
         else
-            Jacu = spzeros(Np, Nu)
-            Jacv = spzeros(Np, Nv)
+            Jacu = spzeros(T, Np, Nu)
+            Jacv = spzeros(T, Np, Nv)
         end
     end
 

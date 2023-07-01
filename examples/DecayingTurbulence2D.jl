@@ -28,13 +28,17 @@ using LinearAlgebra
 # Case name for saving results
 name = "DecayingTurbulence2D"
 
+# Floating point precision
+T = Float32
+
 # Viscosity model
-viscosity_model = LaminarModel(; Re = 1e4)
+viscosity_model = LaminarModel(; Re = T(10_000))
 
 # A 2D grid is a Cartesian product of two vectors
 n = 200
-x = LinRange(0.0, 1.0, n + 1)
-y = LinRange(0.0, 1.0, n + 1)
+lims = (T(0), T(1))
+x = LinRange(lims..., n + 1)
+y = LinRange(lims..., n + 1)
 plot_grid(x, y)
 
 # Build setup and assemble operators
@@ -42,7 +46,7 @@ setup = Setup(x, y; viscosity_model);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
 # Fourier pressure solver
-pressure_solver = FourierPressureSolver(setup)
+pressure_solver = FourierPressureSolver(setup);
 
 # Initial conditions
 K = n ÷ 2

@@ -18,7 +18,9 @@ function operator_interpolation(::Dimension{2}, grid, boundary_conditions)
         (; hxi3, hyi3, hx3, hy3) = grid
     end
 
-    weight = 1 / 2
+    T = eltype(hx)
+
+    weight = T(1 / 2)
 
     mat_hx = Diagonal(hxi)
     mat_hy = Diagonal(hyi)
@@ -41,8 +43,8 @@ function operator_interpolation(::Dimension{2}, grid, boundary_conditions)
         mat_hx3 = Diagonal(hxi3)
         mat_hy3 = Diagonal(hyi3)
 
-        weight1 = 1 / 2 * β
-        weight2 = 1 / 2 * (1 - β)
+        weight1 = 1 // 2 * β
+        weight2 = 1 // 2 * (1 - β)
 
         # Periodic boundary conditions
         if boundary_conditions.u.x == (:periodic, :periodic)
@@ -495,7 +497,9 @@ function operator_interpolation(::Dimension{3}, grid, boundary_conditions)
     (; hx, hy, hz, hxi, hyi, hzi) = grid
     (; Buvy, Buwz, Bvux, Bvwz, Bwux, Bwvy) = grid
 
-    weight = 1 / 2
+    T = eltype(hx)
+
+    weight = T(1 / 2)
 
     mat_hx = spdiagm(Nx, Nx, hxi)
     mat_hy = spdiagm(Ny, Ny, hyi)

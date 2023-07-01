@@ -26,12 +26,12 @@ function Grid(x, y; boundary_conditions, order4 = false)
     hy = diff(y)
 
     # Distance between pressure points
-    gx = zeros(Nx + 1)
+    gx = zeros(T, Nx + 1)
     gx[1] = hx[1] / 2
     gx[2:Nx] = (hx[1:(Nx-1)] + hx[2:Nx]) / 2
     gx[Nx+1] = hx[end] / 2
 
-    gy = zeros(Ny + 1)
+    gy = zeros(T, Ny + 1)
     gy[1] = hy[1] / 2
     gy[2:Ny] = (hy[1:(Ny-1)] + hy[2:Ny]) / 2
     gy[Ny+1] = hy[end] / 2
@@ -91,7 +91,7 @@ function Grid(x, y; boundary_conditions, order4 = false)
 
     ## For a grid with three times larger volumes:
     if order4
-        hx3 = zeros(Nx)
+        hx3 = zeros(T, Nx)
         hx3[2:(end-1)] = hx[1:(end-2)] + hx[2:(end-1)] + hx[3:end]
         if boundary_conditions.u.x[1] == :periodic &&
            boundary_conditions.u.x[2] == :periodic
@@ -102,7 +102,7 @@ function Grid(x, y; boundary_conditions, order4 = false)
             hx3[end] = hx[end-1] + 2 * hx[end]
         end
 
-        hy3 = zeros(Ny)
+        hy3 = zeros(T, Ny)
         hy3[2:(end-1)] = hy[1:(end-2)] + hy[2:(end-1)] + hy[3:end]
         if boundary_conditions.v.y[1] == :periodic &&
            boundary_conditions.v.y[2] == :periodic
@@ -117,7 +117,7 @@ function Grid(x, y; boundary_conditions, order4 = false)
         hyi3 = copy(hy3)
 
         # Distance between pressure points
-        gx3 = zeros(Nx + 1)
+        gx3 = zeros(T, Nx + 1)
         gx3[3:(Nx-1)] = gx[2:(end-3)] + gx[3:(end-2)] + gx[4:(end-1)]
         if boundary_conditions.u.x[1] == :periodic &&
            boundary_conditions.u.x[2] == :periodic
@@ -133,7 +133,7 @@ function Grid(x, y; boundary_conditions, order4 = false)
         end
 
         # Distance between pressure points
-        gy3 = zeros(Ny + 1)
+        gy3 = zeros(T, Ny + 1)
         gy3[3:(Ny-1)] = gy[2:(end-3)] + gy[3:(end-2)] + gy[4:(end-1)]
         if boundary_conditions.v.y[1] == :periodic &&
            boundary_conditions.v.y[2] == :periodic
@@ -208,11 +208,11 @@ function Grid(x, y; boundary_conditions, order4 = false)
         end
     end
 
-    Bmap = spdiagm(Nux_in + 1, Nx + 2, diagpos => ones(Nux_in + 1))
+    Bmap = spdiagm(Nux_in + 1, Nx + 2, diagpos => ones(T, Nux_in + 1))
 
     # Matrix to map from Nvx_t-1 to Nux_in points
     # (used in interpolation, convection_diffusion, viscosity)
-    Bvux = spdiagm(Nux_in, Nvx_t - 1, diagpos => ones(Nux_in))
+    Bvux = spdiagm(Nux_in, Nvx_t - 1, diagpos => ones(T, Nux_in))
 
     # Map from Npx+2 points to Nux_t-1 points (ux faces)
     Bkux = copy(Bmap)
@@ -274,11 +274,11 @@ function Grid(x, y; boundary_conditions, order4 = false)
         end
     end
 
-    Bmap = spdiagm(Nvy_in + 1, Ny + 2, diagpos => ones(Nvy_in + 1))
+    Bmap = spdiagm(Nvy_in + 1, Ny + 2, diagpos => ones(T, Nvy_in + 1))
 
     # Matrix to map from Nuy_t-1 to Nvy_in points
     # (used in interpolation, convection_diffusion)
-    Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(Nvy_in))
+    Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(T, Nvy_in))
 
     # Map from Npy+2 points to Nvy_t-1 points (vy faces)
     Bkvy = copy(Bmap)
@@ -349,18 +349,18 @@ function Grid(x, y; boundary_conditions, order4 = false)
     end
 
     # Metrics that can be useful for initialization:
-    xu = ones(1, Nuy_in) ⊗ xin
-    yu = yp ⊗ ones(Nux_in)
+    xu = ones(T, 1, Nuy_in) ⊗ xin
+    yu = yp ⊗ ones(T, Nux_in)
     xu = reshape(xu, Nux_in, Nuy_in)
     yu = reshape(yu, Nux_in, Nuy_in)
 
-    xv = ones(1, Nvy_in) ⊗ xp
-    yv = yin ⊗ ones(Nvx_in)
+    xv = ones(T, 1, Nvy_in) ⊗ xp
+    yv = yin ⊗ ones(T, Nvx_in)
     xv = reshape(xv, Nvx_in, Nvy_in)
     yv = reshape(yv, Nvx_in, Nvy_in)
 
-    xpp = ones(Ny) ⊗ xp
-    ypp = yp ⊗ ones(Nx)
+    xpp = ones(T, Ny) ⊗ xp
+    ypp = yp ⊗ ones(T, Nx)
     xpp = reshape(xpp, Nx, Ny)
     ypp = reshape(ypp, Nx, Ny)
 
@@ -486,17 +486,17 @@ function Grid(x, y, z; boundary_conditions, order4 = false)
     hz = diff(z)
 
     # Distance between pressure points
-    gx = zeros(Nx + 1)
+    gx = zeros(T, Nx + 1)
     gx[1] = hx[1] / 2
     gx[2:Nx] = (hx[1:(Nx-1)] + hx[2:Nx]) / 2
     gx[Nx+1] = hx[end] / 2
 
-    gy = zeros(Ny + 1)
+    gy = zeros(T, Ny + 1)
     gy[1] = hy[1] / 2
     gy[2:Ny] = (hy[1:(Ny-1)] + hy[2:Ny]) / 2
     gy[Ny+1] = hy[end] / 2
 
-    gz = zeros(Nz + 1)
+    gz = zeros(T, Nz + 1)
     gz[1] = hz[1] / 2
     gz[2:Nz] = (hz[1:(Nz-1)] + hz[2:Nz]) / 2
     gz[Nz+1] = hz[end] / 2
@@ -609,8 +609,8 @@ function Grid(x, y, z; boundary_conditions, order4 = false)
     boundary_conditions.u.x == (:pressure, :pressure) && (diagpos = 0)
     boundary_conditions.u.x == (:periodic, :periodic) && (diagpos = 0)
 
-    Bmap = spdiagm(Nux_in + 1, Nx + 2, diagpos => ones(Nux_in + 1))
-    Bmap_x_xin = spdiagm(Nux_in, Nx + 1, diagpos => ones(Nux_in))
+    Bmap = spdiagm(Nux_in + 1, Nx + 2, diagpos => ones(T, Nux_in + 1))
+    Bmap_x_xin = spdiagm(Nux_in, Nx + 1, diagpos => ones(T, Nux_in))
     hxd = Bmap * hxd
     gxi = Bmap_x_xin * gx
     xin = Bmap_x_xin * x
@@ -623,10 +623,10 @@ function Grid(x, y, z; boundary_conditions, order4 = false)
     end
 
     # Matrix to map from Nvx_t-1 to Nux_in points
-    Bvux = spdiagm(Nux_in, Nvx_t - 1, diagpos => ones(Nux_in))
+    Bvux = spdiagm(Nux_in, Nvx_t - 1, diagpos => ones(T, Nux_in))
 
     # Matrix to map from Nwx_t-1 to Nux_in points
-    Bwux = spdiagm(Nux_in, Nwx_t - 1, diagpos => ones(Nux_in))
+    Bwux = spdiagm(Nux_in, Nwx_t - 1, diagpos => ones(T, Nux_in))
 
     # Map from Npx+2 points to Nux_t-1 points (ux faces)
     Bkux = copy(Bmap)
@@ -650,8 +650,8 @@ function Grid(x, y, z; boundary_conditions, order4 = false)
     boundary_conditions.v.y == (:pressure, :pressure) && (diagpos = 0)
     boundary_conditions.v.y == (:periodic, :periodic) && (diagpos = 0)
 
-    Bmap = spdiagm(Nvy_in + 1, Ny + 2, diagpos => ones(Nvy_in + 1))
-    Bmap_y_yin = spdiagm(Nvy_in, Ny + 1, diagpos => ones(Nvy_in))
+    Bmap = spdiagm(Nvy_in + 1, Ny + 2, diagpos => ones(T, Nvy_in + 1))
+    Bmap_y_yin = spdiagm(Nvy_in, Ny + 1, diagpos => ones(T, Nvy_in))
 
     hyd = Bmap * hyd
     gyi = Bmap_y_yin * gy
@@ -665,10 +665,10 @@ function Grid(x, y, z; boundary_conditions, order4 = false)
     end
 
     # Matrix to map from Nuy_t-1 to Nvy_in points
-    Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(Nvy_in))
+    Buvy = spdiagm(Nvy_in, Nuy_t - 1, diagpos => ones(T, Nvy_in))
 
     # matrix to map from Nwy_t-1 to Nvy_in points
-    Bwvy = spdiagm(Nvy_in, Nwy_t - 1, diagpos => ones(Nvy_in))
+    Bwvy = spdiagm(Nvy_in, Nwy_t - 1, diagpos => ones(T, Nvy_in))
 
     # Map from Npy+2 points to Nvy_t-1 points (vy faces)
     Bkvy = copy(Bmap)
@@ -693,8 +693,8 @@ function Grid(x, y, z; boundary_conditions, order4 = false)
     boundary_conditions.w.z == (:periodic, :periodic) && (diagpos = 0)
 
     shape = (Nwz_in + 1, Nz + 2)
-    Bmap = spdiagm(shape..., diagpos => ones(Nwz_in + 1))
-    Bmap_z_zin = spdiagm(Nwz_in, Nz + 1, diagpos => ones(Nwz_in))
+    Bmap = spdiagm(shape..., diagpos => ones(T, Nwz_in + 1))
+    Bmap_z_zin = spdiagm(Nwz_in, Nz + 1, diagpos => ones(T, Nwz_in))
     hzd = Bmap * hzd
     gzi = Bmap_z_zin * gz
     zin = Bmap_z_zin * z
@@ -707,10 +707,10 @@ function Grid(x, y, z; boundary_conditions, order4 = false)
     end
 
     # Matrix to map from Nuz_t-1 to Nwz_in points
-    Buwz = spdiagm(Nwz_in, Nuz_t - 1, diagpos => ones(Nwz_in))
+    Buwz = spdiagm(Nwz_in, Nuz_t - 1, diagpos => ones(T, Nwz_in))
 
     # Matrix to map from Nvz_t-1 to Nwz_in points
-    Bvwz = spdiagm(Nwz_in, Nvz_t - 1, diagpos => ones(Nwz_in))
+    Bvwz = spdiagm(Nwz_in, Nvz_t - 1, diagpos => ones(T, Nwz_in))
 
     # Map from Npy+2 points to Nvy_t-1 points (vy faces)
     Bkwz = copy(Bmap)
@@ -732,21 +732,21 @@ function Grid(x, y, z; boundary_conditions, order4 = false)
     Ω = [Ωu; Ωv; Ωw]
 
     # Metrics that can be useful for initialization:
-    xu = reshape(ones(Nuz_in) ⊗ ones(Nuy_in) ⊗ xin, Nux_in, Nuy_in, Nuz_in)
-    yu = reshape(ones(Nuz_in) ⊗ yp ⊗ ones(Nux_in), Nux_in, Nuy_in, Nuz_in)
-    zu = reshape(zp ⊗ ones(Nuy_in) ⊗ ones(Nux_in), Nux_in, Nuy_in, Nuz_in)
+    xu = reshape(ones(T, Nuz_in) ⊗ ones(T, Nuy_in) ⊗ xin, Nux_in, Nuy_in, Nuz_in)
+    yu = reshape(ones(T, Nuz_in) ⊗ yp ⊗ ones(T, Nux_in), Nux_in, Nuy_in, Nuz_in)
+    zu = reshape(zp ⊗ ones(T, Nuy_in) ⊗ ones(T, Nux_in), Nux_in, Nuy_in, Nuz_in)
 
-    xv = reshape(ones(Nvz_in) ⊗ ones(Nvy_in) ⊗ xp, Nvx_in, Nvy_in, Nvz_in)
-    yv = reshape(ones(Nvz_in) ⊗ yin ⊗ ones(Nvx_in), Nvx_in, Nvy_in, Nvz_in)
-    zv = reshape(zp ⊗ ones(Nvy_in) ⊗ ones(Nvx_in), Nvx_in, Nvy_in, Nvz_in)
+    xv = reshape(ones(T, Nvz_in) ⊗ ones(T, Nvy_in) ⊗ xp, Nvx_in, Nvy_in, Nvz_in)
+    yv = reshape(ones(T, Nvz_in) ⊗ yin ⊗ ones(T, Nvx_in), Nvx_in, Nvy_in, Nvz_in)
+    zv = reshape(zp ⊗ ones(T, Nvy_in) ⊗ ones(T, Nvx_in), Nvx_in, Nvy_in, Nvz_in)
 
-    xw = reshape(ones(Nwz_in) ⊗ ones(Nwy_in) ⊗ xp, Nwx_in, Nwy_in, Nwz_in)
-    yw = reshape(ones(Nwz_in) ⊗ yp ⊗ ones(Nwx_in), Nwx_in, Nwy_in, Nwz_in)
-    zw = reshape(zin ⊗ ones(Nwy_in) ⊗ ones(Nwx_in), Nwx_in, Nwy_in, Nwz_in)
+    xw = reshape(ones(T, Nwz_in) ⊗ ones(T, Nwy_in) ⊗ xp, Nwx_in, Nwy_in, Nwz_in)
+    yw = reshape(ones(T, Nwz_in) ⊗ yp ⊗ ones(T, Nwx_in), Nwx_in, Nwy_in, Nwz_in)
+    zw = reshape(zin ⊗ ones(T, Nwy_in) ⊗ ones(T, Nwx_in), Nwx_in, Nwy_in, Nwz_in)
 
-    xpp = reshape(ones(Nz) ⊗ ones(Ny) ⊗ xp, Nx, Ny, Nz)
-    ypp = reshape(ones(Nz) ⊗ yp ⊗ ones(Nx), Nx, Ny, Nz)
-    zpp = reshape(zp ⊗ ones(Ny) ⊗ ones(Nx), Nx, Ny, Nz)
+    xpp = reshape(ones(T, Nz) ⊗ ones(T, Ny) ⊗ xp, Nx, Ny, Nz)
+    ypp = reshape(ones(T, Nz) ⊗ yp ⊗ ones(T, Nx), Nx, Ny, Nz)
+    zpp = reshape(zp ⊗ ones(T, Ny) ⊗ ones(T, Nx), Nx, Ny, Nz)
 
     # Indices of unknowns in velocity vector
     indu = 1:Nu

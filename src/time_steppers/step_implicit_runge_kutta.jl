@@ -7,6 +7,8 @@ function step(method::ImplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothi
     (; G, M) = operators
     (; A, b, c, p_add_solve, maxiter, abstol, newton_type) = method
 
+    T = typeof(Δt)
+
     # Update current solution (does not depend on previous step size)
     n += 1
     Vₙ .= V
@@ -20,9 +22,9 @@ function step(method::ImplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothi
     # Time instances at all stages, tⱼ = [t₁, t₂, ..., tₛ]
     tⱼ = @. tₙ + c * Δtₙ
 
-    Vtotₙ_mat = zeros(NV * s, 0)
-    ptotₙ_mat = zeros(Np * s, 0)
-    yMtot_mat = zeros(Np * s, 0)
+    Vtotₙ_mat = zeros(T, NV * s, 0)
+    ptotₙ_mat = zeros(T, Np * s, 0)
+    yMtot_mat = zeros(T, Np * s, 0)
     for i = 1:s
         # Initialize with the solution at tₙ
         Vtotₙ_mat = [Vtotₙ_mat Vₙ]
@@ -408,8 +410,9 @@ See also [`momentum_allstage!`](@ref).
 """
 function momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, get_jacobian = false)
     (; NV, Np) = setup.grid
+    T = eltype(Vⱼ)
 
-    ∇Fⱼ = spzeros(0, 0)
+    ∇Fⱼ = spzeros(T, 0, 0)
     for i = 1:nstage
         # Indices for current stage
         ind_Vᵢ = (1:NV) .+ NV * (i - 1)

@@ -6,6 +6,8 @@ function step(method::ExplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothi
     (; G, M) = operators
     (; A, b, c, p_add_solve) = method
 
+    T = typeof(Δt)
+
     # Update current solution (does not depend on previous step size)
     n += 1
     Vₙ = V
@@ -20,8 +22,8 @@ function step(method::ExplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothi
 
     # Reset RK arrays
     tᵢ = tₙ
-    kV = zeros(nV, 0)
-    kp = zeros(np, 0)
+    kV = zeros(T, nV, 0)
+    kp = zeros(T, np, 0)
 
     ## Start looping over stages
 

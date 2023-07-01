@@ -9,6 +9,8 @@ function bc_general_stag_diff(Nt, Nin, Nb, bc1, bc2, h1, h2)
     # Val1 and val2 can be scalars or vectors with either the value or the
     # Derivative
     # (ghost) points on staggered locations (pressure lines)
+ 
+    T = typeof(h1)
 
     # Some input checking:
     if Nt != Nin + Nb
@@ -16,24 +18,24 @@ function bc_general_stag_diff(Nt, Nin, Nb, bc1, bc2, h1, h2)
     end
 
     # Boundary conditions
-    Bbc = spzeros(Nb, Nt)
-    ybc1_1D = zeros(Nb)
-    ybc2_1D = zeros(Nb)
+    Bbc = spzeros(T, Nb, Nt)
+    ybc1_1D = zeros(T, Nb)
+    ybc2_1D = zeros(T, Nb)
 
     if Nb == 0
         # No boundary points, so simply diagonal matrix without boundary contribution
         B1D = I(Nt)
-        Btemp = spzeros(Nt, 2)
-        ybc1 = zeros(2)
-        ybc2 = zeros(2)
+        Btemp = spzeros(T, Nt, 2)
+        ybc1 = zeros(T, 2)
+        ybc2 = zeros(T, 2)
     elseif Nb == 1
         # One boundary point (should not be unnecessary)
     elseif Nb == 2
         # Normal situation, 2 boundary points
 
         # Boundary matrices
-        Bin = spdiagm(Nt, Nin, -1 => ones(Nin))
-        Bb = spzeros(Nt, Nb)
+        Bin = spdiagm(Nt, Nin, -1 => ones(T, Nin))
+        Bb = spzeros(T, Nt, Nb)
         Bb[1, 1] = 1
         Bb[end, Nb] = 1
 
@@ -74,7 +76,7 @@ function bc_general_stag_diff(Nt, Nin, Nb, bc1, bc2, h1, h2)
         end
     end
 
-    if Nb ∈ [1, 2]
+    if Nb ∈ (1, 2)
         ybc1 = ybc1_1D
         ybc2 = ybc2_1D
 

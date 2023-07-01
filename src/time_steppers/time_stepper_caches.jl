@@ -112,7 +112,7 @@ function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
     yMtot = zeros(T, Np * s)
 
     # Finite volumes
-    Ωtot = kron(ones(s), Ω)
+    Ωtot = kron(ones(T, s), Ω)
 
     # Iteration matrix
     dfmom = spzeros(T, s * NV, s * NV)

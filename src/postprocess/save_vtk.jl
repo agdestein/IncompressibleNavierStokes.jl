@@ -21,7 +21,7 @@ function save_vtk(V, p, t, setup, filename = "output/solution")
         vels = get_velocity(setup, V, t)
         if N == 2
             # ParaView prefers 3D vectors. Add zero z-component.
-            wp = zeros(size(vels[1]))
+            wp = zero(vels[1])
             vels = (vels..., wp)
         end
         vtk["velocity"] = vels

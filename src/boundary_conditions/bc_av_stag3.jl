@@ -11,6 +11,8 @@ function bc_av_stag3(Nt, Nin, Nb, bc1, bc2, h1, h2)
 
     # (ghost) points on staggered locations (pressure lines)
 
+    T = typeof(h1)
+
     # some input checking:
     if Nt != Nin + Nb
         error("Number of inner points plus boundary points is not equal to total points")
@@ -19,21 +21,21 @@ function bc_av_stag3(Nt, Nin, Nb, bc1, bc2, h1, h2)
     if Nb == 0
         # no boundary points, so simply diagonal matrix without boundary contribution
         B1D = I(Nt)
-        Btemp = spzeros(Nt, 2)
-        ybc1 = zeros(2)
-        ybc2 = zeros(2)
+        Btemp = spzeros(T, Nt, 2)
+        ybc1 = zeros(T, 2)
+        ybc2 = zeros(T, 2)
     else
         # boundary conditions
-        Bbc = spzeros(Nb, Nt)
-        ybc1_1D = zeros(Nb)
-        ybc2_1D = zeros(Nb)
+        Bbc = spzeros(T, Nb, Nt)
+        ybc1_1D = zeros(T, Nb)
+        ybc2_1D = zeros(T, Nb)
 
         if Nb == 6
             # normal situation, 2 boundary points
 
             # boundary matrices
-            Bin = spdiagm(Nt, Nin, -3 => ones(Nin))
-            Bb = spzeros(Nt, Nb)
+            Bin = spdiagm(Nt, Nin, -3 => ones(T, Nin))
+            Bb = spzeros(T, Nt, Nb)
             Bb[1:3, 1:3] = I(3)
             Bb[(end-2):end, (end-2):end] = I(3)
 

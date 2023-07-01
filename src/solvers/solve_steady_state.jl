@@ -23,13 +23,15 @@ function solve(
     (; NV, Np) = setup.grid
     (; G, M) = setup.operators
 
+    T = eltype(V₀)
+
     # Temporary variables
     momentum_cache = MomentumCache(setup)
-    F = zeros(NV)
-    f = zeros(NV + Np)
-    ∇F = spzeros(NV, NV)
-    Z2 = spzeros(Np, Np)
-    Δq = zeros(NV + Np)
+    F = zeros(T, NV)
+    f = zeros(T, NV + Np)
+    ∇F = spzeros(T, NV, NV)
+    Z2 = spzeros(T, Np, Np)
+    Δq = zeros(T, NV + Np)
 
     # Loop index
     n = 1
