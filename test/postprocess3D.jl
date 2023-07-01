@@ -29,8 +29,7 @@
     logger = Logger(; nupdate = 1)
     observer = StateObserver(5, V₀, p₀, t_start)
     writer = VTKWriter(; nupdate = 5, dir = "output", filename = "solution3D")
-    tracer = QuantityTracer(; nupdate = 1)
-    processors = [logger, observer, tracer, writer]
+    processors = [logger, observer, writer]
 
     # Real time plot
     rtp = real_time_plot(observer, setup)
@@ -47,7 +46,6 @@
     end
 
     @testset "Plot fields" begin
-        @test plot_tracers(tracer) isa Figure
         @test plot_pressure(setup, p) isa Makie.FigureAxisPlot
         @test plot_velocity(setup, V, t_end) isa Makie.FigureAxisPlot
         @test plot_vorticity(setup, V, tlims[2]) isa Makie.FigureAxisPlot

@@ -55,10 +55,6 @@
         @test sum(abs, V) / length(V) < norm(lid_vel)
     end
 
-    # Iteration processors
-    tracer = QuantityTracer()
-    processors = [tracer]
-
     @testset "Unsteady problem" begin
         problem = UnsteadyProblem(setup, V₀, p₀, tlims)
         V, p = @time solve(problem, RK44(); Δt = 0.01, processors)
@@ -69,10 +65,5 @@
 
         # Check that the average velocity is smaller than the lid velocity
         @test sum(abs, V) / length(V) < norm(lid_vel)
-
-        # Check for steady state convergence
-        @test tracer.umom[end] < 1e-10
-        @test tracer.vmom[end] < 1e-10
-        @test tracer.wmom[end] < 1e-10
     end
 end

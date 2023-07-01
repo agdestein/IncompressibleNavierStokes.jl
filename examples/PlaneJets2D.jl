@@ -159,9 +159,8 @@ real_time_plot(observer, setup)
 # Iteration processors
 logger = Logger()
 writer = VTKWriter(; nupdate = 1, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer()
-## processors = [logger, observer, tracer, writer]
-processors = [logger, observer, tracer]
+## processors = [logger, observer, writer]
+processors = [logger, observer]
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V, p, tlims);
@@ -174,9 +173,6 @@ V, p = solve(problem, RK44P2(); Δt = 0.001, processors, pressure_solver, inplac
 
 # Export to VTK
 save_vtk(V, p, t_end, setup, "output/solution")
-
-# Plot tracers
-plot_tracers(tracer)
 
 # Plot pressure
 plot_pressure(setup, p)

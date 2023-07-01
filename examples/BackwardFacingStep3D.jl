@@ -84,9 +84,8 @@ V, p = solve(problem);
 logger = Logger(; nupdate = 10)
 observer = StateObserver(50, V₀, p₀, t_start)
 writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer(; nupdate = 25)
-## processors = [logger, observer, tracer, writer]
-processors = [logger, observer, tracer]
+## processors = [logger, observer, writer]
+processors = [logger, observer]
 
 # Real time plot
 real_time_plot(observer, setup)
@@ -102,9 +101,6 @@ V, p = solve(problem, RK44(); Δt = 0.01, processors, inplace = true);
 
 # Export to VTK
 save_vtk(V, p, t_end, setup, "output/solution")
-
-# Plot tracers
-plot_tracers(tracer)
 
 # Plot pressure
 plot_pressure(setup, p)

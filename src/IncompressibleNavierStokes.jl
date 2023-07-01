@@ -122,7 +122,6 @@ include("postprocess/plot_pressure.jl")
 include("postprocess/plot_velocity.jl")
 include("postprocess/plot_vorticity.jl")
 include("postprocess/plot_streamfunction.jl")
-include("postprocess/plot_tracers.jl")
 include("postprocess/save_vtk.jl")
 
 # Force
@@ -133,7 +132,7 @@ export LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
 export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors
-export AbstractProcessor, Logger, StateObserver, VTKWriter, QuantityTracer
+export AbstractProcessor, Logger, StateObserver, VTKWriter
 export initialize!, process!, finalize!
 export real_time_plot, energy_history_plot, energy_spectrum_plot
 
@@ -161,7 +160,6 @@ export plot_force,
     plot_streamfunction,
     plot_velocity,
     plot_vorticity,
-    plot_tracers,
     save_vtk
 
 # ODE methods

@@ -40,8 +40,7 @@
 
     # Iteration processors
     logger = Logger()
-    tracer = QuantityTracer()
-    processors = [logger, tracer]
+    processors = [logger]
 
     @testset "Unsteady problem" begin
         problem = UnsteadyProblem(setup, V₀, p₀, tlims)
@@ -53,9 +52,5 @@
 
         # Check that the average velocity is smaller than the lid velocity
         @test sum(abs, V) / length(V) < lid_vel
-
-        # Check for steady state convergence
-        @test tracer.umom[end] < 1e-10
-        @test tracer.vmom[end] < 1e-10
     end
 end

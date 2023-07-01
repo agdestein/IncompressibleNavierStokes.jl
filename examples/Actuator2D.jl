@@ -86,9 +86,8 @@ V₀, p₀ = create_initial_conditions(
 logger = Logger()
 observer = StateObserver(1, V₀, p₀, t_start)
 writer = VTKWriter(; nupdate = 1, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer()
-## processors = [logger, observer, tracer, writer]
-processors = [logger, observer, tracer]
+## processors = [logger, observer, writer]
+processors = [logger, observer]
 
 # Real time plot
 real_time_plot(observer, setup)
@@ -110,9 +109,6 @@ box = (
 
 # Export to VTK
 save_vtk(V, p, t_end, setup, "output/solution")
-
-# Plot tracers
-plot_tracers(tracer)
 
 # Plot pressure
 fig = plot_pressure(setup, p)

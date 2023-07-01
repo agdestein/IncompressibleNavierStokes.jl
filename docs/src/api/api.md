@@ -98,7 +98,6 @@ plot_force
 plot_grid
 plot_pressure
 plot_streamfunction
-plot_tracers
 plot_velocity
 plot_vorticity
 save_vtk
@@ -124,7 +123,6 @@ is_steady
 AbstractProcessor
 Logger
 VTKWriter
-QuantityTracer
 StateObserver
 initialize!
 process!

@@ -88,9 +88,8 @@ problem = UnsteadyProblem(setup, V₀, p₀, tlims)
 logger = Logger(; nupdate = 1000)
 observer = StateObserver(50, V₀, p₀, t_start)
 writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer(; nupdate = 10)
-## processors = [logger, observer, tracer, writer]
-processors = [logger, observer, tracer]
+## processors = [logger, observer, writer]
+processors = [logger, observer]
 
 # Real time plot
 real_time_plot(observer, setup)
@@ -107,10 +106,6 @@ V, p = solve(problem, RK44(); Δt = 0.001, processors)
 # Export fields to VTK. The file `output/solution.vtr` may be opened for visulization
 # in [ParaView](https://www.paraview.org/).
 save_vtk(V, p, t_end, setup, "output/solution")
-
-# The `tracer` object contains a history of some quantities related to the
-# momentum and energy.
-plot_tracers(tracer)
 
 # Plot pressure
 plot_pressure(setup, p)

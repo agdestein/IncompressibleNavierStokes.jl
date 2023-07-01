@@ -20,10 +20,6 @@
     # Time interval
     t_start, t_end = tlims = (0.0, 0.5)
 
-    # Iteration processors
-    tracer = QuantityTracer()
-    processors = [tracer]
-
     # Viscosity models
     T = Float64
     Re = 1000.0
@@ -68,18 +64,13 @@
             @test sum(abs, V) / length(V) < lid_vel broken = broken
 
             problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-            V, p = solve(problem, RK44(); Δt = 0.01, processors)
+            V, p = solve(problem, RK44(); Δt = 0.01)
 
             # Check that the average velocity is smaller than the lid velocity
             broken =
                 viscosity_model isa Union{QRModel,MixingLengthModel} ||
                 convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
             @test sum(abs, V) / length(V) < lid_vel broken = broken
-
-            # Check for steady state convergence
-            broken = viscosity_model isa Union{QRModel,MixingLengthModel}
-            @test tracer.umom[end] < 1e-10 broken = broken
-            @test tracer.vmom[end] < 1e-10 broken = broken
         end
     end
 

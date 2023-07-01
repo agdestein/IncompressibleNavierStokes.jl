@@ -59,19 +59,3 @@ Base.@kwdef mutable struct VTKWriter <: AbstractProcessor
     filename::String = "solution"
     pvd::CollectionFile = paraview_collection("")
 end
-
-"""
-    QuantityTracer(nupdate)
-
-Store scalar quantities (maximum divergence, momentum, kinetic energy) every `nupdate` time
-steps.
-"""
-Base.@kwdef mutable struct QuantityTracer <: AbstractProcessor
-    nupdate::Int = 1
-    t::Vector{Float64} = zeros(0)
-    maxdiv::Vector{Float64} = zeros(0)
-    umom::Vector{Float64} = zeros(0)
-    vmom::Vector{Float64} = zeros(0)
-    wmom::Vector{Float64} = zeros(0)
-    k::Vector{Float64} = zeros(0)
-end

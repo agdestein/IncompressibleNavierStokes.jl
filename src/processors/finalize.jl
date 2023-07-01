@@ -8,4 +8,3 @@ function finalize! end
 finalize!(::Logger) = nothing
 finalize!(::StateObserver) = nothing
 finalize!(writer::VTKWriter) = vtk_save(writer.pvd)
-finalize!(::QuantityTracer) = nothing
