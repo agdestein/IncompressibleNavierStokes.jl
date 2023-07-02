@@ -115,7 +115,7 @@ box = (
 )
 
 # Export to VTK
-save_vtk(V, p, t_end, setup, "output/solution")
+save_vtk(setup, V, p, t_end, "output/solution")
 
 # Plot pressure
 fig = plot_pressure(setup, p)

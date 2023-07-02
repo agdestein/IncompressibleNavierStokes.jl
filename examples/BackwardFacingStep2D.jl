@@ -79,7 +79,7 @@ V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.002, processors
 # We may visualize or export the computed fields `(V, p)`
 
 # Export to VTK
-save_vtk(V, p, t_end, setup, "output/solution")
+save_vtk(setup, V, p, t_end, "output/solution")
 
 # Plot pressure
 plot_pressure(setup, p)

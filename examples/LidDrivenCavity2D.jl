@@ -99,7 +99,7 @@ V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; method = RK44(), Δt = 
 
 # Export fields to VTK. The file `output/solution.vtr` may be opened for visulization
 # in [ParaView](https://www.paraview.org/).
-save_vtk(V, p, t_end, setup, "output/solution")
+save_vtk(setup, V, p, t_end, "output/solution")
 
 # Plot pressure
 plot_pressure(setup, p)
