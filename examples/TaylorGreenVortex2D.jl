@@ -47,30 +47,36 @@ initial_velocity_v(x, y) = cos(x)sin(y)
 initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
 V₀, p₀ = create_initial_conditions(
     setup,
-    t_start;
     initial_velocity_u,
     initial_velocity_v,
     initial_pressure,
+    t_start;
     pressure_solver,
 );
 
 # Solve steady state problem
-problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = solve(problem; npicard = 2);
+V, p = solve_steady_state(setup, V₀, p₀; npicard = 2);
 
 # Iteration processors
-logger = Logger()
-observer = StateObserver(1, V₀, p₀, t_start)
-writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
-## processors = [logger, observer, writer]
-processors = [logger, observer]
-
-# Real time plot
-real_time_plot(observer, setup)
+processors = (
+    field_plotter(setup; nupdate = 1),
+    # energy_history_plotter(setup; nupdate = 1),
+    # energy_spectrum_plotter(setup; nupdate = 1),
+    step_logger(; nupdate = 1),
+    # vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+);
 
 # Solve unsteady problem
-problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver, inplace = true)
+V, p, outputs = solve_unsteady(
+    setup,
+    V₀,
+    p₀,
+    tlims;
+    Δt = 0.01,
+    processors,
+    pressure_solver,
+    inplace = true,
+);
 #md current_figure()
 
 # ## Post-process

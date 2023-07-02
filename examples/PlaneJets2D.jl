@@ -87,84 +87,97 @@ initial_velocity_v(x, y) = 0.0
 initial_pressure(x, y) = 0.0
 V₀, p₀ = create_initial_conditions(
     setup,
-    t_start;
     initial_velocity_u,
     initial_velocity_v,
+    t_start;
     initial_pressure,
     pressure_solver,
 );
 V, p = V₀, p₀
 
 # Real time plot: Streamwise average and spectrum
-o = StateObserver(1, V₀, p₀, t_start)
-(; indu, yu, yin, Nux_in, Nuy_in) = setup.grid
+mean_plotter(setup; nupdate = 1) = processor(
+    function (state)
+        (; indu, yu, yin, Nux_in, Nuy_in) = setup.grid
 
-umean = @lift begin
-    V, p, t = $(o.state)
-    u = V[indu]
-    sleep(0.001)
-    reshape(sum(reshape(u, size(yu)); dims = 1), :) ./ (Nux_in * U())
-end
+        umean = @lift begin
+            (; V, p, t) = $state
+            u = V[indu]
+            sleep(0.001)
+            reshape(sum(reshape(u, size(yu)); dims = 1), :) ./ (Nux_in * U())
+        end
 
-K = Nux_in ÷ 2
-k = 1:(K-1)
+        K = Nux_in ÷ 2
+        k = 1:(K-1)
 
-# Find energy spectrum where y = 0
-n₀ = Nuy_in ÷ 2
-E₀ = @lift begin
-    V, p, t = $(o.state)
-    u = V[indu]
-    u_y = reshape(u, size(yu))[:, n₀]
-    abs.(fft(u_y .^ 2))[k.+1]
-end
+        # Find energy spectrum where y = 0
+        n₀ = Nuy_in ÷ 2
+        E₀ = @lift begin
+            (; V, p, t) = $state
+            u = V[indu]
+            u_y = reshape(u, size(yu))[:, n₀]
+            abs.(fft(u_y .^ 2))[k.+1]
+        end
 
-# Find energy spectrum where y = 1
-n₁ = argmin(n -> abs(yin[n] .- 1), 1:Nuy_in)
-E₁ = @lift begin
-    V, p, t = $(o.state)
-    u = V[indu]
-    u_y = reshape(u, size(yu))[:, n₁]
-    abs.(fft(u_y .^ 2))[k.+1]
-end
+        # Find energy spectrum where y = 1
+        n₁ = argmin(n -> abs(yin[n] .- 1), 1:Nuy_in)
+        E₁ = @lift begin
+            (; V, p, t) = $state
+            u = V[indu]
+            u_y = reshape(u, size(yu))[:, n₁]
+            abs.(fft(u_y .^ 2))[k.+1]
+        end
 
-fig = Figure()
-ax = Axis(
-    fig[1, 1];
-    title = "Mean streamwise flow",
-    xlabel = "y",
-    ylabel = L"\langle u \rangle / U_0",
+        fig = Figure()
+        ax = Axis(
+            fig[1, 1];
+            title = "Mean streamwise flow",
+            xlabel = "y",
+            ylabel = L"\langle u \rangle / U_0",
+        )
+        lines!(ax, yu[1, :], umean)
+        ax = Axis(
+            fig[1, 2];
+            title = "Streamwise energy spectrum",
+            xscale = log10,
+            yscale = log10,
+            xlabel = L"k_x",
+            ylabel = L"\hat{U}_{cl} / U_0",
+        )
+        # ylims!(ax, (10^(0.0), 10^4.0))
+        ksub = k[10:end]
+        lines!(ax, ksub, 1000 .* ksub .^ (-3 / 5); label = L"k^{-3/5}")
+        lines!(ax, ksub, 1e7 .* ksub .^ -3; label = L"k^{-3}")
+        scatter!(ax, k, E₀; label = "y = $(yin[n₀])")
+        scatter!(ax, k, E₁; label = "y = $(yin[n₁])")
+        axislegend(ax; position = :lb)
+
+        display(fig)
+        fig
+    end;
+    nupdate,
 )
-lines!(ax, yu[1, :], umean)
-ax = Axis(
-    fig[1, 2];
-    title = "Streamwise energy spectrum",
-    xscale = log10,
-    yscale = log10,
-    xlabel = L"k_x",
-    ylabel = L"\hat{U}_{cl} / U_0",
-)
-# ylims!(ax, (10^(0.0), 10^4.0))
-ksub = k[10:end]
-lines!(ax, ksub, 1000 .* ksub .^ (-3 / 5); label = L"k^{-3/5}")
-lines!(ax, ksub, 1e7 .* ksub .^ -3; label = L"k^{-3}")
-scatter!(ax, k, E₀; label = "y = $(yin[n₀])")
-scatter!(ax, k, E₁; label = "y = $(yin[n₁])")
-axislegend(ax; position = :lb)
-fig
-
-# Real time plot: Other option, just plot field
-observer = StateObserver(1, V₀, p₀, t_start)
-real_time_plot(observer, setup)
 
 # Iteration processors
-logger = Logger()
-writer = VTKWriter(; nupdate = 1, dir = "output/$name", filename = "solution")
-## processors = [logger, observer, writer]
-processors = [logger, observer]
+processors = (
+    step_logger(; nupdate = 1),
+    # vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+    field_plotter(setup; nupdate = 1),
+    mean_plotter(setup),
+);
 
 # Solve unsteady problem
-problem = UnsteadyProblem(setup, V, p, tlims);
-V, p = solve(problem, RK44P2(); Δt = 0.001, processors, pressure_solver, inplace = true);
+V, p, outputs = solve_unsteady(
+    setup,
+    V₀,
+    p₀,
+    tlims;
+    method = RK44P2(),
+    Δt = 0.001,
+    processors,
+    pressure_solver,
+    inplace = true,
+);
 #md current_figure()
 
 # ## Post-process

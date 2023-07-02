@@ -62,33 +62,34 @@ V₀, p₀ = random_field(
 t_start, t_end = tlims = (T(0), T(0.1))
 
 # Iteration processors
-logger = Logger()
-observer = StateObserver(1, V₀, p₀, t_start)
-writer = VTKWriter(; nupdate = 100, dir = "output/$name", filename = "solution")
-## processors = [logger, observer, writer]
-processors = [logger, observer]
-
-# Real time plot
-rtp = real_time_plot(observer, setup)
-
-# Plot energy history
-ehist = energy_history_plot(observer, setup)
-
-# Plot energy spectrum
-espec = energy_spectrum_plot(observer, setup, K)
+processors = (
+    # step_logger(; nupdate = 1),
+    # vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+    field_plotter(setup; nupdate = 1),
+    energy_history_plotter(setup; nupdate = 1),
+    energy_spectrum_plotter(setup; nupdate = 1),
+);
 
 # Solve unsteady problem
-problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve_unsteady(setup, V₀, p₀, tlims; method = RK44(; T), Δt = T(0.001), processors, pressure_solver, inplace = true);
+V, p, outputs = solve_unsteady(
+    setup,
+    V₀,
+    p₀,
+    tlims;
+    Δt = T(0.001),
+    processors,
+    pressure_solver,
+    inplace = true,
+);
 
-# Real time plot
-rtp
+# Field plot
+outputs[1]
 
 # Energy history
-ehist
+outputs[2]
 
 # Energy spectrum
-espec
+outputs[3]
 
 # ## Post-process
 #

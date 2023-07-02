@@ -48,7 +48,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
             Diff_fact = lu(I(NV) - θ * Δt / Re * Diagonal(1 ./ Ω) * Diff)
         end
 
-        (; V, p, t) = step(method_startup, Δt)
+        (; V, p, t) = step(method_startup, stepper_startup, Δt)
         return create_stepper(
             method;
             setup,
@@ -79,9 +79,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     @assert Δtₙ ≈ Δtₙ₋₁
 
     # Unsteady BC at current time
-    if bc_unsteady
-        bc_vectors = get_bc_vectors(setup, tₙ)
-    end
+    bc_unsteady && (bc_vectors = get_bc_vectors(setup, tₙ))
     (; yDiff) = bc_vectors
 
     yDiffₙ = yDiff
@@ -93,9 +91,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     cₙ, = convection(convection_model, Vₙ, Vₙ, setup; bc_vectors)
 
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
-    if bc_unsteady
-        bc_vectors = get_bc_vectors(setup, tₙ + Δt)
-    end
+    bc_unsteady && (bc_vectors = get_bc_vectors(setup, tₙ + Δt))
     (; yDiff, y_p) = bc_vectors
 
     bₙ₊₁ = force
@@ -124,9 +120,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     end
 
     # Make the velocity field `uₙ₊₁` at `tₙ₊₁` divergence-free (need BC at `tₙ₊₁`)
-    if bc_unsteady
-        bc_vectors = get_bc_vectors(setup, tₙ + Δt)
-    end
+    bc_unsteady && (bc_vectors = get_bc_vectors(setup, tₙ + Δt))
     (; yM) = bc_vectors
 
     # Boundary condition for Δp between time steps (!= 0 if fluctuating outlet pressure)
@@ -181,7 +175,7 @@ function step!(
     (; NV, Ω) = grid
     (; G, M) = operators
     (; Diff) = operators
-    (; p_add_solve, α₁, α₂, θ) = method
+    (; p_add_solve, α₁, α₂, θ, method_startup) = method
     (; cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ) = cache
     (; d, ∇d) = momentum_cache
     (; Re) = viscosity_model
@@ -206,7 +200,7 @@ function step!(
         Diff_fact = lu(I(NV) - θ * Δt / Re * Diagonal(1 ./ Ω) * Diff)
 
         # Note: We do one out-of-place step here, with a few allocations
-        (; V, p, t) = step(method_startup, Δt)
+        (; V, p, t) = step(method_startup, stepper_startup, Δt)
         return create_stepper(
             method;
             setup,
@@ -237,9 +231,7 @@ function step!(
     @assert Δtₙ ≈ Δtₙ₋₁
 
     # Unsteady BC at current time
-    if bc_unsteady
-        bc_vectors = get_bc_vectors(setup, tₙ)
-    end
+    bc_unsteady && (bc_vectors = get_bc_vectors(setup, tₙ))
     (; yDiff) = bc_vectors
 
     yDiffₙ .= yDiff
@@ -251,9 +243,7 @@ function step!(
     convection!(convection_model, cₙ, nothing, Vₙ, Vₙ, setup, momentum_cache; bc_vectors)
 
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
-    if bc_unsteady
-        bc_vectors = get_bc_vectors(setup, tₙ + Δt)
-    end
+    bc_unsteady && (bc_vectors = get_bc_vectors(setup, tₙ + Δt))
     (; yDiff, y_p) = bc_vectors
     bₙ₊₁ = force
 

@@ -3,6 +3,8 @@ create_stepper(::ImplicitRungeKuttaMethod; setup, pressure_solver, bc_vectors, V
 
 function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
     # TODO: Implement out-of-place IRK
+    error()
+
     (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
@@ -161,7 +163,7 @@ function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
 
     t = tₙ + Δtₙ
 
-    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, Δt, n)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
 end
 
 function step!(
@@ -399,7 +401,7 @@ function step!(
 
     t = tₙ + Δtₙ
 
-    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, Δt, n)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
 end
 
 """

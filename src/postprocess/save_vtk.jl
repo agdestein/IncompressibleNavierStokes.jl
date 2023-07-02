@@ -10,11 +10,13 @@ function save_vtk(V, p, t, setup, filename = "output/solution")
     parts = split(filename, "/")
     path = join(parts[1:end-1], "/")
     isdir(path) || mkpath(path)
-    (; xp, yp, zp) = setup.grid
+    (; grid) = setup
     N = setup.grid.dimension()
     if N == 2
+        (; xp, yp) = grid
         coords = (xp, yp)
     elseif N == 3
+        (; xp, yp, zp) = grid
         coords = (xp, yp, zp)
     end
     vtk_grid(filename, coords...) do vtk

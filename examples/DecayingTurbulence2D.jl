@@ -50,28 +50,40 @@ pressure_solver = FourierPressureSolver(setup);
 
 # Initial conditions
 K = n ÷ 2
-V₀, p₀ = random_field(
-    setup, K;
-    A = T(1_000_000),
-    σ = T(30),
-    s = 5,
-    pressure_solver,
-)
+V₀, p₀ = random_field(setup, K; A = T(1_000_000), σ = T(30), s = 5, pressure_solver);
 
 # Time interval
 t_start, t_end = tlims = (T(0), T(1))
 
 # Iteration processors
 processors = (
+    field_plotter(setup; nupdate = 1),
+    energy_history_plotter(setup; nupdate = 1),
+    energy_spectrum_plotter(setup; nupdate = 1),
     step_logger(; nupdate = 1),
-    # vtk_writer(; nupdate = 10, dir = "output/$name", filename = "solution"),
-    field_plotter(setup; nupdate = 10),
-    # energy_history_plotter(setup; nupdate = 10),
-    # energy_spectrum_plotter(setup; nupdate = 10),
-)
+    # vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+);
 
 # Solve unsteady problem
-V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; method = RK44(; T), Δt = 0.001, processors, pressure_solver, inplace = true);
+V, p, outputs = solve_unsteady(
+    setup,
+    V₀,
+    p₀,
+    tlims;
+    Δt = T(0.001),
+    processors,
+    pressure_solver,
+    inplace = true,
+);
+
+# Field plot
+outputs[1]
+
+# Energy history plot
+outputs[2]
+
+# Energy spectrum plot
+outputs[3]
 
 # ## Post-process
 #

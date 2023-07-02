@@ -79,9 +79,9 @@ function solve_unsteady(
 
         # Perform a single time step with the time integration method
         if inplace
-            stepper = step!(stepper, Δt; cache, momentum_cache)
+            stepper = step!(method, stepper, Δt; cache, momentum_cache)
         else
-            stepper = step(stepper, Δt)
+            stepper = step(method, stepper, Δt)
         end
 
         # Process iteration results with each processor

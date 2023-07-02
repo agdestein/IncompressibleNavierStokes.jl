@@ -7,7 +7,8 @@ Non-mutating/allocating/out-of-place version.
 
 See also [`step!`](@ref).
 """
-step(stepper, Δt; bc_vectors = nothing) = step(stepper.method, stepper, Δt; bc_vectors = nothing)
+function step end
+# step(stepper, Δt; bc_vectors = nothing) = step(stepper.method, stepper, Δt; bc_vectors = nothing)
 
 """
     step!(stepper, Δt; cache, momentum_cache, bc_vectors = nothing)
@@ -18,7 +19,8 @@ Mutating/non-allocating/in-place version.
 
 See also [`step`](@ref).
 """
-step!(stepper, Δt; kwargs...) = step!(stepper.method, stepper, Δt; kwargs...)
+function step! end
+# step!(stepper, Δt; kwargs...) = step!(stepper.method, stepper, Δt; kwargs...)
 
 include("step_ab_cn.jl")
 include("step_one_leg.jl")

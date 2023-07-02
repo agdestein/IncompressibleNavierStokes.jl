@@ -76,25 +76,32 @@ initial_velocity_v(x, y) = 0.0
 initial_pressure(x, y) = 0.0
 V₀, p₀ = create_initial_conditions(
     setup,
-    t_start;
     initial_velocity_u,
     initial_velocity_v,
+    t_start;
     initial_pressure,
 );
 
 # Iteration processors
-logger = Logger()
-observer = StateObserver(1, V₀, p₀, t_start)
-writer = VTKWriter(; nupdate = 1, dir = "output/$name", filename = "solution")
-## processors = [logger, observer, writer]
-processors = [logger, observer]
-
-# Real time plot
-real_time_plot(observer, setup)
+processors = (
+    step_logger(; nupdate = 1),
+    # vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+    field_plotter(setup; nupdate = 1),
+    # energy_history_plotter(setup; nupdate = 10),
+    # energy_spectrum_plotter(setup; nupdate = 10),
+);
 
 # Solve unsteady problem
-problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve(problem, RK44P2(); Δt = 0.05, processors, inplace = true);
+V, p, outputs = solve_unsteady(
+    setup,
+    V₀,
+    p₀,
+    tlims;
+    method = RK44P2(),
+    Δt = 0.05,
+    processors,
+    inplace = true,
+);
 #md current_figure()
 
 # ## Post-process

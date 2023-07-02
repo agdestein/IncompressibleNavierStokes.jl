@@ -31,7 +31,7 @@ function step(method::OneLegMethod, stepper, Δt)
         Vₙ = V
         pₙ = p
         tₙ = t
-        (; V, p, t) = step(method_startup, Δt)
+        (; V, p, t) = step(method_startup, stepper_startup, Δt)
         return create_stepper(
             method;
             setup,
@@ -102,7 +102,7 @@ function step(method::OneLegMethod, stepper, Δt)
 
     t = tₙ + Δtₙ
 
-    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, Δt, n, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
 end
 
 function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
@@ -125,7 +125,7 @@ function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
         tₙ = t
 
         # Note: We do one out-of-place step here, with a few allocations
-        (; V, p, t) = step(method_startup, Δt)
+        (; V, p, t) = step(method_startup, stepper_startup, Δt)
         return create_stepper(
             method;
             setup,
@@ -209,5 +209,5 @@ function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
 
     t = tₙ + Δtₙ
 
-    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, Δt, n, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
 end

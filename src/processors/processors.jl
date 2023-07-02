@@ -50,10 +50,11 @@ Create processor that logs time step information.
 step_logger(; nupdate = 1) = processor((step_observer) -> @lift begin
     (; t, n) = $step_observer
     @printf "Iteration %d\tt = %g\n" n t
+    nothing
 end; nupdate)
 
 """
-    vtk_writer(; nupdate, dir = "output", filename = "solution")
+    vtk_writer(setup; nupdate, dir = "output", filename = "solution")
 
 Create processor that writes the solution every `nupdate` time steps to a VTK file. The resulting Paraview data
 collection file is stored in `"\$dir/\$filename.pvd"`.
@@ -63,13 +64,15 @@ vtk_writer(setup; nupdate = 1, dir = "output", filename = "solution") = processo
         ispath(dir) || mkpath(dir)
         pvd = paraview_collection(joinpath(dir, filename))
         @lift begin
-            (; dimension, xp, yp, zp) = setup.grid
+            (; grid) = setup
+            (; dimension, xp, yp) = grid
             (; V, p, t) = $step_observer
 
             N = dimension()
             if N == 2
                 coords = (xp, yp)
             elseif N == 3
+                (; zp) = grid
                 coords = (xp, yp, zp)
             end
 

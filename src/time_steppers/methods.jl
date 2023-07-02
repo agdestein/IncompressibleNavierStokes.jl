@@ -68,7 +68,12 @@ struct AdamsBashforthCrankNicolsonMethod{T,M} <: AbstractODEMethod{T}
 end
 
 """
-    OneLegMethod(; β = 1 // 2, p_add_solve = true)
+    OneLegMethod(
+        T = Float64;
+        β = T(1 // 2),
+        p_add_solve = true,
+        method_startup = RK44(; T),
+    )
 
 Explicit one-leg β-method following symmetry-preserving discretization of
 turbulent flow. See [Verstappen and Veldman (JCP 2003)] for details, or [Direct numerical

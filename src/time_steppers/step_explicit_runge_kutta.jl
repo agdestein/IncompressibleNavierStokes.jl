@@ -81,7 +81,7 @@ function step(method::ExplicitRungeKuttaMethod, stepper, Δt)
 
     t = tₙ + Δtₙ
 
-    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, Δt, n)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
 end
 
 function step!(
@@ -184,5 +184,5 @@ function step!(
 
     t = tₙ + Δtₙ
 
-    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, Δt, n)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
 end

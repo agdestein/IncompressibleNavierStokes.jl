@@ -65,39 +65,33 @@ initial_velocity_v(x, y) = 0.0
 initial_pressure(x, y) = 0.0
 V₀, p₀ = create_initial_conditions(
     setup,
-    t_start;
     initial_velocity_u,
     initial_velocity_v,
+    t_start;
     initial_pressure,
 )
 
 # ## Solve problems
 #
-# Problems can be solved solved by calling the [`solve`](@ref) function.
+# Problems can be solved.
 
-# A [`SteadyStateProblem`](@ref) is for computing a state where the right hand side of the
+# The [`solve_steady_state`](@ref) function is for computing a state where the right hand side of the
 # momentum equation is zero.
-problem = SteadyStateProblem(setup, V₀, p₀)
-V, p = solve(problem)
+V, p = solve_steady_state(setup, V₀, p₀)
 
 # For this test case, the same steady state may be obtained by solving an
-# [`UnsteadyProblem`](@ref) for a sufficiently long time.
-problem = UnsteadyProblem(setup, V₀, p₀, tlims)
+# unsteady problem for a sufficiently long time.
 
 # Iteration processors
-logger = Logger(; nupdate = 1000)
-observer = StateObserver(50, V₀, p₀, t_start)
-writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
-## processors = [logger, observer, writer]
-processors = [logger, observer]
-
-# Real time plot
-real_time_plot(observer, setup)
+processors = (
+    step_logger(; nupdate = 1000),
+    vtk_writer(setup; nupdate = 20, dir = "output/$name", filename = "solution"),
+    field_plotter(setup; nupdate = 50),
+);
 
 # A ODE method is needed. Here we will opt for a standard fourth order Runge-Kutta method
 # with a fixed time step.
-V, p = solve(problem, RK44(); Δt = 0.001, processors)
-#md current_figure()
+V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; method = RK44(), Δt = 0.001, processors);
 
 # ## Post-process
 #
@@ -119,3 +113,14 @@ plot_vorticity(setup, V, t_end; levels)
 
 # Plot streamfunction
 plot_streamfunction(setup, V, t_end)
+
+# In addition, the tuple `outputs` contains quantities from our processors.
+# The logger returns nothing.
+outputs[1]
+
+# The [`vtk_writer`](@ref) returns the file name of the ParaView collection
+# file.
+outputs[2]
+
+# The [`field_plotter`](@ref) returns the field plot figure.
+outputs[3]
