@@ -109,14 +109,6 @@ save_vtk
 create_initial_conditions
 ```
 
-## Problems
-
-```@docs
-SteadyStateProblem
-UnsteadyProblem
-is_steady
-```
-
 ## Processors
 
 ```@docs
@@ -134,8 +126,8 @@ real_time_plot
 
 ```@docs
 get_timestep
-solve
-solve_animate
+solve_unsteady
+solve_steady_state
 ```
 
 ### Pressure solvers

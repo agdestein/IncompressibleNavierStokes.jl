@@ -1,6 +1,6 @@
 """
-    solve(
-        problem::SteadyStateProblem;
+    function solve_steady_state(
+        setup, V₀, p₀;
         jacobian_type = :newton,
         npicard = 2,
         abstol = 1e-10,
@@ -12,14 +12,13 @@ This saddlepoint system arises from linearization of the convective terms.
 
 Each `processor` is called after every `processor.nupdate` iteration.
 """
-function solve(
-    problem::SteadyStateProblem;
+function solve_steady_state(
+    setup, V₀, p₀;
     jacobian_type = :newton,
     npicard = 2,
     abstol = 1e-10,
     maxiter = 10,
 )
-    (; setup, V₀, p₀) = problem
     (; NV, Np) = setup.grid
     (; G, M) = setup.operators
 

@@ -75,7 +75,6 @@ include("time_steppers/nstage.jl")
 include("time_steppers/time_stepper_caches.jl")
 include("time_steppers/step.jl")
 include("time_steppers/isexplicit.jl")
-include("time_steppers/needs_startup_method.jl")
 include("time_steppers/lambda_max.jl")
 
 # Preprocess
@@ -83,9 +82,6 @@ include("preprocess/create_initial_conditions.jl")
 
 # Processors
 include("processors/processors.jl")
-include("processors/initialize.jl")
-include("processors/process.jl")
-include("processors/finalize.jl")
 include("processors/real_time_plot.jl")
 
 # Momentum equation
@@ -99,14 +95,10 @@ include("momentum/strain_tensor.jl")
 include("momentum/turbulent_K.jl")
 include("momentum/turbulent_viscosity.jl")
 
-# Problems
-include("problems/problems.jl")
-include("problems/is_steady.jl")
-
 # Solvers
 include("solvers/get_timestep.jl")
-include("solvers/solve.jl")
-include("solvers/solve_animate.jl")
+include("solvers/solve_steady_state.jl")
+include("solvers/solve_unsteady.jl")
 
 # Utils
 include("utils/filter_convection.jl")
@@ -125,16 +117,15 @@ include("postprocess/plot_streamfunction.jl")
 include("postprocess/save_vtk.jl")
 
 # Force
-export SteadyBodyForce, UnsteadyBodyForce
+export SteadyBodyForce
 
 # Models
 export LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
 export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors
-export AbstractProcessor, Logger, StateObserver, VTKWriter
-export initialize!, process!, finalize!
-export real_time_plot, energy_history_plot, energy_spectrum_plot
+export processor, step_logger, vtk_writer
+export field_plotter, energy_history_plotter, energy_spectrum_plotter
 
 # Setup
 export Setup
@@ -148,8 +139,7 @@ export pressure_poisson,
     pressure_poisson!, pressure_additional_solve, pressure_additional_solve!
 
 # Problems
-export SteadyStateProblem, UnsteadyProblem, is_steady
-export solve, solve_animate
+export solve_unsteady, solve_steady_state
 export momentum, momentum!
 
 export create_initial_conditions, random_field, get_bc_vectors, get_velocity

@@ -22,10 +22,6 @@ function ode_method_cache(::AdamsBashforthCrankNicolsonMethod{T}, setup) where {
     yDiffₙ₊₁ = zeros(T, NV)
     Gpₙ = zeros(T, NV)
 
-    # Compute factorization at first time step (guaranteed since Δt > 0)
-    Δt = Ref(T(0))
-    Diff_fact = Ref(cholesky(spzeros(0, 0)))
-
     (;
         cₙ,
         cₙ₋₁,
@@ -39,8 +35,6 @@ function ode_method_cache(::AdamsBashforthCrankNicolsonMethod{T}, setup) where {
         yDiffₙ,
         yDiffₙ₊₁,
         Gpₙ,
-        Diff_fact,
-        Δt,
     )
 end
 
@@ -58,7 +52,11 @@ end
 function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup) where {T}
     (; NV, Np) = setup.grid
 
+    Vₙ = zeros(T, NV)
+    pₙ = zeros(T, Np) 
+
     ns = nstage(method)
+
     kV = zeros(T, NV, ns)
     kp = zeros(T, Np, ns)
     Vtemp = zeros(T, NV)
@@ -68,16 +66,16 @@ function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup) where {T}
     f = zeros(T, Np)
     Δp = zeros(T, Np)
 
-    # Get coefficients of RK method
-    (; A, b, c) = method
-
-    (; kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp)
+    (; Vₙ, pₙ, kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
     (; NV, Np, Ω) = setup.grid
     (; G, M) = setup.operators
     (; A, b, c) = method
+
+    Vₙ = zeros(T, NV)
+    pₙ = zeros(T, Np) 
 
     # Number of stages
     s = length(b)
@@ -120,6 +118,8 @@ function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
     Z = [dfmom Gtot; Mtot Z2]
 
     (;
+        Vₙ,
+        pₙ, 
         Vtotₙ,
         ptotₙ,
         Qⱼ,

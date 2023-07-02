@@ -1,6 +1,9 @@
+create_stepper(::ImplicitRungeKuttaMethod; setup, pressure_solver, bc_vectors, V, p, t, n = 0) = 
+    (; setup, pressure_solver, bc_vectors, V, p, t, n)
+
 function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
     # TODO: Implement out-of-place IRK
-    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; NV, Np, Ω) = grid
@@ -11,8 +14,8 @@ function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
 
     # Update current solution (does not depend on previous step size)
     n += 1
-    Vₙ .= V
-    pₙ .= p
+    Vₙ = V
+    pₙ = p
     tₙ = t
     Δtₙ = Δt
 
@@ -158,7 +161,7 @@ function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, Δt, n)
 end
 
 function step!(
@@ -168,12 +171,13 @@ function step!(
     cache,
     momentum_cache,
 )
-    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; NV, Np, Ω) = grid
     (; G, M) = operators
     (; A, b, c, p_add_solve, maxiter, abstol, newton_type) = method
+    (; Vₙ, pₙ) = cache
     (; Vtotₙ, ptotₙ, Qⱼ, Fⱼ, ∇Fⱼ, fⱼ, F, ∇F, f, Δp, Gp) = cache
     (; Mtot, yMtot, Ωtot, dfmom, Z) = cache
     (; Ω_sNV, A_ext, b_ext) = cache
@@ -395,7 +399,7 @@ function step!(
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, Δt, n)
 end
 
 """

@@ -1,5 +1,8 @@
+create_stepper(::ExplicitRungeKuttaMethod; setup, pressure_solver, bc_vectors, V, p, t, n = 0) = 
+    (; setup, pressure_solver, bc_vectors, V, p, t, n)
+
 function step(method::ExplicitRungeKuttaMethod, stepper, Δt)
-    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; Ω) = grid
@@ -78,7 +81,7 @@ function step(method::ExplicitRungeKuttaMethod, stepper, Δt)
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, Δt, n)
 end
 
 function step!(
@@ -88,13 +91,13 @@ function step!(
     cache,
     momentum_cache,
 )
-    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; Ω) = grid
     (; G, M) = operators
     (; A, b, c, p_add_solve) = method
-    (; kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f) = cache
+    (; Vₙ, pₙ, kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f) = cache
 
     # Update current solution (does not depend on previous step size)
     n += 1
@@ -181,5 +184,5 @@ function step!(
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, Δt, n)
 end

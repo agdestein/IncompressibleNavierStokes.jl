@@ -52,44 +52,26 @@ pressure_solver = FourierPressureSolver(setup);
 K = n ÷ 2
 V₀, p₀ = random_field(
     setup, K;
-    A = 1e6,
-    σ = 30,
-    ## σ = 10,
+    A = T(1_000_000),
+    σ = T(30),
     s = 5,
     pressure_solver,
 )
 
 # Time interval
-t_start, t_end = tlims = (0.0, 1.0)
+t_start, t_end = tlims = (T(0), T(1))
 
 # Iteration processors
-logger = Logger()
-observer = StateObserver(1, V₀, p₀, t_start)
-writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
-## processors = [logger, observer, writer]
-processors = [logger, observer]
-
-# Real time plot
-rtp = real_time_plot(observer, setup)
-
-# Plot energy history
-ehist = energy_history_plot(observer, setup)
-
-# Plot energy spectrum
-espec = energy_spectrum_plot(observer, setup, K)
+processors = (
+    step_logger(; nupdate = 1),
+    # vtk_writer(; nupdate = 10, dir = "output/$name", filename = "solution"),
+    field_plotter(setup; nupdate = 10),
+    # energy_history_plotter(setup; nupdate = 10),
+    # energy_spectrum_plotter(setup; nupdate = 10),
+)
 
 # Solve unsteady problem
-problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve(problem, RK44(); Δt = 0.001, processors, pressure_solver, inplace = true);
-
-# Real time plot
-rtp
-
-# Energy history
-ehist
-
-# Energy spectrum
-espec
+V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; method = RK44(; T), Δt = 0.001, processors, pressure_solver, inplace = true);
 
 # ## Post-process
 #

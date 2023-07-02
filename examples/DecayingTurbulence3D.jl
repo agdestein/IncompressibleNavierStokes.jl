@@ -79,7 +79,7 @@ espec = energy_spectrum_plot(observer, setup, K)
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve(problem, RK44(; T); Δt = T(0.001), processors, pressure_solver, inplace = true);
+V, p = solve_unsteady(setup, V₀, p₀, tlims; method = RK44(; T), Δt = T(0.001), processors, pressure_solver, inplace = true);
 
 # Real time plot
 rtp

@@ -1,15 +1,13 @@
 """
-    solve(
-        problem::UnsteadyProblem,
-        method;
-        pressure_solver = DirectPressureSolver(problem.setup),
+    function solve_unsteady(
+        setup, V₀, p₀, tlims;
+        method = RK44(; T = eltype(V₀)),
+        pressure_solver = DirectPressureSolver(setup),
         Δt = nothing,
         cfl = 1,
         n_adapt_Δt = 1,
-        nstartup = 1,
-        method_startup = nothing,
         inplace = false,
-        processors = [],
+        processors = (),
     )
 
 Solve unsteady problem using `method`.
@@ -24,20 +22,16 @@ For methods that are not self-starting, `nstartup` startup iterations are perfor
 
 Each `processor` is called after every `processor.nupdate` time step.
 """
-function solve(
-    problem::UnsteadyProblem,
-    method;
-    pressure_solver = DirectPressureSolver(problem.setup),
-    Δt = nothing,
+function solve_unsteady(
+    setup, V₀, p₀, tlims;
+    method = RK44(; T = eltype(V₀)),
+    pressure_solver = DirectPressureSolver(setup),
+    Δt = zero(eltype(V₀)),
     cfl = 1,
     n_adapt_Δt = 1,
-    nstartup = 1,
-    method_startup = nothing,
     inplace = false,
-    processors = [],
+    processors = (),
 )
-    (; setup, V₀, p₀, tlims) = problem
-
     t_start, t_end = tlims
     isadaptive = isnothing(Δt)
     if !isadaptive
@@ -45,57 +39,38 @@ function solve(
         Δt = (t_end - t_start) / nstep
     end
 
-    # For methods that need a velocity field at n-1 the first time step
-    # (e.g. AB-CN, oneleg beta) use ERK or IRK
-    if needs_startup_method(method)
-        println("Starting up with method $(method_startup)")
-        method_use = method_startup
-    else
-        method_use = method
-    end
-
     if inplace
-        cache = ode_method_cache(method_use, setup)
+        cache = ode_method_cache(method, setup)
         momentum_cache = MomentumCache(setup)
     end
 
     # Initialize BC arrays
     bc_vectors = get_bc_vectors(setup, t_start)
 
-    stepper = (;
-        n = 0,
-        method = method_use,
+    # Time stepper
+    stepper = create_stepper(
+        method;
         setup,
         pressure_solver,
         bc_vectors,
         V = copy(V₀),
         p = copy(p₀),
-        t = copy(t_start),
-        Vₙ = copy(V₀),
-        pₙ = copy(p₀),
-        tₙ = copy(t_start),
+        t = t_start,
     )
+
+    # Get initial time step
     isadaptive && (Δt = get_timestep(stepper, cfl))
 
-    # Processors for iteration results  
-    for ps ∈ processors
-        initialize!(ps, stepper)
-        process!(ps, stepper)
-    end
+    # Initialize processors for iteration results  
+    state = get_state(stepper)
+    states = map(ps -> Observable(state), processors)
+    initialized = map((ps, o) -> ps.initialize(o), processors, states)
 
     while stepper.t < t_end
-        if stepper.n == nstartup && needs_startup_method(method)
-            println("n = $(stepper.n): switching to primary ODE method ($method)")
-            stepper = (; stepper..., method)
-            if inplace
-                cache = ode_method_cache(method, setup)
-            end
-        end
-
         if isadaptive
             if rem(stepper.n, n_adapt_Δt) == 0
                 # Change timestep based on operators
-                Δt = get_timestep(stepper, cfl; bc_vectors)
+                Δt = get_timestep(stepper, cfl)
             end
 
             # Make sure not to step past `t_end`
@@ -110,14 +85,20 @@ function solve(
         end
 
         # Process iteration results with each processor
-        for ps ∈ processors
+        for (ps, o) ∈ zip(processors, states)
             # Only update each `nupdate`-th iteration
-            stepper.n % ps.nupdate == 0 && process!(ps, stepper)
+            stepper.n % ps.nupdate == 0 && (o[] = get_state(stepper))
         end
     end
 
-    foreach(finalize!, processors)
+    (; V, p, t, n) = stepper
+    finalized = map((ps, i) -> ps.finalize(i, get_state(stepper)), processors, initialized)
 
     (; V, p) = stepper
-    V, p
+    V, p, finalized
+end
+
+function get_state(stepper)
+    (; V, p, t, n) = stepper
+    (; V, p, t, n)
 end

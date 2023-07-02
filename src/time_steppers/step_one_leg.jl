@@ -1,12 +1,53 @@
+create_stepper(
+    method::OneLegMethod;
+    setup,
+    pressure_solver,
+    bc_vectors,
+    V,
+    p,
+    t,
+    n = 0,
+
+    # For the first step, these are not used
+    Vₙ = copy(V),
+    pₙ = copy(p),
+    tₙ = t,
+) = (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
+
 function step(method::OneLegMethod, stepper, Δt)
-    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
-    (; p_add_solve, β) = method
+    (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ) = stepper
+    (; p_add_solve, β, method_startup) = method
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; G, M) = operators
     (; Ω) = grid
 
-    # Update current solution (does not depend on previous step size)
+    # One-leg requires state at previous time step, which is not available at
+    # the first iteration. Do one startup step instead
+    if n == 0
+        stepper_startup =
+            create_stepper(method_startup; setup, pressure_solver, bc_vectors, V, p, t)
+        n += 1
+        Vₙ = V
+        pₙ = p
+        tₙ = t
+        (; V, p, t) = step(method_startup, Δt)
+        return create_stepper(
+            method;
+            setup,
+            pressure_solver,
+            bc_vectors,
+            V,
+            p,
+            t,
+            n,
+            Vₙ,
+            pₙ,
+            tₙ,
+        )
+    end
+
+    # Update current solution
     Δtₙ₋₁ = t - tₙ
     n += 1
     Vₙ₋₁ = Vₙ
@@ -15,6 +56,8 @@ function step(method::OneLegMethod, stepper, Δt)
     pₙ = p
     tₙ = t
     Δtₙ = Δt
+
+    # One-leg requires fixed time step
     @assert Δtₙ ≈ Δtₙ₋₁
 
     # Intermediate ("offstep") velocities
@@ -59,19 +102,46 @@ function step(method::OneLegMethod, stepper, Δt)
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, Δt, n, Vₙ, pₙ, tₙ)
 end
 
 function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
     (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
-    (; p_add_solve, β) = method
+    (; p_add_solve, β, method_startup) = method
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; G, M) = operators
     (; Ω) = grid
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache
 
-    # Update current solution (does not depend on previous step size)
+    # One-leg requires state at previous time step, which is not available at
+    # the first iteration. Do one startup step instead
+    if n == 0
+        stepper_startup =
+            create_stepper(method_startup; setup, pressure_solver, bc_vectors, V, p, t)
+        n += 1
+        Vₙ = V
+        pₙ = p
+        tₙ = t
+
+        # Note: We do one out-of-place step here, with a few allocations
+        (; V, p, t) = step(method_startup, Δt)
+        return create_stepper(
+            method;
+            setup,
+            pressure_solver,
+            bc_vectors,
+            V,
+            p,
+            t,
+            n,
+            Vₙ,
+            pₙ,
+            tₙ,
+        )
+    end
+
+    # Update current solution
     Δtₙ₋₁ = t - tₙ
     n += 1
     Vₙ₋₁ .= Vₙ
@@ -80,6 +150,8 @@ function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
     pₙ .= p
     tₙ = t
     Δtₙ = Δt
+
+    # One-leg requires fixed time step
     @assert Δtₙ ≈ Δtₙ₋₁
 
     # Intermediate ("offstep") velocities
@@ -137,5 +209,5 @@ function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, Δt, n, Vₙ, pₙ, tₙ)
 end
