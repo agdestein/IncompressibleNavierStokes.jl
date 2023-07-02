@@ -25,6 +25,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     (; G, M) = operators
     (; Diff) = operators
     (; p_add_solve, α₁, α₂, θ, method_startup) = method
+    (; Re) = viscosity_model
 
     T = typeof(Δt)
 
@@ -44,7 +45,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
 
         if viscosity_model isa LaminarModel
             # Factorize implicit part at first time step
-            Diff_fact = lu(I(NV) - θ * Δt * Diagonal(1 ./ Ω) * Diff)
+            Diff_fact = lu(I(NV) - θ * Δt / Re * Diagonal(1 ./ Ω) * Diff)
         end
 
         (; V, p, t) = step(method_startup, Δt)
@@ -107,7 +108,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
 
     Gpₙ = G * pₙ + y_p
 
-    d = Diff * V
+    d = 1 / Re * (Diff * V)
 
     # Right hand side of the momentum equation update
     Rr = @. Vₙ + 1 / Ω * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + yDiff + b - Gpₙ)
@@ -183,6 +184,7 @@ function step!(
     (; p_add_solve, α₁, α₂, θ) = method
     (; cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ) = cache
     (; d, ∇d) = momentum_cache
+    (; Re) = viscosity_model
 
     T = typeof(Δt)
 
@@ -201,7 +203,7 @@ function step!(
         cₙ, = convection(convection_model, Vₙ, Vₙ, setup; bc_vectors)
 
         # Factorize implicit part at first time step
-        Diff_fact = lu(I(NV) - θ * Δt * Diagonal(1 ./ Ω) * Diff)
+        Diff_fact = lu(I(NV) - θ * Δt / Re * Diagonal(1 ./ Ω) * Diff)
 
         # Note: We do one out-of-place step here, with a few allocations
         (; V, p, t) = step(method_startup, Δt)
@@ -265,6 +267,7 @@ function step!(
     Gpₙ .+= y_p
 
     mul!(d, Diff, V)
+    d ./= Re
 
     # Right hand side of the momentum equation update
     @. Rr = Vₙ + 1 ./ Ω * Δt * (-(α₁ * cₙ + α₂ * cₙ₋₁) + (1 - θ) * d + yDiff + b - Gpₙ)
