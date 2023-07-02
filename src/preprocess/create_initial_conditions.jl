@@ -123,9 +123,9 @@ function create_spectrum_2(K, A, σ, s)
     T = typeof(A)
     a =
         A * [
-            1 / sqrt((2π)^2 * 2σ^2) *
+            1 / sqrt((2T(π))^2 * 2σ^2) *
             exp(-((i - s)^2 + (j - s)^2) / 2σ^2) *
-            exp(-2π * im * rand()) for i = 1:K, j = 1:K
+                exp(-2T(π) * im * rand(T)) for i = 1:K, j = 1:K
         ]
     [
         a reverse(a; dims = 2)
@@ -134,11 +134,12 @@ function create_spectrum_2(K, A, σ, s)
 end
 
 function create_spectrum_3(K, A, σ, s)
+    T = typeof(A)
     a =
         A * [
-            1 / sqrt((2π)^3 * 3σ^2) *
+            1 / sqrt((2T(π))^3 * 3σ^2) *
             exp(-((i - s)^2 + (j - s)^2 + (k - s)^2) / 2σ^2) *
-            exp(-2π * im * rand()) for i = 1:K, j = 1:K, k = 1:K
+                exp(-2T(π) * im * rand(T)) for i = 1:K, j = 1:K, k = 1:K
         ]
     [
         a reverse(a; dims = 2); reverse(a; dims = 1) reverse(a; dims = (1, 2));;;
@@ -149,7 +150,9 @@ end
 """
     random_field(
         setup, K;
-        A = 1e6, σ = 30, s = 5,
+        A = 1_000_000,
+        σ = 30,
+        s = 5,
         pressure_solver = DirectPressureSolver(setup),
     )
 
@@ -169,7 +172,7 @@ function random_field(
     ::Dimension{2},
     setup,
     K;
-    A = convert(eltype(setup.grid.x), 1e6),
+    A = convert(eltype(setup.grid.x), 1_000_000),
     σ = convert(eltype(setup.grid.x), 30),
     s = 5,
     pressure_solver = DirectPressureSolver(setup),
@@ -203,7 +206,7 @@ function random_field(
     ::Dimension{3},
     setup,
     K;
-    A = convert(eltype(setup.grid.x), 1e6),
+    A = convert(eltype(setup.grid.x), 1_000_000),
     σ = convert(eltype(setup.grid.x), 30),
     s = 5,
     pressure_solver = DirectPressureSolver(setup),

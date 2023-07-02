@@ -12,7 +12,7 @@ function operator_regularization(::Dimension{2}, grid, operators)
     (; Su_ux, Su_uy, Sv_vx, Sv_vy) = operators
 
     Δ = max_size(grid)
-    α_reg = 1 / 16 * Δ^2
+    α_reg = Δ^2 / 16
 
     Ωu⁻¹ = 1 ./ Ω[indu]
     Ωv⁻¹ = 1 ./ Ω[indv]
@@ -33,7 +33,7 @@ function operator_regularization(::Dimension{3}, grid, operators)
     (; Sw_wx, Sw_wy, Sw_wz) = operators
 
     Δ = max_size(grid)
-    α_reg = 1 / 16 * Δ^2
+    α_reg = Δ^2 / 16
 
     Ωu⁻¹ = 1 ./ Ω[indu]
     Ωv⁻¹ = 1 ./ Ω[indv]

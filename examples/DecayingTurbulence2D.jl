@@ -35,7 +35,7 @@ T = Float32
 viscosity_model = LaminarModel(; Re = T(10_000))
 
 # A 2D grid is a Cartesian product of two vectors
-n = 200
+n = 256
 lims = (T(0), T(1))
 x = LinRange(lims..., n + 1)
 y = LinRange(lims..., n + 1)

@@ -27,14 +27,18 @@ using IncompressibleNavierStokes
 # Case name for saving results
 name = "DecayingTurbulence3D"
 
+# Floating point precision
+T = Float32
+
 # Viscosity model
-viscosity_model = LaminarModel(; Re = 1e4)
+viscosity_model = LaminarModel(; Re = T(10_000))
 
 # A 3D grid is a Cartesian product of three vectors
-n = 50
-x = LinRange(0.0, 1.0, n + 1)
-y = LinRange(0.0, 1.0, n + 1)
-z = LinRange(0.0, 1.0, n + 1)
+n = 64
+lims = (T(0), T(1))
+x = LinRange(lims..., n + 1)
+y = LinRange(lims..., n + 1)
+z = LinRange(lims..., n + 1)
 plot_grid(x, y, z)
 
 # Build setup and assemble operators
@@ -42,21 +46,20 @@ setup = Setup(x, y, z; viscosity_model);
 
 # Since the grid is uniform and identical for x, y, and z, we may use a
 # specialized Fourier pressure solver
-pressure_solver = FourierPressureSolver(setup)
+pressure_solver = FourierPressureSolver(setup);
 
 # Initial conditions
 K = n ÷ 2
 V₀, p₀ = random_field(
     setup, K;
-    A = 1e6,
-    σ = 30,
-    ## σ = 10,
+    A = T(1_000_000),
+    σ = T(30),
     s = 5,
     pressure_solver,
 )
 
 # Time interval
-t_start, t_end = tlims = (0.0, 0.1)
+t_start, t_end = tlims = (T(0), T(0.1))
 
 # Iteration processors
 logger = Logger()
@@ -76,7 +79,7 @@ espec = energy_spectrum_plot(observer, setup, K)
 
 # Solve unsteady problem
 problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve(problem, RK44(); Δt = 0.001, processors, pressure_solver, inplace = true);
+V, p = solve(problem, RK44(; T); Δt = T(0.001), processors, pressure_solver, inplace = true);
 
 # Real time plot
 rtp

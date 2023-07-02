@@ -134,14 +134,11 @@ Get Runge Kutta method. The function checks whether the method is explicit.
 
 For implicit RK methods: `newton_type`, `maxiter`, `abstol`, `reltol`.
 """
-function runge_kutta_method(A, b, c, r; kwargs...)
+function runge_kutta_method(A, b, c, r; T = Float64, kwargs...)
     s = size(A, 1)
     s == size(A, 2) == length(b) == length(c) ||
         error("A, b, and c must have the same sizes")
     isexplicit = all(≈(0), UpperTriangular(A))
-    # T = promote_type(eltype(A), eltype(b), eltype(c), typeof(r))
-    # TODO: Find where to pass T
-    T = Float64
     A = convert(Matrix{T}, A)
     b = convert(Vector{T}, b)
     c = convert(Vector{T}, c)

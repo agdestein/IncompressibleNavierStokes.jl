@@ -501,20 +501,11 @@ function get_bc_vectors(::Dimension{3}, setup, t)
     (; Sw_wx_bc, Sw_wy_bc, Sw_wz_bc) = operators
 
     (; Mx_bc, My_bc, Mz_bc) = operators
-    (; Aν_vy_bc) = operators
 
     (; Iu_ux_bc, Iv_vy_bc, Iw_wz_bc) = operators
     (; Iv_uy_bc_lr, Iv_uy_bc_lu, Iw_uz_bc_lr, Iw_uz_bc_bf) = operators
     (; Iu_vx_bc_lr, Iu_vx_bc_lu, Iw_vz_bc_lu, Iw_vz_bc_bf) = operators
     (; Iu_wx_bc_lr, Iu_wx_bc_bf, Iv_wy_bc_lu, Iv_wy_bc_bf) = operators
-
-    (; Cux_k_bc, Cuy_k_bc, Cuz_k_bc) = operators
-    (; Cvx_k_bc, Cvy_k_bc, Cvz_k_bc) = operators
-    (; Cwx_k_bc, Cwy_k_bc, Cwz_k_bc) = operators
-
-    (; Auy_k_bc, Avx_k_bc) = operators
-    (; Auz_k_bc, Awx_k_bc) = operators
-    (; Awy_k_bc, Avz_k_bc) = operators
 
     (; Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf) = operators
     (; Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf) = operators
@@ -928,6 +919,13 @@ function get_bc_vectors(::Dimension{3}, setup, t)
     )
 
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
+        (; Aν_vy_bc) = operators
+        (; Cux_k_bc, Cuy_k_bc, Cuz_k_bc) = operators
+        (; Cvx_k_bc, Cvy_k_bc, Cvz_k_bc) = operators
+        (; Cwx_k_bc, Cwy_k_bc, Cwz_k_bc) = operators
+        (; Auy_k_bc, Avx_k_bc) = operators
+        (; Auz_k_bc, Awx_k_bc) = operators
+        (; Awy_k_bc, Avz_k_bc) = operators
 
         # Set bc for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
