@@ -1,5 +1,5 @@
-function step(method::ExplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothing)
-    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+function step(method::ExplicitRungeKuttaMethod, stepper, Δt)
+    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; Ω) = grid
@@ -48,7 +48,7 @@ function step(method::ExplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothi
 
         # Boundary conditions at tᵢ₊₁
         tᵢ = tₙ + c[i] * Δtₙ
-        if isnothing(bc_vectors) || bc_unsteady
+        if bc_unsteady
             bc_vectors = get_bc_vectors(setup, tᵢ)
         end
         (; yM) = bc_vectors
@@ -78,7 +78,7 @@ function step(method::ExplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothi
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
 end
 
 function step!(
@@ -87,9 +87,8 @@ function step!(
     Δt;
     cache,
     momentum_cache,
-    bc_vectors = nothing,
 )
-    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; Ω) = grid
@@ -138,7 +137,7 @@ function step!(
 
         # Boundary conditions at tᵢ₊₁
         tᵢ = tₙ + c[i] * Δtₙ
-        if isnothing(bc_vectors) || bc_unsteady
+        if bc_unsteady
             bc_vectors = get_bc_vectors(setup, tᵢ)
         end
         (; yM) = bc_vectors
@@ -182,5 +181,5 @@ function step!(
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
 end

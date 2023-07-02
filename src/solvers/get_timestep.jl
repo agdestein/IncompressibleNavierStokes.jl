@@ -5,11 +5,11 @@ Estimate time step based on eigenvalues of operators, using Gershgorin.
 """
 function get_timestep end
 
-get_timestep(stepper, cfl; bc_vectors) = get_timestep(stepper.setup.grid.dimension, stepper, cfl; bc_vectors)
+get_timestep(stepper, cfl) = get_timestep(stepper.setup.grid.dimension, stepper, cfl)
 
 # 2D version
-function get_timestep(::Dimension{2}, stepper, cfl; bc_vectors)
-    (; setup, method, V) = stepper
+function get_timestep(::Dimension{2}, stepper, cfl)
+    (; setup, method, bc_vectors, V) = stepper
     (; grid, operators) = setup
     (; NV, indu, indv, Ω) = grid
     (; Diff) = operators
@@ -56,8 +56,8 @@ function get_timestep(::Dimension{2}, stepper, cfl; bc_vectors)
 end
 
 # 3D version
-function get_timestep(::Dimension{3}, stepper, cfl; bc_vectors)
-    (; setup, method, V) = stepper
+function get_timestep(::Dimension{3}, stepper, cfl)
+    (; setup, method, bc_vectors, V) = stepper
     (; grid, operators) = setup
     (; NV, indu, indv, indw, Ω) = grid
     (; Diff) = operators

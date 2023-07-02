@@ -59,11 +59,15 @@ function solve(
         momentum_cache = MomentumCache(setup)
     end
 
+    # Initialize BC arrays
+    bc_vectors = get_bc_vectors(setup, t_start)
+
     stepper = (;
         n = 0,
         method = method_use,
         setup,
         pressure_solver,
+        bc_vectors,
         V = copy(V₀),
         p = copy(p₀),
         t = copy(t_start),
@@ -72,9 +76,6 @@ function solve(
         tₙ = copy(t_start),
     )
     isadaptive && (Δt = get_timestep(stepper, cfl))
-
-    # Initialize BC arrays
-    bc_vectors = get_bc_vectors(setup, stepper.t)
 
     # Processors for iteration results  
     for ps ∈ processors
@@ -103,9 +104,9 @@ function solve(
 
         # Perform a single time step with the time integration method
         if inplace
-            stepper = step!(stepper, Δt; cache, momentum_cache, bc_vectors)
+            stepper = step!(stepper, Δt; cache, momentum_cache)
         else
-            stepper = step(stepper, Δt; bc_vectors)
+            stepper = step(stepper, Δt)
         end
 
         # Process iteration results with each processor

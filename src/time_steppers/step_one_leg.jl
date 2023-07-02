@@ -1,5 +1,5 @@
-function step(method::OneLegMethod, stepper, Δt; bc_vectors = nothing)
-    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+function step(method::OneLegMethod, stepper, Δt)
+    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; p_add_solve, β) = method
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
@@ -31,7 +31,7 @@ function step(method::OneLegMethod, stepper, Δt; bc_vectors = nothing)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
-    if isnothing(bc_vectors) || bc_unsteady
+    if bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ + Δtₙ)
     end
     (; yM) = bc_vectors
@@ -59,11 +59,11 @@ function step(method::OneLegMethod, stepper, Δt; bc_vectors = nothing)
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
 end
 
-function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache, bc_vectors = nothing)
-    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
+    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; p_add_solve, β) = method
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
@@ -96,7 +96,7 @@ function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache, bc_vec
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
-    if isnothing(bc_vectors) || bc_unsteady
+    if bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ + Δtₙ)
     end
     (; yM) = bc_vectors
@@ -137,5 +137,5 @@ function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache, bc_vec
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
 end

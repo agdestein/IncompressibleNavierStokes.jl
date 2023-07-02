@@ -1,5 +1,5 @@
-function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt; bc_vectors = nothing)
-    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
+    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) =
         setup
     (; bc_unsteady) = boundary_conditions
@@ -27,7 +27,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt; bc_vector
     @assert Δtₙ ≈ Δtₙ₋₁
 
     # Unsteady BC at current time
-    if isnothing(bc_vectors) || bc_unsteady
+    if bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ)
     end
     (; yDiff) = bc_vectors
@@ -41,7 +41,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt; bc_vector
     cₙ, = convection(convection_model, Vₙ, Vₙ, setup; bc_vectors)
 
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
-    if isnothing(bc_vectors) || bc_unsteady
+    if bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ + Δt)
     end
     (; yDiff, y_p) = bc_vectors
@@ -73,7 +73,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt; bc_vector
     end
 
     # Make the velocity field `uₙ₊₁` at `tₙ₊₁` divergence-free (need BC at `tₙ₊₁`)
-    if isnothing(bc_vectors) || bc_unsteady
+    if bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ + Δt)
     end
     (; yM) = bc_vectors
@@ -108,9 +108,8 @@ function step!(
     Δt;
     cache,
     momentum_cache,
-    bc_vectors = nothing,
 )
-    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) =
         setup
     (; bc_unsteady) = boundary_conditions
@@ -124,7 +123,7 @@ function step!(
     T = typeof(Δt)
 
     # For the first time step, this might be necessary
-    if isnothing(bc_vectors) || bc_unsteady
+    if bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ)
     end
     convection!(convection_model, cₙ, nothing, Vₙ, Vₙ, setup, momentum_cache; bc_vectors)
@@ -140,7 +139,7 @@ function step!(
     @assert Δtₙ ≈ Δtₙ₋₁
 
     # Unsteady BC at current time
-    if isnothing(bc_vectors) || bc_unsteady
+    if bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ)
     end
     (; yDiff) = bc_vectors
@@ -154,7 +153,7 @@ function step!(
     convection!(convection_model, cₙ, nothing, Vₙ, Vₙ, setup, momentum_cache; bc_vectors)
 
     # Unsteady BC at next time (Vₙ is not used normally in bodyforce.jl)
-    if isnothing(bc_vectors) || bc_unsteady
+    if bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ + Δt)
     end
     (; yDiff, y_p) = bc_vectors
@@ -227,5 +226,5 @@ function step!(
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
 end

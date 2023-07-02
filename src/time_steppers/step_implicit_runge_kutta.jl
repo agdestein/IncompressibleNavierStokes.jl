@@ -1,6 +1,6 @@
-function step(method::ImplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothing)
+function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
     # TODO: Implement out-of-place IRK
-    (; setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; NV, Np, Ω) = grid
@@ -32,7 +32,7 @@ function step(method::ImplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothi
 
         # Boundary conditions at all the stage time steps to make the velocity field
         # uᵢ₊₁ at tᵢ₊₁ divergence-free (BC at tᵢ₊₁ needed)
-        if isnothing(bc_vectors) || bc_unsteady
+        if bc_unsteady
             # Modify `yM`
             tᵢ = tⱼ[i]
             bc_vectors = get_bc_vectors(setup, tᵢ)
@@ -124,7 +124,7 @@ function step(method::ImplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothi
     # Make V satisfy the incompressibility constraint at n+1; this is only needed when the
     # boundary conditions are time-dependent. For stiffly accurate methods, this can also
     # be skipped (e.g. Radau IIA) - this still needs to be implemented
-    if isnthing(bc_vectors) || bc_unsteady
+    if bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ + Δtₙ)
         (; yM) = bc_vectors
 
@@ -158,7 +158,7 @@ function step(method::ImplicitRungeKuttaMethod, stepper, Δt; bc_vectors = nothi
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
 end
 
 function step!(
@@ -167,9 +167,8 @@ function step!(
     Δt;
     cache,
     momentum_cache,
-    bc_vectors = nothing,
 )
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; NV, Np, Ω) = grid
@@ -204,7 +203,7 @@ function step!(
 
         # Boundary conditions at all the stage time steps to make the velocity field
         # uᵢ₊₁ at tᵢ₊₁ divergence-free (BC at tᵢ₊₁ needed)
-        if isnothing(bc_vectors) || bc_unsteady
+        if bc_unsteady
             tᵢ = tⱼ[i]
             bc_vectors = get_bc_vectors(setup, tᵢ)
         end
@@ -396,7 +395,7 @@ function step!(
 
     t = tₙ + Δtₙ
 
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    (; method, setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ)
 end
 
 """
