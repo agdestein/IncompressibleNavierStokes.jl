@@ -27,6 +27,8 @@ function create_initial_conditions(
     (; xu, yu, xv, yv, xpp, ypp, Ω) = grid
     (; G, M) = operators
 
+    T = eltype(xu)
+
     # Boundary conditions
     bc_vectors = get_bc_vectors(setup, t)
     (; yM) = bc_vectors
@@ -45,6 +47,7 @@ function create_initial_conditions(
     # Iteration 1 corresponds to t₀ = 0 (for unsteady simulations)
     maxdiv, umom, vmom, k = compute_conservation(V, t, setup; bc_vectors)
 
+    # TODO: Maybe eps(T)^(3//4)
     if maxdiv > 1e-12
         @warn "Initial velocity field not (discretely) divergence free: $maxdiv.\n" *
               "Performing additional projection."
@@ -75,9 +78,9 @@ function create_initial_conditions(
     initial_pressure = nothing,
     pressure_solver = DirectPressureSolver(setup),
 )
-    (; grid) = setup
+    (; grid, operators) = setup
     (; xu, yu, zu, xv, yv, zv, xw, yw, zw, xpp, ypp, zpp, Ω) = grid
-    (; G, M) = setup.operators
+    (; G, M) = operators
 
     # Boundary conditions
     bc_vectors = get_bc_vectors(setup, t)
@@ -99,13 +102,14 @@ function create_initial_conditions(
     # Iteration 1 corresponds to t₀ = 0 (for unsteady simulations)
     maxdiv, umom, vmom, wmom, k = compute_conservation(V, t, setup; bc_vectors)
 
+    # TODO: Maybe eps(T)^(3//4)
     if maxdiv > 1e-12
         @warn "Initial velocity field not (discretely) divergence free: $maxdiv.\n" *
               "Performing additional projection."
 
         # Make velocity field divergence free
         f = M * V + yM
-        Δp = pressure_poisson(pressure_solver, f, setup)
+        Δp = pressure_poisson(pressure_solver, f)
         V .-= 1 ./ Ω .* (G * Δp)
     end
 
@@ -119,28 +123,42 @@ function create_initial_conditions(
     V, p
 end
 
-function create_spectrum_2(K, A, σ, s)
+function create_spectrum_2(x, A, σ, s)
     T = typeof(A)
-    a =
-        A * [
-            1 / sqrt((2T(π))^2 * 2σ^2) *
-            exp(-((i - s)^2 + (j - s)^2) / 2σ^2) *
-                exp(-2T(π) * im * rand(T)) for i = 1:K, j = 1:K
-        ]
+    AT = typeof(x)
+    nx, ny = size(x)
+    Kx = nx ÷ 2
+    Ky = ny ÷ 2
+    i = AT(reshape(1:Kx, :, 1))
+    j = AT(reshape(1:Ky, 1, :))
+    p = T(π)
+    a = @. A * (
+        1 / sqrt((2p)^2 * 2σ^2) *
+        exp(-((i - s)^2 + (j - s)^2) / 2σ^2) *
+        exp(-2p * im * rand(T))
+    )
     [
         a reverse(a; dims = 2)
         reverse(a; dims = 1) reverse(a)
     ]
 end
 
-function create_spectrum_3(K, A, σ, s)
+function create_spectrum_3(x, A, σ, s)
     T = typeof(A)
-    a =
-        A * [
-            1 / sqrt((2T(π))^3 * 3σ^2) *
-            exp(-((i - s)^2 + (j - s)^2 + (k - s)^2) / 2σ^2) *
-                exp(-2T(π) * im * rand(T)) for i = 1:K, j = 1:K, k = 1:K
-        ]
+    AT = typeof(x)
+    nx, ny, nz = size(x)
+    Kx = nx ÷ 2
+    Ky = ny ÷ 2
+    Kz = nz ÷ 2
+    i = AT(reshape(1:Kx, :, 1, 1))
+    j = AT(reshape(1:Ky, 1, :, 1))
+    k = AT(reshape(1:Kz, 1, 1, :))
+    p = T(π)
+    a = @. A * (
+        1 / sqrt((2p)^3 * 3σ^2) *
+        exp(-((i - s)^2 + (j - s)^2 + (k - s)^2) / 2σ^2) *
+        exp(-2p * im * rand(T))
+    )
     [
         a reverse(a; dims = 2); reverse(a; dims = 1) reverse(a; dims = (1, 2));;;
         reverse(a; dims = 3) reverse(a; dims = (2, 3)); reverse(a; dims = (1, 3)) reverse(a)
@@ -165,25 +183,24 @@ Create random field.
 """
 function random_field end
 
-random_field(setup, K; kwargs...) = random_field(setup.grid.dimension, setup, K; kwargs...)
+random_field(setup; kwargs...) = random_field(setup.grid.dimension, setup; kwargs...)
 
 # 2D version
 function random_field(
     ::Dimension{2},
-    setup,
-    K;
+    setup;
     A = convert(eltype(setup.grid.x), 1_000_000),
     σ = convert(eltype(setup.grid.x), 30),
     s = 5,
     pressure_solver = DirectPressureSolver(setup),
 )
-    (; Ω) = setup.grid
+    (; xu, xv, Ω) = setup.grid
     (; G, M) = setup.operators
 
-    T = eltype(setup.grid.x)
+    T = eltype(Ω)
 
-    u = real.(ifft(create_spectrum_2(K, A, σ, s)))
-    v = real.(ifft(create_spectrum_2(K, A, σ, s)))
+    u = real.(ifft(create_spectrum_2(xu, A, σ, s)))
+    v = real.(ifft(create_spectrum_2(xv, A, σ, s)))
     V = [reshape(u, :); reshape(v, :)]
     f = M * V
     p = zero(f)
@@ -204,21 +221,20 @@ end
 # 3D version
 function random_field(
     ::Dimension{3},
-    setup,
-    K;
+    setup;
     A = convert(eltype(setup.grid.x), 1_000_000),
     σ = convert(eltype(setup.grid.x), 30),
     s = 5,
     pressure_solver = DirectPressureSolver(setup),
 )
-    (; Ω) = setup.grid
+    (; xu, xv, xw, Ω) = setup.grid
     (; G, M) = setup.operators
 
-    T = eltype(setup.grid.x)
+    T = eltype(Ω)
 
-    u = real.(ifft(create_spectrum_3(K, A, σ, s)))
-    v = real.(ifft(create_spectrum_3(K, A, σ, s)))
-    w = real.(ifft(create_spectrum_3(K, A, σ, s)))
+    u = real.(ifft(create_spectrum_3(xu, A, σ, s)))
+    v = real.(ifft(create_spectrum_3(xv, A, σ, s)))
+    w = real.(ifft(create_spectrum_3(xw, A, σ, s)))
     V = [reshape(u, :); reshape(v, :); reshape(w, :)]
     f = M * V
     p = zero(f)

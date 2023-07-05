@@ -43,6 +43,7 @@ function field_plot(
     fieldname = :vorticity,
     type = heatmap,
     sleeptime = 0.001,
+    equal_axis = false,
 )
     (; boundary_conditions, grid) = setup
     (; xlims, ylims, x, y, xp, yp) = grid
@@ -131,7 +132,7 @@ function field_plot(
     end
 
     ax.title = titlecase(string(fieldname))
-    ax.aspect = DataAspect()
+    equal_axis && (ax.aspect = DataAspect())
     ax.xlabel = "x"
     ax.ylabel = "y"
     limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
@@ -149,6 +150,7 @@ function field_plot(
     fieldname = :vorticity,
     sleeptime = 0.001,
     alpha = 0.05,
+    equal_axis = false,
 )
     (; boundary_conditions, grid) = setup
     (; xlims, ylims, x, y, z, xp, yp, zp) = grid
@@ -200,8 +202,9 @@ function field_plot(
 
     lims = @lift get_lims($field)
 
+    aspect = equal_axis ? (; aspect = :data) : (;)
     fig = Figure()
-    ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect = :data)
+    ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
     hm = contour!(
         ax,
         xf,
@@ -286,9 +289,8 @@ end
 
 function energy_spectrum_plot(
     ::Dimension{3},
-    state,
     setup,
-    K,
+    state,
 )
     (; xpp) = setup.grid
     Kx, Ky, Kz = size(xpp) .÷ 2
@@ -297,7 +299,8 @@ function energy_spectrum_plot(
     kz = 1:(Ky-1)
     kk = reshape([sqrt(kx^2 + ky^2 + kz^2) for kx ∈ kx, ky ∈ ky, kz ∈ kz], :)
     ehat = @lift begin
-        V, p, t = $(state.state)
+        (; V, p, t) = $state
+        V = Array(V)
         up, vp, wp = get_velocity(setup, V, t)
         e = @. up^2 + vp^2 + wp^2
         reshape(abs.(fft(e)[kx.+1, ky.+1, kz.+1]), :)

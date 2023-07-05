@@ -6,21 +6,19 @@ Get time stepper cache for the given ODE method.
 """
 function ode_method_cache end
 
-function ode_method_cache(::AdamsBashforthCrankNicolsonMethod{T}, setup) where {T}
-    (; NV, Np) = setup.grid
-
-    cₙ = zeros(T, NV)
-    cₙ₋₁ = zeros(T, NV)
-    F = zeros(T, NV)
-    f = zeros(T, Np)
-    Δp = zeros(T, Np)
-    Rr = zeros(T, NV)
-    b = zeros(T, NV)
-    bₙ = zeros(T, NV)
-    bₙ₊₁ = zeros(T, NV)
-    yDiffₙ = zeros(T, NV)
-    yDiffₙ₊₁ = zeros(T, NV)
-    Gpₙ = zeros(T, NV)
+function ode_method_cache(::AdamsBashforthCrankNicolsonMethod, setup, V, p)
+    cₙ = similar(V)
+    cₙ₋₁ = similar(V)
+    F = similar(V)
+    f = similar(p)
+    Δp = similar(p)
+    Rr = similar(V)
+    b = similar(V)
+    bₙ = similar(V)
+    bₙ₊₁ = similar(V)
+    yDiffₙ = similar(V)
+    yDiffₙ₊₁ = similar(V)
+    Gpₙ = similar(V)
 
     (;
         cₙ,
@@ -38,44 +36,48 @@ function ode_method_cache(::AdamsBashforthCrankNicolsonMethod{T}, setup) where {
     )
 end
 
-function ode_method_cache(::OneLegMethod{T}, setup) where {T}
+function ode_method_cache(::OneLegMethod{T}, setup, V, p) where {T}
     (; NV, Np) = setup.grid
-    Vₙ₋₁ = zeros(T, NV)
-    pₙ₋₁ = zeros(T, Np)
-    F = zeros(T, NV)
-    f = zeros(T, Np)
-    Δp = zeros(T, Np)
-    GΔp = zeros(T, NV)
+    Vₙ₋₁ = similar(V)
+    pₙ₋₁ = similar(p)
+    F = similar(V)
+    f = similar(p)
+    Δp = similar(p)
+    GΔp = similar(V)
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp)
 end
 
-function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup) where {T}
+function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup, V, p) where {T}
     (; NV, Np) = setup.grid
 
-    Vₙ = zeros(T, NV)
-    pₙ = zeros(T, Np) 
+    Vₙ = similar(V)
+    pₙ = similar(p)
 
     ns = nstage(method)
 
-    kV = zeros(T, NV, ns)
-    kp = zeros(T, Np, ns)
-    Vtemp = zeros(T, NV)
-    Vtemp2 = zeros(T, NV)
-    F = zeros(T, NV)
+    # kV = zeros(T, NV, ns)
+    # kp = zeros(T, Np, ns)
+    
+    kV = [similar(V) for i = 1:ns]
+    kp = [similar(p) for i = 1:ns]
+
+    Vtemp = similar(V)
+    Vtemp2 = similar(V)
+    F = similar(V)
     ∇F = spzeros(T, NV, NV)
-    f = zeros(T, Np)
-    Δp = zeros(T, Np)
+    f = similar(p)
+    Δp = similar(p)
 
     (; Vₙ, pₙ, kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp)
 end
 
-function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
+function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup, V, p) where {T}
     (; NV, Np, Ω) = setup.grid
     (; G, M) = setup.operators
     (; A, b, c) = method
 
-    Vₙ = zeros(T, NV)
-    pₙ = zeros(T, Np) 
+    Vₙ = similar(V)
+    pₙ = similar(p)
 
     # Number of stages
     s = length(b)
@@ -96,11 +98,11 @@ function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup) where {T}
 
     fⱼ = zeros(T, s * (NV + Np))
 
-    F = zeros(T, NV)
+    F = similar(V)
     ∇F = spzeros(T, NV, NV)
-    f = zeros(T, Np)
-    Δp = zeros(T, Np)
-    Gp = zeros(T, NV)
+    f = similar(p)
+    Δp = similar(p)
+    Gp = similar(V)
 
     # Gradient operator (could also use 1 instead of c and later scale the pressure)
     Gtot = kron(A, G)

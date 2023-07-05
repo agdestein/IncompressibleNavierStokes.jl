@@ -1,5 +1,5 @@
 """
-    pressure_poisson(solver, f, setup)
+    pressure_poisson(solver, f)
 
 Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
 For periodic and no-slip BC, the sum of `f` should be zero.
@@ -67,7 +67,7 @@ end
 function pressure_poisson!(solver::FourierPressureSolver, p, f)
     (; Ahat, fhat, phat) = solver
 
-    fhat[:] = f
+    fhat[:] .= complex.(f)
 
     # Fourier transform of right hand side
     fft!(fhat)

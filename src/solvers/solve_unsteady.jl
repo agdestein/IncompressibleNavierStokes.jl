@@ -31,6 +31,7 @@ function solve_unsteady(
     n_adapt_Δt = 1,
     inplace = false,
     processors = (),
+    bc_vectors = get_bc_vectors(setup, tlims[1]),
 )
     t_start, t_end = tlims
     isadaptive = isnothing(Δt)
@@ -40,12 +41,12 @@ function solve_unsteady(
     end
 
     if inplace
-        cache = ode_method_cache(method, setup)
-        momentum_cache = MomentumCache(setup)
+        cache = ode_method_cache(method, setup, V₀, p₀)
+        momentum_cache = MomentumCache(setup, V₀, p₀)
     end
 
-    # Initialize BC arrays
-    bc_vectors = get_bc_vectors(setup, t_start)
+    # # Initialize BC arrays
+    # bc_vectors = device(get_bc_vectors(setup, t_start))
 
     # Time stepper
     stepper = create_stepper(

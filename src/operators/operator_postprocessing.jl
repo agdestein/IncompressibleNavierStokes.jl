@@ -24,7 +24,8 @@ function operator_postprocessing(::Dimension{2}, grid, boundary_conditions)
             0 => diag[1:(end-1)],
             Nx - 1 => -diag[[end - 1]],
         )
-        repeat_x = spdiagm(Nx + 1, Nx, -Nx => [1], 0 => ones(T, Nx))
+        weight = T(1)
+        repeat_x = spdiagm(Nx + 1, Nx, -Nx => [weight], 0 => fill(weight, Nx))
 
         # du/dy, like Su_uy
         diag = 1 ./ gyd
@@ -36,7 +37,8 @@ function operator_postprocessing(::Dimension{2}, grid, boundary_conditions)
             0 => diag[1:(end-1)],
             Ny - 1 => -diag[[end - 1]],
         )
-        repeat_y = spdiagm(Ny + 1, Ny, -Ny => [1], 0 => ones(T, Ny))
+        weight = T(1)
+        repeat_y = spdiagm(Ny + 1, Ny, -Ny => [weight], 0 => fill(weight, Ny))
     else
         # dv/dx, like Sv_vx
         diag = 1 ./ gy[2:(end-1)]
@@ -82,10 +84,17 @@ function operator_postprocessing(::Dimension{3}, grid, boundary_conditions)
             Nx - 1 => -diag[[end - 1]],
         )
         # FIXME: nonuniform weights: 1/gi / (1/gi + 1/gj) ?
-        diag = fill(T(1 / 2), Nx)
-        average_x =
-            spdiagm(Nx + 1, Nx, -Nx => [1 / 2], -1 => diag, 0 => diag, Nx - 1 => [1 / 2])
-        repeat_x = spdiagm(Nx + 1, Nx, -Nx => [1], 0 => ones(T, Nx))
+        weight = T(1 // 2)
+        average_x = spdiagm(
+            Nx + 1,
+            Nx,
+            -Nx => [weight],
+            -1 => fill(weight, Nx),
+            0 => fill(weight, Nx),
+            Nx - 1 => [weight],
+        )
+        weight = T(1)
+        repeat_x = spdiagm(Nx + 1, Nx, -Nx => [weight], 0 => fill(weight, Nx))
 
         diag = 1 ./ gyd
         ∂y = spdiagm(
@@ -96,10 +105,17 @@ function operator_postprocessing(::Dimension{3}, grid, boundary_conditions)
             0 => diag[1:(end-1)],
             Ny - 1 => -diag[[end - 1]],
         )
-        diag = fill(T(1 / 2), Ny)
-        average_y =
-            spdiagm(Ny + 1, Ny, -Ny => [1 / 2], -1 => diag, 0 => diag, Ny - 1 => [1 / 2])
-        repeat_y = spdiagm(Ny + 1, Ny, -Ny => [1], 0 => ones(T, Ny))
+        weight = T(1 // 2)
+        average_y = spdiagm(
+            Ny + 1,
+            Ny,
+            -Ny => [weight],
+            -1 => fill(weight, Ny),
+            0 => fill(weight, Ny),
+            Ny - 1 => [weight],
+        )
+        weight = T(1)
+        repeat_y = spdiagm(Ny + 1, Ny, -Ny => [weight], 0 => fill(weight, Ny))
 
         diag = 1 ./ gzd
         ∂z = spdiagm(
@@ -110,21 +126,28 @@ function operator_postprocessing(::Dimension{3}, grid, boundary_conditions)
             0 => diag[1:(end-1)],
             Nz - 1 => -diag[[end - 1]],
         )
-        diag = fill(T(1 / 2), Nz)
-        average_z =
-            spdiagm(Nz + 1, Nz, -Nz => [1 / 2], -1 => diag, 0 => diag, Nz - 1 => [1 / 2])
-        repeat_z = spdiagm(Nz + 1, Nz, -Nz => [1], 0 => ones(T, Nz))
+        weight = T(1 // 2)
+        average_z = spdiagm(
+            Nz + 1,
+            Nz,
+            -Nz => [weight],
+            -1 => fill(weight, Nz),
+            0 => fill(weight, Nz),
+            Nz - 1 => [weight],
+        )
+        weight = T(1)
+        repeat_z = spdiagm(Nz + 1, Nz, -Nz => [weight], 0 => fill(weight, Nz))
     else
         diag = 1 ./ gx[2:(end-1)]
         ∂x = spdiagm(Nx - 1, Nx, 0 => -diag, 1 => diag)
-        diag = fill(T(1 / 2), Nx - 1)
+        diag = fill(T(1 // 2), Nx - 1)
         average_x = spdiagm(Nx - 1, Nx, 0 => diag, 1 => diag)
         # average_x = sparse(I, Nx - 1, Nx)
         repeat_x = I(Nx - 1)
 
         diag = 1 ./ gy[2:(end-1)]
         ∂y = spdiagm(Ny - 1, Ny, 0 => -diag, 1 => diag)
-        diag = fill(T(1 / 2), Ny - 1)
+        diag = fill(T(1 // 2), Ny - 1)
         average_y = spdiagm(Ny - 1, Ny, 0 => diag, 1 => diag)
         # average_y = sparse(I, Ny - 1, Ny)
         repeat_y = I(Ny - 1)

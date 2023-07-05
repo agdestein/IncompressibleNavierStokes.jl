@@ -25,8 +25,9 @@ function step(method::ExplicitRungeKuttaMethod, stepper, Δt)
 
     # Reset RK arrays
     tᵢ = tₙ
-    kV = zeros(T, nV, 0)
-    kp = zeros(T, np, 0)
+    # kV = zeros(T, nV, 0)
+    # kp = zeros(T, np, 0)
+    kV = fill(V, 0)
 
     ## Start looping over stages
 
@@ -43,11 +44,13 @@ function step(method::ExplicitRungeKuttaMethod, stepper, Δt)
         # Store right-hand side of stage i
         # Remove the -G*p contribution (but not y_p)
         kVᵢ = 1 ./ Ω .* (F + G * p)
-        kV = [kV kVᵢ]
+        # kV = [kV kVᵢ]
+        kV = [kV; [kVᵢ]]
 
         # Update velocity current stage by sum of Fᵢ's until this stage, weighted
         # with Butcher tableau coefficients. This gives uᵢ₊₁, and for i=s gives uᵢ₊₁
-        V = kV * A[i, 1:i]
+        # V = dot(kV * A[i, 1:i]
+        V = sum(A[i, j] * kV[j] for j = 1:i)
 
         # Boundary conditions at tᵢ₊₁
         tᵢ = tₙ + c[i] * Δtₙ
@@ -109,9 +112,9 @@ function step!(
     # Number of stages
     nstage = length(b)
 
-    # Reset RK arrays
-    kV .= 0
-    kp .= 0
+    # # Reset RK arrays
+    # kV .= 0
+    # kp .= 0
 
     tᵢ = tₙ
 
@@ -129,14 +132,19 @@ function step!(
 
         # Store right-hand side of stage i
         # Remove the -G*p contribution (but not y_p)
-        kVᵢ = @view kV[:, i]
+        # kVᵢ = @view kV[:, i]
+        kVᵢ = kV[i]
         mul!(kVᵢ, G, p)
         @. kVᵢ = 1 ./ Ω * (F + kVᵢ)
         # kVᵢ .= 1 ./ Ω .* (F + G * p)
 
         # Update velocity current stage by sum of Fᵢ's until this stage, weighted
         # with Butcher tableau coefficients. This gives uᵢ₊₁, and for i=s gives uᵢ₊₁
-        mul!(Vtemp, kV, A[i, :])
+        # mul!(Vtemp, kV, A[i, :])
+        Vtemp .= 0
+        for j = 1:i
+            Vtemp .= Vtemp .+ A[i, j] .* kV[j]
+        end
 
         # Boundary conditions at tᵢ₊₁
         tᵢ = tₙ + c[i] * Δtₙ

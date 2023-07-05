@@ -68,6 +68,9 @@ vtk_writer(setup; nupdate = 1, dir = "output", filename = "solution") = processo
             (; dimension, xp, yp) = grid
             (; V, p, t) = $step_observer
 
+            V = Array(V)
+            p = Array(p)
+
             N = dimension()
             if N == 2
                 coords = (xp, yp)

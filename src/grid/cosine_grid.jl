@@ -11,4 +11,8 @@ x_i = a + \\frac{1}{2} \\left( 1 - \\cos \\left( \\pi \\frac{i}{n} \\right) \\ri
 
 See also [`stretched_grid`](@ref).
 """
-cosine_grid(a, b, N) = map(i -> a + (b - a) * (1 - cospi(i / N)) / 2, 0:N)
+function cosine_grid(a, b, N) 
+    T = typeof(a)
+    i = T.(0:N)
+    @. a + (b - a) * (1 - cospi(i / N)) / 2
+end

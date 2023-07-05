@@ -15,6 +15,7 @@ end                                                 #src
 # plotting), but does not work when building this example on GitHub.
 # `CairoMakie` makes high-quality static vector-graphics plots.
 
+using CUDA
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
@@ -22,13 +23,17 @@ using IncompressibleNavierStokes
 # Case name for saving results
 name = "TaylorGreenVortex2D"
 
+# Floating point type
+T = Float32
+
 # Viscosity model
-viscosity_model = LaminarModel(; Re = 2000.0)
+viscosity_model = LaminarModel(; Re = T(2_000))
 
 # A 2D grid is a Cartesian product of two vectors
-n = 100
-x = LinRange(0, 2π, n + 1)
-y = LinRange(0, 2π, n + 1)
+n = 128
+lims = (T(0), T(2π))
+x = LinRange(lims..., n + 1)
+y = LinRange(lims..., n + 1)
 plot_grid(x, y)
 
 # Build setup and assemble operators
@@ -39,12 +44,12 @@ setup = Setup(x, y; viscosity_model);
 pressure_solver = FourierPressureSolver(setup)
 
 # Time interval
-t_start, t_end = tlims = (0.0, 10.0)
+t_start, t_end = tlims = (T(0), T(1))
 
 # Initial conditions
 initial_velocity_u(x, y) = -sin(x)cos(y)
 initial_velocity_v(x, y) = cos(x)sin(y)
-initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
+initial_pressure(x, y) = 1 // 4 * (cos(2x) + cos(2y))
 V₀, p₀ = create_initial_conditions(
     setup,
     initial_velocity_u,
@@ -67,15 +72,40 @@ processors = (
 );
 
 # Solve unsteady problem
-V, p, outputs = solve_unsteady(
+@time V, p, outputs = solve_unsteady(
     setup,
     V₀,
     p₀,
     tlims;
-    Δt = 0.01,
+    Δt = T(0.01),
     processors,
     pressure_solver,
     inplace = true,
+);
+#md current_figure()
+
+cusetup = cu(setup);
+
+# Iteration processors
+processors = (
+    field_plotter(cusetup; nupdate = 1),
+    # energy_history_plotter(setup; nupdate = 1),
+    # energy_spectrum_plotter(setup; nupdate = 1),
+    step_logger(; nupdate = 1),
+    # vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+);
+
+# Solve unsteady problem
+@time V, p, outputs = solve_unsteady(
+    cusetup,
+    cu(V₀),
+    cu(p₀),
+    tlims;
+    Δt = T(0.01),
+    processors,
+    pressure_solver = FourierPressureSolver(cusetup),
+    inplace = true,
+    bc_vectors = cu(get_bc_vectors(setup, t_start)),
 );
 #md current_figure()
 

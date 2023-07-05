@@ -20,7 +20,7 @@ function get_vorticity(::Dimension{2}, setup, V, t)
         Nωy = Ny - 1
     end
 
-    ω = zeros(eltype(V), Nωx, Nωy)
+    ω = similar(V, Nωx, Nωy)
 
     vorticity!(ω, setup, V, t)
 end
@@ -47,7 +47,7 @@ function get_vorticity(::Dimension{3}, setup, V, t)
         Nωz = Nz - 1
     end
 
-    ω = zeros(eltype(V), Nωx, Nωy, Nωz)
+    ω = similar(V, Nωx, Nωy, Nωz)
 
     vorticity!(ω, setup, V, t)
 end
@@ -72,7 +72,7 @@ function vorticity!(::Dimension{2}, ω, setup, V, t)
 
     uₕ = @view V[indu]
     vₕ = @view V[indv]
-    ω_flat = reshape(ω, length(ω))
+    ω_flat = reshape(ω, :)
 
     if boundary_conditions.u.x[1] == :periodic && boundary_conditions.v.y[1] == :periodic
         uₕ_in = uₕ
@@ -112,7 +112,7 @@ function vorticity!(::Dimension{3}, ω, setup, V, t)
     uₕ = @view V[indu]
     vₕ = @view V[indv]
     wₕ = @view V[indw]
-    ω_flat = reshape(ω, length(ω))
+    ω_flat = reshape(ω, :)
 
     if boundary_conditions.u.x[1] == :periodic &&
        boundary_conditions.v.y[1] == :periodic &&

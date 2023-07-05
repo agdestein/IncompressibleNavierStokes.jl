@@ -25,8 +25,8 @@ end
 
 Conjugate gradients iterative pressure solver.
 """
-struct CGPressureSolver{T} <: AbstractPressureSolver{T}
-    A::SparseMatrixCSC{T,Int}
+struct CGPressureSolver{T,M<:AbstractMatrix{T}} <: AbstractPressureSolver{T}
+    A::M
     abstol::T
     reltol::T
     maxiter::Int
@@ -37,15 +37,14 @@ struct CGPressureSolver{T} <: AbstractPressureSolver{T}
         maxiter = size(setup.operators.A, 2),
     )
         (; A) = setup.operators
-        T = eltype(A)
-        new{T}(A, abstol, reltol, maxiter)
+        new{eltype(A),typeof(A)}(A, abstol, reltol, maxiter)
     end
 end
 
-struct FourierPressureSolver{T,N} <: AbstractPressureSolver{T}
-    Ahat::Array{Complex{T},N}
-    phat::Array{Complex{T},N}
-    fhat::Array{Complex{T},N}
+struct FourierPressureSolver{T,A<:AbstractArray{Complex{T}}} <: AbstractPressureSolver{T}
+    Ahat::A
+    phat::A
+    fhat::A
 end
 
 """
@@ -58,7 +57,9 @@ FourierPressureSolver(setup) = FourierPressureSolver(setup.grid.dimension, setup
 function FourierPressureSolver(::Dimension{2}, setup)
     (; grid, boundary_conditions) = setup
     (; hx, hy, Npx, Npy) = grid
+
     T = eltype(hx)
+    AT = typeof(hx)
 
     if any(
         !isequal((:periodic, :periodic)),
@@ -67,19 +68,19 @@ function FourierPressureSolver(::Dimension{2}, setup)
         error("FourierPressureSolver only implemented for periodic boundary conditions")
     end
 
-    Δx = hx[1]
-    Δy = hy[1]
-    if any(≉(Δx), hx) || any(≉(Δy), hy)
+    Δx = first(hx)
+    Δy = first(hy)
+    if any(!≈(Δx), hx) || any(!≈(Δy), hy)
         error("FourierPressureSolver requires uniform grid along each dimension")
     end
 
     # Fourier transform of the discretization
     # Assuming uniform grid, although Δx and Δy do not need to be the same
-    i = 0:(Npx-1)
-    j = reshape(0:(Npy-1), 1, :)
+    i = AT(0:(Npx-1))
+    j = reshape(AT(0:(Npy-1)), 1, :)
 
     # Scale with Δx*Δy, since we solve the PDE in integrated form
-    Ahat = @. 4 * Δx * Δy * (sin(i * T(π) / Npx)^2 / Δx^2 + sin(j * T(π) / Npy)^2 / Δy^2)
+    Ahat = @. 4 * Δx * Δy * (sin(i * π / Npx)^2 / Δx^2 + sin(j * π / Npy)^2 / Δy^2)
 
     # Pressure is determined up to constant, fix at 0
     Ahat[1] = 1
@@ -90,13 +91,15 @@ function FourierPressureSolver(::Dimension{2}, setup)
     phat = similar(Ahat)
     fhat = similar(Ahat)
 
-    FourierPressureSolver{T,2}(Ahat, phat, fhat)
+    FourierPressureSolver{T,typeof(Ahat)}(Ahat, phat, fhat)
 end
 
 function FourierPressureSolver(::Dimension{3}, setup)
     (; grid, boundary_conditions) = setup
     (; hx, hy, hz, Npx, Npy, Npz) = grid
+
     T = eltype(hx)
+    AT = typeof(hx)
 
     if any(
         !isequal((:periodic, :periodic)),
@@ -105,18 +108,18 @@ function FourierPressureSolver(::Dimension{3}, setup)
         error("FourierPressureSolver only implemented for periodic boundary conditions")
     end
 
-    Δx = hx[1]
-    Δy = hy[1]
-    Δz = hz[1]
-    if any(≉(Δx), hx) || any(≉(Δy), hy) || any(≉(Δz), hz)
+    Δx = first(hx)
+    Δy = first(hy)
+    Δz = first(hz)
+    if any(!≈(Δx), hx) || any(!≈(Δy), hy) || any(!≈(Δz), hz)
         error("FourierPressureSolver requires uniform grid along each dimension")
     end
 
     # Fourier transform of the discretization
-    # Assuming uniform grid, although Δx, Δy and Δz do not need to be the same
-    i = 0:(Npx-1)
-    j = reshape(0:(Npy-1), 1, :)
-    k = reshape(0:(Npz-1), 1, 1, :)
+    # Assuming uniform grid, although Δx and Δy do not need to be the same
+    i = AT(0:(Npx-1))
+    j = reshape(AT(0:(Npy-1)), 1, :)
+    k = reshape(AT(0:(Npz-1)), 1, 1, :)
 
     # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
     Ahat = @. 4 *
@@ -124,9 +127,9 @@ function FourierPressureSolver(::Dimension{3}, setup)
         Δy *
         Δz *
        (
-           sin(i * T(π) / Npx)^2 / Δx^2 +
-           sin(j * T(π) / Npy)^2 / Δy^2 +
-           sin(k * T(π) / Npz)^2 / Δz^2
+           sin(i * π / Npx)^2 / Δx^2 +
+           sin(j * π / Npy)^2 / Δy^2 +
+           sin(k * π / Npz)^2 / Δz^2
        )
 
     # Pressure is determined up to constant, fix at 0
@@ -138,5 +141,5 @@ function FourierPressureSolver(::Dimension{3}, setup)
     phat = similar(Ahat)
     fhat = similar(Ahat)
 
-    FourierPressureSolver{T,3}(Ahat, phat, fhat)
+    FourierPressureSolver{T,typeof(Ahat)}(Ahat, phat, fhat)
 end

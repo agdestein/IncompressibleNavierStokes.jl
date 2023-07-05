@@ -16,7 +16,7 @@ function solve_steady_state(
     setup, V₀, p₀;
     jacobian_type = :newton,
     npicard = 2,
-    abstol = 1e-10,
+    abstol = eps(eltype(V₀))^(3//4) * 100,
     maxiter = 10,
 )
     (; NV, Np) = setup.grid
@@ -25,7 +25,7 @@ function solve_steady_state(
     T = eltype(V₀)
 
     # Temporary variables
-    momentum_cache = MomentumCache(setup)
+    momentum_cache = MomentumCache(setup, V₀, p₀)
     F = zeros(T, NV)
     f = zeros(T, NV + Np)
     ∇F = spzeros(T, NV, NV)

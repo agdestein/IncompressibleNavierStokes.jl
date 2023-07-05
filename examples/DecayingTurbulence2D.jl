@@ -24,6 +24,9 @@ using FFTW
 using GLMakie #!md
 using IncompressibleNavierStokes
 using LinearAlgebra
+using SparseArrays
+
+using CUDA
 
 # Case name for saving results
 name = "DecayingTurbulence2D"
@@ -35,11 +38,11 @@ T = Float32
 viscosity_model = LaminarModel(; Re = T(10_000))
 
 # A 2D grid is a Cartesian product of two vectors
-n = 256
+n = 2048
 lims = (T(0), T(1))
-x = LinRange(lims..., n + 1)
-y = LinRange(lims..., n + 1)
-plot_grid(x, y)
+x = collect(LinRange(lims..., n + 1))
+y = collect(LinRange(lims..., n + 1))
+# plot_grid(x, y)
 
 # Build setup and assemble operators
 setup = Setup(x, y; viscosity_model);
@@ -49,31 +52,34 @@ setup = Setup(x, y; viscosity_model);
 pressure_solver = FourierPressureSolver(setup);
 
 # Initial conditions
-K = n ÷ 2
-V₀, p₀ = random_field(setup, K; A = T(1_000_000), σ = T(30), s = 5, pressure_solver);
+V₀, p₀ = random_field(setup; A = T(10_000_000), σ = T(30), s = 5, pressure_solver);
+V, p = V₀, p₀
 
 # Time interval
 t_start, t_end = tlims = (T(0), T(1))
 
+cusetup = cu(setup)
+
 # Iteration processors
 processors = (
-    field_plotter(setup; nupdate = 1),
-    energy_history_plotter(setup; nupdate = 1),
-    energy_spectrum_plotter(setup; nupdate = 1),
+    field_plotter(cusetup; nupdate = 10),
+    # energy_history_plotter(setup; nupdate = 1),
+    # energy_spectrum_plotter(setup; nupdate = 1),
     step_logger(; nupdate = 1),
     # vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
 );
 
 # Solve unsteady problem
 V, p, outputs = solve_unsteady(
-    setup,
-    V₀,
-    p₀,
+    cusetup,
+    cu(V₀),
+    cu(p₀),
     tlims;
-    Δt = T(0.001),
+    Δt = T(0.0001),
     processors,
-    pressure_solver,
+    pressure_solver = FourierPressureSolver(cusetup),
     inplace = true,
+    bc_vectors = cu(get_bc_vectors(setup, t_start)),
 );
 
 # Field plot
@@ -93,10 +99,11 @@ outputs[3]
 save_vtk(setup, V, p, t_end, "output/solution")
 
 # Plot pressure
-plot_pressure(setup, p)
+plot_pressure(setup, Array(p))
 
 # Plot velocity
-plot_velocity(setup, V, t_end)
+plot_velocity(setup, Array(V), t_end)
 
 # Plot vorticity
-plot_vorticity(setup, V, t_end)
+plot_vorticity(setup, Array(V), t_end)
+plot_vorticity(setup, Array(V₀), t_end)
