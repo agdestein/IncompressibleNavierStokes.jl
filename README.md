@@ -129,4 +129,4 @@ V, p = solve_unsteady(
 
 The resulting animation is shown below.
 
-![Vorticity](assets/vorticity.gif)
+![Vorticity](assets/vorticity.mkv)
