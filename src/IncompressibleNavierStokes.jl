@@ -84,6 +84,7 @@ include("preprocess/create_initial_conditions.jl")
 # Processors
 include("processors/processors.jl")
 include("processors/real_time_plot.jl")
+include("processors/animator.jl")
 
 # Momentum equation
 include("momentum/compute_conservation.jl")
@@ -127,6 +128,7 @@ export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvecti
 # Processors
 export processor, step_logger, vtk_writer
 export field_plotter, energy_history_plotter, energy_spectrum_plotter
+export animator
 
 # Setup
 export Setup

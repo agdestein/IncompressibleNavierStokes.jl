@@ -108,6 +108,16 @@ processors = (
     # vtk_writer(setup; nupdate = 20, dir = "output/$name", filename = "solution"),
 );
 
+# Iteration processors
+processors = (
+    # field_plotter(setup; nupdate = 1),
+    # energy_history_plotter(setup; nupdate = 1),
+    # energy_spectrum_plotter(setup; nupdate = 100),
+    # animator(setup, "vorticity.mkv"; nupdate = 4),
+    # vtk_writer(setup; nupdate = 20, dir = "output/$name", filename = "solution"),
+    step_logger(; nupdate = 1),
+);
+
 # By default, a standard fourth order Runge-Kutta method is used. If we don't
 # provide the time step explicitly, an adaptive time step is used.
 V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = T(0.00001), processors, pressure_solver);

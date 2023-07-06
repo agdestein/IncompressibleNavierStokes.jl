@@ -62,11 +62,12 @@ cusetup = cu(setup)
 
 # Iteration processors
 processors = (
-    field_plotter(cusetup; nupdate = 10),
+    field_plotter(setup; nupdate = 10),
     # energy_history_plotter(setup; nupdate = 1),
     # energy_spectrum_plotter(setup; nupdate = 1),
-    step_logger(; nupdate = 1),
+    # animator(setup, "vorticity.mkv"; nupdate = 4),
     # vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+    step_logger(; nupdate = 1),
 );
 
 # Solve unsteady problem
