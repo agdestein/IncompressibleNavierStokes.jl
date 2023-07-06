@@ -17,45 +17,23 @@
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
     V₀, p₀ = create_initial_conditions(
         setup,
-        t_start;
         initial_velocity_u,
         initial_velocity_v,
+        t_start;
         initial_pressure,
         pressure_solver,
     )
 
     # Iteration processors
-    logger = Logger(; nupdate = 1)
-    observer = StateObserver(1, V₀, p₀, t_start)
-    writer = VTKWriter(; nupdate = 5, dir = "output", filename = "solution2D")
-    processors = [logger, observer, writer]
-
-    # Real time plot
-    rtp = real_time_plot(observer, setup)
-
-    # Lift observable (kinetic energy history)
-    (; Ωp) = setup.grid
-    _E = zeros(0)
-    E = @lift begin
-        V, p, t = $(observer.state)
-        up, vp = get_velocity(setup, V, t)
-        up = reshape(up, :)
-        vp = reshape(vp, :)
-        push!(_E, up' * Diagonal(Ωp) * up + vp' * Diagonal(Ωp) * vp)
-    end
+    processors = (
+        field_plotter(setup; nupdate = 1),
+        vtk_writer(setup; nupdate = 5, dir = "output", filename = "solution2D"),
+        animator(setup, "output/vorticity2D.mkv"; nupdate = 10),
+        step_logger(),
+    )
 
     # Solve unsteady problem
-    problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-    V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver)
-
-    @testset "State observer" begin
-        # 1 from @lift
-        # 1 from initial process!
-        # 100 time steps
-        @test length(_E) == 102
-        @test _E[1] ≈ _E[2]
-        @test all(<(0), diff(_E[2:end]))
-    end
+    V, p = solve(setup, V₀, p₀, tlims; Δt = 0.01, processors, pressure_solver)
 
     @testset "VTK files" begin
         @test isfile("output/solution2D.pvd")
@@ -73,15 +51,6 @@
     end
 
     @testset "Animate" begin
-        V, p = solve_animate(
-            problem,
-            RK44();
-            Δt = 4π / 200,
-            pressure_solver,
-            filename = "output/vorticity2D.gif",
-            nframe = 10,
-            nsubframe = 4,
-        )
-        @test isfile("output/vorticity2D.gif")
+        @test isfile("output/vorticity2D.mkv")
     end
 end

@@ -20,9 +20,9 @@
     initial_pressure(x, y) = 0.0
     V₀, p₀ = create_initial_conditions(
         setup,
-        t_start;
         initial_velocity_u,
         initial_velocity_v,
+        t_start;
         initial_pressure,
     )
 
@@ -39,8 +39,7 @@
     end
 
     # Iteration processors
-    logger = Logger()
-    processors = [logger]
+    processors = (step_logger(),)
 
     @testset "Unsteady problem" begin
         problem = UnsteadyProblem(setup, V₀, p₀, tlims)

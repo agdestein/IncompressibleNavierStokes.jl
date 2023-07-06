@@ -17,26 +17,24 @@
     initial_pressure(x, y, z) = 1 / 4 * (cos(2x) + cos(2y) + cos(2z))
     V₀, p₀ = create_initial_conditions(
         setup,
-        t_start;
         initial_velocity_u,
         initial_velocity_v,
         initial_velocity_w,
+        t_start;
         initial_pressure,
         pressure_solver,
     )
 
     # Iteration processors
-    logger = Logger(; nupdate = 1)
-    observer = StateObserver(5, V₀, p₀, t_start)
-    writer = VTKWriter(; nupdate = 5, dir = "output", filename = "solution3D")
-    processors = [logger, observer, writer]
-
-    # Real time plot
-    rtp = real_time_plot(observer, setup)
+    processors = (
+        field_plotter(setup; nupdate = 5),
+        vtk_writer(setup; nupdate = 5, dir = "output", filename = "solution3D"),
+        animator(setup, "output/vorticity3D.mkv"; nupdate = 10),
+        step_logger(),
+    )
 
     # Solve unsteady problem
-    problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-    V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver)
+    V, p = solve(setup, V₀, p₀, tlims; Δt = 0.01, processors, pressure_solver)
 
     @testset "VTK files" begin
         @test isfile("output/solution3D.pvd")
@@ -54,15 +52,6 @@
     end
 
     @testset "Animate" begin
-        V, p = solve_animate(
-            problem,
-            RK44();
-            Δt = 4π / 200,
-            pressure_solver,
-            filename = "output/vorticity3D.gif",
-            nframe = 10,
-            nsubframe = 4,
-        )
-        @test isfile("output/vorticity3D.gif")
+        @test isfile("output/vorticity3D.mkv")
     end
 end
