@@ -119,7 +119,7 @@ processors = (
 )
 
 # Solve unsteady Navier-Stokes equations
-V, p = solve_unsteady(
+V, p, outputs = solve_unsteady(
     setup, V₀, p₀, tlims;
     method = RK44P2(),
     Δt = 0.05,

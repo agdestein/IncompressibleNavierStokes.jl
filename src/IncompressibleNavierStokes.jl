@@ -126,7 +126,7 @@ export LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
 export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors
-export processor, step_logger, vtk_writer
+export processor, step_logger, vtk_writer, field_saver
 export field_plotter, energy_history_plotter, energy_spectrum_plotter
 export animator
 

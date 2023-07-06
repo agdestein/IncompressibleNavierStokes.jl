@@ -104,17 +104,11 @@ V, p = solve_steady_state(setup, V₀, p₀)
 # Iteration processors
 processors = (
     # field_plotter(setup; nupdate = 1),
-    step_logger(; nupdate = 1),
-    # vtk_writer(setup; nupdate = 20, dir = "output/$name", filename = "solution"),
-);
-
-# Iteration processors
-processors = (
-    # field_plotter(setup; nupdate = 1),
     # energy_history_plotter(setup; nupdate = 1),
     # energy_spectrum_plotter(setup; nupdate = 100),
     # animator(setup, "vorticity.mkv"; nupdate = 4),
     # vtk_writer(setup; nupdate = 20, dir = "output/$name", filename = "solution"),
+    # field_saver(setup; nupdate = 10),
     step_logger(; nupdate = 1),
 );
 

@@ -97,3 +97,25 @@ vtk_writer(setup; nupdate = 1, dir = "output", filename = "solution") = processo
     finalize = (pvd, step_observer) -> vtk_save(pvd),
     nupdate,
 )
+
+"""
+    field_saver(setup; nupdate = 1)
+
+Create processor that stores the solution every `nupdate` time step to the vector of vectors `V` and `p`. The solution times are stored in the vector `t`.
+"""
+field_saver(setup; nupdate = 1) = processor(
+    function (step_observer)
+        T = eltype(setup.grid.x)
+        _V = fill(zeros(T, 0), 0)
+        _p = fill(zeros(T, 0), 0)
+        _t = fill(zero(T), 0)
+        @lift begin
+            (; V, p, t) = $step_observer
+            push!(_V, Array(V))
+            push!(_p, Array(p))
+            push!(_t, t)
+        end
+        (; V = _V, p = _p, t = _t)
+    end;
+    nupdate
+)

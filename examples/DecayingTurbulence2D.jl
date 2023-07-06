@@ -67,6 +67,7 @@ processors = (
     # energy_spectrum_plotter(setup; nupdate = 1),
     # animator(setup, "vorticity.mkv"; nupdate = 4),
     # vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+    # field_saver(setup; nupdate = 10),
     step_logger(; nupdate = 1),
 );
 
