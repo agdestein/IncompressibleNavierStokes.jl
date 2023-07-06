@@ -27,8 +27,7 @@
     )
 
     @testset "Steady state problem" begin
-        problem = SteadyStateProblem(setup, V₀, p₀)
-        V, p = solve(problem)
+        V, p = solve_steady_state(setup, V₀, p₀)
 
         # Check that solution did not explode
         @test all(!isnan, V)
@@ -42,8 +41,7 @@
     processors = (step_logger(),)
 
     @testset "Unsteady problem" begin
-        problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-        V, p = solve(problem, RK44(); Δt = 0.01, processors)
+        V, p = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors)
 
         # Check that solution did not explode
         @test all(!isnan, V)

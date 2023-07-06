@@ -33,7 +33,7 @@
     )
 
     # Solve unsteady problem
-    V, p = solve(setup, V₀, p₀, tlims; Δt = 0.01, processors, pressure_solver)
+    V, p = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors, pressure_solver)
 
     @testset "VTK files" begin
         @test isfile("output/solution2D.pvd")

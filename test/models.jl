@@ -22,7 +22,7 @@
     T = Float64
     Re = 1000.0
     lam = LaminarModel(; Re)
-    ml = MixingLengthModel(; Re)
+    ml = MixingLengthModel(; Re, lm = 1.0)
     smag = SmagorinskyModel(; Re)
     qr = QRModel(; Re)
 

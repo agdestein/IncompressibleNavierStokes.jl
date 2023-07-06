@@ -36,8 +36,8 @@ function diffusion(
     bc_vectors,
     get_jacobian = false,
 )
-    (; indu, indv, indw) = setup.grid
-    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
+    (; indu, indv) = setup.grid
+    (; Dux, Duy, Dvx, Dvy) = setup.operators
     (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
     (; Aν_ux, Aν_uy, Aν_vx, Aν_vy) = setup.operators
     (; yAν_ux, yAν_uy, yAν_vx, yAν_vy) = bc_vectors
@@ -123,7 +123,7 @@ Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V` using vi
 """
 function diffusion! end
 
-diffusion!(m, d, ∇d, V, setup; kwargs...) = diffusion(setup.grid.dimension, m, d, ∇d, V, setup; kwargs...)
+diffusion!(m, d, ∇d, V, setup; kwargs...) = diffusion!(setup.grid.dimension, m, d, ∇d, V, setup; kwargs...)
 
 function diffusion!(m::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
     (; Re) = m
@@ -150,8 +150,8 @@ function diffusion!(
     bc_vectors,
     get_jacobian = false,
 )
-    (; indu, indv, indw) = setup.grid
-    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
+    (; indu, indv) = setup.grid
+    (; Dux, Duy, Dvx, Dvy) = setup.operators
     (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
     (; Aν_ux, Aν_uy, Aν_vx, Aν_vy) = setup.operators
     (; yAν_ux, yAν_uy, yAν_vx, yAν_vy) = bc_vectors
