@@ -5,7 +5,8 @@ Plot streamfunction.
 """
 function plot_streamfunction end
 
-plot_streamfunction(setup, V, t; kwargs...) = plot_streamfunction(setup.grid.dimension, setup, V, t; kwargs...)
+plot_streamfunction(setup, V, t; kwargs...) =
+    plot_streamfunction(setup.grid.dimension, setup, V, t; kwargs...)
 
 # 2D version
 function plot_streamfunction(::Dimension{2}, setup, V, t; kwargs...)

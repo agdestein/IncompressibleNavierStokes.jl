@@ -3,7 +3,8 @@
 
 Construct divergence and gradient operator.
 """
-operator_divergence(grid, boundary_conditions) = operator_divergence(grid.dimension, grid, boundary_conditions)
+operator_divergence(grid, boundary_conditions) =
+    operator_divergence(grid.dimension, grid, boundary_conditions)
 
 # 2D version
 function operator_divergence(::Dimension{2}, grid, boundary_conditions)

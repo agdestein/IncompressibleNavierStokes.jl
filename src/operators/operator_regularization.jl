@@ -3,7 +3,8 @@
 
 Build regularization matrices.
 """
-operator_regularization(grid, boundary_conditions) = operator_regularization(grid.dimension, grid, boundary_conditions)
+operator_regularization(grid, boundary_conditions) =
+    operator_regularization(grid.dimension, grid, boundary_conditions)
 
 # 2D version
 function operator_regularization(::Dimension{2}, grid, operators)

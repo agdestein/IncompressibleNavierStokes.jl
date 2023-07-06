@@ -123,7 +123,8 @@ Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V` using vi
 """
 function diffusion! end
 
-diffusion!(m, d, ∇d, V, setup; kwargs...) = diffusion!(setup.grid.dimension, m, d, ∇d, V, setup; kwargs...)
+diffusion!(m, d, ∇d, V, setup; kwargs...) =
+    diffusion!(setup.grid.dimension, m, d, ∇d, V, setup; kwargs...)
 
 function diffusion!(m::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
     (; Re) = m

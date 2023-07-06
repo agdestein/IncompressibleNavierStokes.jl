@@ -25,13 +25,5 @@ function Operators(grid, boundary_conditions, viscosity_model)
     # Post-processing
     op_pos = operator_postprocessing(grid, boundary_conditions)
 
-    (;
-        op_ave...,
-        op_int...,
-        op_div...,
-        op_con...,
-        op_reg...,
-        op_vis...,
-        op_pos...,
-    )
+    (; op_ave..., op_int..., op_div..., op_con..., op_reg..., op_vis..., op_pos...)
 end

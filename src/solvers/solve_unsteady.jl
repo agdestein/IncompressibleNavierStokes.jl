@@ -20,7 +20,10 @@ CFL-number `cfl` .
 Each `processor` is called after every `processor.nupdate` time step.
 """
 function solve_unsteady(
-    setup, V₀, p₀, tlims;
+    setup,
+    V₀,
+    p₀,
+    tlims;
     method = RK44(; T = eltype(V₀)),
     pressure_solver = DirectPressureSolver(setup),
     Δt = zero(eltype(V₀)),

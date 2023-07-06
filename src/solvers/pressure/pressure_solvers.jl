@@ -123,14 +123,10 @@ function FourierPressureSolver(::Dimension{3}, setup)
 
     # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
     Ahat = @. 4 *
-        Δx *
-        Δy *
-        Δz *
-       (
-           sin(i * π / Npx)^2 / Δx^2 +
-           sin(j * π / Npy)^2 / Δy^2 +
-           sin(k * π / Npz)^2 / Δz^2
-       )
+       Δx *
+       Δy *
+       Δz *
+       (sin(i * π / Npx)^2 / Δx^2 + sin(j * π / Npy)^2 / Δy^2 + sin(k * π / Npz)^2 / Δz^2)
 
     # Pressure is determined up to constant, fix at 0
     Ahat[1] = 1

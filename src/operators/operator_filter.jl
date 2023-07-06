@@ -3,7 +3,8 @@
 
 Construct filtering operator.
 """
-operator_filter(grid, boundary_conditions) = operator_filter(grid.dimension, grid, boundary_conditions)
+operator_filter(grid, boundary_conditions) =
+    operator_filter(grid.dimension, grid, boundary_conditions)
 
 # 2D version
 function operator_filter(::Dimension{2}, grid, boundary_conditions, Nx_coarse, Ny_coarse)
@@ -11,5 +12,4 @@ function operator_filter(::Dimension{2}, grid, boundary_conditions, Nx_coarse, N
 end
 
 # 3D version
-function operator_filter(::Dimension{3}, grid, boundary_conditions)
-end
+function operator_filter(::Dimension{3}, grid, boundary_conditions) end

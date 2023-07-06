@@ -5,7 +5,8 @@ Plot vorticity field.
 """
 function plot_vorticity end
 
-plot_vorticity(setup, V, t; kwargs...) = plot_vorticity(setup.grid.dimension, setup, V, t; kwargs...)
+plot_vorticity(setup, V, t; kwargs...) =
+    plot_vorticity(setup.grid.dimension, setup, V, t; kwargs...)
 
 # 2D version
 function plot_vorticity(::Dimension{2}, setup, V, t; kwargs...)

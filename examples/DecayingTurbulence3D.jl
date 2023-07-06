@@ -51,13 +51,7 @@ setup = Setup(x, y, z; viscosity_model);
 pressure_solver = FourierPressureSolver(setup);
 
 # Initial conditions
-V₀, p₀ = random_field(
-    setup;
-    A = T(1_000_000),
-    σ = T(30),
-    s = 5,
-    pressure_solver,
-)
+V₀, p₀ = random_field(setup; A = T(1_000_000), σ = T(30), s = 5, pressure_solver)
 
 # Time interval
 t_start, t_end = tlims = (T(0), T(1.0))

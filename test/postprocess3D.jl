@@ -34,7 +34,8 @@
     )
 
     # Solve unsteady problem
-    V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors, pressure_solver)
+    V, p, outputs =
+        solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors, pressure_solver)
 
     @testset "VTK files" begin
         @test isfile("output/solution3D.pvd")

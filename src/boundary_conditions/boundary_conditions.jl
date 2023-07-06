@@ -31,16 +31,7 @@ function BoundaryConditions(
     p∞ = zero(T)
     p_bc = (; x = (p∞, p∞), y = (p∞, p∞))
 
-    (;
-        bc_unsteady,
-        bc_type...,
-        u_bc,
-        v_bc,
-        dudt_bc,
-        dvdt_bc,
-        p_bc,
-        kwargs...,
-    )
+    (; bc_unsteady, bc_type..., u_bc, v_bc, dudt_bc, dvdt_bc, p_bc, kwargs...)
 end
 
 """

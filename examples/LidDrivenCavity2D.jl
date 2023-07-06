@@ -114,7 +114,8 @@ processors = (
 
 # By default, a standard fourth order Runge-Kutta method is used. If we don't
 # provide the time step explicitly, an adaptive time step is used.
-V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = T(0.00001), processors, pressure_solver);
+V, p, outputs =
+    solve_unsteady(setup, V₀, p₀, tlims; Δt = T(0.00001), processors, pressure_solver);
 
 # GPU
 using CUDA
@@ -124,7 +125,10 @@ processors = (
     step_logger(; nupdate = 1),
 );
 V, p, outputs = solve_unsteady(
-    cusetup, cu(V₀), cu(p₀), tlims;
+    cusetup,
+    cu(V₀),
+    cu(p₀),
+    tlims;
     Δt = T(0.00001),
     processors,
     pressure_solver = CGPressureSolver(cusetup),

@@ -5,16 +5,8 @@ Evaluate rate of strain tensor `S(V)` and its magnitude.
 """
 function strain_tensor end
 
-strain_tensor(
-    V,
-    setup;
-    kwargs...,
-) = strain_tensor(
-    setup.grid.dimension,
-    V,
-    setup;
-    kwargs...,
-)
+strain_tensor(V, setup; kwargs...) =
+    strain_tensor(setup.grid.dimension, V, setup; kwargs...)
 
 # 2D version
 function strain_tensor(

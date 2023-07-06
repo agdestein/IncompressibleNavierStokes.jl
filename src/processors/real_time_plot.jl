@@ -31,10 +31,8 @@ Available plot `type`s for 3D are:
 
 The `alpha` value gets passed to `contour` in 3D.
 """
-field_plotter(setup; nupdate = 1, kwargs...) = processor(
-    state -> field_plot(setup.grid.dimension, setup, state; kwargs...);
-    nupdate,
-)
+field_plotter(setup; nupdate = 1, kwargs...) =
+    processor(state -> field_plot(setup.grid.dimension, setup, state; kwargs...); nupdate)
 
 function field_plot(
     ::Dimension{2},
@@ -229,10 +227,8 @@ end
 
 Create energy history plot, with a history point added every time `step_observer` is updated.
 """
-energy_history_plotter(setup; nupdate = 1, kwargs...) = processor(
-    state -> energy_history_plot(setup, state; kwargs...);
-    nupdate,
-)
+energy_history_plotter(setup; nupdate = 1, kwargs...) =
+    processor(state -> energy_history_plot(setup, state; kwargs...); nupdate)
 
 function energy_history_plot(setup, state)
     (; Ωp) = setup.grid
@@ -259,11 +255,7 @@ energy_spectrum_plotter(setup; nupdate = 1, kwargs...) = processor(
     nupdate,
 )
 
-function energy_spectrum_plot(
-    ::Dimension{2},
-    setup,
-    state,
-)
+function energy_spectrum_plot(::Dimension{2}, setup, state)
     (; xpp) = setup.grid
     Kx, Ky = size(xpp) .÷ 2
     kx = 1:(Kx-1)
@@ -276,8 +268,7 @@ function energy_spectrum_plot(
         reshape(abs.(fft(e)[kx.+1, ky.+1]), :)
     end
     espec = Figure()
-    ax =
-        Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
+    ax = Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
     ## ylims!(ax, (1e-20, 1))
     scatter!(ax, kk, ehat; label = "Kinetic energy")
     krange = LinRange(extrema(kk)..., 100)
@@ -287,11 +278,7 @@ function energy_spectrum_plot(
     espec
 end
 
-function energy_spectrum_plot(
-    ::Dimension{3},
-    setup,
-    state,
-)
+function energy_spectrum_plot(::Dimension{3}, setup, state)
     (; xpp) = setup.grid
     Kx, Ky, Kz = size(xpp) .÷ 2
     kx = 1:(Kx-1)
@@ -306,8 +293,7 @@ function energy_spectrum_plot(
         reshape(abs.(fft(e)[kx.+1, ky.+1, kz.+1]), :)
     end
     espec = Figure()
-    ax =
-        Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
+    ax = Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
     ## ylims!(ax, (1e-20, 1))
     scatter!(ax, kk, ehat; label = "Kinetic energy")
     krange = LinRange(extrema(kk)..., 100)

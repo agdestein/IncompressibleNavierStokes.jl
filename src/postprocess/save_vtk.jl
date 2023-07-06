@@ -10,7 +10,7 @@ function save_vtk(setup, V, p, t, filename = "output/solution")
     parts = split(filename, "/")
     path = join(parts[1:end-1], "/")
     isdir(path) || mkpath(path)
-    (; grid) = setup;
+    (; grid) = setup
     N = setup.grid.dimension()
     if N == 2
         (; xp, yp) = grid

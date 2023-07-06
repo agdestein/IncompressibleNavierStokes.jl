@@ -15,18 +15,8 @@ See also [`convection_components!`](@ref).
 """
 function convection_components end
 
-convection_components(
-    V,
-    ϕ,
-    setup;
-    kwargs...,
-) = convection_components(
-    setup.grid.dimension,
-    V,
-    ϕ,
-    setup;
-    kwargs...,
-)
+convection_components(V, ϕ, setup; kwargs...) =
+    convection_components(setup.grid.dimension, V, ϕ, setup; kwargs...)
 
 # 2D version
 function convection_components(
@@ -295,24 +285,8 @@ See also [`convection_components`](@ref).
 """
 function convection_components! end
 
-convection_components!(
-    c,
-    ∇c,
-    V,
-    ϕ,
-    setup,
-    cache;
-    kwargs...,
-) = convection_components!(
-    setup.grid.dimension,
-    c,
-    ∇c,
-    V,
-    ϕ,
-    setup,
-    cache;
-    kwargs...,
-)
+convection_components!(c, ∇c, V, ϕ, setup, cache; kwargs...) =
+    convection_components!(setup.grid.dimension, c, ∇c, V, ϕ, setup, cache; kwargs...)
 
 # 2D version
 function convection_components!(

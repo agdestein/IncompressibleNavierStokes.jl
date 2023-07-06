@@ -3,7 +3,8 @@
 
 Construct interpolation operators.
 """
-operator_interpolation(grid, boundary_conditions) = operator_interpolation(grid.dimension, grid, boundary_conditions)
+operator_interpolation(grid, boundary_conditions) =
+    operator_interpolation(grid.dimension, grid, boundary_conditions)
 
 # 2D version
 function operator_interpolation(::Dimension{2}, grid, boundary_conditions)

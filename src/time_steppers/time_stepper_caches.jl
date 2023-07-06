@@ -20,20 +20,7 @@ function ode_method_cache(::AdamsBashforthCrankNicolsonMethod, setup, V, p)
     yDiffₙ₊₁ = similar(V)
     Gpₙ = similar(V)
 
-    (;
-        cₙ,
-        cₙ₋₁,
-        F,
-        f,
-        Δp,
-        Rr,
-        b,
-        bₙ,
-        bₙ₊₁,
-        yDiffₙ,
-        yDiffₙ₊₁,
-        Gpₙ,
-    )
+    (; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ)
 end
 
 function ode_method_cache(::OneLegMethod{T}, setup, V, p) where {T}
@@ -57,7 +44,7 @@ function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup, V, p) wher
 
     # kV = zeros(T, NV, ns)
     # kp = zeros(T, Np, ns)
-    
+
     kV = [similar(V) for i = 1:ns]
     kp = [similar(p) for i = 1:ns]
 
@@ -121,7 +108,7 @@ function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup, V, p) wher
 
     (;
         Vₙ,
-        pₙ, 
+        pₙ,
         Vtotₙ,
         ptotₙ,
         Qⱼ,

@@ -450,7 +450,25 @@ function Grid(x, y; boundary_conditions, order4 = false)
         )
     end
 
-    (; dimension, α, β, order4, Nx, Ny, xlims, ylims, x, y, xp, yp, hx, hy, gx, gy, params...)
+    (;
+        dimension,
+        α,
+        β,
+        order4,
+        Nx,
+        Ny,
+        xlims,
+        ylims,
+        x,
+        y,
+        xp,
+        yp,
+        hx,
+        hy,
+        gx,
+        gy,
+        params...,
+    )
 end
 
 """

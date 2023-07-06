@@ -80,7 +80,10 @@ t_start, t_end = tlims = (T(0), T(5))
 
 # Solve unsteady problem
 V, p, outputs = solve_unsteady(
-    setup, V₀, p₀, tlims;
+    setup,
+    V₀,
+    p₀,
+    tlims;
     Δt = T(0.01),
     processors,
     pressure_solver,
@@ -90,7 +93,10 @@ V, p, outputs = solve_unsteady(
 
 # Solve unsteady problem
 V, p, outputs = solve_unsteady(
-    cusetup, cu(V₀), cu(p₀), tlims;
+    cusetup,
+    cu(V₀),
+    cu(p₀),
+    tlims;
     Δt = T(0.005),
     processors,
     pressure_solver = FourierPressureSolver(cusetup),

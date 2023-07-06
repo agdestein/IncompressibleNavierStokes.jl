@@ -5,7 +5,8 @@ Compute mass, momentum and energy conservation properties of velocity field.
 """
 function compute_conservation end
 
-compute_conservation(V, t, setup; bc_vectors = nothing) = compute_conservation(setup.grid.dimension, V, t, setup; bc_vectors = nothing)
+compute_conservation(V, t, setup; bc_vectors = nothing) =
+    compute_conservation(setup.grid.dimension, V, t, setup; bc_vectors = nothing)
 
 # 2D version
 function compute_conservation(::Dimension{2}, V, t, setup; bc_vectors = nothing)
@@ -47,10 +48,12 @@ function compute_conservation(::Dimension{2}, V, t, setup; bc_vectors = nothing)
     k = 1 // 2 * sum(Ω .* V .^ 2)
 
     # Add boundary contributions in case of Dirichlet BC
-    boundary_conditions.u.x[1] == :dirichlet && (k += 1 // 2 * sum(uLe_i .^ 2 .* hy) * gx[1])
+    boundary_conditions.u.x[1] == :dirichlet &&
+        (k += 1 // 2 * sum(uLe_i .^ 2 .* hy) * gx[1])
     boundary_conditions.u.x[2] == :dirichlet &&
         (k += 1 // 2 * sum(uRi_i .^ 2 .* hy) * gx[end])
-    boundary_conditions.v.y[1] == :dirichlet && (k += 1 // 2 * sum(vLo_i .^ 2 .* hx) * gy[1])
+    boundary_conditions.v.y[1] == :dirichlet &&
+        (k += 1 // 2 * sum(vLo_i .^ 2 .* hx) * gy[1])
     boundary_conditions.v.y[2] == :dirichlet &&
         (k += 1 // 2 * sum(vUp_i .^ 2 .* hx) * gy[end])
 

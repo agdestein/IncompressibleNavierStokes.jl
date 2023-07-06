@@ -5,7 +5,8 @@ Plot velocity.
 """
 function plot_velocity end
 
-plot_velocity(setup, V, t; kwargs...) = plot_velocity(setup.grid.dimension, setup, V, t; kwargs...)
+plot_velocity(setup, V, t; kwargs...) =
+    plot_velocity(setup.grid.dimension, setup, V, t; kwargs...)
 
 # 2D version
 function plot_velocity(::Dimension{2}, setup, V, t; kwargs...)

@@ -70,18 +70,18 @@ function get_bc_vectors(::Dimension{2}, setup, t)
 
     # Mx
     # ybc = uLe_i ⊗ Mx_bc.ybc1 + uRi_i ⊗ Mx_bc.ybc2
-    ybc = vec(Mx_bc.ybc1 * uLe_i') + vec(Mx_bc.ybc2 * uRi_i') 
+    ybc = vec(Mx_bc.ybc1 * uLe_i') + vec(Mx_bc.ybc2 * uRi_i')
     yMx = Mx_bc.Bbc * ybc
     if order4
         # ybc3 = uLe_i ⊗ Mx_bc3.ybc1 + uRi_i ⊗ Mx_bc3.ybc2
-        ybc3 = vec(Mx_bc3.ybc1 * uLe_i') + vec(Mx_bc3.ybc2 * uRi_i') 
+        ybc3 = vec(Mx_bc3.ybc1 * uLe_i') + vec(Mx_bc3.ybc2 * uRi_i')
         yMx3 = Mx_bc3.Bbc * ybc3
         yMx = α * yMx - yMx3
     end
 
     # My
     # ybc = My_bc.ybc1 ⊗ vLo_i + My_bc.ybc2 ⊗ vUp_i
-    ybc = vec(vLo_i * My_bc.ybc1') + vec(vUp_i * My_bc.ybc2') 
+    ybc = vec(vLo_i * My_bc.ybc1') + vec(vUp_i * My_bc.ybc2')
     yMy = My_bc.Bbc * ybc
     if order4
         ybc3 = My_bc3.ybc1 ⊗ vLo_i + My_bc3.ybc2 ⊗ vUp_i

@@ -3,7 +3,8 @@
 
 Construct postprocessing operators such as vorticity.
 """
-operator_postprocessing(grid, boundary_conditions) = operator_postprocessing(grid.dimension, grid, boundary_conditions)
+operator_postprocessing(grid, boundary_conditions) =
+    operator_postprocessing(grid.dimension, grid, boundary_conditions)
 
 # 2D version
 function operator_postprocessing(::Dimension{2}, grid, boundary_conditions)

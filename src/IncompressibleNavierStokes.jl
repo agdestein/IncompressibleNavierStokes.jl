@@ -148,12 +148,7 @@ export momentum, momentum!
 export create_initial_conditions, random_field, get_bc_vectors, get_velocity
 
 export plot_force,
-    plot_grid,
-    plot_pressure,
-    plot_streamfunction,
-    plot_velocity,
-    plot_vorticity,
-    save_vtk
+    plot_grid, plot_pressure, plot_streamfunction, plot_velocity, plot_vorticity, save_vtk
 
 # ODE methods
 

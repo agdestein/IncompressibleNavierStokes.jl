@@ -9,7 +9,7 @@ function bc_general_stag_diff(Nt, Nin, Nb, bc1, bc2, h1, h2)
     # Val1 and val2 can be scalars or vectors with either the value or the
     # Derivative
     # (ghost) points on staggered locations (pressure lines)
- 
+
     T = typeof(h1)
 
     # Some input checking:

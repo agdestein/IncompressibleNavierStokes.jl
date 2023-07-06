@@ -1,5 +1,13 @@
-create_stepper(::ExplicitRungeKuttaMethod; setup, pressure_solver, bc_vectors, V, p, t, n = 0) = 
-    (; setup, pressure_solver, bc_vectors, V, p, t, n)
+create_stepper(
+    ::ExplicitRungeKuttaMethod;
+    setup,
+    pressure_solver,
+    bc_vectors,
+    V,
+    p,
+    t,
+    n = 0,
+) = (; setup, pressure_solver, bc_vectors, V, p, t, n)
 
 function step(method::ExplicitRungeKuttaMethod, stepper, Δt)
     (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
@@ -87,13 +95,7 @@ function step(method::ExplicitRungeKuttaMethod, stepper, Δt)
     create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
 end
 
-function step!(
-    method::ExplicitRungeKuttaMethod,
-    stepper,
-    Δt;
-    cache,
-    momentum_cache,
-)
+function step!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache, momentum_cache)
     (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions

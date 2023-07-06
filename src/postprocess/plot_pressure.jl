@@ -5,7 +5,8 @@ Plot pressure.
 """
 function plot_pressure end
 
-plot_pressure(setup, p; kwargs...) = plot_pressure(setup.grid.dimension, setup, p; kwargs...)
+plot_pressure(setup, p; kwargs...) =
+    plot_pressure(setup.grid.dimension, setup, p; kwargs...)
 
 # 2D version
 function plot_pressure(::Dimension{2}, setup, p; kwargs...)

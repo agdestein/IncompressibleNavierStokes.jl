@@ -3,14 +3,11 @@
 
 Construct convection and diffusion operators.
 """
-operator_convection_diffusion(grid, boundary_conditions) = operator_convection_diffusion(grid.dimension, grid, boundary_conditions)
+operator_convection_diffusion(grid, boundary_conditions) =
+    operator_convection_diffusion(grid.dimension, grid, boundary_conditions)
 
 # 2D version
-function operator_convection_diffusion(
-    ::Dimension{2},
-    grid,
-    boundary_conditions,
-)
+function operator_convection_diffusion(::Dimension{2}, grid, boundary_conditions)
     (; Nx, Ny) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t) = grid
@@ -463,12 +460,8 @@ function operator_convection_diffusion(
         Diffuy_div = (α * Duy - Duy3) * Diagonal(1 ./ Ωuy)
         Diffvx_div = (α * Dvx - Dvx3) * Diagonal(1 ./ Ωvx)
         Diffvy_div = (α * Dvy - Dvy3) * Diagonal(1 ./ Ωvy)
-        Diffu =
-            Diffux_div * (α * Su_ux - Su_ux3) +
-            Diffuy_div * (α * Su_uy - Su_uy3)
-        Diffv =
-            Diffvx_div * (α * Sv_vx - Sv_vx3) +
-            Diffvy_div * (α * Sv_vy - Sv_vy3)
+        Diffu = Diffux_div * (α * Su_ux - Su_ux3) + Diffuy_div * (α * Su_uy - Su_uy3)
+        Diffv = Diffvx_div * (α * Sv_vx - Sv_vx3) + Diffvy_div * (α * Sv_vy - Sv_vy3)
     else
         Diffu = Dux * Su_ux + Duy * Su_uy
         Diffv = Dvx * Sv_vx + Dvy * Sv_vy
@@ -522,11 +515,7 @@ function operator_convection_diffusion(
 end
 
 # 3D version
-function operator_convection_diffusion(
-    ::Dimension{3},
-    grid,
-    boundary_conditions,
-)
+function operator_convection_diffusion(::Dimension{3}, grid, boundary_conditions)
     (; Nx, Ny, Nz) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t) = grid

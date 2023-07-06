@@ -3,7 +3,8 @@
 
 Construct averaging operators.
 """
-operator_averaging(grid, boundary_conditions) = operator_averaging(grid.dimension, grid, boundary_conditions)
+operator_averaging(grid, boundary_conditions) =
+    operator_averaging(grid.dimension, grid, boundary_conditions)
 
 # 2D version
 function operator_averaging(::Dimension{2}, grid, boundary_conditions)
