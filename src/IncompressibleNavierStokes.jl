@@ -61,6 +61,7 @@ include("operators/operator_postprocessing.jl")
 include("operators/operator_regularization.jl")
 include("operators/operator_turbulent_diffusion.jl")
 include("operators/operator_viscosity.jl")
+include("operators/operator_filter.jl")
 
 # Pressure solvers
 include("solvers/pressure/pressure_solvers.jl")

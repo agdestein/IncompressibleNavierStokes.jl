@@ -1,9 +1,9 @@
 """
-    operator_convection_diffusion(dimension, grid, boundary_conditions)
+    operator_convection_diffusion(grid, boundary_conditions)
 
 Construct convection and diffusion operators.
 """
-function operator_convection_diffusion end
+operator_convection_diffusion(grid, boundary_conditions) = operator_convection_diffusion(grid.dimension, grid, boundary_conditions)
 
 # 2D version
 function operator_convection_diffusion(

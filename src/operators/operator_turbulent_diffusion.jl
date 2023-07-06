@@ -1,10 +1,10 @@
 """
-    operator_turbulent_diffusion(dimension, grid, boundary_conditions)
+    operator_turbulent_diffusion(grid, boundary_conditions)
 
 Average (turbulent) viscosity to cell faces: from `ν` at `xp`, `yp` to `ν` at `ux`, `uy`,
 `vx`, `vy` locations.
 """
-function operator_turbulent_diffusion end
+operator_turbulent_diffusion(grid, boundary_conditions) = operator_turbulent_diffusion(grid.dimension, grid, boundary_conditions)
 
 # 2D version
 function operator_turbulent_diffusion(::Dimension{2}, grid, boundary_conditions)

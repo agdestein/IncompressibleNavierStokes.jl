@@ -219,12 +219,12 @@ function Grid(x, y; boundary_conditions, order4 = false)
 
     ## Y-direction
 
-    # Gyi: integration and gyd: differentiation
+    # gyi: integration and gyd: differentiation
     gyd = copy(gy)
     gyd[1] = hy[1]
     gyd[end] = hy[end]
 
-    # Hyi: integration and hyd: differentiation
+    # hyi: integration and hyd: differentiation
     # Map to find suitable size
     hyi = copy(hy)
 

@@ -47,7 +47,7 @@ pressure_solver = FourierPressureSolver(setup)
 # Initial conditions
 initial_velocity_u(x, y, z) = sin(x)cos(y)cos(z)
 initial_velocity_v(x, y, z) = -cos(x)sin(y)cos(z)
-initial_velocity_w(x, y, z) = T(0)
+initial_velocity_w(x, y, z) = zero(x)
 initial_pressure(x, y, z) = 1 // 4 * (cos(2x) + cos(2y) + cos(2z))
 V₀, p₀ = create_initial_conditions(
     setup,
