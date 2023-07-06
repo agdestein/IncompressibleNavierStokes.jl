@@ -63,7 +63,7 @@
 
             # Check that the average velocity is smaller than the lid velocity
             broken =
-                viscosity_model isa Union{QRModel,MixingLengthModel} ||
+                viscosity_model isa MixingLengthModel ||
                 convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
             @test sum(abs, V) / length(V) < lid_vel broken = broken
         end
