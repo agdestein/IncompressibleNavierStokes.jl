@@ -43,7 +43,7 @@ function field_plot(
     fieldname = :vorticity,
     type = heatmap,
     sleeptime = 0.001,
-    equal_axis = false,
+    equal_axis = true,
 )
     (; boundary_conditions, grid) = setup
     (; xlims, ylims, x, y, xp, yp) = grid
@@ -150,7 +150,7 @@ function field_plot(
     fieldname = :vorticity,
     sleeptime = 0.001,
     alpha = 0.05,
-    equal_axis = false,
+    equal_axis = true,
 )
     (; boundary_conditions, grid) = setup
     (; xlims, ylims, x, y, z, xp, yp, zp) = grid
