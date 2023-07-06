@@ -38,9 +38,9 @@
 
     @testset "VTK files" begin
         @test isfile("output/solution3D.pvd")
-        @test isfile("output/solution3D_t=0p0.vtr")
+        @test isfile("output/solution3D_t=0p0.vti")
         save_vtk(setup, V, p, t_end, "output/field3D")
-        @test isfile("output/field3D.vtr")
+        @test isfile("output/field3D.vti")
     end
 
     @testset "Plot fields" begin
