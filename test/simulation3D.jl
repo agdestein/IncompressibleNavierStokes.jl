@@ -41,7 +41,7 @@
     processors = (step_logger(),)
 
     @testset "Unsteady problem" begin
-        V, p = @time solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors)
+        V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors)
 
         # Check that solution did not explode
         @test all(!isnan, V)

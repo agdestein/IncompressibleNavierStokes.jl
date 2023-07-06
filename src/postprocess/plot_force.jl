@@ -11,8 +11,8 @@ plot_force(setup, t; kwargs...) = plot_force(setup.grid.dimension, setup, t; kwa
 function plot_force(::Dimension{2}, setup, t; kwargs...)
     (; grid, force) = setup
     (; xp, yp, xlims, ylims) = grid
-    (; xu, yu, zu, indu, xlims, ylims) = grid
-    (; F) = force
+    (; xu, yu, indu, xlims, ylims) = grid
+    F = force
 
     Fp = reshape(F[indu], size(xu))
     # TODO: norm of F instead of Fu
@@ -35,7 +35,7 @@ end
 function plot_force(::Dimension{3}, setup, t; kwargs...)
     (; grid, force) = setup
     (; xu, yu, zu, indu) = grid
-    (; F) = force
+    F = force
 
     # Get force at pressure points
     # up, vp, wp = get_velocity(setup, V, t)

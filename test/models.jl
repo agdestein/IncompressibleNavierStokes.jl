@@ -59,7 +59,7 @@
             broken = convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
             @test sum(abs, V) / length(V) < lid_vel broken = broken
 
-            V, p = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01)
+            V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01)
 
             # Check that the average velocity is smaller than the lid velocity
             broken =
