@@ -26,9 +26,14 @@
 
     # Iteration processors
     processors = (
-        field_plotter(setup; nupdate = 1),
+        field_plotter(setup; nupdate = 1, displayfig = false),
         vtk_writer(setup; nupdate = 5, dir = "output", filename = "solution2D"),
-        animator(setup, "output/vorticity2D.mkv"; nupdate = 10),
+        animator(
+            setup,
+            "output/vorticity2D.mkv";
+            nupdate = 10,
+            plotter = field_plotter(setup; displayfig = false),
+        ),
         step_logger(),
     )
 
