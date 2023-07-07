@@ -15,7 +15,6 @@ end                                                 #src
 # plotting), but does not work when building this example on GitHub.
 # `CairoMakie` makes high-quality static vector-graphics plots.
 
-using CUDA
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
@@ -26,11 +25,18 @@ name = "TaylorGreenVortex3D"
 # Floating point precision
 T = Float32
 
+# For CPU
+device = identity
+
+# For GPU (note that `cu` converts to `Float32`)
+## using CUDA
+## device = cu
+
 # Viscosity model
 viscosity_model = LaminarModel(; Re = T(2_000))
 
 # A 3D grid is a Cartesian product of three vectors
-n = 128
+n = 32
 lims = (T(0), T(2π))
 x = LinRange(lims..., n + 1)
 y = LinRange(lims..., n + 1)
@@ -62,17 +68,15 @@ V₀, p₀ = create_initial_conditions(
 # Solve steady state problem
 V, p = solve_steady_state(setup, V₀, p₀; npicard = 6)
 
-cusetup = cu(setup);
-
 # Iteration processors
 processors = (
-    field_plotter(setup; nupdate = 10),
-    # energy_history_plotter(setup; nupdate = 1),
-    # energy_spectrum_plotter(setup; nupdate = 100),
-    # animator(setup, "vorticity.mkv"; nupdate = 4),
-    vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-    # field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1),
+    field_plotter(device(setup); nupdate = 5),
+    ## energy_history_plotter(device(setup); nupdate = 1),
+    ## energy_spectrum_plotter(device(setup); nupdate = 100),
+    ## animator(device(setup), "vorticity.mp4"; nupdate = 4),
+    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+    ## field_saver(setup; nupdate = 10),
+    step_logger(; nupdate = 10),
 );
 
 # Time interval
@@ -87,42 +91,26 @@ V, p, outputs = solve_unsteady(
     Δt = T(0.01),
     processors,
     pressure_solver,
-    inplace = false,
+    inplace = true,
+    device,
 );
 #md current_figure()
-
-# Solve unsteady problem
-V, p, outputs = solve_unsteady(
-    cusetup,
-    cu(V₀),
-    cu(p₀),
-    tlims;
-    Δt = T(0.005),
-    processors,
-    pressure_solver = FourierPressureSolver(cusetup),
-    inplace = false,
-    bc_vectors = cu(get_bc_vectors(setup, t_start)),
-);
-#md current_figure()
-
-V
-p
 
 # ## Post-process
 #
 # We may visualize or export the computed fields `(V, p)`
 
 # Export to VTK
-save_vtk(setup, setup, Array(V), Array(p), "output/solution")
+save_vtk(setup, setup, V, p, "output/solution")
 
 # Plot pressure
-plot_pressure(setup, Array(p); alpha = 0.05)
+plot_pressure(setup, p; levels = 3, alpha = 0.05)
 
 # Plot velocity
-plot_velocity(setup, Array(V), t_end; alpha = 0.05)
+plot_velocity(setup, V, t_end; levels = 3, alpha = 0.05)
 
 # Plot vorticity
-plot_vorticity(setup, Array(V), t_end; alpha = 0.05)
+plot_vorticity(setup, V, t_end; levels = 5, alpha = 0.05)
 
 # Plot streamfunction
-## plot_streamfunction(setup, Array(V), t_end)
+## plot_streamfunction(setup, V, t_end)

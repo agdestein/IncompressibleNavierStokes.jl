@@ -20,6 +20,13 @@ struct DirectPressureSolver{T,F<:Factorization{T}} <: AbstractPressureSolver{T}
     end
 end
 
+# This moves all the inner arrays to the GPU when calling
+# `cu(::FourierPressureSolver)` from CUDA.jl
+# TODO: CUDA does not support `factorize`, `lu`, etc, but maybe `L` and `U` can be
+# converted to `CuArray` after factorization on the CPU
+Adapt.adapt_structure(to, s::DirectPressureSolver) =
+    error("`DirectPressureSolver` is not yet implemented for CUDA. Consider using `CGPressureSolver`.")
+
 """
     CGPressureSolver(setup; [abstol], [reltol], [maxiter])
 
@@ -30,22 +37,33 @@ struct CGPressureSolver{T,M<:AbstractMatrix{T}} <: AbstractPressureSolver{T}
     abstol::T
     reltol::T
     maxiter::Int
-    function CGPressureSolver(
-        setup;
-        abstol = 0,
-        reltol = √eps(eltype(setup.operators.A)),
-        maxiter = size(setup.operators.A, 2),
-    )
-        (; A) = setup.operators
-        new{eltype(A),typeof(A)}(A, abstol, reltol, maxiter)
-    end
 end
+
+function CGPressureSolver(
+    setup;
+    abstol = 0,
+    reltol = √eps(eltype(setup.operators.A)),
+    maxiter = size(setup.operators.A, 2),
+)
+    (; A) = setup.operators
+    CGPressureSolver{eltype(A),typeof(A)}(A, abstol, reltol, maxiter)
+end
+
+# This moves all the inner arrays to the GPU when calling
+# `cu(::FourierPressureSolver)` from CUDA.jl
+Adapt.adapt_structure(to, s::CGPressureSolver) =
+    CGPressureSolver(adapt(to, s.A), adapt(to, s.abstol), adapt(to, s.reltol), adapt(to, s.maxiter))
 
 struct FourierPressureSolver{T,A<:AbstractArray{Complex{T}}} <: AbstractPressureSolver{T}
     Ahat::A
     phat::A
     fhat::A
 end
+
+# This moves all the inner arrays to the GPU when calling
+# `cu(::FourierPressureSolver)` from CUDA.jl
+Adapt.adapt_structure(to, s::FourierPressureSolver) =
+    FourierPressureSolver(adapt(to, s.Ahat), adapt(to, s.phat), adapt(to, s.fhat))
 
 """
     FourierPressureSolver(setup)

@@ -8,6 +8,7 @@
         n_adapt_Δt = 1,
         inplace = false,
         processors = (),
+        device = identity,
     )
 
 Solve unsteady problem using `method`.
@@ -18,6 +19,29 @@ If `Δt = nothing`, the time step is chosen every `n_adapt_Δt` iteration with
 CFL-number `cfl` .
 
 Each `processor` is called after every `processor.nupdate` time step.
+
+All arrays and operators are passed through the `device` function.
+This allows for performing computations on a different device than the host (CPU).
+To compute on an Nvidia GPU using CUDA, change
+
+```
+solve_unsteady(setup, V₀, p₀, tlims; kwargs...)
+```
+
+to the following:
+
+```
+using CUDA
+solve_unsteady(
+    setup, V₀, p₀, tlims;
+    device = cu,
+    kwargs...
+)
+```
+
+Note that the `state` observable passed to the `processor.initialize` function
+contains vector living on the device, and you may have to move them back to
+the host using `Array(V)` and `Array(p)` in the processor.
 """
 function solve_unsteady(
     setup,
@@ -31,7 +55,7 @@ function solve_unsteady(
     n_adapt_Δt = 1,
     inplace = false,
     processors = (),
-    bc_vectors = get_bc_vectors(setup, tlims[1]),
+    device = identity,
 )
     t_start, t_end = tlims
     isadaptive = isnothing(Δt)
@@ -40,13 +64,21 @@ function solve_unsteady(
         Δt = (t_end - t_start) / nstep
     end
 
+    # Initialize BC arrays (currently only done on host, due to Kronecker
+    # products)
+    bc_vectors = get_bc_vectors(setup, t_start)
+
+    # Move vectors and operators to device (if any).
+    setup = device(setup)
+    V₀ = device(V₀)
+    p₀ = device(p₀)
+    bc_vectors = device(bc_vectors)
+    pressure_solver = device(pressure_solver)
+
     if inplace
         cache = ode_method_cache(method, setup, V₀, p₀)
         momentum_cache = MomentumCache(setup, V₀, p₀)
     end
-
-    # # Initialize BC arrays
-    # bc_vectors = device(get_bc_vectors(setup, t_start))
 
     # Time stepper
     stepper = create_stepper(

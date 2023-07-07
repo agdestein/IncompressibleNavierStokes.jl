@@ -14,8 +14,7 @@ end                                                 #src
 # eventually group to form larger visible eddies.
 
 # We start by loading packages.
-# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
-# for plotting. `GLMakie` creates an interactive window (useful for real-time
+# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed for plotting. `GLMakie` creates an interactive window (useful for real-time
 # plotting), but does not work when building this example on GitHub.
 # `CairoMakie` makes high-quality static vector-graphics plots.
 
@@ -24,19 +23,25 @@ using FFTW
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-using CUDA
-
 # Case name for saving results
 name = "DecayingTurbulence3D"
 
 # Floating point precision
 T = Float32
 
+# To use CPU: Do not move any arrays
+device = identity
+
+# To use GPU, use `cu` to move arrays to the GPU.
+# Note: `cu` converts to Float32
+## using CUDA
+## device = cu
+
 # Viscosity model
 viscosity_model = LaminarModel(; Re = T(10_000))
 
 # A 3D grid is a Cartesian product of three vectors
-n = 128
+n = 32
 lims = (T(0), T(1))
 x = LinRange(lims..., n + 1)
 y = LinRange(lims..., n + 1)
@@ -58,12 +63,12 @@ t_start, t_end = tlims = (T(0), T(1.0))
 
 # Iteration processors
 processors = (
-    # field_plotter(setup; nupdate = 1),
-    # energy_history_plotter(setup; nupdate = 1),
-    # energy_spectrum_plotter(setup; nupdate = 100),
-    # animator(setup, "vorticity.mkv"; nupdate = 4),
-    vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-    # field_saver(setup; nupdate = 10),
+    field_plotter(device(setup); nupdate = 10),
+    energy_history_plotter(device(setup); nupdate = 10),
+    energy_spectrum_plotter(device(setup); nupdate = 10),
+    ## animator(device(setup), "vorticity.mp4"; nupdate = 4),
+    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+    ## field_saver(setup; nupdate = 10),
     step_logger(; nupdate = 1),
 );
 
@@ -76,20 +81,8 @@ V, p, outputs = solve_unsteady(
     Δt = T(0.001),
     processors,
     pressure_solver,
-    inplace = false,
-);
-
-# Solve unsteady problem
-V, p, outputs = solve_unsteady(
-    cu(setup),
-    cu(V₀),
-    cu(p₀),
-    tlims;
-    Δt = T(0.001),
-    processors,
-    pressure_solver = FourierPressureSolver(cu(setup)),
-    inplace = false,
-    bc_vectors = cu(get_bc_vectors(setup, t_start)),
+    inplace = true,
+    device,
 );
 
 # Field plot
@@ -106,13 +99,13 @@ outputs[3]
 # We may visualize or export the computed fields `(V, p)`
 
 # Export to VTK
-save_vtk(setup, Array(V), Array(p), t_end, "output/solution")
+save_vtk(setup, V, p, t_end, "output/solution")
 
 # Plot pressure
-plot_pressure(setup, Array(p))
+plot_pressure(setup, p)
 
 # Plot velocity
-plot_velocity(setup, Array(V), t_end)
+plot_velocity(setup, V, t_end)
 
 # Plot vorticity
-plot_vorticity(setup, Array(V), t_end)
+plot_vorticity(setup, V, t_end)

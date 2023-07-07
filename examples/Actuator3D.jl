@@ -109,11 +109,11 @@ V₀, p₀ = create_initial_conditions(
 # Iteration processors
 processors = (
     field_plotter(setup; nupdate = 5),
-    # energy_history_plotter(setup; nupdate = 10),
-    # energy_spectrum_plotter(setup; nupdate = 10),
-    # animator(setup, "vorticity.mkv"; nupdate = 4),
-    # vtk_writer(setup; nupdate = 2, dir = "output/$name", filename = "solution"),
-    # field_saver(setup; nupdate = 10),
+    ## energy_history_plotter(setup; nupdate = 10),
+    ## energy_spectrum_plotter(setup; nupdate = 10),
+    ## animator(setup, "vorticity.mkv"; nupdate = 4),
+    ## vtk_writer(setup; nupdate = 2, dir = "output/$name", filename = "solution"),
+    ## field_saver(setup; nupdate = 10),
     step_logger(; nupdate = 1),
 );
 

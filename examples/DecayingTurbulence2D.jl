@@ -19,14 +19,9 @@ end                                                 #src
 # plotting), but does not work when building this example on GitHub.
 # `CairoMakie` makes high-quality static vector-graphics plots.
 
-using FFTW
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
-using LinearAlgebra
-using SparseArrays
-
-using CUDA
 
 # Case name for saving results
 name = "DecayingTurbulence2D"
@@ -34,14 +29,22 @@ name = "DecayingTurbulence2D"
 # Floating point precision
 T = Float32
 
+# To use CPU: Do not move any arrays
+device = identity
+
+# To use GPU, use `cu` to move arrays to the GPU.
+# Note: `cu` converts to Float32
+## using CUDA
+## device = cu
+
 # Viscosity model
 viscosity_model = LaminarModel(; Re = T(10_000))
 
 # A 2D grid is a Cartesian product of two vectors
-n = 2048
+n = 256
 lims = (T(0), T(1))
-x = collect(LinRange(lims..., n + 1))
-y = collect(LinRange(lims..., n + 1))
+x = LinRange(lims..., n + 1)
+y = LinRange(lims..., n + 1)
 # plot_grid(x, y)
 
 # Build setup and assemble operators
@@ -52,36 +55,33 @@ setup = Setup(x, y; viscosity_model);
 pressure_solver = FourierPressureSolver(setup);
 
 # Initial conditions
-V₀, p₀ = random_field(setup; A = T(10_000_000), σ = T(30), s = 5, pressure_solver);
-V, p = V₀, p₀
-
-# Time interval
-t_start, t_end = tlims = (T(0), T(1))
-
-cusetup = cu(setup)
+V₀, p₀ = random_field(setup; A = T(1_000_000), σ = T(30), s = 5, pressure_solver);
 
 # Iteration processors
 processors = (
-    field_plotter(setup; nupdate = 10),
-    # energy_history_plotter(setup; nupdate = 1),
-    # energy_spectrum_plotter(setup; nupdate = 1),
-    # animator(setup, "vorticity.mkv"; nupdate = 4),
-    # vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-    # field_saver(setup; nupdate = 10),
+    field_plotter(device(setup); nupdate = 20),
+    ## energy_history_plotter(device(setup); nupdate = 1),
+    ## energy_spectrum_plotter(device(setup); nupdate = 1),
+    ## animator(device(setup), "vorticity.mp4"; nupdate = 16),
+    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+    ## field_saver(setup; nupdate = 10),
     step_logger(; nupdate = 1),
 );
 
+# Time interval
+t_start, t_end = tlims = (T(0), T(0.5))
+
 # Solve unsteady problem
 V, p, outputs = solve_unsteady(
-    cusetup,
-    cu(V₀),
-    cu(p₀),
+    setup,
+    V₀,
+    p₀,
     tlims;
-    Δt = T(0.0001),
+    Δt = T(0.001),
     processors,
-    pressure_solver = FourierPressureSolver(cusetup),
+    pressure_solver = FourierPressureSolver(setup),
     inplace = true,
-    bc_vectors = cu(get_bc_vectors(setup, t_start)),
+    device,
 );
 
 # Field plot
@@ -101,11 +101,10 @@ outputs[3]
 save_vtk(setup, V, p, t_end, "output/solution")
 
 # Plot pressure
-plot_pressure(setup, Array(p))
+plot_pressure(setup, p)
 
 # Plot velocity
-plot_velocity(setup, Array(V), t_end)
+plot_velocity(setup, V, t_end)
 
 # Plot vorticity
-plot_vorticity(setup, Array(V), t_end)
-plot_vorticity(setup, Array(V₀), t_end)
+plot_vorticity(setup, V, t_end)

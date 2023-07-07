@@ -5,6 +5,7 @@ Energy-conserving solvers for the incompressible Navier-Stokes equations.
 """
 module IncompressibleNavierStokes
 
+using Adapt
 using FFTW
 using IterativeSolvers
 using LinearAlgebra
