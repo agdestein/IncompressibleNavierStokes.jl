@@ -149,6 +149,7 @@ function field_plot(
     sleeptime = 0.001,
     alpha = 0.05,
     equal_axis = true,
+    levels = 3,
 )
     (; boundary_conditions, grid) = setup
     (; xlims, ylims, x, y, z, xp, yp, zp) = grid
@@ -200,6 +201,8 @@ function field_plot(
 
     lims = @lift get_lims($field)
 
+    isnothing(levels) && (levels = @lift(LinRange($(lims)..., 10)))
+
     aspect = equal_axis ? (; aspect = :data) : (;)
     fig = Figure()
     ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
@@ -209,7 +212,7 @@ function field_plot(
         yf,
         zf,
         field;
-        levels = @lift(LinRange($(lims)..., 10)),
+        levels,
         colorrange = lims,
         shading = false,
         alpha,
