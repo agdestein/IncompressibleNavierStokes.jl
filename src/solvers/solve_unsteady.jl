@@ -127,8 +127,11 @@ function solve_unsteady(
     (; V, p, t, n) = stepper
     finalized = map((ps, i) -> ps.finalize(i, get_state(stepper)), processors, initialized)
 
+    # Final state
     (; V, p) = stepper
-    V, p, finalized
+
+    # Move output arrays to host
+    Array(V), Array(p), finalized
 end
 
 function get_state(stepper)
