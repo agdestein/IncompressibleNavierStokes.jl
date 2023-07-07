@@ -17,7 +17,7 @@ WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 [compat]
 FFTW = "1"
 IterativeSolvers = "0.9"
-Makie = "0.15, 0.16, 0.17, 0.18, 0.19"
+Makie = "0.19"
 WriteVTK = "1"
 julia = "1.7"
 
