@@ -42,6 +42,7 @@ function field_plot(
     type = heatmap,
     sleeptime = 0.001,
     equal_axis = true,
+    displayfig = true,
 )
     (; boundary_conditions, grid) = setup
     (; xlims, ylims, x, y, xp, yp) = grid
@@ -136,7 +137,7 @@ function field_plot(
     limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
     Colorbar(fig[1, 2], hm)
 
-    display(fig)
+    displayfig && display(fig)
 
     fig
 end
@@ -150,6 +151,7 @@ function field_plot(
     alpha = 0.05,
     equal_axis = true,
     levels = 3,
+    displayfig = true,
 )
     (; boundary_conditions, grid) = setup
     (; xlims, ylims, x, y, z, xp, yp, zp) = grid
@@ -206,21 +208,11 @@ function field_plot(
     aspect = equal_axis ? (; aspect = :data) : (;)
     fig = Figure()
     ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
-    hm = contour!(
-        ax,
-        xf,
-        yf,
-        zf,
-        field;
-        levels,
-        colorrange = lims,
-        shading = false,
-        alpha,
-    )
+    hm = contour!(ax, xf, yf, zf, field; levels, colorrange = lims, shading = false, alpha)
 
     Colorbar(fig[1, 2], hm)
 
-    display(fig)
+    displayfig && display(fig)
 
     fig
 end
@@ -233,7 +225,7 @@ Create energy history plot, with a history point added every time `step_observer
 energy_history_plotter(setup; nupdate = 1, kwargs...) =
     processor(state -> energy_history_plot(setup, state; kwargs...); nupdate)
 
-function energy_history_plot(setup, state)
+function energy_history_plot(setup, state; displayfig = true)
     (; Ωp) = setup.grid
     _points = Point2f[]
     points = @lift begin
@@ -244,7 +236,7 @@ function energy_history_plot(setup, state)
         push!(_points, Point2f(t, E))
     end
     fig = lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))
-    display(fig)
+    displayfig && display(fig)
     fig
 end
 
@@ -258,7 +250,7 @@ energy_spectrum_plotter(setup; nupdate = 1, kwargs...) = processor(
     nupdate,
 )
 
-function energy_spectrum_plot(::Dimension{2}, setup, state)
+function energy_spectrum_plot(::Dimension{2}, setup, state; displayfig = true)
     (; xpp) = setup.grid
     Kx, Ky = size(xpp) .÷ 2
     kx = 1:(Kx-1)
@@ -277,11 +269,11 @@ function energy_spectrum_plot(::Dimension{2}, setup, state)
     krange = LinRange(extrema(kk)..., 100)
     lines!(ax, krange, 1e7 * krange .^ (-3); label = "k⁻³", color = :red)
     axislegend(ax)
-    display(espec)
+    displayfig && display(espec)
     espec
 end
 
-function energy_spectrum_plot(::Dimension{3}, setup, state)
+function energy_spectrum_plot(::Dimension{3}, setup, state, displayfig = true)
     (; xpp) = setup.grid
     Kx, Ky, Kz = size(xpp) .÷ 2
     kx = 1:(Kx-1)
@@ -302,6 +294,6 @@ function energy_spectrum_plot(::Dimension{3}, setup, state)
     krange = LinRange(extrema(kk)..., 100)
     lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = "\$k^{-5/3}\$", color = :red)
     axislegend(ax)
-    display(espec)
+    displayfig && display(espec)
     espec
 end
