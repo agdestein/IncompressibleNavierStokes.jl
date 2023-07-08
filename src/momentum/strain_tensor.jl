@@ -33,8 +33,8 @@ function strain_tensor(
 
     # These four components are approximated by
     S11 = Su_ux * uₕ + ySu_ux
-    S12 = 1 / 2 * (Su_uy * uₕ + ySu_uy + Sv_uy * vₕ + ySv_uy)
-    S21 = 1 / 2 * (Su_vx * uₕ + ySu_vx + Sv_vx * vₕ + ySv_vx)
+    S12 = 1 // 2 .* (Su_uy * uₕ .+ ySu_uy .+ Sv_uy * vₕ .+ ySv_uy)
+    S21 = 1 // 2 .* (Su_vx * uₕ .+ ySu_vx .+ Sv_vx * vₕ .+ ySv_vx)
     S22 = Sv_vy * vₕ + ySv_vy
 
     # Note: S11 and S22 at xp, yp locations (pressure locations)
@@ -114,7 +114,7 @@ function strain_tensor(
         # S21_p = interp2(y', x, S21_temp, yp', xp)
 
         ## Invariants
-        q = @. 1 / 2 * (S11_p[:]^2 + S12_p[:]^2 + S21_p[:]^2 + S22_p[:]^2)
+        q = @. 1 // 2 * (S11_p[:]^2 + S12_p[:]^2 + S21_p[:]^2 + S22_p[:]^2)
 
         # Absolute value of strain tensor
         # With S as defined above, i.e. 1/2*(grad u + grad u^T)
@@ -124,10 +124,10 @@ function strain_tensor(
         # Option 2a
         S11_p = Cux_k * uₕ + yCux_k
         S12_p =
-            1 / 2 * (
-                Cuy_k * (Auy_k * uₕ + yAuy_k) +
-                yCuy_k +
-                Cvx_k * (Avx_k * vₕ + yAvx_k) +
+            1 // 2 .* (
+                Cuy_k * (Auy_k * uₕ + yAuy_k) .+
+                yCuy_k .+
+                Cvx_k * (Avx_k * vₕ + yAvx_k) .+
                 yCvx_k
             )
         S21_p = S12_p
@@ -137,8 +137,8 @@ function strain_tensor(
 
         # Jacobian of S_abs wrt u and v
         if get_jacobian
-            eps = 1e-14
-            Sabs_inv = spdiagm(1 ./ (2 .* S_abs .+ eps))
+            ϵ = 100 * eps(T)
+            Sabs_inv = spdiagm(1 ./ (2 .* S_abs .+ ϵ))
             Jacu =
                 Sabs_inv * (4 * spdiagm(S11_p) * Cux_k + 4 * spdiagm(S12_p) * Cuy_k * Auy_k)
             Jacv =

@@ -55,7 +55,6 @@ function solve_steady_state(
 
     println("Initial momentum residual = $maxres")
 
-    # record(fig, "output/vorticity.mp4", 1:rtp.nt; framerate = 60) do n
     while maxres > abstol
         if n > maxiter
             @warn "Newton not converged in $maxiter iterations, showing results anyway"

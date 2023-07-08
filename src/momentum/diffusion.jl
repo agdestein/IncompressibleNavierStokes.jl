@@ -183,18 +183,18 @@ function diffusion!(
     # Molecular viscosity
     ν = 1 / model.Re
 
-    du .= Dux * (2 .* (ν .+ ν_t_ux) .* S11[:]) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12[:])
-    dv .= Dvx * (2 .* (ν .+ ν_t_vx) .* S21[:]) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22[:])
-
+    du .= Dux * (2 .* (ν .+ ν_t_ux) .* S11) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12)
+    dv .= Dvx * (2 .* (ν .+ ν_t_vx) .* S21) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22)
+    
     if get_jacobian
         # Freeze ν_t, i.e. we skip the derivative of ν_t wrt V in the Jacobian
         Jacu1 =
             Dux * 2 * spdiagm(ν .+ ν_t_ux) * Su_ux +
-            Duy * 2 * spdiagm(ν .+ ν_t_uy) * 1 / 2 * Su_uy
-        Jacu2 = Duy * 2 * spdiagm(ν .+ ν_t_uy) * 1 / 2 * Sv_uy
-        Jacv1 = Dvx * 2 * spdiagm(ν .+ ν_t_vx) * 1 / 2 * Su_vx
+            Duy * 2 * spdiagm(ν .+ ν_t_uy) * 1 // 2 * Su_uy
+        Jacu2 = Duy * 2 * spdiagm(ν .+ ν_t_uy) * 1 // 2 * Sv_uy
+        Jacv1 = Dvx * 2 * spdiagm(ν .+ ν_t_vx) * 1 // 2 * Su_vx
         Jacv2 =
-            Dvx * 2 * spdiagm(ν .+ ν_t_vx) * 1 / 2 * Sv_vx +
+            Dvx * 2 * spdiagm(ν .+ ν_t_vx) * 1 // 2 * Sv_vx +
             Dvy * 2 * spdiagm(ν .+ ν_t_vy) * Sv_vy
         Jacu = [Jacu1 Jacu2]
         Jacv = [Jacv1 Jacv2]

@@ -25,7 +25,7 @@ SteadyBodyForce
 ## Grid
 
 ```@docs
-dimension
+Dimension
 Grid
 cosine_grid
 max_size
@@ -112,14 +112,13 @@ create_initial_conditions
 ## Processors
 
 ```@docs
-AbstractProcessor
-Logger
-VTKWriter
-StateObserver
-initialize!
-process!
-finalize!
-real_time_plot
+step_logger
+vtk_writer
+field_saver
+field_plotter
+energy_history_plotter
+energy_spectrum_plotter
+animator
 ```
 
 ## Solvers
@@ -156,7 +155,6 @@ ImplicitRungeKuttaMethod
 isexplicit
 lambda_conv_max
 lambda_diff_max
-needs_startup_method
 nstage
 ode_method_cache
 runge_kutta_method
