@@ -47,16 +47,13 @@ processor(initialize; finalize = (initialized, stepper) -> initialized, nupdate 
 
 Create processor that logs time step information.
 """
-step_logger(; nupdate = 1) = processor(
-    function (step_observer) 
-        @lift begin
-            (; t, n) = $step_observer
-            @printf "Iteration %d\tt = %g\n" n t
-        end
-        nothing
-    end;
-    nupdate,
-)
+step_logger(; nupdate = 1) = processor(function (step_observer)
+    @lift begin
+        (; t, n) = $step_observer
+        @printf "Iteration %d\tt = %g\n" n t
+    end
+    nothing
+end; nupdate)
 
 """
     vtk_writer(setup; nupdate, dir = "output", filename = "solution")

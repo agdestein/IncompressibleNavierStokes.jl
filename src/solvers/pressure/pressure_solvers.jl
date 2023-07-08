@@ -24,8 +24,9 @@ end
 # `cu(::FourierPressureSolver)` from CUDA.jl
 # TODO: CUDA does not support `factorize`, `lu`, etc, but maybe `L` and `U` can be
 # converted to `CuArray` after factorization on the CPU
-Adapt.adapt_structure(to, s::DirectPressureSolver) =
-    error("`DirectPressureSolver` is not yet implemented for CUDA. Consider using `CGPressureSolver`.")
+Adapt.adapt_structure(to, s::DirectPressureSolver) = error(
+    "`DirectPressureSolver` is not yet implemented for CUDA. Consider using `CGPressureSolver`.",
+)
 
 """
     CGPressureSolver(setup; [abstol], [reltol], [maxiter])
@@ -51,8 +52,12 @@ end
 
 # This moves all the inner arrays to the GPU when calling
 # `cu(::FourierPressureSolver)` from CUDA.jl
-Adapt.adapt_structure(to, s::CGPressureSolver) =
-    CGPressureSolver(adapt(to, s.A), adapt(to, s.abstol), adapt(to, s.reltol), adapt(to, s.maxiter))
+Adapt.adapt_structure(to, s::CGPressureSolver) = CGPressureSolver(
+    adapt(to, s.A),
+    adapt(to, s.abstol),
+    adapt(to, s.reltol),
+    adapt(to, s.maxiter),
+)
 
 struct FourierPressureSolver{T,A<:AbstractArray{Complex{T}}} <: AbstractPressureSolver{T}
     Ahat::A

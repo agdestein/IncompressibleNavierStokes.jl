@@ -39,12 +39,20 @@
             plotter = field_plotter(setup; displayfig = false),
         ),
         step_logger(),
-    );
+    )
 
     # Solve unsteady problem
     # FIXME: using too many processors results in endless compilation
-    V, p, outputs =
-        solve_unsteady(setup, V₀, p₀, tlims; Δt = T(0.01), processors, pressure_solver, inplace = true)
+    V, p, outputs = solve_unsteady(
+        setup,
+        V₀,
+        p₀,
+        tlims;
+        Δt = T(0.01),
+        processors,
+        pressure_solver,
+        inplace = true,
+    )
 
     @testset "VTK files" begin
         @test isfile("output/solution3D.pvd")

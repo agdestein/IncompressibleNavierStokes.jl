@@ -185,7 +185,7 @@ function diffusion!(
 
     du .= Dux * (2 .* (ν .+ ν_t_ux) .* S11) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12)
     dv .= Dvx * (2 .* (ν .+ ν_t_vx) .* S21) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22)
-    
+
     if get_jacobian
         # Freeze ν_t, i.e. we skip the derivative of ν_t wrt V in the Jacobian
         Jacu1 =

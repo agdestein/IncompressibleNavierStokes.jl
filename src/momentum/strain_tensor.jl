@@ -125,9 +125,7 @@ function strain_tensor(
         S11_p = Cux_k * uₕ + yCux_k
         S12_p =
             1 // 2 .* (
-                Cuy_k * (Auy_k * uₕ + yAuy_k) .+
-                yCuy_k .+
-                Cvx_k * (Avx_k * vₕ + yAvx_k) .+
+                Cuy_k * (Auy_k * uₕ + yAuy_k) .+ yCuy_k .+ Cvx_k * (Avx_k * vₕ + yAvx_k) .+
                 yCvx_k
             )
         S21_p = S12_p
