@@ -30,6 +30,7 @@ function Setup(
     bc_type = (;
         u = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
         v = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
+        ν = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
     ),
     order4 = false,
     bodyforce_u = (x, y) -> 0,
@@ -71,6 +72,11 @@ end
                 y = (:periodic, :periodic),
                 z = (:periodic, :periodic),
             ),
+            ν = (;
+                x = (:periodic, :periodic),
+                y = (:periodic, :periodic),
+                z = (:periodic, :periodic),
+            ),
         ),
         order4 = false,
         bodyforce_u = (x, y, z) -> 0,
@@ -104,6 +110,11 @@ function Setup(
             z = (:periodic, :periodic),
         ),
         w = (;
+            x = (:periodic, :periodic),
+            y = (:periodic, :periodic),
+            z = (:periodic, :periodic),
+        ),
+        ν = (;
             x = (:periodic, :periodic),
             y = (:periodic, :periodic),
             z = (:periodic, :periodic),
