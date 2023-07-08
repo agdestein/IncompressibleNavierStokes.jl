@@ -112,7 +112,7 @@ V₀, p₀ = create_initial_conditions(
 # Time step processors
 processors = (
     # Record solution every fourth time step
-    animator(setup, "vorticity.mkv"; nupdate = 4),
+    animator(setup, "vorticity.mp4"; nupdate = 4),
 
     # Log time step information
     step_logger(),
@@ -129,4 +129,4 @@ V, p, outputs = solve_unsteady(
 
 The resulting animation is shown below.
 
-![Vorticity](assets/vorticity.mkv)
+![Vorticity](assets/vorticity.mp4)
