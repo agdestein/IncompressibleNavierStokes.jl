@@ -60,16 +60,16 @@ V₀, p₀ = random_field(setup; A = T(1_000_000), σ = T(30), s = 5, pressure_s
 # Iteration processors
 processors = (
     field_plotter(device(setup); nupdate = 20),
-    ## energy_history_plotter(device(setup); nupdate = 1),
-    ## energy_spectrum_plotter(device(setup); nupdate = 1),
+    energy_history_plotter(device(setup); nupdate = 20, displayfig = false),
+    energy_spectrum_plotter(device(setup); nupdate = 20, displayfig = false),
     ## animator(device(setup), "vorticity.mp4"; nupdate = 16),
     ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
     ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1),
+    step_logger(; nupdate = 100),
 );
 
 # Time interval
-t_start, t_end = tlims = (T(0), T(0.5))
+t_start, t_end = tlims = (T(0), T(1.0))
 
 # Solve unsteady problem
 V, p, outputs = solve_unsteady(

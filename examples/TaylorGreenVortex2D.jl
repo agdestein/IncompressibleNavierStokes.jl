@@ -63,8 +63,8 @@ V, p = solve_steady_state(setup, V₀, p₀; npicard = 2);
 
 # Iteration processors
 processors = (
-    field_plotter(setup; nupdate = 1),
-    ## energy_history_plotter(setup; nupdate = 1),
+    ## field_plotter(setup; nupdate = 1),
+    energy_history_plotter(setup; nupdate = 1),
     ## energy_spectrum_plotter(setup; nupdate = 1),
     ## animator(setup, "vorticity.mkv"; nupdate = 4),
     ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
@@ -103,3 +103,6 @@ plot_vorticity(setup, V, t_end)
 
 # Plot streamfunction
 ## plot_streamfunction(setup, V, t_end)
+
+# Energy history
+outputs[1]

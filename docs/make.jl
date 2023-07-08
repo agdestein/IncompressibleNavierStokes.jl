@@ -32,7 +32,7 @@ examples = [
     "Planar Mixing (2D)" => "PlanarMixing2D",
     "Shear Layer (2D)" => "ShearLayer2D",
     # "Taylor-Green Vortex (2D)" => "TaylorGreenVortex2D",
-    "Taylor-Green Vortex (3D)" => "TaylorGreenVortex3D",
+    # "Taylor-Green Vortex (3D)" => "TaylorGreenVortex3D",
 ]
 
 output = "generated"

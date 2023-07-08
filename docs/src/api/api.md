@@ -85,6 +85,7 @@ operator_postprocessing
 operator_regularization
 operator_turbulent_diffusion
 operator_viscosity
+operator_filter
 ```
 
 ## Postprocess
@@ -107,6 +108,7 @@ save_vtk
 
 ```@docs
 create_initial_conditions
+random_field
 ```
 
 ## Processors
