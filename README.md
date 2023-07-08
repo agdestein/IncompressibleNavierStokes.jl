@@ -129,4 +129,4 @@ V, p, outputs = solve_unsteady(
 
 The resulting animation is shown below.
 
-![Vorticity](https://github.com/agdestein/IncompressibleNavierStokes.jl/assets/40632532/6ee09a03-1674-46e0-843c-000f0b9b9527)
+https://github.com/agdestein/IncompressibleNavierStokes.jl/assets/40632532/6ee09a03-1674-46e0-843c-000f0b9b9527
