@@ -8,8 +8,10 @@
         ν = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
     )
 
-    x = LinRange(0.0, 1.0, 25)
-    y = LinRange(0.0, 1.0, 25)
+    n = 25
+    x = LinRange(0.0, 1.0, n)
+    y = LinRange(0.0, 1.0, n)
+    Δ = √2 / n
 
     initial_velocity_u(x, y) = 0.0
     initial_velocity_v(x, y) = 0.0
@@ -22,7 +24,7 @@
     T = Float64
     Re = 1000.0
     lam = LaminarModel(; Re)
-    ml = MixingLengthModel(; Re, lm = 1.0)
+    ml = MixingLengthModel(; Re, lm = Δ)
     smag = SmagorinskyModel(; Re)
     qr = QRModel(; Re)
 
@@ -53,18 +55,14 @@
                 initial_pressure,
             )
 
-            V, p = solve_steady_state(setup, V₀, p₀)
-
-            # Check that the average velocity is smaller than the lid velocity
+            V, p = solve_steady_state(setup, V₀, p₀; npicard = 5, maxiter = 15) # Check that the average velocity is smaller than the lid velocity
             broken = convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
             @test sum(abs, V) / length(V) < lid_vel broken = broken
 
             V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01)
 
             # Check that the average velocity is smaller than the lid velocity
-            broken =
-                viscosity_model isa MixingLengthModel ||
-                convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
+            broken = convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
             @test sum(abs, V) / length(V) < lid_vel broken = broken
         end
     end
