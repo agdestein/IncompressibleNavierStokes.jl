@@ -9,7 +9,7 @@ end                                                 #src
 #
 # In this example we consider a box with a moving lid. The velocity is initially at rest. The
 # solution should reach at steady state equilibrium after a certain time. The same steady
-# state should be obtained when solving a `SteadyStateProblem`.
+# state should be obtained when solving a steady state problem.
 
 # We start by loading packages.
 # A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
