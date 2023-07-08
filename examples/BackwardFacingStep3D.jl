@@ -60,7 +60,7 @@ plot_grid(x, y, z)
 setup = Setup(x, y, z; viscosity_model, u_bc, v_bc, w_bc, bc_type);
 
 # Time interval
-t_start, t_end = tlims = (0.0, 25.0)
+t_start, t_end = tlims = (0.0, 7.0)
 
 # Initial conditions (extend inflow)
 initial_velocity_u(x, y, z) = y ≥ 0 ? 24y * (1 / 2 - y) : 0.0
@@ -69,31 +69,29 @@ initial_velocity_w(x, y, z) = 0.0
 initial_pressure(x, y, z) = 0.0
 V₀, p₀ = create_initial_conditions(
     setup,
-    t_start;
     initial_velocity_u,
     initial_velocity_v,
     initial_velocity_w,
+    t_start;
     initial_pressure,
 );
 
 # Solve steady state problem
-problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = solve(problem);
+V, p = solve_steady_state(setup, V₀, p₀);
 
 # Iteration processors
-logger = Logger(; nupdate = 10)
-observer = StateObserver(50, V₀, p₀, t_start)
-writer = VTKWriter(; nupdate = 20, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer(; nupdate = 25)
-## processors = [logger, observer, tracer, writer]
-processors = [logger, observer, tracer]
-
-# Real time plot
-real_time_plot(observer, setup)
+processors = (
+    field_plotter(setup; nupdate = 50),
+    ## energy_history_plotter(setup; nupdate = 10),
+    ## energy_spectrum_plotter(setup; nupdate = 10),
+    ## animator(setup, "vorticity.mkv"; nupdate = 4),
+    ## vtk_writer(setup; nupdate = 20, dir = "output/$name", filename = "solution"),
+    ## field_saver(setup; nupdate = 10),
+    step_logger(; nupdate = 10),
+);
 
 # Solve unsteady problem
-problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve(problem, RK44(); Δt = 0.01, processors, inplace = true);
+V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors, inplace = true)
 #md current_figure()
 
 # ## Post-process
@@ -101,10 +99,7 @@ V, p = solve(problem, RK44(); Δt = 0.01, processors, inplace = true);
 # We may visualize or export the computed fields `(V, p)`
 
 # Export to VTK
-save_vtk(V, p, t_end, setup, "output/solution")
-
-# Plot tracers
-plot_tracers(tracer)
+save_vtk(setup, V, p, t_end, "output/solution")
 
 # Plot pressure
 plot_pressure(setup, p)

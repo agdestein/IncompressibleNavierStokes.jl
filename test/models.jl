@@ -6,12 +6,12 @@
         u = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
         v = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
         ν = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-        k = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-        e = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
     )
 
-    x = LinRange(0.0, 1.0, 25)
-    y = LinRange(0.0, 1.0, 25)
+    n = 25
+    x = LinRange(0.0, 1.0, n)
+    y = LinRange(0.0, 1.0, n)
+    Δ = √2 / n
 
     initial_velocity_u(x, y) = 0.0
     initial_velocity_v(x, y) = 0.0
@@ -20,18 +20,13 @@
     # Time interval
     t_start, t_end = tlims = (0.0, 0.5)
 
-    # Iteration processors
-    tracer = QuantityTracer()
-    processors = [tracer]
-
     # Viscosity models
     T = Float64
     Re = 1000.0
-    lam = LaminarModel{T}(; Re)
-    kϵ = KEpsilonModel{T}(; Re)
-    ml = MixingLengthModel{T}(; Re)
-    smag = SmagorinskyModel{T}(; Re)
-    qr = QRModel{T}(; Re)
+    lam = LaminarModel(; Re)
+    ml = MixingLengthModel(; Re, lm = Δ)
+    smag = SmagorinskyModel(; Re)
+    qr = QRModel(; Re)
 
     # Convection models
     noreg = NoRegConvectionModel()
@@ -51,40 +46,28 @@
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
             setup = Setup(x, y; viscosity_model, convection_model, u_bc, v_bc, bc_type)
-            setup.boundary_conditions.v
 
             V₀, p₀ = create_initial_conditions(
                 setup,
-                t_start;
                 initial_velocity_u,
                 initial_velocity_v,
+                t_start;
                 initial_pressure,
             )
 
-            problem = SteadyStateProblem(setup, V₀, p₀)
-            V, p = solve(problem)
+            V, p = solve_steady_state(setup, V₀, p₀; npicard = 5, maxiter = 15) # Check that the average velocity is smaller than the lid velocity
+            broken = convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
+            @test sum(abs, V) / length(V) < lid_vel broken = broken
+
+            V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01)
 
             # Check that the average velocity is smaller than the lid velocity
             broken = convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
             @test sum(abs, V) / length(V) < lid_vel broken = broken
-
-            problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-            V, p = solve(problem, RK44(); Δt = 0.01, processors)
-
-            # Check that the average velocity is smaller than the lid velocity
-            broken =
-                viscosity_model isa Union{QRModel,MixingLengthModel} ||
-                convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
-            @test sum(abs, V) / length(V) < lid_vel broken = broken
-
-            # Check for steady state convergence
-            broken = viscosity_model isa Union{QRModel,MixingLengthModel}
-            @test tracer.umom[end] < 1e-10 broken = broken
-            @test tracer.vmom[end] < 1e-10 broken = broken
         end
     end
 
-    unfinished_models = [(kϵ, noreg), (lam, leray)]
+    unfinished_models = [(lam, leray)]
 
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin

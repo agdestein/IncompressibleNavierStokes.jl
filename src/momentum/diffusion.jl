@@ -9,14 +9,17 @@ See also [`diffusion!`](@ref).
 """
 function diffusion end
 
-function diffusion(::LaminarModel, V, setup; bc_vectors, get_jacobian = false)
+diffusion(m, V, setup; kwargs...) = diffusion(setup.grid.dimension, m, V, setup; kwargs...)
+
+function diffusion(m::LaminarModel, V, setup; bc_vectors, get_jacobian = false)
+    (; Re) = m
     (; Diff) = setup.operators
     (; yDiff) = bc_vectors
 
-    d = Diff * V + yDiff
+    d = 1 ./ Re .* (Diff * V .+ yDiff)
 
     if get_jacobian
-        ∇d = Diff
+        ∇d = 1 / Re * Diff
     else
         ∇d = nothing
     end
@@ -26,14 +29,15 @@ end
 
 # 2D version
 function diffusion(
+    ::Dimension{2},
     model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
     V,
-    setup::Setup{T,2};
+    setup;
     bc_vectors,
     get_jacobian = false,
-) where {T}
-    (; indu, indv, indw) = setup.grid
-    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
+)
+    (; indu, indv) = setup.grid
+    (; Dux, Duy, Dvx, Dvy) = setup.operators
     (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
     (; Aν_ux, Aν_uy, Aν_vx, Aν_vy) = setup.operators
     (; yAν_ux, yAν_uy, yAν_vx, yAν_vy) = bc_vectors
@@ -47,7 +51,7 @@ function diffusion(
     ν_t = turbulent_viscosity(model, setup, S_abs)
 
     # To compute the diffusion, we need ν_t at ux, uy, vx and vy locations
-    # This means we have to reverse the process of strain_tensor.m: go
+    # This means we have to reverse the process of `strain_tensor`: go
     # from pressure points back to the ux, uy, vx, vy locations
     ν_t_ux = Aν_ux * ν_t + yAν_ux
     ν_t_uy = Aν_uy * ν_t + yAν_uy
@@ -102,16 +106,13 @@ end
 
 # 3D version
 function diffusion(
+    ::Dimension{3},
     model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
     V,
-    setup::Setup{T,3};
+    setup;
     bc_vectors,
     get_jacobian = false,
-) where {T}
-    error("Not implemented")
-end
-
-function diffusion(model::KEpsilonModel, V, setup; bc_vectors, get_jacobian = false)
+)
     error("Not implemented")
 end
 
@@ -122,20 +123,26 @@ Evaluate diffusive terms `d` and optionally Jacobian `∇d = ∂d/∂V` using vi
 """
 function diffusion! end
 
-function diffusion!(::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
+diffusion!(m, d, ∇d, V, setup; kwargs...) =
+    diffusion!(setup.grid.dimension, m, d, ∇d, V, setup; kwargs...)
+
+function diffusion!(m::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
+    (; Re) = m
     (; Diff) = setup.operators
     (; yDiff) = bc_vectors
 
-    # d = Diff * V + yDiff
+    # d = 1 ./ Re .* (Diff * V .+ yDiff)
     mul!(d, Diff, V)
-    d .+= yDiff
+    @. d = 1 / Re * (d + yDiff)
 
-    get_jacobian && (∇d .= Diff)
+    get_jacobian && (@. ∇d = 1 / Re * Diff)
 
     d, ∇d
 end
 
+# 2D version
 function diffusion!(
+    ::Dimension{2},
     model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
     d,
     ∇d,
@@ -144,8 +151,8 @@ function diffusion!(
     bc_vectors,
     get_jacobian = false,
 )
-    (; indu, indv, indw) = setup.grid
-    (; Dux, Duy, Duz, Dvx, Dvy, Dvz, Dwx, Dwy, Dwz) = setup.operators
+    (; indu, indv) = setup.grid
+    (; Dux, Duy, Dvx, Dvy) = setup.operators
     (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
     (; Aν_ux, Aν_uy, Aν_vx, Aν_vy) = setup.operators
     (; yAν_ux, yAν_uy, yAν_vx, yAν_vy) = bc_vectors
@@ -176,18 +183,18 @@ function diffusion!(
     # Molecular viscosity
     ν = 1 / model.Re
 
-    du .= Dux * (2 .* (ν .+ ν_t_ux) .* S11[:]) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12[:])
-    dv .= Dvx * (2 .* (ν .+ ν_t_vx) .* S21[:]) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22[:])
+    du .= Dux * (2 .* (ν .+ ν_t_ux) .* S11) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12)
+    dv .= Dvx * (2 .* (ν .+ ν_t_vx) .* S21) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22)
 
     if get_jacobian
         # Freeze ν_t, i.e. we skip the derivative of ν_t wrt V in the Jacobian
         Jacu1 =
             Dux * 2 * spdiagm(ν .+ ν_t_ux) * Su_ux +
-            Duy * 2 * spdiagm(ν .+ ν_t_uy) * 1 / 2 * Su_uy
-        Jacu2 = Duy * 2 * spdiagm(ν .+ ν_t_uy) * 1 / 2 * Sv_uy
-        Jacv1 = Dvx * 2 * spdiagm(ν .+ ν_t_vx) * 1 / 2 * Su_vx
+            Duy * 2 * spdiagm(ν .+ ν_t_uy) * 1 // 2 * Su_uy
+        Jacu2 = Duy * 2 * spdiagm(ν .+ ν_t_uy) * 1 // 2 * Sv_uy
+        Jacv1 = Dvx * 2 * spdiagm(ν .+ ν_t_vx) * 1 // 2 * Su_vx
         Jacv2 =
-            Dvx * 2 * spdiagm(ν .+ ν_t_vx) * 1 / 2 * Sv_vx +
+            Dvx * 2 * spdiagm(ν .+ ν_t_vx) * 1 // 2 * Sv_vx +
             Dvy * 2 * spdiagm(ν .+ ν_t_vy) * Sv_vy
         Jacu = [Jacu1 Jacu2]
         Jacv = [Jacv1 Jacv2]
@@ -211,6 +218,16 @@ function diffusion!(
     d, ∇d
 end
 
-function diffusion!(model::KEpsilonModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
-    error("k-e implementation in diffusion.jl not finished")
+# 3D version
+function diffusion!(
+    ::Dimension{3},
+    model::Union{QRModel,SmagorinskyModel,MixingLengthModel},
+    d,
+    ∇d,
+    V,
+    setup;
+    bc_vectors,
+    get_jacobian = false,
+)
+    error("Not implemented")
 end

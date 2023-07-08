@@ -1,12 +1,14 @@
 """
-    get_streamfunction(V, t, setup)
+    get_streamfunction(setup, V, t)
 
 Compute streamfunction ``\\psi`` from a Poisson equation ``\\nabla^2 \\psi = -\\omega``.
 """
 function get_streamfunction end
 
+get_streamfunction(setup, V, t) = get_streamfunction(setup.grid.dimension, setup, V, t)
+
 # 2D version
-function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
+function get_streamfunction(::Dimension{2}, setup, V, t)
     (; grid, operators, boundary_conditions) = setup
     (; u_bc, v_bc) = boundary_conditions
     (; indu, indv, Nux_in, Nvx_in, Nx, Ny) = grid
@@ -93,7 +95,7 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
     Aψ = Wv_vx * Q2Dx + Wu_uy * Q2Dy
     yAψ = Wv_vx * yQx + Wu_uy * yQy
 
-    ω = get_vorticity(V, t, setup)
+    ω = get_vorticity(setup, V, t)
     ω_flat = reshape(ω, length(ω))
 
     # Solve streamfunction from Poisson equation
@@ -103,6 +105,6 @@ function get_streamfunction(V, t, setup::Setup{T,2}) where {T}
 end
 
 # 3D version
-function get_streamfunction(V, t, setup::Setup{T,3}) where {T}
+function get_streamfunction(::Dimension{3}, setup, V, t)
     error("Not implemented")
 end

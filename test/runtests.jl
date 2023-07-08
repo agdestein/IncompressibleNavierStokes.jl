@@ -26,7 +26,7 @@ using Test
         Aqua.test_all(
             IncompressibleNavierStokes;
             ambiguities = false,
-            project_toml_formatting = false, # https://github.com/JuliaTesting/Aqua.jl/issues/72
+            project_toml_formatting = true,
         )
     end
 end

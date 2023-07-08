@@ -69,31 +69,29 @@ initial_velocity_w(x, y, z) = 0.0
 initial_pressure(x, y, z) = 0.0
 V₀, p₀ = create_initial_conditions(
     setup,
-    t_start;
     initial_velocity_u,
     initial_velocity_v,
     initial_velocity_w,
+    t_start;
     initial_pressure,
 );
 
 # Solve steady state problem
-problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = solve(problem; npicard = 5, maxiter = 15);
+V, p = solve_steady_state(setup, V₀, p₀; npicard = 5, maxiter = 15);
 
 # Iteration processors
-logger = Logger()
-observer = StateObserver(1, V₀, p₀, t_start)
-writer = VTKWriter(; nupdate = 5, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer()
-## processors = [logger, observer, tracer, writer]
-processors = [logger, observer, tracer]
-
-# Real time plot
-real_time_plot(observer, setup)
+processors = (
+    field_plotter(setup; nupdate = 1),
+    ## energy_history_plotter(setup; nupdate = 1),
+    ## energy_spectrum_plotter(setup; nupdate = 100),
+    ## animator(setup, "vorticity.mkv"; nupdate = 4),
+    ## vtk_writer(setup; nupdate = 5, dir = "output/$name", filename = "solution"),
+    ## field_saver(setup; nupdate = 10),
+    step_logger(; nupdate = 1),
+);
 
 # Solve unsteady problem
-problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve(problem, RK44(); Δt = 0.001, processors)
+V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.001, processors)
 #md current_figure()
 
 # ## Post-process
@@ -101,10 +99,7 @@ V, p = solve(problem, RK44(); Δt = 0.001, processors)
 # We may visualize or export the computed fields `(V, p)`
 
 # Export to VTK
-save_vtk(V, p, t_end, setup, "output/solution")
-
-# Plot tracers
-plot_tracers(tracer)
+save_vtk(setup, V, p, t_end, "output/solution")
 
 # Plot pressure
 plot_pressure(setup, p)

@@ -3,15 +3,16 @@
 
 Construct divergence and gradient operator.
 """
-function operator_divergence end
+operator_divergence(grid, boundary_conditions) =
+    operator_divergence(grid.dimension, grid, boundary_conditions)
 
 # 2D version
-function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
+function operator_divergence(::Dimension{2}, grid, boundary_conditions)
     (; Npx, Npy) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t) = grid
     (; hx, hy) = grid
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
     (; order4, α) = grid
 
     bc = boundary_conditions
@@ -19,6 +20,8 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     if order4
         (; hxi3, hyi3) = grid
     end
+
+    T = eltype(hx)
 
     ## Divergence operator M
 
@@ -32,7 +35,7 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     # Building blocks consisting of diagonal matrices where the diagonal is
     # equal to constant per block (hy(block)) and changing for next block to
     # hy(block+1)
-    diag1 = ones(Nux_t - 1)
+    diag1 = ones(T, Nux_t - 1)
     M1D = spdiagm(Nux_t - 1, Nux_t, 0 => -diag1, 1 => diag1)
 
     # We only need derivative at inner pressure points, so we map the resulting
@@ -43,7 +46,7 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     bc.u.x[2] == :pressure && bc.u.x[1] != :pressure && (diagpos = 0)
     bc.u.x[2] == :periodic && bc.u.x[1] == :periodic && (diagpos = 1)
 
-    BMx = spdiagm(Npx, Nux_t - 1, diagpos => ones(Npx))
+    BMx = spdiagm(Npx, Nux_t - 1, diagpos => ones(T, Npx))
     M1D = BMx * M1D
 
     # Extension to 2D to be used in post-processing files
@@ -58,7 +61,7 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
 
     if order4
         mat_hy3 = Diagonal(hyi3)
-        diag1 = ones(Nux_t - 1)
+        diag1 = ones(T, Nux_t - 1)
         M1D3 = spdiagm(Nux_t - 1, Nux_t + 2, 0 => -diag1, 3 => diag1)
         M1D3 = BMx * M1D3
         Mx_bc3 = bc_div2(
@@ -75,7 +78,7 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     end
 
     ## My (same as Mx but reversing indices and kron arguments)
-    diag1 = ones(Nvy_t - 1)
+    diag1 = ones(T, Nvy_t - 1)
     M1D = spdiagm(Nvy_t - 1, Nvy_t, 0 => -diag1, 1 => diag1)
 
     # We only need derivative at inner pressure points, so we map the resulting
@@ -86,7 +89,7 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     bc.v.y[2] == :pressure && bc.v.y[1] != :pressure && (diagpos = 0)
     bc.v.y[2] == :periodic && bc.v.y[1] == :periodic && (diagpos = 1)
 
-    BMy = spdiagm(Npy, Nvy_t - 1, diagpos => ones(Npy))
+    BMy = spdiagm(Npy, Nvy_t - 1, diagpos => ones(T, Npy))
     M1D = BMy * M1D
 
     # Extension to 2D to be used in post-processing files
@@ -101,7 +104,7 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
 
     if order4
         mat_hx3 = Diagonal(hxi3)
-        diag1 = ones(Nvy_t - 1)
+        diag1 = ones(T, Nvy_t - 1)
         M1D3 = spdiagm(Nvy_t - 1, Nvy_t + 2, 0 => -diag1, 3 => diag1)
         M1D3 = BMy * M1D3
         My_bc3 = bc_div2(
@@ -130,7 +133,7 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     # Note that this also holds for outflow boundary conditions, if the stress
     # on the ouflow boundary is properly taken into account in y_p (often this
     # stress will be zero)
-    G = -M'
+    G = -sparse(M')
 
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
@@ -138,12 +141,12 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
     # Only the right hand side vector changes, so the pressure matrix can be set up outside the time-stepping-loop.
 
     # Laplace = div grad
-    A = M * Diagonal(Ω⁻¹) * G
+    A = M * Diagonal(1 ./ Ω) * G
 
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions
     if all(≠(:pressure), (bc.u.x..., bc.v.y...))
-        if any(≉(0; atol = 1e-10), sum(A; dims = 2))
+        if any(!≈(0; atol = sqrt(eps(T))), sum(A; dims = 2))
             @warn "Pressure matrix: not all rowsums are zero!"
         end
     end
@@ -159,13 +162,15 @@ function operator_divergence(grid::Grid{T,2}, boundary_conditions) where {T}
 end
 
 # 3D version
-function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
+function operator_divergence(::Dimension{3}, grid, boundary_conditions)
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuz_in) = grid
     (; Nvx_in, Nvy_in, Nvy_b, Nvy_t, Nvz_in) = grid
     (; Nwx_in, Nwy_in, Nwz_in, Nwz_b, Nwz_t) = grid
     (; Npx, Npy, Npz) = grid
     (; hx, hy, hz) = grid
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
+
+    T = eltype(hx)
 
     bc = boundary_conditions
 
@@ -180,7 +185,7 @@ function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
     # Building blocks consisting of diagonal matrices where the diagonal is
     # Equal to constant per block (hy(block)) and changing for next block to
     # Hy(block+1)
-    diag1 = ones(Nux_t - 1)
+    diag1 = ones(T, Nux_t - 1)
     M1D = spdiagm(Nux_t - 1, Nux_t, 0 => -diag1, 1 => diag1)
 
     # We only need derivative at inner pressure points, so we map the resulting
@@ -190,7 +195,7 @@ function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
     bc.u.x[2] != :pressure && bc.u.x[1] == :pressure && (diagpos = 1)
     bc.u.x[2] == :pressure && bc.u.x[1] != :pressure && (diagpos = 0)
     bc.u.x[2] == :periodic && bc.u.x[1] == :periodic && (diagpos = 1)
-    BMx = spdiagm(Npx, Nux_t - 1, diagpos => ones(Npx))
+    BMx = spdiagm(Npx, Nux_t - 1, diagpos => ones(T, Npx))
     M1D = BMx * M1D
 
     # Extension to 3D to be used in post-processing files
@@ -205,7 +210,7 @@ function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
 
     ## My
     # Same as Mx but reversing indices and kron arguments
-    diag1 = ones(Nvy_t - 1)
+    diag1 = ones(T, Nvy_t - 1)
     M1D = spdiagm(Nvy_t - 1, Nvy_t, 0 => -diag1, 1 => diag1)
 
     # We only need derivative at inner pressure points, so we map the resulting
@@ -215,7 +220,7 @@ function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
     bc.v.y[2] != :pressure && bc.v.y[1] == :pressure && (diagpos = 1)
     bc.v.y[2] == :pressure && bc.v.y[1] != :pressure && (diagpos = 0)
     bc.v.y[2] == :periodic && bc.v.y[1] == :periodic && (diagpos = 1)
-    BMy = spdiagm(Npy, Nvy_t - 1, diagpos => ones(Npy))
+    BMy = spdiagm(Npy, Nvy_t - 1, diagpos => ones(T, Npy))
     M1D = BMy * M1D
 
     # Extension to 3D to be used in post-processing files
@@ -230,7 +235,7 @@ function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
 
     ## Mz
     # Same as Mx but reversing indices and kron arguments
-    diag1 = ones(Nwz_t - 1)
+    diag1 = ones(T, Nwz_t - 1)
     M1D = spdiagm(Nwz_t - 1, Nwz_t, 0 => -diag1, 1 => diag1)
 
     # We only need derivative at inner pressure points, so we map the resulting
@@ -241,7 +246,7 @@ function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
     bc.w.z[1] != :pressure && bc.w.z[2] == :pressure && (diagpos = 0)
     bc.w.z[1] == :periodic && bc.w.z[2] == :periodic && (diagpos = 1)
 
-    BMz = spdiagm(Npz, Nwz_t - 1, diagpos => ones(Npz))
+    BMz = spdiagm(Npz, Nwz_t - 1, diagpos => ones(T, Npz))
     M1D = BMz * M1D
 
     # Extension to 3D to be used in post-processing files
@@ -263,22 +268,22 @@ function operator_divergence(grid::Grid{T,3}, boundary_conditions) where {T}
     # Note that this also holds for outflow boundary conditions, if the stress
     # on the ouflow boundary is properly taken into account in y_p (often this
     # stress will be zero)
-    G = -M'
+    G = -sparse(M')
 
     ## Pressure matrix for pressure correction method;
     # Also used to make initial data divergence free or compute additional poisson solve
-    # if !is_steady(problem) && !isa(viscosity_model, KEpsilonModel)
+    # if !is_steady(problem)
     # Note that the matrix for the pressure is constant in time.
     # Only the right hand side vector changes, so the pressure matrix can be set up
     # outside the time-stepping-loop.
 
     # Laplace = div grad
-    A = M * Diagonal(Ω⁻¹) * G
+    A = M * Diagonal(1 ./ Ω) * G
 
     # Check if all the row sums of the pressure matrix are zero, which
     # should be the case if there are no pressure boundary conditions
     if all(≠(:pressure), (bc.u.x..., bc.v.y..., bc.w.z...))
-        if any(≉(0; atol = 1e-10), sum(A; dims = 2))
+        if any(!≈(0; atol = sqrt(eps(T))), sum(A; dims = 2))
             @warn "Pressure matrix: not all rowsums are zero!"
         end
     end

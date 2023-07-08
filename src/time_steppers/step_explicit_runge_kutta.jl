@@ -1,22 +1,23 @@
-"""
-    step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
+create_stepper(
+    ::ExplicitRungeKuttaMethod;
+    setup,
+    pressure_solver,
+    bc_vectors,
+    V,
+    p,
+    t,
+    n = 0,
+) = (; setup, pressure_solver, bc_vectors, V, p, t, n)
 
-Perform one time step for the general explicit Runge-Kutta method (ERK).
-
-Dirichlet boundary points are not part of solution vector but are prescribed in a strong
-manner via the `u_bc` and `v_bc` functions.
-
-Non-mutating/allocating/out-of-place version.
-
-See also [`step!`](@ref).
-"""
-function step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+function step(method::ExplicitRungeKuttaMethod, stepper, Δt)
+    (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
     (; G, M) = operators
     (; A, b, c, p_add_solve) = method
+
+    T = typeof(Δt)
 
     # Update current solution (does not depend on previous step size)
     n += 1
@@ -32,8 +33,9 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
 
     # Reset RK arrays
     tᵢ = tₙ
-    kV = zeros(nV, 0)
-    kp = zeros(np, 0)
+    # kV = zeros(T, nV, 0)
+    # kp = zeros(T, np, 0)
+    kV = fill(V, 0)
 
     ## Start looping over stages
 
@@ -49,16 +51,18 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
 
         # Store right-hand side of stage i
         # Remove the -G*p contribution (but not y_p)
-        kVᵢ = Ω⁻¹ .* (F + G * p)
-        kV = [kV kVᵢ]
+        kVᵢ = 1 ./ Ω .* (F + G * p)
+        # kV = [kV kVᵢ]
+        kV = [kV; [kVᵢ]]
 
         # Update velocity current stage by sum of Fᵢ's until this stage, weighted
         # with Butcher tableau coefficients. This gives uᵢ₊₁, and for i=s gives uᵢ₊₁
-        V = kV * A[i, 1:i]
+        # V = dot(kV * A[i, 1:i]
+        V = sum(A[i, j] * kV[j] for j = 1:i)
 
         # Boundary conditions at tᵢ₊₁
         tᵢ = tₙ + c[i] * Δtₙ
-        if isnothing(bc_vectors) || bc_unsteady
+        if bc_unsteady
             bc_vectors = get_bc_vectors(setup, tᵢ)
         end
         (; yM) = bc_vectors
@@ -77,7 +81,7 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
         Gp = G * p
 
         # Update velocity current stage, which is now divergence free
-        V = @. Vₙ + Δtₙ * (V - c[i] * Ω⁻¹ * Gp)
+        V = @. Vₙ + Δtₙ * (V - c[i] / Ω * Gp)
     end
 
     # For steady bc we do an additional pressure solve
@@ -88,35 +92,17 @@ function step(stepper::ExplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
 end
 
-"""
-    step!(stepper::ExplicitRungeKuttaStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
-
-Perform one time step for the general explicit Runge-Kutta method (ERK).
-
-Dirichlet boundary points are not part of solution vector but are prescribed in a strong
-manner via the `u_bc` and `v_bc` functions.
-
-Mutating/non-allocating/in-place version.
-
-See also [`step`](@ref).
-"""
-function step!(
-    stepper::ExplicitRungeKuttaStepper,
-    Δt;
-    cache,
-    momentum_cache,
-    bc_vectors = nothing,
-)
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+function step!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache, momentum_cache)
+    (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
     (; G, M) = operators
     (; A, b, c, p_add_solve) = method
-    (; kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f) = cache
+    (; Vₙ, pₙ, kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f) = cache
 
     # Update current solution (does not depend on previous step size)
     n += 1
@@ -128,9 +114,9 @@ function step!(
     # Number of stages
     nstage = length(b)
 
-    # Reset RK arrays
-    kV .= 0
-    kp .= 0
+    # # Reset RK arrays
+    # kV .= 0
+    # kp .= 0
 
     tᵢ = tₙ
 
@@ -148,18 +134,23 @@ function step!(
 
         # Store right-hand side of stage i
         # Remove the -G*p contribution (but not y_p)
-        kVᵢ = @view kV[:, i]
+        # kVᵢ = @view kV[:, i]
+        kVᵢ = kV[i]
         mul!(kVᵢ, G, p)
-        @. kVᵢ = Ω⁻¹ * (F + kVᵢ)
-        # kVᵢ .= Ω⁻¹ .* (F + G * p)
+        @. kVᵢ = 1 ./ Ω * (F + kVᵢ)
+        # kVᵢ .= 1 ./ Ω .* (F + G * p)
 
         # Update velocity current stage by sum of Fᵢ's until this stage, weighted
         # with Butcher tableau coefficients. This gives uᵢ₊₁, and for i=s gives uᵢ₊₁
-        mul!(Vtemp, kV, A[i, :])
+        # mul!(Vtemp, kV, A[i, :])
+        Vtemp .= 0
+        for j = 1:i
+            Vtemp .= Vtemp .+ A[i, j] .* kV[j]
+        end
 
         # Boundary conditions at tᵢ₊₁
         tᵢ = tₙ + c[i] * Δtₙ
-        if isnothing(bc_vectors) || bc_unsteady
+        if bc_unsteady
             bc_vectors = get_bc_vectors(setup, tᵢ)
         end
         (; yM) = bc_vectors
@@ -181,7 +172,7 @@ function step!(
         mul!(Vtemp2, G, p)
 
         # Update velocity current stage, which is now divergence free
-        @. V = Vₙ + Δtₙ * (Vtemp - c[i] * Ω⁻¹ * Vtemp2)
+        @. V = Vₙ + Δtₙ * (Vtemp - c[i] / Ω * Vtemp2)
     end
 
     # For steady bc we do an additional pressure solve
@@ -203,5 +194,5 @@ function step!(
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
 end

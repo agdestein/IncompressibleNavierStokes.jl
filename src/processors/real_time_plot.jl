@@ -1,15 +1,13 @@
-function real_time_plot end
-
 """
-    real_time_plot(
-        state_observer,
-        setup::Setup{T,2};
+    field_plotter(
+        setup;
         fieldname = :vorticity,
-        type = heatmap,
+        type = nothing,
         sleeptime = 0.001,
+        alpha = 0.05,
     )
 
-Plot the solution every time the state is updated (2D version).
+Plot the solution every time the state `o` is updated.
 
 The `sleeptime` is slept at every update, to give Makie time to update the
 plot. Set this to `nothing` to skip sleeping.
@@ -21,19 +19,31 @@ Available fieldnames are:
 - `:streamfunction`,
 - `:pressure`.
 
-Available plot `type`s are:
+Available plot `type`s for 2D are:
 
-- `heatmap`,
+- `heatmap` (default),
 - `contour`,
 - `contourf`.
+
+Available plot `type`s for 3D are:
+
+- `contour` (default).
+
+The `alpha` value gets passed to `contour` in 3D.
 """
-function real_time_plot(
-    o::StateObserver,
-    setup::Setup{T,2};
+field_plotter(setup; nupdate = 1, kwargs...) =
+    processor(state -> field_plot(setup.grid.dimension, setup, state; kwargs...); nupdate)
+
+function field_plot(
+    ::Dimension{2},
+    setup,
+    state;
     fieldname = :vorticity,
     type = heatmap,
     sleeptime = 0.001,
-) where {T}
+    equal_axis = true,
+    displayfig = true,
+)
     (; boundary_conditions, grid) = setup
     (; xlims, ylims, x, y, xp, yp) = grid
 
@@ -67,18 +77,19 @@ function real_time_plot(
 
     field = @lift begin
         isnothing(sleeptime) || sleep(sleeptime)
-        (V, p, t) = $(o.state)
-        if fieldname == :velocity
-            up, vp = get_velocity(V, t, setup)
+        (; V, p, t) = $state
+        f = if fieldname == :velocity
+            up, vp = get_velocity(setup, V, t)
             map((u, v) -> √sum(u^2 + v^2), up, vp)
         elseif fieldname == :vorticity
-            get_vorticity(V, t, setup)
+            get_vorticity(setup, V, t)
         elseif fieldname == :streamfunction
-            get_streamfunction(V, t, setup)
+            get_streamfunction(setup, V, t)
         elseif fieldname == :pressure
             error("Not implemented")
-            reshape(copy(p), length(xp), length(yp))
+            reshape(p, length(xp), length(yp))
         end
+        Array(f)
     end
 
     lims = @lift begin
@@ -120,47 +131,28 @@ function real_time_plot(
     end
 
     ax.title = titlecase(string(fieldname))
-    ax.aspect = DataAspect()
+    equal_axis && (ax.aspect = DataAspect())
     ax.xlabel = "x"
     ax.ylabel = "y"
     limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
     Colorbar(fig[1, 2], hm)
 
+    displayfig && display(fig)
+
     fig
 end
 
-"""
-    real_time_plot(
-        state_observer,
-        setup::Setup{T,3};
-        fieldname = :vorticity,
-        sleeptime = 0.001,
-        alpha = 0.05,
-    )
-
-Plot the solution every time the state is updated (3D version).
-
-The `sleeptime` is slept at every update, to give Makie time to update the
-plot. Set this to `nothing` to skip sleeping.
-
-The plot type if `contour`.
-
-Available fieldnames are:
-
-- `:velocity`,
-- `:vorticity`,
-- `:streamfunction`,
-- `:pressure`.
-
-The `alpha` value gets passed to `contour`.
-"""
-function real_time_plot(
-    o::StateObserver,
-    setup::Setup{T,3};
+function field_plot(
+    ::Dimension{3},
+    setup,
+    state;
     fieldname = :vorticity,
     sleeptime = 0.001,
     alpha = 0.05,
-) where {T}
+    equal_axis = true,
+    levels = 3,
+    displayfig = true,
+)
     (; boundary_conditions, grid) = setup
     (; xlims, ylims, x, y, z, xp, yp, zp) = grid
 
@@ -195,36 +187,113 @@ function real_time_plot(
 
     field = @lift begin
         isnothing(sleeptime) || sleep(sleeptime)
-        (V, p, t) = $(o.state)
-        if fieldname == :velocity
-            up, vp, wp = get_velocity(V, t, setup)
+        (; V, p, t) = $state
+        f = if fieldname == :velocity
+            up, vp, wp = get_velocity(setup, V, t)
             map((u, v, w) -> √sum(u^2 + v^2 + w^2), up, vp, wp)
         elseif fieldname == :vorticity
-            get_vorticity(V, t, setup)
+            get_vorticity(setup, V, t)
         elseif fieldname == :streamfunction
-            get_streamfunction(V, t, setup)
+            get_streamfunction(setup, V, t)
         elseif fieldname == :pressure
             reshape(copy(p), length(xp), length(yp), length(zp))
         end
+        Array(f)
     end
 
     lims = @lift get_lims($field)
 
+    isnothing(levels) && (levels = @lift(LinRange($(lims)..., 10)))
+
+    aspect = equal_axis ? (; aspect = :data) : (;)
     fig = Figure()
-    ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect = :data)
-    hm = contour!(
-        ax,
-        xf,
-        yf,
-        zf,
-        field;
-        levels = @lift(LinRange($(lims)..., 10)),
-        colorrange = lims,
-        shading = false,
-        alpha,
-    )
+    ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
+    hm = contour!(ax, xf, yf, zf, field; levels, colorrange = lims, shading = false, alpha)
 
     Colorbar(fig[1, 2], hm)
 
+    displayfig && display(fig)
+
     fig
+end
+
+"""
+    energy_history_plotter(setup)
+
+Create energy history plot, with a history point added every time `step_observer` is updated.
+"""
+energy_history_plotter(setup; nupdate = 1, kwargs...) =
+    processor(state -> energy_history_plot(setup, state; kwargs...); nupdate)
+
+function energy_history_plot(setup, state; displayfig = true)
+    (; Ωp) = setup.grid
+    _points = Point2f[]
+    points = @lift begin
+        (; V, p, t) = $state
+        vels = get_velocity(setup, V, t)
+        vels = reshape.(vels, :)
+        E = sum(vel -> sum(@. Ωp * vel^2), vels)
+        push!(_points, Point2f(t, E))
+    end
+    fig = lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))
+    displayfig && display(fig)
+    fig
+end
+
+"""
+    energy_spectrum_plotter(setup; nupdate = 1)
+
+Create energy spectrum plot, redrawn every time `step_observer` is updated.
+"""
+energy_spectrum_plotter(setup; nupdate = 1, kwargs...) = processor(
+    state -> energy_spectrum_plot(setup.grid.dimension, setup, state; kwargs...);
+    nupdate,
+)
+
+function energy_spectrum_plot(::Dimension{2}, setup, state; displayfig = true)
+    (; xpp) = setup.grid
+    Kx, Ky = size(xpp) .÷ 2
+    kx = 1:(Kx-1)
+    ky = 1:(Ky-1)
+    kk = reshape([sqrt(kx^2 + ky^2) for kx ∈ kx, ky ∈ ky], :)
+    ehat = @lift begin
+        (; V, p, t) = $state
+        up, vp = get_velocity(setup, V, t)
+        e = up .^ 2 .+ vp .^ 2
+        reshape(abs.(fft(e)[kx.+1, ky.+1]), :)
+    end
+    espec = Figure()
+    ax = Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
+    ## ylims!(ax, (1e-20, 1))
+    scatter!(ax, kk, ehat; label = "Kinetic energy")
+    krange = LinRange(extrema(kk)..., 100)
+    lines!(ax, krange, 1e7 * krange .^ (-3); label = "k⁻³", color = :red)
+    axislegend(ax)
+    displayfig && display(espec)
+    espec
+end
+
+function energy_spectrum_plot(::Dimension{3}, setup, state, displayfig = true)
+    (; xpp) = setup.grid
+    Kx, Ky, Kz = size(xpp) .÷ 2
+    kx = 1:(Kx-1)
+    ky = 1:(Ky-1)
+    kz = 1:(Ky-1)
+    kk = reshape([sqrt(kx^2 + ky^2 + kz^2) for kx ∈ kx, ky ∈ ky, kz ∈ kz], :)
+    ehat = @lift begin
+        (; V, p, t) = $state
+        V = Array(V)
+        up, vp, wp = get_velocity(setup, V, t)
+        e = @. up^2 + vp^2 + wp^2
+        reshape(abs.(fft(e)[kx.+1, ky.+1, kz.+1]), :)
+    end
+    espec = Figure()
+    ax = Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
+    ## ylims!(ax, (1e-20, 1))
+    scatter!(ax, kk, ehat; label = "Kinetic energy")
+    krange = LinRange(extrema(kk)..., 100)
+    lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = "\$k^{-5/3}\$", color = :red)
+    axislegend(ax)
+    displayfig && display(espec)
+    espec
 end

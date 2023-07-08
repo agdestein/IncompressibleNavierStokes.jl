@@ -5,14 +5,13 @@ Energy-conserving solvers for the incompressible Navier-Stokes equations.
 """
 module IncompressibleNavierStokes
 
+using Adapt
 using FFTW
-using Interpolations
 using IterativeSolvers
 using LinearAlgebra
 using Printf
 using SparseArrays
 using Statistics
-using UnPack
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 using Makie
 
@@ -20,8 +19,8 @@ using Makie
 const ⊗ = kron
 
 # Grid
+include("grid/dimension.jl")
 include("grid/grid.jl")
-include("grid/get_dimension.jl")
 include("grid/stretched_grid.jl")
 include("grid/cosine_grid.jl")
 include("grid/max_size.jl")
@@ -62,11 +61,8 @@ include("operators/operator_interpolation.jl")
 include("operators/operator_postprocessing.jl")
 include("operators/operator_regularization.jl")
 include("operators/operator_turbulent_diffusion.jl")
-include("operators/ke_production.jl")
-include("operators/ke_convection.jl")
-include("operators/ke_diffusion.jl")
-include("operators/ke_viscosity.jl")
 include("operators/operator_viscosity.jl")
+include("operators/operator_filter.jl")
 
 # Pressure solvers
 include("solvers/pressure/pressure_solvers.jl")
@@ -79,11 +75,8 @@ include("time_steppers/methods.jl")
 include("time_steppers/tableaux.jl")
 include("time_steppers/nstage.jl")
 include("time_steppers/time_stepper_caches.jl")
-include("time_steppers/time_steppers.jl")
-include("time_steppers/change_time_stepper.jl")
 include("time_steppers/step.jl")
 include("time_steppers/isexplicit.jl")
-include("time_steppers/needs_startup_method.jl")
 include("time_steppers/lambda_max.jl")
 
 # Preprocess
@@ -91,13 +84,10 @@ include("preprocess/create_initial_conditions.jl")
 
 # Processors
 include("processors/processors.jl")
-include("processors/initialize.jl")
-include("processors/process.jl")
-include("processors/finalize.jl")
 include("processors/real_time_plot.jl")
+include("processors/animator.jl")
 
 # Momentum equation
-include("momentum/bodyforce.jl")
 include("momentum/compute_conservation.jl")
 include("momentum/check_symmetry.jl")
 include("momentum/convection_components.jl")
@@ -108,14 +98,10 @@ include("momentum/strain_tensor.jl")
 include("momentum/turbulent_K.jl")
 include("momentum/turbulent_viscosity.jl")
 
-# Problems
-include("problems/problems.jl")
-include("problems/is_steady.jl")
-
 # Solvers
 include("solvers/get_timestep.jl")
-include("solvers/solve.jl")
-include("solvers/solve_animate.jl")
+include("solvers/solve_steady_state.jl")
+include("solvers/solve_unsteady.jl")
 
 # Utils
 include("utils/filter_convection.jl")
@@ -131,53 +117,39 @@ include("postprocess/plot_pressure.jl")
 include("postprocess/plot_velocity.jl")
 include("postprocess/plot_vorticity.jl")
 include("postprocess/plot_streamfunction.jl")
-include("postprocess/plot_tracers.jl")
 include("postprocess/save_vtk.jl")
 
-# Reexport
-export @pack!
-
-# Grid
-export get_dimension
-
 # Force
-export SteadyBodyForce, UnsteadyBodyForce
+export SteadyBodyForce
 
 # Models
-export LaminarModel, KEpsilonModel, MixingLengthModel, SmagorinskyModel, QRModel
+export LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
 export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors
-export AbstractProcessor, Logger, StateObserver, VTKWriter, QuantityTracer
-export initialize!, process!, finalize!
-export real_time_plot
+export processor, step_logger, vtk_writer, field_saver
+export field_plotter, energy_history_plotter, energy_spectrum_plotter
+export animator
 
 # Setup
-export Grid, Operators, BoundaryConditions, Setup
+export Setup
 
 # 1D grids
 export stretched_grid, cosine_grid
 
 # Pressure solvers
-export DirectPressureSolver, CGPressureSolver, FourierPressureSolver
+export DirectPressureSolver, CGPressureSolver, SpectralPressureSolver
 export pressure_poisson,
     pressure_poisson!, pressure_additional_solve, pressure_additional_solve!
 
 # Problems
-export SteadyStateProblem, UnsteadyProblem, is_steady
-export solve, solve_animate
+export solve_unsteady, solve_steady_state
 export momentum, momentum!
 
-export create_initial_conditions, get_bc_vectors, get_velocity
+export create_initial_conditions, random_field, get_bc_vectors, get_velocity
 
 export plot_force,
-    plot_grid,
-    plot_pressure,
-    plot_streamfunction,
-    plot_velocity,
-    plot_vorticity,
-    plot_tracers,
-    save_vtk
+    plot_grid, plot_pressure, plot_streamfunction, plot_velocity, plot_vorticity, save_vtk
 
 # ODE methods
 

@@ -1,15 +1,14 @@
 """
-    solve(
-        problem::UnsteadyProblem,
-        method;
-        pressure_solver = DirectPressureSolver(problem.setup),
+    function solve_unsteady(
+        setup, V₀, p₀, tlims;
+        method = RK44(; T = eltype(V₀)),
+        pressure_solver = DirectPressureSolver(setup),
         Δt = nothing,
         cfl = 1,
         n_adapt_Δt = 1,
-        nstartup = 1,
-        method_startup = nothing,
         inplace = false,
-        processors = [],
+        processors = (),
+        device = identity,
     )
 
 Solve unsteady problem using `method`.
@@ -19,25 +18,45 @@ an integer.
 If `Δt = nothing`, the time step is chosen every `n_adapt_Δt` iteration with
 CFL-number `cfl` .
 
-For methods that are not self-starting, `nstartup` startup iterations are performed with
-`method_startup`.
-
 Each `processor` is called after every `processor.nupdate` time step.
+
+All arrays and operators are passed through the `device` function.
+This allows for performing computations on a different device than the host (CPU).
+To compute on an Nvidia GPU using CUDA, change
+
+```
+solve_unsteady(setup, V₀, p₀, tlims; kwargs...)
+```
+
+to the following:
+
+```
+using CUDA
+solve_unsteady(
+    setup, V₀, p₀, tlims;
+    device = cu,
+    kwargs...
+)
+```
+
+Note that the `state` observable passed to the `processor.initialize` function
+contains vector living on the device, and you may have to move them back to
+the host using `Array(V)` and `Array(p)` in the processor.
 """
-function solve(
-    problem::UnsteadyProblem,
-    method;
-    pressure_solver = DirectPressureSolver(problem.setup),
-    Δt = nothing,
+function solve_unsteady(
+    setup,
+    V₀,
+    p₀,
+    tlims;
+    method = RK44(; T = eltype(V₀)),
+    pressure_solver = DirectPressureSolver(setup),
+    Δt = zero(eltype(V₀)),
     cfl = 1,
     n_adapt_Δt = 1,
-    nstartup = 1,
-    method_startup = nothing,
     inplace = false,
-    processors = [],
+    processors = (),
+    device = identity,
 )
-    (; setup, V₀, p₀, tlims) = problem
-
     t_start, t_end = tlims
     isadaptive = isnothing(Δt)
     if !isadaptive
@@ -45,55 +64,46 @@ function solve(
         Δt = (t_end - t_start) / nstep
     end
 
-    # For methods that need a velocity field at n-1 the first time step
-    # (e.g. AB-CN, oneleg beta) use ERK or IRK
-    if needs_startup_method(method)
-        println("Starting up with method $(method_startup)")
-        method_use = method_startup
-    else
-        method_use = method
-    end
+    # Initialize BC arrays (currently only done on host, due to Kronecker
+    # products)
+    bc_vectors = get_bc_vectors(setup, t_start)
+
+    # Move vectors and operators to device (if any).
+    setup = device(setup)
+    V₀ = device(V₀)
+    p₀ = device(p₀)
+    bc_vectors = device(bc_vectors)
+    pressure_solver = device(pressure_solver)
 
     if inplace
-        cache = ode_method_cache(method_use, setup)
-        momentum_cache = MomentumCache(setup)
+        cache = ode_method_cache(method, setup, V₀, p₀)
+        momentum_cache = MomentumCache(setup, V₀, p₀)
     end
 
-    stepper = TimeStepper(;
-        method = method_use,
+    # Time stepper
+    stepper = create_stepper(
+        method;
         setup,
         pressure_solver,
+        bc_vectors,
         V = copy(V₀),
         p = copy(p₀),
-        t = copy(t_start),
-        Vₙ = copy(V₀),
-        pₙ = copy(p₀),
-        tₙ = copy(t_start),
+        t = t_start,
     )
+
+    # Get initial time step
     isadaptive && (Δt = get_timestep(stepper, cfl))
 
-    # Initialize BC arrays
-    bc_vectors = get_bc_vectors(setup, stepper.t)
-
-    # Processors for iteration results  
-    for ps ∈ processors
-        initialize!(ps, stepper)
-        process!(ps, stepper)
-    end
+    # Initialize processors for iteration results  
+    state = get_state(stepper)
+    states = map(ps -> Observable(state), processors)
+    initialized = map((ps, o) -> ps.initialize(o), processors, states)
 
     while stepper.t < t_end
-        if stepper.n == nstartup && needs_startup_method(method)
-            println("n = $(stepper.n): switching to primary ODE method ($method)")
-            stepper = change_time_stepper(stepper, method)
-            if inplace
-                cache = ode_method_cache(method, setup)
-            end
-        end
-
         if isadaptive
-            if rem(stepper.n, n_adapt_Δt) == 0
+            if stepper.n % n_adapt_Δt == 0
                 # Change timestep based on operators
-                Δt = get_timestep(stepper, cfl; bc_vectors)
+                Δt = get_timestep(stepper, cfl)
             end
 
             # Make sure not to step past `t_end`
@@ -102,20 +112,29 @@ function solve(
 
         # Perform a single time step with the time integration method
         if inplace
-            stepper = step!(stepper, Δt; cache, momentum_cache, bc_vectors)
+            stepper = step!(method, stepper, Δt; cache, momentum_cache)
         else
-            stepper = step(stepper, Δt; bc_vectors)
+            stepper = step(method, stepper, Δt)
         end
 
         # Process iteration results with each processor
-        for ps ∈ processors
+        for (ps, o) ∈ zip(processors, states)
             # Only update each `nupdate`-th iteration
-            stepper.n % ps.nupdate == 0 && process!(ps, stepper)
+            stepper.n % ps.nupdate == 0 && (o[] = get_state(stepper))
         end
     end
 
-    foreach(finalize!, processors)
+    (; V, p, t, n) = stepper
+    finalized = map((ps, i) -> ps.finalize(i, get_state(stepper)), processors, initialized)
 
+    # Final state
     (; V, p) = stepper
-    V, p
+
+    # Move output arrays to host
+    Array(V), Array(p), finalized
+end
+
+function get_state(stepper)
+    (; V, p, t, n) = stepper
+    (; V, p, t, n)
 end

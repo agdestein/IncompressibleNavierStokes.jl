@@ -20,15 +20,14 @@
     initial_pressure(x, y) = 0.0
     V₀, p₀ = create_initial_conditions(
         setup,
-        t_start;
         initial_velocity_u,
         initial_velocity_v,
+        t_start;
         initial_pressure,
     )
 
     @testset "Steady state problem" begin
-        problem = SteadyStateProblem(setup, V₀, p₀)
-        V, p = solve(problem)
+        V, p = solve_steady_state(setup, V₀, p₀)
 
         # Check that solution did not explode
         @test all(!isnan, V)
@@ -39,13 +38,10 @@
     end
 
     # Iteration processors
-    logger = Logger()
-    tracer = QuantityTracer()
-    processors = [logger, tracer]
+    processors = (step_logger(),)
 
     @testset "Unsteady problem" begin
-        problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-        V, p = solve(problem, RK44(); Δt = 0.01, processors)
+        V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors)
 
         # Check that solution did not explode
         @test all(!isnan, V)
@@ -53,9 +49,5 @@
 
         # Check that the average velocity is smaller than the lid velocity
         @test sum(abs, V) / length(V) < lid_vel
-
-        # Check for steady state convergence
-        @test tracer.umom[end] < 1e-10
-        @test tracer.vmom[end] < 1e-10
     end
 end

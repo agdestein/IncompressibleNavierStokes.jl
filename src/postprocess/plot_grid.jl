@@ -7,20 +7,17 @@ Plot nonuniform Cartesian grid.
 """
 function plot_grid end
 
-plot_grid(g::Grid{T,2}) where {T} = plot_grid(g.x, g.y)
-plot_grid(g::Grid{T,3}) where {T} = plot_grid(g.x, g.y, g.z)
-
-function plot_grid(x, y)
-    wireframe(
-        x,
-        y,
-        zeros(length(x), length(y));
-        axis = (; aspect = DataAspect(), xlabel = "x", ylabel = "y"),
-    )
-end
+plot_grid(x, y) = wireframe(
+    x,
+    y,
+    zeros(eltype(x), length(x), length(y));
+    axis = (; aspect = DataAspect(), xlabel = "x", ylabel = "y"),
+)
 
 function plot_grid(x, y, z)
     nx, ny, nz = length(x), length(y), length(z)
+    T = eltype(x)
+
     # x = repeat(x, 1, ny, nz)
     # y = repeat(reshape(y, 1, :, 1), nx, 1, nz)
     # z = repeat(reshape(z, 1, 1, :), nx, ny, 1)
@@ -38,15 +35,15 @@ function plot_grid(x, y, z)
     ax.aspect = :data
 
     ax = Axis(fig[1, 2]; xlabel = "x", ylabel = "y")
-    wireframe!(ax, x, y, zeros(length(x), length(y)))
+    wireframe!(ax, x, y, zeros(T, length(x), length(y)))
     ax.aspect = DataAspect()
 
     ax = Axis(fig[2, 1]; xlabel = "y", ylabel = "z")
-    wireframe!(ax, y, z, zeros(length(y), length(z)))
+    wireframe!(ax, y, z, zeros(T, length(y), length(z)))
     ax.aspect = DataAspect()
 
     ax = Axis(fig[2, 2]; xlabel = "x", ylabel = "z")
-    wireframe!(ax, x, z, zeros(length(x), length(z)))
+    wireframe!(ax, x, z, zeros(T, length(x), length(z)))
     ax.aspect = DataAspect()
 
     fig

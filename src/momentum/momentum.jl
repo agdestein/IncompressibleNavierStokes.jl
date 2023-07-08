@@ -49,7 +49,7 @@ function momentum(
     d, ∇d = diffusion(viscosity_model, V, setup; bc_vectors, get_jacobian)
 
     # Body force
-    b = bodyforce(force, t, setup)
+    b = force
 
     # Residual in Finite Volume form, including the pressure contribution
     F = @. -c + d + b
@@ -132,7 +132,7 @@ function momentum!(
     diffusion!(viscosity_model, d, ∇d, V, setup; bc_vectors, get_jacobian)
 
     # Body force
-    bodyforce!(force, b, t, setup)
+    b = force
 
     # Residual in Finite Volume form, including the pressure contribution
     @. F = -c + d + b

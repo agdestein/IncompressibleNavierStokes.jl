@@ -5,8 +5,11 @@ Compute mass, momentum and energy conservation properties of velocity field.
 """
 function compute_conservation end
 
+compute_conservation(V, t, setup; bc_vectors = nothing) =
+    compute_conservation(setup.grid.dimension, V, t, setup; bc_vectors = nothing)
+
 # 2D version
-function compute_conservation(V, t, setup::Setup{T,2}; bc_vectors = nothing) where {T}
+function compute_conservation(::Dimension{2}, V, t, setup; bc_vectors = nothing)
     (; grid, operators, boundary_conditions) = setup
     (; indu, indv, Ω, x, y, xp, yp, hx, hy, gx, gy) = grid
     (; M) = operators
@@ -42,21 +45,23 @@ function compute_conservation(V, t, setup::Setup{T,2}; bc_vectors = nothing) whe
     boundary_conditions.v.y[2] == :dirichlet && (vmom += sum(vUp_i .* hx) * gy[end])
 
     # Calculate total kinetic energy
-    k = 1 / 2 * sum(Ω .* V .^ 2)
+    k = 1 // 2 * sum(Ω .* V .^ 2)
 
     # Add boundary contributions in case of Dirichlet BC
-    boundary_conditions.u.x[1] == :dirichlet && (k += 1 / 2 * sum(uLe_i .^ 2 .* hy) * gx[1])
+    boundary_conditions.u.x[1] == :dirichlet &&
+        (k += 1 // 2 * sum(uLe_i .^ 2 .* hy) * gx[1])
     boundary_conditions.u.x[2] == :dirichlet &&
-        (k += 1 / 2 * sum(uRi_i .^ 2 .* hy) * gx[end])
-    boundary_conditions.v.y[1] == :dirichlet && (k += 1 / 2 * sum(vLo_i .^ 2 .* hx) * gy[1])
+        (k += 1 // 2 * sum(uRi_i .^ 2 .* hy) * gx[end])
+    boundary_conditions.v.y[1] == :dirichlet &&
+        (k += 1 // 2 * sum(vLo_i .^ 2 .* hx) * gy[1])
     boundary_conditions.v.y[2] == :dirichlet &&
-        (k += 1 / 2 * sum(vUp_i .^ 2 .* hx) * gy[end])
+        (k += 1 // 2 * sum(vUp_i .^ 2 .* hx) * gy[end])
 
     maxdiv, umom, vmom, k
 end
 
 # 3D version
-function compute_conservation(V, t, setup::Setup{T,3}; bc_vectors = nothing) where {T}
+function compute_conservation(::Dimension{3}, V, t, setup; bc_vectors = nothing)
     (; grid, operators, boundary_conditions) = setup
     (; indu, indv, indw, Ω, x, y, z, xp, yp, zp, hx, hy, hz, gx, gy, gz) = grid
     (; M) = operators
@@ -99,21 +104,21 @@ function compute_conservation(V, t, setup::Setup{T,3}; bc_vectors = nothing) whe
     boundary_conditions.w.z[2] == :dirichlet && (wmom += sum(wFr_i .* (hy ⊗ hx)) * gz[end])
 
     # Calculate total kinetic energy
-    k = 1 / 2 * sum(Ω .* V .^ 2)
+    k = 1 // 2 * sum(Ω .* V .^ 2)
 
     # Add boundary contributions in case of Dirichlet BC
     boundary_conditions.u.x[1] == :dirichlet &&
-        (k += 1 / 2 * sum(uLe_i .^ 2 .* (hz ⊗ hy)) * gx[1])
+        (k += 1 // 2 * sum(uLe_i .^ 2 .* (hz ⊗ hy)) * gx[1])
     boundary_conditions.u.x[2] == :dirichlet &&
-        (k += 1 / 2 * sum(uRi_i .^ 2 .* (hz ⊗ hy)) * gx[end])
+        (k += 1 // 2 * sum(uRi_i .^ 2 .* (hz ⊗ hy)) * gx[end])
     boundary_conditions.v.y[1] == :dirichlet &&
-        (k += 1 / 2 * sum(vLo_i .^ 2 .* (hz ⊗ hx)) * gy[1])
+        (k += 1 // 2 * sum(vLo_i .^ 2 .* (hz ⊗ hx)) * gy[1])
     boundary_conditions.v.y[2] == :dirichlet &&
-        (k += 1 / 2 * sum(vUp_i .^ 2 .* (hz ⊗ hx)) * gy[end])
+        (k += 1 // 2 * sum(vUp_i .^ 2 .* (hz ⊗ hx)) * gy[end])
     boundary_conditions.w.z[1] == :dirichlet &&
-        (k += 1 / 2 * sum(wBa_i .^ 2 .* (hy ⊗ hx)) * gz[1])
+        (k += 1 // 2 * sum(wBa_i .^ 2 .* (hy ⊗ hx)) * gz[1])
     boundary_conditions.w.z[2] == :dirichlet &&
-        (k += 1 / 2 * sum(wFr_i .^ 2 .* (hy ⊗ hx)) * gz[end])
+        (k += 1 // 2 * sum(wFr_i .^ 2 .* (hy ⊗ hx)) * gz[end])
 
     maxdiv, umom, vmom, wmom, k
 end

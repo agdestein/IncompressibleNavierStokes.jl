@@ -6,7 +6,14 @@ Abstract ODE method.
 abstract type AbstractODEMethod{T} end
 
 """
-    AdamsBashforthCrankNicolsonMethod(; α₁ = 3 // 2, α₂ = -1 // 2, θ = 1 // 2, p_add_solve = true)
+    AdamsBashforthCrankNicolsonMethod(
+        T = Float64;
+        α₁ = T(3 // 2),
+        α₂ = T(-1 // 2),
+        θ = T(1 // 2),
+        p_add_solve = true,
+        method_startup = RK44(; T),
+    )
 
 IMEX AB-CN: Adams-Bashforth for explicit convection (parameters `α₁` and `α₂`) and
 Crank-Nicolson for implicit diffusion (implicitness `θ`).
@@ -39,21 +46,34 @@ where BC are boundary conditions of diffusion. This is rewritten as:
 \\end{align*}
 ```
 
-The LU decomposition of the LHS matrix is precomputed in `operator_convection_diffusion.jl`.
+The LU decomposition of the LHS matrix is computed every time the time step changes.
 
 Note that, in constrast to explicit methods, the pressure from previous time steps has an
 influence on the accuracy of the velocity.
-
 """
-Base.@kwdef struct AdamsBashforthCrankNicolsonMethod{T} <: AbstractODEMethod{T}
-    α₁::T = 3 // 2
-    α₂::T = -1 // 2
-    θ::T = 1 // 2
-    p_add_solve::Bool = true
+struct AdamsBashforthCrankNicolsonMethod{T,M} <: AbstractODEMethod{T}
+    α₁::T
+    α₂::T
+    θ::T
+    p_add_solve::Bool
+    method_startup::M
+    AdamsBashforthCrankNicolsonMethod(
+        T = Float64;
+        α₁ = T(3 // 2),
+        α₂ = T(-1 // 2),
+        θ = T(1 // 2),
+        p_add_solve = true,
+        method_startup = RK44(; T),
+    ) = new{T,typeof(method_startup)}(α₁, α₂, θ, p_add_solve, method_startup)
 end
 
 """
-    OneLegMethod(; β = 1 // 2, p_add_solve = true)
+    OneLegMethod(
+        T = Float64;
+        β = T(1 // 2),
+        p_add_solve = true,
+        method_startup = RK44(; T),
+    )
 
 Explicit one-leg β-method following symmetry-preserving discretization of
 turbulent flow. See [Verstappen and Veldman (JCP 2003)] for details, or [Direct numerical
@@ -66,9 +86,16 @@ Formulation:
 \\beta) u^n - \\beta u^{n-1}).
 ```
 """
-Base.@kwdef struct OneLegMethod{T} <: AbstractODEMethod{T}
-    β::T = 1 // 2
-    p_add_solve::Bool = true
+struct OneLegMethod{T,M} <: AbstractODEMethod{T}
+    β::T
+    p_add_solve::Bool
+    method_startup::M
+    OneLegMethod(
+        T = Float64;
+        β = T(1 // 2),
+        p_add_solve = true,
+        method_startup = RK44(; T),
+    ) = new{T,typeof(method_startup)}(β, p_add_solve, method_startup)
 end
 
 """
@@ -134,14 +161,11 @@ Get Runge Kutta method. The function checks whether the method is explicit.
 
 For implicit RK methods: `newton_type`, `maxiter`, `abstol`, `reltol`.
 """
-function runge_kutta_method(A, b, c, r; kwargs...)
+function runge_kutta_method(A, b, c, r; T = Float64, kwargs...)
     s = size(A, 1)
     s == size(A, 2) == length(b) == length(c) ||
         error("A, b, and c must have the same sizes")
     isexplicit = all(≈(0), UpperTriangular(A))
-    # T = promote_type(eltype(A), eltype(b), eltype(c), typeof(r))
-    # TODO: Find where to pass T
-    T = Float64
     A = convert(Matrix{T}, A)
     b = convert(Vector{T}, b)
     c = convert(Vector{T}, c)

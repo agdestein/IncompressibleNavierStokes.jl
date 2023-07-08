@@ -1,5 +1,10 @@
 """
-    convection(model, V, ϕ, setup; bc_vectors, get_jacobian = false)
+    convection(
+        model, V, ϕ, setup;
+        bc_vectors,
+        get_jacobian = false,
+        newton_factor = false,
+    )
 
 Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`, using the convection
 model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
@@ -10,7 +15,11 @@ See also [`convection!`](@ref).
 """
 function convection end
 
+convection(m, V, ϕ, setup; kwargs...) =
+    convection(setup.grid.dimension, m, V, ϕ, setup; kwargs...)
+
 function convection(
+    dimension,
     ::NoRegConvectionModel,
     V,
     ϕ,
@@ -51,17 +60,18 @@ end
 
 # 2D version
 function convection(
+    ::Dimension{2},
     ::C2ConvectionModel,
     V,
     ϕ,
-    setup::Setup{T,2};
+    setup;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
-) where {T}
+)
     (; grid, operators) = setup
     (; indu, indv) = grid
-    (; Diffu_f, Diffv_f, M, α) = operators
+    (; Diffu_f, Diffv_f, M, α_reg) = operators
     (; yDiffu_f, yDiffv_f, yM) = bc_vectors
 
     uₕ = @view V[indu]
@@ -70,11 +80,11 @@ function convection(
     ϕu = @view ϕ[indu]
     ϕv = @view ϕ[indv]
 
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α_reg)
+    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α_reg)
 
-    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
-    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
+    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α_reg)
+    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α_reg)
 
     ϕ̄ = [ϕ̄u; ϕ̄v]
     V̄ = [ūₕ; v̄ₕ]
@@ -87,8 +97,8 @@ function convection(
     cu = @view c[indu]
     cv = @view c[indv]
 
-    cu = filter_convection(cu, Diffu_f, yDiffu_f, α)
-    cv = filter_convection(cv, Diffv_f, yDiffv_f, α)
+    cu = filter_convection(cu, Diffu_f, yDiffu_f, α_reg)
+    cv = filter_convection(cv, Diffv_f, yDiffv_f, α_reg)
 
     c = [cu; cv]
 
@@ -97,17 +107,18 @@ end
 
 # 3D version
 function convection(
+    ::Dimension{3},
     ::C2ConvectionModel,
     V,
     ϕ,
-    setup::Setup{T,3};
+    setup;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
-) where {T}
+)
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
-    (; Diffu_f, Diffv_f, Diffw_f, M, α) = operators
+    (; Diffu_f, Diffv_f, Diffw_f, M, α_reg) = operators
     (; yDiffu_f, yDiffv_f, yDiffw_f, yM) = bc_vectors
 
     uₕ = @view V[indu]
@@ -118,13 +129,13 @@ function convection(
     ϕv = @view ϕ[indv]
     ϕw = @view ϕ[indw]
 
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
-    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α)
+    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α_reg)
+    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α_reg)
+    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α_reg)
 
-    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
-    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
-    w̄ₕ = filter_convection(wₕ, Diffw_f, yDiffw_f, α)
+    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α_reg)
+    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α_reg)
+    w̄ₕ = filter_convection(wₕ, Diffw_f, yDiffw_f, α_reg)
 
     ϕ̄ = [ϕ̄u; ϕ̄v; ϕ̄w]
     V̄ = [ūₕ; v̄ₕ; w̄ₕ]
@@ -139,9 +150,9 @@ function convection(
     cv = @view c[indv]
     cw = @view c[indw]
 
-    cu = filter_convection(cu, Diffu_f, yDiffu_f, α)
-    cv = filter_convection(cv, Diffv_f, yDiffv_f, α)
-    cw = filter_convection(cw, Diffw_f, yDiffw_f, α)
+    cu = filter_convection(cu, Diffu_f, yDiffu_f, α_reg)
+    cv = filter_convection(cv, Diffv_f, yDiffv_f, α_reg)
+    cw = filter_convection(cw, Diffw_f, yDiffw_f, α_reg)
 
     c = [cu; cv; cw]
 
@@ -150,17 +161,18 @@ end
 
 # 2D version
 function convection(
+    ::Dimension{2},
     ::C4ConvectionModel,
     V,
     ϕ,
-    setup::Setup{T,2};
+    setup;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
-) where {T}
+)
     (; grid, operators) = setup
     (; indu, indv) = grid
-    (; Diffu_f, Diffv_f, M, α) = operators
+    (; Diffu_f, Diffv_f, M, α_reg) = operators
     (; yDiffu_f, yDiffv_f, yM) = bc_vectors
 
     uₕ = @view V[indu]
@@ -172,17 +184,17 @@ function convection(
     # C4 consists of 3 terms:
     # C4 = conv(filter(u), filter(u)) + filter(conv(filter(u), u') +
     #      filter(conv(u', filter(u)))
-    # Where u' = u - filter(u)
+    # where u' = u - filter(u)
 
     # Filter both convecting and convected velocity
-    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
-    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
+    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α_reg)
+    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α_reg)
 
     V̄ = [ūₕ; v̄ₕ]
     ΔV = V - V̄
 
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α_reg)
+    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α_reg)
 
     ϕ̄ = [ϕ̄u; ϕ̄v]
     Δϕ = ϕ - ϕ̄
@@ -203,8 +215,8 @@ function convection(
     cu3 = @view c3[indu]
     cv3 = @view c3[indv]
 
-    cu += filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
-    cv += filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α)
+    cu += filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α_reg)
+    cv += filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α_reg)
 
     c = [cu; cv]
 
@@ -213,17 +225,18 @@ end
 
 # 3D version
 function convection(
+    ::Dimension{3},
     ::C4ConvectionModel,
     V,
     ϕ,
-    setup::Setup{T,3};
+    setup;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
-) where {T}
+)
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
-    (; Diffu_f, Diffv_f, Diffw_f, M, α) = operators
+    (; Diffu_f, Diffv_f, Diffw_f, M, α_reg) = operators
     (; yDiffu_f, yDiffv_f, yDiffw_f, yM) = bc_vectors
     (; c2, ∇c2, c3, ∇c3) = cache
 
@@ -238,19 +251,19 @@ function convection(
     # C4 consists of 3 terms:
     # C4 = conv(filter(u), filter(u)) + filter(conv(filter(u), u') +
     #      filter(conv(u', filter(u)))
-    # Where u' = u - filter(u)
+    # where u' = u - filter(u)
 
     # Filter both convecting and convected velocity
-    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
-    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
-    w̄ₕ = filter_convection(wₕ, Diffw_f, yDiffw_f, α)
+    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α_reg)
+    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α_reg)
+    w̄ₕ = filter_convection(wₕ, Diffw_f, yDiffw_f, α_reg)
 
     V̄ = [ūₕ; v̄ₕ; w̄ₕ]
     ΔV = V - V̄
 
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
-    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α)
+    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α_reg)
+    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α_reg)
+    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α_reg)
 
     ϕ̄ = [ϕ̄u; ϕ̄v; ϕ̄w]
     Δϕ = ϕ - ϕ̄
@@ -274,9 +287,9 @@ function convection(
     cv3 = @view c3[indv]
     cw3 = @view c3[indw]
 
-    cu += filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
-    cv += filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α)
-    cw += filter_convection(cw2 + cw3, Diffw_f, yDiffw_f, α)
+    cu += filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α_reg)
+    cv += filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α_reg)
+    cw += filter_convection(cw2 + cw3, Diffw_f, yDiffw_f, α_reg)
 
     c = [cu; cv; cw]
 
@@ -285,17 +298,18 @@ end
 
 # 2D version
 function convection(
+    ::Dimension{2},
     ::LerayConvectionModel,
     V,
     ϕ,
-    setup::Setup{T,2};
+    setup;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
-) where {T}
+)
     (; grid, operators) = setup
     (; indu, indv) = grid
-    (; Diffu_f, Diffv_f, M, α) = operators
+    (; Diffu_f, Diffv_f, M, α_reg) = operators
     (; yDiffu_f, yDiffv_f, yM) = bc_vectors
 
     ϕu = @view ϕ[indu]
@@ -305,8 +319,8 @@ function convection(
     error("Leray convection not implemented yet")
 
     # Filter the convecting field
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α_reg)
+    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α_reg)
 
     ϕ̄ = [ϕ̄u; ϕ̄v]
 
@@ -318,20 +332,21 @@ end
 
 # 3D version
 function convection(
+    ::Dimension{3},
     ::LerayConvectionModel,
     c,
     ∇c,
     V,
     ϕ,
-    setup::Setup{T,3},
+    setup,
     bc_vectors,
     cache;
     get_jacobian = false,
     newton_factor = false,
-) where {T}
+)
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
-    (; Diffu_f, Diffv_f, Diffw_f, M, α) = operators
+    (; Diffu_f, Diffv_f, Diffw_f, M, α_reg) = operators
     (; yDiffu_f, yDiffv_f, yDiffw_f, yM) = bc_vectors
 
     ϕu = @view ϕ[indu]
@@ -342,9 +357,9 @@ function convection(
     error("Leray convection not implemented yet")
 
     # Filter the convecting field
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
-    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α)
+    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α_reg)
+    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α_reg)
+    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α_reg)
 
     ϕ̄ = [ϕ̄u; ϕ̄v; ϕ̄w]
 
@@ -355,7 +370,12 @@ function convection(
 end
 
 """
-    convection!(model, c, ∇c, V, ϕ, setup, cache; bc_vectors, get_jacobian = false)
+    convection!(
+        model, c, ∇c, V, ϕ, setup, cache;
+        bc_vectors,
+        get_jacobian = false,
+        newton_factor = false,
+    )
 
 Evaluate convective terms `c` and, optionally, Jacobian `∇c = ∂c/∂V`, using the convection
 model `model`. The convected quantity is `ϕ` (usually `ϕ = V`).
@@ -366,7 +386,11 @@ See also [`convection`](@ref).
 """
 function convection! end
 
+convection!(m, c, ∇c, V, ϕ, setup, cache; kwargs...) =
+    convection!(setup.grid.dimension, m, c, ∇c, V, ϕ, setup, cache; kwargs...)
+
 function convection!(
+    dimension,
     ::NoRegConvectionModel,
     c,
     ∇c,
@@ -417,20 +441,21 @@ end
 
 # 2D version
 function convection!(
+    ::Dimension{2},
     ::C2ConvectionModel,
     c,
     ∇c,
     V,
     ϕ,
-    setup::Setup{T,2},
+    setup,
     cache;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
-) where {T}
+)
     (; grid, operators) = setup
     (; indu, indv) = grid
-    (; Diffu_f, Diffv_f, M, α) = operators
+    (; Diffu_f, Diffv_f, M, α_reg) = operators
     (; yDiffu_f, yDiffv_f, yM) = bc_vectors
 
     cu = @view c[indu]
@@ -442,11 +467,11 @@ function convection!(
     ϕu = @view ϕ[indu]
     ϕv = @view ϕ[indv]
 
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α_reg)
+    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α_reg)
 
-    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
-    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
+    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α_reg)
+    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α_reg)
 
     ϕ̄ = [ϕ̄u; ϕ̄v]
     V̄ = [ūₕ; v̄ₕ]
@@ -466,28 +491,29 @@ function convection!(
         newton_factor,
     )
 
-    cu .= filter_convection(cu, Diffu_f, yDiffu_f, α)
-    cv .= filter_convection(cv, Diffv_f, yDiffv_f, α)
+    cu .= filter_convection(cu, Diffu_f, yDiffu_f, α_reg)
+    cv .= filter_convection(cv, Diffv_f, yDiffv_f, α_reg)
 
     c, ∇c
 end
 
 # 3D version
 function convection!(
+    ::Dimension{3},
     ::C2ConvectionModel,
     c,
     ∇c,
     V,
     ϕ,
-    setup::Setup{T,3},
+    setup,
     cache;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
-) where {T}
+)
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
-    (; Diffu_f, Diffv_f, Diffw_f, M, α) = operators
+    (; Diffu_f, Diffv_f, Diffw_f, M, α_reg) = operators
     (; yDiffu_f, yDiffv_f, yDiffw_f, yM) = bc_vectors
 
     cu = @view c[indu]
@@ -502,13 +528,13 @@ function convection!(
     ϕv = @view ϕ[indv]
     ϕw = @view ϕ[indw]
 
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
-    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α)
+    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α_reg)
+    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α_reg)
+    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α_reg)
 
-    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
-    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
-    w̄ₕ = filter_convection(wₕ, Diffw_f, yDiffw_f, α)
+    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α_reg)
+    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α_reg)
+    w̄ₕ = filter_convection(wₕ, Diffw_f, yDiffw_f, α_reg)
 
     ϕ̄ = [ϕ̄u; ϕ̄v; ϕ̄w]
     V̄ = [ūₕ; v̄ₕ; w̄ₕ]
@@ -528,29 +554,30 @@ function convection!(
         newton_factor,
     )
 
-    cu .= filter_convection(cu, Diffu_f, yDiffu_f, α)
-    cv .= filter_convection(cv, Diffv_f, yDiffv_f, α)
-    cw .= filter_convection(cw, Diffw_f, yDiffw_f, α)
+    cu .= filter_convection(cu, Diffu_f, yDiffu_f, α_reg)
+    cv .= filter_convection(cv, Diffv_f, yDiffv_f, α_reg)
+    cw .= filter_convection(cw, Diffw_f, yDiffw_f, α_reg)
 
     c, ∇c
 end
 
 # 2D version
 function convection!(
+    ::Dimension{2},
     ::C4ConvectionModel,
     c,
     ∇c,
     V,
     ϕ,
-    setup::Setup{T,2},
+    setup,
     cache;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
-) where {T}
+)
     (; grid, operators) = setup
     (; indu, indv) = grid
-    (; Diffu_f, Diffv_f, M, α) = operators
+    (; Diffu_f, Diffv_f, M, α_reg) = operators
     (; yDiffu_f, yDiffv_f, yM) = bc_vectors
     (; c2, ∇c2, c3, ∇c3) = cache
 
@@ -570,17 +597,17 @@ function convection!(
     # C4 consists of 3 terms:
     # C4 = conv(filter(u), filter(u)) + filter(conv(filter(u), u') +
     #      filter(conv(u', filter(u)))
-    # Where u' = u - filter(u)
+    # where u' = u - filter(u)
 
     # Filter both convecting and convected velocity
-    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
-    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
+    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α_reg)
+    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α_reg)
 
     V̄ = [ūₕ; v̄ₕ]
     ΔV = V - V̄
 
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α_reg)
+    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α_reg)
 
     ϕ̄ = [ϕ̄u; ϕ̄v]
     Δϕ = ϕ - ϕ̄
@@ -622,28 +649,29 @@ function convection!(
         newton_factor,
     )
 
-    cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
-    cv .+= filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α)
+    cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α_reg)
+    cv .+= filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α_reg)
 
     c, ∇c
 end
 
 # 3D version
 function convection!(
+    ::Dimension{3},
     ::C4ConvectionModel,
     c,
     ∇c,
     V,
     ϕ,
-    setup::Setup{T,3},
+    setup,
     cache;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
-) where {T}
+)
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
-    (; Diffu_f, Diffv_f, Diffw_f, M, α) = operators
+    (; Diffu_f, Diffv_f, Diffw_f, M, α_reg) = operators
     (; yDiffu_f, yDiffv_f, yDiffw_f, yM) = bc_vectors
     (; c2, ∇c2, c3, ∇c3) = cache
 
@@ -670,19 +698,19 @@ function convection!(
     # C4 consists of 3 terms:
     # C4 = conv(filter(u), filter(u)) + filter(conv(filter(u), u') +
     #      filter(conv(u', filter(u)))
-    # Where u' = u - filter(u)
+    # where u' = u - filter(u)
 
     # Filter both convecting and convected velocity
-    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α)
-    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α)
-    w̄ₕ = filter_convection(wₕ, Diffw_f, yDiffw_f, α)
+    ūₕ = filter_convection(uₕ, Diffu_f, yDiffu_f, α_reg)
+    v̄ₕ = filter_convection(vₕ, Diffv_f, yDiffv_f, α_reg)
+    w̄ₕ = filter_convection(wₕ, Diffw_f, yDiffw_f, α_reg)
 
     V̄ = [ūₕ; v̄ₕ; w̄ₕ]
     ΔV = V - V̄
 
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
-    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α)
+    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α_reg)
+    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α_reg)
+    ϕ̄w = filter_convection(ϕw, Diffw_f, yDiffw_f, α_reg)
 
     ϕ̄ = [ϕ̄u; ϕ̄v; ϕ̄w]
     Δϕ = ϕ - ϕ̄
@@ -724,29 +752,30 @@ function convection!(
         newton_factor,
     )
 
-    cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α)
-    cv .+= filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α)
-    cw .+= filter_convection(cw2 + cw3, Diffw_f, yDiffw_f, α)
+    cu .+= filter_convection(cu2 + cu3, Diffu_f, yDiffu_f, α_reg)
+    cv .+= filter_convection(cv2 + cv3, Diffv_f, yDiffv_f, α_reg)
+    cw .+= filter_convection(cw2 + cw3, Diffw_f, yDiffw_f, α_reg)
 
     c, ∇c
 end
 
 # 2D version
 function convection!(
+    ::Dimension{2},
     ::LerayConvectionModel,
     c,
     ∇c,
     V,
     ϕ,
-    setup::Setup{T,2},
+    setup,
     cache;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
-) where {T}
+)
     (; grid, operators) = setup
     (; indu, indv) = grid
-    (; Diffu_f, Diffv_f, M, α) = operators
+    (; Diffu_f, Diffv_f, M, α_reg) = operators
     (; yDiffu_f, yDiffv_f, yM) = bc_vectors
 
     ϕu = @view ϕ[indu]
@@ -756,8 +785,8 @@ function convection!(
     error("Leray convection not implemented yet")
 
     # Filter the convecting field
-    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α)
-    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α)
+    ϕ̄u = filter_convection(ϕu, Diffu_f, yDiffu_f, α_reg)
+    ϕ̄v = filter_convection(ϕv, Diffv_f, yDiffv_f, α_reg)
 
     ϕ̄ = [ϕ̄u; ϕ̄v]
 
@@ -781,17 +810,18 @@ end
 
 # 3D version
 function convection!(
+    ::Dimension{3},
     ::LerayConvectionModel,
     c,
     ∇c,
     V,
     ϕ,
-    setup::Setup{T,3},
+    setup,
     cache;
     bc_vectors,
     get_jacobian = false,
     newton_factor = false,
-) where {T}
+)
     (; grid, operators) = setup
     (; indu, indv, indw) = grid
     (; Diffu_f, Diffv_f, Diffw_f, M, α) = operators

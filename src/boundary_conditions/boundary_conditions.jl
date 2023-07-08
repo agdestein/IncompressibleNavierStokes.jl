@@ -1,28 +1,4 @@
 """
-    BoundaryConditions{T}
-
-Boundary conditions with floating point type `T`.
-"""
-Base.@kwdef struct BoundaryConditions{T,U,V,W,DU,DV,DW}
-    bc_unsteady::Bool = false
-    u::NamedTuple = (;)
-    v::NamedTuple = (;)
-    w::NamedTuple = (;)
-    k::NamedTuple = (;)
-    e::NamedTuple = (;)
-    ν::NamedTuple = (;)
-    u_bc::U
-    v_bc::V
-    w_bc::W
-    dudt_bc::DU
-    dvdt_bc::DV
-    dwdt_bc::DW
-    p_bc::NamedTuple = (;)
-    k_bc::NamedTuple = (;)
-    e_bc::NamedTuple = (;)
-end
-
-"""
     BoundaryConditions(u_bc, v_bc; T = Float64, bc_unsteady, bc_type, kwargs...)
 
 Create discrete boundary condtions.
@@ -55,32 +31,7 @@ function BoundaryConditions(
     p∞ = zero(T)
     p_bc = (; x = (p∞, p∞), y = (p∞, p∞))
 
-    # K-eps values
-    k_bc = (; x = (zero(T), zero(T)), y = (zero(T), zero(T)))
-    e_bc = (; x = (zero(T), zero(T)), y = (zero(T), zero(T)))
-
-    BoundaryConditions{
-        T,
-        typeof(u_bc),
-        typeof(v_bc),
-        Nothing,
-        typeof(dudt_bc),
-        typeof(dvdt_bc),
-        Nothing,
-    }(;
-        bc_unsteady,
-        bc_type...,
-        u_bc,
-        v_bc,
-        w_bc = nothing,
-        dudt_bc,
-        dvdt_bc,
-        dwdt_bc = nothing,
-        p_bc,
-        k_bc,
-        e_bc,
-        kwargs...,
-    )
+    (; bc_unsteady, bc_type..., u_bc, v_bc, dudt_bc, dvdt_bc, p_bc, kwargs...)
 end
 
 """
@@ -129,19 +80,7 @@ function BoundaryConditions(
     p∞ = zero(T)
     p_bc = (; x = (p∞, p∞), y = (p∞, p∞), z = (p∞, p∞))
 
-    # K-eps values
-    k_bc = (; x = (zero(T), zero(T)), y = (zero(T), zero(T)), z = (zero(T), zero(T)))
-    e_bc = (; x = (zero(T), zero(T)), y = (zero(T), zero(T)), z = (zero(T), zero(T)))
-
-    BoundaryConditions{
-        T,
-        typeof(u_bc),
-        typeof(v_bc),
-        typeof(w_bc),
-        typeof(dudt_bc),
-        typeof(dvdt_bc),
-        typeof(dwdt_bc),
-    }(;
+    (;
         bc_unsteady,
         bc_type...,
         u_bc,
@@ -151,8 +90,6 @@ function BoundaryConditions(
         dvdt_bc,
         dwdt_bc,
         p_bc,
-        k_bc,
-        e_bc,
         kwargs...,
     )
 end

@@ -5,14 +5,18 @@ Evaluate rate of strain tensor `S(V)` and its magnitude.
 """
 function strain_tensor end
 
+strain_tensor(V, setup; kwargs...) =
+    strain_tensor(setup.grid.dimension, V, setup; kwargs...)
+
 # 2D version
 function strain_tensor(
+    ::Dimension{2},
     V,
-    setup::Setup{T,2};
+    setup;
     bc_vectors,
     get_jacobian = false,
     get_S_abs = false,
-) where {T}
+)
     (; grid, operators, boundary_conditions) = setup
     (; Nx, Ny, Nu, Nv, Np, indu, indv) = grid
     (; Nux_in, Nuy_in, Nvx_in, Nvy_in) = grid
@@ -22,13 +26,15 @@ function strain_tensor(
     (; ySu_ux, ySu_uy, ySu_vx, ySv_vx, ySv_vy, ySv_uy) = bc_vectors
     (; yCux_k, yCuy_k, yCvx_k, yCvy_k, yAuy_k, yAvx_k) = bc_vectors
 
+    T = eltype(V)
+
     uₕ = @view V[indu]
     vₕ = @view V[indv]
 
     # These four components are approximated by
     S11 = Su_ux * uₕ + ySu_ux
-    S12 = 1 / 2 * (Su_uy * uₕ + ySu_uy + Sv_uy * vₕ + ySv_uy)
-    S21 = 1 / 2 * (Su_vx * uₕ + ySu_vx + Sv_vx * vₕ + ySv_vx)
+    S12 = 1 // 2 .* (Su_uy * uₕ .+ ySu_uy .+ Sv_uy * vₕ .+ ySv_uy)
+    S21 = 1 // 2 .* (Su_vx * uₕ .+ ySu_vx .+ Sv_vx * vₕ .+ ySv_vx)
     S22 = Sv_vy * vₕ + ySv_vy
 
     # Note: S11 and S22 at xp, yp locations (pressure locations)
@@ -60,7 +66,7 @@ function strain_tensor(
 
             # S12 is defined on the corners: size Nux_in*(Nuy_in+1), positions (xin, y)
             # Get S12 and S21 at all corner points
-            S12_temp = zeros(Nx + 1, Ny + 1)
+            S12_temp = zeros(T, Nx + 1, Ny + 1)
             S12_temp[1:Nx, :] = reshape(S12, Nx, Ny + 1)
             S12_temp[Nx+1, :] = S12_temp[1, :]
         elseif boundary_conditions.u.x[1] == :dirichlet &&
@@ -70,7 +76,7 @@ function strain_tensor(
 
             # S12 is defined on the corners: size Nux_in*(Nuy_in+1), positions (xin, y)
             # Get S12 and S21 at all corner points
-            S12_temp = zeros(Nx + 1, Ny + 1)
+            S12_temp = zeros(T, Nx + 1, Ny + 1)
             S12_temp[2:(Nx+1), :] = reshape(S12, Nx, Ny + 1)
             S12_temp[1, :] = S12_temp[2, :] # Copy from x[2] to x[1]; one could do this more accurately in principle by using the BC
         else
@@ -84,7 +90,7 @@ function strain_tensor(
             S22_p = S22_p(:, 2:(Nvy_in+1)) # Why not 1:Nvy_in?
 
             # Similarly S21 is size (Nux_in+1)*Nuy_in, positions (x, yin)
-            S21_temp = zeros(Nx + 1, Ny + 1)
+            S21_temp = zeros(T, Nx + 1, Ny + 1)
             S21_temp[:, 1:Ny] = reshape(S21, Nx + 1, Ny)
             S21_temp[:, Ny+1] = S21_temp[:, 1]
         elseif boundary_conditions.v.y[1] == :pressure &&
@@ -108,7 +114,7 @@ function strain_tensor(
         # S21_p = interp2(y', x, S21_temp, yp', xp)
 
         ## Invariants
-        q = @. 1 / 2 * (S11_p[:]^2 + S12_p[:]^2 + S21_p[:]^2 + S22_p[:]^2)
+        q = @. 1 // 2 * (S11_p[:]^2 + S12_p[:]^2 + S21_p[:]^2 + S22_p[:]^2)
 
         # Absolute value of strain tensor
         # With S as defined above, i.e. 1/2*(grad u + grad u^T)
@@ -118,10 +124,8 @@ function strain_tensor(
         # Option 2a
         S11_p = Cux_k * uₕ + yCux_k
         S12_p =
-            1 / 2 * (
-                Cuy_k * (Auy_k * uₕ + yAuy_k) +
-                yCuy_k +
-                Cvx_k * (Avx_k * vₕ + yAvx_k) +
+            1 // 2 .* (
+                Cuy_k * (Auy_k * uₕ + yAuy_k) .+ yCuy_k .+ Cvx_k * (Avx_k * vₕ + yAvx_k) .+
                 yCvx_k
             )
         S21_p = S12_p
@@ -131,15 +135,15 @@ function strain_tensor(
 
         # Jacobian of S_abs wrt u and v
         if get_jacobian
-            eps = 1e-14
-            Sabs_inv = spdiagm(1 ./ (2 .* S_abs .+ eps))
+            ϵ = 100 * eps(T)
+            Sabs_inv = spdiagm(1 ./ (2 .* S_abs .+ ϵ))
             Jacu =
                 Sabs_inv * (4 * spdiagm(S11_p) * Cux_k + 4 * spdiagm(S12_p) * Cuy_k * Auy_k)
             Jacv =
                 Sabs_inv * (4 * spdiagm(S12_p) * Cvx_k * Avx_k + 4 * spdiagm(S22_p) * Cvy_k)
         else
-            Jacu = spzeros(Np, Nu)
-            Jacv = spzeros(Np, Nv)
+            Jacu = spzeros(T, Np, Nu)
+            Jacv = spzeros(T, Np, Nv)
         end
     end
 
@@ -148,11 +152,12 @@ end
 
 # 3D version
 function strain_tensor(
+    ::Dimension{3},
     V,
-    setup::Setup{T,3};
+    setup;
     bc_vectors,
     get_jacobian = false,
     get_S_abs = false,
-) where {T}
+)
     error("Not implemented (3D)")
 end

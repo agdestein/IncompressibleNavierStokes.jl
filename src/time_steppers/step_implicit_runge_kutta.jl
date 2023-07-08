@@ -1,28 +1,31 @@
-"""
-    step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
+create_stepper(
+    ::ImplicitRungeKuttaMethod;
+    setup,
+    pressure_solver,
+    bc_vectors,
+    V,
+    p,
+    t,
+    n = 0,
+) = (; setup, pressure_solver, bc_vectors, V, p, t, n)
 
-Do one time step for implicit Runge-Kutta method.
-
-Unsteady Dirichlet boundary points are not part of solution vector but
-are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
-
-Non-mutating/allocating/out-of-place version.
-
-See also [`step!`](@ref).
-"""
-function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
+function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
     # TODO: Implement out-of-place IRK
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    error()
+
+    (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
-    (; NV, Np, Ω⁻¹) = grid
+    (; NV, Np, Ω) = grid
     (; G, M) = operators
     (; A, b, c, p_add_solve, maxiter, abstol, newton_type) = method
 
+    T = typeof(Δt)
+
     # Update current solution (does not depend on previous step size)
     n += 1
-    Vₙ .= V
-    pₙ .= p
+    Vₙ = V
+    pₙ = p
     tₙ = t
     Δtₙ = Δt
 
@@ -32,9 +35,9 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
     # Time instances at all stages, tⱼ = [t₁, t₂, ..., tₛ]
     tⱼ = @. tₙ + c * Δtₙ
 
-    Vtotₙ_mat = zeros(NV * s, 0)
-    ptotₙ_mat = zeros(Np * s, 0)
-    yMtot_mat = zeros(Np * s, 0)
+    Vtotₙ_mat = zeros(T, NV * s, 0)
+    ptotₙ_mat = zeros(T, Np * s, 0)
+    yMtot_mat = zeros(T, Np * s, 0)
     for i = 1:s
         # Initialize with the solution at tₙ
         Vtotₙ_mat = [Vtotₙ_mat Vₙ]
@@ -42,7 +45,7 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
 
         # Boundary conditions at all the stage time steps to make the velocity field
         # uᵢ₊₁ at tᵢ₊₁ divergence-free (BC at tᵢ₊₁ needed)
-        if isnothing(bc_vectors) || bc_unsteady
+        if bc_unsteady
             # Modify `yM`
             tᵢ = tⱼ[i]
             bc_vectors = get_bc_vectors(setup, tᵢ)
@@ -129,12 +132,12 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
     end
 
     # Solution at new time step with b-coefficients of RK method
-    V = Vₙ .+ Δtₙ .* Ω⁻¹ .* (b_ext * Fⱼ)
+    V = Vₙ .+ Δtₙ ./ Ω .* (b_ext * Fⱼ)
 
     # Make V satisfy the incompressibility constraint at n+1; this is only needed when the
     # boundary conditions are time-dependent. For stiffly accurate methods, this can also
     # be skipped (e.g. Radau IIA) - this still needs to be implemented
-    if isnthing(bc_vectors) || bc_unsteady
+    if bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ + Δtₙ)
         (; yM) = bc_vectors
 
@@ -142,7 +145,7 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
         p = pressure_poisson!(pressure_solver, f)
 
         mul!(Gp, G, p)
-        V = @. V - Δtₙ * Ω⁻¹ * Gp
+        V = @. V - Δtₙ / Ω * Gp
 
         if p_add_solve
             p = pressure_additional_solve(
@@ -168,34 +171,17 @@ function step(stepper::ImplicitRungeKuttaStepper, Δt; bc_vectors = nothing)
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
 end
 
-"""
-    step!(stepper::ImplicitRungeKuttaStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
-
-Do one time step for implicit Runge-Kutta method.
-
-Unsteady Dirichlet boundary points are not part of solution vector but
-are prescribed in a "strong" manner via the `u_bc` and `v_bc` functions.
-
-Mutating/non-allocating/in-place version.
-
-See also [`step`](@ref).
-"""
-function step!(
-    stepper::ImplicitRungeKuttaStepper,
-    Δt;
-    cache,
-    momentum_cache,
-    bc_vectors = nothing,
-)
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+function step!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, momentum_cache)
+    (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
-    (; NV, Np, Ω⁻¹) = grid
+    (; NV, Np, Ω) = grid
     (; G, M) = operators
     (; A, b, c, p_add_solve, maxiter, abstol, newton_type) = method
+    (; Vₙ, pₙ) = cache
     (; Vtotₙ, ptotₙ, Qⱼ, Fⱼ, ∇Fⱼ, fⱼ, F, ∇F, f, Δp, Gp) = cache
     (; Mtot, yMtot, Ωtot, dfmom, Z) = cache
     (; Ω_sNV, A_ext, b_ext) = cache
@@ -225,7 +211,7 @@ function step!(
 
         # Boundary conditions at all the stage time steps to make the velocity field
         # uᵢ₊₁ at tᵢ₊₁ divergence-free (BC at tᵢ₊₁ needed)
-        if isnothing(bc_vectors) || bc_unsteady
+        if bc_unsteady
             tᵢ = tⱼ[i]
             bc_vectors = get_bc_vectors(setup, tᵢ)
         end
@@ -371,8 +357,8 @@ function step!(
 
     # Solution at new time step with b-coefficients of RK method
     mul!(V, b_ext, Fⱼ)
-    @. V = Vₙ + Δtₙ * Ω⁻¹ * V
-    # V .= Vₙ .+ Δtₙ .* Ω⁻¹ .* (b_ext * Fⱼ)
+    @. V = Vₙ + Δtₙ / Ω * V
+    # V .= Vₙ .+ Δtₙ ./ Ω .* (b_ext * Fⱼ)
 
     # Make V satisfy the incompressibility constraint at n+1; this is only needed when the
     # boundary conditions are time-dependent. For stiffly accurate methods, this can also
@@ -387,7 +373,7 @@ function step!(
         pressure_poisson!(pressure_solver, p, f)
 
         mul!(Gp, G, p)
-        @. V -= Δtₙ * Ω⁻¹ * Gp
+        @. V -= Δtₙ / Ω * Gp
 
         if p_add_solve
             pressure_additional_solve!(
@@ -417,7 +403,7 @@ function step!(
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
 end
 
 """
@@ -431,8 +417,9 @@ See also [`momentum_allstage!`](@ref).
 """
 function momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, get_jacobian = false)
     (; NV, Np) = setup.grid
+    T = eltype(Vⱼ)
 
-    ∇Fⱼ = spzeros(0, 0)
+    ∇Fⱼ = spzeros(T, 0, 0)
     for i = 1:nstage
         # Indices for current stage
         ind_Vᵢ = (1:NV) .+ NV * (i - 1)

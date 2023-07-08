@@ -95,7 +95,7 @@ setup = Setup(
 );
 
 # Time interval
-t_start, t_end = tlims = (0.0, 12.0)
+t_start, t_end = tlims = (0.0, 40.0)
 
 # Initial conditions (extend inflow)
 initial_velocity_u(x, y) = 1.0
@@ -103,21 +103,30 @@ initial_velocity_v(x, y) = 0.0
 initial_pressure(x, y) = 0.0
 V₀, p₀ = create_initial_conditions(
     setup,
-    t_start;
     initial_velocity_u,
     initial_velocity_v,
+    t_start;
     initial_pressure,
 );
 
-problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-V, p = solve_animate(
-    problem,
-    RK44P2();
+# Time step processors
+processors = (
+    # Record solution every fourth time step
+    animator(setup, "vorticity.mp4"; nupdate = 4),
+
+    # Log time step information
+    step_logger(),
+)
+
+# Solve unsteady Navier-Stokes equations
+V, p, outputs = solve_unsteady(
+    setup, V₀, p₀, tlims;
+    method = RK44P2(),
     Δt = 0.05,
-    filename = "vorticity.gif",
+    processors,
 )
 ```
 
 The resulting animation is shown below.
 
-![Vorticity](assets/vorticity.gif)
+![Vorticity](assets/vorticity.mp4)

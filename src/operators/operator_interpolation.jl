@@ -1,12 +1,13 @@
 """
     operator_interpolation(grid, boundary_conditions)
 
-Construct averaging operators.
+Construct interpolation operators.
 """
-function operator_interpolation end
+operator_interpolation(grid, boundary_conditions) =
+    operator_interpolation(grid.dimension, grid, boundary_conditions)
 
 # 2D version
-function operator_interpolation(grid::Grid{T,2}, boundary_conditions) where {T}
+function operator_interpolation(::Dimension{2}, grid, boundary_conditions)
     (; Nx, Ny) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t) = grid
@@ -18,7 +19,9 @@ function operator_interpolation(grid::Grid{T,2}, boundary_conditions) where {T}
         (; hxi3, hyi3, hx3, hy3) = grid
     end
 
-    weight = 1 / 2
+    T = eltype(hx)
+
+    weight = T(1 / 2)
 
     mat_hx = Diagonal(hxi)
     mat_hy = Diagonal(hyi)
@@ -41,8 +44,8 @@ function operator_interpolation(grid::Grid{T,2}, boundary_conditions) where {T}
         mat_hx3 = Diagonal(hxi3)
         mat_hy3 = Diagonal(hyi3)
 
-        weight1 = 1 / 2 * β
-        weight2 = 1 / 2 * (1 - β)
+        weight1 = 1 // 2 * β
+        weight2 = 1 // 2 * (1 - β)
 
         # Periodic boundary conditions
         if boundary_conditions.u.x == (:periodic, :periodic)
@@ -487,7 +490,7 @@ function operator_interpolation(grid::Grid{T,2}, boundary_conditions) where {T}
 end
 
 # 3D version
-function operator_interpolation(grid::Grid{T,3}, boundary_conditions) where {T}
+function operator_interpolation(::Dimension{3}, grid, boundary_conditions)
     (; Nx, Ny, Nz) = grid
     (; Nux_in, Nux_b, Nux_t, Nuy_in, Nuy_b, Nuy_t, Nuz_in, Nuz_b, Nuz_t) = grid
     (; Nvx_in, Nvx_b, Nvx_t, Nvy_in, Nvy_b, Nvy_t, Nvz_in, Nvz_b, Nvz_t) = grid
@@ -495,7 +498,9 @@ function operator_interpolation(grid::Grid{T,3}, boundary_conditions) where {T}
     (; hx, hy, hz, hxi, hyi, hzi) = grid
     (; Buvy, Buwz, Bvux, Bvwz, Bwux, Bwvy) = grid
 
-    weight = 1 / 2
+    T = eltype(hx)
+
+    weight = T(1 / 2)
 
     mat_hx = spdiagm(Nx, Nx, hxi)
     mat_hy = spdiagm(Ny, Ny, hyi)

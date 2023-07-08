@@ -1,6 +1,6 @@
 """
-    solve(
-        problem::SteadyStateProblem;
+    function solve_steady_state(
+        setup, V₀, p₀;
         jacobian_type = :newton,
         npicard = 2,
         abstol = 1e-10,
@@ -12,24 +12,27 @@ This saddlepoint system arises from linearization of the convective terms.
 
 Each `processor` is called after every `processor.nupdate` iteration.
 """
-function solve(
-    problem::SteadyStateProblem;
+function solve_steady_state(
+    setup,
+    V₀,
+    p₀;
     jacobian_type = :newton,
     npicard = 2,
-    abstol = 1e-10,
+    abstol = eps(eltype(V₀))^(3 // 4) * 100,
     maxiter = 10,
 )
-    (; setup, V₀, p₀) = problem
     (; NV, Np) = setup.grid
     (; G, M) = setup.operators
 
+    T = eltype(V₀)
+
     # Temporary variables
-    momentum_cache = MomentumCache(setup)
-    F = zeros(NV)
-    f = zeros(NV + Np)
-    ∇F = spzeros(NV, NV)
-    Z2 = spzeros(Np, Np)
-    Δq = zeros(NV + Np)
+    momentum_cache = MomentumCache(setup, V₀, p₀)
+    F = zeros(T, NV)
+    f = zeros(T, NV + Np)
+    ∇F = spzeros(T, NV, NV)
+    Z2 = spzeros(T, Np, Np)
+    Δq = zeros(T, NV + Np)
 
     # Loop index
     n = 1
@@ -52,7 +55,6 @@ function solve(
 
     println("Initial momentum residual = $maxres")
 
-    # record(fig, "output/vorticity.mp4", 1:rtp.nt; framerate = 60) do n
     while maxres > abstol
         if n > maxiter
             @warn "Newton not converged in $maxiter iterations, showing results anyway"

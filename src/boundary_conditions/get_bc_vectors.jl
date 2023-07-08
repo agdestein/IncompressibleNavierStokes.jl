@@ -5,8 +5,10 @@ Get boundary condition vectors.
 """
 function get_bc_vectors end
 
+get_bc_vectors(setup, t) = get_bc_vectors(setup.grid.dimension, setup, t)
+
 # 2D version
-function get_bc_vectors(setup::Setup{T,2}, t) where {T}
+function get_bc_vectors(::Dimension{2}, setup, t)
     (; grid, operators, boundary_conditions, viscosity_model) = setup
 
     (; Nux_in, Nvy_in, Np, Npx, Npy) = grid
@@ -20,8 +22,6 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
     (; Iu_ux_bc, Iv_uy_bc_lr, Iv_uy_bc_lu) = operators
     (; Iu_vx_bc_lr, Iu_vx_bc_lu, Iv_vy_bc) = operators
     (; Mx_bc, My_bc) = operators
-    (; Aν_vy_bc) = operators
-    (; Cux_k_bc, Cuy_k_bc, Cvx_k_bc, Cvy_k_bc, Auy_k_bc, Avx_k_bc) = operators
     (; Su_vx_bc_lr, Su_vx_bc_lu, Sv_uy_bc_lr, Sv_uy_bc_lu) = operators
 
     (; u_bc, v_bc, dudt_bc, dvdt_bc) = boundary_conditions
@@ -37,6 +37,8 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
         (; Diffux_div, Diffuy_div, Diffvx_div, Diffvy_div) = operators
         (; Mx_bc3, My_bc3) = operators
     end
+
+    T = typeof(t)
 
     # TODO: Split function into allocating part (constructor?) and mutating `update!`
 
@@ -67,16 +69,19 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
     ## Boundary conditions for divergence
 
     # Mx
-    ybc = uLe_i ⊗ Mx_bc.ybc1 + uRi_i ⊗ Mx_bc.ybc2
+    # ybc = uLe_i ⊗ Mx_bc.ybc1 + uRi_i ⊗ Mx_bc.ybc2
+    ybc = vec(Mx_bc.ybc1 * uLe_i') + vec(Mx_bc.ybc2 * uRi_i')
     yMx = Mx_bc.Bbc * ybc
     if order4
-        ybc3 = uLe_i ⊗ Mx_bc3.ybc1 + uRi_i ⊗ Mx_bc3.ybc2
+        # ybc3 = uLe_i ⊗ Mx_bc3.ybc1 + uRi_i ⊗ Mx_bc3.ybc2
+        ybc3 = vec(Mx_bc3.ybc1 * uLe_i') + vec(Mx_bc3.ybc2 * uRi_i')
         yMx3 = Mx_bc3.Bbc * ybc3
         yMx = α * yMx - yMx3
     end
 
     # My
-    ybc = My_bc.ybc1 ⊗ vLo_i + My_bc.ybc2 ⊗ vUp_i
+    # ybc = My_bc.ybc1 ⊗ vLo_i + My_bc.ybc2 ⊗ vUp_i
+    ybc = vec(vLo_i * My_bc.ybc1') + vec(vUp_i * My_bc.ybc2')
     yMy = My_bc.Bbc * ybc
     if order4
         ybc3 = My_bc3.ybc1 ⊗ vLo_i + My_bc3.ybc2 ⊗ vUp_i
@@ -107,21 +112,21 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
 
         ydM = ydMx + ydMy
     else
-        ydM = zeros(Np)
+        ydM = zeros(T, Np)
     end
 
     ## Boundary conditions for pressure
 
     # Left and right side
-    y1D_le = zeros(Nux_in)
-    y1D_ri = zeros(Nux_in)
+    y1D_le = zeros(T, Nux_in)
+    y1D_ri = zeros(T, Nux_in)
     boundary_conditions.u.x[1] == :pressure && (y1D_le[1] = -1)
     boundary_conditions.u.x[2] == :pressure && (y1D_ri[end] = 1)
     y_px = (hy .* p_bc.x[1]) ⊗ y1D_le + (hy .* p_bc.x[2]) ⊗ y1D_ri
 
     # Lower and upper side
-    y1D_lo = zeros(Nvy_in)
-    y1D_up = zeros(Nvy_in)
+    y1D_lo = zeros(T, Nvy_in)
+    y1D_up = zeros(T, Nvy_in)
     boundary_conditions.v.y[1] == :pressure && (y1D_lo[1] = -1)
     boundary_conditions.v.y[2] == :pressure && (y1D_up[end] = 1)
     y_py = y1D_lo ⊗ (hx .* p_bc.y[1]) + y1D_up ⊗ (hx .* p_bc.y[2])
@@ -182,8 +187,8 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
         ySv_vy = α * Sv_vy_bc.Bbc * ybc1 - Sv_vy_bc3.Bbc * ybc3
 
         if viscosity_model isa LaminarModel
-            yDiffu = 1 / Re * (Diffux_div * ySu_ux + Diffuy_div * ySu_uy)
-            yDiffv = 1 / Re * (Diffvx_div * ySv_vx + Diffvy_div * ySv_vy)
+            yDiffu = Diffux_div * ySu_ux + Diffuy_div * ySu_uy
+            yDiffv = Diffvx_div * ySv_vx + Diffvy_div * ySv_vy
             yDiff = [yDiffu; yDiffv]
         else
             error("fourth order turbulent diffusion not implemented")
@@ -226,8 +231,8 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
         ybc = Sv_vy_bc.ybc1 ⊗ vLo_i + Sv_vy_bc.ybc2 ⊗ vUp_i
         ySv_vy = Sv_vy_bc.Bbc * ybc
 
-        yDiffu = 1 / Re * (Dux * ySu_ux + Duy * ySu_uy)
-        yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy)
+        yDiffu = Dux * ySu_ux + Duy * ySu_uy
+        yDiffv = Dvx * ySv_vx + Dvy * ySv_vy
         yDiff = [yDiffu; yDiffv]
 
         Ωu⁻¹ = 1 ./ Ω[indu]
@@ -332,14 +337,60 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
         yIv_vy3 = Iv_vy_bc3.Bbc * ybc3
     end
 
+    ## Group BC vectors
+    bc_vectors = (;
+        yM,
+        ydM,
+        y_p,
+        yAu_ux,
+        yAu_uy,
+        yAv_vx,
+        yAv_vy,
+        yDiff,
+        yIu_ux,
+        yIv_uy,
+        yIu_vx,
+        yIv_vy,
+    )
+
+    if order4
+        bc_vectors = (;
+            bc_vectors...,
+            yAu_ux3,
+            yAu_uy3,
+            yAv_vx3,
+            yAv_vy3,
+            yIu_ux3,
+            yIv_uy3,
+            yIu_vx3,
+            yIv_vy3,
+        )
+    else
+        # Use values directly (see diffusion.jl and strain_tensor.jl)
+        bc_vectors = (;
+            bc_vectors...,
+            ySu_ux,
+            ySu_uy,
+            ySu_vx,
+            ySv_vx,
+            ySv_vy,
+            ySv_uy,
+            yDiffu_f,
+            yDiffv_f,
+        )
+    end
+
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
+        (; Aν_vy_bc) = operators
+        (; Cux_k_bc, Cuy_k_bc, Cvx_k_bc, Cvy_k_bc, Auy_k_bc, Avx_k_bc) = operators
+
         # Set BC for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
         # In all other cases, homogeneous (zero) Neumann conditions are used
-        nuLe = zeros(Npy)
-        nuRi = zeros(Npy)
-        nuLo = zeros(Npx)
-        nuUp = zeros(Npx)
+        nuLe = zeros(T, Npy)
+        nuRi = zeros(T, Npy)
+        nuLo = zeros(T, Npx)
+        nuUp = zeros(T, Npx)
 
         ## Nu_ux
         (; Aν_ux_bc) = operators
@@ -407,52 +458,7 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
 
         ybc = Cvy_k_bc.ybc1 ⊗ vLo_i + Cvy_k_bc.ybc2 ⊗ vUp_i
         yCvy_k = Cvy_k_bc.Bbc * ybc
-    end
 
-    ## Group BC vectors
-    bc_vectors = (;
-        yM,
-        ydM,
-        y_p,
-        yAu_ux,
-        yAu_uy,
-        yAv_vx,
-        yAv_vy,
-        yDiff,
-        yIu_ux,
-        yIv_uy,
-        yIu_vx,
-        yIv_vy,
-    )
-
-    if order4
-        bc_vectors = (;
-            bc_vectors...,
-            yAu_ux3,
-            yAu_uy3,
-            yAv_vx3,
-            yAv_vy3,
-            yIu_ux3,
-            yIv_uy3,
-            yIu_vx3,
-            yIv_vy3,
-        )
-    else
-        # Use values directly (see diffusion.jl and strain_tensor.jl)
-        bc_vectors = (;
-            bc_vectors...,
-            ySu_ux,
-            ySu_uy,
-            ySu_vx,
-            ySv_vx,
-            ySv_vy,
-            ySv_uy,
-            yDiffu_f,
-            yDiffv_f,
-        )
-    end
-
-    if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         bc_vectors = (;
             bc_vectors...,
             yAν_ux,
@@ -472,7 +478,7 @@ function get_bc_vectors(setup::Setup{T,2}, t) where {T}
 end
 
 # 3D version
-function get_bc_vectors(setup::Setup{T,3}, t) where {T}
+function get_bc_vectors(::Dimension{3}, setup, t)
     (; grid, operators, boundary_conditions, viscosity_model) = setup
 
     (; Re) = viscosity_model
@@ -498,24 +504,17 @@ function get_bc_vectors(setup::Setup{T,3}, t) where {T}
     (; Sw_wx_bc, Sw_wy_bc, Sw_wz_bc) = operators
 
     (; Mx_bc, My_bc, Mz_bc) = operators
-    (; Aν_vy_bc) = operators
 
     (; Iu_ux_bc, Iv_vy_bc, Iw_wz_bc) = operators
     (; Iv_uy_bc_lr, Iv_uy_bc_lu, Iw_uz_bc_lr, Iw_uz_bc_bf) = operators
     (; Iu_vx_bc_lr, Iu_vx_bc_lu, Iw_vz_bc_lu, Iw_vz_bc_bf) = operators
     (; Iu_wx_bc_lr, Iu_wx_bc_bf, Iv_wy_bc_lu, Iv_wy_bc_bf) = operators
 
-    (; Cux_k_bc, Cuy_k_bc, Cuz_k_bc) = operators
-    (; Cvx_k_bc, Cvy_k_bc, Cvz_k_bc) = operators
-    (; Cwx_k_bc, Cwy_k_bc, Cwz_k_bc) = operators
-
-    (; Auy_k_bc, Avx_k_bc) = operators
-    (; Auz_k_bc, Awx_k_bc) = operators
-    (; Awy_k_bc, Avz_k_bc) = operators
-
     (; Sv_uy_bc_lr, Sv_uy_bc_lu, Sw_uz_bc_lr, Sw_uz_bc_bf) = operators
     (; Su_vx_bc_lr, Su_vx_bc_lu, Sw_vz_bc_lu, Sw_vz_bc_bf) = operators
     (; Su_wx_bc_lr, Su_wx_bc_bf, Sv_wy_bc_lu, Sv_wy_bc_bf) = operators
+
+    T = typeof(t)
 
     # TODO: Split up function into allocating part (constructor?) and mutating `update!`
 
@@ -597,29 +596,29 @@ function get_bc_vectors(setup::Setup{T,3}, t) where {T}
 
         ydM = ydMx + ydMy + ydMz
     else
-        ydM = zeros(Np)
+        ydM = zeros(T, Np)
     end
 
     ## Boundary conditions for pressure
 
     # Left and right side
-    y1D_le = zeros(Nux_in)
-    y1D_ri = zeros(Nux_in)
+    y1D_le = zeros(T, Nux_in)
+    y1D_ri = zeros(T, Nux_in)
     boundary_conditions.u.x[1] == :pressure && (y1D_le[1] = -1)
     boundary_conditions.u.x[2] == :pressure && (y1D_ri[end] = 1)
     y_px = (p_bc.x[1] .* (hz ⊗ hy)) ⊗ y1D_le + (p_bc.x[2] .* (hz ⊗ hy)) ⊗ y1D_ri
 
     # Lower and upper side (order of kron not correct, so reshape)
-    y1D_lo = zeros(Nvy_in)
-    y1D_up = zeros(Nvy_in)
+    y1D_lo = zeros(T, Nvy_in)
+    y1D_up = zeros(T, Nvy_in)
     boundary_conditions.v.y[1] == :pressure && (y1D_lo[1] = -1)
     boundary_conditions.v.y[2] == :pressure && (y1D_up[end] = 1)
     y_py = (p_bc.y[1] .* (hz ⊗ hx)) ⊗ y1D_lo + (p_bc.y[2] .* (hz ⊗ hx)) ⊗ y1D_up
     y_py = reshape(permutedims(reshape(y_py, Nvy_in, Nvx_in, Nvz_in), (2, 1, 3)), :)
 
     # Back and front side
-    y1D_ba = zeros(Nwz_in)
-    y1D_fr = zeros(Nwz_in)
+    y1D_ba = zeros(T, Nwz_in)
+    y1D_fr = zeros(T, Nwz_in)
     boundary_conditions.w.z[1] == :pressure && (y1D_ba[1] = -1)
     boundary_conditions.w.z[2] == :pressure && (y1D_fr[end] = 1)
     y_pz = y1D_ba ⊗ (p_bc.z[1] .* (hy ⊗ hx)) + y1D_fr ⊗ (p_bc.z[2] .* (hy ⊗ hx))
@@ -779,9 +778,9 @@ function get_bc_vectors(setup::Setup{T,3}, t) where {T}
     # Sv_wy
     ySv_wy = ySv_wy_bf + ySv_wy_lu
 
-    yDiffu = 1 / Re * (Dux * ySu_ux + Duy * ySu_uy + Duz * ySu_uz)
-    yDiffv = 1 / Re * (Dvx * ySv_vx + Dvy * ySv_vy + Dvz * ySv_vz)
-    yDiffw = 1 / Re * (Dwx * ySw_wx + Dwy * ySw_wy + Dwz * ySw_wz)
+    yDiffu = Dux * ySu_ux + Duy * ySu_uy + Duz * ySu_uz
+    yDiffv = Dvx * ySv_vx + Dvy * ySv_vy + Dvz * ySv_vz
+    yDiffw = Dwx * ySw_wx + Dwy * ySw_wy + Dwz * ySw_wz
     yDiff = [yDiffu; yDiffv; yDiffw]
 
     Ωu⁻¹ = 1 ./ Ω[indu]
@@ -878,14 +877,66 @@ function get_bc_vectors(setup::Setup{T,3}, t) where {T}
     ybc = Iw_wz_bc.ybc1 ⊗ wBa_i + Iw_wz_bc.ybc2 ⊗ wFr_i
     yIw_wz = Iw_wz_bc.Bbc * ybc
 
+    # Group vectors
+    bc_vectors = (;
+        yM,
+        ydM,
+        y_p,
+        yAu_ux,
+        yAu_uy,
+        yAu_uz,
+        yAv_vx,
+        yAv_vy,
+        yAv_vz,
+        yAw_wx,
+        yAw_wy,
+        yAw_wz,
+        yDiff,
+        ySu_ux,
+        ySu_uy,
+        ySu_uz,
+        ySv_vx,
+        ySv_vy,
+        ySv_vz,
+        ySw_wx,
+        ySw_wy,
+        ySw_wz,
+        ySu_vx,
+        ySu_wx,
+        ySv_uy,
+        ySv_wy,
+        ySw_uz,
+        ySw_vz,
+        yDiffu_f,
+        yDiffv_f,
+        yDiffw_f,
+        yIu_ux,
+        yIv_uy,
+        yIw_uz,
+        yIu_vx,
+        yIv_vy,
+        yIw_vz,
+        yIu_wx,
+        yIv_wy,
+        yIw_wz,
+    )
+
     if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
+        (; Aν_vy_bc) = operators
+        (; Cux_k_bc, Cuy_k_bc, Cuz_k_bc) = operators
+        (; Cvx_k_bc, Cvy_k_bc, Cvz_k_bc) = operators
+        (; Cwx_k_bc, Cwy_k_bc, Cwz_k_bc) = operators
+        (; Auy_k_bc, Avx_k_bc) = operators
+        (; Auz_k_bc, Awx_k_bc) = operators
+        (; Awy_k_bc, Avz_k_bc) = operators
+
         # Set bc for turbulent viscosity nu_t
         # In the periodic case, the value of nu_t is not needed
         # In all other cases, homogeneous (zero) Neumann conditions are used
-        nuLe = zeros(Npy)
-        nuRi = zeros(Npy)
-        nuLo = zeros(Npx)
-        nuUp = zeros(Npx)
+        nuLe = zeros(T, Npy)
+        nuRi = zeros(T, Npy)
+        nuLo = zeros(T, Npx)
+        nuUp = zeros(T, Npx)
 
         ## Nu_ux
         (; Aν_ux_bc) = operators
@@ -953,52 +1004,7 @@ function get_bc_vectors(setup::Setup{T,3}, t) where {T}
 
         ybc = Cvy_k_bc.ybc1 ⊗ vLo_i + Cvy_k_bc.ybc2 ⊗ vUp_i
         yCvy_k = Cvy_k_bc.Bbc * ybc
-    end
 
-    bc_vectors = (;
-        yM,
-        ydM,
-        y_p,
-        yAu_ux,
-        yAu_uy,
-        yAu_uz,
-        yAv_vx,
-        yAv_vy,
-        yAv_vz,
-        yAw_wx,
-        yAw_wy,
-        yAw_wz,
-        yDiff,
-        ySu_ux,
-        ySu_uy,
-        ySu_uz,
-        ySv_vx,
-        ySv_vy,
-        ySv_vz,
-        ySw_wx,
-        ySw_wy,
-        ySw_wz,
-        ySu_vx,
-        ySu_wx,
-        ySv_uy,
-        ySv_wy,
-        ySw_uz,
-        ySw_vz,
-        yDiffu_f,
-        yDiffv_f,
-        yDiffw_f,
-        yIu_ux,
-        yIv_uy,
-        yIw_uz,
-        yIu_vx,
-        yIv_vy,
-        yIw_vz,
-        yIu_wx,
-        yIv_wy,
-        yIw_wz,
-    )
-
-    if viscosity_model isa Union{QRModel,SmagorinskyModel,MixingLengthModel}
         bc_vectors = (;
             bc_vectors...,
             yAν_ux,

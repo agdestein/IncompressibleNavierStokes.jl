@@ -5,10 +5,9 @@
 
     setup = Setup(x, y)
 
-    @test plot_grid(setup.grid) isa Makie.FigureAxisPlot
     @test plot_grid(x, y) isa Makie.FigureAxisPlot
 
-    pressure_solver = FourierPressureSolver(setup)
+    pressure_solver = SpectralPressureSolver(setup)
 
     t_start, t_end = tlims = (0.0, 1.0)
 
@@ -18,56 +17,38 @@
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
     V₀, p₀ = create_initial_conditions(
         setup,
-        t_start;
         initial_velocity_u,
         initial_velocity_v,
+        t_start;
         initial_pressure,
         pressure_solver,
     )
 
     # Iteration processors
-    logger = Logger(; nupdate = 1)
-    observer = StateObserver(1, V₀, p₀, t_start)
-    writer = VTKWriter(; nupdate = 5, dir = "output", filename = "solution2D")
-    tracer = QuantityTracer(; nupdate = 1)
-    processors = [logger, observer, tracer, writer]
-
-    # Real time plot
-    rtp = real_time_plot(observer, setup)
-
-    # Lift observable (kinetic energy history)
-    (; Ωp) = setup.grid
-    _E = zeros(0)
-    E = @lift begin
-        V, p, t = $(observer.state)
-        up, vp = get_velocity(V, t, setup)
-        up = reshape(up, :)
-        vp = reshape(vp, :)
-        push!(_E, up' * Diagonal(Ωp) * up + vp' * Diagonal(Ωp) * vp)
-    end
+    processors = (
+        field_plotter(setup; nupdate = 1, displayfig = false),
+        vtk_writer(setup; nupdate = 5, dir = "output", filename = "solution2D"),
+        animator(
+            setup,
+            "output/vorticity2D.mkv";
+            nupdate = 10,
+            plotter = field_plotter(setup; displayfig = false),
+        ),
+        step_logger(),
+    )
 
     # Solve unsteady problem
-    problem = UnsteadyProblem(setup, V₀, p₀, tlims)
-    V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver)
-
-    @testset "State observer" begin
-        # 1 from @lift
-        # 1 from initial process!
-        # 100 time steps
-        @test length(_E) == 102
-        @test _E[1] ≈ _E[2]
-        @test all(<(0), diff(_E[2:end]))
-    end
+    V, p, outputs =
+        solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors, pressure_solver)
 
     @testset "VTK files" begin
         @test isfile("output/solution2D.pvd")
-        @test isfile("output/solution2D_t=0p0.vtr")
-        save_vtk(V, p, t_end, setup, "output/field2D")
-        @test isfile("output/field2D.vtr")
+        @test isfile("output/solution2D_t=0p0.vti")
+        save_vtk(setup, V, p, t_end, "output/field2D")
+        @test isfile("output/field2D.vti")
     end
 
     @testset "Plot fields" begin
-        @test plot_tracers(tracer) isa Figure
         @test plot_pressure(setup, p) isa Figure
         @test plot_velocity(setup, V, t_end) isa Figure
         @test plot_vorticity(setup, V, t_end) isa Figure
@@ -76,15 +57,6 @@
     end
 
     @testset "Animate" begin
-        V, p = solve_animate(
-            problem,
-            RK44();
-            Δt = 4π / 200,
-            pressure_solver,
-            filename = "output/vorticity2D.gif",
-            nframe = 10,
-            nsubframe = 4,
-        )
-        @test isfile("output/vorticity2D.gif")
+        @test isfile("output/vorticity2D.mkv")
     end
 end

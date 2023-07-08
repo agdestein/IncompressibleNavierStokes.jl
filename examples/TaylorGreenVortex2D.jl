@@ -22,56 +22,67 @@ using IncompressibleNavierStokes
 # Case name for saving results
 name = "TaylorGreenVortex2D"
 
+# Floating point type
+T = Float32
+
 # Viscosity model
-viscosity_model = LaminarModel(; Re = 2000.0)
+viscosity_model = LaminarModel(; Re = T(2_000))
 
 # A 2D grid is a Cartesian product of two vectors
-n = 100
-x = LinRange(0, 2π, n + 1)
-y = LinRange(0, 2π, n + 1)
+n = 128
+lims = (T(0), T(2π))
+x = LinRange(lims..., n + 1)
+y = LinRange(lims..., n + 1)
 plot_grid(x, y)
 
 # Build setup and assemble operators
 setup = Setup(x, y; viscosity_model);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
-# Fourier pressure solver
-pressure_solver = FourierPressureSolver(setup)
+# spectral pressure solver
+pressure_solver = SpectralPressureSolver(setup)
 
 # Time interval
-t_start, t_end = tlims = (0.0, 10.0)
+t_start, t_end = tlims = (T(0), T(1))
 
 # Initial conditions
 initial_velocity_u(x, y) = -sin(x)cos(y)
 initial_velocity_v(x, y) = cos(x)sin(y)
-initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
+initial_pressure(x, y) = 1 // 4 * (cos(2x) + cos(2y))
 V₀, p₀ = create_initial_conditions(
     setup,
-    t_start;
     initial_velocity_u,
     initial_velocity_v,
+    t_start;
     initial_pressure,
     pressure_solver,
 );
 
 # Solve steady state problem
-problem = SteadyStateProblem(setup, V₀, p₀);
-V, p = solve(problem; npicard = 2);
+V, p = solve_steady_state(setup, V₀, p₀; npicard = 2);
 
 # Iteration processors
-logger = Logger()
-observer = StateObserver(1, V₀, p₀, t_start)
-writer = VTKWriter(; nupdate = 10, dir = "output/$name", filename = "solution")
-tracer = QuantityTracer()
-## processors = [logger, observer, tracer, writer]
-processors = [logger, observer, tracer]
-
-# Real time plot
-real_time_plot(observer, setup)
+processors = (
+    ## field_plotter(setup; nupdate = 1),
+    energy_history_plotter(setup; nupdate = 1),
+    ## energy_spectrum_plotter(setup; nupdate = 1),
+    ## animator(setup, "vorticity.mkv"; nupdate = 4),
+    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+    ## field_saver(setup; nupdate = 10),
+    step_logger(; nupdate = 1),
+);
 
 # Solve unsteady problem
-problem = UnsteadyProblem(setup, V₀, p₀, tlims);
-V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver, inplace = true)
+V, p, outputs = solve_unsteady(
+    setup,
+    V₀,
+    p₀,
+    tlims;
+    Δt = T(0.01),
+    processors,
+    pressure_solver,
+    inplace = true,
+);
 #md current_figure()
 
 # ## Post-process
@@ -79,10 +90,7 @@ V, p = solve(problem, RK44(); Δt = 0.01, processors, pressure_solver, inplace =
 # We may visualize or export the computed fields `(V, p)`
 
 # Export to VTK
-save_vtk(V, p, t_end, setup, "output/solution")
-
-# Plot tracers
-plot_tracers(tracer)
+save_vtk(setup, V, p, t_end, "output/solution")
 
 # Plot pressure
 plot_pressure(setup, p)
@@ -95,3 +103,6 @@ plot_vorticity(setup, V, t_end)
 
 # Plot streamfunction
 ## plot_streamfunction(setup, V, t_end)
+
+# Energy history
+outputs[1]

@@ -20,15 +20,14 @@ get_bc_vectors
 
 ```@docs
 SteadyBodyForce
-UnsteadyBodyForce
 ```
 
 ## Grid
 
 ```@docs
+Dimension
 Grid
 cosine_grid
-get_dimension
 max_size
 stretched_grid
 ```
@@ -38,7 +37,6 @@ stretched_grid
 ```@docs
 AbstractViscosityModel
 LaminarModel
-KEpsilonModel
 MixingLengthModel
 SmagorinskyModel
 QRModel
@@ -58,8 +56,6 @@ LerayConvectionModel
 
 ```@docs
 MomentumCache
-bodyforce
-bodyforce!
 check_symmetry
 compute_conservation
 convection
@@ -81,10 +77,6 @@ turbulent_viscosity
 
 ```@docs
 Operators
-ke_convection
-ke_diffusion
-ke_production
-ke_viscosity
 operator_averaging
 operator_convection_diffusion
 operator_divergence
@@ -93,6 +85,7 @@ operator_postprocessing
 operator_regularization
 operator_turbulent_diffusion
 operator_viscosity
+operator_filter
 ```
 
 ## Postprocess
@@ -106,7 +99,6 @@ plot_force
 plot_grid
 plot_pressure
 plot_streamfunction
-plot_tracers
 plot_velocity
 plot_vorticity
 save_vtk
@@ -116,36 +108,27 @@ save_vtk
 
 ```@docs
 create_initial_conditions
-```
-
-## Problems
-
-```@docs
-SteadyStateProblem
-UnsteadyProblem
-is_steady
+random_field
 ```
 
 ## Processors
 
 ```@docs
-AbstractProcessor
-Logger
-VTKWriter
-QuantityTracer
-StateObserver
-initialize!
-process!
-finalize!
-real_time_plot
+step_logger
+vtk_writer
+field_saver
+field_plotter
+energy_history_plotter
+energy_spectrum_plotter
+animator
 ```
 
 ## Solvers
 
 ```@docs
 get_timestep
-solve
-solve_animate
+solve_unsteady
+solve_steady_state
 ```
 
 ### Pressure solvers
@@ -154,7 +137,7 @@ solve_animate
 AbstractPressureSolver
 DirectPressureSolver
 CGPressureSolver
-FourierPressureSolver
+SpectralPressureSolver
 pressure_additional_solve
 pressure_additional_solve!
 pressure_poisson
@@ -171,19 +154,9 @@ OneLegMethod
 ExplicitRungeKuttaMethod
 ImplicitRungeKuttaMethod
 
-TimeStepper
-
-AbstractODEMethodCache
-ExplicitRungeKuttaCache
-ImplicitRungeKuttaCache
-AdamsBashforthCrankNicolsonCache
-OneLegCache
-
-change_time_stepper
 isexplicit
 lambda_conv_max
 lambda_diff_max
-needs_startup_method
 nstage
 ode_method_cache
 runge_kutta_method

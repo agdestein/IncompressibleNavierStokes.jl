@@ -1,13 +1,15 @@
 """
-    get_velocity(V, t, setup)
+    get_velocity(setup, V, t)
 
 Get velocity values at pressure points. Interpolate velocities to pressure positions using
 `BMx` and `BMy` (and `BMz`), constructed in operator_divergence.jl.
 """
 function get_velocity end
 
+get_velocity(setup, V, t) = get_velocity(setup.grid.dimension, setup, V, t)
+
 # 2D version
-function get_velocity(V, t, setup::Setup{T,2}) where {T}
+function get_velocity(::Dimension{2}, setup, V, t)
     (; grid, operators) = setup
     (; Npx, Npy, indu, indv) = grid
     (; Au_ux, Av_vy, Bup, Bvp) = operators
@@ -26,7 +28,7 @@ function get_velocity(V, t, setup::Setup{T,2}) where {T}
 end
 
 # 3D version
-function get_velocity(V, t, setup::Setup{T,3}) where {T}
+function get_velocity(::Dimension{3}, setup, V, t)
     (; grid, operators) = setup
     (; Au_ux, Av_vy, Aw_wz, Bup, Bvp, Bwp) = operators
     (; Npx, Npy, Npz, indu, indv, indw) = grid

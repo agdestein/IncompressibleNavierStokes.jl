@@ -1,21 +1,53 @@
-"""
-    step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
+create_stepper(
+    method::OneLegMethod;
+    setup,
+    pressure_solver,
+    bc_vectors,
+    V,
+    p,
+    t,
+    n = 0,
 
-Do one time step using one-leg-β-method.
+    # For the first step, these are not used
+    Vₙ = copy(V),
+    pₙ = copy(p),
+    tₙ = t,
+) = (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
 
-Non-mutating/allocating/out-of-place version.
-
-See also [`step!`](@ref).
-"""
-function step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
-    (; p_add_solve, β) = method
+function step(method::OneLegMethod, stepper, Δt)
+    (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ) = stepper
+    (; p_add_solve, β, method_startup) = method
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; G, M) = operators
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
 
-    # Update current solution (does not depend on previous step size)
+    # One-leg requires state at previous time step, which is not available at
+    # the first iteration. Do one startup step instead
+    if n == 0
+        stepper_startup =
+            create_stepper(method_startup; setup, pressure_solver, bc_vectors, V, p, t)
+        n += 1
+        Vₙ = V
+        pₙ = p
+        tₙ = t
+        (; V, p, t) = step(method_startup, stepper_startup, Δt)
+        return create_stepper(
+            method;
+            setup,
+            pressure_solver,
+            bc_vectors,
+            V,
+            p,
+            t,
+            n,
+            Vₙ,
+            pₙ,
+            tₙ,
+        )
+    end
+
+    # Update current solution
     Δtₙ₋₁ = t - tₙ
     n += 1
     Vₙ₋₁ = Vₙ
@@ -24,6 +56,8 @@ function step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
     pₙ = p
     tₙ = t
     Δtₙ = Δt
+
+    # One-leg requires fixed time step
     @assert Δtₙ ≈ Δtₙ₋₁
 
     # Intermediate ("offstep") velocities
@@ -36,11 +70,11 @@ function step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
 
     # Take a time step with this right-hand side, this gives an intermediate velocity field
     # (not divergence free)
-    V = @. (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1 // 2)
+    V = @. (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δtₙ / Ω * F) / (β + 1 // 2)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
-    if isnothing(bc_vectors) || bc_unsteady
+    if bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ + Δtₙ)
     end
     (; yM) = bc_vectors
@@ -56,7 +90,7 @@ function step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
     GΔp = G * Δp
 
     # Update velocity field
-    V = @. V - Δtᵦ * Ω⁻¹ * GΔp
+    V = @. V - Δtᵦ / Ω * GΔp
 
     # Update pressure (second order)
     p = @. 2pₙ - pₙ₋₁ + 4 // 3 * Δp
@@ -68,24 +102,46 @@ function step(stepper::OneLegStepper, Δt; bc_vectors = nothing)
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
 end
 
-"""
-    step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
-
-Do one time step using one-leg-β-method.
-"""
-function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = nothing)
-    (; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
-    (; p_add_solve, β) = method
+function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
+    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; p_add_solve, β, method_startup) = method
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; G, M) = operators
-    (; Ω⁻¹) = grid
+    (; Ω) = grid
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache
 
-    # Update current solution (does not depend on previous step size)
+    # One-leg requires state at previous time step, which is not available at
+    # the first iteration. Do one startup step instead
+    if n == 0
+        stepper_startup =
+            create_stepper(method_startup; setup, pressure_solver, bc_vectors, V, p, t)
+        n += 1
+        Vₙ = V
+        pₙ = p
+        tₙ = t
+
+        # Note: We do one out-of-place step here, with a few allocations
+        (; V, p, t) = step(method_startup, stepper_startup, Δt)
+        return create_stepper(
+            method;
+            setup,
+            pressure_solver,
+            bc_vectors,
+            V,
+            p,
+            t,
+            n,
+            Vₙ,
+            pₙ,
+            tₙ,
+        )
+    end
+
+    # Update current solution
     Δtₙ₋₁ = t - tₙ
     n += 1
     Vₙ₋₁ .= Vₙ
@@ -94,6 +150,8 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = 
     pₙ .= p
     tₙ = t
     Δtₙ = Δt
+
+    # One-leg requires fixed time step
     @assert Δtₙ ≈ Δtₙ₋₁
 
     # Intermediate ("offstep") velocities
@@ -106,11 +164,11 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = 
 
     # Take a time step with this right-hand side, this gives an intermediate velocity field
     # (not divergence free)
-    @. V = (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δtₙ * Ω⁻¹ * F) / (β + 1 // 2)
+    @. V = (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δtₙ / Ω * F) / (β + 1 // 2)
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
-    if isnothing(bc_vectors) || bc_unsteady
+    if bc_unsteady
         bc_vectors = get_bc_vectors(setup, tₙ + Δtₙ)
     end
     (; yM) = bc_vectors
@@ -128,7 +186,7 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = 
     mul!(GΔp, G, Δp)
 
     # Update velocity field
-    @. V -= Δtᵦ * Ω⁻¹ * GΔp
+    @. V -= Δtᵦ / Ω * GΔp
 
     # Update pressure (second order)
     @. p = 2pₙ - pₙ₋₁ + 4 // 3 * Δp
@@ -151,5 +209,5 @@ function step!(stepper::OneLegStepper, Δt; cache, momentum_cache, bc_vectors = 
 
     t = tₙ + Δtₙ
 
-    TimeStepper(; method, setup, pressure_solver, n, V, p, t, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
 end
