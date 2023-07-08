@@ -138,7 +138,7 @@ export Setup
 export stretched_grid, cosine_grid
 
 # Pressure solvers
-export DirectPressureSolver, CGPressureSolver, FourierPressureSolver
+export DirectPressureSolver, CGPressureSolver, SpectralPressureSolver
 export pressure_poisson,
     pressure_poisson!, pressure_additional_solve, pressure_additional_solve!
 

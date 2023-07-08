@@ -22,7 +22,7 @@ function pressure_poisson(solver::CGPressureSolver, f)
     cg(A, f; abstol, reltol, maxiter)
 end
 
-function pressure_poisson(solver::FourierPressureSolver, f)
+function pressure_poisson(solver::SpectralPressureSolver, f)
     (; Ahat) = solver
 
     f = reshape(f, size(Ahat))
@@ -64,7 +64,7 @@ function pressure_poisson!(solver::CGPressureSolver, p, f)
     cg!(p, A, f; abstol, reltol, maxiter)
 end
 
-function pressure_poisson!(solver::FourierPressureSolver, p, f)
+function pressure_poisson!(solver::SpectralPressureSolver, p, f)
     (; Ahat, fhat, phat) = solver
 
     fhat[:] .= complex.(f)

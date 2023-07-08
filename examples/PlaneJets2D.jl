@@ -75,8 +75,8 @@ setup = Setup(x, y; viscosity_model);
 # setup = Setup(x, y; viscosity_model, u_bc, v_bc, bc_type);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
-# Fourier pressure solver
-pressure_solver = FourierPressureSolver(setup)
+# spectral pressure solver
+pressure_solver = SpectralPressureSolver(setup)
 
 # Time interval
 t_start, t_end = tlims = (0.0, 1.0)

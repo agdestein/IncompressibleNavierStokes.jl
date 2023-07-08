@@ -8,7 +8,7 @@
     y = LinRange(0, 2π, n + 1)
     setup = Setup(x, y; viscosity_model)
 
-    pressure_solver = FourierPressureSolver(setup)
+    pressure_solver = SpectralPressureSolver(setup)
 
     t_start, t_end = tlims = (0.0, 5.0)
 

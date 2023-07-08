@@ -47,8 +47,8 @@ plot_grid(x, y, z)
 setup = Setup(x, y, z; viscosity_model);
 
 # Since the grid is uniform and identical for x, y, and z, we may use a
-# specialized Fourier pressure solver
-pressure_solver = FourierPressureSolver(setup)
+# specialized spectral pressure solver
+pressure_solver = SpectralPressureSolver(setup)
 
 # Initial conditions
 initial_velocity_u(x, y, z) = sin(x)cos(y)cos(z)

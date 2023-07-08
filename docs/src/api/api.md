@@ -137,7 +137,7 @@ solve_steady_state
 AbstractPressureSolver
 DirectPressureSolver
 CGPressureSolver
-FourierPressureSolver
+SpectralPressureSolver
 pressure_additional_solve
 pressure_additional_solve!
 pressure_poisson

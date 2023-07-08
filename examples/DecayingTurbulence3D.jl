@@ -52,8 +52,8 @@ z = LinRange(lims..., n + 1)
 setup = Setup(x, y, z; viscosity_model);
 
 # Since the grid is uniform and identical for x, y, and z, we may use a
-# specialized Fourier pressure solver
-pressure_solver = FourierPressureSolver(setup);
+# specialized spectral pressure solver
+pressure_solver = SpectralPressureSolver(setup);
 
 # Initial conditions
 V₀, p₀ = random_field(setup; A = T(1_000_000), σ = T(30), s = 5, pressure_solver)

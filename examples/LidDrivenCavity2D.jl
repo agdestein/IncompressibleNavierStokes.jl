@@ -92,7 +92,7 @@ setup = Setup(x, y; viscosity_model, u_bc, v_bc, bc_type);
 # 
 # - [`DirectPressureSolver`](@ref) (only for CPU with `Float64`)
 # - [`CGPressureSolver`](@ref)
-# - [`FourierPressureSolver`](@ref) (only for periodic boundary conditions and
+# - [`SpectralPressureSolver`](@ref) (only for periodic boundary conditions and
 #   uniform grids)
 
 pressure_solver = DirectPressureSolver(setup)

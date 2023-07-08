@@ -10,7 +10,7 @@
 
     @test plot_grid(x, y, z) isa Makie.Figure
 
-    pressure_solver = FourierPressureSolver(setup)
+    pressure_solver = SpectralPressureSolver(setup)
 
     t_start, t_end = tlims = (T(0), T(1))
 

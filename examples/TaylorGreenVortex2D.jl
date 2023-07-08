@@ -39,8 +39,8 @@ plot_grid(x, y)
 setup = Setup(x, y; viscosity_model);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
-# Fourier pressure solver
-pressure_solver = FourierPressureSolver(setup)
+# spectral pressure solver
+pressure_solver = SpectralPressureSolver(setup)
 
 # Time interval
 t_start, t_end = tlims = (T(0), T(1))

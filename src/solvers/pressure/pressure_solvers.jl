@@ -21,7 +21,7 @@ struct DirectPressureSolver{T,F<:Factorization{T}} <: AbstractPressureSolver{T}
 end
 
 # This moves all the inner arrays to the GPU when calling
-# `cu(::FourierPressureSolver)` from CUDA.jl
+# `cu(::SpectralPressureSolver)` from CUDA.jl
 # TODO: CUDA does not support `factorize`, `lu`, etc, but maybe `L` and `U` can be
 # converted to `CuArray` after factorization on the CPU
 Adapt.adapt_structure(to, s::DirectPressureSolver) = error(
@@ -51,7 +51,7 @@ function CGPressureSolver(
 end
 
 # This moves all the inner arrays to the GPU when calling
-# `cu(::FourierPressureSolver)` from CUDA.jl
+# `cu(::SpectralPressureSolver)` from CUDA.jl
 Adapt.adapt_structure(to, s::CGPressureSolver) = CGPressureSolver(
     adapt(to, s.A),
     adapt(to, s.abstol),
@@ -59,25 +59,25 @@ Adapt.adapt_structure(to, s::CGPressureSolver) = CGPressureSolver(
     adapt(to, s.maxiter),
 )
 
-struct FourierPressureSolver{T,A<:AbstractArray{Complex{T}}} <: AbstractPressureSolver{T}
+struct SpectralPressureSolver{T,A<:AbstractArray{Complex{T}}} <: AbstractPressureSolver{T}
     Ahat::A
     phat::A
     fhat::A
 end
 
 # This moves all the inner arrays to the GPU when calling
-# `cu(::FourierPressureSolver)` from CUDA.jl
-Adapt.adapt_structure(to, s::FourierPressureSolver) =
-    FourierPressureSolver(adapt(to, s.Ahat), adapt(to, s.phat), adapt(to, s.fhat))
+# `cu(::SpectralPressureSolver)` from CUDA.jl
+Adapt.adapt_structure(to, s::SpectralPressureSolver) =
+    SpectralPressureSolver(adapt(to, s.Ahat), adapt(to, s.phat), adapt(to, s.fhat))
 
 """
-    FourierPressureSolver(setup)
+    SpectralPressureSolver(setup)
 
-Build Fourier pressure solver from setup.
+Build spectral pressure solver from setup.
 """
-FourierPressureSolver(setup) = FourierPressureSolver(setup.grid.dimension, setup)
+SpectralPressureSolver(setup) = SpectralPressureSolver(setup.grid.dimension, setup)
 
-function FourierPressureSolver(::Dimension{2}, setup)
+function SpectralPressureSolver(::Dimension{2}, setup)
     (; grid, boundary_conditions) = setup
     (; hx, hy, Npx, Npy) = grid
 
@@ -88,13 +88,13 @@ function FourierPressureSolver(::Dimension{2}, setup)
         !isequal((:periodic, :periodic)),
         (boundary_conditions.u.x, boundary_conditions.v.y),
     )
-        error("FourierPressureSolver only implemented for periodic boundary conditions")
+        error("SpectralPressureSolver only implemented for periodic boundary conditions")
     end
 
     Δx = first(hx)
     Δy = first(hy)
     if any(!≈(Δx), hx) || any(!≈(Δy), hy)
-        error("FourierPressureSolver requires uniform grid along each dimension")
+        error("SpectralPressureSolver requires uniform grid along each dimension")
     end
 
     # Fourier transform of the discretization
@@ -114,10 +114,10 @@ function FourierPressureSolver(::Dimension{2}, setup)
     phat = similar(Ahat)
     fhat = similar(Ahat)
 
-    FourierPressureSolver{T,typeof(Ahat)}(Ahat, phat, fhat)
+    SpectralPressureSolver{T,typeof(Ahat)}(Ahat, phat, fhat)
 end
 
-function FourierPressureSolver(::Dimension{3}, setup)
+function SpectralPressureSolver(::Dimension{3}, setup)
     (; grid, boundary_conditions) = setup
     (; hx, hy, hz, Npx, Npy, Npz) = grid
 
@@ -128,14 +128,14 @@ function FourierPressureSolver(::Dimension{3}, setup)
         !isequal((:periodic, :periodic)),
         [boundary_conditions.u.x, boundary_conditions.v.y, boundary_conditions.w.z],
     )
-        error("FourierPressureSolver only implemented for periodic boundary conditions")
+        error("SpectralPressureSolver only implemented for periodic boundary conditions")
     end
 
     Δx = first(hx)
     Δy = first(hy)
     Δz = first(hz)
     if any(!≈(Δx), hx) || any(!≈(Δy), hy) || any(!≈(Δz), hz)
-        error("FourierPressureSolver requires uniform grid along each dimension")
+        error("SpectralPressureSolver requires uniform grid along each dimension")
     end
 
     # Fourier transform of the discretization
@@ -160,5 +160,5 @@ function FourierPressureSolver(::Dimension{3}, setup)
     phat = similar(Ahat)
     fhat = similar(Ahat)
 
-    FourierPressureSolver{T,typeof(Ahat)}(Ahat, phat, fhat)
+    SpectralPressureSolver{T,typeof(Ahat)}(Ahat, phat, fhat)
 end

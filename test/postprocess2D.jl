@@ -7,7 +7,7 @@
 
     @test plot_grid(x, y) isa Makie.FigureAxisPlot
 
-    pressure_solver = FourierPressureSolver(setup)
+    pressure_solver = SpectralPressureSolver(setup)
 
     t_start, t_end = tlims = (0.0, 1.0)
 

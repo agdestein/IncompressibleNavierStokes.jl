@@ -51,8 +51,8 @@ y = LinRange(lims..., n + 1)
 setup = Setup(x, y; viscosity_model);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
-# Fourier pressure solver
-pressure_solver = FourierPressureSolver(setup);
+# spectral pressure solver
+pressure_solver = SpectralPressureSolver(setup);
 
 # Initial conditions
 V₀, p₀ = random_field(setup; A = T(1_000_000), σ = T(30), s = 5, pressure_solver);
@@ -79,7 +79,7 @@ V, p, outputs = solve_unsteady(
     tlims;
     Δt = T(0.001),
     processors,
-    pressure_solver = FourierPressureSolver(setup),
+    pressure_solver,
     inplace = true,
     device,
 );
