@@ -314,6 +314,7 @@ function step!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, momentum_c
                 momentum_cache;
                 bc_vectors,
                 get_jacobian = true,
+                nstage = s,
             )
 
             # Update iteration matrix
@@ -344,6 +345,7 @@ function step!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, momentum_c
             cache,
             momentum_cache;
             bc_vectors,
+            nstage = s,
         )
         mul!(fmomⱼ, A_ext, Fⱼ)
         @. fmomⱼ -= (Ωtot * Vⱼ - Ωtot * Vtotₙ) / Δtₙ
@@ -407,9 +409,9 @@ function step!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, momentum_c
 end
 
 """
-    momentum_allstage(V, C, p, t, setup; get_jacobian = false)
+    momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, get_jacobian = false)
 
-Call momentum for multiple `(V, p)` pairs, as required in implicit RK methods.
+Call momentum for multiple `(Vⱼ, pⱼ)` pairs, as required in implicit RK methods.
 
 Non-mutating/allocating/out-of-place version.
 
@@ -445,7 +447,20 @@ function momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, g
 end
 
 """
-    momentum_allstage!(F, ∇F, V, C, p, t, setup, cache, momentum_cache; get_jacobian = false)
+    momentum_allstage!(
+        Fⱼ,
+        ∇Fⱼ,
+        Vⱼ,
+        ϕⱼ,
+        pⱼ,
+        tⱼ,
+        setup,
+        cache,
+        momentum_cache;
+        bc_vectors,
+        nstage,
+        get_jacobian = false,
+    )
 
 Call momentum for multiple `(V, p)` pairs, as required in implicit RK methods.
 
