@@ -228,7 +228,7 @@ The discrete pressure Poisson equation is given by
 A p_h = g,
 ```
 
-where ``A = -M \Omega^{-1} G`` is a Laplace operator and ``g = -M F(V_h)``.
+where ``A = -M \Omega^{-1} G`` is a Laplace operator and ``g = -M \Omega^{-1} F(V_h) + \frac{\mathrm{d}}{\mathrm{d} t} y_M``.
 
 [^1]: [Harlow1965](@cite)
 [^2]: [Sanderse2014](@cite)
