@@ -91,6 +91,7 @@
                 Δt = 0.01,
                 pressure_solver,
                 inplace = true,
+                processors = (step_logger(),),
             )
             @test_broken norm(V - V_exact) / norm(V_exact) < 1e-3
         end
