@@ -1,5 +1,6 @@
 # Run a typical simulation: Lid-Driven Cavity case (LDC)
 @testset "Simulation 3D" begin
+    @info "Testing 3D simulation"
     lid_vel = [1.0, 0.0, 0.2] # Lid velocity
     u_bc(x, y, z, t) = y ≈ 1.0 ? lid_vel[1] : 0.0
     v_bc(x, y, z, t) = 0.0

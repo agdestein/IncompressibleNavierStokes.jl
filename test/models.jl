@@ -45,6 +45,7 @@
 
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
+            @info "Testing $(typeof(viscosity_model)) and $(typeof(convection_model))"
             setup = Setup(x, y; viscosity_model, convection_model, u_bc, v_bc, bc_type)
 
             V₀, p₀ = create_initial_conditions(
@@ -71,6 +72,7 @@
 
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
+            @info "Testing $(typeof(viscosity_model)) and $(typeof(convection_model))"
             setup = Setup(x, y; viscosity_model, convection_model, u_bc, v_bc, bc_type)
         end
     end

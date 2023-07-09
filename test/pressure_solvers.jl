@@ -1,4 +1,5 @@
 @testset "Pressure solvers" begin
+    @info "Testing pressure solvers"
     n = 20
     x = LinRange(0, 2π, n)
     y = LinRange(0, 2π, n)

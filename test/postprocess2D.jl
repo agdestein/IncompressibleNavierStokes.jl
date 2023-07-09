@@ -1,4 +1,6 @@
 @testset "Postprocess 2D" begin
+    @info "Testing 2D processors"
+
     n = 10
     x = LinRange(0, 2π, n)
     y = LinRange(0, 2π, n)
@@ -30,7 +32,7 @@
         vtk_writer(setup; nupdate = 5, dir = "output", filename = "solution2D"),
         animator(
             setup,
-            "output/vorticity2D.mkv";
+            "output/vorticity2D.mp4";
             nupdate = 10,
             plotter = field_plotter(setup; displayfig = false),
         ),
@@ -42,6 +44,7 @@
         solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors, pressure_solver)
 
     @testset "VTK files" begin
+        @info "Testing 2D processors: VTK files"
         @test isfile("output/solution2D.pvd")
         @test isfile("output/solution2D_t=0p0.vti")
         save_vtk(setup, V, p, t_end, "output/field2D")
@@ -49,6 +52,7 @@
     end
 
     @testset "Plot fields" begin
+        @info "Testing 2D processors: Plots"
         @test plot_pressure(setup, p) isa Figure
         @test plot_velocity(setup, V, t_end) isa Figure
         @test plot_vorticity(setup, V, t_end) isa Figure
@@ -57,6 +61,7 @@
     end
 
     @testset "Animate" begin
-        @test isfile("output/vorticity2D.mkv")
+        @info "Testing 2D processors: Animation"
+        @test isfile("output/vorticity2D.mp4")
     end
 end

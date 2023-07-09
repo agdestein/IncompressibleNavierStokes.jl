@@ -1,4 +1,5 @@
 @testset "Grid" begin
+    @info "Testing grid"
     a = 1.2
     b = 4.5
     N = 76

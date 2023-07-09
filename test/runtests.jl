@@ -23,6 +23,7 @@ using Test
     include("postprocess3D.jl")
 
     @testset "Aqua" begin
+        @info "Testing code with Aqua"
         Aqua.test_all(
             IncompressibleNavierStokes;
             ambiguities = false,
