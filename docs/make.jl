@@ -59,9 +59,10 @@ makedocs(
         "Home" => "index.md",
         "Getting Started" => "getting_started.md",
         "Examples" => [e.first => joinpath(output, e.second * ".md") for e ∈ examples],
-        "Discretization" => [
-            "Spatial discretization" => "discretization/spatial.md",
-            "Time discretization" => "discretization/time.md",
+        "Equations" => [
+            "Incompressible Navier-Stokes equations" => "equations/ns.md",
+            "Spatial discretization" => "equations/spatial.md",
+            "Time discretization" => "equations/time.md",
         ],
         "Features" => [
             "Floating point precision" => "features/precision.md",
