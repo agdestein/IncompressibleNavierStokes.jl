@@ -22,6 +22,10 @@ The volume center coordinates are deduced as ``x_i = \frac{1}{2} (x_{i -
 - The ``p``-point ``(x_i, y_j)``,
 - The ``\omega``-point ``(x_{i + \frac{1}{2}}, y_{j + \frac{1}{2}})``.
 
+This configuration is illustrated as follows:
+
+![Grid](../assets/grid.svg)
+
 ## Interpolation
 
 The vectors of unknowns will not contain all the half-index values:
@@ -110,7 +114,6 @@ and
 q_{i, j}^{y y} = \frac{q_{i, j + \frac{1}{2}}^y - q_{i, j -
 \frac{1}{2}}^y}{y_{j + \frac{1}{2}} - y_{j - \frac{1}{2}}}.
 ```
-
 
 ## Discretizing the Navier-Stokes equations
 
