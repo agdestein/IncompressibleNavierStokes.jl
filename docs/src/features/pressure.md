@@ -2,7 +2,7 @@
 
 The discrete pressure Poisson equation
 ```math
-A p = f
+A p_h = g
 ```
 enforces divergence freeness. There are three options for solving this system:
 
