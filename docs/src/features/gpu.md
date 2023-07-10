@@ -1,10 +1,13 @@
 # GPU Support
 
 If an Nvidia GPU is available, the default CPU solve call
+
 ```julia
 solve_unsteady(setup, V₀, p₀, tlims; kwargs...)
 ```
+
 can now be replaced with the following:
+
 ```julia
 using CUDA
 solve_unsteady(
@@ -13,6 +16,7 @@ solve_unsteady(
     kwargs...
 )
 ```
+
 This moves the arrays and sparse operators to the GPU, outsourcing all array operations to the GPU.
 
 Limitations:

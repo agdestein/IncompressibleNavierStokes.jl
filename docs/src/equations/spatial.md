@@ -17,6 +17,9 @@ The volume center coordinates are deduced as ``x_i = \frac{1}{2} (x_{i -
 \frac{1}{2}} + x_{i + \frac{1}{2}})`` and ``y_j = \frac{1}{2} (y_{j -
 \frac{1}{2}} + y_{j + \frac{1}{2}})``.
 
+In each finite volume there are four different positions in which quantities of
+interest can be defined:
+
 - The ``u``-point ``(x_{i + \frac{1}{2}}, y_j)``,
 - The ``v``-point ``(x_i, y_{j + \frac{1}{2}})``,
 - The ``p``-point ``(x_i, y_j)``,
@@ -228,9 +231,10 @@ The discrete pressure Poisson equation is given by
 A p_h = g,
 ```
 
-where ``A = -M \Omega^{-1} G`` is a Laplace operator and ``g = -M \Omega^{-1} F(V_h) + \frac{\mathrm{d}}{\mathrm{d} t} y_M``.
+where ``A = -M \Omega^{-1} G`` is a Laplace operator and ``g = -M \Omega^{-1}
+(F(V_h) - y_G) + \frac{\mathrm{d}}{\mathrm{d} t} y_M``.
 
 [^1]: [Harlow1965](@cite)
-[^2]: [Sanderse2014](@cite)
+[^2]: [Sanderse2012](@cite)
 [^3]: [Sanderse2013](@cite)
 [^4]: [Sanderse2014](@cite)
