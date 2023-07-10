@@ -1,6 +1,7 @@
 # Incompressible Navier-Stokes equations
 
-The incompressible Navier-Stokes equations in conservative form are given by
+The incompressible Navier-Stokes equations are comprised of a mass equation and
+two or three momentum equations. In conservative form, they are given by
 
 ```math
 \begin{align*}
@@ -16,6 +17,7 @@ pressure, ``\nu`` is the kinematic viscosity, and ``f = (f_u, f_v)`` or ``f =
 
 ```math
 \begin{split}
+    \frac{\partial u}{\partial x} + \frac{\partial v}{\partial y} & = 0, \\
     \frac{\partial u}{\partial t} + \frac{\partial (u u)}{\partial x} +
     \frac{\partial (v u)}{\partial y} & = - \frac{\partial p}{\partial x} +
     \nu \left( \frac{\partial^2 u}{\partial x^2} + \frac{\partial^2
@@ -31,6 +33,8 @@ In 3D, the equations become
 
 ```math
 \begin{split}
+    \frac{\partial u}{\partial x} + \frac{\partial v}{\partial y} +
+    \frac{\partial w}{\partial z} & = 0, \\
     \frac{\partial u}{\partial t} + \frac{\partial (u u)}{\partial x} +
     \frac{\partial (v u)}{\partial y} + \frac{\partial (w u)}{\partial z} & = -
     \frac{\partial p}{\partial x} + \nu \left( \frac{\partial^2 u}{\partial
