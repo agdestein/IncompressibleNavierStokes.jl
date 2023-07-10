@@ -24,7 +24,7 @@ The volume center coordinates are deduced as ``x_i = \frac{1}{2} (x_{i -
 
 This configuration is illustrated as follows:
 
-![Grid](../assets/grid.svg)
+![Grid](../assets/grid.png)
 
 ## Interpolation
 
