@@ -70,6 +70,7 @@ makedocs(
             "Large eddy simulation" => "features/les.md",
             "Pressure solvers" => "features/pressure.md",
             "Boundary conditions" => "features/bc.md",
+            "Time steppers" => "features/steppers.md",
         ],
         "API Reference" =>
             ["API" => "api/api.md", "Runge-Kutta methods" => "api/tableaux.md"],
