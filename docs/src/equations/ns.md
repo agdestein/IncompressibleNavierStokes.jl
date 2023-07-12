@@ -13,7 +13,8 @@ two or three momentum equations. In conservative form, they are given by
 
 where ``V = (u, v)`` or ``V = (u, v, w)`` is the velocity field, ``p`` is the
 pressure, ``\nu`` is the kinematic viscosity, and ``f = (f_u, f_v)`` or ``f =
-(f_u, f_v, f_w)`` is the body force. In 2D, the equations become
+(f_u, f_v, f_w)`` is the body force per unit of volume. In 2D, the equations
+become
 
 ```math
 \begin{split}
@@ -53,6 +54,43 @@ In 3D, the equations become
 \end{split}
 ```
 
+
+## Integral form
+
+When discretizing the Navier-Stokes equations it can be useful to integrate the
+equations over an arbitrary control volume ``\mathcal{O}``. Its boundary will
+be denoted ``\partial \mathcal{O}``, with normal ``n`` and surface element
+``\mathrm{d} \Gamma``.
+
+The mass equation in integral form is given by
+
+```math
+\int_{\partial \mathcal{O}} V \cdot n \, \mathrm{d} \Gamma = 0.
+```
+
+where we have used the divergence theorem to convert the volume integral to a
+surface integral. Similarly, the momentum equations take the form
+
+```math
+\frac{\partial }{\partial t} \int_\mathcal{O} V \, \mathrm{d} \Omega
+= \int_{\partial \mathcal{O}} \left( - V V^\mathsf{T} - P + \nu S \right) \cdot n \,
+\mathrm{d} \Gamma + \int_\mathcal{O} f \mathrm{d} \Omega
+```
+
+where ``P = p \mathrm{I} = \operatorname{diag}(p, p)`` is the hydrostatic stress tensor
+and ``S = \nabla V + (\nabla V)^\mathsf{T}`` is the strain-rate tensor. Here we
+have once again used the divergence theorem.
+
+!!! note "Strain-rate tensor"
+    The second term in the strain rate tensor is optional, as
+
+    ```math
+    \int_{\partial \mathcal{O}} (\nabla V)^\mathsf{T} \cdot n \, \mathrm{d} \Gamma = 0
+    ```
+
+    due to the divergence freeness of ``V`` (mass equation).
+
+
 ## Boundary conditions
 
 Because we will use a Cartesian grid for discretization, the fields ``V``,
@@ -67,6 +105,7 @@ the first dimension)
 - Pressure: ``p(x = x_1) = p_1``
 - Symmetric (no movement through boundary ``x = x_1``, but free movement along
   it): ``u(x = x_1) = 0``
+
 
 ## Pressure equation
 
@@ -112,6 +151,7 @@ velocity stays divergence free.
 
 If there are no pressure boundary conditions, the pressure is only unique up to
 a constant. We set this constant to ``1``.
+
 
 ## Other quantities of interest
 
