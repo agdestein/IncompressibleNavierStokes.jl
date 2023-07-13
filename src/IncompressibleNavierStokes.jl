@@ -106,6 +106,7 @@ include("solvers/solve_unsteady.jl")
 # Utils
 include("utils/filter_convection.jl")
 include("utils/get_lims.jl")
+include("utils/plotmat.jl")
 
 # Postprocess
 include("postprocess/get_velocity.jl")
@@ -150,6 +151,7 @@ export create_initial_conditions, random_field, get_bc_vectors, get_velocity
 
 export plot_force,
     plot_grid, plot_pressure, plot_streamfunction, plot_velocity, plot_vorticity, save_vtk
+export plotmat
 
 # ODE methods
 
