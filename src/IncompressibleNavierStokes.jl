@@ -134,6 +134,7 @@ export animator
 
 # Setup
 export Setup
+export operator_filter
 
 # 1D grids
 export stretched_grid, cosine_grid
