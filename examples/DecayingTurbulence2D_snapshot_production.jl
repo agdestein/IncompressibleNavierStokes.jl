@@ -71,7 +71,7 @@ for k = 1:K
     processors = (
         field_plotter(device(setup); nupdate = 1,displayfig = false),
         energy_history_plotter(device(setup); nupdate = 20, displayfig = false),
-        energy_spectrum_plotter(device(setup); nupdate = 1, displayfig = true),
+        energy_spectrum_plotter(device(setup); nupdate = 1, displayfig = false),
         ## animator(device(setup), "vorticity.mp4"; nupdate = 16),
         ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
         ## field_saver(setup; nupdate = 10),
@@ -79,7 +79,7 @@ for k = 1:K
     );
 
     # Time interval
-    t_start, t_end = tlims = (T(0), T(.01))
+    t_start, t_end = tlims = (T(0), T(.05))
 
     # Solve unsteady problem
     V, p, outputs = solve_unsteady(
@@ -97,7 +97,8 @@ for k = 1:K
     snapshots_V[:,k] = V;
 end
 
-
+save_object("output/snapshots_V.jld2",snapshots_V)
+save_object("output/snapshots_V_0.jld2",snapshots_V₀)
 
 
 
