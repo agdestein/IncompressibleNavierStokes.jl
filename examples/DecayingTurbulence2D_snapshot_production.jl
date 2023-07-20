@@ -56,12 +56,13 @@ setup = Setup(x, y; viscosity_model);
 # spectral pressure solver
 pressure_solver = SpectralPressureSolver(setup);
 
-K = 2; 
+K = 256; 
 
 snapshots_V₀ = zeros(setup.grid.NV,K);
 snapshots_V  = zeros(setup.grid.NV,K);
 
 for k = 1:K
+    k
     # Initial conditions
     V₀, p₀ = random_field(setup; A = T(1_000_000), σ = T(30), s = 5, pressure_solver);
 
@@ -79,7 +80,7 @@ for k = 1:K
     );
 
     # Time interval
-    t_start, t_end = tlims = (T(0), T(.05))
+    t_start, t_end = tlims = (T(0), T(.5))
 
     # Solve unsteady problem
     V, p, outputs = solve_unsteady(
@@ -97,8 +98,8 @@ for k = 1:K
     snapshots_V[:,k] = V;
 end
 
-save_object("output/snapshots_V.jld2",snapshots_V)
-save_object("output/snapshots_V_0.jld2",snapshots_V₀)
+JLD2.save_object("output/snapshots_V.jld2",snapshots_V)
+JLD2.save_object("output/snapshots_V_0.jld2",snapshots_V₀)
 
 
 
