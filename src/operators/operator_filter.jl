@@ -16,7 +16,7 @@ function create_top_hat_p(N, M)
     l = reshape(1:s, 1, 1, 1, :)
 
     ijkl = @. s * (i - 1) + k + s * N * (j - 1) + N * (l - 1)
-    
+
     z = fill(1 / s^2, N^2)
 
     sparse(ij[:], ijkl[:], z)
@@ -40,7 +40,7 @@ function create_top_hat_u(N, M)
     l = reshape(1:s, 1, 1, 1, :)
 
     ijkl = @. s * (i - 1) + k + s * N * (j - 1) + N * (l - 1)
-    
+
     z = fill(1 / s, N * M)
 
     sparse(ij[:], ijkl[:], z, M^2, N^2)
@@ -64,7 +64,7 @@ function create_top_hat_v(N, M)
     l = fill(1, 1, 1, 1, 1)
 
     ijkl = @. s * (i - 1) + k + s * N * (j - 1) + N * (l - 1)
-    
+
     z = fill(1 / s, N * M)
 
     sparse(ij[:], ijkl[:], z, M^2, N^2)
@@ -105,7 +105,7 @@ function operator_filter(::Dimension{2}, grid, boundary_conditions, s)
         ==((:periodic, :periodic)),
         (boundary_conditions.u.x, boundary_conditions.v.y),
     ) "Filter assumes periodic boundary conditions"
-    @assert Nx == Ny 
+    @assert Nx == Ny
 
     Kp = create_top_hat_p(N, M)
     Ku = create_top_hat_u(N, M)
