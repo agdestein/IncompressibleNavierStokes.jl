@@ -15,7 +15,4 @@ A p_h = g.
 
 ## Runge-Kutta methods
 
-See Sanderse [^1] [^2].
-
-[^1]: [Sanderse2012](@cite)
-[^2]: [Sanderse2013](@cite)
+See Sanderse [Sanderse2012](@cite) [Sanderse2013](@cite).

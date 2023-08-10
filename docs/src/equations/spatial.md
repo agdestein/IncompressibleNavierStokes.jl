@@ -1,10 +1,10 @@
 # Spatial Discretization
 
 To discretize the incompressible Navier-Stokes equations, we will use finite
-volumes on a staggered Cartesian grid, as proposed by Harlow
-and Welsh [^1]. We will use the notation of Sanderse [^2] [^3] [^4]. For
-simplicity, we will illustrate everything in 2D. The 3D discretization is very
-similar, but more verbose.
+volumes on a staggered Cartesian grid, as proposed by Harlow and Welsh
+[Harlow1965](@cite). We will use the notation of Sanderse [Sanderse2012](@cite)
+[Sanderse2013](@cite) [Sanderse2014](@cite). For simplicity, we will illustrate
+everything in 2D. The 3D discretization is very similar, but more verbose.
 
 ## Finite volumes
 
@@ -405,9 +405,3 @@ symmetric since ``G = M^\mathsf{T}``.
     of discretely divergence free velocities. However, using this formulation
     would require an efficient way to perform the projection without assembling
     the operator matrix ``L^{-1}``, which would be very costly.
-
-
-[^1]: [Harlow1965](@cite)
-[^2]: [Sanderse2012](@cite)
-[^3]: [Sanderse2013](@cite)
-[^4]: [Sanderse2014](@cite)
