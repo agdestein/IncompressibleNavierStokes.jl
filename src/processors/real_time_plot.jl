@@ -208,7 +208,19 @@ function field_plot(
     aspect = equal_axis ? (; aspect = :data) : (;)
     fig = Figure()
     ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
-    hm = contour!(ax, xf, yf, zf, field; levels, colorrange = lims, shading = false, alpha)
+    hm = contour!(
+        ax,
+        xf,
+        yf,
+        zf,
+        field;
+        levels,
+        colorrange = lims,
+        shading = false,
+        alpha,
+        highclip = :red,
+        lowclip = :red,
+    )
 
     Colorbar(fig[1, 2], hm)
 
