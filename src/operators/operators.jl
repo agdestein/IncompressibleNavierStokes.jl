@@ -3,7 +3,7 @@
 
 Build operators.
 """
-function Operators(grid, boundary_conditions, viscosity_model)
+function Operators(grid, boundary_conditions)
     # Averaging operators
     op_ave = operator_averaging(grid, boundary_conditions)
 
@@ -19,8 +19,12 @@ function Operators(grid, boundary_conditions, viscosity_model)
     # Regularization modelling - this changes the convective term
     op_reg = operator_regularization(grid, op_con)
 
+    # # Classical turbulence modelling via the diffusive term
+    # op_vis = operator_viscosity(viscosity_model, grid, boundary_conditions)
+
     # Classical turbulence modelling via the diffusive term
-    op_vis = operator_viscosity(viscosity_model, grid, boundary_conditions)
+    # Note: We build turbulent diffusion operator even for laminar model
+    op_vis = operator_turbulent_diffusion(grid, boundary_conditions)
 
     # Post-processing
     op_pos = operator_postprocessing(grid, boundary_conditions)

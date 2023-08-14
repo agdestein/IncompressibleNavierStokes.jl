@@ -41,7 +41,7 @@ function Setup(
         BoundaryConditions(u_bc, v_bc; dudt_bc, dvdt_bc, bc_type, T = eltype(x))
     grid = Grid(x, y; boundary_conditions, order4)
     force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
-    operators = Operators(grid, boundary_conditions, viscosity_model)
+    operators = Operators(grid, boundary_conditions)
     (; grid, boundary_conditions, viscosity_model, convection_model, force, operators)
 end
 
@@ -137,6 +137,6 @@ function Setup(
     )
     grid = Grid(x, y, z; boundary_conditions, order4)
     force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
-    operators = Operators(grid, boundary_conditions, viscosity_model)
+    operators = Operators(grid, boundary_conditions)
     (; grid, boundary_conditions, viscosity_model, convection_model, force, operators)
 end
