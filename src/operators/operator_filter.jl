@@ -116,4 +116,6 @@ function operator_filter(::Dimension{2}, grid, boundary_conditions, s)
 end
 
 # 3D version
-function operator_filter(::Dimension{3}, grid, boundary_conditions) end
+function operator_filter(::Dimension{3}, grid, boundary_conditions)
+    error("Not implemented")
+end
