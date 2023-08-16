@@ -1,9 +1,10 @@
 """
-    create_top_hat_p(N, M)
+    create_top_hat_p([T = Float64], N, M)
 
 `N` fine points and `M` coarse points in each dimension.
 """
-function create_top_hat_p(N, M)
+create_top_hat_p(N, M) = create_top_hat_p(Float64, N, M)
+function create_top_hat_p(T, N, M)
     s = N ÷ M
     @assert s * M == N
 
@@ -17,17 +18,18 @@ function create_top_hat_p(N, M)
 
     ijkl = @. s * (i - 1) + k + s * N * (j - 1) + N * (l - 1)
 
-    z = fill(1 / s^2, N^2)
+    z = fill(T(1) / s^2, N^2)
 
     sparse(ij[:], ijkl[:], z)
 end
 
 """
-    create_top_hat_u(N, M)
+    create_top_hat_u([T = Float64], N, M)
 
 `N` fine points and `M` coarse points in each dimension.
 """
-function create_top_hat_u(N, M)
+create_top_hat_u(N, M) = create_top_hat_u(Float64, N, M)
+function create_top_hat_u(T, N, M)
     s = N ÷ M
     @assert s * M == N
 
@@ -41,17 +43,18 @@ function create_top_hat_u(N, M)
 
     ijkl = @. s * (i - 1) + k + s * N * (j - 1) + N * (l - 1)
 
-    z = fill(1 / s, N * M)
+    z = fill(T(1) / s, N * M)
 
     sparse(ij[:], ijkl[:], z, M^2, N^2)
 end
 
 """
-    create_top_hat_v(N, M)
+create_top_hat_v([T = Float64], N, M)
 
 `N` fine points and `M` coarse points in each dimension.
 """
-function create_top_hat_v(N, M)
+create_top_hat_v(N, M) = create_top_hat_v(Float64, N, M)
+function create_top_hat_v(T, N, M)
     s = N ÷ M
     @assert s * M == N
 
@@ -65,7 +68,7 @@ function create_top_hat_v(N, M)
 
     ijkl = @. s * (i - 1) + k + s * N * (j - 1) + N * (l - 1)
 
-    z = fill(1 / s, N * M)
+    z = fill(T(1) / s, N * M)
 
     sparse(ij[:], ijkl[:], z, M^2, N^2)
 end
@@ -91,7 +94,8 @@ operator_filter(grid, boundary_conditions, s) =
 
 # 2D version
 function operator_filter(::Dimension{2}, grid, boundary_conditions, s)
-    (; Nx, Ny, hx, hy) = grid
+    (; Nx, Ny, hx, hy, x) = grid
+    T = eltype(x)
     N = Nx
     M = N ÷ s
 
@@ -107,9 +111,9 @@ function operator_filter(::Dimension{2}, grid, boundary_conditions, s)
     ) "Filter assumes periodic boundary conditions"
     @assert Nx == Ny
 
-    Kp = create_top_hat_p(N, M)
-    Ku = create_top_hat_u(N, M)
-    Kv = create_top_hat_v(N, M)
+    Kp = create_top_hat_p(T, N, M)
+    Ku = create_top_hat_u(T, N, M)
+    Kv = create_top_hat_v(T, N, M)
     KV = blockdiag(Ku, Kv)
 
     (; KV, Kp)
