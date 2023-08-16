@@ -9,7 +9,9 @@ using Adapt
 using FFTW
 using IterativeSolvers
 using LinearAlgebra
+using Lux
 using Printf
+using Random
 using SparseArrays
 using Statistics
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
@@ -119,6 +121,9 @@ include("postprocess/plot_velocity.jl")
 include("postprocess/plot_vorticity.jl")
 include("postprocess/plot_streamfunction.jl")
 include("postprocess/save_vtk.jl")
+
+# Closure models
+include("closures/cnn.jl")
 
 # Force
 export SteadyBodyForce
