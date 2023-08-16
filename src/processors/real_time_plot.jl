@@ -285,7 +285,7 @@ function energy_spectrum_plot(::Dimension{2}, setup, state; displayfig = true)
     espec
 end
 
-function energy_spectrum_plot(::Dimension{3}, setup, state, displayfig = true)
+function energy_spectrum_plot(::Dimension{3}, setup, state, displayfig = true, checktime = 0.0001)
     (; xpp) = setup.grid
     Kx, Ky, Kz = size(xpp) .÷ 2
     kx = 1:(Kx-1)
@@ -307,5 +307,22 @@ function energy_spectrum_plot(::Dimension{3}, setup, state, displayfig = true)
     lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = "\$k^{-5/3}\$", color = :red)
     axislegend(ax)
     displayfig && display(espec)
-    espec
+    return espec
+
+    # Make sure the figure is fully rendered before allowing code to continue
+    if displayfig
+        render = display(espec)
+        done_rendering = Ref(false)
+        on(render.render_tic) do _
+            done_rendering[] = true
+        end
+        on(state) do s
+            # State is updated, block code execution until GLMakie has rendered
+            # figure update
+            done_rendering[] = false
+            while !done_rendering[]
+                sleep(checktime)
+            end
+        end
+    end
 end
