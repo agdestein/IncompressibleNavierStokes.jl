@@ -94,7 +94,7 @@ function field_plot(
 
     lims = @lift begin
         f = $field
-        if type == heatmap
+        if type ∈ (heatmap, image)
             lims = get_lims(f)
         elseif type ∈ (contour, contourf)
             if ≈(extrema(f)...; rtol = 1e-10)
@@ -113,8 +113,8 @@ function field_plot(
 
     fig = Figure()
 
-    if type == heatmap
-        ax, hm = heatmap(fig[1, 1], xf, yf, field; colorrange = lims)
+    if type ∈ (heatmap, image)
+        ax, hm = type(fig[1, 1], xf, yf, field; colorrange = lims)
     elseif type ∈ (contour, contourf)
         ax, hm = type(
             fig[1, 1],
