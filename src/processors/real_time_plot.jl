@@ -114,7 +114,9 @@ function field_plot(
     fig = Figure()
 
     if type ∈ (heatmap, image)
-        ax, hm = type(fig[1, 1], xf, yf, field; colorrange = lims)
+        ax, hm = type(fig[1, 1], xf, yf, field; 
+            colormap = :viridis,
+            colorrange = lims)
     elseif type ∈ (contour, contourf)
         ax, hm = type(
             fig[1, 1],
