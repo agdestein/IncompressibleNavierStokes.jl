@@ -32,7 +32,14 @@ function momentum(
     nopressure = false,
     newton_factor = false,
 )
-    (; viscosity_model, convection_model, force, boundary_conditions, operators) = setup
+    (;
+        viscosity_model,
+        convection_model,
+        force,
+        closure_model,
+        boundary_conditions,
+        operators,
+    ) = setup
     (; G) = operators
 
     # Unsteady BC
@@ -51,8 +58,11 @@ function momentum(
     # Body force
     b = force
 
+    # Closure model
+    cm = closure_model(V)
+
     # Residual in Finite Volume form, including the pressure contribution
-    F = @. -c + d + b
+    F = @. -c + d + b + cm
 
     # Nopressure = false is the most common situation, in which we return the entire
     # right-hand side vector
@@ -102,7 +112,14 @@ function momentum!(
     nopressure = false,
     newton_factor = false,
 )
-    (; viscosity_model, convection_model, force, boundary_conditions, operators) = setup
+    (;
+        viscosity_model,
+        convection_model,
+        force,
+        closure_model,
+        boundary_conditions,
+        operators,
+    ) = setup
     (; G) = setup.operators
 
     # Unsteady BC
@@ -134,8 +151,11 @@ function momentum!(
     # Body force
     b = force
 
+    # Closure model
+    cm = closure_model(V)
+
     # Residual in Finite Volume form, including the pressure contribution
-    @. F = -c + d + b
+    @. F = -c + d + b + cm
 
     # Nopressure = false is the most common situation, in which we return the entire
     # right-hand side vector

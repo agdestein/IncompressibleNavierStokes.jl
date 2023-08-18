@@ -14,6 +14,7 @@
         order4 = false,
         bodyforce_u = (x, y) -> 0,
         bodyforce_v = (x, y) -> 0,
+        closure_model = V -> zero(V),
     )
 
 Create 2D setup.
@@ -36,13 +37,22 @@ function Setup(
     bodyforce_u = (x, y) -> 0,
     bodyforce_v = (x, y) -> 0,
     steady_force = true,
+    closure_model = V -> zero(V),
 )
     boundary_conditions =
         BoundaryConditions(u_bc, v_bc; dudt_bc, dvdt_bc, bc_type, T = eltype(x))
     grid = Grid(x, y; boundary_conditions, order4)
     force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
     operators = Operators(grid, boundary_conditions)
-    (; grid, boundary_conditions, viscosity_model, convection_model, force, operators)
+    (;
+        grid,
+        boundary_conditions,
+        viscosity_model,
+        convection_model,
+        force,
+        closure_model,
+        operators,
+    )
 end
 
 """
@@ -82,6 +92,7 @@ end
         bodyforce_u = (x, y, z) -> 0,
         bodyforce_v = (x, y, z) -> 0,
         bodyforce_w = (x, y, z) -> 0,
+        closure_model = V -> zero(V),
     )
 
 Create 3D setup.
@@ -124,6 +135,7 @@ function Setup(
     bodyforce_u = (x, y, z) -> 0,
     bodyforce_v = (x, y, z) -> 0,
     bodyforce_w = (x, y, z) -> 0,
+    closure_model = V -> zero(V),
 )
     boundary_conditions = BoundaryConditions(
         u_bc,
@@ -138,5 +150,13 @@ function Setup(
     grid = Grid(x, y, z; boundary_conditions, order4)
     force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
     operators = Operators(grid, boundary_conditions)
-    (; grid, boundary_conditions, viscosity_model, convection_model, force, operators)
+    (;
+        grid,
+        boundary_conditions,
+        viscosity_model,
+        convection_model,
+        force,
+        closure_model,
+        operators,
+    )
 end
