@@ -23,7 +23,7 @@ function fno(setup, c, σ, kmax; rng = Random.default_rng(), kwargs...)
     @assert c[1] == 2
     @assert c[end] == 2
 
-    # Create convolutional closure model
+    # Create FNO closure model
     NN = Chain(
         # Unflatten and separate u and v velocities
         V -> reshape(V, _nx..., 2, :),
@@ -68,13 +68,13 @@ Fourier layer operating on uniformly discretized functions.
 
 Some important sizes:
 
-- `dimension`: Spatial dimension, eg `Dimension(2)` or `Dimension(3)`.
-- `(cin, nx..., nsample)`: input size
-- `(cout, nx..., nsample)`: output size
-- `nx = fill(n, dimension())`: number of points in each spatial dimension
+- `dimension`: Spatial dimension, e.g. `Dimension(2)` or `Dimension(3)`.
+- `(cin, nx..., nsample)`: Input size
+- `(cout, nx..., nsample)`: Output size
+- `nx = fill(n, dimension())`: Number of points in each spatial dimension
 - `n ≥ kmax`: Same number of points in each spatial dimension, must be
-  larger than cut-off frequency
-- `kmax`: Cut-off frequency
+  larger than cut-off wavenumber
+- `kmax`: Cut-off wavenumber
 - `nsample`: Number of input samples (treated independently)
 """
 struct FourierLayer{N,A,F} <: Lux.AbstractExplicitLayer
@@ -108,6 +108,12 @@ Lux.statelength(::FourierLayer) = 0
 
 # Pass inputs through Fourier layer
 function ((; cout, cin, kmax, σ)::FourierLayer{N})(x, params, state)
+    # TODO: Check if this is more efficient for
+    # size(x) = (cin, nx..., nsample) or
+    # size(x) = (nx..., cin, nsample)
+    
+    # TODO: Set FFT normalization so that layer is truly grid independent
+
     _cin, nx..., nsample = size(x)
     @assert _cin == cin "Number of input channels must be compatible with weights"
     @assert all(==(first(nx)), nx) "Fourier layer requires same number of grid points in each dimension"
@@ -126,7 +132,7 @@ function ((; cout, cin, kmax, σ)::FourierLayer{N})(x, params, state)
 
     # Spectral part (applied mode-wise)
     # - go to complex-valued spectral space
-    # - chop off high frequencies
+    # - chop off high wavenumbers
     # - multiply with weights mode-wise
     # - pad with zeros to restore original shape
     # - go back to real valued spatial representation
@@ -140,14 +146,14 @@ function ((; cout, cin, kmax, σ)::FourierLayer{N})(x, params, state)
     z = real.(ifft(z, 2:1+N))
 
     # Outer layer: Activation over combined spatial and spectral parts
-    # Note: Even though high frequencies are chopped of in `z` and may
-    # possibly not be present in the input at all, `σ` creates new high frequencies.
-    # High frequency functions may thus be represented using a sequence of
+    # Note: Even though high wavenumbers are chopped off in `z` and may
+    # possibly not be present in the input at all, `σ` creates new high wavenumbers.
+    # High wavenumber functions may thus be represented using a sequence of
     # Fourier layers. In this case, the `y`s are the only place where
     # information contained in high
-    # input frequencies survive in a Fourier layer.
+    # input wavenumbers survive in a Fourier layer.
     v = σ.(y .+ z)
 
-    # Fourier layer does not change state
+    # Fourier layer does not modify state
     v, state
 end
