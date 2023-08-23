@@ -25,12 +25,17 @@ function cnn(
 
     # Make sure there are two velocity fields in input and output
     @assert c[1] == 2
+    # @assert c[1] == 4
     @assert c[end] == 2
 
     # Create convolutional closure model
     NN = Chain(
         # Unflatten and separate u and v velocities
         V -> reshape(V, Nx, Ny, 2, :),
+
+        # # uu, uv, vu, vv
+        # V -> reshape(V, Nx, Ny, 2, 1, :) .* reshape(V, Nx, Ny, 1, 2, :),
+        # V -> reshape(V, Nx, Ny, 4, :),
 
         # Add padding so that output has same shape as commutator error
         u -> pad_circular(u, sum(r)),
