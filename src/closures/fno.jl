@@ -8,10 +8,12 @@ function fno(setup, c, σ, kmax; rng = Random.default_rng(), kwargs...)
     (; grid) = setup
     (; dimension) = grid
 
-    if dimension() == 2
+    N = dimension()
+
+    if N == 2
         (; Nx, Ny) = grid
         _nx = (Nx, Ny)
-    elseif dimension() == 3
+    elseif N == 3
         (; Nx, Ny, Nz) = grid
         _nx = (Nx, Ny, Nz)
     end
@@ -26,12 +28,18 @@ function fno(setup, c, σ, kmax; rng = Random.default_rng(), kwargs...)
         # Unflatten and separate u and v velocities
         V -> reshape(V, _nx..., 2, :),
 
+        # Put channels in first dimension
+        V -> permutedims(V, (N + 1, (1:N)..., N + 2))
+
         # # uu, uv, vu, vv
         # V -> reshape(V, Nx, Ny, 2, 1, :) .* reshape(V, Nx, Ny, 1, 2, :),
         # V -> reshape(V, Nx, Ny, 4, :),
 
         # Some Fourier layers
         (FourierLayer(dimension, c[i] => c[i+1], kmax; σ = σ[i]) for i ∈ eachindex(r))...,
+
+        # Put channels back after spatial dimensions
+        u -> permutedims(u, ((2:N+1)..., 1, N + 2))
 
         # Flatten to vector
         u -> reshape(u, 2 * prod(_nx...), :),
