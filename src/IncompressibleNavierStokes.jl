@@ -11,6 +11,7 @@ using FFTW
 using IterativeSolvers
 using LinearAlgebra
 using Lux
+using NNlib
 using Printf
 using Random
 using SparseArrays
