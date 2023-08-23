@@ -8,6 +8,7 @@ end                                                 #src
 using GLMakie
 using IncompressibleNavierStokes
 using LinearAlgebra
+using Lux
 
 # Floating point precision
 T = Float32
@@ -15,10 +16,11 @@ T = Float32
 # To use CPU: Do not move any arrays
 device = identity
 
-# # To use GPU, use `cu` to move arrays to the GPU.
-# # Note: `cu` converts to Float32
-# using CUDA
-# device = cu
+# To use GPU, use `cu` to move arrays to the GPU.
+# Note: `cu` converts to Float32
+using CUDA
+using LuxCUDA
+device = cu
 
 # Viscosity model
 Re = T(2_000)
@@ -114,6 +116,7 @@ V, p, outputs = solve_unsteady(
 );
 
 # V₀, p₀ = V, p
+# V, p = V₀, p₀
 
 Vbar = KV * V
 pbar = Kp * p
@@ -148,3 +151,32 @@ norm(Vbar_smag - Vbar) / norm(Vbar)
 # Filtered quantities
 filtered = outputs[1]
 filtered.V[end]
+
+closure, θ =
+    cnn(setup_coarse, [5, 5, 5], [2, 5, 5, 2], [tanh, tanh, identity], [true, true, false];)
+
+@time closure(Vbar, θ);
+
+cuVbar = cu(Vbar)
+cuθ = cu(θ)
+@time closure(cuVbar, cuθ);
+
+size(Vbar)
+size(closure(Vbar, θ))
+
+using Zygote
+
+@time gradient(θ -> sum(closure(Vbar, θ)), θ);
+@time gradient(θ -> sum(closure(cuVbar, θ)), cuθ);
+
+Vbar_cnn, pbar_cnn, outputs_cnn = solve_unsteady(
+    (; setup_coarse..., closure_model = V -> closure(V, 1.0f-3 * cuθ)),
+    KV * V₀,
+    Kp * p₀,
+    tlims;
+    Δt = T(2e-4),
+    processors = processors_coarse,
+    pressure_solver = pressure_solver_coarse,
+    inplace = true,
+    device,
+);

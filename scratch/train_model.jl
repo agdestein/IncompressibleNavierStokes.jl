@@ -10,6 +10,7 @@ using IncompressibleNavierStokes
 using JLD2
 using LinearAlgebra
 using Lux
+using NNlib
 using Optimisers
 using Random
 using Zygote
@@ -17,8 +18,8 @@ using Zygote
 # Floating point precision
 T = Float32
 
-# To use CPU: Do not move any arrays
-device = identity
+# # To use CPU: Do not move any arrays
+# device = identity
 
 # To use GPU, use `cu` to move arrays to the GPU.
 # Note: `cu` converts to Float32
@@ -174,17 +175,25 @@ end
 
 norm(commutator_error[:, 1, 1]) / norm(filtered.F[:, 1, 1])
 
-closure, θ = cnn(
+# closure, θ₀ = cnn(
+#     les,
+#     [5, 5, 5],
+#     [2, 8, 8, 2],
+#     [tanh, tanh, identity],
+#     [true, true, false];
+# )
+
+closure, θ₀ = cnn(
     les,
     [5, 5, 5],
-    [2, 5, 5, 2],
-    [tanh, tanh, identity],
+    [2, 8, 8, 2],
+    [leakyrelu, leakyrelu, identity],
     [true, true, false];
 )
 
-loss(x, y, θ) = sum(abs2, closure(x, θ) - y) / length(y)
+loss(x, y, θ) = sum(abs2, closure(x, θ) - y) / sum(abs2, y)
 
-loss(filtered.V[:, 1, 1], commutator_error[:, 1, 1], θ)
+loss(filtered.V[:, 1, 1], commutator_error[:, 1, 1], θ₀)
 
 function create_loss(x, y; nuse = size(x, 2))
     x = reshape(x, size(x, 1), :)
@@ -201,20 +210,49 @@ end
 
 randloss = create_loss(filtered.V, commutator_error; nuse = 100)
 
-devθ₀ = device(θ)
+# θ = 2f-2 * device(θ₀)
+θ = 5.0f-2 * device(θ₀)
 
-randloss(devθ)
+randloss(θ)
 
-first(gradient(randloss, devθ))
+first(gradient(randloss, θ))
 
 V_test = device(reshape(filtered.V[:, 1:20, 1:2], :, 40))
 c_test = device(reshape(commutator_error[:, 1:20, 1:2], :, 40))
 
-devθ = devθ₀
-opt = Optimisers.setup(Adam(0.005f0), devθ)
-for i = 1:200
-    g = first(gradient(randloss, devθ))
-    opt, devθ = Optimisers.update(opt, devθ, g)
-    e_test = norm(closure(V_test, devθ) - c_test) / norm(c_test)
+opt = Optimisers.setup(Adam(1.0f-3), θ)
+
+obs = Observable([(0, T(0))])
+fig = lines(obs)
+hlines!([1.0f0])
+obs[] = fill((0, T(0)), 0)
+j = 0
+display(fig)
+
+niter = 1000
+for i = 1:niter
+    g = first(gradient(randloss, θ))
+    opt, θ = Optimisers.update(opt, θ, g)
+    e_test = norm(closure(V_test, θ) - c_test) / norm(c_test)
     @info "Iteration $i\trelative test error: $e_test"
+    obs[] = push!(obs[], (j + i, e_test))
 end
+j += niter
+
+# jldsave("output/theta.jld2"; θ = Array(θ))
+# θθ = load("output/theta.jld2")
+# θθ = θθ["θ"]
+# θθ = cu(θθ)
+# θ .= θθ
+
+relative_error(closure(V_test, θ), c_test)
+
+CUDA.memory_status()
+
+GC.gc()
+
+CUDA.reclaim()
+
+Array(θ.layer_5)
+θ.layer_4.weight
+θ.layer_4.bias
