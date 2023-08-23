@@ -125,6 +125,7 @@ include("postprocess/save_vtk.jl")
 
 # Closure models
 include("closures/cnn.jl")
+include("closures/loss.jl")
 
 # Force
 export SteadyBodyForce
@@ -161,7 +162,7 @@ export plot_force,
 export plotmat
 
 # Closure models
-export cnn
+export cnn, relative_error
 
 # ODE methods
 
