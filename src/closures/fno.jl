@@ -1,10 +1,10 @@
 """
-    fno(setup, c, σ, kmax; rng = Random.default_rng(), kwargs...)
+    fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
 
 Create FNO closure model. Return a tuple `(closure, θ)` where `θ` are the initial
 parameters and `closure(V, θ)` predicts the commutator error.
 """
-function fno(setup, c, σ, kmax; rng = Random.default_rng(), kwargs...)
+function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
     (; grid) = setup
     (; dimension) = grid
 
@@ -21,7 +21,6 @@ function fno(setup, c, σ, kmax; rng = Random.default_rng(), kwargs...)
 
     # Make sure there are two velocity fields in input and output
     @assert c[1] == 2
-    @assert c[end] == 2
 
     # Create FNO closure model
     NN = Chain(
@@ -29,20 +28,24 @@ function fno(setup, c, σ, kmax; rng = Random.default_rng(), kwargs...)
         V -> reshape(V, _nx..., 2, :),
 
         # Put channels in first dimension
-        V -> permutedims(V, (N + 1, (1:N)..., N + 2))
+        V -> permutedims(V, (N + 1, (1:N)..., N + 2)),
 
         # # uu, uv, vu, vv
         # V -> reshape(V, Nx, Ny, 2, 1, :) .* reshape(V, Nx, Ny, 1, 2, :),
         # V -> reshape(V, Nx, Ny, 4, :),
 
         # Some Fourier layers
-        (FourierLayer(dimension, c[i] => c[i+1], kmax; σ = σ[i]) for i ∈ eachindex(r))...,
+        (FourierLayer(dimension, c[i] => c[i+1], kmax; σ = σ[i]) for i ∈ eachindex(σ))...,
+
+        # Compress with a final dense layer
+        Dense(c[end] => 2 * c[end], ψ),
+        Dense(2 * c[end] => 2; use_bias = false),
 
         # Put channels back after spatial dimensions
-        u -> permutedims(u, ((2:N+1)..., 1, N + 2))
+        u -> permutedims(u, ((2:N+1)..., 1, N + 2)),
 
         # Flatten to vector
-        u -> reshape(u, 2 * prod(_nx...), :),
+        u -> reshape(u, 2 * prod(_nx), :),
     )
 
     # Create parameter vector (empty state)
@@ -107,12 +110,14 @@ Lux.parameterlength((; cin, cout, kmax)::FourierLayer) =
 Lux.statelength(::FourierLayer) = 0
 
 # Pass inputs through Fourier layer
-function ((; cout, cin, kmax, σ)::FourierLayer{N})(x, params, state)
+function ((; dimension, cout, cin, kmax, σ)::FourierLayer)(x, params, state)
     # TODO: Check if this is more efficient for
     # size(x) = (cin, nx..., nsample) or
     # size(x) = (nx..., cin, nsample)
-    
+
     # TODO: Set FFT normalization so that layer is truly grid independent
+
+    N = dimension()
 
     _cin, nx..., nsample = size(x)
     @assert _cin == cin "Number of input channels must be compatible with weights"
@@ -137,13 +142,15 @@ function ((; cout, cin, kmax, σ)::FourierLayer{N})(x, params, state)
     # - pad with zeros to restore original shape
     # - go back to real valued spatial representation
     ikeep = ntuple(Returns(1:kmax+1), N)
-    z = fft(x, 2:1+N)
+    dims = ntuple(i -> 1 + i, N)
+    z = fft(x, dims)
     z = z[:, ikeep..., :]
     z = reshape(z, 1, cin, ikeep..., :)
     z = sum(R .* z; dims = 2)
     z = reshape(z, cout, ikeep..., :)
-    z = pad_zeros(z, ntuple(i -> isodd(i) ? 0 : first(nx) - kmax - 1, 2N); dims = 2:1+N)
-    z = real.(ifft(z, 2:1+N))
+    # z = pad_zeros(z, ntuple(i -> isodd(i) ? 0 : first(nx) - kmax - 1, 2N); dims = 2:1+N)
+    z = pad_zeros(z, ntuple(i -> isodd(i) ? 0 : first(nx) - kmax - 1, 2N); dims)
+    z = real.(ifft(z, dims))
 
     # Outer layer: Activation over combined spatial and spectral parts
     # Note: Even though high wavenumbers are chopped off in `z` and may
