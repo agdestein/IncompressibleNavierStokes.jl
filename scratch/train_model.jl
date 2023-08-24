@@ -65,8 +65,7 @@ filter_saver(setup, KV, Kp, Ωbar; nupdate = 1, bc_vectors = get_bc_vectors(setu
             _FG = fill(zeros(T, 0), 0)
             _p = fill(zeros(T, 0), 0)
             _t = fill(zero(T), 0)
-            @lift begin
-                (; V, p, t) = $step_observer
+            on(step_observer) do (; V, p, t)
                 F, = momentum(V, V, p, t, setup; bc_vectors, nopressure = true)
                 FG, = momentum(V, V, p, t, setup; bc_vectors, nopressure = false)
                 push!(_V, KV * Array(V))
@@ -179,43 +178,38 @@ norm(commutator_error[:, 1, 1]) / norm(filtered.F[:, 1, 1])
 #     les,
 #     [5, 5, 5],
 #     [2, 8, 8, 2],
-#     [tanh, tanh, identity],
+#     [leakyrelu, leakyrelu, identity],
 #     [true, true, false];
 # )
 
-closure, θ₀ = cnn(
-    les,
-    [5, 5, 5],
-    [2, 8, 8, 2],
-    [leakyrelu, leakyrelu, identity],
-    [true, true, false];
-)
+closure, θ₀ = fno(les, 8, [2, 16, 8, 8], [gelu, gelu, identity], gelu)
+
+length(θ₀)
 
 loss(x, y, θ) = sum(abs2, closure(x, θ) - y) / sum(abs2, y)
 
 loss(filtered.V[:, 1, 1], commutator_error[:, 1, 1], θ₀)
 
-function create_loss(x, y; nuse = size(x, 2))
+function create_loss(x, y; nuse = size(x, 2), device = identity)
     x = reshape(x, size(x, 1), :)
     y = reshape(y, size(y, 1), :)
     nsample = size(x, 2)
     d = ndims(x)
     function randloss(θ)
         i = Zygote.@ignore sort(shuffle(1:nsample)[1:nuse])
-        xuse = Zygote.@ignore device(selectdim(x, d, i))
-        yuse = Zygote.@ignore device(selectdim(y, d, i))
+        xuse = Zygote.@ignore device(Array(selectdim(x, d, i)))
+        yuse = Zygote.@ignore device(Array(selectdim(y, d, i)))
         loss(xuse, yuse, θ)
     end
 end
 
-randloss = create_loss(filtered.V, commutator_error; nuse = 100)
+randloss = create_loss(filtered.V, commutator_error; nuse = 50, device)
 
-# θ = 2f-2 * device(θ₀)
 θ = 5.0f-2 * device(θ₀)
 
 randloss(θ)
 
-first(gradient(randloss, θ))
+@time first(gradient(randloss, θ));
 
 V_test = device(reshape(filtered.V[:, 1:20, 1:2], :, 40))
 c_test = device(reshape(commutator_error[:, 1:20, 1:2], :, 40))
@@ -223,21 +217,27 @@ c_test = device(reshape(commutator_error[:, 1:20, 1:2], :, 40))
 opt = Optimisers.setup(Adam(1.0f-3), θ)
 
 obs = Observable([(0, T(0))])
-fig = lines(obs)
+
+fig = lines(obs; axis = (; title = "Relative prediction error", xlabel = "Iteration"))
 hlines!([1.0f0])
-obs[] = fill((0, T(0)), 0)
-j = 0
 display(fig)
 
-niter = 1000
+obs[] = fill((0, T(0)), 0)
+j = 0
+
+nplot = 10
+niter = 500
 for i = 1:niter
     g = first(gradient(randloss, θ))
     opt, θ = Optimisers.update(opt, θ, g)
-    e_test = norm(closure(V_test, θ) - c_test) / norm(c_test)
-    @info "Iteration $i\trelative test error: $e_test"
-    obs[] = push!(obs[], (j + i, e_test))
+    if i % nplot == 0 
+        e_test = norm(closure(V_test, θ) - c_test) / norm(c_test)
+        @info "Iteration $i\trelative test error: $e_test"
+        _i = (j += nplot)
+        obs[] = push!(obs[], (_i, e_test))
+        autolimits!(fig.axis)
+    end
 end
-j += niter
 
 # jldsave("output/theta.jld2"; θ = Array(θ))
 # θθ = load("output/theta.jld2")
@@ -247,12 +247,50 @@ j += niter
 
 relative_error(closure(V_test, θ), c_test)
 
+size(filtered.V)
+
+devles = device(les);
+
+V_nm, p_nm, outputs_nm = solve_unsteady(
+    les,
+    filtered.V[:, 1, 1],
+    filtered.p[:, 1, 1],
+    (t_burn, t_end);
+    Δt = T(2e-4),
+    processors = (
+        step_logger(; nupdate = 10),
+        field_plotter(devles; type = heatmap, nupdate = 1),
+    ),
+    pressure_solver = pressure_solver_les,
+    inplace = false,
+    device,
+)
+
+V_fno, p_fno, outputs_fno = solve_unsteady(
+    (; les..., closure_model = V -> closure(V, θ)),
+    filtered.V[:, 1, 1],
+    filtered.p[:, 1, 1],
+    (t_burn, t_end);
+    Δt = T(2e-4),
+    processors = (
+        step_logger(; nupdate = 10),
+        field_plotter(devles; type = heatmap, nupdate = 1),
+    ),
+    pressure_solver = pressure_solver_les,
+    inplace = false,
+    device,
+)
+
+V = filtered.V[:, end, 1]
+p = filtered.p[:, end, 1]
+
+relative_error(V_nm, V)
+relative_error(V_fno, V)
+
+plot_vorticity(les, V_nm, t_end)
+plot_vorticity(les, V_fno, t_end)
+plot_vorticity(les, V, t_end)
+
 CUDA.memory_status()
-
 GC.gc()
-
 CUDA.reclaim()
-
-Array(θ.layer_5)
-θ.layer_4.weight
-θ.layer_4.bias

@@ -27,15 +27,15 @@ function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
         # Unflatten and separate u and v velocities
         V -> reshape(V, _nx..., 2, :),
 
-        # Put channels in first dimension
-        V -> permutedims(V, (N + 1, (1:N)..., N + 2)),
-
         # # uu, uv, vu, vv
         # V -> reshape(V, Nx, Ny, 2, 1, :) .* reshape(V, Nx, Ny, 1, 2, :),
         # V -> reshape(V, Nx, Ny, 4, :),
 
         # Some Fourier layers
-        (FourierLayer(dimension, c[i] => c[i+1], kmax; σ = σ[i]) for i ∈ eachindex(σ))...,
+        (FourierLayer(dimension, kmax, c[i] => c[i+1]; σ = σ[i]) for i ∈ eachindex(σ))...,
+
+        # Put channels in first dimension
+        V -> permutedims(V, (N + 1, (1:N)..., N + 2)),
 
         # Compress with a final dense layer
         Dense(c[end] => 2 * c[end], ψ),
@@ -65,15 +65,15 @@ function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
 end
 
 """
-    FourierLayer(dimension, cin => cout, kmax; σ = identity, init_weight = glorot_uniform)
+    FourierLayer(dimension, kmax, cin => cout; σ = identity, init_weight = glorot_uniform)
 
 Fourier layer operating on uniformly discretized functions.
 
 Some important sizes:
 
 - `dimension`: Spatial dimension, e.g. `Dimension(2)` or `Dimension(3)`.
-- `(cin, nx..., nsample)`: Input size
-- `(cout, nx..., nsample)`: Output size
+- `(nx..., cin, nsample)`: Input size
+- `(nx..., cout, nsample)`: Output size
 - `nx = fill(n, dimension())`: Number of points in each spatial dimension
 - `n ≥ kmax`: Same number of points in each spatial dimension, must be
   larger than cut-off wavenumber
@@ -82,35 +82,35 @@ Some important sizes:
 """
 struct FourierLayer{N,A,F} <: Lux.AbstractExplicitLayer
     dimension::Dimension{N}
+    kmax::Int
     cin::Int
     cout::Int
-    kmax::Int
     σ::A
     init_weight::F
 end
 
 FourierLayer(
     dimension,
-    ch::Pair{Int,Int},
-    kmax;
+    kmax,
+    ch::Pair{Int,Int};
     σ = identity,
     init_weight = glorot_uniform,
-) = FourierLayer(dimension, first(ch), last(ch), kmax, σ, init_weight)
+) = FourierLayer(dimension, kmax, first(ch), last(ch), σ, init_weight)
 
 Lux.initialparameters(
     rng::AbstractRNG,
     (; dimension, kmax, cin, cout, init_weight)::FourierLayer,
 ) = (;
     spatial_weight = init_weight(rng, cout, cin),
-    spectral_weights = init_weight(rng, cout, cin, fill(kmax + 1, dimension())..., 2),
+    spectral_weights = init_weight(rng, fill(kmax + 1, dimension())..., cout, cin, 2),
 )
 Lux.initialstates(::AbstractRNG, ::FourierLayer) = (;)
-Lux.parameterlength((; cin, cout, kmax)::FourierLayer) =
-    cout * cin + cout * cin * (kmax + 1)^dimension() * 2
+Lux.parameterlength((; kmax, cin, cout)::FourierLayer) =
+    cout * cin + (kmax + 1)^dimension() * 2 * cout * cin
 Lux.statelength(::FourierLayer) = 0
 
 # Pass inputs through Fourier layer
-function ((; dimension, cout, cin, kmax, σ)::FourierLayer)(x, params, state)
+function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
     # TODO: Check if this is more efficient for
     # size(x) = (cin, nx..., nsample) or
     # size(x) = (nx..., cin, nsample)
@@ -119,7 +119,7 @@ function ((; dimension, cout, cin, kmax, σ)::FourierLayer)(x, params, state)
 
     N = dimension()
 
-    _cin, nx..., nsample = size(x)
+    nx..., _cin, nsample = size(x)
     @assert _cin == cin "Number of input channels must be compatible with weights"
     @assert all(==(first(nx)), nx) "Fourier layer requires same number of grid points in each dimension"
     @assert kmax ≤ first(nx) "Fourier layer input must be discretized on at least `kmax` points"
@@ -127,13 +127,14 @@ function ((; dimension, cout, cin, kmax, σ)::FourierLayer)(x, params, state)
     # Destructure params
     # The real and imaginary parts of R are stored in two separate channels
     W = params.spatial_weight
+    W = reshape(W, ntuple(Returns(1), N)..., cout, cin)
     R = params.spectral_weights
-    R = selectdim(R, 3 + N, 1) .+ im .* selectdim(R, 3 + N, 2)
+    R = selectdim(R, N + 3, 1) .+ im .* selectdim(R, N + 3, 2)
 
     # Spatial part (applied point-wise)
-    y = reshape(x, cin, :)
-    y = W * y
-    y = reshape(y, cout, nx..., :)
+    y = reshape(x, nx..., 1, cin, :)
+    y = sum(W .* y; dims = N + 2)
+    y = reshape(y, nx..., cout, :)
 
     # Spectral part (applied mode-wise)
     # - go to complex-valued spectral space
@@ -142,13 +143,13 @@ function ((; dimension, cout, cin, kmax, σ)::FourierLayer)(x, params, state)
     # - pad with zeros to restore original shape
     # - go back to real valued spatial representation
     ikeep = ntuple(Returns(1:kmax+1), N)
-    dims = ntuple(i -> 1 + i, N)
+    nkeep = ntuple(Returns(kmax+1), N)
+    dims = ntuple(identity, N)
     z = fft(x, dims)
-    z = z[:, ikeep..., :]
-    z = reshape(z, 1, cin, ikeep..., :)
-    z = sum(R .* z; dims = 2)
-    z = reshape(z, cout, ikeep..., :)
-    # z = pad_zeros(z, ntuple(i -> isodd(i) ? 0 : first(nx) - kmax - 1, 2N); dims = 2:1+N)
+    z = z[ikeep..., :, :]
+    z = reshape(z, nkeep..., 1, cin, :)
+    z = sum(R .* z; dims = N + 2)
+    z = reshape(z, nkeep..., cout, :)
     z = pad_zeros(z, ntuple(i -> isodd(i) ? 0 : first(nx) - kmax - 1, 2N); dims)
     z = real.(ifft(z, dims))
 
