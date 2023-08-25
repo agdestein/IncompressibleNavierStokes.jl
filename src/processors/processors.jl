@@ -56,12 +56,24 @@ step_logger(; nupdate = 1) = processor(function (step_observer)
 end; nupdate)
 
 """
-    vtk_writer(setup; nupdate, dir = "output", filename = "solution")
+    vtk_writer(
+        setup;
+        nupdate = 1,
+        dir = "output",
+        filename = "solution",
+        fields = (:velocity, :pressure, :vorticity),
+    )
 
 Create processor that writes the solution every `nupdate` time steps to a VTK file. The resulting Paraview data
 collection file is stored in `"\$dir/\$filename.pvd"`.
 """
-vtk_writer(setup; nupdate = 1, dir = "output", filename = "solution") = processor(
+vtk_writer(
+    setup;
+    nupdate = 1,
+    dir = "output",
+    filename = "solution",
+    fields = (:velocity, :pressure, :vorticity),
+) = processor(
     function (step_observer)
         ispath(dir) || mkpath(dir)
         pvd = paraview_collection(joinpath(dir, filename))
@@ -69,9 +81,6 @@ vtk_writer(setup; nupdate = 1, dir = "output", filename = "solution") = processo
             (; grid) = setup
             (; dimension, xp, yp) = grid
             (; V, p, t) = $step_observer
-
-            V = Array(V)
-            p = Array(p)
 
             N = dimension()
             if N == 2
@@ -81,16 +90,26 @@ vtk_writer(setup; nupdate = 1, dir = "output", filename = "solution") = processo
                 coords = (xp, yp, zp)
             end
 
+            # Move arryas to CPU before writing
+            V isa Array || (V = Array(V))
+            p isa Array || (p = Array(p))
+
             tformat = replace(string(t), "." => "p")
             vtk_grid("$(dir)/$(filename)_t=$tformat", coords...) do vtk
-                vels = get_velocity(setup, V, t)
-                if N == 2
-                    # ParaView prefers 3D vectors. Add zero z-component.
-                    wp = zeros(size(vels[1]))
-                    vels = (vels..., wp)
+                if :velocity ∈ fields
+                    vels = get_velocity(setup, V, t)
+                    if N == 2
+                        # ParaView prefers 3D vectors. Add zero z-component.
+                        wp = zeros(size(vels[1]))
+                        vels = (vels..., wp)
+                    end
+                    vtk["velocity"] = vels
                 end
-                vtk["velocity"] = vels
-                vtk["pressure"] = p
+
+                :pressure ∈ fields && (vtk["pressure"] = p)
+                :vorticity ∈ fields &&
+                    (vtk["vorticity"] = reshape(get_vorticity(setup, V, t), :))
+
                 pvd[t] = vtk
             end
         end
