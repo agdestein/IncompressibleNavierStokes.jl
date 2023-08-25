@@ -99,14 +99,15 @@ function create_callback(
     display_each_iteration = false,
 )
     istart = isempty(state) ? 0 : Int(first(state[end]))
-    obs = Observable(state)
+    obs = Observable([Point2f(0, 0)])
     fig = lines(obs; axis = (; title = "Relative prediction error", xlabel = "Iteration"))
     hlines!([1.0f0]; linestyle = :dash)
+    obs[] = state
     display(fig)
     function callback(state, i, θ)
         e = norm(f(x, θ) - y) / norm(y)
-        @info "Iteration $i \trelative error: $e_test"
-        state = push(state, Point2f(istart + i, e_test))
+        @info "Iteration $i \trelative error: $e"
+        state = push!(copy(state), Point2f(istart + i, e))
         obs[] = state
         autolimits!(fig.axis)
         display_each_iteration && display(fig)
