@@ -11,13 +11,15 @@ using FFTW
 using IterativeSolvers
 using LinearAlgebra
 using Lux
+using Makie
 using NNlib
+using Optimisers
 using Printf
 using Random
 using SparseArrays
 using Statistics
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
-using Makie
+using Zygote
 
 # Convenience notation
 const ⊗ = kron
@@ -127,7 +129,8 @@ include("postprocess/save_vtk.jl")
 # Closure models
 include("closures/cnn.jl")
 include("closures/fno.jl")
-include("closures/loss.jl")
+include("closures/training.jl")
+include("closures/create_les_data.jl")
 
 # Force
 export SteadyBodyForce
@@ -164,7 +167,10 @@ export plot_force,
 export plotmat
 
 # Closure models
-export cnn, fno, relative_error
+export cnn, fno
+export train
+export mean_squared_error, relative_error
+export create_randloss, create_callback, create_les_data
 
 # ODE methods
 
