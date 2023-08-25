@@ -68,7 +68,7 @@ size(filtered.V)
 plot_vorticity(setup, filtered.V[:, end, 1], T(0))
 
 # Uniform periodic grid
-pressure_solver_les = SpectralPressureSolver(setup)
+pressure_solver = SpectralPressureSolver(setup)
 
 # Compute commutator errors
 _, n_t, n_ic = size(filtered.V)
@@ -169,7 +169,7 @@ V_nm, p_nm, outputs_nm = solve_unsteady(
         step_logger(; nupdate = 10),
         field_plotter(devsetup; type = heatmap, nupdate = 1),
     ),
-    pressure_solver = pressure_solver_les,
+    pressure_solver,
     inplace = false,
     device,
     devsetup,
@@ -185,7 +185,7 @@ V_fno, p_fno, outputs_fno = solve_unsteady(
         step_logger(; nupdate = 10),
         field_plotter(devsetup; type = heatmap, nupdate = 1),
     ),
-    pressure_solver = pressure_solver_les,
+    pressure_solver,
     inplace = false,
     device,
     devsetup,
