@@ -8,7 +8,7 @@ _filter_saver(
 ) = processor(
     function (step_observer)
         (; Ω) = setup.grid
-        KVmom = Ωbar * KV * Diagonal(1 ./ Ω)
+        KVmom = Diagonal(Ωbar) * (KV * Diagonal(1 ./ Ω))
         T = eltype(setup.grid.x)
         _V = fill(zeros(T, 0), 0)
         _F = fill(zeros(T, 0), 0)
@@ -18,10 +18,10 @@ _filter_saver(
         on(step_observer) do (; V, p, t)
             F, = momentum(V, V, p, t, setup; bc_vectors, nopressure = true)
             FG, = momentum(V, V, p, t, setup; bc_vectors, nopressure = false)
-            push!(_V, KV * Array(V))
-            push!(_F, KVmom * Array(F))
-            push!(_FG, KVmom * Array(FG))
-            push!(_p, Kp * Array(p))
+            push!(_V, Array(KV * V))
+            push!(_F, Array(KVmom * F))
+            push!(_FG, Array(KVmom * FG))
+            push!(_p, Array(Kp * p))
             push!(_t, t)
         end
         (; V = _V, F = _F, FG = _FG, p = _p, t = _t)
@@ -31,7 +31,7 @@ _filter_saver(
 
 function create_les_data(
     T;
-    viscosity_model = LaminarModel(; T(2_000)),
+    viscosity_model = LaminarModel(; Re = T(2_000)),
     lims = (T(0), T(1)),
     n_les = 64,
     compression = 4,
@@ -75,10 +75,10 @@ function create_les_data(
     processors = (
         _filter_saver(
             device(dns),
-            KV,
-            Kp,
-            les.grid.Ω;
-            bc_vectors = device(get_bc_vectors(dns, t_start)),
+            device(KV),
+            device(Kp),
+            device(les.grid.Ω);
+            bc_vectors = device(get_bc_vectors(dns, T(0))),
         ),
         step_logger(; nupdate = 10),
     )
@@ -95,7 +95,7 @@ function create_les_data(
             dns,
             V₀,
             p₀,
-            (t_start, t_burn);
+            (T(0), t_burn);
             Δt,
             processors = (step_logger(; nupdate = 10),),
             pressure_solver,
@@ -109,7 +109,7 @@ function create_les_data(
             dns,
             V,
             p,
-            (t_burn, t_end);
+            (T(0), t_sim);
             Δt,
             processors,
             pressure_solver,
