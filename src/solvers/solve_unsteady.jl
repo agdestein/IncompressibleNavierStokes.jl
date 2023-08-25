@@ -56,6 +56,7 @@ function solve_unsteady(
     inplace = false,
     processors = (),
     device = identity,
+    devsetup = device(setup),
 )
     t_start, t_end = tlims
     isadaptive = isnothing(Δt)
@@ -69,7 +70,7 @@ function solve_unsteady(
     bc_vectors = get_bc_vectors(setup, t_start)
 
     # Move vectors and operators to device (if any).
-    setup = device(setup)
+    setup = devsetup
     V₀ = device(V₀)
     p₀ = device(p₀)
     bc_vectors = device(bc_vectors)
