@@ -102,7 +102,10 @@ FourierLayer(
     init_weight = glorot_uniform,
 ) = FourierLayer(dimension, kmax, first(ch), last(ch), σ, init_weight)
 
-Lux.initialparameters(rng, (; dimension, kmax, cin, cout, init_weight)::FourierLayer) = (;
+Lux.initialparameters(
+    rng::AbstractRNG,
+    (; dimension, kmax, cin, cout, init_weight)::FourierLayer,
+) = (;
     spatial_weight = init_weight(rng, cout, cin),
     spectral_weights = init_weight(rng, fill(kmax + 1, dimension())..., cout, cin, 2),
 )
