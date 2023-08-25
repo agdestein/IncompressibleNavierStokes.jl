@@ -1,8 +1,8 @@
 """
     fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
 
-Create FNO closure model. Return a tuple `(closure, θ)` where `θ` are the initial
-parameters and `closure(V, θ)` predicts the commutator error.
+Create FNO closure model. Return a tuple `(closure, θ)` where `θ` are the
+initial parameters and `closure(V, θ)` predicts the commutator error.
 """
 function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
     (; grid) = setup
@@ -19,8 +19,11 @@ function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
     end
     @assert all(==(first(_nx)), _nx)
 
+    # Fourier layers
+    @assert length(kmax) == length(c) == length(σ)
+
     # Make sure there are two velocity fields in input and output
-    @assert c[1] == 2
+    c = [2; c]
 
     # Create FNO closure model
     NN = Chain(
@@ -32,7 +35,9 @@ function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
         # V -> reshape(V, Nx, Ny, 4, :),
 
         # Some Fourier layers
-        (FourierLayer(dimension, kmax, c[i] => c[i+1]; σ = σ[i]) for i ∈ eachindex(σ))...,
+        (
+            FourierLayer(dimension, kmax[i], c[i] => c[i+1]; σ = σ[i]) for i ∈ eachindex(σ)
+        )...,
 
         # Put channels in first dimension
         V -> permutedims(V, (N + 1, (1:N)..., N + 2)),
@@ -97,10 +102,7 @@ FourierLayer(
     init_weight = glorot_uniform,
 ) = FourierLayer(dimension, kmax, first(ch), last(ch), σ, init_weight)
 
-Lux.initialparameters(
-    rng::AbstractRNG,
-    (; dimension, kmax, cin, cout, init_weight)::FourierLayer,
-) = (;
+Lux.initialparameters(rng, (; dimension, kmax, cin, cout, init_weight)::FourierLayer) = (;
     spatial_weight = init_weight(rng, cout, cin),
     spectral_weights = init_weight(rng, fill(kmax + 1, dimension())..., cout, cin, 2),
 )
@@ -117,6 +119,7 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
 
     # TODO: Set FFT normalization so that layer is truly grid independent
 
+    # Spatial dimension
     N = dimension()
 
     nx..., _cin, nsample = size(x)
@@ -132,18 +135,26 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
     R = selectdim(R, N + 3, 1) .+ im .* selectdim(R, N + 3, 2)
 
     # Spatial part (applied point-wise)
+    # Do matrix multiplication manually for now
+    # TODO: Make W*x more efficient with Tullio.jl
     y = reshape(x, nx..., 1, cin, :)
     y = sum(W .* y; dims = N + 2)
     y = reshape(y, nx..., cout, :)
 
     # Spectral part (applied mode-wise)
+    #
+    # Steps:
+    #
     # - go to complex-valued spectral space
     # - chop off high wavenumbers
     # - multiply with weights mode-wise
     # - pad with zeros to restore original shape
     # - go back to real valued spatial representation
+    #
+    # We do matrix multiplications manually for now
+    # TODO: Make R*xhat more efficient with Tullio
     ikeep = ntuple(Returns(1:kmax+1), N)
-    nkeep = ntuple(Returns(kmax+1), N)
+    nkeep = ntuple(Returns(kmax + 1), N)
     dims = ntuple(identity, N)
     z = fft(x, dims)
     z = z[ikeep..., :, :]
@@ -155,11 +166,11 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
 
     # Outer layer: Activation over combined spatial and spectral parts
     # Note: Even though high wavenumbers are chopped off in `z` and may
-    # possibly not be present in the input at all, `σ` creates new high wavenumbers.
-    # High wavenumber functions may thus be represented using a sequence of
-    # Fourier layers. In this case, the `y`s are the only place where
-    # information contained in high
-    # input wavenumbers survive in a Fourier layer.
+    # possibly not be present in the input at all, `σ` creates new high
+    # wavenumbers. High wavenumber functions may thus be represented using a
+    # sequence of Fourier layers. In this case, the `y`s are the only place
+    # where information contained in high input wavenumbers survive in a
+    # Fourier layer.
     v = σ.(y .+ z)
 
     # Fourier layer does not modify state

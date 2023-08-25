@@ -182,7 +182,22 @@ norm(commutator_error[:, 1, 1]) / norm(filtered.F[:, 1, 1])
 #     [true, true, false];
 # )
 
-closure, θ₀ = fno(les, 8, [2, 16, 8, 8], [gelu, gelu, identity], gelu)
+closure, θ₀ = fno(
+    # Setup
+    les,
+
+    # Cut-off wavenumbers
+    [8, 8, 8],
+
+    # Channel sizes
+    [16, 8, 8],
+
+    # Fourier activations
+    [gelu, gelu, identity],
+
+    # Dense activation
+    gelu,
+)
 
 length(θ₀)
 
@@ -214,7 +229,7 @@ randloss(θ)
 V_test = device(reshape(filtered.V[:, 1:20, 1:2], :, 40))
 c_test = device(reshape(commutator_error[:, 1:20, 1:2], :, 40))
 
-opt = Optimisers.setup(Adam(1.0f-3), θ)
+opt = Optimisers.setup(Adam(1.0f-2), θ)
 
 obs = Observable([(0, T(0))])
 
@@ -230,7 +245,7 @@ niter = 500
 for i = 1:niter
     g = first(gradient(randloss, θ))
     opt, θ = Optimisers.update(opt, θ, g)
-    if i % nplot == 0 
+    if i % nplot == 0
         e_test = norm(closure(V_test, θ) - c_test) / norm(c_test)
         @info "Iteration $i\trelative test error: $e_test"
         _i = (j += nplot)
