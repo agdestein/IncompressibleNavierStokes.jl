@@ -33,23 +33,23 @@ function create_les_data(
     T;
     viscosity_model = LaminarModel(; Re = T(2_000)),
     lims = (T(0), T(1)),
-    n_les = 64,
+    nles = 64,
     compression = 4,
-    n_ic = 10,
-    t_burn = T(0.1),
-    t_sim = T(0.1),
+    nsim = 10,
+    tburn = T(0.1),
+    tsim = T(0.1),
     Δt = T(1e-4),
     device = identity,
 )
-    n_dns = compression * n_les
-    x_dns = LinRange(lims..., n_dns + 1)
-    y_dns = LinRange(lims..., n_dns + 1)
-    x_les = x_dns[1:compression:end]
-    y_les = y_dns[1:compression:end]
+    ndns = compression * nles
+    xdns = LinRange(lims..., ndns + 1)
+    ydns = LinRange(lims..., ndns + 1)
+    xles = xdns[1:compression:end]
+    yles = ydns[1:compression:end]
 
     # Build setup and assemble operators
-    dns = Setup(x_dns, y_dns; viscosity_model)
-    les = Setup(x_les, y_les; viscosity_model)
+    dns = Setup(xdns, ydns; viscosity_model)
+    les = Setup(xles, yles; viscosity_model)
 
     # Filter
     (; KV, Kp) = operator_filter(dns.grid, dns.boundary_conditions, compression)
@@ -59,14 +59,14 @@ function create_les_data(
     pressure_solver = SpectralPressureSolver(dns)
 
     # Number of time steps to save
-    n_t = round(Int, t_sim / Δt)
+    nt = round(Int, tsim / Δt)
 
     # Filtered quantities to store
     filtered = (;
-        V = zeros(T, n_les * n_les * 2, n_t + 1, n_ic),
-        F = zeros(T, n_les * n_les * 2, n_t + 1, n_ic),
-        FG = zeros(T, n_les * n_les * 2, n_t + 1, n_ic),
-        p = zeros(T, n_les * n_les, n_t + 1, n_ic),
+        V = zeros(T, nles * nles * 2, nt + 1, nsim),
+        F = zeros(T, nles * nles * 2, nt + 1, nsim),
+        FG = zeros(T, nles * nles * 2, nt + 1, nsim),
+        p = zeros(T, nles * nles, nt + 1, nsim),
     )
 
     @info "Generating $(Base.summarysize(filtered) / 1e6) Mb of LES data"
@@ -83,19 +83,19 @@ function create_les_data(
         step_logger(; nupdate = 10),
     )
 
-    for i_ic = 1:n_ic
-        @info "Generating data for IC $i_ic of $n_ic"
+    for isim = 1:nsim
+        @info "Generating data for simulation $isim of $nsim"
 
         # Initial conditions
         V₀, p₀ = random_field(dns; A = T(10_000_000), σ = T(30), s = 5, pressure_solver)
 
         # Solve burn-in DNS
-        @info "Burn-in for IC $i_ic of $n_ic"
+        @info "Burn-in for IC $isim of $nsim"
         V, p, outputs = solve_unsteady(
             dns,
             V₀,
             p₀,
-            (T(0), t_burn);
+            (T(0), tburn);
             Δt,
             processors = (step_logger(; nupdate = 10),),
             pressure_solver,
@@ -104,12 +104,12 @@ function create_les_data(
         )
 
         # Solve DNS and store filtered quantities
-        @info "Solving DNS for IC $i_ic of $n_ic"
+        @info "Solving DNS for IC $isim of $nsim"
         V, p, outputs = solve_unsteady(
             dns,
             V,
             p,
-            (T(0), t_sim);
+            (T(0), tsim);
             Δt,
             processors,
             pressure_solver,
@@ -119,10 +119,10 @@ function create_les_data(
         f = outputs[1]
 
         # Store result for current IC
-        filtered.V[:, :, i_ic] = stack(f.V)
-        filtered.F[:, :, i_ic] = stack(f.F)
-        filtered.FG[:, :, i_ic] = stack(f.FG)
-        filtered.p[:, :, i_ic] = stack(f.p)
+        filtered.V[:, :, isim] = stack(f.V)
+        filtered.F[:, :, isim] = stack(f.F)
+        filtered.FG[:, :, isim] = stack(f.FG)
+        filtered.p[:, :, isim] = stack(f.p)
     end
 
     filtered
