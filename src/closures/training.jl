@@ -57,14 +57,14 @@ function create_randloss(loss, f, x, y; nuse = size(x, 2), device = identity)
 end
 
 """
-    mean_squared_error(f, x, y, θ; normalize = y -> sum(abs2, y))
+    mean_squared_error(f, x, y, θ; normalize = y -> sum(abs2, y), λ = sqrt(eps(eltype(x))))
 
 Compute MSE between `f(x, θ)` and `y`.
 
 The MSE is further divided by `normalize(y)`.
 """
-mean_squared_error(f, x, y, θ; normalize = y -> sum(abs2, y)) =
-    sum(abs2, f(x, θ) - y) / normalize(y)
+mean_squared_error(f, x, y, θ; normalize = y -> sum(abs2, y), λ = sqrt(eps(eltype(x)))) =
+    sum(abs2, f(x, θ) - y) / normalize(y) + λ * sum(abs2, θ) / length(θ)
 
 """
     relative_error(x, y)
@@ -91,13 +91,7 @@ If `state` is nonempty, it also plots previous convergence.
 If not using interactive GLMakie window, set `display_each_iteration` to
 `true`.
 """
-function create_callback(
-    f,
-    x,
-    y;
-    state = Point2f[],
-    display_each_iteration = false,
-)
+function create_callback(f, x, y; state = Point2f[], display_each_iteration = false)
     istart = isempty(state) ? 0 : Int(first(state[end]))
     obs = Observable([Point2f(0, 0)])
     fig = lines(obs; axis = (; title = "Relative prediction error", xlabel = "Iteration"))
@@ -114,4 +108,3 @@ function create_callback(
         state
     end
 end
-
