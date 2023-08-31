@@ -110,7 +110,7 @@ Lux.initialparameters(
     spectral_weights = init_weight(rng, fill(kmax + 1, dimension())..., cout, cin, 2),
 )
 Lux.initialstates(::AbstractRNG, ::FourierLayer) = (;)
-Lux.parameterlength((; kmax, cin, cout)::FourierLayer) =
+Lux.parameterlength((; dimension, kmax, cin, cout)::FourierLayer) =
     cout * cin + (kmax + 1)^dimension() * 2 * cout * cin
 Lux.statelength(::FourierLayer) = 0
 
