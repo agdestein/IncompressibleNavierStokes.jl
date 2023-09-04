@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Spatial discretization · IncompressibleNavierStokes.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link rel="canonical" href="https://agdestein.github.io/IncompressibleNavierStokes.jl/equations/spatial/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.svg" alt="IncompressibleNavierStokes.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">IncompressibleNavierStokes.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../generated/LidDrivenCavity2D/">Tutorial: Lid-Driven Cavity (2D)</a></li><li><a class="tocitem" href="../../generated/Actuator2D/">Actuator (2D)</a></li><li><a class="tocitem" href="../../generated/BackwardFacingStep2D/">Backward Facing Step (2D)</a></li><li><a class="tocitem" href="../../generated/DecayingTurbulence2D/">Decaying Turbulunce (2D)</a></li><li><a class="tocitem" href="../../generated/PlanarMixing2D/">Planar Mixing (2D)</a></li><li><a class="tocitem" href="../../generated/ShearLayer2D/">Shear Layer (2D)</a></li></ul></li><li><span class="tocitem">Equations</span><ul><li><a class="tocitem" href="../ns/">Incompressible Navier-Stokes equations</a></li><li class="is-active"><a class="tocitem" href>Spatial discretization</a><ul class="internal"><li><a class="tocitem" href="#Finite-volumes"><span>Finite volumes</span></a></li><li><a class="tocitem" href="#Interpolation"><span>Interpolation</span></a></li><li><a class="tocitem" href="#Finite-volume-discretization-of-the-Navier-Stokes-equations"><span>Finite volume discretization of the Navier-Stokes equations</span></a></li><li><a class="tocitem" href="#Boundary-conditions"><span>Boundary conditions</span></a></li><li><a class="tocitem" href="#Discrete-pressure-Poisson-equation"><span>Discrete pressure Poisson equation</span></a></li></ul></li><li><a class="tocitem" href="../time/">Time discretization</a></li></ul></li><li><span class="tocitem">Features</span><ul><li><a class="tocitem" href="../../features/precision/">Floating point precision</a></li><li><a class="tocitem" href="../../features/gpu/">GPU Support</a></li><li><a class="tocitem" href="../../features/les/">Large eddy simulation</a></li><li><a class="tocitem" href="../../features/pressure/">Pressure solvers</a></li><li><a class="tocitem" href="../../features/bc/">Boundary conditions</a></li><li><a class="tocitem" href="../../features/steppers/">Time steppers</a></li></ul></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../api/api/">API</a></li><li><a class="tocitem" href="../../api/tableaux/">Runge-Kutta methods</a></li></ul></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Equations</a></li><li class="is-active"><a href>Spatial discretization</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Spatial discretization</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/agdestein/IncompressibleNavierStokes.jl/blob/main/docs/src/equations/spatial.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Spatial-Discretization"><a class="docs-heading-anchor" href="#Spatial-Discretization">Spatial Discretization</a><a id="Spatial-Discretization-1"></a><a class="docs-heading-anchor-permalink" href="#Spatial-Discretization" title="Permalink"></a></h1><p>To discretize the incompressible Navier-Stokes equations, we will use finite volumes on a staggered Cartesian grid, as proposed by Harlow and Welsh <a href="../../references/#Harlow1965">[4]</a>. We will use the notation of Sanderse <a href="../../references/#Sanderse2012">[5]</a> <a href="../../references/#Sanderse2013">[6]</a> <a href="../../references/#Sanderse2014">[7]</a>. For simplicity, we will illustrate everything in 2D. The 3D discretization is very similar, but more verbose.</p><h2 id="Finite-volumes"><a class="docs-heading-anchor" href="#Finite-volumes">Finite volumes</a><a id="Finite-volumes-1"></a><a class="docs-heading-anchor-permalink" href="#Finite-volumes" title="Permalink"></a></h2><p>The finite volumes are given by</p><p class="math-container">\[\Omega_{i, j} = [x_{i -
+\frac{1}{2}}, x_{i + \frac{1}{2}}] \times [y_{j - \frac{1}{2}}, y_{j +
+\frac{1}{2}}].\]</p><p>They are fully defined by the vectors of volume faces <span>$x = (x_{i + \frac{1}{2}})_i$</span> and <span>$y = (y_{j + \frac{1}{2}})_j$</span>. Note that the components are not assumed to be uniformly spaced. But we do assume that they are strictly increasing.</p><p>The volume center coordinates are determined from the volume boundary boundaries by <span>$x_i = \frac{1}{2} (x_{i - \frac{1}{2}} + x_{i + \frac{1}{2}})$</span> and <span>$y_j = \frac{1}{2} (y_{j - \frac{1}{2}} + y_{j + \frac{1}{2}})$</span>. This allows for defining the shifted volumes <span>$\Omega_{i + \frac{1}{2}, j}$</span>, <span>$\Omega_{i, j + \frac{1}{2}}$</span>, and <span>$\Omega_{i + \frac{1}{2}, j + \frac{1}{2}}$</span>.</p><p>We also define the volume widths <span>$\Delta x_i = x_{i + \frac{1}{2}} - x_{i - \frac{1}{2}}$</span> and volume heights <span>$\Delta y_j = y_{j + \frac{1}{2}} - y_{j - \frac{1}{2}}$</span>. The volume sizes are thus <span>$| \Omega_{i, j} | = \Delta x_i \Delta y_j$</span>.</p><p>In each finite volume <span>$\Omega_{i, j}$</span>, there are four different positions in which quantities of interest can be defined:</p><ul><li>The <span>$p$</span>-point <span>$(x_i, y_j)$</span>,</li><li>The <span>$u$</span>-point <span>$(x_{i + \frac{1}{2}}, y_j)$</span>,</li><li>The <span>$v$</span>-point <span>$(x_i, y_{j + \frac{1}{2}})$</span>,</li><li>The <span>$\omega$</span>-point <span>$(x_{i + \frac{1}{2}}, y_{j + \frac{1}{2}})$</span>.</li></ul><p>They form the corners of the top-right quadrant of <span>$\Omega_{i, j}$</span>.</p><p>The vectors of unknowns will not contain all the half-index values, only those of their own point:</p><ul><li>The vector <span>$u_h$</span> will only consist of the components <span>$u_{i + \frac{1}{2}, j}$</span>.</li><li>The vector <span>$v_h$</span> will only consist of the components <span>$v_{i, j +   \frac{1}{2}}$</span>.</li><li>The vector <span>$p_h$</span> will only consist of the components <span>$p_{i, j}$</span>.</li></ul><p>In addtion, we define the full velocity vector <span>$V_h = \begin{pmatrix} u_h \\ v_h \end{pmatrix}$</span>.</p><div class="admonition is-info"><header class="admonition-header">Storage convection</header><div class="admonition-body"><p>We use the column-major convention (Julia, MATLAB, Fortran), and not the row-major convention (Python, C). Thus the <span>$x$</span>-index <span>$i$</span> will vary for one whole cycle in the vectors <span>$u_h$</span>, <span>$v_h$</span>, <span>$p_h$</span> before the <span>$y$</span>-index <span>$j$</span> is incremented.</p></div></div><p>This finite volume configuration is illustrated as follows:</p><p><img src="../../assets/grid.png" alt="Grid"/></p><h2 id="Interpolation"><a class="docs-heading-anchor" href="#Interpolation">Interpolation</a><a id="Interpolation-1"></a><a class="docs-heading-anchor-permalink" href="#Interpolation" title="Permalink"></a></h2><p>When a quantity is required <em>outside</em> of its native point, we will use interpolation. Examples:</p><ul><li>To compute <span>$u$</span> at the pressure points:<p class="math-container">\[\begin{split}
+    u_{i, j} &amp; =
+    \frac{x_{i + \frac{1}{2}} - x_i}{x_{i + \frac{1}{2}} - x_{i - \frac{1}{2}}}
+    u_{i - \frac{1}{2}, j}
+    + \frac{x_i - x_{i - \frac{1}{2}}}{x_{i + \frac{1}{2}} - x_{i - \frac{1}{2}}}
+    u_{i + \frac{1}{2}, j} \\
+    &amp; = 
+    \frac{1}{2} (u_{i - \frac{1}{2}, j} + u_{i + \frac{1}{2}, j})
+\end{split}\]</p>Interpolation weights from volume faces to volume centers are always <span>$\frac{1}{2}$</span>.</li><li>To compute <span>$v$</span> at vorticity points:<p class="math-container">\[v_{i + \frac{1}{2}, j + \frac{1}{2}} =
+\frac{x_{i + 1} - x_{i + \frac{1}{2}}}{x_{i + 1} - x_i}
+v_{i, j + \frac{1}{2}}
++ \frac{x_{i + \frac{1}{2}} - x_i}{x_{i + 1} - x_i}
+v_{i + 1, j + \frac{1}{2}}\]</p></li><li>To compute <span>$p$</span> at <span>$v$</span>-points:<p class="math-container">\[p_{i, j + \frac{1}{2}} =
+\frac{y_{j + 1} - y_{j + \frac{1}{2}}}{y_{j + 1} - y_j}
+p_{i, j}
++ \frac{y_{j + \frac{1}{2}} - y_j}{y_{j + 1} - y_j}
+p_{i, j + 1}\]</p></li></ul><p>Note that the grid is allowed to be non-uniform, so the weights of interpolation from volume centers to volume faces may unequal and different from <span>$\frac{1}{2}$</span>.</p><h2 id="Finite-volume-discretization-of-the-Navier-Stokes-equations"><a class="docs-heading-anchor" href="#Finite-volume-discretization-of-the-Navier-Stokes-equations">Finite volume discretization of the Navier-Stokes equations</a><a id="Finite-volume-discretization-of-the-Navier-Stokes-equations-1"></a><a class="docs-heading-anchor-permalink" href="#Finite-volume-discretization-of-the-Navier-Stokes-equations" title="Permalink"></a></h2><p>We will consider the integral form of the Navier-Stokes equations. This has the advantage that some of the spatial derivatives dissapear, reducing the amount of finite difference approximations we need to perform.</p><h3 id="Mass-equation"><a class="docs-heading-anchor" href="#Mass-equation">Mass equation</a><a id="Mass-equation-1"></a><a class="docs-heading-anchor-permalink" href="#Mass-equation" title="Permalink"></a></h3><p>The mass equation takes the form</p><p class="math-container">\[\int_{\partial \mathcal{O}} V \cdot n \, \mathrm{d} \Gamma = 0, \quad \forall
+\mathcal{O} \subset \Omega.\]</p><p>Using the pressure volume <span>$\mathcal{O} = \Omega_{i, j}$</span>, we get</p><p class="math-container">\[\int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}} u(x_{i + \frac{1}{2}}, y) \, \mathrm{d} y
+- \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}} u(x_{i - \frac{1}{2}}, y) \, \mathrm{d} y
++ \int_{x_{i - \frac{1}{2}}}^{x_{i + \frac{1}{2}}} v(x, y_{j + \frac{1}{2}}) \, \mathrm{d} x
+- \int_{x_{i - \frac{1}{2}}}^{x_{i + \frac{1}{2}}} v(x, y_{j - \frac{1}{2}}) \, \mathrm{d} x
+= 0.\]</p><p>Assuming that the flow is fully resolved, meaning that <span>$\Omega_{i, j}$</span> is is sufficiently small such that <span>$u$</span> and <span>$v$</span> are locally linear, we can perform the local approximation (quadrature)</p><p class="math-container">\[\begin{split}
+    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}} u(x_{i - \frac{1}{2}}, y) \, \mathrm{d} y
+    &amp; \approx \Delta y_j u_{i - \frac{1}{2}, j}, \\
+    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}} u(x_{i + \frac{1}{2}}, y) \, \mathrm{d} y
+    &amp; \approx \Delta y_j u_{i + \frac{1}{2}, j}, \\
+    \int_{x_{i - \frac{1}{2}}}^{x_{i + \frac{1}{2}}} v(x, y_{j - \frac{1}{2}}) \, \mathrm{d} x
+    &amp; \approx \Delta x_i v_{i, j - \frac{1}{2}}, \\
+    \int_{x_{i - \frac{1}{2}}}^{x_{i + \frac{1}{2}}} v(x, y_{j + \frac{1}{2}}) \, \mathrm{d} x
+    &amp; \approx \Delta x_i v_{i, j + \frac{1}{2}}.
+\end{split}\]</p><p>This yields the discrete mass equation</p><p class="math-container">\[\Delta y_j (u_{i + \frac{1}{2}, j} - u_{i -
+\frac{1}{2}, j})
++ 
+\Delta x_i (v_{i, j + \frac{1}{2}} - v_{i, j -
+\frac{1}{2}})
+= 0\]</p><p>which can also be written in the matrix form</p><p class="math-container">\[M V_h = M_x u_h + M_y v_h = 0,\]</p><p>where <span>$M = \begin{pmatrix} M_x &amp; M_y \end{pmatrix}$</span> is the discrete divergence operator.</p><div class="admonition is-info"><header class="admonition-header">Approximation error</header><div class="admonition-body"><p>For the mass equation, the only approximation we have performed is quadrature. No interpolation or finite difference error is present.</p></div></div><h3 id="Momentum-equations"><a class="docs-heading-anchor" href="#Momentum-equations">Momentum equations</a><a id="Momentum-equations-1"></a><a class="docs-heading-anchor-permalink" href="#Momentum-equations" title="Permalink"></a></h3><p>We will consider the two momentum equations separately. Grouping the convection, pressure gradient, diffusion, and body force terms in each of their own integrals, we get, for all <span>$\mathcal{O} \subset \Omega$</span>:</p><p class="math-container">\[\begin{split}
+    \frac{\partial }{\partial t} \int_\mathcal{O} u \, \mathrm{d} \Omega
+    &amp; =
+    - \int_{\partial \mathcal{O}} \left( u u n_x + u v n_y \right) \, \mathrm{d} \Gamma
+    - \int_{\partial \mathcal{O}} p n_x \, \mathrm{d} \Gamma
+    + \nu \int_{\partial \mathcal{O}} \left( \frac{\partial u}{\partial x} n_x + \frac{\partial u}{\partial y} n_y \right) \, \mathrm{d} \Gamma
+    + \int_\mathcal{O} f_u \mathrm{d} \Omega, \\
+    \frac{\partial }{\partial t} \int_\mathcal{O} v \, \mathrm{d} \Omega
+    &amp; =
+    - \int_{\partial \mathcal{O}} \left( v u n_x + v v n_y \right) \, \mathrm{d} \Gamma
+    - \int_{\partial \mathcal{O}} p n_y \, \mathrm{d} \Gamma
+    + \nu \int_{\partial \mathcal{O}} \left( \frac{\partial v}{\partial x} n_x + \frac{\partial v}{\partial y} n_y \right) \, \mathrm{d} \Gamma
+    + \int_\mathcal{O} f_v \mathrm{d} \Omega,
+\end{split}\]</p><p>where <span>$n = (n_x, n_y)$</span>.</p><p>This time, we will not let <span>$\mathcal{O}$</span> be the reference finite volume <span>$\Omega_{i, j}$</span> (the <span>$p$</span>-volume), but rather the shifted <span>$u$</span>- and <span>$v$</span>-volumes. Setting <span>$\mathcal{O} = \Omega_{i + \frac{1}{2}, j}$</span> gives</p><p class="math-container">\[\begin{split}
+    \frac{\partial }{\partial t}
+    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}}
+    \int_{x_i}^{x_{i + 1}}
+    u(x, y) \, \mathrm{d} x \mathrm{d} y
+    =
+      &amp; -
+    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}}
+    \left( (u u)(x_{i + 1}, y) - (u u)(x_i, y) \right)
+    \, \mathrm{d} y \\
+
+    &amp; -
+    \int_{x_i}^{x_{i + 1}}
+    \left( (u v)(x, y_{j + \frac{1}{2}}) - (u v)(x, y_{j - \frac{1}{2}})
+    \right)
+    \, \mathrm{d} x \\
+
+    &amp; -
+    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}}
+    \left( p(x_{i + 1}, y) - p(x_i, y) \right)
+    \, \mathrm{d} y \\
+
+    &amp; + \nu
+    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}}
+    \left( \frac{\partial u}{\partial x}(x_{i + 1}, y) - \frac{\partial
+    u}{\partial x}(x_i, y) \right)
+    \, \mathrm{d} y \\
+
+    &amp; + \nu \int_{x_i}^{x_{i + 1}}
+    \left( \frac{\partial u}{\partial y}(x, y_{j + \frac{1}{2}}) -
+    \frac{\partial u}{\partial y}(x, y_{j - \frac{1}{2}}) \right)
+    \, \mathrm{d} x \\
+
+    &amp; +
+    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}}
+    \int_{x_i}^{x_{i + 1}}
+    f_u(x, y) \, \mathrm{d} x \mathrm{d} y \\
+\end{split}\]</p><p>This equation is still exact. We now introduce some approximations on <span>$\Omega_{i + \frac{1}{2}, j}$</span> and its boundaries to remove all unknown continuous quantities.</p><ol><li>We replace the integrals with a mid-point quadrature rule.</li><li>The the mid-point values of derivatives are approximated using a central finite difference:<p class="math-container">\[\frac{\partial u}{\partial x}(x_i, y_j) \approx \frac{u_{i + \frac{1}{2}, j}
+- u_{i - \frac{1}{2}, j}}{x_{i + \frac{1}{2}} - x_{i - \frac{1}{2}}},\]</p>and similarly for <span>$\frac{\partial u}{\partial x}(x_{i + 1}, y_j)$</span>. If the grid is non-uniform, we also translate the derivative value to the midpoint:<p class="math-container">\[\frac{\partial u}{\partial y}(x_{i + \frac{1}{2}}, y_{j + \frac{1}{2}})
+\approx \frac{\partial u}{\partial y} \left( x_{i + \frac{1}{2}}, \frac{y_i + y_{i + 1}}{2} \right)
+\approx \frac{u_{i + \frac{1}{2}, j + 1} - u_{i + \frac{1}{2}, j}}{y_{j + 1} - y_j},\]</p>and similarly for <span>$\frac{\partial u}{\partial y}(x_{i + \frac{1}{2}}, y_{j - \frac{1}{2}})$</span>.</li><li>Quantities outside their canonical positions are obtained through interpolation.</li></ol><p>Finally, the discrete <span>$u$</span>-momentum equations are given by</p><p class="math-container">\[\begin{split}
+    \Delta x_{i + \frac{1}{2}}
+    \Delta y_j
+    \frac{\mathrm{d} }{\mathrm{d} t} u_{i + \frac{1}{2}, j} =
+    &amp; - \Delta y_j \left( (u u)_{i + 1, j} - (u u)_{i, j} \right) \\
+    &amp; - \Delta x_{i + \frac{1}{2}} \left( (u v)_{i + \frac{1}{2}, j +
+    \frac{1}{2}} - (u v)_{i + \frac{1}{2}, j - \frac{1}{2}} \right) \\
+    &amp; - \Delta y_j \left( p_{i + 1, j} - p_{i, j} \right) \\
+    &amp; + \nu \Delta y_j \left( 
+    \frac{u_{i + \frac{3}{2}, j} - u_{i + \frac{1}{2}, j}}{\Delta x_{i + 1}}
+    - \frac{u_{i + \frac{1}{2}, j} - u_{i - \frac{1}{2}, j}}{\Delta x_i}
+    \right) \\
+    &amp; + \nu \Delta x_{i + \frac{1}{2}} \left( 
+    \frac{u_{i + \frac{1}{2}, j + 1} - u_{i + \frac{1}{2}, j}}{\Delta y_{j + \frac{1}{2}}}
+    - \frac{u_{i + \frac{1}{2}, j} - u_{i + \frac{1}{2}, j - 1}}{\Delta y_{j - \frac{1}{2}}}
+    \right) \\
+    &amp; + 
+    \Delta x_{i + \frac{1}{2}}
+    \Delta y_j
+    f_u \left( x_{i + \frac{1}{2}}, y_j \right).
+\end{split}\]</p><p>A similar derivation over the <span>$v$</span>-volume <span>$\Omega_{i, j + \frac{1}{2}}$</span> yields the discrete <span>$v$</span>-momentum equations</p><p class="math-container">\[\begin{split}
+    \Delta x_i
+    \Delta y_{j + \frac{1}{2}}
+    \frac{\mathrm{d} }{\mathrm{d} t} v_{i, j + \frac{1}{2}} =
+    &amp; - \Delta y_{j + \frac{1}{2}} \left( (v u)_{i + \frac{1}{2}, j + \frac{1}{2}}
+    - (v u)_{i - \frac{1}{2}, j + \frac{1}{2}} \right) \\
+    &amp; - \Delta x_i \left( (v v)_{i, j + 1} - (v v)_{i, j} \right) \\
+    &amp; - \Delta x_i \left( p_{i, j + 1} - p_{i, j} \right) \\
+    &amp; + \nu \Delta x_{i + \frac{1}{2}} \left( 
+    \frac{v_{i + 1, j + \frac{1}{2}} - v_{i, j + \frac{1}{2}}}{\Delta x_{i + \frac{1}{2}}}
+    - \frac{v_{i, j + \frac{1}{2}} - u_{i - 1, j + \frac{1}{2}}}{\Delta x_{i -
+    \frac{1}{2}}} \right) \\
+    &amp; + \nu \Delta x_i \left( 
+    \frac{v_{i, j + \frac{3}{2}} - u_{i, j + \frac{1}{2}}}{\Delta y_{j + 1}}
+    - \frac{v_{i, j + \frac{1}{2}} - v_{i, j - \frac{1}{2}}}{\Delta y_j}
+    \right) \\
+    &amp; + 
+    \Delta x_i
+    \Delta y_{j + \frac{1}{2}}
+    f_v \left( x_i, y_{j + \frac{1}{2}} \right).
+\end{split}\]</p><p>In matrix form, we will denote this as</p><p class="math-container">\[\Omega_h \frac{\mathrm{d} V_h}{\mathrm{d} t} = - C(V_h) + \nu D V_h + \Omega_h f_h  - G p_h.\]</p><p>Note the important property <span>$G = M^\mathsf{T}$</span>.</p><h2 id="Boundary-conditions"><a class="docs-heading-anchor" href="#Boundary-conditions">Boundary conditions</a><a id="Boundary-conditions-1"></a><a class="docs-heading-anchor-permalink" href="#Boundary-conditions" title="Permalink"></a></h2><p>If a domain boundary is not periodic, the boundary values of certain quantities are prescribed. Consider the left boundary defined by <span>$i = \frac{1}{2}$</span>.</p><ul><li>For Dirichlet boundary conditions, we prescribe the value<p class="math-container">\[u_{\frac{1}{2}, j} := u(x_{\frac{1}{2}}, y_j)\]</p>For <span>$v$</span>, we also prescribe values, but only at the boundary, thus replacing otherwise interpolated <span>$v$</span>-fluxes:<p class="math-container">\[v_{\frac{1}{2}, j - \frac{1}{2}} := v(x_{\frac{1}{2}}, y_{j - \frac{1}{2}}).\]</p></li><li>For a symmetric left boundary, only <span>$u_{\frac{1}{2}, j}$</span> is prescribed.</li><li>For a pressure left boundary, we prescribe <span>$p$</span>:<p class="math-container">\[p_{0, j} = p(x_0, y_j).\]</p></li></ul><p>The boundary components are removed from the two vectors <span>$V_h$</span> and <span>$p_h$</span>. Instead, these components are prescribed as constants.</p><p>The discrete mass equation then becomes</p><p class="math-container">\[M V_h = y_M,\]</p><p>where <span>$y_M$</span> are the boundary conditions for <span>$M$</span>.</p><p>The discrete momentum equations become</p><p class="math-container">\[\begin{split}
+    \Omega_h \frac{\mathrm{d} V_h}{\mathrm{d} t} &amp; = -C(V_h) V_h + \nu (D V_h +
+    y_D) + f_h - (G p_h + y_G) \\
+    &amp; = F(V_h) - (G p_h + y_G),
+\end{split}\]</p><p>where <span>$y_D$</span> is diffusion boundary vector and <span>$y_G$</span> is the pressure boundary vector.</p><h2 id="Discrete-pressure-Poisson-equation"><a class="docs-heading-anchor" href="#Discrete-pressure-Poisson-equation">Discrete pressure Poisson equation</a><a id="Discrete-pressure-Poisson-equation-1"></a><a class="docs-heading-anchor-permalink" href="#Discrete-pressure-Poisson-equation" title="Permalink"></a></h2><p>Instead of directly discretizing the continuous pressure Poisson equation, we will rededuce it in the <em>discrete</em> setting, thus aiming to preserve the discrete divergence freeness instead of the continuous one. Applying the discrete divergence operator <span>$M$</span> to the discrete momentum equations yields the discrete pressure Poisson equation</p><p class="math-container">\[- L p_h = - M \Omega_h^{-1} (F(V_h) - y_G) + \frac{\mathrm{d} y_M}{\mathrm{d} t}\]</p><p>where <span>$L = M \Omega_h^{-1} G$</span> is a discrete Laplace operator. It is positive symmetric since <span>$G = M^\mathsf{T}$</span>.</p><div class="admonition is-info"><header class="admonition-header">Pressure projection</header><div class="admonition-body"><p>The pressure vector <span>$p_h$</span> can be seen as a Lagrange multiplier enforcing the constraint of divergence freeness. It is possible to write a the momentum equations without the pressure by explicitly solving the discrete Poisson equation:</p><p class="math-container">\[p_h = L^{-1} M \Omega_h^{-1} (F(V_h) - y_G) - L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.\]</p><p>The momentum equations then become</p><p class="math-container">\[\Omega_h \frac{\mathrm{d} V_h}{\mathrm{d} t} = (I - G L^{-1} M \Omega_h^{-1})
+(F(V_h) - y_G) + G L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.\]</p><p>The matrix <span>$(I - G L^{-1} M \Omega^{-1})$</span> is a projector onto the space of discretely divergence free velocities. However, using this formulation would require an efficient way to perform the projection without assembling the operator matrix <span>$L^{-1}$</span>, which would be very costly.</p></div></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ns/">« Incompressible Navier-Stokes equations</a><a class="docs-footer-nextpage" href="../time/">Time discretization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Monday 4 September 2023 22:23">Monday 4 September 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
