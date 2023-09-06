@@ -9,7 +9,7 @@ get_bc_vectors(setup, t) = get_bc_vectors(setup.grid.dimension, setup, t)
 
 # 2D version
 function get_bc_vectors(::Dimension{2}, setup, t)
-    (; grid, operators, boundary_conditions, viscosity_model) = setup
+    (; grid, operators, boundary_conditions, viscosity_model, Re) = setup
 
     (; Nux_in, Nvy_in, Np, Npx, Npy) = grid
     (; xin, yin, x, y, hx, hy, xp, yp) = grid
@@ -26,8 +26,6 @@ function get_bc_vectors(::Dimension{2}, setup, t)
 
     (; u_bc, v_bc, dudt_bc, dvdt_bc) = boundary_conditions
     (; p_bc, bc_unsteady) = boundary_conditions
-
-    (; Re) = viscosity_model
 
     if order4
         (; Au_ux_bc3, Au_uy_bc3, Av_vx_bc3, Av_vy_bc3) = operators
@@ -479,9 +477,7 @@ end
 
 # 3D version
 function get_bc_vectors(::Dimension{3}, setup, t)
-    (; grid, operators, boundary_conditions, viscosity_model) = setup
-
-    (; Re) = viscosity_model
+    (; grid, operators, boundary_conditions, viscosity_model, Re) = setup
 
     (; u_bc, v_bc, w_bc, dudt_bc, dvdt_bc, dwdt_bc) = boundary_conditions
     (; p_bc, bc_unsteady) = boundary_conditions

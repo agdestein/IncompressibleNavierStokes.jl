@@ -23,7 +23,7 @@ using IncompressibleNavierStokes
 name = "ShearLayer2D"
 
 # Viscosity model
-viscosity_model = LaminarModel(; Re = Inf)
+Re = Inf
 
 # A 2D grid is a Cartesian product of two vectors
 n = 100
@@ -32,7 +32,7 @@ y = LinRange(0, 2π, n + 1)
 plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = Setup(x, y; viscosity_model);
+setup = Setup(x, y; Re);
 
 # Time interval
 t_start, t_end = tlims = (0.0, 8.0)

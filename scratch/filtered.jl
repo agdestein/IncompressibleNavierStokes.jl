@@ -22,10 +22,8 @@ using CUDA
 using LuxCUDA
 device = cu
 
-# Viscosity model
+# Reynolds number
 Re = T(2_000)
-laminar = LaminarModel(; Re)
-smagorinsky = SmagorinskyModel(; Re, C_s = T(0.173))
 
 # A 2D grid is a Cartesian product of two vectors
 s = 2
@@ -42,9 +40,9 @@ y_coarse = y[1:s:end]
 plot_grid(x_coarse, y_coarse)
 
 # Build setup and assemble operators
-setup = Setup(x, y; viscosity_model = laminar);
+setup = Setup(x, y; Re);
 devsetup = device(setup);
-setup_coarse = Setup(x_coarse, y_coarse; viscosity_model = laminar);
+setup_coarse = Setup(x_coarse, y_coarse; Re);
 
 # Filter
 (; KV, Kp) = operator_filter(setup.grid, setup.boundary_conditions, s);
@@ -134,7 +132,7 @@ Vbar_nomodel, pbar_nomodel, outputs_lam = solve_unsteady(
 );
 
 Vbar_smag, pbar_smag, outputs_smag = solve_unsteady(
-    (; setup_coarse..., viscosity_model = smagorinsky),
+    (; setup_coarse..., viscosity_model = SmagorinskyModel(; C_s = T(0.173))),
     KV * V₀,
     Kp * p₀,
     tlims;

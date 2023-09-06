@@ -53,16 +53,8 @@ device = identity
 ## using CUDA
 ## device = cu
 
-# Available viscosity models are:
-#
-# - [`LaminarModel`](@ref),
-# - [`MixingLengthModel`](@ref),
-# - [`SmagorinskyModel`](@ref), and
-# - [`QRModel`](@ref).
-#
-# They all take a Reynolds number as a parameter. Here we choose a moderate
-# Reynolds number. Note how we pass the floating point type.
-viscosity_model = LaminarModel(; Re = T(1_000))
+# Here we choose a moderate Reynolds number. Note how we pass the floating point type.
+Re = T(1_000)
 
 # Dirichlet boundary conditions are specified as plain Julia functions. They
 # are marked by the `:dirichlet` symbol. Other possible BC types are
@@ -85,7 +77,7 @@ plot_grid(x, y)
 
 # We can now build the setup and assemble operators.
 # A 3D setup is built if we also provide a vector of z-coordinates.
-setup = Setup(x, y; viscosity_model, u_bc, v_bc, bc_type);
+setup = Setup(x, y; Re, u_bc, v_bc, bc_type);
 
 # The pressure solver is used to solve the pressure Poisson equation.
 # Available solvers are

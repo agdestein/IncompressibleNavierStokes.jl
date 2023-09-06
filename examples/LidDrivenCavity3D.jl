@@ -25,7 +25,7 @@ using IncompressibleNavierStokes
 name = "LidDrivenCavity3D"
 
 # Viscosity model
-viscosity_model = LaminarModel(; Re = 1000.0)
+Re = 1000.0
 
 # Boundary conditions: horizontal movement of the top lid
 u_bc(x, y, z, t) = y ≈ 1.0 ? 1.0 : 0.0
@@ -57,7 +57,7 @@ z = LinRange(-0.2, 0.2, 10)
 plot_grid(x, y, z)
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; viscosity_model, u_bc, v_bc, w_bc, bc_type);
+setup = Setup(x, y, z; Re, u_bc, v_bc, w_bc, bc_type);
 
 # Time interval
 t_start, t_end = tlims = (0.0, 0.2)

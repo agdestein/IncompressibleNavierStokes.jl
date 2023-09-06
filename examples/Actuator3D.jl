@@ -25,7 +25,7 @@ using IncompressibleNavierStokes
 name = "Actuator3D"
 
 # Viscosity model
-viscosity_model = LaminarModel(; Re = 100.0)
+Re = 100.0
 
 # Boundary conditions: Unsteady BC requires time derivatives
 u_bc(x, y, z, t) = x ≈ 0.0 ? cos(π / 6 * sin(π / 6 * t)) : 0.0
@@ -76,7 +76,7 @@ setup = Setup(
     x,
     y,
     z;
-    viscosity_model,
+    Re,
     u_bc,
     v_bc,
     w_bc,

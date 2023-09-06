@@ -35,14 +35,14 @@ device = cu
 # Setup
 n = 128
 lims = T(0), T(1)
-viscosity_model = LaminarModel(; Re = T(6_000))
+Re = T(6_000)
 tburn = T(0.05)
 tsim = T(0.05)
 
 # Build LES setup and assemble operators
 x = LinRange(lims..., n + 1)
 y = LinRange(lims..., n + 1)
-setup = Setup(x, y; viscosity_model);
+setup = Setup(x, y; Re);
 
 # Number of simulations
 ntrain = 10
@@ -51,7 +51,7 @@ ntest = 5
 
 # Create LES data from DNS
 params = (;
-    viscosity_model,
+    Re,
     lims,
     nles = n,
     compression = 4,

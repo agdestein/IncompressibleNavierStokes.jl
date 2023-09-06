@@ -18,14 +18,13 @@ create_stepper(
 
 function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, cₙ, tₙ, Diff_fact) = stepper
-    (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) =
+    (; convection_model, viscosity_model, Re, force, grid, operators, boundary_conditions) =
         setup
     (; bc_unsteady) = boundary_conditions
     (; NV, Ω) = grid
     (; G, M) = operators
     (; Diff) = operators
     (; p_add_solve, α₁, α₂, θ, method_startup) = method
-    (; Re) = viscosity_model
 
     T = typeof(Δt)
 
@@ -169,7 +168,7 @@ function step!(
     momentum_cache,
 )
     (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, cₙ, tₙ, Diff_fact) = stepper
-    (; convection_model, viscosity_model, force, grid, operators, boundary_conditions) =
+    (; convection_model, viscosity_model, Re, force, grid, operators, boundary_conditions) =
         setup
     (; bc_unsteady) = boundary_conditions
     (; NV, Ω) = grid
@@ -178,7 +177,6 @@ function step!(
     (; p_add_solve, α₁, α₂, θ, method_startup) = method
     (; cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ) = cache
     (; d, ∇d) = momentum_cache
-    (; Re) = viscosity_model
 
     T = typeof(Δt)
 

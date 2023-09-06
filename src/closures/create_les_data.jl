@@ -104,7 +104,7 @@ _filter_saver(
 
 function create_les_data(
     T;
-    viscosity_model = LaminarModel(; Re = T(2_000)),
+    Re = T(2_000),
     lims = (T(0), T(1)),
     nles = 64,
     compression = 4,
@@ -121,8 +121,8 @@ function create_les_data(
     yles = ydns[1:compression:end]
 
     # Build setup and assemble operators
-    dns = Setup(xdns, ydns; viscosity_model)
-    les = Setup(xles, yles; viscosity_model)
+    dns = Setup(xdns, ydns; Re)
+    les = Setup(xles, yles; Re)
 
     # Filter
     (; KV, Kp) = operator_filter(dns.grid, dns.boundary_conditions, compression)

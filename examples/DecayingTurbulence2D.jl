@@ -38,7 +38,7 @@ device = identity
 ## device = cu
 
 # Viscosity model
-viscosity_model = LaminarModel(; Re = T(10_000))
+Re = T(10_000)
 
 # A 2D grid is a Cartesian product of two vectors
 n = 256
@@ -48,7 +48,7 @@ y = LinRange(lims..., n + 1)
 # plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = Setup(x, y; viscosity_model);
+setup = Setup(x, y; Re);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
 # spectral pressure solver

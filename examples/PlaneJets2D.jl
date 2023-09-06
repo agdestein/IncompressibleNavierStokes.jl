@@ -26,7 +26,7 @@ using LaTeXStrings
 name = "PlaneJets2D"
 
 # Viscosity model
-viscosity_model = LaminarModel(; Re = 6000.0)
+Re = 6000.0
 
 # Test cases (A, B, C, D; in order)
 # U() = sqrt(467.4)
@@ -71,8 +71,8 @@ y = LinRange(-10.0, 10.0, 5n)
 plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = Setup(x, y; viscosity_model);
-# setup = Setup(x, y; viscosity_model, u_bc, v_bc, bc_type);
+setup = Setup(x, y; Re);
+# setup = Setup(x, y; Re, u_bc, v_bc, bc_type);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
 # spectral pressure solver

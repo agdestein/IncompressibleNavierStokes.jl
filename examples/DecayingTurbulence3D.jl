@@ -38,7 +38,7 @@ device = identity
 ## device = cu
 
 # Viscosity model
-viscosity_model = LaminarModel(; Re = T(10_000))
+Re = T(10_000)
 
 # A 3D grid is a Cartesian product of three vectors
 n = 32
@@ -49,7 +49,7 @@ z = LinRange(lims..., n + 1)
 # plot_grid(x, y, z)
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; viscosity_model);
+setup = Setup(x, y, z; Re);
 
 # Since the grid is uniform and identical for x, y, and z, we may use a
 # specialized spectral pressure solver

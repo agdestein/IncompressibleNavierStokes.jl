@@ -23,10 +23,10 @@
     # Viscosity models
     T = Float64
     Re = 1000.0
-    lam = LaminarModel(; Re)
-    ml = MixingLengthModel(; Re, lm = Δ)
-    smag = SmagorinskyModel(; Re)
-    qr = QRModel(; Re)
+    lam = LaminarModel()
+    ml = MixingLengthModel(; lm = Δ)
+    smag = SmagorinskyModel()
+    qr = QRModel()
 
     # Convection models
     noreg = NoRegConvectionModel()
@@ -46,7 +46,7 @@
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
             @info "Testing $(typeof(viscosity_model)) and $(typeof(convection_model))"
-            setup = Setup(x, y; viscosity_model, convection_model, u_bc, v_bc, bc_type)
+            setup = Setup(x, y; Re, viscosity_model, convection_model, u_bc, v_bc, bc_type)
 
             V₀, p₀ = create_initial_conditions(
                 setup,
@@ -73,7 +73,7 @@
     for (viscosity_model, convection_model) in models
         @testset "$(typeof(viscosity_model)) $(typeof(convection_model))" begin
             @info "Testing $(typeof(viscosity_model)) and $(typeof(convection_model))"
-            setup = Setup(x, y; viscosity_model, convection_model, u_bc, v_bc, bc_type)
+            setup = Setup(x, y; Re, viscosity_model, convection_model, u_bc, v_bc, bc_type)
         end
     end
 end

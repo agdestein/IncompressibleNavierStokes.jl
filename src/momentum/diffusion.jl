@@ -11,8 +11,8 @@ function diffusion end
 
 diffusion(m, V, setup; kwargs...) = diffusion(setup.grid.dimension, m, V, setup; kwargs...)
 
-function diffusion(m::LaminarModel, V, setup; bc_vectors, get_jacobian = false)
-    (; Re) = m
+function diffusion(::LaminarModel, V, setup; bc_vectors, get_jacobian = false)
+    (; Re) = setup
     (; Diff) = setup.operators
     (; yDiff) = bc_vectors
 
@@ -36,6 +36,7 @@ function diffusion(
     bc_vectors,
     get_jacobian = false,
 )
+    (; Re) = setup
     (; indu, indv) = setup.grid
     (; Dux, Duy, Dvx, Dvy) = setup.operators
     (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
@@ -63,7 +64,7 @@ function diffusion(
     # Tau = 2*(ν+ν_t)*S(u), with S(u) = 1/2*(∇u + (∇u)^T)
 
     # Molecular viscosity
-    ν = 1 / model.Re
+    ν = 1 / Re
 
     du = Dux * (2 .* (ν .+ ν_t_ux) .* S11[:]) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12[:])
     dv = Dvx * (2 .* (ν .+ ν_t_vx) .* S21[:]) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22[:])
@@ -126,8 +127,8 @@ function diffusion! end
 diffusion!(m, d, ∇d, V, setup; kwargs...) =
     diffusion!(setup.grid.dimension, m, d, ∇d, V, setup; kwargs...)
 
-function diffusion!(m::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
-    (; Re) = m
+function diffusion!(::LaminarModel, d, ∇d, V, setup; bc_vectors, get_jacobian = false)
+    (; Re) = setup
     (; Diff) = setup.operators
     (; yDiff) = bc_vectors
 
@@ -151,6 +152,7 @@ function diffusion!(
     bc_vectors,
     get_jacobian = false,
 )
+    (; Re) = setup
     (; indu, indv) = setup.grid
     (; Dux, Duy, Dvx, Dvy) = setup.operators
     (; Su_ux, Su_uy, Su_vx, Sv_vx, Sv_vy, Sv_uy) = setup.operators
@@ -181,7 +183,7 @@ function diffusion!(
     # Tau = 2*(ν+ν_t)*S(u), with S(u) = 1/2*(∇u + (∇u)^T)
 
     # Molecular viscosity
-    ν = 1 / model.Re
+    ν = 1 / Re
 
     du .= Dux * (2 .* (ν .+ ν_t_ux) .* S11) .+ Duy * (2 .* (ν .+ ν_t_uy) .* S12)
     dv .= Dvx * (2 .* (ν .+ ν_t_vx) .* S21) .+ Dvy * (2 .* (ν .+ ν_t_vy) .* S22)

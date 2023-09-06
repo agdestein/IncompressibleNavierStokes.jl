@@ -23,7 +23,7 @@ using IncompressibleNavierStokes
 name = "PlanarMixing2D"
 
 # Viscosity model
-viscosity_model = LaminarModel(; Re = 500.0)
+Re = 500.0
 
 # Boundary conditions: Unsteady BC requires time derivatives
 ΔU = 1.0
@@ -52,7 +52,7 @@ y = LinRange(-32.0, 32.0, n)
 plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = Setup(x, y; viscosity_model, u_bc, v_bc, dudt_bc, dvdt_bc, bc_type);
+setup = Setup(x, y; Re, u_bc, v_bc, dudt_bc, dvdt_bc, bc_type);
 
 # Time interval
 t_start, t_end = tlims = (0.0, 100.0)

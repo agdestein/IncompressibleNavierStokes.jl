@@ -26,7 +26,7 @@ using IncompressibleNavierStokes
 name = "BackwardFacingStep3D"
 
 # Viscosity model
-viscosity_model = LaminarModel(; Re = 3000.0)
+Re = 3000.0
 
 # Boundary conditions: steady inflow on the top half
 u_bc(x, y, z, t) = x ≈ 0 && y ≥ 0 ? 24y * (1 / 2 - y) : 0.0
@@ -57,7 +57,7 @@ z = LinRange(-0.25, 0.25, 8)
 plot_grid(x, y, z)
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; viscosity_model, u_bc, v_bc, w_bc, bc_type);
+setup = Setup(x, y, z; Re, u_bc, v_bc, w_bc, bc_type);
 
 # Time interval
 t_start, t_end = tlims = (0.0, 7.0)
