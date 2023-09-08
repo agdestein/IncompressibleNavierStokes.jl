@@ -3,65 +3,85 @@
 To discretize the incompressible Navier-Stokes equations, we will use finite
 volumes on a staggered Cartesian grid, as proposed by Harlow and Welsh
 [Harlow1965](@cite). We will use the notation of Sanderse [Sanderse2012](@cite)
-[Sanderse2013](@cite) [Sanderse2014](@cite). For simplicity, we will illustrate
-everything in 2D. The 3D discretization is very similar, but more verbose.
+[Sanderse2013](@cite) [Sanderse2014](@cite).
+
+Let ``d \in \{2, 3\}`` denote the spatial dimension (2D or 3D). We will make
+use of the "Cartesian" index ``I = (i, j)`` in 2D or ``I = (i, j, k)`` in 3D,
+with ``I(1) = i``, ``I(2) = j``, and ``I(3) = k``. Here, the indices ``I``,
+``i``, ``j``, and ``k``, represent discrete degrees of freedom. To specify a
+spatial dimension, we will use the symbols ``(\alpha, \beta, \gamma) \in \{1,
+\dots, d\}^3``. We will use the symbol ``\delta(\alpha) = (\delta_{\alpha
+\beta})_{\beta = 1}^d \in \{0, 1\}^d`` to indicate a perturbation in the
+direction ``\alpha``, where ``\delta_{\alpha \beta}`` is the Kronecker symbol.
+The spatial variable is ``x = (x^1, \dots, x^d) \in \Omega \subset
+\mathbb{R}^d``. Note that ``\Omega = \prod_{\alpha = 1}^d [0, L^\alpha]`` is
+assumed to have the shape of a box with side lengths ``L^\alpha > 0``.
 
 ## Finite volumes
 
-The finite volumes are given by
+The finite volumes are defined as
 
 ```math
-\Omega_{i, j} = [x_{i -
-\frac{1}{2}}, x_{i + \frac{1}{2}}] \times [y_{j - \frac{1}{2}}, y_{j +
-\frac{1}{2}}].
+\Omega_I = \prod_{\alpha = 1}^d \left[ x^\alpha_{I(\alpha) - \frac{1}{2}},
+x^\alpha_{I(\alpha) + \frac{1}{2}} \right], \quad I \in \mathcal{I}.
 ```
 
-They are fully defined by the vectors of volume faces ``x =
-(x_{i + \frac{1}{2}})_i`` and ``y = (y_{j + \frac{1}{2}})_j``. Note that the
-components are not assumed to be uniformly spaced. But we do assume that they
-are strictly increasing.
+They represent rectangles in 2D and prisms in 3D. They are fully defined by the
+vectors of volume faces ``x^\alpha = \left( x^\alpha_{i + \frac{1}{2}}
+\right)_{i = 0}^{N(\alpha)}``, where ``N = (N(1), \dots, N(d)) \in
+\mathbb{N}^d`` are the numbers of volumes in each dimension and ``\mathcal{I} =
+\prod_{\alpha = 1}^d \{1, \dots, N(\alpha)\}`` the set of finite volume
+indices. Note that the components ``x^\alpha_{i}`` are not assumed to be
+uniformly spaced. But we do assume that they are strictly increasing with
+``i``.
 
-The volume center coordinates are determined from the volume boundary
-boundaries by ``x_i = \frac{1}{2} (x_{i - \frac{1}{2}} + x_{i + \frac{1}{2}})``
-and ``y_j = \frac{1}{2} (y_{j - \frac{1}{2}} + y_{j + \frac{1}{2}})``. This
-allows for defining the shifted volumes ``\Omega_{i + \frac{1}{2}, j}``,
-``\Omega_{i, j + \frac{1}{2}}``, and ``\Omega_{i + \frac{1}{2}, j +
-\frac{1}{2}}``.
+The volume center coordinates are determined from the volume boundaries by
+``x^\alpha_{i} = \frac{1}{2} (x^\alpha_{i - \frac{1}{2}} + x_{i +
+\frac{1}{2}})``. This allows for defining the shifted volumes ``\Omega_{I +
+\delta(\alpha) / 2}``.
 
-We also define the volume widths ``\Delta x_i = x_{i + \frac{1}{2}} - x_{i -
-\frac{1}{2}}`` and volume heights ``\Delta y_j = y_{j + \frac{1}{2}} - y_{j -
-\frac{1}{2}}``. The volume sizes are thus ``| \Omega_{i, j} | = \Delta x_i
-\Delta y_j``.
+We also define the volume widths/depths/heights ``\Delta x^\alpha_i =
+x^\alpha_{i + \frac{1}{2}} - x^\alpha_{i - \frac{1}{2}}``, where ``i`` can take
+half values. The volume sizes are thus ``| \Omega_{I} | = \prod_{\alpha = 1}^d
+\Delta x^\alpha_{I(\alpha)}``.
 
-In each finite volume ``\Omega_{i, j}``, there are four different positions in
-which quantities of interest can be defined:
+In addition to the finite volumes and their half-indexed shifted variants, we
+define the surface
 
-- The ``p``-point ``(x_i, y_j)``,
-- The ``u``-point ``(x_{i + \frac{1}{2}}, y_j)``,
-- The ``v``-point ``(x_i, y_{j + \frac{1}{2}})``,
-- The ``\omega``-point ``(x_{i + \frac{1}{2}}, y_{j + \frac{1}{2}})``.
+```math
+\Gamma^\alpha_I = \prod_{\beta = 1}^d \begin{cases}
+    \left\{ x^\beta_{I(\beta)} \right\}, & \quad \alpha = \beta \\
+    \left[ x^\beta_{I(\beta) - 1 / 2}, x^\beta_{I(\beta) + 1 / 2} \right], & \quad
+    \text{otherwise},
+\end{cases}
+```
+where ``I`` can take half-values. It is the interface between ``\Omega_{I -
+\delta(\alpha) / 2}`` and ``\Omega_{I + \delta(\alpha) / 2}``, and has surface
+normal ``\delta(\alpha)``.
 
-They form the corners of the top-right quadrant of ``\Omega_{i, j}``.
 
-The vectors of unknowns will not contain all the half-index values, only those
-of their own point:
+In each finite volume ``\Omega_{I}`` (integer ``I``), there are three different
+types of positions in which quantities of interest can be defined:
 
-- The vector ``u_h`` will only consist of the components ``u_{i + \frac{1}{2},
-  j}``.
-- The vector ``v_h`` will only consist of the components ``v_{i, j +
-    \frac{1}{2}}``.
-- The vector ``p_h`` will only consist of the components ``p_{i, j}``.
+- The volume center ``x_I = (x_{I(1)}, \dots, x_{I(d)})``, where the discrete
+  pressure ``p_I`` is defined;
+- The right/rear/top volume face centers ``x_{I + \delta(\alpha) / 2}``, where
+  the discrete ``\alpha``-velocity component ``u^\alpha_{I + \delta(\alpha) / 2}`` is defined;
+- The right-rear-top volume corner  ``x_{I + \sum_{\alpha} \delta(\alpha) /
+  2}``, where the discrete vorticity ``\omega_{I + \sum_{\alpha} \delta(\alpha) /
+  2}`` is defined.
 
-In addtion, we define the full velocity vector
-``V_h = \begin{pmatrix} u_h \\ v_h \end{pmatrix}``.
+The vectors of unknowns ``u^\alpha_h`` and ``p_h`` will not contain all the
+half-index components, only those from their own canonical position.
 
-!!! note "Storage convection"
+!!! note "Storage convention"
     We use the column-major convention (Julia, MATLAB, Fortran), and not the
-    row-major convention (Python, C). Thus the ``x``-index ``i`` will vary for
-    one whole cycle in the vectors ``u_h``, ``v_h``, ``p_h`` before the
-    ``y``-index ``j`` is incremented.
+    row-major convention (Python, C). Thus the ``x^1``-index ``i`` will vary for
+    one whole cycle in the vectors before the
+    ``x^2``-index ``j`` is incremented, e.g. ``p_h = (p_{(1, 1, 1)},
+    p_{(2, 1, 1)}, \dots p_{(N(1), N(2), N(3))})`` in 3D.
 
-This finite volume configuration is illustrated as follows:
+In 2D, this finite volume configuration is illustrated as follows:
 
 ![Grid](../assets/grid.png)
 
@@ -69,39 +89,38 @@ This finite volume configuration is illustrated as follows:
 
 When a quantity is required *outside* of its native point, we will use interpolation. Examples:
 
-- To compute ``u`` at the pressure points:
+- To compute ``u^\alpha`` at the pressure point ``x_I``:
   ```math
   \begin{split}
-      u_{i, j} & =
-      \frac{x_{i + \frac{1}{2}} - x_i}{x_{i + \frac{1}{2}} - x_{i - \frac{1}{2}}}
-      u_{i - \frac{1}{2}, j}
-      + \frac{x_i - x_{i - \frac{1}{2}}}{x_{i + \frac{1}{2}} - x_{i - \frac{1}{2}}}
-      u_{i + \frac{1}{2}, j} \\
-      & = 
-      \frac{1}{2} (u_{i - \frac{1}{2}, j} + u_{i + \frac{1}{2}, j})
+      u^\alpha_I & = \frac{x^\alpha_{I(\alpha) + 1 / 2} -
+      x^\alpha_{I(\alpha)}}{x^\alpha_{I(\alpha) + 1 / 2} - x^\alpha_{I(\alpha) - 1 / 2}}
+      u_{I - \delta(\alpha) / 2}
+      + \frac{x^\alpha_{I(\alpha)} - x^\alpha_{I(\alpha) - 1 / 2}}{x^\alpha_{I(\alpha) + 1 / 2} - x^\alpha_{I(\alpha) - 1 / 2}}
+      u_{I + \delta(\alpha) / 2} \\
+      & = \frac{1}{2} \left( u_{I - \delta(\alpha) / 2} + u_{I + \delta(\alpha) / 2} \right).
   \end{split}
   ```
   Interpolation weights from volume faces to volume centers are always
   ``\frac{1}{2}``.
-- To compute ``v`` at vorticity points:
+- To compute ``u^\alpha`` at center of edge between ``\alpha``-face and
+  ``\beta``-face ``x_{I + \delta(\alpha) / 2 + \delta(\beta) / 2}``:
   ```math
-  v_{i + \frac{1}{2}, j + \frac{1}{2}} =
-  \frac{x_{i + 1} - x_{i + \frac{1}{2}}}{x_{i + 1} - x_i}
-  v_{i, j + \frac{1}{2}}
-  + \frac{x_{i + \frac{1}{2}} - x_i}{x_{i + 1} - x_i}
-  v_{i + 1, j + \frac{1}{2}}
+  u^\alpha_{I + \delta(\alpha) / 2 + \delta(\beta) / 2} =
+  \frac{x^\beta_{I(\beta) + 1} - x^\beta_{I(\beta) + 1 / 2}}{x^\beta_{I(\beta) + 1} - x^\beta_{I(\beta)}}
+  u^\alpha_{I + \delta(\alpha) / 2}
+  + \frac{x^\beta_{I(\beta) + 1 / 2} - x^\beta_{I(\beta)}}{x^\beta_{I(\beta) + 1} - x^\beta_{I(\beta)}}
+  u^\alpha_{I + \delta(\alpha) / 2 + \delta(\beta)}.
   ```
-- To compute ``p`` at ``v``-points:
+  Note that the grid is allowed to be non-uniform, so the interpolation weights
+  may unequal and different from ``\frac{1}{2}``.
+- To compute ``p`` at ``u^\alpha``-points:
   ```math
-  p_{i, j + \frac{1}{2}} =
-  \frac{y_{j + 1} - y_{j + \frac{1}{2}}}{y_{j + 1} - y_j}
-  p_{i, j}
-  + \frac{y_{j + \frac{1}{2}} - y_j}{y_{j + 1} - y_j}
-  p_{i, j + 1}
+  p_{I + \delta(\alpha) / 2} =
+  \frac{x^\alpha_{I(\alpha) + 1} - x^\alpha_{I(\alpha) + 1 / 2}}{x^\alpha_{I(\alpha) + 1} - x^\alpha_{I(\alpha)}}
+  p_{I}
+  + \frac{x^\alpha_{I(\alpha) + 1 / 2} - x^\alpha_{I(\alpha)}}{x^\alpha_{I(\alpha) + 1} - x^\alpha_{I(\alpha)}}
+  p_{I + \delta(\alpha)}
   ```
-
-Note that the grid is allowed to be non-uniform, so the weights of interpolation from
-volume centers to volume faces may unequal and different from ``\frac{1}{2}``.
 
 ## Finite volume discretization of the Navier-Stokes equations
 
@@ -114,55 +133,41 @@ of finite difference approximations we need to perform.
 The mass equation takes the form
 
 ```math
-\int_{\partial \mathcal{O}} V \cdot n \, \mathrm{d} \Gamma = 0, \quad \forall
+\int_{\partial \mathcal{O}} u \cdot n \, \mathrm{d} \Gamma = 0, \quad \forall
 \mathcal{O} \subset \Omega.
 ```
 
-Using the pressure volume ``\mathcal{O} = \Omega_{i, j}``, we get
+Using the pressure volume ``\mathcal{O} = \Omega_{I}``, we get
 
 ```math
-\int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}} u(x_{i + \frac{1}{2}}, y) \, \mathrm{d} y
-- \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}} u(x_{i - \frac{1}{2}}, y) \, \mathrm{d} y
-+ \int_{x_{i - \frac{1}{2}}}^{x_{i + \frac{1}{2}}} v(x, y_{j + \frac{1}{2}}) \, \mathrm{d} x
-- \int_{x_{i - \frac{1}{2}}}^{x_{i + \frac{1}{2}}} v(x, y_{j - \frac{1}{2}}) \, \mathrm{d} x
-= 0.
+\sum_{\alpha = 1}^d \left( \int_{\Gamma^\alpha_{I + \delta(\alpha) / 2}} u^\alpha \, \mathrm{d} \Gamma -
+\int_{\Gamma_{I - \delta(\alpha) / 2}^\alpha} u^\alpha \, \mathrm{d} \Gamma
+\right) = 0.
 ```
 
-Assuming that the flow is fully resolved, meaning that ``\Omega_{i, j}`` is is
-sufficiently small such that ``u`` and ``v`` are locally linear, we can perform the
+Assuming that the flow is fully resolved, meaning that ``\Omega_{I}`` is is
+sufficiently small such that ``u`` is locally linear, we can perform the
 local approximation (quadrature)
 
 ```math
-\begin{split}
-    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}} u(x_{i - \frac{1}{2}}, y) \, \mathrm{d} y
-    & \approx \Delta y_j u_{i - \frac{1}{2}, j}, \\
-    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}} u(x_{i + \frac{1}{2}}, y) \, \mathrm{d} y
-    & \approx \Delta y_j u_{i + \frac{1}{2}, j}, \\
-    \int_{x_{i - \frac{1}{2}}}^{x_{i + \frac{1}{2}}} v(x, y_{j - \frac{1}{2}}) \, \mathrm{d} x
-    & \approx \Delta x_i v_{i, j - \frac{1}{2}}, \\
-    \int_{x_{i - \frac{1}{2}}}^{x_{i + \frac{1}{2}}} v(x, y_{j + \frac{1}{2}}) \, \mathrm{d} x
-    & \approx \Delta x_i v_{i, j + \frac{1}{2}}.
-\end{split}
+\int_{\Gamma^\alpha_I} u^\alpha \, \mathrm{d} \Gamma \approx | \Gamma^\alpha_I | u^\alpha_{I}.
 ```
 
 This yields the discrete mass equation
 
 ```math
-\Delta y_j (u_{i + \frac{1}{2}, j} - u_{i -
-\frac{1}{2}, j})
-+ 
-\Delta x_i (v_{i, j + \frac{1}{2}} - v_{i, j -
-\frac{1}{2}})
-= 0
+\sum_{\alpha = 1}^d
+\left| \Gamma^\alpha_I \right| \left( u^\alpha_{I + \delta(\alpha) / 2} -
+u^\alpha_{I - \delta(\alpha) / 2} \right) = 0
 ```
 
 which can also be written in the matrix form
 
 ```math
-M V_h = M_x u_h + M_y v_h = 0,
+M V = \sum_{\alpha = 1}^d M^\alpha u^\alpha = 0,
 ```
 
-where ``M = \begin{pmatrix} M_x & M_y \end{pmatrix}`` is the discrete
+where ``M = \begin{pmatrix} M_1 & \dots & M_d \end{pmatrix}`` is the discrete
 divergence operator.
 
 !!! note "Approximation error"
@@ -171,147 +176,110 @@ divergence operator.
 
 ### Momentum equations
 
-We will consider the two momentum equations separately. Grouping the
-convection, pressure gradient, diffusion, and body force terms in each of their
-own integrals, we get, for all ``\mathcal{O} \subset \Omega``:
+Grouping the convection, pressure gradient, diffusion, and body force terms in
+each of their own integrals, we get, for all ``\mathcal{O} \subset \Omega``:
 
 ```math
-\begin{split}
-    \frac{\partial }{\partial t} \int_\mathcal{O} u \, \mathrm{d} \Omega
-    & =
-    - \int_{\partial \mathcal{O}} \left( u u n_x + u v n_y \right) \, \mathrm{d} \Gamma
-    - \int_{\partial \mathcal{O}} p n_x \, \mathrm{d} \Gamma
-    + \nu \int_{\partial \mathcal{O}} \left( \frac{\partial u}{\partial x} n_x + \frac{\partial u}{\partial y} n_y \right) \, \mathrm{d} \Gamma
-    + \int_\mathcal{O} f_u \mathrm{d} \Omega, \\
-    \frac{\partial }{\partial t} \int_\mathcal{O} v \, \mathrm{d} \Omega
-    & =
-    - \int_{\partial \mathcal{O}} \left( v u n_x + v v n_y \right) \, \mathrm{d} \Gamma
-    - \int_{\partial \mathcal{O}} p n_y \, \mathrm{d} \Gamma
-    + \nu \int_{\partial \mathcal{O}} \left( \frac{\partial v}{\partial x} n_x + \frac{\partial v}{\partial y} n_y \right) \, \mathrm{d} \Gamma
-    + \int_\mathcal{O} f_v \mathrm{d} \Omega,
-\end{split}
+\frac{\partial }{\partial t} \int_\mathcal{O} u^\alpha \, \mathrm{d} \Omega
+=
+- \sum_{\beta = 1}^d \int_{\partial \mathcal{O}} u^\alpha u^\beta n^\beta \, \mathrm{d} \Gamma
+- \int_{\partial \mathcal{O}} p n^\alpha \, \mathrm{d} \Gamma
++ \nu \sum_{\beta = 1}^d \int_{\partial \mathcal{O}} \frac{\partial u^\alpha}{\partial x^\beta} n^\beta \, \mathrm{d} \Gamma
++ \int_\mathcal{O} f^\alpha \mathrm{d} \Omega,
 ```
 
-where ``n = (n_x, n_y)``.
+where ``n = (n^1, \dots, n^d)`` is the surface normal vector to ``\partial
+\Omega``.
 
 This time, we will not let ``\mathcal{O}`` be the reference finite volume
-``\Omega_{i, j}`` (the ``p``-volume), but rather the shifted ``u``- and
-``v``-volumes. Setting ``\mathcal{O} = \Omega_{i + \frac{1}{2}, j}`` gives
+``\Omega_{I}`` (the ``p``-volume), but rather the shifted ``u^\alpha``-volume.
+Setting ``\mathcal{O} = \Omega_{I + \delta(\alpha) / 2}`` (with right/rear/top
+``\beta``-faces ``\Gamma^\beta_{I + \delta(\alpha) / 2 + \delta(\beta) / 2}``)
+gives
 
 ```math
 \begin{split}
     \frac{\partial }{\partial t}
-    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}}
-    \int_{x_i}^{x_{i + 1}}
-    u(x, y) \, \mathrm{d} x \mathrm{d} y
+    \int_{\Omega_{I + \delta(\alpha) / 2}}
+    \! \! \! 
+    \! \! \! 
+    \! \! \! 
+    \! \! \! 
+    u^\alpha \, \mathrm{d} \Omega
     =
-      & -
-    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}}
-    \left( (u u)(x_{i + 1}, y) - (u u)(x_i, y) \right)
-    \, \mathrm{d} y \\
-
     & -
-    \int_{x_i}^{x_{i + 1}}
-    \left( (u v)(x, y_{j + \frac{1}{2}}) - (u v)(x, y_{j - \frac{1}{2}})
-    \right)
-    \, \mathrm{d} x \\
-
+    \sum_{\beta = 1}^d \left(
+        \int_{\Gamma^{\beta}_{I + \delta(\alpha) / 2 + \delta(\beta) / 2}}
+            \! \! \! 
+            \! \! \! 
+            \! \! \! 
+            \! \! \! 
+        u^\alpha u^\beta \, \mathrm{d} \Gamma 
+        - \int_{\Gamma^{\beta}_{I + \delta(\alpha) / 2 - \delta(\beta) / 2}}
+            \! \! \! 
+            \! \! \! 
+            \! \! \! 
+            \! \! \! 
+            \! \! \! 
+            \! \! \! 
+        u^\alpha u^\beta \, \mathrm{d} \Gamma 
+    \right) \\
     & -
-    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}}
-    \left( p(x_{i + 1}, y) - p(x_i, y) \right)
-    \, \mathrm{d} y \\
-
-    & + \nu
-    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}}
-    \left( \frac{\partial u}{\partial x}(x_{i + 1}, y) - \frac{\partial
-    u}{\partial x}(x_i, y) \right)
-    \, \mathrm{d} y \\
-
-    & + \nu \int_{x_i}^{x_{i + 1}}
-    \left( \frac{\partial u}{\partial y}(x, y_{j + \frac{1}{2}}) -
-    \frac{\partial u}{\partial y}(x, y_{j - \frac{1}{2}}) \right)
-    \, \mathrm{d} x \\
-
+    \left(
+        \int_{\Gamma^{\alpha}_{I + \delta(\alpha)}} p \, \mathrm{d} \Gamma
+    - \int_{\Gamma^{\alpha}_{I}} p \, \mathrm{d} \Gamma
+    \right) \\
+    & + \nu \sum_{\beta = 1}^d 
+    \left(
+        \int_{\Gamma^{\beta}_{I + \delta(\alpha) / 2 + \delta(\beta) / 2}}
+        \frac{\partial u^\alpha}{\partial x^\beta} \, \mathrm{d} \Gamma 
+        - \int_{\Gamma^{\beta}_{I + \delta(\alpha) / 2 - \delta(\beta) / 2}}
+        \frac{\partial u^\alpha}{\partial x^\beta} \, \mathrm{d} \Gamma 
+    \right) \\
     & +
-    \int_{y_{j - \frac{1}{2}}}^{y_{j + \frac{1}{2}}}
-    \int_{x_i}^{x_{i + 1}}
-    f_u(x, y) \, \mathrm{d} x \mathrm{d} y \\
+    \int_{\Omega_{I + \delta(\alpha) / 2}}
+    f^\alpha \, \mathrm{d} \Omega
 \end{split}
 ```
 
 This equation is still exact. We now introduce some approximations on
-``\Omega_{i + \frac{1}{2}, j}`` and its boundaries to remove all unknown
+``\Omega_{I + \delta(\alpha) / 2}`` and its boundaries to remove all unknown
 continuous quantities.
 
 1. We replace the integrals with a mid-point quadrature rule.
-1. The the mid-point values of derivatives are
-   approximated using a central finite difference:
+1. The mid-point values of derivatives are approximated using a central-like finite difference:
    ```math
-   \frac{\partial u}{\partial x}(x_i, y_j) \approx \frac{u_{i + \frac{1}{2}, j}
-   - u_{i - \frac{1}{2}, j}}{x_{i + \frac{1}{2}} - x_{i - \frac{1}{2}}},
+   \frac{\partial u^\alpha}{\partial x^\beta}(x_I) \approx
+   \frac{u^\alpha_{I + \delta(\beta) / 2}
+   - u^\alpha_{I - \delta(\beta) / 2}}{x^\beta_{I(\beta) + 1 / 2} - x^\beta_{I(\beta) - 1 / 2}}.
    ```
-   and similarly for ``\frac{\partial u}{\partial x}(x_{i + 1}, y_j)``. If the
-   grid is non-uniform, we also translate the derivative value to the midpoint:
-   ```math
-   \frac{\partial u}{\partial y}(x_{i + \frac{1}{2}}, y_{j + \frac{1}{2}})
-   \approx \frac{\partial u}{\partial y} \left( x_{i + \frac{1}{2}}, \frac{y_i + y_{i + 1}}{2} \right)
-   \approx \frac{u_{i + \frac{1}{2}, j + 1} - u_{i + \frac{1}{2}, j}}{y_{j + 1} - y_j},
-   ```
-   and similarly for
-   ``\frac{\partial u}{\partial y}(x_{i + \frac{1}{2}}, y_{j - \frac{1}{2}})``.
 1. Quantities outside their canonical positions are obtained through
    interpolation.
 
-Finally, the discrete ``u``-momentum equations are given by
+Finally, the discrete ``\alpha``-momentum equations are given by
 
 ```math
 \begin{split}
-    \Delta x_{i + \frac{1}{2}}
-    \Delta y_j
-    \frac{\mathrm{d} }{\mathrm{d} t} u_{i + \frac{1}{2}, j} =
-    & - \Delta y_j \left( (u u)_{i + 1, j} - (u u)_{i, j} \right) \\
-    & - \Delta x_{i + \frac{1}{2}} \left( (u v)_{i + \frac{1}{2}, j +
-    \frac{1}{2}} - (u v)_{i + \frac{1}{2}, j - \frac{1}{2}} \right) \\
-    & - \Delta y_j \left( p_{i + 1, j} - p_{i, j} \right) \\
-    & + \nu \Delta y_j \left( 
-    \frac{u_{i + \frac{3}{2}, j} - u_{i + \frac{1}{2}, j}}{\Delta x_{i + 1}}
-    - \frac{u_{i + \frac{1}{2}, j} - u_{i - \frac{1}{2}, j}}{\Delta x_i}
+    \left| \Omega_{I + \delta(\alpha) / 2} \right|
+    \frac{\mathrm{d} }{\mathrm{d} t} u^\alpha_{I + \delta(\alpha) / 2} =
+    & - \sum_{\beta = 1}^d \left| \Gamma^\beta_{I + \delta(\alpha) / 2} \right|
+    \left(
+        (u^\alpha
+        u^\beta)_{I + \delta(\alpha) / 2 + \delta(\beta) / 2}
+        -
+        (u^\alpha
+        u^\beta )_{I + \delta(\alpha) / 2 - \delta(\beta) / 2}
     \right) \\
-    & + \nu \Delta x_{i + \frac{1}{2}} \left( 
-    \frac{u_{i + \frac{1}{2}, j + 1} - u_{i + \frac{1}{2}, j}}{\Delta y_{j + \frac{1}{2}}}
-    - \frac{u_{i + \frac{1}{2}, j} - u_{i + \frac{1}{2}, j - 1}}{\Delta y_{j - \frac{1}{2}}}
+    & - \left| \Gamma^\alpha_{I + \delta(\alpha) / 2} \right|
+    \left( p_{I + \delta(\alpha)} - p_{I} \right) \\
+    & + \nu \sum_{\beta = 1}^d \left| \Gamma^\beta_{I + \delta(\alpha) / 2} \right|
+    \left( 
+        \frac{u^\alpha_{I + \delta(\alpha) / 2 + \delta(\beta)} - u^\alpha_{I +
+        \delta(\alpha) / 2}}{x^\beta_{I(\beta) + 1} - x^\beta_{I(\beta)}}
+        - \frac{u^\alpha_{I + \delta(\alpha) / 2} - u^\alpha_{I + \delta(\alpha)
+        / 2 - \delta(\beta)}}{x^\beta_{I(\beta)} - x^\beta_{I(\beta) - 1}}
     \right) \\
-    & + 
-    \Delta x_{i + \frac{1}{2}}
-    \Delta y_j
-    f_u \left( x_{i + \frac{1}{2}}, y_j \right).
-\end{split}
-```
-
-A similar derivation over the ``v``-volume ``\Omega_{i, j + \frac{1}{2}}``
-yields the discrete ``v``-momentum equations
-
-```math
-\begin{split}
-    \Delta x_i
-    \Delta y_{j + \frac{1}{2}}
-    \frac{\mathrm{d} }{\mathrm{d} t} v_{i, j + \frac{1}{2}} =
-    & - \Delta y_{j + \frac{1}{2}} \left( (v u)_{i + \frac{1}{2}, j + \frac{1}{2}}
-    - (v u)_{i - \frac{1}{2}, j + \frac{1}{2}} \right) \\
-    & - \Delta x_i \left( (v v)_{i, j + 1} - (v v)_{i, j} \right) \\
-    & - \Delta x_i \left( p_{i, j + 1} - p_{i, j} \right) \\
-    & + \nu \Delta x_{i + \frac{1}{2}} \left( 
-    \frac{v_{i + 1, j + \frac{1}{2}} - v_{i, j + \frac{1}{2}}}{\Delta x_{i + \frac{1}{2}}}
-    - \frac{v_{i, j + \frac{1}{2}} - u_{i - 1, j + \frac{1}{2}}}{\Delta x_{i -
-    \frac{1}{2}}} \right) \\
-    & + \nu \Delta x_i \left( 
-    \frac{v_{i, j + \frac{3}{2}} - u_{i, j + \frac{1}{2}}}{\Delta y_{j + 1}}
-    - \frac{v_{i, j + \frac{1}{2}} - v_{i, j - \frac{1}{2}}}{\Delta y_j}
-    \right) \\
-    & + 
-    \Delta x_i
-    \Delta y_{j + \frac{1}{2}}
-    f_v \left( x_i, y_{j + \frac{1}{2}} \right).
+    & + \left| \Omega_{I + \delta(\alpha) / 2} \right| f^\alpha(x_{I + \delta(\alpha) / 2}).
 \end{split}
 ```
 
