@@ -384,7 +384,7 @@ column-major convention. Note that the ``d`` discrete velocity fields ``u^1_h,
 We can write the mass and momentum equations in matrix form. The discrete mass
 equation then becomes
 ```math
-M u_h = y_M,
+M u_h + y_M = 0,
 ```
 where ``M`` is the discrete divergence operator and ``y_M`` contains the
 boundary value contributions of the velocity to the divergence field.
@@ -417,7 +417,7 @@ discrete divergence operator ``M`` to the discrete momentum equations yields
 the discrete pressure Poisson equation
 
 ```math
-L p_h = M \Omega_h^{-1} (F(V_h) - y_G) - \frac{\mathrm{d} y_M}{\mathrm{d} t},
+L p_h = M \Omega_h^{-1} (F(V_h) - y_G) + \frac{\mathrm{d} y_M}{\mathrm{d} t},
 ```
 
 where ``L = M \Omega_h^{-1} G`` is a discrete Laplace operator. It is positive
@@ -431,7 +431,7 @@ symmetric since ``G = M^\mathsf{T}``.
     not known exactly, for example if the next value of the inflow is unknown at
     the time of the current value, it must be computed using past values of
     of the velocity inflow only, for example ``\frac{\mathrm{d} y_M}{\mathrm{d}
-    t} \approx (y_M(t) - y_M(t - \Delta t) / \Delta t``.
+    t} \approx (y_M(t) - y_M(t - \Delta t)) / \Delta t`` for some ``\Delta t``.
 
 !!! note "Uniqueness of pressure field"
 
@@ -449,14 +449,14 @@ symmetric since ``G = M^\mathsf{T}``.
     discrete Poisson equation:
 
     ```math
-    p_h = L^{-1} M \Omega_h^{-1} (F(u_h) - y_G) - L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.
+    p_h = L^{-1} M \Omega_h^{-1} (F(u_h) - y_G) + L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.
     ```
 
     The momentum equations then become
 
     ```math
     \Omega_h \frac{\mathrm{d} u_h}{\mathrm{d} t} = (I - G L^{-1} M \Omega_h^{-1})
-    (F(u_h) - y_G) + G L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.
+    (F(u_h) - y_G) - G L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.
     ```
 
     The matrix ``(I - G L^{-1} M \Omega^{-1})`` is a projector onto the space
