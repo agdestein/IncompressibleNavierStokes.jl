@@ -15,41 +15,15 @@ abstract type AbstractODEMethod{T} end
         method_startup = RK44(; T),
     )
 
-IMEX AB-CN: Adams-Bashforth for explicit convection (parameters `α₁` and `α₂`) and
-Crank-Nicolson for implicit diffusion (implicitness `θ`).
-The method is second order for `θ = 1/2`.
+IMEX AB-CN: Adams-Bashforth for explicit convection (parameters `α₁` and `α₂`)
+and Crank-Nicolson for implicit diffusion (implicitness `θ`). The method is
+second order for `θ = 1/2`.
 
-Adams-Bashforth for convection and Crank-Nicolson for diffusion
-formulation:
+The LU decomposition of the LHS matrix is computed every time the time step
+changes.
 
-```math
-\\begin{align*}
-(\\mathbf{u}^{n+1} - \\mathbf{u}^n) / Δt & =
-    -(\\alpha_1 \\mathbf{c}^n + \\alpha_2 \\mathbf{c}^{n-1}) \\\\
-    & + \\theta \\mathbf{d}^{n+1} + (1-\\theta) \\mathbf{d}^n \\\\
-    & + \\theta \\mathbf{F}^{n+1} + (1-\\theta) \\mathbf{F}^n \\\\
-    & + \\theta \\mathbf{BC}^{n+1} + (1-\\theta) \\mathbf{BC}^n \\\\
-    & - \\mathbf{G} \\mathbf{p} + \\mathbf{y}_p
-\\end{align*}
-```
-
-where BC are boundary conditions of diffusion. This is rewritten as:
-
-```math
-\\begin{align*}
-(\\frac{1}{\\Delta t} \\mathbf{I} - \\theta \\mathbf{D}) \\mathbf{u}^{n+1} & =
-    (\\frac{1}{\\Delta t} \\mathbf{I} - (1 - \\theta) \\mathbf{D}) \\mathbf{u}^{n} \\\\
-    & - (\\alpha_1 \\mathbf{c}^n + \\alpha_2 \\mathbf{c}^{n-1}) \\\\
-    & + \\theta \\mathbf{F}^{n+1} + (1-\\theta) \\mathbf{F}^{n} \\\\
-    & + \\theta \\mathbf{BC}^{n+1} + (1-\\theta) \\mathbf{BC}^{n} \\\\
-    & - \\mathbf{G} \\mathbf{p} + \\mathbf{y}_p
-\\end{align*}
-```
-
-The LU decomposition of the LHS matrix is computed every time the time step changes.
-
-Note that, in constrast to explicit methods, the pressure from previous time steps has an
-influence on the accuracy of the velocity.
+Note that, in constrast to explicit methods, the pressure from previous time
+steps has an influence on the accuracy of the velocity.
 """
 struct AdamsBashforthCrankNicolsonMethod{T,M} <: AbstractODEMethod{T}
     α₁::T
@@ -76,15 +50,8 @@ end
     )
 
 Explicit one-leg β-method following symmetry-preserving discretization of
-turbulent flow. See [Verstappen and Veldman (JCP 2003)] for details, or [Direct numerical
-simulation of turbulence at lower costs (Journal of Engineering Mathematics 1997)].
-
-Formulation:
-
-```math
-\\frac{(\\beta + 1/2) u^{n+1} - 2 \\beta u^{n} + (\\beta - 1/2) u^{n-1}}{\\Delta t} = F((1 +
-\\beta) u^n - \\beta u^{n-1}).
-```
+turbulent flow. See Verstappen and Veldman [Verstappen2003](@cite)
+[Verstappen1997](@cite) for details.
 """
 struct OneLegMethod{T,M} <: AbstractODEMethod{T}
     β::T
