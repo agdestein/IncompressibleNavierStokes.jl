@@ -24,33 +24,33 @@ function get_timestep(::Dimension{2}, stepper, cfl)
     vₕ = @view V[indv]
 
     # For explicit methods only
-    if isexplicit(method)
-        # Convective part
-        Cu =
-            Cux * spdiagm(Iu_ux * uₕ + yIu_ux) * Au_ux +
-            Cuy * spdiagm(Iv_uy * vₕ + yIv_uy) * Au_uy
-        Cv =
-            Cvx * spdiagm(Iu_vx * uₕ + yIu_vx) * Av_vx +
-            Cvy * spdiagm(Iv_vy * vₕ + yIv_vy) * Av_vy
-        C = blockdiag(Cu, Cv)
-        test = spdiagm(1 ./ Ω) * C
-        sum_conv = abs.(test) * ones(T, NV) - diag(abs.(test)) - diag(test)
-        λ_conv = maximum(sum_conv)
+    @assert isexplicit(method) "Adaptive timestep requires explicit method"
 
-        # Based on max. value of stability region (not a very good indication
-        # For the methods that do not include the imaginary axis)
-        Δt_conv = lambda_conv_max(method) / λ_conv
+    # Convective part
+    Cu =
+        Cux * spdiagm(Iu_ux * uₕ + yIu_ux) * Au_ux +
+        Cuy * spdiagm(Iv_uy * vₕ + yIv_uy) * Au_uy
+    Cv =
+        Cvx * spdiagm(Iu_vx * uₕ + yIu_vx) * Av_vx +
+        Cvy * spdiagm(Iv_vy * vₕ + yIv_vy) * Av_vy
+    C = blockdiag(Cu, Cv)
+    test = spdiagm(1 ./ Ω) * C
+    sum_conv = abs.(test) * ones(T, NV) - diag(abs.(test)) - diag(test)
+    λ_conv = maximum(sum_conv)
 
-        ## Diffusive part
-        test = Diagonal(1 ./ Ω) * Diff
-        sum_diff = abs.(test) * ones(T, NV) - diag(abs.(test)) - diag(test)
-        λ_diff = maximum(sum_diff)
+    # Based on max. value of stability region (not a very good indication
+    # For the methods that do not include the imaginary axis)
+    Δt_conv = lambda_conv_max(method) / λ_conv
 
-        # Based on max. value of stability region
-        Δt_diff = lambda_diff_max(method) / λ_diff
+    ## Diffusive part
+    test = Diagonal(1 ./ Ω) * Diff
+    sum_diff = abs.(test) * ones(T, NV) - diag(abs.(test)) - diag(test)
+    λ_diff = maximum(sum_diff)
 
-        Δt = cfl * min(Δt_conv, Δt_diff)
-    end
+    # Based on max. value of stability region
+    Δt_diff = lambda_diff_max(method) / λ_diff
+
+    Δt = cfl * min(Δt_conv, Δt_diff)
 
     Δt
 end
@@ -75,39 +75,39 @@ function get_timestep(::Dimension{3}, stepper, cfl)
     wₕ = @view V[indw]
 
     # For explicit methods only
-    if isexplicit(method)
-        # Convective part
-        Cu =
-            Cux * spdiagm(Iu_ux * uₕ + yIu_ux) * Au_ux +
-            Cuy * spdiagm(Iv_uy * vₕ + yIv_uy) * Au_uy +
-            Cuz * spdiagm(Iw_uz * wₕ + yIw_uz) * Au_uz
-        Cv =
-            Cvx * spdiagm(Iu_vx * uₕ + yIu_vx) * Av_vx +
-            Cvy * spdiagm(Iv_vy * vₕ + yIv_vy) * Av_vy +
-            Cvz * spdiagm(Iw_vz * wₕ + yIw_vz) * Av_vz
-        Cw =
-            Cwx * spdiagm(Iu_wx * uₕ + yIu_wx) * Aw_wx +
-            Cwy * spdiagm(Iv_wy * vₕ + yIv_wy) * Aw_wy +
-            Cwz * spdiagm(Iw_wz * wₕ + yIw_wz) * Aw_wz
-        C = blockdiag(Cu, Cv, Cw)
-        test = spdiagm(1 ./ Ω) * C
-        sum_conv = abs.(test) * ones(T, NV) - diag(abs.(test)) - diag(test)
-        λ_conv = maximum(sum_conv)
+    @assert isexplicit(method) "Adaptive timestep requires explicit method"
 
-        # Based on max. value of stability region (not a very good indication
-        # For the methods that do not include the imaginary axis)
-        Δt_conv = lambda_conv_max(method) / λ_conv
+    # Convective part
+    Cu =
+        Cux * spdiagm(Iu_ux * uₕ + yIu_ux) * Au_ux +
+        Cuy * spdiagm(Iv_uy * vₕ + yIv_uy) * Au_uy +
+        Cuz * spdiagm(Iw_uz * wₕ + yIw_uz) * Au_uz
+    Cv =
+        Cvx * spdiagm(Iu_vx * uₕ + yIu_vx) * Av_vx +
+        Cvy * spdiagm(Iv_vy * vₕ + yIv_vy) * Av_vy +
+        Cvz * spdiagm(Iw_vz * wₕ + yIw_vz) * Av_vz
+    Cw =
+        Cwx * spdiagm(Iu_wx * uₕ + yIu_wx) * Aw_wx +
+        Cwy * spdiagm(Iv_wy * vₕ + yIv_wy) * Aw_wy +
+        Cwz * spdiagm(Iw_wz * wₕ + yIw_wz) * Aw_wz
+    C = blockdiag(Cu, Cv, Cw)
+    test = spdiagm(1 ./ Ω) * C
+    sum_conv = abs.(test) * ones(T, NV) - diag(abs.(test)) - diag(test)
+    λ_conv = maximum(sum_conv)
 
-        ## Diffusive part
-        test = Diagonal(1 ./ Ω) * Diff
-        sum_diff = abs.(test) * ones(T, NV) - diag(abs.(test)) - diag(test)
-        λ_diff = maximum(sum_diff)
+    # Based on max. value of stability region (not a very good indication
+    # For the methods that do not include the imaginary axis)
+    Δt_conv = lambda_conv_max(method) / λ_conv
 
-        # Based on max. value of stability region
-        Δt_diff = lambda_diff_max(method) / λ_diff
+    ## Diffusive part
+    test = Diagonal(1 ./ Ω) * Diff
+    sum_diff = abs.(test) * ones(T, NV) - diag(abs.(test)) - diag(test)
+    λ_diff = maximum(sum_diff)
 
-        Δt = cfl * min(Δt_conv, Δt_diff)
-    end
+    # Based on max. value of stability region
+    Δt_diff = lambda_diff_max(method) / λ_diff
+
+    Δt = cfl * min(Δt_conv, Δt_diff)
 
     Δt
 end
