@@ -4,7 +4,7 @@ The spatially discretized Navier-Stokes equations form a differential-algebraic
 system, with an ODE for the velocity
 
 ```math
-\Omega \frac{\mathrm{d} u_h}{\mathrm{d} t} = F(u_h) - (G p_h + y_G)
+\Omega_h \frac{\mathrm{d} u_h}{\mathrm{d} t} = F(u_h, t) - (G p_h + y_G)
 ```
 
 subject to the algebraic constraint formed by the mass equation
@@ -147,10 +147,10 @@ The resulting pressure ``P`` is then accurate to the same order as ``U``.
 See Verstappen and Veldman [Verstappen2003](@cite) [Verstappen1997](@cite).
 
 We here require that the time step ``\Delta t`` is constant. Given the velocity
-``U_0`` and pressure ``P_0`` at the current time ``t_0`` and their and their
-previous values ``U_{-1}`` and ``P_{-1}`` at the time ``t_{-1} = t_0 - \Delta
-t``, we start by computing the "offstep" values ``V = (1 + \beta) V_0 - \beta
-V_{-1}`` and ``Q = (1 + \beta) P_0 - \beta P_{-1}``.
+``U_0`` and pressure ``P_0`` at the current time ``t_0`` and their previous
+values ``U_{-1}`` and ``P_{-1}`` at the time ``t_{-1} = t_0 - \Delta t``, we
+start by computing the "offstep" values ``V = (1 + \beta) V_0 - \beta V_{-1}``
+and ``Q = (1 + \beta) P_0 - \beta P_{-1}``.
 
 A tentative velocity field ``W`` is then computed as follows:
 
@@ -168,7 +168,7 @@ L \Delta P = \frac{\beta + \frac{1}{2}}{\Delta t} (M W + y_M(t)).
 Finally, the divergence free velocity field is given by
 
 ```math
-U = W - \frac{\delta t}{\beta + \frac{1}{2}} \Omega_h^{-1} G \Delta P,
+U = W - \frac{\Delta t}{\beta + \frac{1}{2}} \Omega_h^{-1} G \Delta P,
 ```
 
 while the second order accurate pressure is given by
