@@ -16,7 +16,7 @@
         order4 = false,
         bodyforce_u = (x, y) -> 0,
         bodyforce_v = (x, y) -> 0,
-        closure_model = V -> zero(V),
+        closure_model = nothing,
     )
 
 Create 2D setup.
@@ -97,7 +97,7 @@ end
         bodyforce_u = (x, y, z) -> 0,
         bodyforce_v = (x, y, z) -> 0,
         bodyforce_w = (x, y, z) -> 0,
-        closure_model = V -> zero(V),
+        closure_model = nothing,
     )
 
 Create 3D setup.

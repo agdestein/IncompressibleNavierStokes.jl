@@ -58,11 +58,11 @@ function momentum(
     # Body force
     b = force
 
-    # Closure model
-    cm = closure_model(V)
-
-    # Residual in Finite Volume form, including the pressure contribution
+    # Residual in Finite Volume form, excluding the pressure contribution
     F = @. -c + d + b + cm
+
+    # Closure model
+    isnothing(closure_model) || (F += closure_model(V))
 
     # Nopressure = false is the most common situation, in which we return the entire
     # right-hand side vector
@@ -74,6 +74,7 @@ function momentum(
         # Jacobian requested
         # We return only the Jacobian with respect to V (not p)
         ∇F = @. -∇c + ∇d
+        @assert isnothing(closure_model) "Jacobian of closure model currently not implemented"
     else
         ∇F = nothing
     end
@@ -151,11 +152,11 @@ function momentum!(
     # Body force
     b = force
 
-    # Closure model
-    cm = closure_model(V)
+    # Residual in Finite Volume form, excluding the pressure contribution
+    @. F = -c + d + b
 
-    # Residual in Finite Volume form, including the pressure contribution
-    @. F = -c + d + b + cm
+    # Closure model
+    isnothing(closure_model) || (F .+= closure_model(V))
 
     # Nopressure = false is the most common situation, in which we return the entire
     # right-hand side vector
@@ -169,6 +170,7 @@ function momentum!(
         # Jacobian requested
         # We return only the Jacobian with respect to V (not p)
         @. ∇F = -∇c + ∇d
+        @assert isnothing(closure_model) "Jacobian of closure model currently not implemented"
     end
 
     F, ∇F
