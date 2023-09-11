@@ -23,10 +23,11 @@ function cnn(
     T = eltype(x)
     @assert T == Float32
 
-    # Make sure there are two velocity fields in input and output
-    @assert c[1] == 2
-    # @assert c[1] == 4
+    # Make sure there are two force fields in output
     @assert c[end] == 2
+
+    # Add input channel size
+    c = [2; c]
 
     # Create convolutional closure model
     NN = Chain(

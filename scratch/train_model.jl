@@ -115,16 +115,16 @@ arrows(x, y, fx, fy; lengthscale = 1.0f0)
 #     setup,
 #
 #     # Radius
-#     [5, 5, 5],
+#     [2, 2, 2, 2],
 #
 #     # Channels
-#     [2, 64, 64, 2],
+#     [64, 64, 64, 2],
 #
 #     # Activations
-#     [leakyrelu, leakyrelu, identity],
+#     [leakyrelu, leakyrelu, leakyrelu, identity],
 #
 #     # Bias
-#     [true, true, false];
+#     [true, true, true, false];
 # )
 
 closure, θ₀ = fno(
