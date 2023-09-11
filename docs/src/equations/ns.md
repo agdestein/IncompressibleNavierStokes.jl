@@ -8,7 +8,7 @@ conservative form, they are given by
 ```math
 \begin{align*}
 \nabla \cdot u & = 0, \\
-\frac{\mathrm{d} u}{\mathrm{d} t} + \nabla \cdot (u u^\mathsf{T}) & = -\nabla p +
+\frac{\partial u}{\partial t} + \nabla \cdot (u u^\mathsf{T}) & = -\nabla p +
 \nu \nabla^2 u + f.
 \end{align*}
 ```
@@ -23,7 +23,7 @@ written as
 \sum_{\beta = 1}^d \frac{\partial u^\beta}{\partial x^\beta} & = 0, \\
 \frac{\partial u^\alpha}{\partial t} + \sum_{\beta = 1}^d
 \frac{\partial}{\partial x^\beta} (u^\alpha u^\beta) & = -\frac{\partial
-p}{\partial x^\alpha} + \nu \sum_{\beta = 1}^d \frac{\partial^2 u}{\partial
+p}{\partial x^\alpha} + \nu \sum_{\beta = 1}^d \frac{\partial^2 u^\alpha}{\partial
 (x^\beta)^2} + f^\alpha.
 \end{align*}
 ```
@@ -39,7 +39,7 @@ be denoted ``\partial \mathcal{O}``, with normal ``n`` and surface element
 The mass equation in integral form is given by
 
 ```math
-\int_{\partial \mathcal{O}} u \cdot n \, \mathrm{d} \Gamma = 0.
+\int_{\partial \mathcal{O}} u \cdot n \, \mathrm{d} \Gamma = 0,
 ```
 
 where we have used the divergence theorem to convert the volume integral to a
@@ -74,8 +74,8 @@ normal ``n``. We allow for the following types of boundary conditions on
 - Periodic boundary conditions: ``u(x) = u(x + \tau)`` and ``p(x) = p(x + \tau)`` for ``x \in
   \Gamma``, where ``\tau`` is a constant translation to another part of the
   boundary ``\partial \Omega``. This usually requires ``\Gamma`` and its
-  periodic counterpart ``\Gamma + \tau`` to be flat (including in this software
-  suite).
+  periodic counterpart ``\Gamma + \tau`` to be flat and rectangular (including
+  in this software suite).
 - Dirichlet boundary conditions: ``u = u_\text{BC}`` on ``\Gamma``. A common
   situation here is that of a sticky wall, with "no slip boundary conditions.
   Then ``u_\text{BC} = 0``.
@@ -98,32 +98,13 @@ equation for the pressure:
 \nabla \cdot f
 ```
 
-In 2D, this equation becomes
+In scalar notation, this becomes
 
 ```math
-- \left(\frac{\partial^2}{\partial x^2} + \frac{\partial^2}{\partial
-y^2}\right) p = \frac{\partial^2 (u u)}{\partial x^2} + 2 \frac{\partial^2 (u
-v)}{\partial x \partial y} + \frac{\partial^2 (v v)}{\partial y^2} - \left( \frac{\partial f_u}{\partial x} + \frac{\partial f_v}{\partial y} \right).
-```
-
-In 3D, this equation becomes
-
-```math
-\begin{split}
-    - \left( \frac{\partial^2}{\partial x^2} + \frac{\partial^2}{\partial
-    y^2} + \frac{\partial^2 }{\partial z^2} \right) p
-    & = \frac{\partial^2 (u u)}{\partial x^2}
-    + 2 \frac{\partial^2 (u v)}{\partial x \partial y}
-    + 2 \frac{\partial^2 (u w)}{\partial x \partial z} \\
-    & + 2 \frac{\partial^2 (v u)}{\partial y \partial x}
-    +   \frac{\partial^2 (v v)}{\partial y^2}
-    + 2 \frac{\partial^2 (v w)}{\partial y \partial z} \\
-    & + 2 \frac{\partial^2 (v u)}{\partial z \partial x}
-    + 2 \frac{\partial^2 (w v)}{\partial z \partial y}
-    +   \frac{\partial^2 (w w)}{\partial z^2} \\
-    & - \left( \frac{\partial f_u}{\partial x} + \frac{\partial f_v}{\partial
-    y} + \frac{\partial f_w}{\partial z} \right).
-\end{split}
+- \sum_{\alpha = 1}^d \frac{\partial^2}{\partial (x^\alpha)^2} p = \sum_{\alpha
+= 1}^d \sum_{\beta = 1}^d \frac{\partial^2 }{\partial x^\alpha \partial
+x^\beta} (u^\alpha u^\beta) - \sum_{\alpha = 1}^d \frac{\partial
+f^\alpha}{\partial x^\alpha}.
 ```
 
 Note the absence of time derivatives in the pressure equation. While the
@@ -143,45 +124,43 @@ The vorticity is defined as ``\omega = \nabla \times u``.
 In 2D, it is a scalar field given by
 
 ```math
-\omega = -\frac{\partial u}{\partial y} + \frac{\partial v}{\partial x}.
+\omega = -\frac{\partial u^1}{\partial x^2} + \frac{\partial u^2}{\partial
+x^1}.
 ```
 
 In 3D, it is a vector field given by
 
 ```math
 \omega = \begin{pmatrix}
-    - \frac{\partial v}{\partial z} + \frac{\partial w}{\partial y} \\
-    \phantom{+} \frac{\partial u}{\partial z} - \frac{\partial w}{\partial x} \\
-    - \frac{\partial u}{\partial z} + \frac{\partial w}{\partial x}
+    - \frac{\partial u^2}{\partial x^3} + \frac{\partial u^3}{\partial x^2} \\
+    - \frac{\partial u^3}{\partial x^1} + \frac{\partial u^1}{\partial x^3}  \\
+    - \frac{\partial u^1}{\partial x^2} + \frac{\partial u^2}{\partial x^1}
 \end{pmatrix}.
 ```
 
 Note that the 2D vorticity is equal
-to the ``z``-component of the 3D vorticity.
+to the ``x^3``-component of the 3D vorticity.
 
 ### Stream function
 
-In 2D, the stream function ``\psi`` is a scalar field defined such that
+The stream function ``\psi`` is a field (scalar in 2D, vector in 3D) defined
+such that
 
 ```math
-u = \frac{\partial \psi}{\partial y}, \quad v = \frac{\partial \psi}{\partial x}.
+u = \nabla \times \psi.
 ```
 
-In 3D, the stream function ``\psi`` is a vector field defined such that
+It is related to the vorticity as
 
 ```math
-u = \nabla \times \psi
-```
-
-It is related to the 3D vorticity as
-
-```math
-\nabla^2 \psi = \nabla \times \omega
+\nabla^2 \psi = \nabla \times \omega.
 ```
 
 ### Kinetic energy
 
-The kinetic energy is defined by ``e = \frac{1}{2} \| u \|^2``.
+The local and total kinetic energy are defined by ``k = \frac{1}{2} \| u
+\|_2^2`` and ``K = \frac{1}{2} \| u \|_{L^2(\Omega)}^2 = \int_\Omega k \,
+\mathrm{d} \Omega``.
 
 ### Reynolds number
 

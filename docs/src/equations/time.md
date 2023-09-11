@@ -29,7 +29,9 @@ it into ``N`` sub-intervals ``[t^n, t^{n + 1}]`` for ``n = 0, \dots, N - 1``,
 with ``t^0 = 0``, ``t^N = T``, and increment ``\Delta t^n = t^{n + 1} - t^n``.
 We define ``U^n \approx u_h(t^n)`` as an approximation to the exact discrete
 velocity field ``u_h(t^n)``, with ``U^0 = u_h(0)`` starting from the exact
-initial conditions.
+initial conditions. We say that the time integration scheme (definition of
+``U^n``) is accurate to the order ``r`` if ``U^n = u_h(t^n) +
+\mathcal{O}(\Delta t^r)`` for all ``n``.
 
 
 ## Explicit Runge-Kutta methods
@@ -150,7 +152,7 @@ We here require that the time step ``\Delta t`` is constant. Given the velocity
 ``U_0`` and pressure ``P_0`` at the current time ``t_0`` and their previous
 values ``U_{-1}`` and ``P_{-1}`` at the time ``t_{-1} = t_0 - \Delta t``, we
 start by computing the "offstep" values ``V = (1 + \beta) V_0 - \beta V_{-1}``
-and ``Q = (1 + \beta) P_0 - \beta P_{-1}``.
+and ``Q = (1 + \beta) P_0 - \beta P_{-1}`` for some ``\beta = \frac{1}{2}``.
 
 A tentative velocity field ``W`` is then computed as follows:
 

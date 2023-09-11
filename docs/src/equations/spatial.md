@@ -194,7 +194,7 @@ u^\alpha}{\partial x^\beta} n^\beta \, \mathrm{d} \Gamma
 ```
 
 where ``n = (n^1, \dots, n^d)`` is the surface normal vector to ``\partial
-\Omega``.
+\mathcal{O}``.
 
 This time, we will not let ``\mathcal{O}`` be the reference finite volume
 ``\Omega_{I}`` (the ``p``-volume), but rather the shifted ``u^\alpha``-volume.
