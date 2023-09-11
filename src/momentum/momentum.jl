@@ -59,7 +59,7 @@ function momentum(
     b = force
 
     # Residual in Finite Volume form, excluding the pressure contribution
-    F = @. -c + d + b + cm
+    F = @. -c + d + b
 
     # Closure model
     isnothing(closure_model) || (F += closure_model(V))
