@@ -51,9 +51,10 @@ are computed as follows:
 \begin{split}
 F_i & = \Omega_h^{-1} F(U_{i - 1}, t_{i - 1}) \\
 V_i & = U_0 + \Delta t \sum_{j = 1}^i a_{i j} F_j \\
-L P_i & = \frac{(M V_i + y_M(t_i)) - (M U_0 + y_M(t_0))}{\Delta t_i^n} \\
-& = \frac{1}{c_i} \sum_{j = 1}^i a_{i j} F_j +
+L P_i & = \frac{1}{c_i} \sum_{j = 1}^i a_{i j} F_j +
 \frac{y_M(t_i) - y_M(t_0)}{\Delta t_i} \\
+& = \frac{(M V_i + y_M(t_i)) - (M U_0 + y_M(t_0))}{\Delta t_i^n} \\
+& = \frac{M V_i + y_M(t_i)}{\Delta t_i^n} \\
 U_i & = V_i - \Delta t_i \Omega_h^{-1} (G P_i + y_G(t_i)),
 \end{split}
 ```

@@ -1,14 +1,13 @@
 """
     function solve_unsteady(
-        setup, V₀, p₀, tlims;
-        method = RK44(; T = eltype(V₀)),
+        setup, u₀, p₀, tlims;
+        method = RK44(; T = eltype(u₀)),
         pressure_solver = DirectPressureSolver(setup),
-        Δt = nothing,
+        Δt = zero(eltype(u₀)),
         cfl = 1,
         n_adapt_Δt = 1,
-        inplace = false,
+        inplace = true,
         processors = (),
-        device = identity,
     )
 
 Solve unsteady problem using `method`.
@@ -25,7 +24,7 @@ This allows for performing computations on a different device than the host (CPU
 To compute on an Nvidia GPU using CUDA, change
 
 ```
-solve_unsteady(setup, V₀, p₀, tlims; kwargs...)
+solve_unsteady(setup, u₀, p₀, tlims; kwargs...)
 ```
 
 to the following:
@@ -33,7 +32,7 @@ to the following:
 ```
 using CUDA
 solve_unsteady(
-    setup, V₀, p₀, tlims;
+    setup, u₀, p₀, tlims;
     device = cu,
     kwargs...
 )
@@ -41,22 +40,20 @@ solve_unsteady(
 
 Note that the `state` observable passed to the `processor.initialize` function
 contains vector living on the device, and you may have to move them back to
-the host using `Array(V)` and `Array(p)` in the processor.
+the host using `Array(u)` and `Array(p)` in the processor.
 """
 function solve_unsteady(
     setup,
-    V₀,
+    u₀,
     p₀,
     tlims;
-    method = RK44(; T = eltype(V₀)),
+    method = RK44(; T = eltype(u₀[1])),
     pressure_solver = DirectPressureSolver(setup),
-    Δt = zero(eltype(V₀)),
+    Δt = zero(eltype(u₀[1])),
     cfl = 1,
     n_adapt_Δt = 1,
-    inplace = false,
+    inplace = true,
     processors = (),
-    device = identity,
-    devsetup = device(setup),
 )
     t_start, t_end = tlims
     isadaptive = isnothing(Δt)
@@ -65,20 +62,8 @@ function solve_unsteady(
         Δt = (t_end - t_start) / nstep
     end
 
-    # Initialize BC arrays (currently only done on host, due to Kronecker
-    # products)
-    bc_vectors = get_bc_vectors(setup, t_start)
-
-    # Move vectors and operators to device (if any).
-    setup = devsetup
-    V₀ = device(V₀)
-    p₀ = device(p₀)
-    bc_vectors = device(bc_vectors)
-    pressure_solver = device(pressure_solver)
-
     if inplace
-        cache = ode_method_cache(method, setup, V₀, p₀)
-        momentum_cache = MomentumCache(setup, V₀, p₀)
+        cache = ode_method_cache(method, setup, u₀, p₀)
     end
 
     # Time stepper
@@ -86,8 +71,7 @@ function solve_unsteady(
         method;
         setup,
         pressure_solver,
-        bc_vectors,
-        V = copy(V₀),
+        u = copy.(u₀),
         p = copy(p₀),
         t = t_start,
     )
@@ -113,9 +97,9 @@ function solve_unsteady(
 
         # Perform a single time step with the time integration method
         if inplace
-            stepper = step!(method, stepper, Δt; cache, momentum_cache)
+            stepper = timestep!(method, stepper, Δt; cache)
         else
-            stepper = step(method, stepper, Δt)
+            stepper = timestep(method, stepper, Δt)
         end
 
         # Process iteration results with each processor
@@ -125,17 +109,17 @@ function solve_unsteady(
         end
     end
 
-    (; V, p, t, n) = stepper
+    (; u, p, t, n) = stepper
     finalized = map((ps, i) -> ps.finalize(i, get_state(stepper)), processors, initialized)
 
     # Final state
-    (; V, p) = stepper
+    (; u, p) = stepper
 
     # Move output arrays to host
-    Array(V), Array(p), finalized
+    u, p, finalized
 end
 
 function get_state(stepper)
-    (; V, p, t, n) = stepper
-    (; V, p, t, n)
+    (; u, p, t, n) = stepper
+    (; u, p, t, n)
 end

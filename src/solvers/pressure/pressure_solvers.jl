@@ -75,86 +75,42 @@ Adapt.adapt_structure(to, s::SpectralPressureSolver) =
 
 Build spectral pressure solver from setup.
 """
-SpectralPressureSolver(setup) = SpectralPressureSolver(setup.grid.dimension, setup)
-
-function SpectralPressureSolver(::Dimension{2}, setup)
+function SpectralPressureSolver(setup)
     (; grid, boundary_conditions) = setup
-    (; hx, hy, Npx, Npy) = grid
+    (; dimension, Δ, Np, x) = grid
 
-    T = eltype(hx)
-    AT = typeof(hx)
+    D = dimension()
+    T = eltype(Δ[1])
 
-    if any(
-        !isequal((:periodic, :periodic)),
-        (boundary_conditions.u.x, boundary_conditions.v.y),
+    Δx = first.(Array.(Δ))
+
+    @assert(
+        all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions),
+        "SpectralPressureSolver only implemented for periodic boundary conditions",
     )
-        error("SpectralPressureSolver only implemented for periodic boundary conditions")
-    end
 
-    Δx = first(hx)
-    Δy = first(hy)
-    if any(!≈(Δx), hx) || any(!≈(Δy), hy)
-        error("SpectralPressureSolver requires uniform grid along each dimension")
-    end
+    @assert(
+        all(α -> all(≈(Δx[α]), Δ[α]), 1:D),
+        "SpectralPressureSolver requires uniform grid along each dimension",
+    )
+
 
     # Fourier transform of the discretization
-    # Assuming uniform grid, although Δx and Δy do not need to be the same
-    i = AT(0:(Npx-1))
-    j = reshape(AT(0:(Npy-1)), 1, :)
+    # Assuming uniform grid, although Δx[1] and Δx[2] do not need to be the same
 
-    # Scale with Δx*Δy, since we solve the PDE in integrated form
-    Ahat = @. 4 * Δx * Δy * (sin(i * π / Npx)^2 / Δx^2 + sin(j * π / Npy)^2 / Δy^2)
+    k = ntuple(d -> reshape(0:Np[d]-1, ntuple(Returns(1), d - 1)..., :, ntuple(Returns(1), D - d)...), D)
 
-    # Pressure is determined up to constant, fix at 0
-    Ahat[1] = 1
-
-    Ahat = complex(Ahat)
-
-    # Placeholders for intermediate results
-    phat = similar(Ahat)
-    fhat = similar(Ahat)
-
-    SpectralPressureSolver{T,typeof(Ahat)}(Ahat, phat, fhat)
-end
-
-function SpectralPressureSolver(::Dimension{3}, setup)
-    (; grid, boundary_conditions) = setup
-    (; hx, hy, hz, Npx, Npy, Npz) = grid
-
-    T = eltype(hx)
-    AT = typeof(hx)
-
-    if any(
-        !isequal((:periodic, :periodic)),
-        [boundary_conditions.u.x, boundary_conditions.v.y, boundary_conditions.w.z],
-    )
-        error("SpectralPressureSolver only implemented for periodic boundary conditions")
+    Ahat = KernelAbstractions.zeros(get_backend(x[1]), Complex{T}, Np...)
+    Tπ = T(π) # CUDA doesn't like pi
+    for d = 1:D
+        @. Ahat += sin(k[d] * Tπ / Np[d])^2 / Δx[d]^2
     end
-
-    Δx = first(hx)
-    Δy = first(hy)
-    Δz = first(hz)
-    if any(!≈(Δx), hx) || any(!≈(Δy), hy) || any(!≈(Δz), hz)
-        error("SpectralPressureSolver requires uniform grid along each dimension")
-    end
-
-    # Fourier transform of the discretization
-    # Assuming uniform grid, although Δx and Δy do not need to be the same
-    i = AT(0:(Npx-1))
-    j = reshape(AT(0:(Npy-1)), 1, :)
-    k = reshape(AT(0:(Npz-1)), 1, 1, :)
 
     # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
-    Ahat = @. 4 *
-       Δx *
-       Δy *
-       Δz *
-       (sin(i * π / Npx)^2 / Δx^2 + sin(j * π / Npy)^2 / Δy^2 + sin(k * π / Npz)^2 / Δz^2)
+    Ahat .*= 4 * prod(Δx)
 
     # Pressure is determined up to constant, fix at 0
-    Ahat[1] = 1
-
-    Ahat = complex(Ahat)
+    Ahat[1:1] .= 1
 
     # Placeholders for intermediate results
     phat = similar(Ahat)

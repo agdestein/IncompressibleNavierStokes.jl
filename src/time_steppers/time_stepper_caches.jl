@@ -34,28 +34,21 @@ function ode_method_cache(::OneLegMethod{T}, setup, V, p) where {T}
     (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp)
 end
 
-function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup, V, p) where {T}
-    (; NV, Np) = setup.grid
+function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup, u, p) where {T}
 
-    Vₙ = similar(V)
-    pₙ = similar(p)
+    uₙ = similar.(u)
 
     ns = nstage(method)
 
-    # kV = zeros(T, NV, ns)
-    # kp = zeros(T, Np, ns)
+    ku = [similar.(u) for i = 1:ns]
 
-    kV = [similar(V) for i = 1:ns]
-    kp = [similar(p) for i = 1:ns]
-
-    Vtemp = similar(V)
-    Vtemp2 = similar(V)
-    F = similar(V)
-    ∇F = spzeros(T, NV, NV)
+    v = similar.(u)
+    F = similar.(u)
+    G = similar.(u)
+    M = similar(p)
     f = similar(p)
-    Δp = similar(p)
 
-    (; Vₙ, pₙ, kV, kp, Vtemp, Vtemp2, F, ∇F, f, Δp)
+    (; uₙ, ku, v, F, M, G, f)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup, V, p) where {T}

@@ -54,30 +54,34 @@ function pressure_poisson! end
 function pressure_poisson!(solver::DirectPressureSolver, p, f)
     # Assume the Laplace matrix is known (A) and is possibly factorized
 
+    f = view(f, :)
+    p = view(p, :)
+
     # Use pre-determined decomposition
     p .= solver.A_fact \ f
 end
 
 function pressure_poisson!(solver::CGPressureSolver, p, f)
-    # TODO: Preconditioner
     (; A, abstol, reltol, maxiter) = solver
+    f = view(f, :)
+    p = view(p, :)
     cg!(p, A, f; abstol, reltol, maxiter)
 end
 
 function pressure_poisson!(solver::SpectralPressureSolver, p, f)
     (; Ahat, fhat, phat) = solver
 
-    fhat[:] .= complex.(f)
+    phat .= complex.(f)
 
     # Fourier transform of right hand side
-    fft!(fhat)
+    fft!(phat)
 
     # Solve for coefficients in Fourier space
-    @. phat = -fhat / Ahat
+    @. phat = -phat / Ahat
 
     # Transform back
     ifft!(phat)
-    @. p[:] = real(@view phat[:])
+    @. p = real(phat)
 
     p
 end

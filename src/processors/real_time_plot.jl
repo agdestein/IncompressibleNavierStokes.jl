@@ -22,6 +22,7 @@ Available fieldnames are:
 Available plot `type`s for 2D are:
 
 - `heatmap` (default),
+- `image`,
 - `contour`,
 - `contourf`.
 
@@ -45,18 +46,12 @@ function field_plot(
     displayfig = true,
 )
     (; boundary_conditions, grid) = setup
-    (; xlims, ylims, x, y, xp, yp) = grid
+    (; xlims, x, xp) = grid
 
     if fieldname == :velocity
-        xf, yf = xp, yp
+        xf = xp
     elseif fieldname == :vorticity
-        if all(==(:periodic), (boundary_conditions.u.x[1], boundary_conditions.v.y[1]))
-            xf = x
-            yf = y
-        else
-            xf = x[2:(end-1)]
-            yf = y[2:(end-1)]
-        end
+        xf = Array.(x)
     elseif fieldname == :streamfunction
         if boundary_conditions.u.x[1] == :periodic
             xf = x
@@ -70,21 +65,21 @@ function field_plot(
         end
     elseif fieldname == :pressure
         error("Not implemented")
-        xf, yf = xp, yp
+        xf = xp
     else
         error("Unknown fieldname")
     end
 
     field = @lift begin
         isnothing(sleeptime) || sleep(sleeptime)
-        (; V, p, t) = $state
+        (; u, p, t) = $state
         f = if fieldname == :velocity
-            up, vp = get_velocity(setup, V, t)
+            up, vp = get_velocity(setup, u, t)
             map((u, v) -> √sum(u^2 + v^2), up, vp)
         elseif fieldname == :vorticity
-            get_vorticity(setup, V, t)
+            vorticity(u, setup)
         elseif fieldname == :streamfunction
-            get_streamfunction(setup, V, t)
+            get_streamfunction(setup, u, t)
         elseif fieldname == :pressure
             error("Not implemented")
             reshape(p, length(xp), length(yp))
@@ -114,14 +109,11 @@ function field_plot(
     fig = Figure()
 
     if type ∈ (heatmap, image)
-        ax, hm = type(fig[1, 1], xf, yf, field; 
-            colormap = :viridis,
-            colorrange = lims)
+        ax, hm = type(fig[1, 1], xf..., field; colormap = :viridis, colorrange = lims)
     elseif type ∈ (contour, contourf)
         ax, hm = type(
             fig[1, 1],
-            xf,
-            yf,
+            xf...,
             field;
             extendlow = :auto,
             extendhigh = :auto,
@@ -136,7 +128,7 @@ function field_plot(
     equal_axis && (ax.aspect = DataAspect())
     ax.xlabel = "x"
     ax.ylabel = "y"
-    limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
+    limits!(ax, xlims[1]..., xlims[2]...)
     Colorbar(fig[1, 2], hm)
 
     displayfig && display(fig)
@@ -287,7 +279,13 @@ function energy_spectrum_plot(::Dimension{2}, setup, state; displayfig = true)
     espec
 end
 
-function energy_spectrum_plot(::Dimension{3}, setup, state, displayfig = true, checktime = 0.0001)
+function energy_spectrum_plot(
+    ::Dimension{3},
+    setup,
+    state,
+    displayfig = true,
+    checktime = 0.0001,
+)
     (; xpp) = setup.grid
     Kx, Ky, Kz = size(xpp) .÷ 2
     kx = 1:(Kx-1)

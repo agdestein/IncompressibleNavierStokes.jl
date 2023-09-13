@@ -6,9 +6,10 @@ Energy-conserving solvers for the incompressible Navier-Stokes equations.
 module IncompressibleNavierStokes
 
 using Adapt
-using ComponentArrays
+using ComponentArrays: ComponentArray
 using FFTW
 using IterativeSolvers
+using KernelAbstractions
 using LinearAlgebra
 using Lux
 using Makie
@@ -24,6 +25,9 @@ using Zygote
 # Convenience notation
 const ⊗ = kron
 
+# Boundary condtions
+include("boundary_conditions.jl")
+
 # Grid
 include("grid/dimension.jl")
 include("grid/grid.jl")
@@ -35,40 +39,8 @@ include("grid/max_size.jl")
 include("models/viscosity_models.jl")
 include("models/convection_models.jl")
 
-# Types
-include("force/force.jl")
-include("boundary_conditions/boundary_conditions.jl")
-include("operators/operators.jl")
+# Setup
 include("setup.jl")
-
-# Boundary condtions
-include("boundary_conditions/bc_av3.jl")
-include("boundary_conditions/bc_av_stag3.jl")
-include("boundary_conditions/bc_diff3.jl")
-include("boundary_conditions/bc_diff_stag.jl")
-include("boundary_conditions/bc_diff_stag3.jl")
-include("boundary_conditions/bc_div2.jl")
-include("boundary_conditions/bc_general.jl")
-include("boundary_conditions/bc_general_stag.jl")
-include("boundary_conditions/bc_general_stag_diff.jl")
-include("boundary_conditions/bc_int2.jl")
-include("boundary_conditions/bc_int3.jl")
-include("boundary_conditions/bc_int_mixed2.jl")
-include("boundary_conditions/bc_int_mixed_stag2.jl")
-include("boundary_conditions/bc_int_mixed_stag3.jl")
-include("boundary_conditions/bc_vort3.jl")
-include("boundary_conditions/get_bc_vectors.jl")
-
-# Operators
-include("operators/operator_averaging.jl")
-include("operators/operator_convection_diffusion.jl")
-include("operators/operator_divergence.jl")
-include("operators/operator_interpolation.jl")
-include("operators/operator_postprocessing.jl")
-include("operators/operator_regularization.jl")
-include("operators/operator_turbulent_diffusion.jl")
-include("operators/operator_viscosity.jl")
-include("operators/operator_filter.jl")
 
 # Pressure solvers
 include("solvers/pressure/pressure_solvers.jl")
@@ -76,7 +48,6 @@ include("solvers/pressure/pressure_poisson.jl")
 include("solvers/pressure/pressure_additional_solve.jl")
 
 # Time steppers
-include("momentum/momentumcache.jl")
 include("time_steppers/methods.jl")
 include("time_steppers/tableaux.jl")
 include("time_steppers/nstage.jl")
@@ -86,7 +57,7 @@ include("time_steppers/isexplicit.jl")
 include("time_steppers/lambda_max.jl")
 
 # Preprocess
-include("preprocess/create_initial_conditions.jl")
+include("create_initial_conditions.jl")
 
 # Processors
 include("processors/processors.jl")
@@ -94,15 +65,7 @@ include("processors/real_time_plot.jl")
 include("processors/animator.jl")
 
 # Momentum equation
-include("momentum/compute_conservation.jl")
-include("momentum/check_symmetry.jl")
-include("momentum/convection_components.jl")
-include("momentum/convection.jl")
-include("momentum/diffusion.jl")
-include("momentum/momentum.jl")
-include("momentum/strain_tensor.jl")
-include("momentum/turbulent_K.jl")
-include("momentum/turbulent_viscosity.jl")
+include("momentum.jl")
 
 # Solvers
 include("solvers/get_timestep.jl")
@@ -110,14 +73,10 @@ include("solvers/solve_steady_state.jl")
 include("solvers/solve_unsteady.jl")
 
 # Utils
-include("utils/filter_convection.jl")
 include("utils/get_lims.jl")
 include("utils/plotmat.jl")
 
 # Postprocess
-include("postprocess/get_velocity.jl")
-include("postprocess/get_vorticity.jl")
-include("postprocess/get_streamfunction.jl")
 include("postprocess/plot_force.jl")
 include("postprocess/plot_grid.jl")
 include("postprocess/plot_pressure.jl")
@@ -131,6 +90,9 @@ include("closures/cnn.jl")
 include("closures/fno.jl")
 include("closures/training.jl")
 include("closures/create_les_data.jl")
+
+# Boundary conditions
+export PeriodicBC, DirichletBC, SymmetricBC, NeumannBC
 
 # Force
 export SteadyBodyForce
@@ -146,7 +108,6 @@ export animator
 
 # Setup
 export Setup
-export operator_filter
 
 # 1D grids
 export stretched_grid, cosine_grid
@@ -160,7 +121,7 @@ export pressure_poisson,
 export solve_unsteady, solve_steady_state
 export momentum, momentum!
 
-export create_initial_conditions, random_field, get_bc_vectors, get_velocity
+export create_initial_conditions, random_field, get_velocity
 
 export plot_force,
     plot_grid, plot_pressure, plot_streamfunction, plot_velocity, plot_vorticity, save_vtk

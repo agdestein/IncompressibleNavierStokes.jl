@@ -16,7 +16,7 @@ create_stepper(
     Diff_fact = spzeros(eltype(V), 0, 0),
 ) = (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, cₙ, tₙ, Diff_fact)
 
-function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
+function timestep(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, cₙ, tₙ, Diff_fact) = stepper
     (; convection_model, viscosity_model, Re, force, grid, operators, boundary_conditions) =
         setup
@@ -47,7 +47,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
             Diff_fact = lu(I(NV) - θ * Δt / Re * Diagonal(1 ./ Ω) * Diff)
         end
 
-        (; V, p, t) = step(method_startup, stepper_startup, Δt)
+        (; V, p, t) = timestep(method_startup, stepper_startup, Δt)
         return create_stepper(
             method;
             setup,
@@ -160,7 +160,7 @@ function step(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     )
 end
 
-function step!(
+function timestep!(
     method::AdamsBashforthCrankNicolsonMethod,
     stepper,
     Δt;
@@ -198,7 +198,7 @@ function step!(
         Diff_fact = lu(I(NV) - θ * Δt / Re * Diagonal(1 ./ Ω) * Diff)
 
         # Note: We do one out-of-place step here, with a few allocations
-        (; V, p, t) = step(method_startup, stepper_startup, Δt)
+        (; V, p, t) = timestep(method_startup, stepper_startup, Δt)
         return create_stepper(
             method;
             setup,

@@ -1,71 +1,39 @@
 """
-    pressure_additional_solve(pressure_solver, V, p, t, setup; bc_vectors = nothing)
+    pressure_additional_solve!(pressure_solver, u, p, t, setup, F, f, M)
 
 Do additional pressure solve. This makes the pressure compatible with the velocity
 field, resulting in same order pressure as velocity.
 """
-function pressure_additional_solve(pressure_solver, V, p, t, setup; bc_vectors = nothing)
-    (; grid, operators, boundary_conditions) = setup
-    (; bc_unsteady) = boundary_conditions
-    (; Ω) = grid
-    (; M) = operators
+function pressure_additional_solve!(pressure_solver, u, p, t, setup, F, M)
+    (; grid) = setup
+    (; dimension, Iu, Ip, Ωu) = grid
+    D = dimension()
 
-    # Get updated BC for ydM (time derivative of BC in ydM)
-    # FIXME: `get_bc_vectors` are called to often (also inside `momentum!`)
-    if isnothing(bc_vectors) || bc_unsteady
-        bc_vectors = get_bc_vectors(setup, t)
+    momentum!(F, u, t, setup)
+
+    for α = 1:D
+        @. F[α] = 1 ./ Ωu[α] .* F[α]
     end
-    (; ydM) = bc_vectors
+    apply_bc_u!(F, t, setup; dudt = true)
+    divergence!(M, F, setup)
 
-    # Momentum already contains G*p with the current p, we therefore effectively solve for
-    # the pressure difference
-    F, = momentum(V, V, p, t, setup; bc_vectors)
-    f = M * (1 ./ Ω .* F) + ydM
-
-    Δp = pressure_poisson(pressure_solver, f)
-    p .+ Δp
+    Min = view(M, Ip)
+    pin = view(p, Ip)
+    pressure_poisson!(pressure_solver, pin, Min)
+    apply_bc_p!(p, t, setup)
+    p
 end
 
 """
-    pressure_additional_solve!(pressure_solver, V, p, t, setup, momentum_cache, F, f; bc_vectors)
+    pressure_additional_solve(pressure_solver, u, t, setup)
 
 Do additional pressure solve. This makes the pressure compatible with the velocity
 field, resulting in same order pressure as velocity.
 """
-function pressure_additional_solve!(
-    pressure_solver,
-    V,
-    p,
-    t,
-    setup,
-    momentum_cache,
-    F,
-    f,
-    Δp;
-    bc_vectors,
-)
-    (; grid, operators, boundary_conditions) = setup
-    (; bc_unsteady) = boundary_conditions
-    (; Ω) = grid
-    (; M) = operators
-
-    # Get updated BC for ydM (time derivative of BC in ydM)
-    # FIXME: `get_bc_vectors` are called to often (also inside `momentum!`)
-    if isnothing(bc_vectors) || bc_unsteady
-        bc_vectors = get_bc_vectors(setup, t)
-    end
-    (; ydM) = bc_vectors
-
-    # Momentum already contains G*p with the current p, we therefore effectively solve for
-    # the pressure difference
-    momentum!(F, nothing, V, V, p, t, setup, momentum_cache; bc_vectors)
-
-    # f = M * (1 ./ Ω .* F) + ydM
-    @. F = 1 ./ Ω .* F
-    mul!(f, M, F)
-    @. f = f + ydM
-
-    pressure_poisson!(pressure_solver, Δp, f)
-
-    p .+= Δp
+function pressure_additional_solve(pressure_solver, u, t, setup)
+    D = setup.grid.dimension()
+    p = KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N)
+    F = ntuple(α -> KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N), D)
+    M = KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N)
+    pressure_additional_solve!(pressure_solver, u, p, t, setup, F, M)
 end

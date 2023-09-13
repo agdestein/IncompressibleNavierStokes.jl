@@ -9,7 +9,7 @@ create_stepper(
     n = 0,
 ) = (; setup, pressure_solver, bc_vectors, V, p, t, n)
 
-function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
+function timestep(method::ImplicitRungeKuttaMethod, stepper, Δt)
     # TODO: Implement out-of-place IRK
     error()
 
@@ -174,7 +174,7 @@ function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
     create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
 end
 
-function step!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, momentum_cache)
+function timestep!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, momentum_cache)
     (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions

@@ -10,15 +10,17 @@ plot_pressure(setup, p; kwargs...) =
 
 # 2D version
 function plot_pressure(::Dimension{2}, setup, p; kwargs...)
-    (; Nx, Ny, Npx, Npy, xp, yp, xlims, ylims) = setup.grid
+    (; xp, xlims) = setup.grid
 
-    # Reshape
-    p = reshape(p, Npx, Npy)
+    xp = Array.(xp)
+    p = Array(p)
+
+    T = eltype(xp[1])
 
     # Levels
     μ, σ = mean(p), std(p)
-    ≈(μ + σ, μ; rtol = 1e-8, atol = 1e-8) && (σ = 1e-4)
-    levels = LinRange(μ - 1.5σ, μ + 1.5σ, 10)
+    # ≈(μ + σ, μ; rtol = sqrt(eps(T)), atol = sqrt(eps(T))) && (σ = sqrt(sqrt(eps(T))))
+    levels = LinRange(μ - T(1.5) * σ, μ + T(1.5) * σ, 10)
 
     # Plot pressure
     fig = Figure()
@@ -29,9 +31,10 @@ function plot_pressure(::Dimension{2}, setup, p; kwargs...)
         xlabel = "x",
         ylabel = "y",
     )
-    limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
-    cf = contourf!(ax, xp, yp, p; extendlow = :auto, extendhigh = :auto, levels, kwargs...)
-    # Colorbar(fig[1,2], cf)
+    limits!(ax, xlims[1]..., xlims[2]...)
+    cf = contourf!(ax, xp..., p; extendlow = :auto, extendhigh = :auto, 
+        levels,
+        kwargs...)
     Colorbar(fig[1, 2], cf)
 
     # save("output/pressure.png", fig, pt_per_unit = 2)

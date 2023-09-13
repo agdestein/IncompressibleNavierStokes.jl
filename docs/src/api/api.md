@@ -9,18 +9,6 @@ IncompressibleNavierStokes
 Setup
 ```
 
-## Boundary conditions
-
-```@docs
-BoundaryConditions
-get_bc_vectors
-```
-
-## Force
-
-```@docs
-SteadyBodyForce
-```
 
 ## Grid
 
@@ -55,46 +43,19 @@ LerayConvectionModel
 ## Momentum
 
 ```@docs
-MomentumCache
-check_symmetry
-compute_conservation
-convection
+divergence
+divergence!
+vorticity
+vorticity!
 convection!
-convection_components
-convection_components!
-diffusion
 diffusion!
-momentum
+bodyforce!
 momentum!
-momentum_allstage
-momentum_allstage!
-strain_tensor
-turbulent_K
-turbulent_viscosity
-```
-
-## Operators
-
-```@docs
-Operators
-operator_averaging
-operator_convection_diffusion
-operator_divergence
-operator_interpolation
-operator_postprocessing
-operator_regularization
-operator_turbulent_diffusion
-operator_viscosity
-operator_filter
 ```
 
 ## Postprocess
 
 ```@docs
-get_streamfunction
-get_velocity
-get_vorticity
-vorticity!
 plot_force
 plot_grid
 plot_pressure
@@ -167,7 +128,6 @@ step!
 ## Utils
 
 ```@docs
-filter_convection
-filter_convection!
 get_lims
+plotmat
 ```

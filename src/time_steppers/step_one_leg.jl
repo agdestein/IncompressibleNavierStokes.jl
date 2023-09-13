@@ -14,7 +14,7 @@ create_stepper(
     tₙ = t,
 ) = (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
 
-function step(method::OneLegMethod, stepper, Δt)
+function timestep(method::OneLegMethod, stepper, Δt)
     (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ) = stepper
     (; p_add_solve, β, method_startup) = method
     (; grid, operators, boundary_conditions) = setup
@@ -31,7 +31,7 @@ function step(method::OneLegMethod, stepper, Δt)
         Vₙ = V
         pₙ = p
         tₙ = t
-        (; V, p, t) = step(method_startup, stepper_startup, Δt)
+        (; V, p, t) = timestep(method_startup, stepper_startup, Δt)
         return create_stepper(
             method;
             setup,
@@ -105,7 +105,7 @@ function step(method::OneLegMethod, stepper, Δt)
     create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
 end
 
-function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
+function timestep!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
     (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; p_add_solve, β, method_startup) = method
     (; grid, operators, boundary_conditions) = setup
@@ -125,7 +125,7 @@ function step!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
         tₙ = t
 
         # Note: We do one out-of-place step here, with a few allocations
-        (; V, p, t) = step(method_startup, stepper_startup, Δt)
+        (; V, p, t) = timestep(method_startup, stepper_startup, Δt)
         return create_stepper(
             method;
             setup,

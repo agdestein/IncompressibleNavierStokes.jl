@@ -1,41 +1,30 @@
-create_stepper(
-    ::ExplicitRungeKuttaMethod;
-    setup,
-    pressure_solver,
-    bc_vectors,
-    V,
-    p,
-    t,
-    n = 0,
-) = (; setup, pressure_solver, bc_vectors, V, p, t, n)
+create_stepper(::ExplicitRungeKuttaMethod; setup, pressure_solver, u, p, t, n = 0) =
+    (; setup, pressure_solver, u, p, t, n)
 
-function step(method::ExplicitRungeKuttaMethod, stepper, Δt)
-    (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
-    (; grid, operators, boundary_conditions) = setup
-    (; bc_unsteady) = boundary_conditions
+function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt)
+    (; setup, pressure_solver, u, p, t, n) = stepper
+    (; grid, boundary_conditions) = setup
     (; Ω) = grid
-    (; G, M) = operators
     (; A, b, c, p_add_solve) = method
 
     T = typeof(Δt)
 
     # Update current solution (does not depend on previous step size)
     n += 1
-    Vₙ = V
+    Vₙ = u
     pₙ = p
     tₙ = t
     Δtₙ = Δt
 
     # Number of stages
-    nV = length(V)
+    nV = length(u)
     np = length(p)
     nstage = length(b)
 
     # Reset RK arrays
     tᵢ = tₙ
     # kV = zeros(T, nV, 0)
-    # kp = zeros(T, np, 0)
-    kV = fill(V, 0)
+    ku = fill(u, 0)
 
     ## Start looping over stages
 
@@ -47,13 +36,13 @@ function step(method::ExplicitRungeKuttaMethod, stepper, Δt)
         # includes force evaluation at tᵢ and pressure gradient. Boundary conditions will be
         # set through `get_bc_vectors` inside momentum. The pressure p is not important here,
         # it will be removed again in the next step
-        F, ∇F = momentum(V, V, p, tᵢ, setup; bc_vectors)
+        F = momentum(u, p, tᵢ, setup)
 
         # Store right-hand side of stage i
         # Remove the -G*p contribution (but not y_p)
         kVᵢ = 1 ./ Ω .* (F + G * p)
         # kV = [kV kVᵢ]
-        kV = [kV; [kVᵢ]]
+        kV = [ku; [kVᵢ]]
 
         # Update velocity current stage by sum of Fᵢ's until this stage, weighted
         # with Butcher tableau coefficients. This gives uᵢ₊₁, and for i=s gives uᵢ₊₁
@@ -92,31 +81,31 @@ function step(method::ExplicitRungeKuttaMethod, stepper, Δt)
 
     t = tₙ + Δtₙ
 
-    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
+    create_stepper(method; setup, pressure_solver, bc_vectors, u, p, t, n)
 end
 
-function step!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache, momentum_cache)
-    (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
-    (; grid, operators, boundary_conditions) = setup
-    (; bc_unsteady) = boundary_conditions
-    (; Ω) = grid
-    (; G, M) = operators
+function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
+    (; setup, pressure_solver, u, p, t, n) = stepper
+    (; grid, boundary_conditions) = setup
+    (; dimension, Ip, Ωu) = grid
     (; A, b, c, p_add_solve) = method
-    (; Vₙ, pₙ, kV, kp, Vtemp, Vtemp2, F, ∇F, Δp, f) = cache
+    (; uₙ, ku, v, F, M, G, f) = cache
+
+    D = dimension()
 
     # Update current solution (does not depend on previous step size)
     n += 1
-    Vₙ .= V
-    pₙ .= p
     tₙ = t
     Δtₙ = Δt
+    for α = 1:D
+        uₙ[α] .= u[α]
+    end
 
     # Number of stages
     nstage = length(b)
 
     # # Reset RK arrays
-    # kV .= 0
-    # kp .= 0
+    # ku .= 0
 
     tᵢ = tₙ
 
@@ -127,72 +116,55 @@ function step!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache, momentum_c
     # At i = s we calculate Fₛ, pₙ₊₁, and uₙ₊₁
     for i = 1:nstage
         # Right-hand side for tᵢ based on current velocity field uₕ, vₕ at level i. This
-        # includes force evaluation at tᵢ and pressure gradient. Boundary conditions will be
-        # set through `get_bc_vectors` inside momentum. The pressure p is not important here,
+        # includes force evaluation at tᵢ and pressure gradient. The pressure p is not important here,
         # it will be removed again in the next step
-        momentum!(F, ∇F, V, V, p, tᵢ, setup, momentum_cache; bc_vectors)
+        momentum!(F, u, tᵢ, setup)
 
         # Store right-hand side of stage i
-        # Remove the -G*p contribution (but not y_p)
-        # kVᵢ = @view kV[:, i]
-        kVᵢ = kV[i]
-        mul!(kVᵢ, G, p)
-        @. kVᵢ = 1 ./ Ω * (F + kVᵢ)
-        # kVᵢ .= 1 ./ Ω .* (F + G * p)
+        for α = 1:D
+            @. ku[i][α] = 1 / Ωu[α] * F[α]
+        end
 
         # Update velocity current stage by sum of Fᵢ's until this stage, weighted
         # with Butcher tableau coefficients. This gives uᵢ₊₁, and for i=s gives uᵢ₊₁
-        # mul!(Vtemp, kV, A[i, :])
-        Vtemp .= 0
+        for α = 1:D
+            v[α] .= uₙ[α]
+        end
         for j = 1:i
-            Vtemp .= Vtemp .+ A[i, j] .* kV[j]
+            for α = 1:D
+                v[α] .= v[α] .+ Δtₙ .* A[i, j] .* ku[j][α]
+            end
         end
 
         # Boundary conditions at tᵢ₊₁
         tᵢ = tₙ + c[i] * Δtₙ
-        if bc_unsteady
-            bc_vectors = get_bc_vectors(setup, tᵢ)
-        end
-        (; yM) = bc_vectors
+        apply_bc_u!(v, tᵢ, setup)
 
-        # Divergence of intermediate velocity field
-        @. Vtemp2 = Vₙ / Δtₙ + Vtemp
-        mul!(f, M, Vtemp2)
-        @. f = (f + yM / Δtₙ) / c[i]
-        # f = (M * (Vₙ / Δtₙ + Vtemp) + yM / Δtₙ) / c[i]
+        # Divergence of tentative velocity field
+        divergence!(M, v, setup)
 
-        # Solve the Poisson equation, but not for the first step if the boundary conditions are steady
-        if boundary_conditions.bc_unsteady || i > 1
-            pressure_poisson!(pressure_solver, p, f)
-        else
-            # Bc steady AND i = 1
-            p .= pₙ
-        end
+        @. M = M / (c[i] * Δtₙ)
 
-        mul!(Vtemp2, G, p)
+        # Solve the Poisson equation
+        Min = view(M, Ip)
+        pin = view(p, Ip)
+        pressure_poisson!(pressure_solver, pin, Min)
+        apply_bc_p!(p, t, setup)
+
+        # Compute pressure correction term
+        pressuregradient!(G, p, setup)
 
         # Update velocity current stage, which is now divergence free
-        @. V = Vₙ + Δtₙ * (Vtemp - c[i] / Ω * Vtemp2)
+        for α = 1:D
+            @. u[α] = v[α] - c[i] * Δtₙ / Ωu[α] * G[α]
+        end
     end
 
-    # For steady bc we do an additional pressure solve
-    # That saves a pressure solve for i = 1 in the next time step
-    if !bc_unsteady || p_add_solve
-        pressure_additional_solve!(
-            pressure_solver,
-            V,
-            p,
-            tₙ + Δtₙ,
-            setup,
-            momentum_cache,
-            F,
-            f,
-            Δp;
-            bc_vectors,
-        )
-    end
+    # Do additional pressure solve to avoid first order pressure
+    p_add_solve &&
+        pressure_additional_solve!(pressure_solver, u, p, tₙ + Δtₙ, setup, F, M)
 
     t = tₙ + Δtₙ
 
-    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
+    create_stepper(method; setup, pressure_solver, u, p, t, n)
 end
