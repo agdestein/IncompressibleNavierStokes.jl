@@ -2,9 +2,9 @@ abstract type AbstractBC end
 
 struct PeriodicBC <: AbstractBC end
 
-struct DirichletBC{F} <: AbstractBC
+struct DirichletBC{F,G} <: AbstractBC
     u::F
-    dudt::F
+    dudt::G
 end
 
 struct SymmetricBC <: AbstractBC end
