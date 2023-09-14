@@ -393,19 +393,25 @@ The discrete momentum equations become
 
 ```math
 \begin{split}
-    \Omega_h \frac{\mathrm{d} u_h}{\mathrm{d} t} & = -C(u_h) + \nu (D u_h +
+    \frac{\mathrm{d} u_h}{\mathrm{d} t} & = -C(u_h) + \nu (D u_h +
     y_D) + f_h - (G p_h + y_G) \\
     & = F(V_h) - (G p_h + y_G),
 \end{split}
 ```
 
-where ``\Omega_h`` is a diagonal matrix containing the velocity volumes, ``C``
-is the convection operator (including boundary contributions), ``D`` is the
-diffusion operator, ``y_D`` is boundary contribution to the diffusion term, ``G
-= M^\mathsf{T}`` is the pressure gradient operator, and ``y_G`` contains the
-boundary contribution of the pressure to the pressure gradient (only non-zero
-for pressure boundary conditions). The term ``F`` refers to all the forces
-except for the pressure gradient.
+where ``C`` is the convection operator (including boundary contributions),
+``D`` is the diffusion operator, ``y_D`` is boundary contribution to the
+diffusion term, ``G = \Omega_h^{-1} M^\mathsf{T}`` is the pressure gradient
+operator, ``y_G`` contains the boundary contribution of the pressure to the
+pressure gradient (only non-zero for pressure boundary conditions), and
+``\Omega_h`` is a diagonal matrix containing the velocity volumes. The term
+``F`` refers to all the forces except for the pressure gradient.
+
+!!! note "Volume normalization"
+    
+    All the operators (except for ``M``) have been divided by the velocity
+    volume sizes ``\Omega_h``. As a result, the operators have the same units
+    as their continuous counterparts.
 
 
 ## Discrete pressure Poisson equation
@@ -417,11 +423,11 @@ discrete divergence operator ``M`` to the discrete momentum equations yields
 the discrete pressure Poisson equation
 
 ```math
-L p_h = M \Omega_h^{-1} (F(V_h) - y_G) + \frac{\mathrm{d} y_M}{\mathrm{d} t},
+L p_h = M (F(V_h) - y_G) + \frac{\mathrm{d} y_M}{\mathrm{d} t},
 ```
 
-where ``L = M \Omega_h^{-1} G`` is a discrete Laplace operator. It is positive
-symmetric since ``G = M^\mathsf{T}``.
+where ``L = M G`` is a discrete Laplace operator. It is positive
+symmetric since ``G = \Omega_h^{-1} M^\mathsf{T}``.
 
 !!! note "Unsteady Dirichlet boundary conditions"
 
@@ -449,17 +455,17 @@ symmetric since ``G = M^\mathsf{T}``.
     discrete Poisson equation:
 
     ```math
-    p_h = L^{-1} M \Omega_h^{-1} (F(u_h) - y_G) + L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.
+    p_h = L^{-1} M (F(u_h) - y_G) + L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.
     ```
 
     The momentum equations then become
 
     ```math
-    \Omega_h \frac{\mathrm{d} u_h}{\mathrm{d} t} = (I - G L^{-1} M \Omega_h^{-1})
+    \frac{\mathrm{d} u_h}{\mathrm{d} t} = (I - G L^{-1} M)
     (F(u_h) - y_G) - G L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.
     ```
 
-    The matrix ``(I - G L^{-1} M \Omega^{-1})`` is a projector onto the space
+    The matrix ``(I - G L^{-1} M)`` is a projector onto the space
     of discretely divergence free velocities. However, using this formulation
     would require an efficient way to perform the projection without assembling
     the operator matrix ``L^{-1}``, which would be very costly.

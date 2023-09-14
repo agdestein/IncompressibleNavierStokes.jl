@@ -48,7 +48,7 @@ function create_initial_conditions(
         apply_bc_p!(p, t, setup)
         G = pressuregradient(p, setup)
         for α = 1:D
-            u[α] .-= 1 ./ Ωu[α] .* G[α]
+            u[α] .-= G[α]
         end
     end
 
@@ -120,7 +120,7 @@ function random_field(
     apply_bc_p!(p, t, setup)
     G = pressuregradient(p, setup)
     for α = 1:D
-        @. u[α] -= 1 / Ωu[α] * G[α]
+        @. u[α] -= G[α]
     end
     apply_bc_u!(u, t, setup)
     p = pressure_additional_solve(pressure_solver, u, t, setup)

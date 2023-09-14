@@ -6,14 +6,9 @@ field, resulting in same order pressure as velocity.
 """
 function pressure_additional_solve!(pressure_solver, u, p, t, setup, F, M)
     (; grid) = setup
-    (; dimension, Iu, Ip, Ωu) = grid
-    D = dimension()
+    (; Ip) = grid
 
     momentum!(F, u, t, setup)
-
-    for α = 1:D
-        @. F[α] = 1 ./ Ωu[α] .* F[α]
-    end
     apply_bc_u!(F, t, setup; dudt = true)
     divergence!(M, F, setup)
 

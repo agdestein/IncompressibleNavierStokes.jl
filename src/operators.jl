@@ -91,17 +91,18 @@ end
 
 function convection!(F, u, setup)
     (; boundary_conditions, grid, Re, bodyforce) = setup
-    (; dimension, Δ, Δu, Nu, Iu, Γu) = grid
+    (; dimension, Δ, Δu, Nu, Iu, Γu, Ωu) = grid
     D = dimension()
     δ = Offset{D}()
     @kernel function _convection!(F, u, α, β, I0)
         I = @index(Global, Cartesian)
         I = I + I0
+        Δuαβ = (α == β ? Δu[β] : Δ[β])
         F[α][I] -=
-            Γu[α][β][I] * (
+            (
                 (u[α][I] + u[α][I+δ(β)]) / 2 * (u[β][I] + u[β][I+δ(α)]) / 2 -
                 (u[α][I-δ(β)] + u[α][I]) / 2 * (u[β][I-δ(β)] + u[β][I-δ(β)+δ(α)]) / 2
-            )
+            ) / Δuαβ[I[β]]
     end
     for α = 1:D
         I0 = first(Iu[α])
@@ -124,13 +125,12 @@ function diffusion!(F, u, setup; ϵ = eps(eltype(F[1])))
     @kernel function _diffusion!(F, u, α, β, I0)
         I = @index(Global, Cartesian)
         I = I + I0
+        Δuαβ = (α == β ? Δu[β] : Δ[β])
         F[α][I] +=
-            ν *
-            Γu[α][β][I] *
-            (
+            ν * (
                 (u[α][I+δ(β)] - u[α][I]) / ((β == α ? Δ : Δu)[β][I[β]] + ϵ) -
                 (u[α][I] - u[α][I-δ(β)]) / ((β == α ? Δ : Δu)[β][(I-δ(β))[β]] + ϵ)
-            )
+            ) / Δuαβ[I[β]]
     end
     for α = 1:D
         I0 = first(Iu[α])
@@ -151,8 +151,6 @@ function bodyforce!(F, u, t, setup)
     @kernel function _bodyforce!(F, force, α, t, I0)
         I = @index(Global, Cartesian)
         I = I + I0
-        vol = prod(β -> (β == α ? Δu : Δ)[k][I[k]], ntuple(identity, D))
-        # vol = Δu[i] * prod(Δ) / Δ[i]
         F[α][I] += force[α](ntuple(β -> α == β ? x[β][1+I[β]] : xp[β][I[β]], D)..., t)
     end
     for α = 1:D
@@ -187,13 +185,13 @@ end
 
 function pressuregradient!(G, p, setup)
     (; boundary_conditions, grid) = setup
-    (; dimension, Δ, Np, Iu, Ω) = grid
+    (; dimension, Δu, Np, Iu) = grid
     D = dimension()
     δ = Offset{D}()
     @kernel function _pressuregradient!(G, p, α, I0)
         I = @index(Global, Cartesian)
         I = I0 + I
-        G[α][I] = Ω[I] / Δ[α][I[α]] * (p[I+δ(α)] - p[I])
+        G[α][I] = (p[I+δ(α)] - p[I]) / Δu[α][I[α]]
     end
     D = dimension()
     for α = 1:D

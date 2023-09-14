@@ -4,7 +4,7 @@ The spatially discretized Navier-Stokes equations form a differential-algebraic
 system, with an ODE for the velocity
 
 ```math
-\Omega_h \frac{\mathrm{d} u_h}{\mathrm{d} t} = F(u_h, t) - (G p_h + y_G)
+\frac{\mathrm{d} u_h}{\mathrm{d} t} = F(u_h, t) - (G p_h + y_G)
 ```
 
 subject to the algebraic constraint formed by the mass equation
@@ -49,13 +49,13 @@ are computed as follows:
 
 ```math
 \begin{split}
-F_i & = \Omega_h^{-1} F(U_{i - 1}, t_{i - 1}) \\
+F_i & = F(U_{i - 1}, t_{i - 1}) \\
 V_i & = U_0 + \Delta t \sum_{j = 1}^i a_{i j} F_j \\
 L P_i & = \frac{1}{c_i} \sum_{j = 1}^i a_{i j} F_j +
 \frac{y_M(t_i) - y_M(t_0)}{\Delta t_i} \\
 & = \frac{(M V_i + y_M(t_i)) - (M U_0 + y_M(t_0))}{\Delta t_i^n} \\
 & = \frac{M V_i + y_M(t_i)}{\Delta t_i^n} \\
-U_i & = V_i - \Delta t_i \Omega_h^{-1} (G P_i + y_G(t_i)),
+U_i & = V_i - \Delta t_i (G P_i + y_G(t_i)),
 \end{split}
 ```
 
@@ -136,7 +136,7 @@ L \Delta P = \frac{M V + y_M(t)}{\Delta t} - M (y_G(t) - y_G(t_0)),
 after which a divergence free velocity ``U`` can be enforced:
 
 ```math
-U = V - \Delta t \Omega_h^{-1} (G \Delta P + y_G(t) - y_G(t_0)).
+U = V - \Delta t (G \Delta P + y_G(t) - y_G(t_0)).
 ```
 
 A first order accurate prediction of the corresponding pressure is ``P = P_0 +
@@ -159,8 +159,8 @@ A tentative velocity field ``W`` is then computed as follows:
 
 ```math
 W = \frac{1}{\beta + \frac{1}{2}} \left( 2 \beta U_0 - \left( \beta -
-\frac{1}{2} \right) U_{-1} + \Delta t \Omega_h^{-1} F(V, t) - \Delta t
-\Omega_h^{-1} (G Q + y_G(t)) \right).
+\frac{1}{2} \right) U_{-1} + \Delta t F(V, t) - \Delta t
+(G Q + y_G(t)) \right).
 ```
 
 A pressure correction ``\Delta P `` is obtained by solving the Poisson equation
@@ -171,7 +171,7 @@ L \Delta P = \frac{\beta + \frac{1}{2}}{\Delta t} (M W + y_M(t)).
 Finally, the divergence free velocity field is given by
 
 ```math
-U = W - \frac{\Delta t}{\beta + \frac{1}{2}} \Omega_h^{-1} G \Delta P,
+U = W - \frac{\Delta t}{\beta + \frac{1}{2}} G \Delta P,
 ```
 
 while the second order accurate pressure is given by

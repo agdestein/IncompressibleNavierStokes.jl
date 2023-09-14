@@ -122,7 +122,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
 
         # Store right-hand side of stage i
         for α = 1:D
-            @. ku[i][α] = 1 / Ωu[α] * F[α]
+            @. ku[i][α] = F[α]
         end
 
         # Update velocity current stage by sum of Fᵢ's until this stage, weighted
@@ -156,7 +156,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
 
         # Update velocity current stage, which is now divergence free
         for α = 1:D
-            @. u[α] = v[α] - c[i] * Δtₙ / Ωu[α] * G[α]
+            @. u[α] = v[α] - c[i] * Δtₙ * G[α]
         end
     end
 
