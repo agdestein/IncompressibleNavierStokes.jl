@@ -64,8 +64,8 @@ include("processors/processors.jl")
 include("processors/real_time_plot.jl")
 include("processors/animator.jl")
 
-# Momentum equation
-include("momentum.jl")
+# Discrete operators
+include("operators.jl")
 
 # Solvers
 include("solvers/get_timestep.jl")

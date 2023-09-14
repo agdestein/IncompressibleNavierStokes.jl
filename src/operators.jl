@@ -1,6 +1,5 @@
 # Let this be constant for now
-# const WORKGROUP = 64
-const WORKGROUP = 256
+const WORKGROUP = 64
 
 # See https://b-fg.github.io/2023/05/07/waterlily-on-gpu.html
 # for writing kernel loops
