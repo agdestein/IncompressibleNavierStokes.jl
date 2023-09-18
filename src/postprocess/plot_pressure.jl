@@ -44,16 +44,14 @@ end
 
 # 3D version
 function plot_pressure(::Dimension{3}, setup, p; kwargs...)
-    (; Nx, Ny, Nz, Npx, Npy, Npz, xp, yp, zp) = setup.grid
-
-    # Reshape
-    p = reshape(p, Npx, Npy, Npz)
+    (; xp) = setup.grid
 
     # Levels
     μ, σ = mean(p), std(p)
     levels = LinRange(μ - 5σ, μ + 5σ, 10)
 
-    contour(xp, yp, zp, p; levels, kwargs...)
+    p = Array(p)
+    contour(xp..., p; levels, kwargs...)
 
     # save("output/pressure.png", fig, pt_per_unit = 2)
 end

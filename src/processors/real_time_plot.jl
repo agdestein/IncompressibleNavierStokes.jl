@@ -148,20 +148,12 @@ function field_plot(
     displayfig = true,
 )
     (; boundary_conditions, grid) = setup
-    (; xlims, ylims, x, y, z, xp, yp, zp) = grid
+    (; xlims, x, xp) = grid
 
     if fieldname == :velocity
         xf, yf, zf = xp, yp, zp
     elseif fieldname == :vorticity
-        if all(==(:periodic), (boundary_conditions.u.x[1], boundary_conditions.v.y[1]))
-            xf = x
-            yf = y
-            zf = y
-        else
-            xf = x[2:(end-1)]
-            yf = y[2:(end-1)]
-            zf = z[2:(end-1)]
-        end
+            xf = xp
     elseif fieldname == :streamfunction
         if boundary_conditions.u.x[1] == :periodic
             xf = x
@@ -181,14 +173,15 @@ function field_plot(
 
     field = @lift begin
         isnothing(sleeptime) || sleep(sleeptime)
-        (; V, p, t) = $state
+        (; u, p, t) = $state
         f = if fieldname == :velocity
-            up, vp, wp = get_velocity(setup, V, t)
-            map((u, v, w) -> √sum(u^2 + v^2 + w^2), up, vp, wp)
+            up = interpolate_u_p(setup, u)
+            map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
         elseif fieldname == :vorticity
-            get_vorticity(setup, V, t)
+            ωp = interpolate_ω_p(setup, vorticity(u, setup))
+            map((u, v, w) -> √sum(u^2 + v^2 + w^2), ωp...)
         elseif fieldname == :streamfunction
-            get_streamfunction(setup, V, t)
+            get_streamfunction(setup, u, t)
         elseif fieldname == :pressure
             reshape(copy(p), length(xp), length(yp), length(zp))
         end
@@ -204,12 +197,10 @@ function field_plot(
     ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
     hm = contour!(
         ax,
-        xf,
-        yf,
-        zf,
+        xf...,
         field;
-        levels,
-        colorrange = lims,
+        # levels,
+        # colorrange = lims,
         shading = false,
         alpha,
         highclip = :red,

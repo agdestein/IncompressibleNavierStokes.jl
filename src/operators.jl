@@ -64,23 +64,21 @@ end
 
 function vorticity!(::Dimension{3}, ω, u, setup)
     (; boundary_conditions, grid) = setup
-    (; dimension, Δu, Nu, Iω, Ωω) = grid
+    (; dimension, Δu, N) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _vorticity!(ω, u, α, I0; Δu)
+    @kernel function _vorticity!(ω, u, α, I0)
         T = eltype(ω)
         I = @index(Global, Cartesian)
         I = I + I0
         β = mod1(α + 1, D)
         γ = mod1(α - 1, D)
-        ω[α][I] =
-            -Ωω[I] / Δu[γ] * (u[β][I+δ(γ)] - u[β][I]) +
-            Ωω[I] / Δu[β] * (u[γ][I+δ(β)] - u[γ][I])
+        ω[α][I] = -(u[β][I+δ(γ)] - u[β][I]) / Δu[γ][I[γ]] + (u[γ][I+δ(β)] - u[γ][I]) / Δu[β][I[β]]
     end
     for α = 1:D
-        I0 = first(Iu[α])
+        I0 = CartesianIndex(ntuple(Returns(1), D))
         I0 -= oneunit(I0)
-        _vorticity!(get_backend(ω), WORKGROUP)(ω, u, α, I0; Δu, ndrange = N .- 1)
+        _vorticity!(get_backend(ω[1]), WORKGROUP)(ω, u, α, I0; ndrange = N .- 1)
         synchronize(get_backend(ω[1]))
     end
     ω
@@ -88,7 +86,7 @@ end
 
 function convection!(F, u, setup)
     (; boundary_conditions, grid, Re, bodyforce) = setup
-    (; dimension, Δ, Δu, Nu, Iu, Γu, Ωu) = grid
+    (; dimension, Δ, Δu, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
     @kernel function _convection!(F, u, α, β, I0)
@@ -115,7 +113,7 @@ end
 # Add ϵ in denominator for "infinitely thin" volumes
 function diffusion!(F, u, setup; ϵ = eps(eltype(F[1])))
     (; boundary_conditions, grid, Re, bodyforce) = setup
-    (; dimension, Δ, Δu, Nu, Iu, Ωu, Γu) = grid
+    (; dimension, Δ, Δu, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
     ν = 1 / Re
@@ -208,3 +206,82 @@ pressuregradient(p, setup) = pressuregradient!(
     p,
     setup,
 )
+
+interpolate_u_p(setup, u) = interpolate_u_p!(
+    setup,
+    ntuple(
+        α -> KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N),
+        setup.grid.dimension(),
+    ),
+    u,
+)
+
+function interpolate_u_p!(setup, up, u)
+    (; boundary_conditions, grid, Re, bodyforce) = setup
+    (; dimension, Np, Ip) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function _interpolate_u_p!(up, u, α, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        up[α][I] = (u[α][I-δ(α)] + u[α][I]) / 2
+    end
+    for α = 1:D
+        I0 = first(Ip)
+        I0 -= oneunit(I0)
+        _interpolate_u_p!(get_backend(up[1]), WORKGROUP)(up, u, α, I0; ndrange = Np)
+        synchronize(get_backend(up[1]))
+    end
+    up
+end
+
+interpolate_ω_p(setup, ω) = interpolate_ω_p!(
+    setup,
+    setup.grid.dimension() == 2 ?
+    KernelAbstractions.zeros(get_backend(ω), eltype(ω), setup.grid.N) :
+    ntuple(
+        α -> KernelAbstractions.zeros(get_backend(ω[1]), eltype(ω[1]), setup.grid.N),
+        setup.grid.dimension(),
+    ),
+    ω,
+)
+
+interpolate_ω_p!(setup, ωp, ω) = interpolate_ω_p!(setup.grid.dimension, setup, ωp, ω)
+
+function interpolate_ω_p!(::Dimension{2}, setup, ωp, ω)
+    (; boundary_conditions, grid, Re, bodyforce) = setup
+    (; dimension, Np, Ip) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function _interpolate_ω_p!(ωp, ω, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        ωp[I] = (ω[I-δ(1)-δ(2)] + ω[I]) / 2
+    end
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    _interpolate_ω_p!(get_backend(ωp), WORKGROUP)(ωp, ω, I0; ndrange = Np)
+    synchronize(get_backend(ωp))
+    ωp
+end
+
+function interpolate_ω_p!(::Dimension{3}, setup, ωp, ω)
+    (; boundary_conditions, grid, Re, bodyforce) = setup
+    (; dimension, Np, Ip) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function _interpolate_ω_p!(ωp, ω, α, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        β = mod1(α + 1, D)
+        γ = mod1(α - 1, D)
+        ωp[α][I] = (ω[α][I-δ(β)-δ(γ)] + ω[α][I]) / 2
+    end
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    for α = 1:D
+        _interpolate_ω_p!(get_backend(ωp[1]), WORKGROUP)(ωp, ω, α, I0; ndrange = Np)
+    end
+    synchronize(get_backend(ωp[1]))
+    ωp
+end
