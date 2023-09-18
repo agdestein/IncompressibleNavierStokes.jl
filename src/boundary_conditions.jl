@@ -2,13 +2,44 @@ abstract type AbstractBC end
 
 struct PeriodicBC <: AbstractBC end
 
+"""
+    DirichletBC()
+
+No split boundary conditions, where all velocity components are zero.
+
+    DirichletBC(u, dudt)
+
+Dirichlet boundary conditions for the velocity, where `u[1] = (x..., t) ->
+u1_BC` up to `u[d] = (x..., t) -> ud_BC`, where `d` is the dimension.
+
+To make the pressure the same order as velocity, also provide `dudt`.
+"""
 struct DirichletBC{F,G} <: AbstractBC
     u::F
     dudt::G
 end
 
+DirichletBC() = DirichletBC(nothing, nothing)
+
+"""
+    SymmetricBC()
+
+Symmetric boundary conditions.
+The parallel velocity and pressure is the same at each side of the boundary.
+The normal velocity is zero.
+"""
 struct SymmetricBC <: AbstractBC end
 
+"""
+    PressureBC()
+
+Pressure boundary conditions.
+The pressure is prescribed on the boundary (usually an "outlet").
+The velocity has zero Neumann conditions.
+
+Note: Currently, the pressure is prescribed with the constant value of
+zero on the entire boundary.
+"""
 struct PressureBC <: AbstractBC end
 
 function ghost_a! end
