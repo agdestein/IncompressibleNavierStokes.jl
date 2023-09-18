@@ -87,63 +87,54 @@ end
 function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
     (; setup, pressure_solver, u, p, t, n) = stepper
     (; grid, boundary_conditions) = setup
-    (; dimension, Ip, Ωu) = grid
+    (; dimension, Ip) = grid
     (; A, b, c, p_add_solve) = method
-    (; uₙ, ku, v, F, M, G, f) = cache
+    (; u₀, ku, v, F, M, G) = cache
 
     D = dimension()
 
     # Update current solution (does not depend on previous step size)
-    n += 1
-    tₙ = t
-    Δtₙ = Δt
+    t₀ = t
     for α = 1:D
-        uₙ[α] .= u[α]
+        u₀[α] .= u[α]
     end
 
     # Number of stages
     nstage = length(b)
 
-    # # Reset RK arrays
-    # ku .= 0
-
-    tᵢ = tₙ
-
     ## Start looping over stages
 
-    # At i = 1 we calculate F₁, p₂ and u₂
+    # At i = 1 we calculate F₁ = F(u₀), p₁ and u₁
     # ⋮
-    # At i = s we calculate Fₛ, pₙ₊₁, and uₙ₊₁
+    # At i = s we calculate Fₛ = F(uₛ₋₁), pₛ, and uₛ
     for i = 1:nstage
-        # Right-hand side for tᵢ based on current velocity field uₕ, vₕ at level i. This
-        # includes force evaluation at tᵢ and pressure gradient. The pressure p is not important here,
-        # it will be removed again in the next step
-        momentum!(F, u, tᵢ, setup)
+        # Right-hand side for tᵢ₋₁ based on current velocity field uᵢ₋₁, vᵢ₋₁ at
+        # level i-1. This includes force evaluation at tᵢ₋₁.
+        momentum!(F, u, t, setup)
 
         # Store right-hand side of stage i
         for α = 1:D
             @. ku[i][α] = F[α]
         end
 
+        # Intermediate time step
+        t = t₀ + c[i] * Δt
+
         # Update velocity current stage by sum of Fᵢ's until this stage, weighted
-        # with Butcher tableau coefficients. This gives uᵢ₊₁, and for i=s gives uᵢ₊₁
+        # with Butcher tableau coefficients. This gives vᵢ
         for α = 1:D
-            v[α] .= uₙ[α]
-        end
-        for j = 1:i
-            for α = 1:D
-                v[α] .= v[α] .+ Δtₙ .* A[i, j] .* ku[j][α]
+            v[α] .= u₀[α]
+            for j = 1:i
+                @. v[α] = v[α] + Δt * A[i, j] * ku[j][α]
             end
         end
 
-        # Boundary conditions at tᵢ₊₁
-        tᵢ = tₙ + c[i] * Δtₙ
-        apply_bc_u!(v, tᵢ, setup)
+        # Boundary conditions at tᵢ
+        apply_bc_u!(v, t, setup)
 
         # Divergence of tentative velocity field
         divergence!(M, v, setup)
-
-        @. M = M / (c[i] * Δtₙ)
+        @. M = M / (c[i] * Δt)
 
         # Solve the Poisson equation
         Min = view(M, Ip)
@@ -156,15 +147,16 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
 
         # Update velocity current stage, which is now divergence free
         for α = 1:D
-            @. u[α] = v[α] - c[i] * Δtₙ * G[α]
+            @. u[α] = v[α] - c[i] * Δt * G[α]
         end
+        apply_bc_u!(u, tᵢ, setup)
     end
 
+    # Complete time step
+    t = t₀ + Δt
+
     # Do additional pressure solve to avoid first order pressure
-    p_add_solve &&
-        pressure_additional_solve!(pressure_solver, u, p, tₙ + Δtₙ, setup, F, M)
+    p_add_solve && pressure_additional_solve!(pressure_solver, u, p, t, setup, F, M)
 
-    t = tₙ + Δtₙ
-
-    create_stepper(method; setup, pressure_solver, u, p, t, n)
+    create_stepper(method; setup, pressure_solver, u, p, t, n = n + 1)
 end

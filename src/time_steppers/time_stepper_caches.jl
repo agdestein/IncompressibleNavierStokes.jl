@@ -7,48 +7,42 @@ Get time stepper cache for the given ODE method.
 function ode_method_cache end
 
 function ode_method_cache(::AdamsBashforthCrankNicolsonMethod, setup, V, p)
-    cₙ = similar(V)
-    cₙ₋₁ = similar(V)
+    c₀ = similar(V)
+    c₋₁ = similar(V)
     F = similar(V)
     f = similar(p)
     Δp = similar(p)
     Rr = similar(V)
     b = similar(V)
-    bₙ = similar(V)
-    bₙ₊₁ = similar(V)
-    yDiffₙ = similar(V)
-    yDiffₙ₊₁ = similar(V)
-    Gpₙ = similar(V)
+    b₀ = similar(V)
+    b₁ = similar(V)
+    yDiff₀ = similar(V)
+    yDiff₁ = similar(V)
+    Gp₀ = similar(V)
 
-    (; cₙ, cₙ₋₁, F, f, Δp, Rr, b, bₙ, bₙ₊₁, yDiffₙ, yDiffₙ₊₁, Gpₙ)
+    (; c₀, c₋₁, F, f, Δp, Rr, b, b₀, b₁, yDiff₀, yDiff₁, Gp₀)
 end
 
 function ode_method_cache(::OneLegMethod{T}, setup, V, p) where {T}
     (; NV, Np) = setup.grid
-    Vₙ₋₁ = similar(V)
-    pₙ₋₁ = similar(p)
+    u₋₁ = similar(V)
+    p₋₁ = similar(p)
     F = similar(V)
     f = similar(p)
     Δp = similar(p)
     GΔp = similar(V)
-    (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp)
+    (; u₋₁, p₋₁, F, f, Δp, GΔp)
 end
 
 function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup, u, p) where {T}
-
-    uₙ = similar.(u)
-
+    u₀ = similar.(u)
     ns = nstage(method)
-
     ku = [similar.(u) for i = 1:ns]
-
     v = similar.(u)
     F = similar.(u)
     G = similar.(u)
     M = similar(p)
-    f = similar(p)
-
-    (; uₙ, ku, v, F, M, G, f)
+    (; u₀, ku, v, F, M, G)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup, V, p) where {T}
