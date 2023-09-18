@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Actuator (2D) · IncompressibleNavierStokes.jl</title><meta name="title" content="Actuator (2D) · IncompressibleNavierStokes.jl"/><meta property="og:title" content="Actuator (2D) · IncompressibleNavierStokes.jl"/><meta property="twitter:title" content="Actuator (2D) · IncompressibleNavierStokes.jl"/><meta name="description" content="Documentation for IncompressibleNavierStokes.jl."/><meta property="og:description" content="Documentation for IncompressibleNavierStokes.jl."/><meta property="twitter:description" content="Documentation for IncompressibleNavierStokes.jl."/><meta property="og:url" content="https://agdestein.github.io/IncompressibleNavierStokes.jl/generated/Actuator2D/"/><meta property="twitter:url" content="https://agdestein.github.io/IncompressibleNavierStokes.jl/generated/Actuator2D/"/><link rel="canonical" href="https://agdestein.github.io/IncompressibleNavierStokes.jl/generated/Actuator2D/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.svg" alt="IncompressibleNavierStokes.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">IncompressibleNavierStokes.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../LidDrivenCavity2D/">Tutorial: Lid-Driven Cavity (2D)</a></li><li class="is-active"><a class="tocitem" href>Actuator (2D)</a><ul class="internal"><li><a class="tocitem" href="#Post-process"><span>Post-process</span></a></li></ul></li><li><a class="tocitem" href="../BackwardFacingStep2D/">Backward Facing Step (2D)</a></li><li><a class="tocitem" href="../DecayingTurbulence2D/">Decaying Turbulunce (2D)</a></li><li><a class="tocitem" href="../PlanarMixing2D/">Planar Mixing (2D)</a></li><li><a class="tocitem" href="../ShearLayer2D/">Shear Layer (2D)</a></li></ul></li><li><span class="tocitem">Equations</span><ul><li><a class="tocitem" href="../../equations/ns/">Incompressible Navier-Stokes equations</a></li><li><a class="tocitem" href="../../equations/spatial/">Spatial discretization</a></li><li><a class="tocitem" href="../../equations/time/">Time discretization</a></li></ul></li><li><span class="tocitem">Features</span><ul><li><a class="tocitem" href="../../features/precision/">Floating point precision</a></li><li><a class="tocitem" href="../../features/gpu/">GPU Support</a></li><li><a class="tocitem" href="../../features/les/">Large eddy simulation</a></li><li><a class="tocitem" href="../../features/pressure/">Pressure solvers</a></li><li><a class="tocitem" href="../../features/bc/">Boundary conditions</a></li><li><a class="tocitem" href="../../features/steppers/">Time steppers</a></li></ul></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../api/api/">API</a></li><li><a class="tocitem" href="../../api/tableaux/">Runge-Kutta methods</a></li></ul></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Actuator (2D)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Actuator (2D)</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/agdestein/IncompressibleNavierStokes.jl/blob/main/examples/Actuator2D.jl#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Unsteady-actuator-case-2D"><a class="docs-heading-anchor" href="#Unsteady-actuator-case-2D">Unsteady actuator case - 2D</a><a id="Unsteady-actuator-case-2D-1"></a><a class="docs-heading-anchor-permalink" href="#Unsteady-actuator-case-2D" title="Permalink"></a></h1><p>In this example, an unsteady inlet velocity profile at encounters a wind turbine blade in a wall-less domain. The blade is modeled as a uniform body force on a thin rectangle.</p><p>We start by loading packages. A <a href="https://github.com/JuliaPlots/Makie.jl">Makie</a> plotting backend is needed for plotting. <code>GLMakie</code> creates an interactive window (useful for real-time plotting), but does not work when building this example on GitHub. <code>CairoMakie</code> makes high-quality static vector-graphics plots.</p><pre><code class="language-julia hljs">using CairoMakie
+using IncompressibleNavierStokes</code></pre><p>Case name for saving results</p><pre><code class="language-julia hljs">name = &quot;Actuator2D&quot;</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;Actuator2D&quot;</code></pre><p>Viscosity model</p><pre><code class="language-julia hljs">viscosity_model = LaminarModel(; Re = 100.0)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">LaminarModel{Float64}(100.0)</code></pre><p>Boundary conditions: Unsteady BC requires time derivatives</p><pre><code class="language-julia hljs">u_bc(x, y, t) = x ≈ 0.0 ? cos(π / 6 * sin(π / 6 * t)) : 0.0
+v_bc(x, y, t) = x ≈ 0.0 ? sin(π / 6 * sin(π / 6 * t)) : 0.0
+dudt_bc(x, y, t) = x ≈ 0.0 ? -(π / 6)^2 * cos(π / 6 * t) * sin(π / 6 * sin(π / 6 * t)) : 0.0
+dvdt_bc(x, y, t) = x ≈ 0.0 ? (π / 6)^2 * cos(π / 6 * t) * cos(π / 6 * sin(π / 6 * t)) : 0.0
+bc_type = (;
+    u = (; x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)),
+    v = (; x = (:dirichlet, :symmetric), y = (:pressure, :pressure)),
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(u = (x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)), v = (x = (:dirichlet, :symmetric), y = (:pressure, :pressure)))</code></pre><p>A 2D grid is a Cartesian product of two vectors</p><pre><code class="language-julia hljs">n = 40
+x = LinRange(0.0, 10.0, 5n)
+y = LinRange(-2.0, 2.0, 2n)
+plot_grid(x, y)</code></pre><img src="59201d18.png" alt="Example block output"/><p>Actuator body force: A thrust coefficient <code>Cₜ</code> distributed over a thin rectangle</p><pre><code class="language-julia hljs">xc, yc = 2.0, 0.0 # Disk center
+D = 1.0           # Disk diameter
+δ = 0.11          # Disk thickness
+Cₜ = 5e-4         # Thrust coefficient
+cₜ = Cₜ / (D * δ)
+inside(x, y) = abs(x - xc) ≤ δ / 2 &amp;&amp; abs(y - yc) ≤ D / 2
+bodyforce_u(x, y) = -cₜ * inside(x, y)
+bodyforce_v(x, y) = 0.0</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">bodyforce_v (generic function with 1 method)</code></pre><p>Build setup and assemble operators</p><pre><code class="language-julia hljs">setup = Setup(
+    x,
+    y;
+    viscosity_model,
+    u_bc,
+    v_bc,
+    dudt_bc,
+    dvdt_bc,
+    bc_type,
+    bodyforce_u,
+    bodyforce_v,
+);</code></pre><p>Time interval</p><pre><code class="language-julia hljs">t_start, t_end = tlims = (0.0, 12.0)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(0.0, 12.0)</code></pre><p>Initial conditions (extend inflow)</p><pre><code class="language-julia hljs">initial_velocity_u(x, y) = 1.0
+initial_velocity_v(x, y) = 0.0
+initial_pressure(x, y) = 0.0
+V₀, p₀ = create_initial_conditions(
+    setup,
+    initial_velocity_u,
+    initial_velocity_v,
+    t_start;
+    initial_pressure,
+);</code></pre><p>Iteration processors</p><pre><code class="language-julia hljs">processors = (
+    field_plotter(setup; nupdate = 1),
+    # energy_history_plotter(setup; nupdate = 10),
+    # energy_spectrum_plotter(setup; nupdate = 10),
+    # animator(setup, &quot;vorticity.mkv&quot;; nupdate = 4),
+    # vtk_writer(setup; nupdate = 10, dir = &quot;output/$name&quot;, filename = &quot;solution&quot;),
+    # field_saver(setup; nupdate = 10),
+    step_logger(; nupdate = 1),
+);</code></pre><p>Solve unsteady problem</p><pre><code class="language-julia hljs">V, p, outputs = solve_unsteady(
+    setup,
+    V₀,
+    p₀,
+    tlims;
+    method = RK44P2(),
+    Δt = 0.05,
+    processors,
+    inplace = true,
+);
+current_figure()</code></pre><img src="8719a84e.png" alt="Example block output"/><h2 id="Post-process"><a class="docs-heading-anchor" href="#Post-process">Post-process</a><a id="Post-process-1"></a><a class="docs-heading-anchor-permalink" href="#Post-process" title="Permalink"></a></h2><p>We may visualize or export the computed fields <code>(V, p)</code>.</p><p>We create a box to visualize the actuator.</p><pre><code class="language-julia hljs">box = (
+    [xc - δ / 2, xc - δ / 2, xc + δ / 2, xc + δ / 2, xc - δ / 2],
+    [yc + D / 2, yc - D / 2, yc - D / 2, yc + D / 2, yc + D / 2],
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">([1.945, 1.945, 2.055, 2.055, 1.945], [0.5, -0.5, -0.5, 0.5, 0.5])</code></pre><p>Export to VTK</p><pre><code class="language-julia hljs">save_vtk(setup, V, p, t_end, &quot;output/solution&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1-element Vector{String}:
+ &quot;output/solution.vti&quot;</code></pre><p>Plot pressure</p><pre><code class="language-julia hljs">fig = plot_pressure(setup, p)
+lines!(box...; color = :red)
+fig</code></pre><img src="ec8a02b2.png" alt="Example block output"/><p>Plot velocity</p><pre><code class="language-julia hljs">fig = plot_velocity(setup, V, t_end)
+lines!(box...; color = :red)
+fig</code></pre><img src="f8c6a30c.png" alt="Example block output"/><p>Plot vorticity</p><pre><code class="language-julia hljs">fig = plot_vorticity(setup, V, t_end)
+lines!(box...; color = :red)
+fig</code></pre><img src="3685cd65.png" alt="Example block output"/><p>Plot streamfunction</p><pre><code class="language-julia hljs">fig = plot_streamfunction(setup, V, t_end)
+lines!(box...; color = :red)
+fig</code></pre><img src="905034b2.png" alt="Example block output"/><p>Plot force</p><pre><code class="language-julia hljs">fig = plot_force(setup, t_end)
+lines!(box...; color = :red)
+fig</code></pre><img src="c37f912f.png" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../LidDrivenCavity2D/">« Tutorial: Lid-Driven Cavity (2D)</a><a class="docs-footer-nextpage" href="../BackwardFacingStep2D/">Backward Facing Step (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.0.1 on <span class="colophon-date" title="Monday 18 September 2023 15:05">Monday 18 September 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
