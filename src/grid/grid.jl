@@ -86,10 +86,30 @@ function Grid(x, boundary_conditions)
 
     # Velocity volume mid-sections
     Γu = ntuple(α -> ntuple(β -> KernelAbstractions.ones(get_backend(x[1]), T, N), D), D)
-    for α = 1:D, β = 1:D, γ = ((1:β-1)..., (β+1:D)...)
-        Γu[α][β] .*= reshape(γ == β ? 1 : γ == α ? Δu[γ] : Δ[γ], ntuple(Returns(1), γ - 1)..., :)
+    for α = 1:D, β = 1:D, γ in ((1:β-1)..., (β+1:D)...)
+        Γu[α][β] .*=
+            reshape(γ == β ? 1 : γ == α ? Δu[γ] : Δ[γ], ntuple(Returns(1), γ - 1)..., :)
     end
 
+    # # Velocity points
+    # Xu = ntuple(α -> KernelAbstractions.ones(get_backend(x[1]), T, N)
+
     # Grid quantities
-    (; dimension, N, Nu, Np, Iu, Ip, xlims, x, xp, Δ, Δu, Ω, Ωu, Ωω, Γu)
+    (;
+        dimension,
+        N,
+        Nu,
+        Np,
+        Iu,
+        Ip,
+        xlims,
+        x,
+        xp,
+        Δ,
+        Δu,
+        Ω,
+        # Ωu,
+        # Ωω,
+        # Γu,
+    )
 end

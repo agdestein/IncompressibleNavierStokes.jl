@@ -24,60 +24,69 @@ using IncompressibleNavierStokes
 # Case name for saving results
 name = "LidDrivenCavity3D"
 
-# Viscosity model
-Re = 1000.0
+# Floating point type
+T = Float64
+
+# For CPU
+device = identity
+
+# For GPU (note that `cu` converts to `Float32`)
+## using CUDA
+## device = cu
+
+# Reynolds number
+Re = T(1_000)
 
 # Boundary conditions: horizontal movement of the top lid
-u_bc(x, y, z, t) = y ≈ 1.0 ? 1.0 : 0.0
-v_bc(x, y, z, t) = 0.0
-w_bc(x, y, z, t) = y ≈ 1.0 ? 0.2 : 0.0
-bc_type = (;
-    u = (;
-        x = (:dirichlet, :dirichlet),
-        y = (:dirichlet, :dirichlet),
-        z = (:periodic, :periodic),
-    ),
-    v = (;
-        x = (:dirichlet, :dirichlet),
-        y = (:dirichlet, :dirichlet),
-        z = (:periodic, :periodic),
-    ),
-    w = (;
-        x = (:dirichlet, :dirichlet),
-        y = (:dirichlet, :dirichlet),
-        z = (:periodic, :periodic),
-    ),
+lidvel = (
+    (x, y, z, t) -> one(x),
+    (x, y, z, t) -> zero(x),
+    (x, y, z, t) -> one(x) / 5,
+)
+dlidveldt = (
+    (x, y, z, t) -> zero(x),
+    (x, y, z, t) -> zero(x),
+    (x, y, z, t) -> zero(x),
+)
+boundary_conditions = (
+    ## x left, x right
+    (DirichletBC(), DirichletBC()),
+
+    ## y rear, y front
+    (DirichletBC(), DirichletBC(lidvel, dlidveldt)),
+
+    ## z bottom, z top
+    (PeriodicBC(), PeriodicBC()),
 )
 
 # A 3D grid is a Cartesian product of three vectors. Here we refine the grid
 # near the walls.
-x = cosine_grid(0.0, 1.0, 25)
-y = cosine_grid(0.0, 1.0, 25)
-z = LinRange(-0.2, 0.2, 10)
+x = cosine_grid(T(0), T(1), 25)
+y = cosine_grid(T(0), T(1), 25)
+z = LinRange(-T(0.2), T(0.2), 11)
 plot_grid(x, y, z)
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; Re, u_bc, v_bc, w_bc, bc_type);
+setup = Setup((x, y, z); Re, boundary_conditions);
 
 # Time interval
-t_start, t_end = tlims = (0.0, 0.2)
+t_start, t_end = tlims = T(0), T(0.2)
 
 # Initial conditions
-initial_velocity_u(x, y, z) = 0.0
-initial_velocity_v(x, y, z) = 0.0
-initial_velocity_w(x, y, z) = 0.0
-initial_pressure(x, y, z) = 0.0
-V₀, p₀ = create_initial_conditions(
+initial_velocity = (
+    (x, y, z) -> zero(x),
+    (x, y, z) -> zero(x),
+    (x, y, z) -> zero(x),
+)
+u₀, p₀ = create_initial_conditions(
     setup,
-    initial_velocity_u,
-    initial_velocity_v,
-    initial_velocity_w,
+    initial_velocity,
     t_start;
-    initial_pressure,
-);
+    pressure_solver,
+)
 
 # Solve steady state problem
-V, p = solve_steady_state(setup, V₀, p₀; npicard = 5, maxiter = 15);
+## u, p = solve_steady_state(setup, u₀, p₀; npicard = 5, maxiter = 15);
 
 # Iteration processors
 processors = (
@@ -91,24 +100,24 @@ processors = (
 );
 
 # Solve unsteady problem
-V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.001, processors)
-#md current_figure()
+u, p, outputs =
+    solve_unsteady(setup, u₀, p₀, tlims; Δt = T(0.001), processors, device);
 
 # ## Post-process
 #
 # We may visualize or export the computed fields `(V, p)`
 
 # Export to VTK
-save_vtk(setup, V, p, t_end, "output/solution")
+save_vtk(setup, u, p, "output/solution")
 
 # Plot pressure
 plot_pressure(setup, p)
 
 # Plot velocity
-plot_velocity(setup, V, t_end)
+plot_velocity(setup, u)
 
 # Plot vorticity
-plot_vorticity(setup, V, t_end)
+plot_vorticity(setup, u)
 
 # Plot streamfunction
-## plot_streamfunction(setup, V, t_end)
+## plot_streamfunction(setup, u)

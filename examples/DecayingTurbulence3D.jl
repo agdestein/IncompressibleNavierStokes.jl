@@ -42,47 +42,44 @@ Re = T(10_000)
 
 # A 3D grid is a Cartesian product of three vectors
 n = 32
-lims = (T(0), T(1))
-x = LinRange(lims..., n + 1)
-y = LinRange(lims..., n + 1)
-z = LinRange(lims..., n + 1)
-# plot_grid(x, y, z)
+lims = T(0), T(1)
+x = ntuple(α -> LinRange(lims..., n + 1), 3)
+# plot_grid(x...)
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; Re);
+setup = device(Setup(x; Re));
 
 # Since the grid is uniform and identical for x, y, and z, we may use a
 # specialized spectral pressure solver
 pressure_solver = SpectralPressureSolver(setup);
 
 # Initial conditions
-V₀, p₀ = random_field(setup; A = T(1_000_000), σ = T(30), s = 5, pressure_solver)
+u₀, p₀ = random_field(setup; A = T(1_000_000), σ = T(30), s = 5, pressure_solver)
 
 # Time interval
-t_start, t_end = tlims = (T(0), T(1.0))
+t_start, t_end = tlims = T(0), T(1.0)
 
 # Iteration processors
 processors = (
-    field_plotter(device(setup); nupdate = 10),
-    energy_history_plotter(device(setup); nupdate = 10),
-    energy_spectrum_plotter(device(setup); nupdate = 10),
-    ## animator(device(setup), "vorticity.mp4"; nupdate = 4),
+    field_plotter(setup; nupdate = 10),
+    energy_history_plotter(setup; nupdate = 10),
+    energy_spectrum_plotter(setup; nupdate = 10),
+    ## animator(setup, "vorticity.mp4"; nupdate = 4),
     ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
     ## field_saver(setup; nupdate = 10),
     step_logger(; nupdate = 1),
 );
 
 # Solve unsteady problem
-V, p, outputs = solve_unsteady(
+u, p, outputs = solve_unsteady(
     setup,
-    V₀,
+    u₀,
     p₀,
     tlims;
     Δt = T(0.001),
     processors,
     pressure_solver,
     inplace = true,
-    device,
 );
 
 # Field plot
@@ -96,16 +93,16 @@ outputs[3]
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(V, p)`
+# We may visualize or export the computed fields `(u, p)`
 
 # Export to VTK
-save_vtk(setup, V, p, t_end, "output/solution")
+save_vtk(setup, u, p, "output/solution")
 
 # Plot pressure
 plot_pressure(setup, p)
 
 # Plot velocity
-plot_velocity(setup, V, t_end)
+plot_velocity(setup, u)
 
 # Plot vorticity
-plot_vorticity(setup, V, t_end)
+plot_vorticity(setup, u)

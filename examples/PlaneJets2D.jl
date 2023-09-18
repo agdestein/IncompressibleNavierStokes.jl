@@ -25,75 +25,91 @@ using LaTeXStrings
 # Case name for saving results
 name = "PlaneJets2D"
 
-# Viscosity model
-Re = 6000.0
+# Floating point type
+T = Float64
+
+# For CPU
+device = identity
+
+# For GPU (note that `cu` converts to `Float32`)
+## using CUDA
+## device = cu
+
+# Reynolds number
+Re = T(6_000)
 
 # Test cases (A, B, C, D; in order)
-# U() = sqrt(467.4)
-U() = 21.619435700313733
+## V() = sqrt(T(467.4))
+V() = T(21.619435700313733)
 
-u_A(y) = U() / 2 * (tanh((y + 1 / 2) / 0.1) - tanh((y - 1 / 2) / 0.1))
+U_A(y) = u() / 2 * (tanh((y + T(0.5)) / T(0.1)) - tanh((y - T(0.5)) / T(0.1)))
 
-u_B(y) =
-    U() / 2 * (tanh((y + 1 + 1 / 2) / 0.1) - tanh((y + 1 - 1 / 2) / 0.1)) +
-    U() / 2 * (tanh((y - 1 + 1 / 2) / 0.1) - tanh((y - 1 - 1 / 2) / 0.1))
+U_B(y) =
+    u() / 2 * (tanh((y + 1 + T(0.5)) / T(0.1)) - tanh((y + 1 - T(0.5)) / T(0.1))) +
+    u() / 2 * (tanh((y - 1 + T(0.5)) / T(0.1)) - tanh((y - 1 - T(0.5)) / T(0.1)))
 
-u_C(y) =
-    U() / 2 * (tanh(((y + 1.0) / 1 + 1 / 2) / 0.1) - tanh(((y + 1.0) / 1 - 1 / 2) / 0.1)) +
-    U() / 4 * (tanh(((y - 1.5) / 2 + 1 / 2) / 0.2) - tanh(((y - 1.5) / 2 - 1 / 2) / 0.2))
+U_C(y) =
+    u() / 2 * (
+        tanh(((y + T(1.0)) / 1 + T(0.5)) / T(0.1)) -
+        tanh(((y + T(1.0)) / 1 - T(0.5)) / T(0.1))
+    ) +
+    u() / 4 * (
+        tanh(((y - T(1.5)) / 2 + T(0.5)) / T(0.2)) -
+        tanh(((y - T(1.5)) / 2 - T(0.5)) / T(0.2))
+    )
 
-u_D(y) =
-    U() / 2 * (tanh(((y + 1.0) / 1 + 1 / 2) / 0.1) - tanh(((y + 1.0) / 1 - 1 / 2) / 0.1)) -
-    U() / 4 * (tanh(((y - 1.5) / 2 + 1 / 2) / 0.2) - tanh(((y - 1.5) / 2 - 1 / 2) / 0.2))
+U_D(y) =
+    u() / 2 * (
+        tanh(((y + T(1.0)) / 1 + T(0.5)) / T(0.1)) -
+        tanh(((y + T(1.0)) / 1 - T(0.5)) / T(0.1))
+    ) -
+    u() / 4 * (
+        tanh(((y - T(1.5)) / 2 + T(0.5)) / T(0.2)) -
+        tanh(((y - T(1.5)) / 2 - T(0.5)) / T(0.2))
+    )
 
-# u(y) = u_A(y)
-# u(y) = u_B(y)
-u(y) = u_C(y)
-# u(y) = u_D(y)
+## U(y) = U_A(y)
+## U(y) = U_B(y)
+U(y) = U_C(y)
+## U(y) = U_D(y)
 
 # Random noise to stimulate turbulence
-u(x, y) = (1 + 0.1 * (rand() - 1 / 2)) * u(y)
+U(x, y) = (1 + T(0.1) * (rand(T) - T(0.5))) * U(y)
 
-# # Boundary conditions: Unsteady BC requires time derivatives
-# u_bc(x, y, t) = x ≈ 0.0 ? u(x, y) : 0.0
-# v_bc(x, y, t) = 0.0
-# bc_type = (;
-#     u = (; x = (:periodic, :periodic), y = (:symmetric, :symmetric)),
-#     v = (; x = (:periodic, :periodic), y = (:pressure, :pressure)),
-# )
+## boundary_conditions = (
+##     (PeriodicBC(), PeriodicBC()),
+##     (PressureBC(), PressureBC())
+## )
 
 # A 2D grid is a Cartesian product of two vectors
 n = 64
 ## n = 128
 ## n = 256
-x = LinRange(0.0, 16.0, 4n)
-y = LinRange(-10.0, 10.0, 5n)
-plot_grid(x, y)
+x = LinRange(T(0), T(16), 4n), LinRange(-T(10), T(10), 5n)
+plot_grid(x...)
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re);
-# setup = Setup(x, y; Re, u_bc, v_bc, bc_type);
+setup = device(Setup(x; Re));
+## setup = device(Setup(x, y; Re, boundary_conditions));
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
 # spectral pressure solver
 pressure_solver = SpectralPressureSolver(setup)
 
 # Time interval
-t_start, t_end = tlims = (0.0, 1.0)
+t_start, t_end = tlims = T(0), T(1)
 
 # Initial conditions
-initial_velocity_u(x, y) = u(x, y)
-initial_velocity_v(x, y) = 0.0
-initial_pressure(x, y) = 0.0
-V₀, p₀ = create_initial_conditions(
+initial_velocity = (
+    (x, y) -> U(x, y),
+    (x, y) -> zero(T),
+)
+u₀, p₀ = create_initial_conditions(
     setup,
-    initial_velocity_u,
-    initial_velocity_v,
+    initial_velocity,
     t_start;
-    initial_pressure,
     pressure_solver,
 );
-V, p = V₀, p₀
 
 # Real time plot: Streamwise average and spectrum
 mean_plotter(setup; nupdate = 1) = processor(
@@ -101,10 +117,10 @@ mean_plotter(setup; nupdate = 1) = processor(
         (; indu, yu, yin, Nux_in, Nuy_in) = setup.grid
 
         umean = @lift begin
-            (; V, p, t) = $state
-            u = V[indu]
+            (; u, p, t) = $state
+            u1 = u[1]
             sleep(0.001)
-            reshape(sum(reshape(u, size(yu)); dims = 1), :) ./ (Nux_in * U())
+            reshape(sum(reshape(u1, size(yu)); dims = 1), :) ./ (Nux_in * V())
         end
 
         K = Nux_in ÷ 2
@@ -166,14 +182,14 @@ processors = (
     ## animator(setup, "vorticity.mkv"; nupdate = 4),
     ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
     ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1),
     mean_plotter(setup),
+    step_logger(; nupdate = 1),
 );
 
 # Solve unsteady problem
-V, p, outputs = solve_unsteady(
+toto, p, outputs = solve_unsteady(
     setup,
-    V₀,
+    u₀,
     p₀,
     tlims;
     method = RK44P2(),
@@ -182,24 +198,29 @@ V, p, outputs = solve_unsteady(
     pressure_solver,
     inplace = true,
 );
-#md current_figure()
 
 # ## Post-process
 #
 # We may visualize or export the computed fields `(V, p)`
 
+outputs[1]
+
+#-
+
+outputs[2]
+
 # Export to VTK
-save_vtk(setup, V, p, t_end, "output/solution")
+save_vtk(setup, toto, p, "output/solution")
 
 # Plot pressure
 plot_pressure(setup, p)
 
 # Plot velocity
-plot_velocity(setup, V₀, t_end)
-plot_velocity(setup, V, t_end)
+plot_velocity(setup, u₀)
+plot_velocity(setup, toto)
 
 # Plot vorticity
-plot_vorticity(setup, V, t_end)
+plot_vorticity(setup, toto)
 
 # Plot stream function
-plot_streamfunction(setup, V, t_end)
+plot_streamfunction(setup, toto)

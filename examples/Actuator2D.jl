@@ -24,62 +24,68 @@ using IncompressibleNavierStokes
 # Case name for saving results
 name = "Actuator2D"
 
-# Viscosity model
-Re = 100.0
+# Floating point type
+T = Float64
+
+# For CPU
+device = identity
+
+# For GPU (note that `cu` converts to `Float32`)
+## using CUDA
+## device = cu
+
+# Reynolds number
+Re = T(100)
 
 # Boundary conditions: Unsteady BC requires time derivatives
-u_bc(x, y, t) = x ≈ 0.0 ? cos(π / 6 * sin(π / 6 * t)) : 0.0
-v_bc(x, y, t) = x ≈ 0.0 ? sin(π / 6 * sin(π / 6 * t)) : 0.0
-dudt_bc(x, y, t) = x ≈ 0.0 ? -(π / 6)^2 * cos(π / 6 * t) * sin(π / 6 * sin(π / 6 * t)) : 0.0
-dvdt_bc(x, y, t) = x ≈ 0.0 ? (π / 6)^2 * cos(π / 6 * t) * cos(π / 6 * sin(π / 6 * t)) : 0.0
-bc_type = (;
-    u = (; x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)),
-    v = (; x = (:dirichlet, :symmetric), y = (:pressure, :pressure)),
+U(x, y, t) = cos(π / 6 * sin(π / 6 * t))
+V(x, y, t) = sin(π / 6 * sin(π / 6 * t))
+dUdt(x, y, t) = -(π / 6)^2 * cos(π / 6 * t) * sin(π / 6 * sin(π / 6 * t))
+dVdt(x, y, t) = (π / 6)^2 * cos(π / 6 * t) * cos(π / 6 * sin(π / 6 * t)) 
+boundary_conditions = (
+    ## x left, x right
+    (DirichletBC((U, V), (dUdt, dVdt)), PressureBC()),
+
+    ## y rear, y front
+    (SymmetricBC(), SymmetricBC()),
 )
 
 # A 2D grid is a Cartesian product of two vectors
 n = 40
-x = LinRange(0.0, 10.0, 5n)
-y = LinRange(-2.0, 2.0, 2n)
+x = LinRange(0.0, 10.0, 5n + 1)
+y = LinRange(-2.0, 2.0, 2n + 1)
 plot_grid(x, y)
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
-xc, yc = 2.0, 0.0 # Disk center
-D = 1.0           # Disk diameter
-δ = 0.11          # Disk thickness
-Cₜ = 5e-4         # Thrust coefficient
+xc, yc = T(2), T(0) # Disk center
+D = T(1)            # Disk diameter
+δ = T(0.11)         # Disk thickness
+Cₜ = T(5e-4)        # Thrust coefficient
 cₜ = Cₜ / (D * δ)
 inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
-bodyforce_u(x, y) = -cₜ * inside(x, y)
-bodyforce_v(x, y) = 0.0
+fu(x, y) = -cₜ * inside(x, y)
+fv(x, y) = zero(x)
 
 # Build setup and assemble operators
 setup = Setup(
-    x,
-    y;
+    (x, y);
     Re,
-    u_bc,
-    v_bc,
-    dudt_bc,
-    dvdt_bc,
-    bc_type,
-    bodyforce_u,
-    bodyforce_v,
+    boundary_conditions,
+    bodyforce = (fu, fv),
 );
 
 # Time interval
-t_start, t_end = tlims = (0.0, 12.0)
+t_start, t_end = tlims = T(0), T(12)
 
 # Initial conditions (extend inflow)
-initial_velocity_u(x, y) = 1.0
-initial_velocity_v(x, y) = 0.0
-initial_pressure(x, y) = 0.0
-V₀, p₀ = create_initial_conditions(
+initial_velocity = (
+    (x, y) -> one(x),
+    (x, y) -> zero(x),
+)
+u₀, p₀ = create_initial_conditions(
     setup,
-    initial_velocity_u,
-    initial_velocity_v,
+    initial_velocity,
     t_start;
-    initial_pressure,
 );
 
 # Iteration processors
@@ -94,17 +100,16 @@ processors = (
 );
 
 # Solve unsteady problem
-V, p, outputs = solve_unsteady(
+u, p, outputs = solve_unsteady(
     setup,
-    V₀,
+    u₀,
     p₀,
     tlims;
     method = RK44P2(),
-    Δt = 0.05,
+    Δt = T(0.05),
     processors,
     inplace = true,
 );
-#md current_figure()
 
 # ## Post-process
 #
@@ -117,7 +122,12 @@ box = (
 )
 
 # Export to VTK
-save_vtk(setup, V, p, t_end, "output/solution")
+save_vtk(setup, u, p, "output/solution")
+
+# Field plot
+fig = outputs[1]
+lines!(box...; color = :red)
+fig
 
 # Plot pressure
 fig = plot_pressure(setup, p)
@@ -125,21 +135,21 @@ lines!(box...; color = :red)
 fig
 
 # Plot velocity
-fig = plot_velocity(setup, V, t_end)
+fig = plot_velocity(setup, u)
 lines!(box...; color = :red)
 fig
 
 # Plot vorticity
-fig = plot_vorticity(setup, V, t_end)
+fig = plot_vorticity(setup, u)
 lines!(box...; color = :red)
 fig
 
 # Plot streamfunction
-fig = plot_streamfunction(setup, V, t_end)
+fig = plot_streamfunction(setup, u)
 lines!(box...; color = :red)
 fig
 
 # Plot force
-fig = plot_force(setup, t_end)
+fig = plot_force(setup)
 lines!(box...; color = :red)
 fig

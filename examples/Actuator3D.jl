@@ -24,86 +24,75 @@ using IncompressibleNavierStokes
 # Case name for saving results
 name = "Actuator3D"
 
-# Viscosity model
-Re = 100.0
+# Floating point type
+T = Float64
+
+# For CPU
+device = identity
+
+# For GPU (note that `cu` converts to `Float32`)
+## using CUDA
+## device = cu
+
+# Reynolds number
+Re = T(100)
 
 # Boundary conditions: Unsteady BC requires time derivatives
-u_bc(x, y, z, t) = x ≈ 0.0 ? cos(π / 6 * sin(π / 6 * t)) : 0.0
-v_bc(x, y, z, t) = x ≈ 0.0 ? sin(π / 6 * sin(π / 6 * t)) : 0.0
-w_bc(x, y, z, t) = 0.0
-dudt_bc(x, y, z, t) =
-    x ≈ 0.0 ? -(π / 6)^2 * cos(π / 6 * t) * sin(π / 6 * sin(π / 6 * t)) : 0.0
-dvdt_bc(x, y, z, t) =
-    x ≈ 0.0 ? (π / 6)^2 * cos(π / 6 * t) * cos(π / 6 * sin(π / 6 * t)) : 0.0
-dwdt_bc(x, y, z, t) = 0.0
-bc_type = (;
-    u = (;
-        x = (:dirichlet, :pressure),
-        y = (:symmetric, :symmetric),
-        z = (:symmetric, :symmetric),
-    ),
-    v = (;
-        x = (:dirichlet, :symmetric),
-        y = (:pressure, :pressure),
-        z = (:symmetric, :symmetric),
-    ),
-    w = (;
-        x = (:dirichlet, :symmetric),
-        y = (:symmetric, :symmetric),
-        z = (:pressure, :pressure),
-    ),
+U(x, y, z, t) = cos(π / 6 * sin(π / 6 * t))
+V(x, y, z, t) = sin(π / 6 * sin(π / 6 * t))
+W(x, y, z, t) = zero(x)
+dUdt(x, y, z, t) = -(π / 6)^2 * cos(π / 6 * t) * sin(π / 6 * sin(π / 6 * t))
+dVdt(x, y, z, t) = (π / 6)^2 * cos(π / 6 * t) * cos(π / 6 * sin(π / 6 * t)) 
+dWdt(x, y, z, t) = zero(x)
+boundary_conditions = (
+    ## x left, x right
+    (DirichletBC((U, V, W), (dUdt, dVdt, dWdt)), PressureBC()),
+
+    ## y rear, y front
+    (SymmetricBC(), SymmetricBC()),
+
+    ## z rear, z front
+    (SymmetricBC(), SymmetricBC()),
 )
 
 # A 3D grid is a Cartesian product of three vectors
-x = LinRange(0.0, 6.0, 30)
-y = LinRange(-2.0, 2.0, 40)
-z = LinRange(-2.0, 2.0, 40)
+x = LinRange(0.0, 6.0, 31)
+y = LinRange(-2.0, 2.0, 41)
+z = LinRange(-2.0, 2.0, 41)
 plot_grid(x, y, z)
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a short cylinder
-cx, cy, cz = 2.0, 0.0, 0.0 # Disk center
-D = 1.0                    # Disk diameter
-δ = 0.11                   # Cylinder height
-Cₜ = 5e-4                  # Thrust coefficient
+cx, cy, cz = T(2), T(0), T(0) # Disk center
+D = T(1)                      # Disk diameter
+δ = T(0.11)                   # Disk thickness
+Cₜ = T(5e-4)                  # Thrust coefficient
 cₜ = Cₜ / (π * (D / 2)^2 * δ)
 inside(x, y, z) = abs(x - cx) ≤ δ / 2 && (y - cy)^2 + (z - cz)^2 ≤ (D / 2)^2
-bodyforce_u(x, y, z) = -cₜ * inside(x, y, z)
-bodyforce_v(x, y, z) = 0.0
-bodyforce_w(x, y, z) = 0.0
+fu(x, y, z) = -cₜ * inside(x, y, z)
+fv(x, y, z) = zero(x)
+fw(x, y, z) = zero(x)
 
 # Build setup and assemble operators
 setup = Setup(
-    x,
-    y,
-    z;
+    (x, y, z);
     Re,
-    u_bc,
-    v_bc,
-    w_bc,
-    dudt_bc,
-    dvdt_bc,
-    dwdt_bc,
-    bc_type,
-    bodyforce_u,
-    bodyforce_v,
-    bodyforce_w,
+    boundary_conditions,
+    bodyforce = (fu, fv, fw),
 );
 
 # Time interval
-t_start, t_end = tlims = (0.0, 3.0)
+t_start, t_end = tlims = T(0), T(3)
 
 # Initial conditions (extend inflow)
-initial_velocity_u(x, y, z) = 1.0
-initial_velocity_v(x, y, z) = 0.0
-initial_velocity_w(x, y, z) = 0.0
-initial_pressure(x, y, z) = 0.0
-V₀, p₀ = create_initial_conditions(
+initial_velocity = (
+    (x, y, z) -> one(x),
+    (x, y, z) -> zero(x),
+    (x, y, z) -> zero(x),
+)
+u₀, p₀ = create_initial_conditions(
     setup,
-    initial_velocity_u,
-    initial_velocity_v,
-    initial_velocity_w,
+    initial_velocity,
     t_start;
-    initial_pressure,
 );
 
 # Iteration processors
@@ -118,36 +107,38 @@ processors = (
 );
 
 # Solve unsteady problem
-V, p, outputs = solve_unsteady(
+u, p, outputs = solve_unsteady(
     setup,
-    V₀,
+    u₀,
     p₀,
     tlims;
     method = RK44P2(),
-    Δt = 0.05,
+    Δt = T(0.05),
     processors,
     inplace = true,
 );
-#md current_figure()
 
 # ## Post-process
 #
 # We may visualize or export the computed fields `(V, p)`
 
+# Field plot
+outputs[1]
+
 # Export to VTK
-save_vtk(setup, V, p, t_end, "output/solution")
+save_vtk(setup, u, p, "output/solution")
 
 # Plot pressure
 plot_pressure(setup, p)
 
 # Plot velocity
-plot_velocity(setup, V, t_end)
+plot_velocity(setup, u)
 
 # Plot vorticity
-plot_vorticity(setup, V, t_end)
+plot_vorticity(setup, u)
 
 # Plot streamfunction
-## plot_streamfunction(setup, V, t_end)
+## plot_streamfunction(setup, V)
 
 # Plot force
-plot_force(setup, t_end)
+plot_force(setup)

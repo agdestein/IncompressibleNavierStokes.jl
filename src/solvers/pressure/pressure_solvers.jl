@@ -109,7 +109,8 @@ function SpectralPressureSolver(setup)
     # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
     Ahat .*= 4 * prod(Δx)
 
-    # Pressure is determined up to constant, fix at 0
+    # Pressure is determined up to constant. By setting the constant
+    # scaling factor to 1, we preserve the average.
     Ahat[1:1] .= 1
 
     # Placeholders for intermediate results

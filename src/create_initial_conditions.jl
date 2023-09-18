@@ -15,7 +15,7 @@ function create_initial_conditions(
     pressure_solver = DirectPressureSolver(setup),
 )
     (; grid) = setup
-    (; dimension, N, Iu, Ip, x, xp, Ωu) = grid
+    (; dimension, N, Iu, Ip, x, xp) = grid
 
     T = eltype(x[1])
     D = dimension()
@@ -103,7 +103,7 @@ function random_field(
     s = convert(eltype(setup.grid.x), 5),
     pressure_solver = DirectPressureSolver(setup),
 )
-    (; dimension, x, N, Ip, Ωu) = setup.grid
+    (; dimension, x, N, Ip) = setup.grid
 
     D = dimension()
     T = eltype(x[1])

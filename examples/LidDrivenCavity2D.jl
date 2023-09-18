@@ -56,28 +56,35 @@ device = identity
 # Here we choose a moderate Reynolds number. Note how we pass the floating point type.
 Re = T(1_000)
 
-# Dirichlet boundary conditions are specified as plain Julia functions. They
-# are marked by the `:dirichlet` symbol. Other possible BC types are
-# `:periodic`, `:symmetric`, and `:pressure`.
-u_bc(x, y, t) = y ≈ 1 ? T(1) : T(0)
-v_bc(x, y, t) = T(0)
-bc_type = (;
-    u = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-    v = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
+# Non-zero Dirichlet boundary conditions are specified as plain Julia functions.
+# Other possible BC types are `PeriodicBC()`, `SymmetricBC`, and `PressureBC`.
+lidvel = (
+    (x, y, t) -> one(x),
+    (x, y, t) -> zero(x),
+)
+dlidveldt = (
+    (x, y, t) -> zero(x),
+    (x, y, t) -> zero(x),
+)
+boundary_conditions = (
+    ## x left, x right
+    (DirichletBC(), DirichletBC()),
+
+    ## y bottom, y top
+    (DirichletBC(), DirichletBC(lidvel, dlidveldt)),
 )
 
 # We create a two-dimensional domain with a box of size `[1, 1]`. The grid is
 # created as a Cartesian product between two vectors. We add a refinement near
 # the walls.
 n = 40
-lims = (T(0), T(1))
-x = cosine_grid(lims..., n)
-y = cosine_grid(lims..., n)
-plot_grid(x, y)
+lims = T(0), T(1)
+x = cosine_grid(lims..., n), cosine_grid(lims..., n)
+plot_grid(x...)
 
 # We can now build the setup and assemble operators.
 # A 3D setup is built if we also provide a vector of z-coordinates.
-setup = Setup(x, y; Re, u_bc, v_bc, bc_type);
+setup = device(Setup(x; boundary_conditions, Re));
 
 # The pressure solver is used to solve the pressure Poisson equation.
 # Available solvers are
@@ -90,18 +97,17 @@ setup = Setup(x, y; Re, u_bc, v_bc, bc_type);
 pressure_solver = DirectPressureSolver(setup)
 
 # We will solve for a time interval of ten seconds.
-t_start, t_end = tlims = (T(0), T(10))
+t_start, t_end = tlims = T(0), T(10)
 
 # The initial conditions are defined as plain Julia functions.
-initial_velocity_u(x, y) = zero(x)
-initial_velocity_v(x, y) = zero(x)
-initial_pressure(x, y) = zero(x)
-V₀, p₀ = create_initial_conditions(
+initial_velocity = (
+    (x, y) -> zero(x),
+    (x, y) -> zero(x),
+)
+u₀, p₀ = create_initial_conditions(
     setup,
-    initial_velocity_u,
-    initial_velocity_v,
+    initial_velocity,
     t_start;
-    initial_pressure,
     pressure_solver,
 )
 
@@ -111,7 +117,7 @@ V₀, p₀ = create_initial_conditions(
 
 # The [`solve_steady_state`](@ref) function is for computing a state where the right hand side of the
 # momentum equation is zero.
-V, p = solve_steady_state(setup, V₀, p₀)
+## u, p = solve_steady_state(setup, u₀, p₀)
 
 # For this test case, the same steady state may be obtained by solving an
 # unsteady problem for a sufficiently long time.
@@ -121,10 +127,10 @@ V, p = solve_steady_state(setup, V₀, p₀)
 # later returned by `solve_unsteady`.
 
 processors = (
-    field_plotter(device(setup); nupdate = 50),
-    ## energy_history_plotter(device(setup); nupdate = 1),
-    ## energy_spectrum_plotter(device(setup); nupdate = 100),
-    ## animator(device(setup), "vorticity.mkv"; nupdate = 4),
+    field_plotter(setup; nupdate = 50),
+    ## energy_history_plotter(setup; nupdate = 1),
+    ## energy_spectrum_plotter(setup; nupdate = 100),
+    ## animator(setup, "vorticity.mkv"; nupdate = 4),
     vtk_writer(setup; nupdate = 100, dir = "output/$name", filename = "solution"),
     ## field_saver(setup; nupdate = 10),
     step_logger(; nupdate = 1000),
@@ -132,8 +138,8 @@ processors = (
 
 # By default, a standard fourth order Runge-Kutta method is used. If we don't
 # provide the time step explicitly, an adaptive time step is used.
-V, p, outputs =
-    solve_unsteady(setup, V₀, p₀, tlims; Δt = T(0.001), processors, pressure_solver, device);
+u, p, outputs =
+    solve_unsteady(setup, u₀, p₀, tlims; Δt = T(0.001), processors, pressure_solver, device);
 
 # ## Post-process
 #
@@ -142,22 +148,22 @@ V, p, outputs =
 # Export fields to VTK. The file `output/solution.vti` may be opened for
 # visulization in [ParaView](https://www.paraview.org/). This is particularly
 # useful for inspecting results from 3D simulations.
-save_vtk(setup, V, p, t_end, "output/solution")
+save_vtk(setup, u, p, "output/solution")
 
 # Plot pressure
 plot_pressure(setup, p)
 
 # Plot velocity. Note the time stamp used for computing boundary conditions, if
 # any.
-plot_velocity(setup, V, t_end)
+plot_velocity(setup, u)
 
 # Plot vorticity (with custom levels)
 levels = [-7, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 7]
-plot_vorticity(setup, V, t_end; levels)
+plot_vorticity(setup, u; levels)
 
 # Plot streamfunction. Note the time stamp used for computing boundary
 # conditions, if any
-plot_streamfunction(setup, V, t_end)
+plot_streamfunction(setup, u)
 
 # In addition, the tuple `outputs` contains quantities from our processors.
 #

@@ -22,35 +22,47 @@ using IncompressibleNavierStokes
 # Case name for saving results
 name = "ShearLayer2D"
 
-# Viscosity model
-Re = Inf
+# Floating point type
+T = Float64
+
+# For CPU
+device = identity
+
+# For GPU (note that `cu` converts to `Float32`)
+## using CUDA
+## device = cu
+
+# Reynolds number
+Re = T(Inf)
 
 # A 2D grid is a Cartesian product of two vectors
 n = 100
-x = LinRange(0, 2π, n + 1)
-y = LinRange(0, 2π, n + 1)
+lims = T(0), T(2π)
+x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
 plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re);
+setup = device(Setup(x; Re));
 
 # Time interval
-t_start, t_end = tlims = (0.0, 8.0)
+t_start, t_end = tlims = T(0), T(8)
 
 # Initial conditions: We add 1 to u in order to make global momentum
 # conservation less trivial
-d = π / 15
-e = 0.05
-initial_velocity_u(x, y) = y ≤ π ? tanh((y - π / 2) / d) : tanh((3π / 2 - y) / d)
-## initial_velocity_u(x, y) = 1.0 + (y ≤ π ? tanh((y - π / 2) / d) : tanh((3π / 2 - y) / d))
-initial_velocity_v(x, y) = e * sin(x)
-initial_pressure(x, y) = 0.0
-V₀, p₀ = create_initial_conditions(
+d = T(π / 15)
+e = T(0.05)
+initial_velocity = (
+    (x, y) -> y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d),
+    (x, y) -> e * sin(x),
+)
+## initial_velocity = (
+##     (x, y) -> T(1) + (y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d)),
+##     (x, y) -> e * sin(x),
+## )
+u₀, p₀ = create_initial_conditions(
     setup,
-    initial_velocity_u,
-    initial_velocity_v,
+    initial_velocity,
     t_start;
-    initial_pressure,
 );
 
 # Iteration processors
@@ -65,33 +77,34 @@ processors = (
 );
 
 # Solve unsteady problem
-V, p, outputs = solve_unsteady(
+u, p, outputs = solve_unsteady(
     setup,
-    V₀,
+    u₀,
     p₀,
     tlims;
     method = RK44(),
-    Δt = 0.01,
+    Δt = T(0.01),
     processors,
     inplace = true,
 );
-#md current_figure()
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(V, p)`
+# We may visualize or export the computed fields `(u, p)`
+
+outputs[1]
 
 # Export to VTK
-save_vtk(setup, V, p, t_end, "output/solution")
+save_vtk(setup, u, p, "output/solution")
 
 # Plot pressure
 plot_pressure(setup, p)
 
 # Plot velocity
-plot_velocity(setup, V, t_end)
+plot_velocity(setup, u)
 
 # Plot vorticity
-plot_vorticity(setup, V, t_end)
+plot_vorticity(setup, u)
 
 # Plot streamfunction
-## plot_streamfunction(setup, V, t_end)
+## plot_streamfunction(setup, u)
