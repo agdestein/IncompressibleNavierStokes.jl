@@ -9,9 +9,7 @@ end
 
 struct SymmetricBC <: AbstractBC end
 
-struct PressureBC{F} <: AbstractBC
-    p::F
-end
+struct PressureBC <: AbstractBC end
 
 function ghost_a! end
 function ghost_b! end
