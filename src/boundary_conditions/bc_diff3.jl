@@ -1,17 +1,14 @@
-
-"""
-total solution u is written as u = Bb*ub + Bin*uin
-the boundary conditions can be written as Bbc*u = ybc
-then u can be written entirely in terms of uin and ybc as:
-u = (Bin-Btemp*Bbc*Bin)*uin + Btemp*ybc, where
-Btemp = Bb*(Bbc*Bb)^(-1)
-Bb, Bin and Bbc depend on type of bc (Neumann/Dirichlet/periodic)
-
-val1 and val2 can be scalars or vectors with either the value or the
-derivative
-
-(ghost) points on boundary / grid lines
-"""
+# total solution u is written as u = Bb*ub + Bin*uin
+# the boundary conditions can be written as Bbc*u = ybc
+# then u can be written entirely in terms of uin and ybc as:
+# u = (Bin-Btemp*Bbc*Bin)*uin + Btemp*ybc, where
+# Btemp = Bb*(Bbc*Bb)^(-1)
+# Bb, Bin and Bbc depend on type of bc (Neumann/Dirichlet/periodic)
+# 
+# val1 and val2 can be scalars or vectors with either the value or the
+# derivative
+# 
+# (ghost) points on boundary / grid lines
 function bc_diff3(Nt, Nin, Nb, bc1, bc2, h1, h2)
     T = typeof(h1)
 
