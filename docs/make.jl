@@ -44,9 +44,9 @@ for e ∈ examples
     # Literate.script(e, o)
 end
 
-makedocs(
-    bib;
+makedocs(;
     modules = [IncompressibleNavierStokes],
+    plugins = [bib],
     authors = "Syver Døving Agdestein, Benjamin Sanderse, and contributors",
     repo = "https://github.com/agdestein/IncompressibleNavierStokes.jl/blob/{commit}{path}#{line}",
     sitename = "IncompressibleNavierStokes.jl",

@@ -125,6 +125,14 @@ step
 step!
 ```
 
+## Filter
+```@docs
+create_top_hat_u
+create_top_hat_v
+create_top_hat_p
+create_top_hat_velocity
+```
+
 ## Utils
 
 ```@docs
