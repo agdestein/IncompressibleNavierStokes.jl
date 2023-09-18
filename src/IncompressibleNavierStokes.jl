@@ -22,6 +22,10 @@ using Statistics
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 using Zygote
 
+# Workgroup size for kernels
+# Let this be constant for now
+const WORKGROUP = 64
+
 # Convenience notation
 const ⊗ = kron
 
