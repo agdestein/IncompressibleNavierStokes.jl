@@ -268,8 +268,8 @@ Finally, the discrete ``\alpha``-momentum equations are given by
 ```math
 \begin{split}
     \left| \Omega_{I + \delta(\alpha) / 2} \right|
-    \frac{\mathrm{d} }{\mathrm{d} t} u^\alpha_{I + \delta(\alpha) / 2} =
-    & - \sum_{\beta = 1}^d \left| \Gamma^\beta_{I + \delta(\alpha) / 2} \right|
+    & \frac{\mathrm{d} }{\mathrm{d} t} u^\alpha_{I + \delta(\alpha) / 2} = \\
+    - & \sum_{\beta = 1}^d \left| \Gamma^\beta_{I + \delta(\alpha) / 2} \right|
     \left(
         (u^\alpha
         u^\beta)_{I + \delta(\alpha) / 2 + \delta(\beta) / 2}
@@ -277,9 +277,9 @@ Finally, the discrete ``\alpha``-momentum equations are given by
         (u^\alpha
         u^\beta )_{I + \delta(\alpha) / 2 - \delta(\beta) / 2}
     \right) \\
-    & - \left| \Gamma^\alpha_{I + \delta(\alpha) / 2} \right|
+    - & \left| \Gamma^\alpha_{I + \delta(\alpha) / 2} \right|
     \left( p_{I + \delta(\alpha)} - p_{I} \right) \\
-    & + \nu \sum_{\beta = 1}^d \left| \Gamma^\beta_{I + \delta(\alpha) / 2}
+    + & \nu \sum_{\beta = 1}^d \left| \Gamma^\beta_{I + \delta(\alpha) / 2}
     \right|
     \left( 
         \frac{u^\alpha_{I + \delta(\alpha) / 2 + \delta(\beta)} - u^\alpha_{I +
@@ -288,7 +288,7 @@ Finally, the discrete ``\alpha``-momentum equations are given by
         \delta(\alpha) / 2 - \delta(\beta)}}{x^\beta_{I(\beta)}
         - x^\beta_{I(\beta) - 1}}
     \right) \\
-    & + \left| \Omega_{I + \delta(\alpha) / 2} \right| f^\alpha(x_{I +
+    + & \left| \Omega_{I + \delta(\alpha) / 2} \right| f^\alpha(x_{I +
     \delta(\alpha) / 2}).
 \end{split}
 ```
@@ -469,3 +469,123 @@ symmetric since ``G = \Omega_h^{-1} M^\mathsf{T}``.
     of discretely divergence free velocities. However, using this formulation
     would require an efficient way to perform the projection without assembling
     the operator matrix ``L^{-1}``, which would be very costly.
+
+## Discrete output quantities
+
+### Kinetic energy
+
+The local kinetic energy is defined by ``k = \frac{1}{2} \| u \|_2^2 =
+\frac{1}{2} \sum_{\alpha = 1}^d u^\alpha u^\alpha``. On the staggered grid
+however, the different velocity components are not located at the same point.
+We will therefore interpolate the velocity to the pressure point before summing
+the squares.
+
+### Vorticity
+
+In 2D, the vorticity is a scalar. Integrating the vorticity ``\omega =
+-\frac{\partial u^1}{\partial x^2} + \frac{\partial u^2}{\partial x^1}`` over
+the vorticity volume ``\Omega_{I + \delta(1) / 2 + \delta(2) / 2}`` gives
+
+```math
+\begin{split}
+\int_{\Omega_{I + \delta(1) / 2 + \delta(2) / 2}} \omega \, \mathrm{d} \Omega
+= & - \left(
+\int_{\Gamma^2_{I + \delta(1) / 2 + \delta(2)}} u^1 \, \mathrm{d} \Gamma
+- \int_{\Gamma^2_{I + \delta(1) / 2}} u^1 \, \mathrm{d} \Gamma
+\right) \\
+& + \left(
+\int_{\Gamma^1_{I + \delta(1) + \delta(2) / 2}} u^2 \, \mathrm{d} \Gamma
+- \int_{\Gamma^1_{I + \delta(2) / 2}} u^2 \, \mathrm{d} \Gamma
+\right)
+\end{split}.
+```
+
+Using quadrature, the discrete vorticity in the corner is given by
+
+```math
+\begin{split}
+\left| \Omega_{I + \delta(1) / 2 + \delta(2) / 2} \right|
+\omega_{I + \delta(1) / 2 + \delta(2) / 2} =
+& - \left| \Gamma^2_{I + \delta(1) / 2 + \delta(2) / 2} \right|
+(u^1_{I + \delta(1) / 2 + \delta(2)}
+- u^1_{I + \delta(1) / 2}) \\
+& + \left| \Gamma^1_{I + \delta(1) / 2 + \delta(2) / 2} \right|
+(u^2_{I + \delta(1) + \delta(2) / 2}
+- u^2_{I + \delta(2) / 2})
+\end{split}.
+```
+
+The 3D vorticity is a vector field ``(\omega^1, \omega^2, \omega^3)``.
+Noting ``\alpha^+ = \operatorname{mod}_3(\alpha + 1)`` and
+``\alpha^- = \operatorname{mod}_3(\alpha - 1)``, the vorticity is obtained
+through
+
+```math
+\begin{split}
+\int_{\Omega_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2}} \omega \, \mathrm{d} \Omega
+= & - \left(
+\int_{\Gamma^{\alpha^-}_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-)}} u^{\alpha^+} \, \mathrm{d} \Gamma
+- \int_{\Gamma^{\alpha^-}_{I + \delta(\alpha^+) / 2}} u^{\alpha^+} \, \mathrm{d} \Gamma
+\right) \\
+& + \left(
+\int_{\Gamma^{\alpha^+}_{I + \delta(\alpha^+) + \delta(\alpha^-) / 2}} u^{\alpha^-} \, \mathrm{d} \Gamma
+- \int_{\Gamma^{\alpha^+}_{I + \delta(\alpha^-) / 2}} u^{\alpha^-} \, \mathrm{d} \Gamma
+\right)
+\end{split}.
+```
+
+```math
+\begin{split}
+\left| \Omega_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} \right|
+\omega_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} =
+& - \left| \Gamma^{\alpha^-}_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} \right|
+(u^{\alpha^+}_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-)}
+- u^{\alpha^+}_{I + \delta(\alpha^+) / 2}) \\
+& + \left| \Gamma^{\alpha^+}_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} \right|
+(u^{\alpha^-}_{I + \delta(\alpha^+) + \delta(\alpha^-) / 2}
+- u^{\alpha^-}_{I + \delta(\alpha^-) / 2})
+\end{split}.
+```
+
+## Stream function
+
+In 2D, the stream function is defined at the corners with the vorticity.
+Integrating the stream function Poisson equation over the vorticity volume
+yields
+
+```math
+\begin{split}
+- \int_{\Omega_{I + \delta(1) / 2 + \delta(2) / 2}} \omega \, \mathrm{d} \Omega
+& = \int_{\Omega_{I + \delta(1) / 2 + \delta(2) / 2}} \nabla^2 \psi \,
+\mathrm{d} \Omega \\
+& = \int_{\Gamma^1_{I + \delta(1) + \delta(2) / 2}} \frac{\partial \psi}{\partial x^1}
+\, \mathrm{d} \Gamma
+- \int_{\Gamma^1_{I + \delta(2) / 2}} \frac{\partial \psi}{\partial x^1}
+\, \mathrm{d} \Gamma \\
+& + \int_{\Gamma^2_{I + \delta(1) / 2 + \delta(2)}} \frac{\partial \psi}{\partial x^2}
+\, \mathrm{d} \Gamma
+- \int_{\Gamma^2_{I + \delta(1) / 2}} \frac{\partial \psi}{\partial x^2}
+\, \mathrm{d} \Gamma.
+\end{split}
+```
+
+Replacing the integrals with the mid-point quadrature rule and the spatial
+derivatives with central finite differences yields the discrete Poisson
+equation for the stream function at the vorticity point:
+
+```math
+\begin{split}
+\left| \Gamma^1_{I + \delta(1) / 2 + \delta(2) / 2} \right|
+\left(
+  \frac{\psi_{I + 3 / 2 \delta(1) + \delta(2) / 2} - \psi_{I + \delta(1) / 2 + \delta(2) / 2}}{x^1_{I(1) + 3 / 2} - x^1_{I(1) + 1 /2}}
+- \frac{\psi_{I + \delta(1) / 2 + \delta(2) / 2} - \psi_{I - \delta(1) / 2 + \delta(2) / 2}}{x^1_{I(1) + 1 / 2} - x^1_{I(1) - 1 / 2}}
+\right) & + \\
+\left| \Gamma^2_{I + \delta(1) / 2 + \delta(2) / 2} \right|
+\left(
+\frac{\psi_{I + \delta(1) / 2 + 3 / 2 \delta(2)} - \psi_{I + \delta(1) / 2 + \delta(2) / 2}}{x^2_{I(1) + 3 / 2} - x^2_{I(1) + 1 / 2}}
+-\frac{\psi_{I + \delta(1) / 2 + \delta(2) / 2} - \psi_{I + \delta(1) / 2 - \delta(2) / 2}}{x^2_{I(2) + 1 / 2} - x^2_{I(2) - 1 / 2}}
+\right) & = \\
+\left| \Omega_{I + \delta(1) / 2 + \delta(2) / 2} \right|
+\omega_{I + \delta(1) / 2 + \delta(2) / 2} &
+\end{split}
+```

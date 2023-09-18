@@ -24,7 +24,7 @@ written as
 \frac{\partial u^\alpha}{\partial t} + \sum_{\beta = 1}^d
 \frac{\partial}{\partial x^\beta} (u^\alpha u^\beta) & = -\frac{\partial
 p}{\partial x^\alpha} + \nu \sum_{\beta = 1}^d \frac{\partial^2 u^\alpha}{\partial
-(x^\beta)^2} + f^\alpha.
+x^\beta \partial x^\beta} + f^\alpha.
 \end{align*}
 ```
 
@@ -101,7 +101,7 @@ equation for the pressure:
 In scalar notation, this becomes
 
 ```math
-- \sum_{\alpha = 1}^d \frac{\partial^2}{\partial (x^\alpha)^2} p = \sum_{\alpha
+- \sum_{\alpha = 1}^d \frac{\partial^2}{\partial x^\alpha \partial x^\alpha} p = \sum_{\alpha
 = 1}^d \sum_{\beta = 1}^d \frac{\partial^2 }{\partial x^\alpha \partial
 x^\beta} (u^\alpha u^\beta) - \sum_{\alpha = 1}^d \frac{\partial
 f^\alpha}{\partial x^\alpha}.
@@ -116,6 +116,18 @@ a constant. We set this constant to ``1``.
 
 
 ## Other quantities of interest
+
+### Reynolds number
+
+The Reynolds number is the inverse of the viscosity: ``Re = \frac{1}{\nu}``. It
+is the only flow parameter governing the incompressible Navier-Stokes
+equations.
+
+### Kinetic energy
+
+The local and total kinetic energy are defined by ``k = \frac{1}{2} \| u
+\|_2^2`` and ``K = \frac{1}{2} \| u \|_{L^2(\Omega)}^2 = \int_\Omega k \,
+\mathrm{d} \Omega``.
 
 ### Vorticity
 
@@ -143,26 +155,27 @@ to the ``x^3``-component of the 3D vorticity.
 
 ### Stream function
 
-The stream function ``\psi`` is a field (scalar in 2D, vector in 3D) defined
-such that
+In 2D, the stream function ``\psi`` is a scalar field such that
+
+```math
+u^1 = \frac{\partial \psi}{\partial x^2}, \quad
+u^2 = -\frac{\partial \psi}{\partial x^1}.
+```
+
+It can be found by solving
+
+```math
+\nabla^2 \psi = - \omega.
+```
+
+In 3D, the stream function is a vector field such that
 
 ```math
 u = \nabla \times \psi.
 ```
 
-It is related to the vorticity as
+It can be found by solving
 
 ```math
 \nabla^2 \psi = \nabla \times \omega.
 ```
-
-### Kinetic energy
-
-The local and total kinetic energy are defined by ``k = \frac{1}{2} \| u
-\|_2^2`` and ``K = \frac{1}{2} \| u \|_{L^2(\Omega)}^2 = \int_\Omega k \,
-\mathrm{d} \Omega``.
-
-### Reynolds number
-
-The Reynolds number is the inverse of the viscosity: ``Re =
-\frac{1}{\nu}``.

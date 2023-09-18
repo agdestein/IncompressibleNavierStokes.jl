@@ -49,28 +49,28 @@ are computed as follows:
 
 ```math
 \begin{split}
-F_i & = F(U_{i - 1}, t_{i - 1}) \\
+F_i & = F(U_{i - 1}, t_{i - 1}) - y_G(t_{i - 1}) \\
 V_i & = U_0 + \Delta t \sum_{j = 1}^i a_{i j} F_j \\
 L P_i & = \frac{1}{c_i} \sum_{j = 1}^i a_{i j} F_j +
 \frac{y_M(t_i) - y_M(t_0)}{\Delta t_i} \\
 & = \frac{(M V_i + y_M(t_i)) - (M U_0 + y_M(t_0))}{\Delta t_i^n} \\
 & = \frac{M V_i + y_M(t_i)}{\Delta t_i^n} \\
-U_i & = V_i - \Delta t_i (G P_i + y_G(t_i)),
+U_i & = V_i - \Delta t_i G P_i,
 \end{split}
 ```
 
-where ``(a_{i j})_{i j}`` are the Butcher tableau coefficients of the RK-method,
-with the convention ``c_i = \sum_{j = 1}^i a_{i j}``.
+where ``(a_{i j})_{i j}`` are the Butcher tableau coefficients of the
+RK-method, with the convention ``c_i = \sum_{j = 1}^i a_{i j}``.
 
 Finally, we set ``U = U_s``. If ``U_0 = u_h(t_0)``, we get the accuracy ``U =
 u_h(t) + \mathcal{O}(\Delta t^{r + 1})``, where ``r`` is the order of the
 RK-method. If we perform ``n`` RK time steps instead of one, starting at exact
-initial conditions ``U^0 = u_h(0)``, then ``U^n = u_h(t^n) +
-\mathcal{O}(\Delta t^r)`` for all ``n \in \{1, \dots, N\}``. Note that for a
-given ``U``, the corresponding pressure ``P`` can be calculated to the same
-accuracy as ``U`` by doing an additional pressure projection after each outer
-time step ``\Delta t`` (if we know ``\frac{\mathrm{d} y_M}{\mathrm{d} t}(t)``),
-or to first order accuracy by simply taking ``P = P_s``.
+initial conditions ``U^0 = u_h(0)``, then ``U^n = u_h(t^n) + \mathcal{O}(\Delta
+t^r)`` for all ``n \in \{1, \dots, N\}``. Note that for a given ``U``, the
+corresponding pressure ``P`` can be calculated to the same accuracy as ``U`` by
+doing an additional pressure projection after each outer time step ``\Delta t``
+(if we know ``\frac{\mathrm{d} y_M}{\mathrm{d} t}(t)``), or to first order
+accuracy by simply taking ``P = P_s``.
 
 Note that each of the sub-step velocities ``U_i`` is divergence free, after
 projecting the tentative velocities ``V_i``. This is ensured due to the
@@ -113,8 +113,8 @@ terms containing ``V`` on the left hand side, to obtain
 
 ```math
 \begin{split}
-\left( \frac{1}{\Delta t} I - \theta D \right) V
-& = \left(\frac{1}{\Delta t} I - (1 - \theta) D \right) U_0 \\
+\left( \frac{1}{\Delta t} I - (1 - \theta) D \right) V
+& = \left(\frac{1}{\Delta t} I - \theta D \right) U_0 \\
 & - (\alpha_0 C(U_0, t_0) + \alpha_{-1} C(U_{-1}, t_{-1})) \\
 & + \theta y_D(t_0) + (1 - \theta) y_D(t) \\
 & + \theta f(t_0) + (1 - \theta) f(t) \\
