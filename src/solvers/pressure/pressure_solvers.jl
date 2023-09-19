@@ -114,8 +114,8 @@ function SpectralPressureSolver(setup)
     Ahat[1:1] .= 1
 
     # Placeholders for intermediate results
-    phat = similar(Ahat)
-    fhat = similar(Ahat)
+    phat = zero(Ahat)
+    fhat = zero(Ahat)
 
     SpectralPressureSolver{T,typeof(Ahat)}(Ahat, phat, fhat)
 end
