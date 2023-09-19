@@ -66,7 +66,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
         for α = 1:D
             @. u[α] = v[α] - c[i] * Δt * G[α]
         end
-        apply_bc_u!(u, tᵢ, setup)
+        apply_bc_u!(u, t, setup)
     end
 
     # Complete time step
