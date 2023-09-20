@@ -4,7 +4,7 @@ create_stepper(::ExplicitRungeKuttaMethod; setup, pressure_solver, u, p, t, n = 
 function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
     (; setup, pressure_solver, u, p, t, n) = stepper
     (; grid, boundary_conditions) = setup
-    (; dimension, Ip) = grid
+    (; dimension, Iu, Ip) = grid
     (; A, b, c, p_add_solve) = method
     (; u₀, ku, v, F, M, G) = cache
 
@@ -42,7 +42,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
         for α = 1:D
             v[α] .= u₀[α]
             for j = 1:i
-                @. v[α] = v[α] + Δt * A[i, j] * ku[j][α]
+                @. v[α][Iu[α]] = v[α][Iu[α]] + Δt * A[i, j] * ku[j][α][Iu[α]]
             end
         end
 
@@ -64,7 +64,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
 
         # Update velocity current stage, which is now divergence free
         for α = 1:D
-            @. u[α] = v[α] - c[i] * Δt * G[α]
+            @. u[α][Iu[α]] = v[α][Iu[α]] - c[i] * Δt * G[α][Iu[α]]
         end
         apply_bc_u!(u, t, setup)
     end
