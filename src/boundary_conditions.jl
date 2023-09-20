@@ -71,8 +71,8 @@ ghost_b!(::PressureBC, x) = push!(x, x[end], x[end] + (x[end] - x[end-1]))
     offset_u(bc, isnormal, atend)
 
 Number of non-DOF velocity components at boundary.
-If ``isnormal``, then the velocity is normal to the boundary, else parallel.
-If ``atend``, it is at the end/right/rear/top boundary, otherwise beginning.
+If `isnormal`, then the velocity is normal to the boundary, else parallel.
+If `atend`, it is at the end/right/rear/top boundary, otherwise beginning.
 """
 function offset_u end
 
