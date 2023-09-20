@@ -33,25 +33,24 @@ name = "LidDrivenCavity2D"
 # scaled judiciously to avoid vanishing digits when applying differential
 # operators of the form "right minus left divided by small distance".
 
-## T = Float16
-## T = Float32
 T = Float64
+## T = Float32
+## T = Float16
 
 # Note how floating point type hygiene is enforced in the following using `T`
 # to avoid mixing different precisions.
 
-# We can also choose to do the computations on a different device.
-# By default, the computations are performed on the host (CPU). An optional
-# `device` keyword allows for moving arrays and operator to a different device
-# such as a GPU. Currently, only Nvidia GPUs with CUDA support sparse operators
-# and fast Fourier transform used by IncompressibleNavierStokes.
+# We can also choose to do the computations on a different device. By default,
+# the computations are performed on the host (CPU). An optional `ArrayType`
+# allows for moving arrays to a different device such as a GPU.
+#
+# Note: For GPUs, single precision is preferred.
 
-# For CPU
-device = identity
-
-# For GPU (note that `cu` converts to `Float32`)
-## using CUDA
-## device = cu
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
 # Here we choose a moderate Reynolds number. Note how we pass the floating point type.
 Re = T(1_000)
@@ -79,12 +78,13 @@ boundary_conditions = (
 # the walls.
 n = 40
 lims = T(0), T(1)
-x = cosine_grid(lims..., n), cosine_grid(lims..., n)
-plot_grid(x...)
+x = cosine_grid(lims..., n)
+y = cosine_grid(lims..., n)
+plot_grid(x, y)
 
 # We can now build the setup and assemble operators.
 # A 3D setup is built if we also provide a vector of z-coordinates.
-setup = device(Setup(x; boundary_conditions, Re));
+setup = Setup(x, y; boundary_conditions, Re, ArrayType);
 
 # The pressure solver is used to solve the pressure Poisson equation.
 # Available solvers are

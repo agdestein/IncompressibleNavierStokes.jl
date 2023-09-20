@@ -25,12 +25,12 @@ name = "ShearLayer2D"
 # Floating point type
 T = Float64
 
-# For CPU
-device = identity
-
-# For GPU (note that `cu` converts to `Float32`)
-## using CUDA
-## device = cu
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
 # Reynolds number
 Re = T(Inf)
@@ -38,11 +38,12 @@ Re = T(Inf)
 # A 2D grid is a Cartesian product of two vectors
 n = 100
 lims = T(0), T(2π)
-x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
+x = LinRange(lims..., n + 1)
+y = LinRange(lims..., n + 1)
 plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = device(Setup(x; Re));
+setup = Setup(x, y; Re, ArrayType);
 
 # Time interval
 t_start, t_end = tlims = T(0), T(8)

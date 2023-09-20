@@ -27,21 +27,17 @@ Re = 500.0
 
 # Boundary conditions: Unsteady BC requires time derivatives
 ΔU = 1.0
-Ū = 1.0
-ϵ = (0.082Ū, 0.012Ū)
+Ubar = 1.0
+ϵ = (0.082Ubar, 0.012Ubar)
 n = (0.4π, 0.3π)
 ω = (0.22, 0.11)
-u_bc(x, y, t) =
-    x ≈ 0.0 ?
-    1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * sin(ω * t)) :
-    0.0
-v_bc(x, y, t) = 0.0
-dudt_bc(x, y, t) =
-    x ≈ 0.0 ? sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * ω * cos(ω * t)) : 0.0
-dvdt_bc(x, y, t) = 0.0
-bc_type = (;
-    u = (; x = (:dirichlet, :pressure), y = (:symmetric, :symmetric)),
-    v = (; x = (:dirichlet, :symmetric), y = (:pressure, :pressure)),
+U(x, y, t) = 1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * sin(ω * t))
+V(x, y, t) = 0.0
+dUdt(x, y, t) = sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * ω * cos(ω * t))
+dVdt(x, y, t) = 0.0
+boundary_conditions = (
+    (DirichletBC((U, V), (dUdt, dVdt)), PressureBC()),
+    (SymmetricBC(), SymmetricBC())
 )
 
 # A 2D grid is a Cartesian product of two vectors
@@ -52,21 +48,20 @@ y = LinRange(-32.0, 32.0, n)
 plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re, u_bc, v_bc, dudt_bc, dvdt_bc, bc_type);
+setup = Setup(x, y; U, boundary_conditions);
 
 # Time interval
-t_start, t_end = tlims = (0.0, 100.0)
+t_start, t_end = tlims = 0.0, 100.0
 
-# Initial conditions
-initial_velocity_u(x, y) = u_bc(0.0, y, 0.0)
-initial_velocity_v(x, y) = 0.0
-initial_pressure(x, y) = 0.0
-V₀, p₀ = create_initial_conditions(
+# Initial conditions (exten inflow)
+initial_velocity = (
+    (x, y) -> U(x, y, 0.0),
+    (x, y) -> 0.0,
+)
+u₀, p₀ = create_initial_conditions(
     setup,
-    initial_velocity_u,
-    initial_velocity_v,
+    initial_velocity,
     t_start;
-    initial_pressure,
 );
 
 # Iteration processors
@@ -81,9 +76,9 @@ processors = (
 );
 
 # Solve unsteady problem
-V, p, outputs = solve_unsteady(
+u, p, outputs = solve_unsteady(
     setup,
-    V₀,
+    u₀,
     p₀,
     tlims;
     method = RK44P2(),
@@ -91,23 +86,24 @@ V, p, outputs = solve_unsteady(
     processors,
     inplace = true,
 );
-#md current_figure()
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(V, p)`
+# We may visualize or export the computed fields `(u, p)`
+
+outputs[1]
 
 # Export to VTK
-save_vtk(setup, V, p, t_end, "output/solution")
+save_vtk(setup, u, p, "output/solution")
 
 # Plot pressure
 plot_pressure(setup, p)
 
 # Plot velocity
-plot_velocity(setup, V, t_end)
+plot_velocity(setup, u)
 
 # Plot vorticity
-plot_vorticity(setup, V, t_end)
+plot_vorticity(setup, u)
 
 # Plot streamfunction
-plot_streamfunction(setup, V, t_end)
+plot_streamfunction(setup, u)

@@ -28,15 +28,21 @@ name = "BackwardFacingStep3D"
 # Floating point type
 T = Float64
 
-# For CPU
-device = identity
-
-# For GPU (note that `cu` converts to `Float32`)
-## using CUDA
-## device = cu
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
 # Reynolds number
 Re = T(3000)
+
+# A 3D grid is a Cartesian product of three vectors
+x = LinRange(T(0), T(10), 129)
+y = LinRange(-T(0.5), T(0.5), 17)
+z = LinRange(-T(0.25), T(0.25), 9)
+plot_grid(x, y, z)
 
 # Boundary conditions: steady inflow on the top half
 U(x, y, z, t) = y ≥ 0 ? 24y * (1 - y) / 2 : zero(x)
@@ -56,14 +62,8 @@ boundary_conditions = (
     (PeriodicBC(), PeriodicBC()),
 )
 
-# A 2D grid is a Cartesian product of two vectors.
-x = LinRange(T(0), T(10), 129)
-y = LinRange(-T(0.5), T(0.5), 17)
-z = LinRange(-T(0.25), T(0.25), 9)
-plot_grid(x, y, z)
-
 # Build setup and assemble operators
-setup = Setup((x, y, z); Re, boundary_conditions);
+setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
 
 # Time interval
 t_start, t_end = tlims = T(0), T(7)

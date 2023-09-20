@@ -25,24 +25,26 @@ name = "TaylorGreenVortex3D"
 # Floating point precision
 T = Float64
 
-# For CPU
-device = identity
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
-# For GPU (note that `cu` converts to `Float32`)
-## using CUDA
-## device = cu
-
-# Viscosity model
+# Reynolds number
 Re = T(6_000)
 
 # A 3D grid is a Cartesian product of three vectors
 n = 32
 lims = T(0), T(2π)
-x = ntuple(α -> LinRange(lims..., n + 1), 3)
-plot_grid(x...)
+x = LinRange(lims..., n + 1)
+y = LinRange(lims..., n + 1)
+z = LinRange(lims..., n + 1)
+plot_grid(x, y, z)
 
 # Build setup and assemble operators
-setup = device(Setup(x; Re));
+setup = Setup(x, y, z; Re, ArrayType);
 
 # Since the grid is uniform and identical for x, y, and z, we may use a
 # specialized spectral pressure solver
@@ -69,9 +71,9 @@ CUDA.reclaim()
 
 # Iteration processors
 processors = (
-    field_plotter(setup; nupdate = 1),
-    ## energy_history_plotter(setup; nupdate = 1),
-    ## energy_spectrum_plotter(setup; nupdate = 100),
+    # field_plotter(setup; fieldname = :velocity, nupdate = 1),
+    # energy_history_plotter(setup; nupdate = 1),
+    energy_spectrum_plotter(setup; nupdate = 100),
     ## animator(setup, "vorticity.mp4"; nupdate = 4),
     ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
     ## field_saver(setup; nupdate = 10),

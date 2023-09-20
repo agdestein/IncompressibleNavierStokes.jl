@@ -27,15 +27,21 @@ name = "Actuator2D"
 # Floating point type
 T = Float64
 
-# For CPU
-device = identity
-
-# For GPU (note that `cu` converts to `Float32`)
-## using CUDA
-## device = cu
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
 # Reynolds number
 Re = T(100)
+
+# A 2D grid is a Cartesian product of two vectors
+n = 40
+x = LinRange(0.0, 10.0, 5n + 1)
+y = LinRange(-2.0, 2.0, 2n + 1)
+plot_grid(x, y)
 
 # Boundary conditions: Unsteady BC requires time derivatives
 U(x, y, t) = cos(π / 6 * sin(π / 6 * t))
@@ -50,12 +56,6 @@ boundary_conditions = (
     (SymmetricBC(), SymmetricBC()),
 )
 
-# A 2D grid is a Cartesian product of two vectors
-n = 40
-x = LinRange(0.0, 10.0, 5n + 1)
-y = LinRange(-2.0, 2.0, 2n + 1)
-plot_grid(x, y)
-
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
 xc, yc = T(2), T(0) # Disk center
 D = T(1)            # Disk diameter
@@ -68,10 +68,11 @@ fv(x, y) = zero(x)
 
 # Build setup and assemble operators
 setup = Setup(
-    (x, y);
+    x, y;
     Re,
     boundary_conditions,
     bodyforce = (fu, fv),
+    ArrayType,
 );
 
 # Time interval

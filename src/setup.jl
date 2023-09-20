@@ -1,26 +1,28 @@
 """
     Setup(
-        x;
+        x...;
         boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
         Re = convert(eltype(x[1]), 1_000),
         viscosity_model = LaminarModel(),
         convection_model = NoRegConvectionModel(),
         bodyforce = nothing,
         closure_model = nothing,
+        ArrayType = Array,
     )
 
 Create setup.
 """
 function Setup(
-    x;
+    x...;
     boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
     Re = convert(eltype(x[1]), 1_000),
     viscosity_model = LaminarModel(),
     convection_model = NoRegConvectionModel(),
     bodyforce = nothing,
     closure_model = nothing,
+    ArrayType = Array,
 )
-    grid = Grid(x, boundary_conditions)
+    grid = Grid(x, boundary_conditions; ArrayType)
     (;
         grid,
         boundary_conditions,
@@ -29,5 +31,6 @@ function Setup(
         convection_model,
         bodyforce,
         closure_model,
+        ArrayType,
     )
 end

@@ -28,12 +28,12 @@ name = "BackwardFacingStep2D"
 # Floating point type
 T = Float64
 
-# For CPU
-device = identity
-
-# For GPU (note that `cu` converts to `Float32`)
-## using CUDA
-## device = cu
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
 # Reynolds number
 Re = T(3000)
@@ -58,7 +58,7 @@ y = cosine_grid(-T(0.5), T(0.5), 51)
 plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = Setup((x, y); Re, boundary_conditions);
+setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 
 # Time interval
 t_start, t_end = tlims = T(0), T(7)

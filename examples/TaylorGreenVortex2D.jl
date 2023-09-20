@@ -23,14 +23,14 @@ using IncompressibleNavierStokes
 name = "TaylorGreenVortex2D"
 
 # Floating point type
-T = Float32
+T = Float64
 
-# For CPU
-device = identity
-
-# For GPU (note that `cu` converts to `Float32`)
-## using CUDA
-## device = cu
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
 # Reynolds number
 Re = T(2_000)
@@ -49,7 +49,7 @@ setup = device(Setup(x; Re));
 pressure_solver = SpectralPressureSolver(setup)
 
 # Time interval
-t_start, t_end = tlims = T(0), T(1)
+t_start, t_end = tlims = T(0), T(5)
 
 # Initial conditions
 initial_velocity = (

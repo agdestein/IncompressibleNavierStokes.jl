@@ -29,13 +29,12 @@ name = "DecayingTurbulence2D"
 # Floating point precision
 T = Float64
 
-# To use CPU: Do not move any arrays
-device = identity
-
-# To use GPU, use `cu` to move arrays to the GPU.
-# Note: `cu` converts to Float32
-## using CUDA
-## device = cu
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
 # Viscosity model
 Re = T(10_000)
@@ -47,7 +46,7 @@ x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
 # plot_grid(x...)
 
 # Build setup and assemble operators
-setup = device(Setup(x; Re));
+setup = Setup(x...; Re, ArrayType);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
 # spectral pressure solver
@@ -67,7 +66,7 @@ processors = (
 );
 
 # Time interval
-t_start, t_end = tlims = T(0), T(1.0)
+t_start, t_end = tlims = T(0), T(1)
 
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
@@ -80,7 +79,6 @@ u, p, outputs = solve_unsteady(
     pressure_solver,
     inplace = true,
 );
-
 
 # ## Post-process
 #

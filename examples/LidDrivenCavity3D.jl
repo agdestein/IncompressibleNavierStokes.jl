@@ -27,15 +27,22 @@ name = "LidDrivenCavity3D"
 # Floating point type
 T = Float64
 
-# For CPU
-device = identity
-
-# For GPU (note that `cu` converts to `Float32`)
-## using CUDA
-## device = cu
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
 # Reynolds number
 Re = T(1_000)
+
+# A 3D grid is a Cartesian product of three vectors. Here we refine the grid
+# near the walls.
+x = cosine_grid(T(0), T(1), 25)
+y = cosine_grid(T(0), T(1), 25)
+z = LinRange(-T(0.2), T(0.2), 11)
+plot_grid(x, y, z)
 
 # Boundary conditions: horizontal movement of the top lid
 lidvel = (
@@ -59,15 +66,8 @@ boundary_conditions = (
     (PeriodicBC(), PeriodicBC()),
 )
 
-# A 3D grid is a Cartesian product of three vectors. Here we refine the grid
-# near the walls.
-x = cosine_grid(T(0), T(1), 25)
-y = cosine_grid(T(0), T(1), 25)
-z = LinRange(-T(0.2), T(0.2), 11)
-plot_grid(x, y, z)
-
 # Build setup and assemble operators
-setup = Setup((x, y, z); Re, boundary_conditions);
+setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
 
 # Time interval
 t_start, t_end = tlims = T(0), T(0.2)

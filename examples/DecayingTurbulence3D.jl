@@ -27,27 +27,28 @@ using IncompressibleNavierStokes
 name = "DecayingTurbulence3D"
 
 # Floating point precision
-T = Float32
+T = Float64
 
-# To use CPU: Do not move any arrays
-device = identity
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
-# To use GPU, use `cu` to move arrays to the GPU.
-# Note: `cu` converts to Float32
-## using CUDA
-## device = cu
-
-# Viscosity model
+# Reynolds number
 Re = T(10_000)
 
 # A 3D grid is a Cartesian product of three vectors
 n = 32
 lims = T(0), T(1)
-x = ntuple(α -> LinRange(lims..., n + 1), 3)
-# plot_grid(x...)
+x = LinRange(lims..., n + 1)
+y = LinRange(lims..., n + 1)
+z = LinRange(lims..., n + 1)
+plot_grid(x, y, z)
 
 # Build setup and assemble operators
-setup = device(Setup(x; Re));
+setup = Setup(x, y, z; Re, ArrayType);
 
 # Since the grid is uniform and identical for x, y, and z, we may use a
 # specialized spectral pressure solver

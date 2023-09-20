@@ -28,12 +28,12 @@ name = "PlaneJets2D"
 # Floating point type
 T = Float64
 
-# For CPU
-device = identity
-
-# For GPU (note that `cu` converts to `Float32`)
-## using CUDA
-## device = cu
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
 # Reynolds number
 Re = T(6_000)
@@ -85,12 +85,13 @@ U(x, y) = (1 + T(0.1) * (rand(T) - T(0.5))) * U(y)
 n = 64
 ## n = 128
 ## n = 256
-x = LinRange(T(0), T(16), 4n), LinRange(-T(10), T(10), 5n)
-plot_grid(x...)
+x = LinRange(T(0), T(16), 4n)
+y = LinRange(-T(10), T(10), 5n)
+plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = device(Setup(x; Re));
-## setup = device(Setup(x, y; Re, boundary_conditions));
+setup = Setup(x, y; Re, ArrayType);
+## setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
 # spectral pressure solver
@@ -102,7 +103,7 @@ t_start, t_end = tlims = T(0), T(1)
 # Initial conditions
 initial_velocity = (
     (x, y) -> U(x, y),
-    (x, y) -> zero(T),
+    (x, y) -> zero(x),
 )
 u₀, p₀ = create_initial_conditions(
     setup,

@@ -4,7 +4,7 @@
 Create nonuniform Cartesian box mesh `x[1]` × ... × `x[d]` with boundary
 conditions `boundary_conditions`.
 """
-function Grid(x, boundary_conditions)
+function Grid(x, boundary_conditions; ArrayType = Array)
     # Kill all LinRanges etc.
     x = Array.(x)
     xlims = extrema.(x)
@@ -103,13 +103,13 @@ function Grid(x, boundary_conditions)
         Iu,
         Ip,
         xlims,
-        x,
-        xp,
-        Δ,
-        Δu,
-        Ω,
-        # Ωu,
-        # Ωω,
-        # Γu,
+        x = ArrayType.(x),
+        xp = ArrayType.(xp),
+        Δ = ArrayType.(Δ),
+        Δu = ArrayType.(Δu),
+        Ω = ArrayType(Ω),
+        # Ωu = ArrayType.(Ωu),
+        # Ωω = ArrayType(Ωω),
+        # Γu = ArrayType.(Γu),
     )
 end

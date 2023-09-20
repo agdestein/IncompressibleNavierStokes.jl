@@ -27,15 +27,21 @@ name = "Actuator3D"
 # Floating point type
 T = Float64
 
-# For CPU
-device = identity
-
-# For GPU (note that `cu` converts to `Float32`)
-## using CUDA
-## device = cu
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
 # Reynolds number
 Re = T(100)
+
+# A 3D grid is a Cartesian product of three vectors
+x = LinRange(0.0, 6.0, 31)
+y = LinRange(-2.0, 2.0, 41)
+z = LinRange(-2.0, 2.0, 41)
+plot_grid(x, y, z)
 
 # Boundary conditions: Unsteady BC requires time derivatives
 U(x, y, z, t) = cos(π / 6 * sin(π / 6 * t))
@@ -55,12 +61,6 @@ boundary_conditions = (
     (SymmetricBC(), SymmetricBC()),
 )
 
-# A 3D grid is a Cartesian product of three vectors
-x = LinRange(0.0, 6.0, 31)
-y = LinRange(-2.0, 2.0, 41)
-z = LinRange(-2.0, 2.0, 41)
-plot_grid(x, y, z)
-
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a short cylinder
 cx, cy, cz = T(2), T(0), T(0) # Disk center
 D = T(1)                      # Disk diameter
@@ -74,10 +74,11 @@ fw(x, y, z) = zero(x)
 
 # Build setup and assemble operators
 setup = Setup(
-    (x, y, z);
+    x, y, z;
     Re,
     boundary_conditions,
     bodyforce = (fu, fv, fw),
+    ArrayType,
 );
 
 # Time interval
