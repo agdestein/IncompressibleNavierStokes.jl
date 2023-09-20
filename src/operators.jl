@@ -94,7 +94,8 @@ function vorticity!(::Dimension{3}, ω, u, setup)
         I = I + I0
         β = mod1(α + 1, D)
         γ = mod1(α - 1, D)
-        ω[α][I] = -(u[β][I+δ(γ)] - u[β][I]) / Δu[γ][I[γ]] + (u[γ][I+δ(β)] - u[γ][I]) / Δu[β][I[β]]
+        ω[α][I] =
+            -(u[β][I+δ(γ)] - u[β][I]) / Δu[γ][I[γ]] + (u[γ][I+δ(β)] - u[γ][I]) / Δu[β][I[β]]
     end
     for α = 1:D
         I0 = CartesianIndex(ntuple(Returns(1), D))
@@ -155,7 +156,7 @@ function diffusion!(F, u, setup; ϵ = eps(eltype(F[1])))
         F[α][I] +=
             ν * (
                 (u[α][I+δ(β)] - u[α][I]) / ((β == α ? Δ : Δu)[β][I[β]] + ϵ) -
-                (u[α][I] - u[α][I-δ(β)]) / ((β == α ? Δ : Δu)[β][(I-δ(β))[β]] + ϵ)
+                (u[α][I] - u[α][I-δ(β)]) / ((β == α ? Δ : Δu)[β][I[β]-1] + ϵ)
             ) / Δuαβ[I[β]]
     end
     for α = 1:D

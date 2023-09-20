@@ -107,7 +107,7 @@ function apply_bc_u!(u, t, setup; kwargs...)
     end
 end
 
-function apply_bc_p!(p, t, setup)
+function apply_bc_p!(p, t, setup; kwargs...)
     (; boundary_conditions, grid) = setup
     (; dimension) = grid
     D = dimension()
@@ -146,7 +146,7 @@ function apply_bc_u!(::PeriodicBC, u, β, t, setup; atend, kwargs...)
     end
 end
 
-function apply_bc_p!(::PeriodicBC, p, β, t, setup; atend)
+function apply_bc_p!(::PeriodicBC, p, β, t, setup; atend, kwargs...)
     (; grid) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
@@ -177,30 +177,34 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwar
     (; dimension, Nu, x, xp) = setup.grid
     D = dimension()
     δ = Offset{D}()
+    isnothing(bc.u) && return
     bcfunc = dudt ? bc.dudt : bc.u
-    @kernel function _bc_a(u, α, β)
+    @kernel function _bc_a(u, α, β, I0)
         I = @index(Global, Cartesian)
-        # u[i][I] = bcfunc[i](ntuple(k -> k == i [I + Nu[i][j] * δ(j)]
-        # TODO: Apply bcfunc
+        I = I + I0
+        u[α][I] = bcfunc[α](ntuple(γ -> γ == α ? x[I[α] + 1] : xp[I[γ]], D))
     end
-    @kernel function _bc_b(u, α, β; xΓ)
+    @kernel function _bc_b(u, α, β, I0)
         I = @index(Global, Cartesian)
-        # u[α][I] = bcfunc[α](ntuple(xp)
-        # TODO: Apply bcfunc
+        I = I + I0
+        u[α][I] = bcfunc[α](ntuple(γ -> γ == α ? x[I[α] + 1] : xp[I[γ]], D))
     end
     for α = 1:D
-        xΓ = (xp[1:β-1]..., xp[β+1:end]...)
+        Xu = (xp[1:β-1]..., x[β], xp[β+1:end]...)
+        I0 = first(Iu[α])
+        I0 -= oneunit(I0)
+        ndrange = (Nu[α][1:β-1]..., 1, Nu[α][β+1:end]...)
         if atend
-            _bc_b(get_backend(u[1]), WORKGROUP)(u, α, β, I0)
+            _bc_b(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
             synchronize(get_backend(u[1]))
         else
-            _bc_a(get_backend(u[1]), WORKGROUP)(u, α, β, I0)
+            _bc_a(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
             synchronize(get_backend(u[1]))
         end
     end
 end
 
-function apply_bc_p!(::DirichletBC, p, β, t, setup; atend)
+function apply_bc_p!(::DirichletBC, p, β, t, setup; atend, kwargs...)
     nothing
 end
 
@@ -209,16 +213,11 @@ function apply_bc_u!(::SymmetricBC, u, β, t, setup; atend, kwargs...)
     (; Nu, x, xp) = setup.grid
     D = dimension()
     δ = Offset{D}()
-    bcfunc = dudt ? bc.dudt : bc.u
     @kernel function _bc_a(u, α, β)
         I = @index(Global, Cartesian)
-        # u[i][I] = bcfunc[i](ntuple(k -> k == i [I + Nu[i][j] * δ(j)]
-        # TODO: Apply bcfunc
     end
     @kernel function _bc_b(u, α, β)
         I = @index(Global, Cartesian)
-        # u[α][I] = bcfunc[α](ntuple(xp)
-        # TODO: Apply bcfunc
     end
     for α = 1:D
         for β = 1:D
@@ -234,7 +233,7 @@ function apply_bc_u!(::SymmetricBC, u, β, t, setup; atend, kwargs...)
     end
 end
 
-function apply_bc_p!(::SymmetricBC, p, β, t, setup; atend)
+function apply_bc_p!(::SymmetricBC, p, β, t, setup; atend, kwargs...)
     error("Not implemented")
 end
 
@@ -242,6 +241,6 @@ function apply_bc_u!(bc::PressureBC, u, β, t, setup; atend, kwargs...)
     error("Not implemented")
 end
 
-function apply_bc_p!(bc::PressureBC, p, β, t, setup; atend)
+function apply_bc_p!(bc::PressureBC, p, β, t, setup; atend, kwargs...)
     error("Not implemented")
 end
