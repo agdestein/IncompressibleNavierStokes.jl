@@ -46,12 +46,13 @@ function field_plot(
     displayfig = true,
 )
     (; boundary_conditions, grid) = setup
-    (; xlims, x, xp) = grid
+    (; dimension, xlims, x, xp, Ip) = grid
+    D = dimension()
 
     if fieldname == :velocity
         xf = xp
     elseif fieldname == :vorticity
-        xf = Array.(x)
+        xf = ntuple(α -> Array(xp[α][Ip.indices[α]]), D)
     elseif fieldname == :streamfunction
         if boundary_conditions.u.x[1] == :periodic
             xf = x
@@ -77,7 +78,7 @@ function field_plot(
             up, vp = get_velocity(setup, u, t)
             map((u, v) -> √sum(u^2 + v^2), up, vp)
         elseif fieldname == :vorticity
-            vorticity(u, setup)
+            interpolate_ω_p(setup, vorticity(u, setup))[Ip]
         elseif fieldname == :streamfunction
             get_streamfunction(setup, u, t)
         elseif fieldname == :pressure
@@ -151,7 +152,7 @@ function field_plot(
     (; xlims, x, xp) = grid
 
     if fieldname == :velocity
-        xf, yf, zf = xp, yp, zp
+        xf = xp
     elseif fieldname == :vorticity
             xf = xp
     elseif fieldname == :streamfunction
@@ -223,17 +224,15 @@ energy_history_plotter(setup; nupdate = 1, kwargs...) =
     processor(state -> energy_history_plot(setup, state; kwargs...); nupdate)
 
 function energy_history_plot(setup, state; displayfig = true)
-    (; Ωp) = setup.grid
     _points = Point2f[]
     points = @lift begin
-        (; V, p, t) = $state
-        vels = get_velocity(setup, V, t)
-        vels = reshape.(vels, :)
-        E = sum(vel -> sum(@. Ωp * vel^2), vels)
+        (; u, p, t) = $state
+        E = kinetic_energy(setup, u)
         push!(_points, Point2f(t, E))
     end
     fig = lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))
     displayfig && display(fig)
+    on(_ -> autolimits!(fig.axis), points)
     fig
 end
 
@@ -243,77 +242,57 @@ end
 Create energy spectrum plot, redrawn every time `step_observer` is updated.
 """
 energy_spectrum_plotter(setup; nupdate = 1, kwargs...) = processor(
-    state -> energy_spectrum_plot(setup.grid.dimension, setup, state; kwargs...);
+    state -> energy_spectrum_plot(setup, state; kwargs...);
     nupdate,
 )
 
-function energy_spectrum_plot(::Dimension{2}, setup, state; displayfig = true)
-    (; xpp) = setup.grid
-    Kx, Ky = size(xpp) .÷ 2
-    kx = 1:(Kx-1)
-    ky = 1:(Ky-1)
-    kk = reshape([sqrt(kx^2 + ky^2) for kx ∈ kx, ky ∈ ky], :)
+function energy_spectrum_plot(setup, state; displayfig = true)
+    (; dimension, xp, Ip) = setup.grid
+    T = eltype(xp[1])
+    D = dimension()
+    K = size(Ip) .÷ 2
+    kx = ntuple(α -> 1:K[α]-1, D)
+    k = KernelAbstractions.zeros(get_backend(xp[1]), T, length.(kx)...)
+    for α = 1:D
+        kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
+        k .+= kα .^ 2
+    end
+    k .= sqrt.(k)
+    k = Array(reshape(k, :))
     ehat = @lift begin
-        (; V, p, t) = $state
-        up, vp = get_velocity(setup, V, t)
-        e = up .^ 2 .+ vp .^ 2
-        reshape(abs.(fft(e)[kx.+1, ky.+1]), :)
+        (; u, p, t) = $state
+        up = interpolate_u_p(setup, u)
+        e = sum(up -> up[Ip] .^ 2, up)
+        Array(reshape(abs.(fft(e)[ntuple(α -> kx[α].+1, D)...]), :))
     end
     espec = Figure()
     ax = Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
     ## ylims!(ax, (1e-20, 1))
-    scatter!(ax, kk, ehat; label = "Kinetic energy")
-    krange = LinRange(extrema(kk)..., 100)
-    lines!(ax, krange, 1e7 * krange .^ (-3); label = "k⁻³", color = :red)
+    scatter!(ax, k, ehat; label = "Kinetic energy")
+    krange = LinRange(extrema(k)..., 100)
+    D == 2 && lines!(ax, krange, 1e7 * krange .^ (-3); label = "k⁻³", color = :red)
+    D == 3 && lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = "\$k^{-5/3}\$", color = :red)
     axislegend(ax)
     displayfig && display(espec)
+    on(ehat) do _
+        autolimits!(ax)
+    end
     espec
 end
 
-function energy_spectrum_plot(
-    ::Dimension{3},
-    setup,
-    state,
-    displayfig = true,
-    checktime = 0.0001,
-)
-    (; xpp) = setup.grid
-    Kx, Ky, Kz = size(xpp) .÷ 2
-    kx = 1:(Kx-1)
-    ky = 1:(Ky-1)
-    kz = 1:(Ky-1)
-    kk = reshape([sqrt(kx^2 + ky^2 + kz^2) for kx ∈ kx, ky ∈ ky, kz ∈ kz], :)
-    ehat = @lift begin
-        (; V, p, t) = $state
-        V = Array(V)
-        up, vp, wp = get_velocity(setup, V, t)
-        e = @. up^2 + vp^2 + wp^2
-        reshape(abs.(fft(e)[kx.+1, ky.+1, kz.+1]), :)
-    end
-    espec = Figure()
-    ax = Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
-    ## ylims!(ax, (1e-20, 1))
-    scatter!(ax, kk, ehat; label = "Kinetic energy")
-    krange = LinRange(extrema(kk)..., 100)
-    lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = "\$k^{-5/3}\$", color = :red)
-    axislegend(ax)
-    displayfig && display(espec)
-    return espec
-
-    # Make sure the figure is fully rendered before allowing code to continue
-    if displayfig
-        render = display(espec)
-        done_rendering = Ref(false)
-        on(render.render_tic) do _
-            done_rendering[] = true
-        end
-        on(state) do s
-            # State is updated, block code execution until GLMakie has rendered
-            # figure update
-            done_rendering[] = false
-            while !done_rendering[]
-                sleep(checktime)
-            end
-        end
-    end
-end
+# # Make sure the figure is fully rendered before allowing code to continue
+# if displayfig
+#     render = display(espec)
+#     done_rendering = Ref(false)
+#     on(render.render_tic) do _
+#         done_rendering[] = true
+#     end
+#     on(state) do s
+#         # State is updated, block code execution until GLMakie has rendered
+#         # figure update
+#         done_rendering[] = false
+#         while !done_rendering[]
+#             sleep(checktime)
+#         end
+#     end
+# end

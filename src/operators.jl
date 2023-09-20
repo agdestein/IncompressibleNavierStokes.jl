@@ -337,3 +337,21 @@ function interpolate_ω_p!(::Dimension{3}, setup, ωp, ω)
     synchronize(get_backend(ωp[1]))
     ωp
 end
+
+"""
+    kinetic_energy(setup, u)
+
+Compute total kinetic energy. The velocity components are interpolated to the
+volume centers and squared.
+"""
+function kinetic_energy(setup, u)
+    (; dimension, Ω, Ip) = setup.grid
+    D = dimension()
+    up = interpolate_u_p(setup, u)
+    E = zero(eltype(up[1]))
+    for α = 1:D
+        # E += sum(I -> Ω[I] * up[α][I]^2, Ip)
+        E += sum(Ω[Ip] .* up[α][Ip] .^ 2)
+    end
+    sqrt(E)
+end
