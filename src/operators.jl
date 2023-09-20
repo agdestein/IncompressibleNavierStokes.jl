@@ -4,6 +4,11 @@
 struct Offset{D} end
 (::Offset{D})(i) where {D} = CartesianIndex(ntuple(j -> j == i ? 1 : 0, D))
 
+"""
+    divergence!(M, u, setup)
+
+Compute divergence of velocity field (in-place version).
+"""
 function divergence!(M, u, setup)
     (; boundary_conditions, grid) = setup
     (; Δ, Np, Ip, Ω) = grid
@@ -26,12 +31,22 @@ function divergence!(M, u, setup)
     M
 end
 
+"""
+    divergence(u, setup)
+
+Compute divergence of velocity field.
+"""
 divergence(u, setup) = divergence!(
     KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N...),
     u,
     setup,
 )
 
+"""
+    vorticity(u, setup)
+
+Compute vorticity field.
+"""
 vorticity(u, setup) = vorticity!(
     setup.grid.dimension() == 2 ?
     KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N) :
@@ -42,6 +57,12 @@ vorticity(u, setup) = vorticity!(
     u,
     setup,
 )
+
+"""
+    vorticity!(ω, u, setup)
+
+Compute vorticity field.
+"""
 vorticity!(ω, u, setup) = vorticity!(setup.grid.dimension, ω, u, setup)
 
 function vorticity!(::Dimension{2}, ω, u, setup)
@@ -84,6 +105,11 @@ function vorticity!(::Dimension{3}, ω, u, setup)
     ω
 end
 
+"""
+    convection!(F, u, setup)
+
+Compute convective term.
+"""
 function convection!(F, u, setup)
     (; boundary_conditions, grid, Re, bodyforce) = setup
     (; dimension, Δ, Δu, Nu, Iu) = grid
@@ -110,8 +136,13 @@ function convection!(F, u, setup)
     F
 end
 
-# Add ϵ in denominator for "infinitely thin" volumes
+"""
+    diffusion!(F, u, setup; ϵ = eps(eltype(F[1])))
+
+Compute diffusive term.
+"""
 function diffusion!(F, u, setup; ϵ = eps(eltype(F[1])))
+    # Add ϵ in denominator for "infinitely thin" volumes
     (; boundary_conditions, grid, Re, bodyforce) = setup
     (; dimension, Δ, Δu, Nu, Iu) = grid
     D = dimension()
@@ -138,6 +169,11 @@ function diffusion!(F, u, setup; ϵ = eps(eltype(F[1])))
     F
 end
 
+"""
+    bodyforce!(F, u, setup; ϵ = eps(eltype(F[1])))
+
+Compute body force.
+"""
 function bodyforce!(F, u, t, setup)
     (; boundary_conditions, grid, Re, bodyforce) = setup
     (; dimension, Δ, Δu, Nu, Iu, x, xp) = grid
@@ -164,6 +200,12 @@ function bodyforce!(F, u, t, setup)
     F
 end
 
+"""
+    momentum!(F, u, t, setup)
+
+Right hand side of momentum equations, excluding pressure gradient.
+Put the result in ``F``.
+"""
 function momentum!(F, u, t, setup)
     (; grid, closure_model) = setup
     (; dimension) = grid
@@ -178,6 +220,11 @@ function momentum!(F, u, t, setup)
     F
 end
 
+"""
+    pressuregradient!(G, p, setup)
+
+Compute pressure gradient (in-place).
+"""
 function pressuregradient!(G, p, setup)
     (; boundary_conditions, grid) = setup
     (; dimension, Δu, Np, Iu) = grid
@@ -198,6 +245,11 @@ function pressuregradient!(G, p, setup)
     G
 end
 
+"""
+    pressuregradient(p, setup)
+
+Compute pressure gradient.
+"""
 pressuregradient(p, setup) = pressuregradient!(
     ntuple(
         α -> KernelAbstractions.zeros(get_backend(p), eltype(p), setup.grid.N),

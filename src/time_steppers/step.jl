@@ -5,7 +5,7 @@ Perform one time step.
 
 Non-mutating/allocating/out-of-place version.
 
-See also [`step!`](@ref).
+See also [`timestep!`](@ref).
 """
 function timestep end
 # step(stepper, Δt; bc_vectors = nothing) = step(stepper.method, stepper, Δt; bc_vectors = nothing)
@@ -17,7 +17,7 @@ Perform one time step>
 
 Mutating/non-allocating/in-place version.
 
-See also [`step`](@ref).
+See also [`timestep`](@ref).
 """
 function timestep! end
 # step!(stepper, Δt; kwargs...) = step!(stepper.method, stepper, Δt; kwargs...)
