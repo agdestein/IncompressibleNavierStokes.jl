@@ -86,8 +86,8 @@ t_start, t_end = tlims = T(0), T(5)
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
-    # u₀, p₀,
-    u, p,
+    u₀, p₀,
+    # u, p,
     tlims;
     Δt = T(0.01),
     processors,

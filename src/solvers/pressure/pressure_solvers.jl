@@ -59,7 +59,59 @@ Adapt.adapt_structure(to, s::CGPressureSolver) = CGPressureSolver(
     adapt(to, s.maxiter),
 )
 
-struct SpectralPressureSolver{T,A<:AbstractArray{Complex{T}}} <: AbstractPressureSolver{T}
+"""
+    CGPressureSolverManual(setup; [abstol], [reltol], [maxiter])
+
+Conjugate gradients iterative pressure solver.
+"""
+struct CGPressureSolverManual{T,S,A,AT} <: AbstractPressureSolver{T}
+    setup::S
+    abstol::T
+    reltol::T
+    maxiter::Int
+    r::A
+    G::AT
+    M::A
+    q::A
+end
+
+CGPressureSolverManual(
+    setup;
+    abstol = zero(eltype(setup.grid.x[1])),
+    reltol = sqrt(eps(eltype(setup.grid.x[1]))),
+    maxiter = prod(setup.grid.Np),
+) = CGPressureSolverManual(
+    setup,
+    abstol,
+    reltol,
+    maxiter,
+    KernelAbstractions.zeros(
+        get_backend(setup.grid.x[1]),
+        eltype(setup.grid.x[1]),
+        setup.grid.N,
+    ),
+    ntuple(
+        α -> KernelAbstractions.zeros(
+            get_backend(setup.grid.x[1]),
+            eltype(setup.grid.x[1]),
+            setup.grid.N,
+        ),
+        setup.grid.dimension(),
+    ),
+    KernelAbstractions.zeros(
+        get_backend(setup.grid.x[1]),
+        eltype(setup.grid.x[1]),
+        setup.grid.N,
+    ),
+    KernelAbstractions.zeros(
+        get_backend(setup.grid.x[1]),
+        eltype(setup.grid.x[1]),
+        setup.grid.N,
+    ),
+)
+
+struct SpectralPressureSolver{T,A<:AbstractArray{Complex{T}},S} <: AbstractPressureSolver{T}
+    setup::S
     Ahat::A
     phat::A
     fhat::A
@@ -94,11 +146,18 @@ function SpectralPressureSolver(setup)
         "SpectralPressureSolver requires uniform grid along each dimension",
     )
 
-
     # Fourier transform of the discretization
     # Assuming uniform grid, although Δx[1] and Δx[2] do not need to be the same
 
-    k = ntuple(d -> reshape(0:Np[d]-1, ntuple(Returns(1), d - 1)..., :, ntuple(Returns(1), D - d)...), D)
+    k = ntuple(
+        d -> reshape(
+            0:Np[d]-1,
+            ntuple(Returns(1), d - 1)...,
+            :,
+            ntuple(Returns(1), D - d)...,
+        ),
+        D,
+    )
 
     Ahat = KernelAbstractions.zeros(get_backend(x[1]), Complex{T}, Np...)
     Tπ = T(π) # CUDA doesn't like pi
@@ -117,5 +176,5 @@ function SpectralPressureSolver(setup)
     phat = zero(Ahat)
     fhat = zero(Ahat)
 
-    SpectralPressureSolver{T,typeof(Ahat)}(Ahat, phat, fhat)
+    SpectralPressureSolver{T,typeof(Ahat),typeof(setup)}(setup, Ahat, phat, fhat)
 end

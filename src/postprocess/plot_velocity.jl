@@ -20,7 +20,7 @@ function plot_velocity(::Dimension{2}, setup, u; kwargs...)
 
     # Levels
     μ, σ = mean(qp), std(qp)
-    # ≈(μ + σ, μ; rtol = 1e-8, atol = 1e-8) && (σ = 1e-4)
+    ≈(μ + σ, μ; rtol = sqrt(eps(T)), atol = sqrt(eps(T))) && (σ = sqrt(sqrt(eps(T))))
     levels = LinRange(μ - T(1.5) * σ, μ + T(1.5) * σ, 10)
 
     fig = Figure()

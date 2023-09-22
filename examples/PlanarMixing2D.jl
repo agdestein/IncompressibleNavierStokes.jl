@@ -48,7 +48,7 @@ y = LinRange(-32.0, 32.0, n)
 plot_grid(x, y)
 
 # Build setup and assemble operators
-setup = Setup(x, y; U, boundary_conditions);
+setup = Setup(x, y; Re, boundary_conditions);
 
 # Time interval
 t_start, t_end = tlims = 0.0, 100.0

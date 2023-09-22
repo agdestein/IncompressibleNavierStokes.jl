@@ -42,7 +42,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
         for α = 1:D
             v[α] .= u₀[α]
             for j = 1:i
-                @. v[α][Iu[α]] = v[α][Iu[α]] + Δt * A[i, j] * ku[j][α][Iu[α]]
+                @. v[α][Iu[α]] .+= Δt * A[i, j] * ku[j][α][Iu[α]]
             end
         end
 
@@ -54,9 +54,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
         @. M = M / (c[i] * Δt)
 
         # Solve the Poisson equation
-        Min = view(M, Ip)
-        pin = view(p, Ip)
-        pressure_poisson!(pressure_solver, pin, Min)
+        pressure_poisson!(pressure_solver, p, M)
         apply_bc_p!(p, t, setup)
 
         # Compute pressure correction term
@@ -73,7 +71,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
     t = t₀ + Δt
 
     # Do additional pressure solve to avoid first order pressure
-    p_add_solve && pressure_additional_solve!(pressure_solver, u, p, t, setup, F, M)
+    p_add_solve && pressure_additional_solve!(pressure_solver, u, p, t, setup, F, G, M)
 
     create_stepper(method; setup, pressure_solver, u, p, t, n = n + 1)
 end

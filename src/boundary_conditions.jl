@@ -63,9 +63,11 @@ ghost_b!(::DirichletBC, x) = push!(x, x[end])
 ghost_a!(::SymmetricBC, x) = pushfirst!(x, x[1] + (x[2] - x[1]))
 ghost_b!(::SymmetricBC, x) = push!(x, x[end] + (x[end] - x[end-1]))
 
-# Add infinitely thin boundary volume and then symmetric
-ghost_a!(::PressureBC, x) = pushfirst!(x, x[1] - (x[2] - x[1]), x[1])
-ghost_b!(::PressureBC, x) = push!(x, x[end], x[end] + (x[end] - x[end-1]))
+# Add infinitely thin boundary volume
+# On the left, we need to add two ghost volumes to have a normal component at
+# the left of the first ghost volume
+ghost_a!(::PressureBC, x) = pushfirst!(x, x[1], x[1])
+ghost_b!(::PressureBC, x) = push!(x, x[end])
 
 """
     offset_u(bc, isnormal, atend)
@@ -84,16 +86,16 @@ Number of non-DOF pressure components at boundary.
 function offset_p end
 
 offset_u(::PeriodicBC, isnormal, atend) = 1
-offset_p(::PeriodicBC) = 1
+offset_p(::PeriodicBC, atend) = 1
 
-offset_u(::DirichletBC, isnormal, atend) = 1
-offset_p(::DirichletBC) = 1
+offset_u(::DirichletBC, isnormal, atend) = 1 + isnormal * atend
+offset_p(::DirichletBC, atend) = 1
 
-offset_u(::SymmetricBC, isnormal, atend) = 1
-offset_p(::SymmetricBC) = 1
+offset_u(::SymmetricBC, isnormal, atend) = 1 + isnormal * atend
+offset_p(::SymmetricBC, atend) = 1
 
-offset_u(::PressureBC, isnormal, atend) = isnormal && atend ? 2 : 1
-offset_p(::PressureBC) = 2
+offset_u(::PressureBC, isnormal, atend) = 1 + !isnormal * !atend
+offset_p(::PressureBC, atend) = 1 + !atend
 
 function apply_bc_u! end
 function apply_bc_p! end
@@ -119,88 +121,107 @@ end
 
 function apply_bc_u!(::PeriodicBC, u, β, t, setup; atend, kwargs...)
     (; grid) = setup
-    (; dimension, Nu, Iu) = grid
+    (; dimension, N) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _bc_a!(u, α, β, I0)
+    @kernel function _bc_a!(u, α, β)
         I = @index(Global, Cartesian)
-        I = I + I0
-        u[α][I] = u[α][I+Nu[α][β]*δ(β)]
+        u[α][I] = u[α][I+(N[β]-2)*δ(β)]
     end
-    @kernel function _bc_b!(u, α, β, I0)
+    @kernel function _bc_b!(u, α, β)
         I = @index(Global, Cartesian)
-        I = I + I0
-        u[α][I+Nu[α][β]*δ(β)] = u[α][I]
+        u[α][I+(N[β]-1)*δ(β)] = u[α][I+δ(β)]
     end
+    ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     for α = 1:D
-        I0 = first(Iu[α])
-        I0 -= oneunit(I0)
-        ndrange = (Nu[α][1:β-1]..., 1, Nu[α][β+1:end]...)
         if atend
-            _bc_b!(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
-            synchronize(get_backend(u[1]))
+            _bc_b!(get_backend(u[1]), WORKGROUP)(u, α, β; ndrange)
         else
-            _bc_a!(get_backend(u[1]), WORKGROUP)(u, α, β, I0 - δ(β); ndrange)
-            synchronize(get_backend(u[1]))
+            _bc_a!(get_backend(u[1]), WORKGROUP)(u, α, β; ndrange)
         end
+        synchronize(get_backend(u[1]))
     end
 end
 
 function apply_bc_p!(::PeriodicBC, p, β, t, setup; atend, kwargs...)
     (; grid) = setup
-    (; dimension, Np, Ip) = grid
+    (; dimension, N) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _bc_a(p, β, I0)
+    @kernel function _bc_a(p, β)
         I = @index(Global, Cartesian)
-        I = I + I0
-        p[I] = p[I+Np[β]*δ(β)]
+        p[I] = p[I+(N[β]-2)*δ(β)]
     end
-    @kernel function _bc_b(p, β, I0)
+    @kernel function _bc_b(p, β)
         I = @index(Global, Cartesian)
-        I = I + I0
-        p[I+Np[β]*δ(β)] = p[I]
+        p[I+(N[β]-1)*δ(β)] = p[I+δ(β)]
     end
-    I0 = first(Ip)
-    I0 -= oneunit(I0)
-    ndrange = (Np[1:β-1]..., 1, Np[β+1:end]...)
+    ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     if atend
-        _bc_b(get_backend(p), WORKGROUP)(p, β, I0; ndrange)
-        synchronize(get_backend(p))
+        _bc_b(get_backend(p), WORKGROUP)(p, β; ndrange)
     else
-        _bc_a(get_backend(p), WORKGROUP)(p, β, I0 - δ(β); ndrange)
-        synchronize(get_backend(p))
+        _bc_a(get_backend(p), WORKGROUP)(p, β; ndrange)
     end
+    synchronize(get_backend(p))
 end
 
+# function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwargs...)
+#     (; dimension, Nu, x, xp, Iu) = setup.grid
+#     D = dimension()
+#     δ = Offset{D}()
+#     isnothing(bc.u) && return
+#     bcfunc = dudt ? bc.dudt : bc.u
+#     @kernel function _bc_a(u, α, β, I0)
+#         I = @index(Global, Cartesian)
+#         I = I + I0
+#         u[α][I] = bcfunc[α](ntuple(γ -> γ == α ? x[γ][I[α]+1] : xp[γ][I[γ]], D)..., t)
+#     end
+#     @kernel function _bc_b(u, α, β, I0)
+#         I = @index(Global, Cartesian)
+#         I = I + I0
+#         u[α][I] = bcfunc[α](ntuple(γ -> γ == α ? x[γ][I[α]+1] : xp[γ][I[γ]], D)..., t)
+#     end
+#     for α = 1:D
+#         Xu = (xp[1:β-1]..., x[β], xp[β+1:end]...)
+#         ndrange = (Nu[α][1:β-1]..., 1, Nu[α][β+1:end]...)
+#         if atend
+#             I0 = first(Iu[α])
+#             I0 -= oneunit(I0)
+#             I0 += Nu[α][β] * δ(β)
+#             _bc_b(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
+#             synchronize(get_backend(u[1]))
+#         else
+#             I0 = first(Iu[α])
+#             I0 -= oneunit(I0)
+#             I0 -= δ(β)
+#             _bc_a(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
+#             synchronize(get_backend(u[1]))
+#         end
+#     end
+# end
+
 function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwargs...)
-    (; dimension, Nu, x, xp) = setup.grid
+    (; dimension, x, xp, N) = setup.grid
     D = dimension()
     δ = Offset{D}()
     isnothing(bc.u) && return
     bcfunc = dudt ? bc.dudt : bc.u
-    @kernel function _bc_a(u, α, β, I0)
-        I = @index(Global, Cartesian)
-        I = I + I0
-        u[α][I] = bcfunc[α](ntuple(γ -> γ == α ? x[I[α] + 1] : xp[I[γ]], D))
-    end
-    @kernel function _bc_b(u, α, β, I0)
-        I = @index(Global, Cartesian)
-        I = I + I0
-        u[α][I] = bcfunc[α](ntuple(γ -> γ == α ? x[I[α] + 1] : xp[I[γ]], D))
-    end
     for α = 1:D
-        Xu = (xp[1:β-1]..., x[β], xp[β+1:end]...)
-        I0 = first(Iu[α])
-        I0 -= oneunit(I0)
-        ndrange = (Nu[α][1:β-1]..., 1, Nu[α][β+1:end]...)
         if atend
-            _bc_b(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
-            synchronize(get_backend(u[1]))
+            I = CartesianIndices(ntuple(γ -> γ == β ? isnormal ? (N[γ]-1:N[γ]-1) : (N[γ]:N[γ]) : (1:N[γ]), D))
         else
-            _bc_a(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
-            synchronize(get_backend(u[1]))
+            I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
         end
+        xI = ntuple(
+            γ -> reshape(
+                γ == α ? x[γ][I.indices[α].+1] : xp[γ][I.indices[γ]],
+                ntuple(Returns(1), γ - 1)...,
+                :,
+                ntuple(Returns(1), D - γ)...,
+            ),
+            D,
+        )
+        u[α][I] .= bcfunc[α].(xI..., t)
     end
 end
 
@@ -209,38 +230,59 @@ function apply_bc_p!(::DirichletBC, p, β, t, setup; atend, kwargs...)
 end
 
 function apply_bc_u!(::SymmetricBC, u, β, t, setup; atend, kwargs...)
-    error("Not implemented")
-    (; Nu, x, xp) = setup.grid
+    (; dimension, N) = setup.grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _bc_a(u, α, β)
-        I = @index(Global, Cartesian)
-    end
-    @kernel function _bc_b(u, α, β)
-        I = @index(Global, Cartesian)
-    end
     for α = 1:D
-        for β = 1:D
-            xΓ = (xp[1:β-1]..., xp[β+1:end]...)
+        if α != β
             if atend
-                _bc_b(get_backend(u[1]), WORKGROUP)(u, α, β, I0)
-                synchronize(get_backend(u[1]))
+                I = CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
+                u[α][I] .= u[α][I.-δ(β)]
             else
-                _bc_a(get_backend(u[1]), WORKGROUP)(u, α, β, I0)
-                synchronize(get_backend(u[1]))
+                I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
+                u[α][I] .= u[α][I.+δ(β)]
             end
         end
     end
 end
 
 function apply_bc_p!(::SymmetricBC, p, β, t, setup; atend, kwargs...)
-    error("Not implemented")
+    nothing
 end
 
 function apply_bc_u!(bc::PressureBC, u, β, t, setup; atend, kwargs...)
-    error("Not implemented")
+    (; grid) = setup
+    (; dimension, Nu, Iu) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function _bc_a!(u, α, β, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        u[α][I-δ(β)] = u[α][I]
+    end
+    @kernel function _bc_b!(u, α, β, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        u[α][I+δ(β)] = u[α][I]
+    end
+    for α = 1:D
+        if atend
+            I0 = first(Iu[α]) + (Nu[α][β] - 1) * δ(β)
+            I0 -= oneunit(I0)
+            ndrange = (Nu[α][1:β-1]..., 1, Nu[α][β+1:end]...)
+            _bc_b!(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
+            synchronize(get_backend(u[1]))
+        else
+            I0 = first(Iu[α])
+            I0 -= oneunit(I0)
+            ndrange = (Nu[α][1:β-1]..., 1, Nu[α][β+1:end]...)
+            _bc_a!(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
+            synchronize(get_backend(u[1]))
+        end
+    end
 end
 
 function apply_bc_p!(bc::PressureBC, p, β, t, setup; atend, kwargs...)
-    error("Not implemented")
+    # p is already zero at boundary
+    nothing
 end

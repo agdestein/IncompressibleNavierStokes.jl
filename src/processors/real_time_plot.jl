@@ -49,41 +49,20 @@ function field_plot(
     (; dimension, xlims, x, xp, Ip) = grid
     D = dimension()
 
-    if fieldname == :velocity
-        xf = xp
-    elseif fieldname == :vorticity
-        xf = ntuple(α -> Array(xp[α][Ip.indices[α]]), D)
-    elseif fieldname == :streamfunction
-        if boundary_conditions.u.x[1] == :periodic
-            xf = x
-        else
-            xf = x[2:(end-1)]
-        end
-        if boundary_conditions.v.y[1] == :periodic
-            yf = y
-        else
-            yf = y[2:(end-1)]
-        end
-    elseif fieldname == :pressure
-        error("Not implemented")
-        xf = xp
-    else
-        error("Unknown fieldname")
-    end
+    xf = ntuple(α -> Array(xp[α][Ip.indices[α]]), D)
 
     field = @lift begin
         isnothing(sleeptime) || sleep(sleeptime)
         (; u, p, t) = $state
         f = if fieldname == :velocity
-            up, vp = get_velocity(setup, u, t)
-            map((u, v) -> √sum(u^2 + v^2), up, vp)
+            up = interpolate_u_p(setup, u)
+            map((u, v) -> √sum(u^2 + v^2), up...)[Ip]
         elseif fieldname == :vorticity
             interpolate_ω_p(setup, vorticity(u, setup))[Ip]
         elseif fieldname == :streamfunction
-            get_streamfunction(setup, u, t)
+            get_streamfunction(setup, u, t)[Ip]
         elseif fieldname == :pressure
-            error("Not implemented")
-            reshape(p, length(xp), length(yp))
+            p[Ip]
         end
         Array(f)
     end

@@ -96,7 +96,7 @@ include("closures/training.jl")
 include("closures/create_les_data.jl")
 
 # Boundary conditions
-export PeriodicBC, DirichletBC, SymmetricBC, NeumannBC
+export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
 
 # Force
 export SteadyBodyForce
@@ -117,13 +117,16 @@ export Setup
 export stretched_grid, cosine_grid
 
 # Pressure solvers
-export DirectPressureSolver, CGPressureSolver, SpectralPressureSolver
+export DirectPressureSolver,
+    CGPressureSolver, CGPressureSolverManual, SpectralPressureSolver
 export pressure_poisson,
     pressure_poisson!, pressure_additional_solve, pressure_additional_solve!
 
+# Operators
+export momentum, divergence, pressuregradient
+
 # Problems
 export solve_unsteady, solve_steady_state
-export momentum, momentum!
 
 export create_initial_conditions, random_field, get_velocity
 

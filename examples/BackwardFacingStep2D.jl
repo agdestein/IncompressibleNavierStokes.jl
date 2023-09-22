@@ -36,10 +36,10 @@ ArrayType = Array
 ## using Metal; ArrayType = MtlArray
 
 # Reynolds number
-Re = T(3000)
+Re = T(3_000)
 
 # Boundary conditions: steady inflow on the top half
-U(x, y, t) = y ≥ 0 ? 24y * (1 - y) / 2 : zero(x)
+U(x, y, t::T) where {T} = y ≥ 0 ? 24y * (T(1 / 2) - y) : zero(x)
 V(x, y, t) = zero(x)
 dUdt(x, y, t) = zero(x)
 dVdt(x, y, t) = zero(x)

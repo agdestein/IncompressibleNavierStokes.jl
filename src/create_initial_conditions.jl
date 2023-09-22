@@ -12,7 +12,7 @@ function create_initial_conditions(
     setup,
     initial_velocity,
     t;
-    pressure_solver = DirectPressureSolver(setup),
+    pressure_solver = CGPressureSolverManual(setup),
 )
     (; grid) = setup
     (; dimension, N, Iu, Ip, x, xp) = grid
@@ -34,7 +34,7 @@ function create_initial_conditions(
 
     # Kinetic energy and momentum of initial velocity field
     # Iteration 1 corresponds to t₀ = 0 (for unsteady simulations)
-    maxdiv = maximum(divergence(u, setup))
+    maxdiv = maximum(abs, divergence(u, setup))
 
     # TODO: Maybe eps(T)^(3//4)
     if maxdiv > 1e-12
@@ -43,8 +43,8 @@ function create_initial_conditions(
 
         # Make velocity field divergence free
         f = divergence(u, setup)
-        Δp = pressure_poisson(pressure_solver, f[Ip][:])
-        p[Ip][:] .= Δp
+        Δp = pressure_poisson(pressure_solver, f)
+        p .= Δp
         apply_bc_p!(p, t, setup)
         G = pressuregradient(p, setup)
         for α = 1:D
@@ -110,13 +110,12 @@ function random_field(
     backend = get_backend(x[1])
 
     u = ntuple(α -> real.(ifft(create_spectrum(N; A, σ, s, backend))), D)
+    apply_bc_u!(u, t, setup)
     M = divergence(u, setup)
     p = zero(M)
 
     # Make velocity field divergence free
-    Min = view(M, Ip)
-    pin = view(p, Ip)
-    pressure_poisson!(pressure_solver, pin, Min)
+    pressure_poisson!(pressure_solver, p, M)
     apply_bc_p!(p, t, setup)
     G = pressuregradient(p, setup)
     for α = 1:D

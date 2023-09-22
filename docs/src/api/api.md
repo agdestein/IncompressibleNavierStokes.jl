@@ -121,16 +121,8 @@ lambda_diff_max
 nstage
 ode_method_cache
 runge_kutta_method
-step
-step!
-```
-
-## Filter
-```@docs
-create_top_hat_u
-create_top_hat_v
-create_top_hat_p
-create_top_hat_velocity
+timestep
+timestep!
 ```
 
 ## Utils
@@ -138,4 +130,26 @@ create_top_hat_velocity
 ```@docs
 get_lims
 plotmat
+```
+
+## Other
+
+```@docs
+DirichletBC
+SymmetricBC
+PressureBC
+mean_squared_error
+cnn
+relative_error
+create_randloss
+kinetic_energy
+FourierLayer
+create_callback
+offset_p
+momentum_allstage
+momentum_allstage!
+fno
+offset_u
+pressuregradient
+pressuregradient!
 ```

@@ -63,8 +63,8 @@ D = T(1)            # Disk diameter
 Cₜ = T(5e-4)        # Thrust coefficient
 cₜ = Cₜ / (D * δ)
 inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
-fu(x, y) = -cₜ * inside(x, y)
-fv(x, y) = zero(x)
+fu(x, y, t) = -cₜ * inside(x, y)
+fv(x, y, t) = zero(x)
 
 # Build setup and assemble operators
 setup = Setup(

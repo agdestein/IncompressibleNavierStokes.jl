@@ -48,7 +48,7 @@ function solve_unsteady(
     p₀,
     tlims;
     method = RK44(; T = eltype(u₀[1])),
-    pressure_solver = DirectPressureSolver(setup),
+    pressure_solver = CGPressureSolverManual(setup),
     Δt = zero(eltype(u₀[1])),
     cfl = 1,
     n_adapt_Δt = 1,

@@ -36,7 +36,7 @@ ArrayType = Array
 Re = T(Inf)
 
 # A 2D grid is a Cartesian product of two vectors
-n = 100
+n = 128
 lims = T(0), T(2π)
 x = LinRange(lims..., n + 1)
 y = LinRange(lims..., n + 1)
@@ -44,6 +44,8 @@ plot_grid(x, y)
 
 # Build setup and assemble operators
 setup = Setup(x, y; Re, ArrayType);
+
+pressure_solver = SpectralPressureSolver(setup)
 
 # Time interval
 t_start, t_end = tlims = T(0), T(8)
@@ -64,6 +66,7 @@ u₀, p₀ = create_initial_conditions(
     setup,
     initial_velocity,
     t_start;
+    pressure_solver,
 );
 
 # Iteration processors
@@ -87,6 +90,7 @@ u, p, outputs = solve_unsteady(
     Δt = T(0.01),
     processors,
     inplace = true,
+    pressure_solver,
 );
 
 # ## Post-process

@@ -57,14 +57,8 @@ Re = T(1_000)
 
 # Non-zero Dirichlet boundary conditions are specified as plain Julia functions.
 # Other possible BC types are `PeriodicBC()`, `SymmetricBC`, and `PressureBC`.
-lidvel = (
-    (x, y, t) -> one(x),
-    (x, y, t) -> zero(x),
-)
-dlidveldt = (
-    (x, y, t) -> zero(x),
-    (x, y, t) -> zero(x),
-)
+lidvel = ((x, y, t) -> one(x), (x, y, t) -> zero(x))
+dlidveldt = ((x, y, t) -> zero(x), (x, y, t) -> zero(x))
 boundary_conditions = (
     ## x left, x right
     (DirichletBC(), DirichletBC()),
@@ -76,7 +70,7 @@ boundary_conditions = (
 # We create a two-dimensional domain with a box of size `[1, 1]`. The grid is
 # created as a Cartesian product between two vectors. We add a refinement near
 # the walls.
-n = 40
+n = 32
 lims = T(0), T(1)
 x = cosine_grid(lims..., n)
 y = cosine_grid(lims..., n)
@@ -94,7 +88,7 @@ setup = Setup(x, y; boundary_conditions, Re, ArrayType);
 # - [`SpectralPressureSolver`](@ref) (only for periodic boundary conditions and
 #   uniform grids)
 
-pressure_solver = DirectPressureSolver(setup)
+pressure_solver = CGPressureSolverManual(setup);
 
 # We will solve for a time interval of ten seconds.
 t_start, t_end = tlims = T(0), T(10)
@@ -104,12 +98,7 @@ initial_velocity = (
     (x, y) -> zero(x),
     (x, y) -> zero(x),
 )
-u₀, p₀ = create_initial_conditions(
-    setup,
-    initial_velocity,
-    t_start;
-    pressure_solver,
-)
+u₀, p₀ = create_initial_conditions(setup, initial_velocity, t_start; pressure_solver);
 
 # ## Solve problems
 #
@@ -138,8 +127,15 @@ processors = (
 
 # By default, a standard fourth order Runge-Kutta method is used. If we don't
 # provide the time step explicitly, an adaptive time step is used.
-u, p, outputs =
-    solve_unsteady(setup, u₀, p₀, tlims; Δt = T(0.001), processors, pressure_solver, device);
+u, p, outputs = solve_unsteady(
+    setup,
+    u₀,
+    p₀,
+    tlims;
+    Δt = T(0.001),
+    processors,
+    pressure_solver,
+);
 
 # ## Post-process
 #

@@ -9,6 +9,6 @@ function get_lims(x, n = 1.5)
     T = eltype(x)
     μ = mean(x)
     σ = std(x)
-    # ≈(μ + σ, μ; rtol = sqrt(eps(T)), atol = sqrt(eps(T))) && (σ = sqrt(sqrt(eps(T))))
+    ≈(μ + σ, μ; rtol = sqrt(eps(T)), atol = sqrt(eps(T))) && (σ = sqrt(sqrt(eps(T))))
     (μ - n * σ, μ + n * σ)
 end

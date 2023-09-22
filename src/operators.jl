@@ -2,16 +2,16 @@
 # for writing kernel loops
 
 struct Offset{D} end
-(::Offset{D})(i) where {D} = CartesianIndex(ntuple(j -> j == i ? 1 : 0, D))
+(::Offset{D})(α) where {D} = CartesianIndex(ntuple(β -> β == α ? 1 : 0, D))
 
 """
     divergence!(M, u, setup)
 
 Compute divergence of velocity field (in-place version).
 """
-function divergence!(M, u, setup)
+function divergence!(M, u, setup; ϵ = sqrt(eps(eltype(M))))
     (; boundary_conditions, grid) = setup
-    (; Δ, Np, Ip, Ω) = grid
+    (; Δ, N, Ip, Ω) = grid
     D = length(u)
     δ = Offset{D}()
     @kernel function _divergence!(M, u, α, I0)
@@ -19,13 +19,17 @@ function divergence!(M, u, setup)
         I = I + I0
         # D = length(I)
         # δ = Offset{D}()
-        M[I] += Ω[I] / Δ[α][I[α]] * (u[α][I] - u[α][I-δ(α)])
+        M[I] += Ω[I] / (Δ[α][I[α]] + ϵ) * (u[α][I] - u[α][I-δ(α)])
     end
     M .= 0
-    I0 = first(Ip)
+    # All volumes have a right velocity
+    # All volumes have a left velocity except the first one
+    # Start at second volume
+    ndrange = N .- 1
+    I0 = 2 * oneunit(first(Ip))
     I0 -= oneunit(I0)
     for α = 1:D
-        _divergence!(get_backend(M), WORKGROUP)(M, u, α, I0; ndrange = Np)
+        _divergence!(get_backend(M), WORKGROUP)(M, u, α, I0; ndrange)
         synchronize(get_backend(M))
     end
     M
@@ -112,19 +116,19 @@ end
 Compute convective term.
 """
 function convection!(F, u, setup)
-    (; boundary_conditions, grid, Re, bodyforce) = setup
-    (; dimension, Δ, Δu, Nu, Iu) = grid
+    (; boundary_conditions, grid, Re) = setup
+    (; dimension, Δ, Δu, Nu, Iu, A) = grid
     D = dimension()
     δ = Offset{D}()
     @kernel function _convection!(F, u, α, β, I0)
         I = @index(Global, Cartesian)
         I = I + I0
-        Δuαβ = (α == β ? Δu[β] : Δ[β])
-        F[α][I] -=
-            (
-                (u[α][I] + u[α][I+δ(β)]) / 2 * (u[β][I] + u[β][I+δ(α)]) / 2 -
-                (u[α][I-δ(β)] + u[α][I]) / 2 * (u[β][I-δ(β)] + u[β][I-δ(β)+δ(α)]) / 2
-            ) / Δuαβ[I[β]]
+        Δuαβ = α == β ? Δu[β] : Δ[β]
+        uαβ1 = A[α][β][2][I[β]-1] * u[α][I-δ(β)] + A[α][β][1][I[β]] * u[α][I]
+        uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
+        uβα1 = A[β][α][2][I[α]-1] * u[β][I-δ(β)] + A[β][α][1][I[α]+1] * u[β][I-δ(β)+δ(α)]
+        uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]] * u[β][I+δ(α)]
+        F[α][I] -= (uαβ2 * uβα2 - uαβ1 * uβα1) / Δuαβ[I[β]]
     end
     for α = 1:D
         I0 = first(Iu[α])
@@ -143,8 +147,9 @@ end
 Compute diffusive term.
 """
 function diffusion!(F, u, setup; ϵ = eps(eltype(F[1])))
+    # ϵ = 1
     # Add ϵ in denominator for "infinitely thin" volumes
-    (; boundary_conditions, grid, Re, bodyforce) = setup
+    (; boundary_conditions, grid, Re) = setup
     (; dimension, Δ, Δu, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
@@ -155,8 +160,8 @@ function diffusion!(F, u, setup; ϵ = eps(eltype(F[1])))
         Δuαβ = (α == β ? Δu[β] : Δ[β])
         F[α][I] +=
             ν * (
-                (u[α][I+δ(β)] - u[α][I]) / ((β == α ? Δ : Δu)[β][I[β]] + ϵ) -
-                (u[α][I] - u[α][I-δ(β)]) / ((β == α ? Δ : Δu)[β][I[β]-1] + ϵ)
+                (u[α][I+δ(β)] - u[α][I]) / ((β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) + ϵ) -
+                (u[α][I] - u[α][I-δ(β)]) / ((β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) + ϵ)
             ) / Δuαβ[I[β]]
     end
     for α = 1:D
@@ -214,33 +219,48 @@ function momentum!(F, u, t, setup)
     for α = 1:D
         F[α] .= 0
     end
-    convection!(F, u, setup)
     diffusion!(F, u, setup)
+    convection!(F, u, setup)
     bodyforce!(F, u, t, setup)
     isnothing(closure_model) || (F .+= closure_model(u))
     F
 end
 
 """
+    momentum(u, t, setup)
+
+Right hand side of momentum equations, excluding pressure gradient.
+"""
+momentum(u, t, setup) = momentum!(
+    ntuple(
+        α -> KernelAbstractions.zeros(get_backend(u[1]), typeof(t), setup.grid.N),
+        length(u),
+    ),
+    u,
+    t,
+    setup,
+)
+
+"""
     pressuregradient!(G, p, setup)
 
 Compute pressure gradient (in-place).
 """
-function pressuregradient!(G, p, setup)
+function pressuregradient!(G, p, setup; ϵ = sqrt(eps(eltype(p))))
     (; boundary_conditions, grid) = setup
-    (; dimension, Δu, Np, Iu) = grid
+    (; dimension, Δu, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
     @kernel function _pressuregradient!(G, p, α, I0)
         I = @index(Global, Cartesian)
         I = I0 + I
-        G[α][I] = (p[I+δ(α)] - p[I]) / Δu[α][I[α]]
+        G[α][I] = (p[I+δ(α)] - p[I]) / (Δu[α][I[α]] + ϵ)
     end
     D = dimension()
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        _pressuregradient!(get_backend(G[1]), WORKGROUP)(G, p, α, I0; ndrange = Np)
+        _pressuregradient!(get_backend(G[1]), WORKGROUP)(G, p, α, I0; ndrange = Nu[α])
         synchronize(get_backend(G[1]))
     end
     G
@@ -319,7 +339,7 @@ function interpolate_ω_p!(::Dimension{2}, setup, ωp, ω)
 end
 
 function interpolate_ω_p!(::Dimension{3}, setup, ωp, ω)
-    (; boundary_conditions, grid, Re, bodyforce) = setup
+    (; boundary_conditions, grid, Re) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
     δ = Offset{D}()

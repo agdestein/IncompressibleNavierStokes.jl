@@ -42,7 +42,7 @@ x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
 plot_grid(x...)
 
 # Build setup and assemble operators
-setup = device(Setup(x; Re));
+setup = Setup(x...; Re, ArrayType);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
 # spectral pressure solver
