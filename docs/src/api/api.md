@@ -98,6 +98,7 @@ solve_steady_state
 AbstractPressureSolver
 DirectPressureSolver
 CGPressureSolver
+CGPressureSolverManual
 SpectralPressureSolver
 pressure_additional_solve
 pressure_additional_solve!
@@ -152,4 +153,5 @@ fno
 offset_u
 pressuregradient
 pressuregradient!
+momentum
 ```
