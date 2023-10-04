@@ -333,9 +333,7 @@ are prescribed. Consider the left boundary defined by ``i = \frac{1}{2}``.
   ```math
   u_{\frac{1}{2}, j} := u(x_{\frac{1}{2}}, y_j)
   ```
-  For ``v``, we also prescribe
-  values, but only at the boundary, thus replacing otherwise interpolated
-  ``v``-fluxes:
+  For ``v``, we also prescribe values, but since ``v`` is not naturally defined on the left-right boundary, the  Dirichlet condition acts only on the interpolated ``v``-fluxes:
   ```math
   v_{\frac{1}{2}, j - \frac{1}{2}} := v(x_{\frac{1}{2}}, y_{j - \frac{1}{2}}).
   ```
