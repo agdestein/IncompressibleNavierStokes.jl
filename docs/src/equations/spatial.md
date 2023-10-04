@@ -44,7 +44,7 @@ which quantities of interest can be defined:
 They form the corners of the top-right quadrant of ``\Omega_{i, j}``.
 
 The vectors of unknowns will not contain all the half-index values, only those
-of their own point:
+of their own point, so we introduce the following half-index ($h$) notation:
 
 - The vector ``u_h`` will only consist of the components ``u_{i + \frac{1}{2},
   j}``.
@@ -156,7 +156,7 @@ This yields the discrete mass equation
 = 0
 ```
 
-which can also be written in the matrix form
+which can also be written in the matrix form using the half-index notation
 
 ```math
 M V_h = M_x u_h + M_y v_h = 0,
@@ -244,7 +244,7 @@ This equation is still exact. We now introduce some approximations on
 continuous quantities.
 
 1. We replace the integrals with a mid-point quadrature rule.
-1. The the mid-point values of derivatives are
+1. The mid-point values of derivatives are
    approximated using a central finite difference:
    ```math
    \frac{\partial u}{\partial x}(x_i, y_j) \approx \frac{u_{i + \frac{1}{2}, j}
@@ -315,7 +315,7 @@ yields the discrete ``v``-momentum equations
 \end{split}
 ```
 
-In matrix form, we will denote this as
+In matrix form and half-index notation, we will denote this as
 
 ```math
 \Omega_h \frac{\mathrm{d} V_h}{\mathrm{d} t} = - C(V_h) + \nu D V_h + \Omega_h f_h  - G p_h.
