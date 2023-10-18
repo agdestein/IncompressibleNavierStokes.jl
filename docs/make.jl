@@ -19,30 +19,33 @@ DocMeta.setdocmeta!(
 
 bib = CitationBibliography(joinpath(@__DIR__, "references.bib"))
 
-# Generate examples
-examples = [
-    "Tutorial: Lid-Driven Cavity (2D)" => "LidDrivenCavity2D",
-    "Actuator (2D)" => "Actuator2D",
-    # "Actuator (3D)" => "Actuator3D",
-    "Backward Facing Step (2D)" => "BackwardFacingStep2D",
-    # "Backward Facing Step (3D)" => "BackwardFacingStep3D",
-    "Decaying Turbulunce (2D)" => "DecayingTurbulence2D",
-    # "Decaying Turbulunce (3D)" => "DecayingTurbulence3D",
-    # "Lid-Driven Cavity (3D)" => "LidDrivenCavity3D",
-    "Planar Mixing (2D)" => "PlanarMixing2D",
-    "Shear Layer (2D)" => "ShearLayer2D",
-    # "Taylor-Green Vortex (2D)" => "TaylorGreenVortex2D",
-    # "Taylor-Green Vortex (3D)" => "TaylorGreenVortex3D",
-]
+# # Generate examples
+# examples = [
+#     "Tutorial: Lid-Driven Cavity (2D)" => "LidDrivenCavity2D",
+#     "Actuator (2D)" => "Actuator2D",
+#     # "Actuator (3D)" => "Actuator3D",
+#     "Backward Facing Step (2D)" => "BackwardFacingStep2D",
+#     # "Backward Facing Step (3D)" => "BackwardFacingStep3D",
+#     "Decaying Turbulunce (2D)" => "DecayingTurbulence2D",
+#     # "Decaying Turbulunce (3D)" => "DecayingTurbulence3D",
+#     # "Lid-Driven Cavity (3D)" => "LidDrivenCavity3D",
+#     "Planar Mixing (2D)" => "PlanarMixing2D",
+#     "Shear Layer (2D)" => "ShearLayer2D",
+#     # "Taylor-Green Vortex (2D)" => "TaylorGreenVortex2D",
+#     # "Taylor-Green Vortex (3D)" => "TaylorGreenVortex3D",
+# ]
+#
+# output = "generated"
+# for e ∈ examples
+#     e = joinpath(@__DIR__, "..", "examples", "$(e.second).jl")
+#     o = joinpath(@__DIR__, "src", output)
+#     Literate.markdown(e, o)
+#     # Literate.notebook(e, o)
+#     # Literate.script(e, o)
+# end
 
 output = "generated"
-for e ∈ examples
-    e = joinpath(@__DIR__, "..", "examples", "$(e.second).jl")
-    o = joinpath(@__DIR__, "src", output)
-    Literate.markdown(e, o)
-    # Literate.notebook(e, o)
-    # Literate.script(e, o)
-end
+examples = ["Tutorial: Lid-Driven Cavity (2D)" => "LidDrivenCavity2D"]
 
 makedocs(;
     modules = [IncompressibleNavierStokes],
@@ -55,6 +58,7 @@ makedocs(;
         canonical = "https://agdestein.github.io/IncompressibleNavierStokes.jl",
         assets = String[],
     ),
+    pagesonly = true,
     pages = [
         "Home" => "index.md",
         "Getting Started" => "getting_started.md",

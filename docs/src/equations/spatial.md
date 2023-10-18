@@ -395,7 +395,7 @@ The discrete momentum equations become
 \begin{split}
     \frac{\mathrm{d} u_h}{\mathrm{d} t} & = -C(u_h) + \nu (D u_h +
     y_D) + f_h - (G p_h + y_G) \\
-    & = F(V_h) - (G p_h + y_G),
+    & = F(u_h) - (G p_h + y_G),
 \end{split}
 ```
 
@@ -423,7 +423,7 @@ discrete divergence operator ``M`` to the discrete momentum equations yields
 the discrete pressure Poisson equation
 
 ```math
-L p_h = M (F(V_h) - y_G) + \frac{\mathrm{d} y_M}{\mathrm{d} t},
+L p_h = M (F(u_h) - y_G) + \frac{\mathrm{d} y_M}{\mathrm{d} t},
 ```
 
 where ``L = M G`` is a discrete Laplace operator. It is positive
