@@ -148,6 +148,7 @@ plot_vorticity(setup, V, t_end)
 
 # Plot streamfunction
 ## plot_streamfunction(setup, V, t_end)
+nothing
 
 # Plot force
 plot_force(setup, t_end)

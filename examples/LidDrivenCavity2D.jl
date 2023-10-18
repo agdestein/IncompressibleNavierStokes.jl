@@ -52,6 +52,7 @@ device = identity
 # For GPU (note that `cu` converts to `Float32`)
 ## using CUDA
 ## device = cu
+nothing
 
 # Available viscosity models are:
 #
