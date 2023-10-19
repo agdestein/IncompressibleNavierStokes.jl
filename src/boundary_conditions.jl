@@ -124,20 +124,20 @@ function apply_bc_u!(::PeriodicBC, u, β, t, setup; atend, kwargs...)
     (; dimension, N) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _bc_a!(u, α, β)
+    @kernel function _bc_a!(u, ::Val{α}, ::Val{β}) where {α,β}
         I = @index(Global, Cartesian)
         u[α][I] = u[α][I+(N[β]-2)*δ(β)]
     end
-    @kernel function _bc_b!(u, α, β)
+    @kernel function _bc_b!(u, ::Val{α}, ::Val{β}) where {α,β}
         I = @index(Global, Cartesian)
         u[α][I+(N[β]-1)*δ(β)] = u[α][I+δ(β)]
     end
     ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     for α = 1:D
         if atend
-            _bc_b!(get_backend(u[1]), WORKGROUP)(u, α, β; ndrange)
+            _bc_b!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β); ndrange)
         else
-            _bc_a!(get_backend(u[1]), WORKGROUP)(u, α, β; ndrange)
+            _bc_a!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β); ndrange)
         end
         synchronize(get_backend(u[1]))
     end
@@ -148,19 +148,19 @@ function apply_bc_p!(::PeriodicBC, p, β, t, setup; atend, kwargs...)
     (; dimension, N) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _bc_a(p, β)
+    @kernel function _bc_a(p, ::Val{β}) where {β}
         I = @index(Global, Cartesian)
         p[I] = p[I+(N[β]-2)*δ(β)]
     end
-    @kernel function _bc_b(p, β)
+    @kernel function _bc_b(p, ::Val{β}) where {β}
         I = @index(Global, Cartesian)
         p[I+(N[β]-1)*δ(β)] = p[I+δ(β)]
     end
     ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     if atend
-        _bc_b(get_backend(p), WORKGROUP)(p, β; ndrange)
+        _bc_b(get_backend(p), WORKGROUP)(p, Val(β); ndrange)
     else
-        _bc_a(get_backend(p), WORKGROUP)(p, β; ndrange)
+        _bc_a(get_backend(p), WORKGROUP)(p, Val(β); ndrange)
     end
     synchronize(get_backend(p))
 end
@@ -208,7 +208,12 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwar
     bcfunc = dudt ? bc.dudt : bc.u
     for α = 1:D
         if atend
-            I = CartesianIndices(ntuple(γ -> γ == β ? isnormal ? (N[γ]-1:N[γ]-1) : (N[γ]:N[γ]) : (1:N[γ]), D))
+            I = CartesianIndices(
+                ntuple(
+                    γ -> γ == β ? isnormal ? (N[γ]-1:N[γ]-1) : (N[γ]:N[γ]) : (1:N[γ]),
+                    D,
+                ),
+            )
         else
             I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
         end
@@ -255,12 +260,12 @@ function apply_bc_u!(bc::PressureBC, u, β, t, setup; atend, kwargs...)
     (; dimension, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _bc_a!(u, α, β, I0)
+    @kernel function _bc_a!(u, ::Val{α}, ::Val{β}, I0) where {α,β}
         I = @index(Global, Cartesian)
         I = I + I0
         u[α][I-δ(β)] = u[α][I]
     end
-    @kernel function _bc_b!(u, α, β, I0)
+    @kernel function _bc_b!(u, ::Val{α}, ::Val{β}, I0) where {α,β}
         I = @index(Global, Cartesian)
         I = I + I0
         u[α][I+δ(β)] = u[α][I]
@@ -270,13 +275,13 @@ function apply_bc_u!(bc::PressureBC, u, β, t, setup; atend, kwargs...)
             I0 = first(Iu[α]) + (Nu[α][β] - 1) * δ(β)
             I0 -= oneunit(I0)
             ndrange = (Nu[α][1:β-1]..., 1, Nu[α][β+1:end]...)
-            _bc_b!(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
+            _bc_b!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β), I0; ndrange)
             synchronize(get_backend(u[1]))
         else
             I0 = first(Iu[α])
             I0 -= oneunit(I0)
             ndrange = (Nu[α][1:β-1]..., 1, Nu[α][β+1:end]...)
-            _bc_a!(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
+            _bc_a!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β), I0; ndrange)
             synchronize(get_backend(u[1]))
         end
     end
