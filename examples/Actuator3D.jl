@@ -139,7 +139,8 @@ plot_velocity(setup, u)
 plot_vorticity(setup, u)
 
 # Plot streamfunction
-## plot_streamfunction(setup, V)
+## plot_streamfunction(setup, u)
+nothing
 
 # Plot force
 plot_force(setup)

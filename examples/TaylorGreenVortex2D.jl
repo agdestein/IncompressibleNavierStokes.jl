@@ -107,6 +107,7 @@ plot_vorticity(setup, u)
 
 # Plot streamfunction
 ## plot_streamfunction(setup, u)
+nothing
 
 # Energy history
 outputs[1]

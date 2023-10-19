@@ -68,6 +68,7 @@ CUDA.reclaim()
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀; npicard = 6)
+nothing
 
 # Iteration processors
 processors = (
@@ -103,16 +104,20 @@ u, p, outputs = solve_unsteady(
 save_vtk(setup, u, p, "output/solution")
 
 # Plot pressure
-plot_pressure(setup, p; levels = 3, alpha = 0.05)
+nothing #md
+plot_pressure(setup, p; levels = 3, alpha = 0.05) #!md
 
 # Plot velocity
-plot_velocity(setup, u; levels = 3, alpha = 0.05)
+nothing #md
+plot_velocity(setup, u; levels = 3, alpha = 0.05) #!md
 
 # Plot vorticity
-plot_vorticity(setup, u; levels = 5, alpha = 0.05)
+nothing #md
+plot_vorticity(setup, u; levels = 5, alpha = 0.05) #!md
 
 # Plot streamfunction
 ## plot_streamfunction(setup, u)
+nothing
 
 # Field plot
 outputs[1]
