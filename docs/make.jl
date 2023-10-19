@@ -55,6 +55,7 @@ makedocs(;
         canonical = "https://agdestein.github.io/IncompressibleNavierStokes.jl",
         assets = String[],
     ),
+    pagesonly = true,
     pages = [
         "Home" => "index.md",
         "Getting Started" => "getting_started.md",

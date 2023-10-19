@@ -36,6 +36,7 @@ device = identity
 # Note: `cu` converts to Float32
 ## using CUDA
 ## device = cu
+nothing
 
 # Viscosity model
 Re = T(10_000)

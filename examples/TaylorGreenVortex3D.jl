@@ -31,6 +31,7 @@ device = identity
 # For GPU (note that `cu` converts to `Float32`)
 ## using CUDA
 ## device = cu
+nothing
 
 # Viscosity model
 Re = T(2_000)
@@ -66,11 +67,12 @@ V₀, p₀ = create_initial_conditions(
 );
 
 # Solve steady state problem
-V, p = solve_steady_state(setup, V₀, p₀; npicard = 6)
+## V, p = solve_steady_state(setup, V₀, p₀; npicard = 6)
+nothing
 
 # Iteration processors
 processors = (
-    field_plotter(device(setup); nupdate = 5),
+    ## field_plotter(device(setup); nupdate = 5),
     ## energy_history_plotter(device(setup); nupdate = 1),
     ## energy_spectrum_plotter(device(setup); nupdate = 100),
     ## animator(device(setup), "vorticity.mp4"; nupdate = 4),
@@ -94,23 +96,26 @@ V, p, outputs = solve_unsteady(
     inplace = true,
     device,
 );
-#md current_figure()
 
 # ## Post-process
 #
 # We may visualize or export the computed fields `(V, p)`
 
 # Export to VTK
-save_vtk(setup, setup, V, p, "output/solution")
+save_vtk(setup, V, p, t_end, "output/solution")
 
 # Plot pressure
-plot_pressure(setup, p; levels = 3, alpha = 0.05)
+nothing #md
+plot_pressure(setup, p; levels = 3, alpha = 0.05) #!md
 
 # Plot velocity
-plot_velocity(setup, V, t_end; levels = 3, alpha = 0.05)
+nothing #md
+plot_velocity(setup, V, t_end; levels = 3, alpha = 0.05) #!md
 
 # Plot vorticity
-plot_vorticity(setup, V, t_end; levels = 5, alpha = 0.05)
+nothing #md
+plot_vorticity(setup, V, t_end; levels = 5, alpha = 0.05) #!md
 
 # Plot streamfunction
 ## plot_streamfunction(setup, V, t_end)
+nothing

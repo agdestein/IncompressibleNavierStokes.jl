@@ -52,6 +52,7 @@ device = identity
 # For GPU (note that `cu` converts to `Float32`)
 ## using CUDA
 ## device = cu
+nothing
 
 # Here we choose a moderate Reynolds number. Note how we pass the floating point type.
 Re = T(1_000)
