@@ -139,17 +139,11 @@ plotmat
 DirichletBC
 SymmetricBC
 PressureBC
-mean_squared_error
-cnn
-relative_error
-create_randloss
 kinetic_energy
 FourierLayer
-create_callback
 offset_p
 momentum_allstage
 momentum_allstage!
-fno
 offset_u
 pressuregradient
 pressuregradient!

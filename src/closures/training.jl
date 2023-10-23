@@ -1,11 +1,11 @@
-raw"""
+"""
     train(
         loss,
         opt,
         θ;
         niter = 100,
         ncallback = 1,
-        callback = (i, θ) -> println("Iteration $i of $niter"),
+        callback = (i, θ) -> println("Iteration \$i of \$niter"),
     )
 
 Update parameters `θ` to minimize `loss(θ)` using the optimiser `opt` for

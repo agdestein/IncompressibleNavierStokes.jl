@@ -72,6 +72,7 @@ makedocs(;
             "Floating point precision" => "features/precision.md",
             "GPU Support" => "features/gpu.md",
             "Large eddy simulation" => "features/les.md",
+            "Neural closure models" => "features/closure.md",
             "Pressure solvers" => "features/pressure.md",
             "Boundary conditions" => "features/bc.md",
             "Time steppers" => "features/steppers.md",

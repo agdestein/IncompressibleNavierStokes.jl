@@ -1,8 +1,8 @@
 """
     cnn(setup, r, c, σ, b; kwargs...)
 
-Create CNN closure model. Return a tuple `(closure, Θ)` where `Θ` are the initial
-parameters and `closure(V, Θ)` predicts the commutator error.
+Create CNN closure model. Return a tuple `(closure, θ)` where `θ` are the initial
+parameters and `closure(V, θ)` predicts the commutator error.
 """
 cnn(setup, r, c, σ, b; kwargs...) = cnn(setup.grid.dimension, setup, r, c, σ, b; kwargs...)
 
