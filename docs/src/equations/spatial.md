@@ -168,9 +168,11 @@ This yields the discrete mass equation
 
 ```math
 \sum_{\alpha = 1}^d
-\left| \Gamma^\alpha_I \right| \left( u^\alpha_{I + \delta(\alpha) / 2} -
-u^\alpha_{I - \delta(\alpha) / 2} \right) = 0.
+\frac{u^\alpha_{I + \delta(\alpha) / 2} -
+u^\alpha_{I - \delta(\alpha) / 2}}{\Delta^\alpha_I} = 0,
 ```
+
+where we have divided by the volume sizes ``\Omega_I``.
 
 !!! note "Approximation error"
     For the mass equation, the only approximation we have performed is
@@ -267,32 +269,30 @@ Finally, the discrete ``\alpha``-momentum equations are given by
 
 ```math
 \begin{split}
-    \left| \Omega_{I + \delta(\alpha) / 2} \right|
     & \frac{\mathrm{d} }{\mathrm{d} t} u^\alpha_{I + \delta(\alpha) / 2} = \\
-    - & \sum_{\beta = 1}^d \left| \Gamma^\beta_{I + \delta(\alpha) / 2} \right|
-    \left(
-        (u^\alpha
-        u^\beta)_{I + \delta(\alpha) / 2 + \delta(\beta) / 2}
+    - & \sum_{\beta = 1}^d
+    \frac{
+        (u^\alpha u^\beta)_{I + \delta(\alpha) / 2 + \delta(\beta) / 2}
         -
-        (u^\alpha
-        u^\beta )_{I + \delta(\alpha) / 2 - \delta(\beta) / 2}
-    \right) \\
-    - & \left| \Gamma^\alpha_{I + \delta(\alpha) / 2} \right|
-    \left( p_{I + \delta(\alpha)} - p_{I} \right) \\
-    + & \nu \sum_{\beta = 1}^d \left| \Gamma^\beta_{I + \delta(\alpha) / 2}
-    \right|
+        (u^\alpha u^\beta )_{I + \delta(\alpha) / 2 - \delta(\beta) / 2}
+    }{\Delta^\beta_{I(\beta) + \delta_{\alpha \beta} / 2}} \\
+    - & \frac{p_{I + \delta(\alpha)} - p_{I}}{\Delta^\alpha_{I(\alpha) + 1 / 2}} \\
+    + & \nu \sum_{\beta = 1}^d
+    \frac{1}{\Delta^\beta_{I(\beta)+ \delta_{\alpha \beta} / 2}}
     \left( 
         \frac{u^\alpha_{I + \delta(\alpha) / 2 + \delta(\beta)} - u^\alpha_{I +
-        \delta(\alpha) / 2}}{x^\beta_{I(\beta) + 1} - x^\beta_{I(\beta)}}
-        - \frac{u^\alpha_{I + \delta(\alpha) / 2} - u^\alpha_{I +
-        \delta(\alpha) / 2 - \delta(\beta)}}{x^\beta_{I(\beta)}
-        - x^\beta_{I(\beta) - 1}}
+        \delta(\alpha) / 2}}{\Delta^\beta_{I(\beta) + 1 / 2}}
+        - \frac{
+            u^\alpha_{I + \delta(\alpha) / 2} -
+            u^\alpha_{I + \delta(\alpha) / 2 - \delta(\beta)}
+        }{\Delta^\beta_{I(\beta) - 1 / 2}}
     \right) \\
-    + & \left| \Omega_{I + \delta(\alpha) / 2} \right| f^\alpha(x_{I +
-    \delta(\alpha) / 2}).
+    + & f^\alpha(x_{I + \delta(\alpha) / 2}),
 \end{split}
 ```
 
+where we have divided each equation by the volume size
+``| \Omega_{I + \delta(\alpha) / 2} |``.
 
 ## Boundary conditions
 
@@ -401,17 +401,21 @@ The discrete momentum equations become
 
 where ``C`` is the convection operator (including boundary contributions),
 ``D`` is the diffusion operator, ``y_D`` is boundary contribution to the
-diffusion term, ``G = \Omega_h^{-1} M^\mathsf{T}`` is the pressure gradient
-operator, ``y_G`` contains the boundary contribution of the pressure to the
-pressure gradient (only non-zero for pressure boundary conditions), and
-``\Omega_h`` is a diagonal matrix containing the velocity volumes. The term
-``F`` refers to all the forces except for the pressure gradient.
+diffusion term,
+``G = W_u^{-1} M^\mathsf{T} W`` is the pressure gradient
+operator,
+``y_G`` contains the boundary contribution of the pressure to the
+pressure gradient (only non-zero for pressure boundary conditions),
+``W_u`` is a diagonal matrix containing the velocity volume sizes
+``| \Omega_{I + \delta(\alpha) / 2} |``, and ``W`` is a diagonal matrix
+containing the reference volume sizes ``| \Omega_I |``.
+The term ``F`` refers to all the forces except for the pressure gradient.
 
 !!! note "Volume normalization"
     
-    All the operators (except for ``M``) have been divided by the velocity
-    volume sizes ``\Omega_h``. As a result, the operators have the same units
-    as their continuous counterparts.
+    All the operators have been divided by the velocity volume sizes.
+    As a result, the operators have the same units as their
+    continuous counterparts.
 
 
 ## Discrete pressure Poisson equation
@@ -423,11 +427,11 @@ discrete divergence operator ``M`` to the discrete momentum equations yields
 the discrete pressure Poisson equation
 
 ```math
-L p_h = M (F(u_h) - y_G) + \frac{\mathrm{d} y_M}{\mathrm{d} t},
+L p_h = W M (F(u_h) - y_G) + W \frac{\mathrm{d} y_M}{\mathrm{d} t},
 ```
 
-where ``L = M G`` is a discrete Laplace operator. It is positive
-symmetric since ``G = \Omega_h^{-1} M^\mathsf{T}``.
+where ``L = W M G = W M W_u^{-1} M^\mathsf{T} W`` is a discrete Laplace
+operator. It is positive symmetric.
 
 !!! note "Unsteady Dirichlet boundary conditions"
 
@@ -455,17 +459,17 @@ symmetric since ``G = \Omega_h^{-1} M^\mathsf{T}``.
     discrete Poisson equation:
 
     ```math
-    p_h = L^{-1} M (F(u_h) - y_G) + L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.
+    p_h = L^{-1} W M (F(u_h) - y_G) + L^{-1} W \frac{\mathrm{d} y_M}{\mathrm{d} t}.
     ```
 
     The momentum equations then become
 
     ```math
-    \frac{\mathrm{d} u_h}{\mathrm{d} t} = (I - G L^{-1} M)
-    (F(u_h) - y_G) - G L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.
+    \frac{\mathrm{d} u_h}{\mathrm{d} t} = (I - G L^{-1} W M)
+    (F(u_h) - y_G) - G L^{-1} W \frac{\mathrm{d} y_M}{\mathrm{d} t}.
     ```
 
-    The matrix ``(I - G L^{-1} M)`` is a projector onto the space
+    The matrix ``(I - G L^{-1} W M)`` is a projector onto the space
     of discretely divergence free velocities. However, using this formulation
     would require an efficient way to perform the projection without assembling
     the operator matrix ``L^{-1}``, which would be very costly.
@@ -500,19 +504,16 @@ the vorticity volume ``\Omega_{I + \delta(1) / 2 + \delta(2) / 2}`` gives
 \end{split}.
 ```
 
-Using quadrature, the discrete vorticity in the corner is given by
+Using quadrature, and dividing by the vorticity volume
+``| \Omega_{I + \delta(1) / 2 + \delta(2) / 2} |``,
+the discrete vorticity in the corner is given by
 
 ```math
-\begin{split}
-\left| \Omega_{I + \delta(1) / 2 + \delta(2) / 2} \right|
 \omega_{I + \delta(1) / 2 + \delta(2) / 2} =
-& - \left| \Gamma^2_{I + \delta(1) / 2 + \delta(2) / 2} \right|
-(u^1_{I + \delta(1) / 2 + \delta(2)}
-- u^1_{I + \delta(1) / 2}) \\
-& + \left| \Gamma^1_{I + \delta(1) / 2 + \delta(2) / 2} \right|
-(u^2_{I + \delta(1) + \delta(2) / 2}
-- u^2_{I + \delta(2) / 2})
-\end{split}.
+- \frac{u^1_{I + \delta(1) / 2 + \delta(2)} -
+u^1_{I + \delta(1) / 2}}{\Delta^2_{I(2) + 1 / 2}}
++ \frac{u^2_{I + \delta(1) + \delta(2) / 2} -
+u^2_{I + \delta(2) / 2}}{\Delta^1_{I(1) + 1 / 2}}.
 ```
 
 The 3D vorticity is a vector field ``(\omega^1, \omega^2, \omega^3)``.
@@ -534,17 +535,17 @@ through
 \end{split}.
 ```
 
+Using quadrature, and dividing by the vorticity volume
+``| \Omega_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} |``,
+the discrete vorticity around the ``\alpha``-edge is given by
+
 ```math
-\begin{split}
-\left| \Omega_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} \right|
 \omega_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} =
-& - \left| \Gamma^{\alpha^-}_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} \right|
-(u^{\alpha^+}_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-)}
-- u^{\alpha^+}_{I + \delta(\alpha^+) / 2}) \\
-& + \left| \Gamma^{\alpha^+}_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} \right|
-(u^{\alpha^-}_{I + \delta(\alpha^+) + \delta(\alpha^-) / 2}
-- u^{\alpha^-}_{I + \delta(\alpha^-) / 2})
-\end{split}.
+- \frac{u^{\alpha^+}_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-)} -
+u^{\alpha^+}_{I + \delta(\alpha^+) / 2}}{\Delta^{\alpha^-}_{I(\alpha^-) + 1 / 2}}
++ \frac{u^{\alpha^-}_{I + \delta(\alpha^+) + \delta(\alpha^-) / 2} -
+u^{\alpha^-}_{I + \delta(\alpha^-) / 2}}{\Delta^{\alpha^+}_{I(\alpha^+) + 1 /
+2}}.
 ```
 
 ## Stream function

@@ -11,15 +11,13 @@ Compute divergence of velocity field (in-place version).
 """
 function divergence!(M, u, setup)
     (; boundary_conditions, grid) = setup
-    (; Δ, N, Ip, Ω) = grid
+    (; Δ, N, Ip) = grid
     D = length(u)
     δ = Offset{D}()
     @kernel function _divergence!(M, u, ::Val{α}, I0) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
-        # D = length(I)
-        # δ = Offset{D}()
-        M[I] += Ω[I] / Δ[α][I[α]] * (u[α][I] - u[α][I-δ(α)])
+        M[I] += (u[α][I] - u[α][I-δ(α)]) / Δ[α][I[α]]
     end
     M .= 0
     # All volumes have a right velocity
@@ -94,14 +92,15 @@ function vorticity!(::Dimension{3}, ω, u, setup)
         T = eltype(ω)
         I = @index(Global, Cartesian)
         I = I + I0
-        β = mod1(α + 1, D)
-        γ = mod1(α - 1, D)
+        α₊ = mod1(α + 1, D)
+        α₋ = mod1(α - 1, D)
         ω[α][I] =
-            -(u[β][I+δ(γ)] - u[β][I]) / Δu[γ][I[γ]] + (u[γ][I+δ(β)] - u[γ][I]) / Δu[β][I[β]]
+            (u[α₋][I+δ(α₊)] - u[α₋][I]) / Δu[α₊][I[α₊]] -
+            (u[α₊][I+δ(α₋)] - u[α₊][I]) / Δu[α₋][I[α₋]]
     end
+    I0 = CartesianIndex(ntuple(Returns(1), D))
+    I0 -= oneunit(I0)
     for α = 1:D
-        I0 = CartesianIndex(ntuple(Returns(1), D))
-        I0 -= oneunit(I0)
         _vorticity!(get_backend(ω[1]), WORKGROUP)(ω, u, Val(α), I0; ndrange = N .- 1)
     end
     ω
@@ -349,9 +348,9 @@ function interpolate_ω_p!(::Dimension{3}, setup, ωp, ω)
     @kernel function _interpolate_ω_p!(ωp, ω, ::Val{α}, I0) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
-        β = mod1(α + 1, D)
-        γ = mod1(α - 1, D)
-        ωp[α][I] = (ω[α][I-δ(β)-δ(γ)] + ω[α][I]) / 2
+        α₊ = mod1(α + 1, D)
+        α₋ = mod1(α - 1, D)
+        ωp[α][I] = (ω[α][I-δ(α₊)-δ(α₋)] + ω[α][I]) / 2
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)

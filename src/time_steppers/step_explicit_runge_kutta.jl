@@ -4,7 +4,7 @@ create_stepper(::ExplicitRungeKuttaMethod; setup, pressure_solver, u, p, t, n = 
 function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
     (; setup, pressure_solver, u, p, t, n) = stepper
     (; grid, boundary_conditions) = setup
-    (; dimension, Iu, Ip) = grid
+    (; dimension, Iu, Ip, Ω) = grid
     (; A, b, c, p_add_solve) = method
     (; u₀, ku, v, F, M, G) = cache
 
@@ -52,7 +52,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
 
         # Divergence of tentative velocity field
         divergence!(M, v, setup)
-        @. M = M / (c[i] * Δt)
+        @. M *= Ω / (c[i] * Δt)
 
         # Solve the Poisson equation
         pressure_poisson!(pressure_solver, p, M)

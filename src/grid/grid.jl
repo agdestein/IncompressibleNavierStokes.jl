@@ -63,6 +63,7 @@ function Grid(x, boundary_conditions; ArrayType = Array)
     xp = ntuple(d -> (x[d][1:end-1] .+ x[d][2:end]) ./ 2, D)
 
     # Volume widths
+    # Infinitely thin widths are set to `eps(T)` to avoid division by zero
     Δ = ntuple(D) do d
         Δ = diff(x[d])
         Δ[Δ .== 0] .= eps(eltype(Δ))
@@ -114,8 +115,7 @@ function Grid(x, boundary_conditions; ArrayType = Array)
                     Aαβ2[end] = 1
                 else
                     # Interpolation from α-face center to left (1) or right (2) α-face β-edge
-                    ϵ = eps(T)
-                    Aαβ1 = [(xp[β][i] - x[β][i]) / (Δu[β][i-1] + ϵ) for i = 2:N[β]]
+                    Aαβ1 = [(xp[β][i] - x[β][i]) / Δu[β][i-1] for i = 2:N[β]]
                     Aαβ2 = 1 .- Aαβ1
                     pushfirst!(Aαβ1, 1)
                     push!(Aαβ2, 1)

@@ -2,7 +2,7 @@
     create_initial_conditions(
         setup,
         initial_velocity,
-        t;
+        t = 0;
         pressure_solver = DirectPressureSolver(setup),
     )
 
@@ -11,11 +11,11 @@ Create initial vectors `(u, p)` at starting time `t`.
 function create_initial_conditions(
     setup,
     initial_velocity,
-    t;
+    t = convert(eltype(setup.grid.x[1]), 0);
     pressure_solver = CGPressureSolverManual(setup),
 )
     (; grid) = setup
-    (; dimension, N, Iu, Ip, x, xp) = grid
+    (; dimension, N, Iu, Ip, x, xp, Ω) = grid
 
     T = eltype(x[1])
     D = dimension()
@@ -43,6 +43,7 @@ function create_initial_conditions(
 
         # Make velocity field divergence free
         f = divergence(u, setup)
+        @. f *= Ω
         Δp = pressure_poisson(pressure_solver, f)
         p .= Δp
         apply_bc_p!(p, t, setup)
@@ -83,7 +84,7 @@ end
 """
     random_field(
         setup, t;
-        A = 1_000_000,
+        A = setup.grid.N[1] * 10_000,
         σ = 30,
         s = 5,
         pressure_solver = DirectPressureSolver(setup),
@@ -98,12 +99,12 @@ Create random field.
 """
 function random_field(
     setup, t;
-    A = convert(eltype(setup.grid.x), 1_000_000),
-    σ = convert(eltype(setup.grid.x), 30),
-    s = convert(eltype(setup.grid.x), 5),
+    A = convert(eltype(setup.grid.x[1]), setup.grid.N[1] * 7_500),
+    σ = convert(eltype(setup.grid.x[1]), 30),
+    s = convert(eltype(setup.grid.x[1]), 5),
     pressure_solver = DirectPressureSolver(setup),
 )
-    (; dimension, x, N, Ip) = setup.grid
+    (; dimension, x, N, Ip, Ω) = setup.grid
 
     D = dimension()
     T = eltype(x[1])
@@ -112,6 +113,7 @@ function random_field(
     u = ntuple(α -> real.(ifft(create_spectrum(N; A, σ, s, backend))), D)
     apply_bc_u!(u, t, setup)
     M = divergence(u, setup)
+    @. M *= Ω
     p = zero(M)
 
     # Make velocity field divergence free

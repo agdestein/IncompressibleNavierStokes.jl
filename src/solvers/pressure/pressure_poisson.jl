@@ -47,12 +47,13 @@ end
 
 function pressure_poisson!(solver::CGPressureSolverManual, p, f)
     (; setup, abstol, reltol, maxiter, r, G, M, q) = solver
-    (; Ip) = setup.grid
+    (; Ip, Ω) = setup.grid
     T = typeof(reltol)
-    
+
     # Initial residual
     pressuregradient!(G, p, setup)
     divergence!(M, G, setup)
+    @. M *= Ω
 
     # Intialize
     q .= 0
@@ -68,6 +69,7 @@ function pressure_poisson!(solver::CGPressureSolverManual, p, f)
 
         pressuregradient!(G, q, setup)
         divergence!(M, G, setup)
+        @. M *= Ω
         α = residual^2 / sum(q[Ip] .* M[Ip])
 
         p .+= α .* q

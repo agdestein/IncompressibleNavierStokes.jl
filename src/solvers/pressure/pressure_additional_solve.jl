@@ -6,7 +6,7 @@ field, resulting in same order pressure as velocity.
 """
 function pressure_additional_solve!(pressure_solver, u, p, t, setup, F, G, M)
     (; grid) = setup
-    (; dimension, Iu, Ip) = grid
+    (; dimension, Iu, Ip, Ω) = grid
     D = dimension()
 
     momentum!(F, u, t, setup)
@@ -19,6 +19,7 @@ function pressure_additional_solve!(pressure_solver, u, p, t, setup, F, G, M)
         # F[α][Iu[α]] .-= G[α][Iu[α]]
     end
     divergence!(M, F, setup)
+    @. M *= Ω
 
     pressure_poisson!(pressure_solver, p, M)
     # dp = pressure_poisson(pressure_solver, M)
