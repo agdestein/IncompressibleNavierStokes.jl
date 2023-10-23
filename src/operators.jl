@@ -9,7 +9,7 @@ struct Offset{D} end
 
 Compute divergence of velocity field (in-place version).
 """
-function divergence!(M, u, setup; ϵ = sqrt(eps(eltype(M))))
+function divergence!(M, u, setup)
     (; boundary_conditions, grid) = setup
     (; Δ, N, Ip, Ω) = grid
     D = length(u)
@@ -19,7 +19,7 @@ function divergence!(M, u, setup; ϵ = sqrt(eps(eltype(M))))
         I = I + I0
         # D = length(I)
         # δ = Offset{D}()
-        M[I] += Ω[I] / (Δ[α][I[α]] + ϵ) * (u[α][I] - u[α][I-δ(α)])
+        M[I] += Ω[I] / Δ[α][I[α]] * (u[α][I] - u[α][I-δ(α)])
     end
     M .= 0
     # All volumes have a right velocity
@@ -145,13 +145,11 @@ function convection!(F, u, setup)
 end
 
 """
-    diffusion!(F, u, setup; ϵ = eps(eltype(F[1])))
+    diffusion!(F, u, setup)
 
 Compute diffusive term.
 """
-function diffusion!(F, u, setup; ϵ = eps(eltype(F[1])))
-    # ϵ = 1
-    # Add ϵ in denominator for "infinitely thin" volumes
+function diffusion!(F, u, setup)
     (; boundary_conditions, grid, Re) = setup
     (; dimension, Δ, Δu, Nu, Iu) = grid
     D = dimension()
@@ -163,8 +161,8 @@ function diffusion!(F, u, setup; ϵ = eps(eltype(F[1])))
         Δuαβ = (α == β ? Δu[β] : Δ[β])
         F[α][I] +=
             ν * (
-                (u[α][I+δ(β)] - u[α][I]) / ((β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) + ϵ) -
-                (u[α][I] - u[α][I-δ(β)]) / ((β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) + ϵ)
+                (u[α][I+δ(β)] - u[α][I]) / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) -
+                (u[α][I] - u[α][I-δ(β)]) / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
             ) / Δuαβ[I[β]]
     end
     for α = 1:D
@@ -185,7 +183,7 @@ function diffusion!(F, u, setup; ϵ = eps(eltype(F[1])))
 end
 
 """
-    bodyforce!(F, u, setup; ϵ = eps(eltype(F[1])))
+    bodyforce!(F, u, setup)
 
 Compute body force.
 """
@@ -254,7 +252,7 @@ momentum(u, t, setup) = momentum!(
 
 Compute pressure gradient (in-place).
 """
-function pressuregradient!(G, p, setup; ϵ = sqrt(eps(eltype(p))))
+function pressuregradient!(G, p, setup)
     (; boundary_conditions, grid) = setup
     (; dimension, Δu, Nu, Iu) = grid
     D = dimension()
@@ -262,7 +260,7 @@ function pressuregradient!(G, p, setup; ϵ = sqrt(eps(eltype(p))))
     @kernel function _pressuregradient!(G, p, ::Val{α}, I0) where {α}
         I = @index(Global, Cartesian)
         I = I0 + I
-        G[α][I] = (p[I+δ(α)] - p[I]) / (Δu[α][I[α]] + ϵ)
+        G[α][I] = (p[I+δ(α)] - p[I]) / Δu[α][I[α]]
     end
     D = dimension()
     for α = 1:D

@@ -63,8 +63,16 @@ function Grid(x, boundary_conditions; ArrayType = Array)
     xp = ntuple(d -> (x[d][1:end-1] .+ x[d][2:end]) ./ 2, D)
 
     # Volume widths
-    Δ = ntuple(d -> diff(x[d]), D)
-    Δu = ntuple(d -> push!(diff(xp[d]), Δ[d][end] / 2), D)
+    Δ = ntuple(D) do d
+        Δ = diff(x[d])
+        Δ[Δ .== 0] .= eps(eltype(Δ))
+        Δ
+    end
+    Δu = ntuple(D) do d
+        Δu = push!(diff(xp[d]), Δ[d][end] / 2)
+        Δu[Δu .== 0] .= eps(eltype(Δu))
+        Δu
+    end
 
     # Reference volume sizes
     Ω = ones(T, N...)
