@@ -33,8 +33,8 @@ function plot_vorticity(::Dimension{2}, setup, u; kwargs...)
         ylabel = "y",
     )
     limits!(ax, xlims[1]..., xlims[2]...)
-    cf = contourf!(ax, xp..., ω; extendlow = :auto, extendhigh = :auto, levels, kwargs...)
-    # cf = heatmap!(ax, xp..., ωp; kwargs...)
+    # cf = contourf!(ax, xp..., ω; extendlow = :auto, extendhigh = :auto, levels, kwargs...)
+    cf = heatmap!(ax, Array.(xp)..., Array(ωp); kwargs...)
     Colorbar(fig[1, 2], cf)
 
     # save("output/vorticity.png", fig, pt_per_unit = 2)

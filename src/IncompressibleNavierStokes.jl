@@ -123,7 +123,7 @@ export pressure_poisson,
     pressure_poisson!, pressure_additional_solve, pressure_additional_solve!
 
 # Operators
-export momentum, divergence, pressuregradient
+export momentum, divergence, pressuregradient, Dfield!, Qfield!
 
 # Problems
 export solve_unsteady, solve_steady_state

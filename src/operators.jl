@@ -1,7 +1,15 @@
-# See https://b-fg.github.io/2023/05/07/waterlily-on-gpu.html
-# for writing kernel loops
+"""
+    δ = Offset{D}()
 
+Carsesian index unit vector in `D = 2` or `D = 3` dimensions.
+Calling `δ(α)` returns a Cartesian index with `1` in the dimension `α` and zeros
+elsewhere.
+
+See <https://b-fg.github.io/2023/05/07/waterlily-on-gpu.html>
+for writing kernel loops using Cartesian indices.
+"""
 struct Offset{D} end
+
 (::Offset{D})(α) where {D} = CartesianIndex(ntuple(β -> β == α ? 1 : 0, D))
 
 """
@@ -359,6 +367,99 @@ function interpolate_ω_p!(::Dimension{3}, setup, ωp, ω)
     end
     ωp
 end
+
+"""
+    Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
+
+Compute the ``D``-field [LiJiajia2019](@cite) given by
+
+```math
+D = \\frac{2 | \\nabla p |}{\\nabla^2 p}.
+```
+"""
+function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
+    (; boundary_conditions, grid) = setup
+    (; dimension, Np, Ip, Δ) = grid
+    T = eltype(p)
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function _Dfield!(d, G, p, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        g = zero(eltype(p))
+        for α = 1:D
+            g += (G[α][I-δ(α)] + G[α][I])^2
+        end
+        lap = zero(eltype(p))
+        # for α = 1:D
+        #     lap += (G[α][I] - G[α][I-δ(α)]) / Δ[α][I[α]]
+        # end
+        if D == 2
+            lap += (G[1][I] - G[1][I-δ(1)]) / Δ[1][I[1]]
+            lap += (G[2][I] - G[2][I-δ(2)]) / Δ[2][I[2]]
+        elseif D == 3
+            lap += (G[1][I] - G[1][I-δ(1)]) / Δ[1][I[1]]
+            lap += (G[2][I] - G[2][I-δ(2)]) / Δ[2][I[2]]
+            lap += (G[3][I] - G[3][I-δ(3)]) / Δ[3][I[3]]
+        end
+        lap = lap > 0 ? max(lap, ϵ) : min(lap, -ϵ)
+        # lap = abs(lap)
+        d[I] = sqrt(g) / 2 / lap
+    end
+    pressuregradient!(G, p, setup)
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    _Dfield!(get_backend(p), WORKGROUP)(d, G, p, I0; ndrange = Np)
+    d
+end
+
+Dfield(p, setup) = Dfield!(
+    KernelAbstractions.zeros(get_backend(p), eltype(p), setup.grid.N),
+    ntuple(
+        α -> KernelAbstractions.zeros(get_backend(p), eltype(p), setup.grid.N),
+        setup.grid.dimension(),
+    ),
+    p,
+    setup,
+)
+
+"""
+    Qfield!(Q, u, setup; ϵ = eps(eltype(Q)))
+
+Compute ``Q``-field [Jeong1995](@cite) given by
+
+```math
+Q = - \\frac{1}{2} \\sum_{α, β} \\frac{\\partial u^α}{\\partial x^β}
+\\frac{\\partial u^β}{\\partial x^α}.
+```
+"""
+function Qfield!(Q, u, setup; ϵ = eps(eltype(Q)))
+    (; boundary_conditions, grid) = setup
+    (; dimension, Np, Ip, Δ) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function _Qfield!(Q, u, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        q = zero(eltype(Q))
+        for α = 1:D, β = 1:D
+            q -=
+                (u[α][I] - u[α][I-δ(β)]) / Δ[β][I[β]] * (u[β][I] - u[β][I-δ(α)]) /
+                Δ[α][I[α]] / 2
+        end
+        Q[I] = q
+    end
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    _Qfield!(get_backend(u[1]), WORKGROUP)(Q, u, I0; ndrange = Np)
+    Q
+end
+
+Qfield(u, setup) = Qfield!(
+    KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N),
+    u,
+    setup,
+)
 
 """
     kinetic_energy(setup, u)

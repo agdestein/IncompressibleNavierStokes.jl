@@ -44,27 +44,42 @@ function field_plot(
     sleeptime = 0.001,
     equal_axis = true,
     displayfig = true,
+    docolorbar = true,
+    resolution = (800, 600),
+    kwargs...,
 )
     (; boundary_conditions, grid) = setup
     (; dimension, xlims, x, xp, Ip) = grid
     D = dimension()
 
-    xf = ntuple(α -> Array(xp[α][Ip.indices[α]]), D)
+    xf = Array.(getindex.(setup.grid.xp, Ip.indices))
 
+    (; u, p, t) = state[]
+    if fieldname == :velocity
+        up = interpolate_u_p(setup, u)
+    elseif fieldname == :vorticity
+        ω = vorticity(u, setup)
+        ωp = interpolate_ω_p(setup, ω)
+    elseif fieldname == :streamfunction
+        ψ = get_streamfunction(setup, u, t)
+    elseif fieldname == :pressure
+    end
     field = @lift begin
         isnothing(sleeptime) || sleep(sleeptime)
         (; u, p, t) = $state
         f = if fieldname == :velocity
-            up = interpolate_u_p(setup, u)
-            map((u, v) -> √sum(u^2 + v^2), up...)[Ip]
+            interpolate_u_p!(setup, up, u)
+            map((u, v) -> √sum(u^2 + v^2), up...)
         elseif fieldname == :vorticity
-            interpolate_ω_p(setup, vorticity(u, setup))[Ip]
+            apply_bc_u!(u, t, setup)
+            vorticity!(ω, u, setup)
+            interpolate_ω_p!(setup, ωp, ω)
         elseif fieldname == :streamfunction
-            get_streamfunction(setup, u, t)[Ip]
+            get_streamfunction!(setup, ψ, u, t)
         elseif fieldname == :pressure
-            p[Ip]
+            p
         end
-        Array(f)
+        Array(f)[Ip]
     end
 
     lims = @lift begin
@@ -86,10 +101,16 @@ function field_plot(
         lims
     end
 
-    fig = Figure()
+    fig = Figure(; resolution)
 
     if type ∈ (heatmap, image)
-        ax, hm = type(fig[1, 1], xf..., field; colormap = :viridis, colorrange = lims)
+        ax, hm = type(
+            fig[1, 1],
+            xf...,
+            field;
+            colorrange = lims,
+            kwargs...,
+        )
     elseif type ∈ (contour, contourf)
         ax, hm = type(
             fig[1, 1],
@@ -99,6 +120,7 @@ function field_plot(
             extendhigh = :auto,
             levels = @lift(LinRange($(lims)..., 10)),
             colorrange = lims,
+            kwargs...,
         )
     else
         error("Unknown plot type")
@@ -109,7 +131,7 @@ function field_plot(
     ax.xlabel = "x"
     ax.ylabel = "y"
     limits!(ax, xlims[1]..., xlims[2]...)
-    Colorbar(fig[1, 2], hm)
+    docolorbar && Colorbar(fig[1, 2], hm)
 
     displayfig && display(fig)
 
@@ -120,33 +142,35 @@ function field_plot(
     ::Dimension{3},
     setup,
     state;
-    fieldname = :vorticity,
+    fieldname = :Dfield,
     sleeptime = 0.001,
-    alpha = 0.05,
+    alpha = convert(eltype(setup.grid.x[1]), 0.1),
+    isorange = convert(eltype(setup.grid.x[1]), 0.5),
     equal_axis = true,
     levels = 3,
     displayfig = true,
+    docolorbar = true,
+    resolution = (800, 600),
+    kwargs...,
 )
     (; boundary_conditions, grid) = setup
-    (; xlims, x, xp) = grid
+    (; xlims, x, xp, Ip) = grid
 
+    xf = Array.(getindex.(setup.grid.xp, Ip.indices))
     if fieldname == :velocity
-        xf = xp
     elseif fieldname == :vorticity
-            xf = xp
     elseif fieldname == :streamfunction
-        if boundary_conditions.u.x[1] == :periodic
-            xf = x
-        else
-            xf = x[2:(end-1)]
-        end
-        if boundary_conditions.v.y[1] == :periodic
-            yf = y
-        else
-            yf = y[2:(end-1)]
-        end
     elseif fieldname == :pressure
-        xf, yf, zf = xp, yp, zp
+    elseif fieldname == :Dfield
+        p = state[].p
+        d = KernelAbstractions.zeros(get_backend(p), eltype(p), setup.grid.N)
+        G = ntuple(
+            α -> KernelAbstractions.zeros(get_backend(p), eltype(p), setup.grid.N),
+            setup.grid.dimension(),
+        )
+    elseif fieldname == :Qfield
+        u = state[].u
+        Q = KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N)
     else
         error("Unknown fieldname")
     end
@@ -164,30 +188,41 @@ function field_plot(
             get_streamfunction(setup, u, t)
         elseif fieldname == :pressure
             reshape(copy(p), length(xp), length(yp), length(zp))
+        elseif fieldname == :Dfield
+            Dfield!(d, G, p, setup)
+            d
+        elseif fieldname == :Qfield
+            Qfield!(Q, u, setup)
+            Q
         end
-        Array(f)
+        Array(f)[Ip]
     end
 
-    lims = @lift get_lims($field)
+    # lims = @lift get_lims($field)
+    lims = isnothing(levels) ? @lift(get_lims($field)) : extrema(levels)
 
     isnothing(levels) && (levels = @lift(LinRange($(lims)..., 10)))
 
     aspect = equal_axis ? (; aspect = :data) : (;)
-    fig = Figure()
-    ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
-    hm = contour!(
-        ax,
+    fig = Figure(; resolution)
+    # ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
+    hm = contour(
+        fig[1,1],
+        # ax,
         xf...,
         field;
-        # levels,
-        # colorrange = lims,
+        levels,
+        colorrange = lims,
+        # colorrange = extrema(levels),
         shading = false,
         alpha,
-        highclip = :red,
-        lowclip = :red,
+        isorange,
+        # highclip = :red,
+        # lowclip = :red,
+        kwargs...,
     )
 
-    Colorbar(fig[1, 2], hm)
+    docolorbar && Colorbar(fig[1, 2], hm)
 
     displayfig && display(fig)
 
@@ -220,10 +255,8 @@ end
 
 Create energy spectrum plot, redrawn every time `step_observer` is updated.
 """
-energy_spectrum_plotter(setup; nupdate = 1, kwargs...) = processor(
-    state -> energy_spectrum_plot(setup, state; kwargs...);
-    nupdate,
-)
+energy_spectrum_plotter(setup; nupdate = 1, kwargs...) =
+    processor(state -> energy_spectrum_plot(setup, state; kwargs...); nupdate)
 
 function energy_spectrum_plot(setup, state; displayfig = true)
     (; dimension, xp, Ip) = setup.grid
@@ -242,7 +275,7 @@ function energy_spectrum_plot(setup, state; displayfig = true)
         (; u, p, t) = $state
         up = interpolate_u_p(setup, u)
         e = sum(up -> up[Ip] .^ 2, up)
-        Array(reshape(abs.(fft(e)[ntuple(α -> kx[α].+1, D)...]), :))
+        Array(reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]), :))
     end
     espec = Figure()
     ax = Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
@@ -250,7 +283,8 @@ function energy_spectrum_plot(setup, state; displayfig = true)
     scatter!(ax, k, ehat; label = "Kinetic energy")
     krange = LinRange(extrema(k)..., 100)
     D == 2 && lines!(ax, krange, 1e7 * krange .^ (-3); label = "k⁻³", color = :red)
-    D == 3 && lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = "\$k^{-5/3}\$", color = :red)
+    D == 3 &&
+        lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = "\$k^{-5/3}\$", color = :red)
     axislegend(ax)
     displayfig && display(espec)
     on(ehat) do _
