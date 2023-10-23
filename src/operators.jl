@@ -83,7 +83,7 @@ function vorticity!(::Dimension{2}, ω, u, setup)
         I = @index(Global, Cartesian)
         I = I + I0
         ω[I] =
-            -(u[1][I+δ(2)] - u[1][I]) / Δu[2][I[2]] + (u[2][I+δ(1)] - u[2][I]) / Δu[1][I[1]]
+            (u[2][I+δ(1)] - u[2][I]) / Δu[1][I[1]] - (u[1][I+δ(2)] - u[1][I]) / Δu[2][I[2]]
     end
     I0 = CartesianIndex(ntuple(Returns(1), D))
     I0 -= oneunit(I0)
