@@ -71,8 +71,8 @@ function solve_unsteady(
         method;
         setup,
         pressure_solver,
-        u = copy.(u₀),
-        p = copy(p₀),
+        u = u₀,
+        p = p₀,
         t = t_start,
     )
 

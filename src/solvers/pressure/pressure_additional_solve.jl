@@ -15,7 +15,8 @@ function pressure_additional_solve!(pressure_solver, u, p, t, setup, F, G, M)
 
     pressuregradient!(G, p, setup)
     for α = 1:D
-        F[α][Iu[α]] .-= G[α][Iu[α]]
+        F[α] .-= G[α]
+        # F[α][Iu[α]] .-= G[α][Iu[α]]
     end
     divergence!(M, F, setup)
 
