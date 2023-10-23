@@ -17,7 +17,7 @@ animator(setup, path; nupdate = 1, plotter = field_plotter(setup), kwargs...) = 
     function (state)
         _state = Observable(state[])
         fig = plotter.initialize(_state)
-        stream = VideoStream(fig, kwargs...)
+        stream = VideoStream(fig; kwargs...)
         @lift begin
             _state[] = $state
             recordframe!(stream)
