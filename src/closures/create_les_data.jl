@@ -35,75 +35,52 @@ end
 _filter_saver(
     dns,
     les,
-    KV,
+    Ku,
     Kp;
     nupdate = 1,
-    bc_vectors_dns = get_bc_vectors(dns, zero(eltype(KV))),
-    bc_vectors_les = get_bc_vectors(les, zero(eltype(KV))),
 ) = processor(
     function (state)
-        (; Ω, x) = dns.grid
+        (; dimension, Ω, x) = dns.grid
+        D = dimension()
         Ωbar = les.grid.Ω
         T = eltype(x)
-        KVmom = Diagonal(Ωbar) * (KV * Diagonal(1 ./ Ω))
         _t = fill(zero(T), 0)
-        _V = fill(zeros(T, 0), 0)
+        _u = fill(ntuple(α -> zeros(T, 0), D), 0)
         _p = fill(zeros(T, 0), 0)
-        _F = fill(zeros(T, 0), 0)
-        _FG = fill(zeros(T, 0), 0)
-        _cF = fill(zeros(T, 0), 0)
-        _cFG = fill(zeros(T, 0), 0)
-        on(state) do (; V, p, t)
-            Vbar = KV * V
+        _F = fill(ntuple(α -> zeros(T, 0), D), 0)
+        _FG = fill(ntuple(α -> zeros(T, 0), D), 0)
+        _cF = fill(ntuple(α -> zeros(T, 0), D), 0)
+        _cFG = fill(ntuple(α -> zeros(T, 0), D), 0)
+        on(state) do (; u, p, t)
+            ubar = Ku .* u
             pbar = Kp * p
-            F, = momentum(V, V, p, t, dns; bc_vectors = bc_vectors_dns, nopressure = true)
-            FG, = momentum(
-                V,
-                V,
-                p,
-                t,
-                dns;
-                bc_vectors = bc_vectors_dns,
-                nopressure = false,
-            )
-            Fbar = KVmom * F
-            FGbar = KVmom * FG
-            FVbar, = momentum(
-                Vbar,
-                Vbar,
-                pbar,
-                t,
-                les;
-                bc_vectors = bc_vectors_les,
-                nopressure = true,
-            )
-            FGVbar, = momentum(
-                Vbar,
-                Vbar,
-                pbar,
-                t,
-                les;
-                bc_vectors = bc_vectors_les,
-                nopressure = false,
-            )
-            cF = Fbar - FVbar
-            cFG = FGbar - FGVbar
+            F = momentum(u, t, dns)
+            G = pressuregradient(p, dns)
+            FG = F .+ G
+            Fbar = Ku .* F
+            FGbar = Ku .* FG
+            FVbar = momentum(ubar, t, les)
+            GVbar = pressuregradient(pbar, les)
+            FGVbar = FVbar + GVbar
+            cF = Fbar .- FVbar
+            cFG = FGbar .- FGVbar
             push!(_t, t)
-            push!(_V, Array(Vbar))
+            push!(_u, Array.(ubar))
             push!(_p, Array(pbar))
-            push!(_F, Array(Fbar))
-            push!(_FG, Array(FGbar))
-            push!(_cF, Array(cF))
-            push!(_cFG, Array(cFG))
+            push!(_F, Array.(Fbar))
+            push!(_FG, Array.(FGbar))
+            push!(_cF, Array.(cF))
+            push!(_cFG, Array.(cFG))
         end
         state[] = state[]
-        (; t = _t, V = _V, p = _p, F = _F, FG = _FG, cF = _cF, cFG = _cFG)
+        (; t = _t, u = _u, p = _p, F = _F, FG = _FG, cF = _cF, cFG = _cFG)
     end;
     nupdate,
 )
 
 function create_les_data(
     T;
+    dimension,
     Re = T(2_000),
     lims = (T(0), T(1)),
     nles = 64,
@@ -112,21 +89,19 @@ function create_les_data(
     tburn = T(0.1),
     tsim = T(0.1),
     Δt = T(1e-4),
-    device = identity,
+    ArrayType = Array,
 )
+    D = dimension()
     ndns = compression * nles
-    xdns = LinRange(lims..., ndns + 1)
-    ydns = LinRange(lims..., ndns + 1)
-    xles = xdns[1:compression:end]
-    yles = ydns[1:compression:end]
+    xdns = ntuple(α -> LinRange(lims..., ndns + 1), D)
+    xles = map(x -> x[1:compression:end], xdns)
 
     # Build setup and assemble operators
-    dns = Setup(xdns, ydns; Re)
-    les = Setup(xles, yles; Re)
+    dns = Setup(xdns...; Re, ArrayType)
+    les = Setup(xles...; Re, ArrayType)
 
     # Filter
-    (; KV, Kp) = operator_filter(dns.grid, dns.boundary_conditions, compression)
-    KVmom = Diagonal(les.grid.Ω) * (KV * Diagonal(1 ./ dns.grid.Ω))
+    (; Ku, Kp) = operator_filter(dns.grid, dns.boundary_conditions, compression)
 
     # Since the grid is uniform and identical for x and y, we may use a specialized
     # spectral pressure solver
@@ -137,14 +112,15 @@ function create_les_data(
     Δt = tsim / nt
 
     # Filtered quantities to store
+    (; N) = les.grid
     filtered = (;
-        V = zeros(T, nles * nles * 2, nt + 1, nsim),
-        p = zeros(T, nles * nles, nt + 1, nsim),
-        F = zeros(T, nles * nles * 2, nt + 1, nsim),
-        FG = zeros(T, nles * nles * 2, nt + 1, nsim),
-        cF = zeros(T, nles * nles * 2, nt + 1, nsim),
-        cFG = zeros(T, nles * nles * 2, nt + 1, nsim),
-        force = zeros(T, nles * nles * 2, nsim),
+        u = zeros(T, N..., D, nt + 1, nsim),
+        p = zeros(T, N..., nt + 1, nsim),
+        F = zeros(T, N..., D, nt + 1, nsim),
+        FG = zeros(T, N..., D, nt + 1, nsim),
+        cF = zeros(T, N..., D, nt + 1, nsim),
+        cFG = zeros(T, N..., D, nt + 1, nsim),
+        force = zeros(T, N..., D, nsim),
     )
 
     @info "Generating $(Base.summarysize(filtered) / 1e6) Mb of LES data"
@@ -153,38 +129,36 @@ function create_les_data(
         @info "Generating data for simulation $isim of $nsim"
 
         # Initial conditions
-        V₀, p₀ = random_field(dns; A = T(10_000_000), σ = T(30), s = 5, pressure_solver)
+        u₀, p₀ = random_field(dns; pressure_solver)
 
         # Random body force
-        force_dns = gaussian_force(xdns, ydns) +
-            gaussian_force(xdns, ydns) +
-            # gaussian_force(xdns, ydns) +
-            # gaussian_force(xdns, ydns) +
-            gaussian_force(xdns, ydns)
-        force_les = KVmom * force_dns
+        force_dns = gaussian_force(xdns...) +
+            gaussian_force(xdns...) +
+            # gaussian_force(xdns...) +
+            # gaussian_force(xdns...) +
+            gaussian_force(xdns...)
+        force_les = Ku .* force_dns
 
         _dns = (; dns..., force = force_dns)
         _les = (; les..., force = force_les)
 
         # Solve burn-in DNS
         @info "Burn-in for simulation $isim of $nsim"
-        V, p, outputs = solve_unsteady(
+        u, p, outputs = solve_unsteady(
             _dns,
-            V₀,
+            u₀,
             p₀,
             (T(0), tburn);
             Δt,
             processors = (step_logger(; nupdate = 10),),
             pressure_solver,
-            inplace = true,
-            device,
         )
 
         # Solve DNS and store filtered quantities
         @info "Solving DNS for simulation $isim of $nsim"
-        V, p, outputs = solve_unsteady(
+        u, p, outputs = solve_unsteady(
             _dns,
-            V,
+            u,
             p,
             (T(0), tsim);
             Δt,
@@ -192,7 +166,7 @@ function create_les_data(
                 _filter_saver(
                     device(_dns),
                     device(_les),
-                    device(KV),
+                    device(Ku),
                     device(Kp);
                     bc_vectors_dns = device(get_bc_vectors(_dns, T(0))),
                     bc_vectors_les = device(get_bc_vectors(_les, T(0))),
@@ -206,13 +180,13 @@ function create_les_data(
         f = outputs[1]
 
         # Store result for current IC
-        filtered.V[:, :, isim] = stack(f.V)
-        filtered.p[:, :, isim] = stack(f.p)
-        filtered.F[:, :, isim] = stack(f.F)
-        filtered.FG[:, :, isim] = stack(f.FG)
-        filtered.cF[:, :, isim] = stack(f.cF)
-        filtered.cFG[:, :, isim] = stack(f.cFG)
-        filtered.force[:, isim] = force_les
+        filtered.u[ntuple(α -> :, D + 2)..., isim] = stack(stack.(f.u))
+        filtered.p[ntuple(α -> :, D + 1)..., isim] = stack(f.p)
+        filtered.F[ntuple(α -> :, D + 2)..., isim] = stack(stack.(f.F))
+        filtered.FG[ntuple(α -> :, D + 2)..., isim] = stack(stack.(f.FG))
+        filtered.cF[ntuple(α -> :, D + 2)..., isim] = stack(stack.(f.cF))
+        filtered.cFG[ntuple(α -> :, D + 2)..., isim] = stack(stack.(f.cFG))
+        filtered.force[ntuple(α -> :, D + 1)..., isim] = stack.(force_les)
     end
 
     filtered
