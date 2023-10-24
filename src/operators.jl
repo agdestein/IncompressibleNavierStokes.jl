@@ -292,6 +292,11 @@ pressuregradient(p, setup) = pressuregradient!(
     setup,
 )
 
+"""
+    interpolate_u_p(setup, u)
+
+Interpolate velocity to pressure points.
+"""
 interpolate_u_p(setup, u) = interpolate_u_p!(
     setup,
     ntuple(
@@ -301,6 +306,11 @@ interpolate_u_p(setup, u) = interpolate_u_p!(
     u,
 )
 
+"""
+    interpolate_u_p!(setup, up, u)
+
+Interpolate velocity to pressure points.
+"""
 function interpolate_u_p!(setup, up, u)
     (; boundary_conditions, grid, Re, bodyforce) = setup
     (; dimension, Np, Ip) = grid
@@ -319,6 +329,11 @@ function interpolate_u_p!(setup, up, u)
     up
 end
 
+"""
+    interpolate_ω_p(setup, ω)
+
+Interpolate vorticity to pressure points.
+"""
 interpolate_ω_p(setup, ω) = interpolate_ω_p!(
     setup,
     setup.grid.dimension() == 2 ?
@@ -330,6 +345,11 @@ interpolate_ω_p(setup, ω) = interpolate_ω_p!(
     ω,
 )
 
+"""
+    interpolate_ω_p!(setup, ωp, ω)
+
+Interpolate vorticity to pressure points.
+"""
 interpolate_ω_p!(setup, ωp, ω) = interpolate_ω_p!(setup.grid.dimension, setup, ωp, ω)
 
 function interpolate_ω_p!(::Dimension{2}, setup, ωp, ω)
@@ -413,6 +433,11 @@ function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
     d
 end
 
+"""
+    Dfield(p, setup)
+
+Compute the ``D``-field.
+"""
 Dfield(p, setup) = Dfield!(
     KernelAbstractions.zeros(get_backend(p), eltype(p), setup.grid.N),
     ntuple(
@@ -455,6 +480,11 @@ function Qfield!(Q, u, setup; ϵ = eps(eltype(Q)))
     Q
 end
 
+"""
+    Qfield(u, setup)
+
+Compute the ``Q``-field.
+"""
 Qfield(u, setup) = Qfield!(
     KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N),
     u,

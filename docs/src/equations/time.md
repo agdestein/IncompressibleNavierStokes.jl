@@ -1,3 +1,7 @@
+```@meta
+CurrentModule = IncompressibleNavierStokes
+```
+
 # Time discretization
 
 The spatially discretized Navier-Stokes equations form a differential-algebraic
@@ -33,6 +37,27 @@ initial conditions. We say that the time integration scheme (definition of
 ``u^n``) is accurate to the order ``r`` if ``u^n = u(t^n) +
 \mathcal{O}(\Delta t^r)`` for all ``n``.
 
+
+IncompressibleNavierStokes provides a collection of explicit and implicit
+[Runge-Kutta methods](../api/tableaux.md), in addition to Adams-Bashforth
+Crank-Nicolson and one-leg beta method time steppers.
+
+The code is currently not adapted to time steppers from
+[DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/solvers/dae_solve/),
+but they may be integrated in the future.
+
+```@docs
+AbstractODEMethod
+AbstractRungeKuttaMethod
+isexplicit
+lambda_conv_max
+lambda_diff_max
+ode_method_cache
+nstage
+runge_kutta_method
+timestep
+timestep!
+```
 
 ## Explicit Runge-Kutta methods
 
@@ -79,11 +104,17 @@ with ``(y_M(t_i) - y_M(t_0)) / \Delta t_i``. The space-discrete
 divergence-freeness is thus perfectly preserved, even though the time
 discretization introduces other errors.
 
+```@docs
+ExplicitRungeKuttaMethod
+```
 
 ## Implicit Runge-Kutta methods
 
 See Sanderse [Sanderse2013](@cite).
 
+```@docs
+ImplicitRungeKuttaMethod
+```
 
 ## Adams-Bashforth Crank-Nicolson method
 
@@ -144,6 +175,9 @@ A first order accurate prediction of the corresponding pressure is ``p = p_0 +
 perform an additional pressure solve to avoid accumulating first order errors.
 The resulting pressure ``p`` is then accurate to the same order as ``u``.
 
+```@docs
+AdamsBashforthCrankNicolsonMethod
+```
 
 ## One-leg beta method
 
@@ -178,4 +212,8 @@ while the second order accurate pressure is given by
 
 ```math
 p = 2 p_0 - p_{-1} + \frac{4}{3} \Delta p.
+```
+
+```@docs
+OneLegMethod
 ```

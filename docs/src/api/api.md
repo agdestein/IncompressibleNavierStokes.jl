@@ -20,16 +20,6 @@ max_size
 stretched_grid
 ```
 
-## Visocosity Models
-
-```@docs
-AbstractViscosityModel
-LaminarModel
-MixingLengthModel
-SmagorinskyModel
-QRModel
-```
-
 ## Convection Models
 
 ```@docs
@@ -38,19 +28,6 @@ NoRegConvectionModel
 C2ConvectionModel
 C4ConvectionModel
 LerayConvectionModel
-```
-
-## Momentum
-
-```@docs
-divergence
-divergence!
-vorticity
-vorticity!
-convection!
-diffusion!
-bodyforce!
-momentum!
 ```
 
 ## Postprocess
@@ -92,63 +69,9 @@ solve_unsteady
 solve_steady_state
 ```
 
-### Pressure solvers
-
-```@docs
-AbstractPressureSolver
-DirectPressureSolver
-CGPressureSolver
-CGPressureSolverManual
-SpectralPressureSolver
-pressure_additional_solve
-pressure_additional_solve!
-pressure_poisson
-pressure_poisson!
-```
-
-## Time steppers
-
-```@docs
-AbstractODEMethod
-AbstractRungeKuttaMethod
-AdamsBashforthCrankNicolsonMethod
-OneLegMethod
-ExplicitRungeKuttaMethod
-ImplicitRungeKuttaMethod
-
-isexplicit
-lambda_conv_max
-lambda_diff_max
-nstage
-ode_method_cache
-runge_kutta_method
-timestep
-timestep!
-```
-
 ## Utils
 
 ```@docs
 get_lims
 plotmat
-```
-
-## Other
-
-```@docs
-DirichletBC
-SymmetricBC
-PressureBC
-kinetic_energy
-FourierLayer
-offset_p
-momentum_allstage
-momentum_allstage!
-offset_u
-pressuregradient
-pressuregradient!
-momentum
-Dfield!
-Qfield!
-Offset
 ```

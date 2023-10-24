@@ -408,15 +408,11 @@ function timestep!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, moment
     create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
 end
 
-"""
-    momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, get_jacobian = false)
-
-Call momentum for multiple `(Vⱼ, pⱼ)` pairs, as required in implicit RK methods.
-
-Non-mutating/allocating/out-of-place version.
-
-See also [`momentum_allstage!`](@ref).
-"""
+# Call momentum for multiple `(Vⱼ, pⱼ)` pairs, as required in implicit RK methods.
+# 
+# Non-mutating/allocating/out-of-place version.
+# 
+# See also [`momentum_allstage!`](@ref).
 function momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, get_jacobian = false)
     (; NV, Np) = setup.grid
     T = eltype(Vⱼ)
@@ -446,28 +442,11 @@ function momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, g
     Fⱼ, ∇Fⱼ
 end
 
-"""
-    momentum_allstage!(
-        Fⱼ,
-        ∇Fⱼ,
-        Vⱼ,
-        ϕⱼ,
-        pⱼ,
-        tⱼ,
-        setup,
-        cache,
-        momentum_cache;
-        bc_vectors,
-        nstage,
-        get_jacobian = false,
-    )
-
-Call momentum for multiple `(V, p)` pairs, as required in implicit RK methods.
-
-Mutating/non-allocating/in-place version.
-
-See also [`momentum_allstage`](@ref).
-"""
+# Call momentum for multiple `(V, p)` pairs, as required in implicit RK methods.
+# 
+# Mutating/non-allocating/in-place version.
+# 
+# See also [`momentum_allstage`](@ref).
 function momentum_allstage!(
     Fⱼ,
     ∇Fⱼ,

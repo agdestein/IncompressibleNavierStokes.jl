@@ -1,11 +1,16 @@
 abstract type AbstractBC end
 
+"""
+    PeriodicBC()
+
+Periodic boundary conditions. Must be periodic on both sides.
+"""
 struct PeriodicBC <: AbstractBC end
 
 """
     DirichletBC()
 
-No split boundary conditions, where all velocity components are zero.
+No slip boundary conditions, where all velocity components are zero.
 
     DirichletBC(u, dudt)
 

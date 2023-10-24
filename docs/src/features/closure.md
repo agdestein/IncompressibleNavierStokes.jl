@@ -70,4 +70,5 @@ We provide two neural architectures: A convolutional neural network (CNN) and a 
 ```@docs
 cnn
 fno
+FourierLayer
 ```

@@ -69,13 +69,13 @@ makedocs(;
             "Time discretization" => "equations/time.md",
         ],
         "Features" => [
+            "Boundary conditions" => "features/bc.md",
+            "Pressure solvers" => "features/pressure.md",
             "Floating point precision" => "features/precision.md",
             "GPU Support" => "features/gpu.md",
+            "Operators" => "features/operators.md",
             "Large eddy simulation" => "features/les.md",
             "Neural closure models" => "features/closure.md",
-            "Pressure solvers" => "features/pressure.md",
-            "Boundary conditions" => "features/bc.md",
-            "Time steppers" => "features/steppers.md",
         ],
         "API Reference" =>
             ["API" => "api/api.md", "Runge-Kutta methods" => "api/tableaux.md"],

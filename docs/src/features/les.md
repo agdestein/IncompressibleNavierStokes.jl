@@ -30,10 +30,10 @@ computed from the local velocity field.
 
 The following eddy viscosity models are available:
 
-- [`SmagorinskyModel`](@ref)
-- [`QRModel`](@ref)
-- [`MixingLengthModel`](@ref)
-
-In addition, the default [`LaminarModel`](@ref) assumes that there are no
-sub-grid stresses. It can be used if the grid is sufficiently refined for the
-given flow. It has the advantage of having a constant diffusion operator.
+```@docs
+AbstractViscosityModel
+LaminarModel
+SmagorinskyModel
+QRModel
+MixingLengthModel
+```

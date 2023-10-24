@@ -102,7 +102,7 @@ export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
 export SteadyBodyForce
 
 # Models
-export LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
+export AbstractViscosityModel, LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
 export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors
@@ -117,8 +117,8 @@ export Setup
 export stretched_grid, cosine_grid
 
 # Pressure solvers
-export DirectPressureSolver,
-    CGPressureSolver, CGPressureSolverManual, SpectralPressureSolver
+export AbstractPressureSolver,
+    DirectPressureSolver, CGPressureSolver, CGPressureSolverManual, SpectralPressureSolver
 export pressure_poisson,
     pressure_poisson!, pressure_additional_solve, pressure_additional_solve!
 
@@ -135,7 +135,7 @@ export plot_force,
 export plotmat
 
 # Closure models
-export cnn, fno
+export cnn, fno, FourierLayer
 export train
 export mean_squared_error, relative_error
 export create_randloss, create_callback, create_les_data

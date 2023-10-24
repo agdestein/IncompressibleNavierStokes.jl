@@ -1,29 +1,15 @@
 # GPU Support
 
-If an Nvidia GPU is available, the default CPU solve call
-
-```julia
-solve_unsteady(setup, V₀, p₀, tlims; kwargs...)
-```
-
-can now be replaced with the following:
-
-```julia
-using CUDA
-solve_unsteady(
-    setup, V₀, p₀, tlims;
-    device = cu,
-    kwargs...
-)
-```
-
-This moves the arrays and sparse operators to the GPU, outsourcing all array operations to the GPU.
+IncompressibleNavierStokes supports various array types. The desired array type
+only has to be passed to the [`Setup`](@ref) function. All operators have been
+made are backend agnostic by using
+[KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl/).
+Even if a GPU is not available, the operators are multithreaded if  Julia is started with multiple threads (e.g. `julia -t 4`)
 
 Limitations:
 
 - [`DirectPressureSolver`](@ref) is currently not supported on the GPU. Use [`CGPressureSolver`](@ref) instead.
 - Unsteady boundary conditions are currently not supported on the GPU.
-- The code uses sparse matrices for discretization. For finer grids, these can take up a lot of memory on the GPU.
 - This has not been tested with other GPU interfaces, such as
     - [AMDGPU.jl](https://github.com/JuliaGPU/AMDGPU.jl)
     - [Metal.jl](https://github.com/JuliaGPU/Metal.jl)

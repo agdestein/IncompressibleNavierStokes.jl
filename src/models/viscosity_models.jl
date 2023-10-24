@@ -8,7 +8,9 @@ abstract type AbstractViscosityModel end
 """
     LaminarModel()
 
-Laminar model.
+Laminar model. This model assumes that there are no
+sub-grid stresses. It can be used if the grid is sufficiently refined for the
+given flow. It has the advantage of having a constant diffusion operator.
 """
 struct LaminarModel <: AbstractViscosityModel
 end
