@@ -169,7 +169,7 @@ This yields the discrete mass equation
 ```math
 \sum_{\alpha = 1}^d
 \frac{u^\alpha_{I + \delta(\alpha) / 2} -
-u^\alpha_{I - \delta(\alpha) / 2}}{\Delta^\alpha_I} = 0,
+u^\alpha_{I - \delta(\alpha) / 2}}{\Delta^\alpha_{I(\alpha)}} = 0,
 ```
 
 where we have divided by the volume sizes ``\Omega_I``.
