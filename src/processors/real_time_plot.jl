@@ -44,6 +44,7 @@ function field_plot(
     sleeptime = 0.001,
     equal_axis = true,
     displayfig = true,
+    displayupdates = false,
     docolorbar = true,
     resolution = (800, 600),
     kwargs...,
@@ -134,6 +135,9 @@ function field_plot(
     docolorbar && Colorbar(fig[1, 2], hm)
 
     displayfig && display(fig)
+    displayupdates && on(state) do _
+        display(fig)
+    end
 
     fig
 end
