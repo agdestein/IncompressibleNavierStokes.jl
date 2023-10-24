@@ -114,6 +114,15 @@ Lux.parameterlength((; dimension, kmax, cin, cout)::FourierLayer) =
     cout * cin + (kmax + 1)^dimension() * 2 * cout * cin
 Lux.statelength(::FourierLayer) = 0
 
+## Pretty printing
+function Base.show(io::IO, (; dimension, kmax, cin, cout, σ)::FourierLayer)
+    print(io, "FourierLayer{", dimension(), "}(")
+    print(io, kmax)
+    print(io, ", ", cin, " => ", cout)
+    print(io, "; σ = ", σ)
+    print(io, ")")
+end
+
 # Pass inputs through Fourier layer
 function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
     # TODO: Check if this is more efficient for
