@@ -29,6 +29,9 @@ const WORKGROUP = 64
 # Convenience notation
 const ⊗ = kron
 
+# Easily retrieve value from Val
+(::Val{x})() where {x} = x
+
 # Boundary condtions
 include("boundary_conditions.jl")
 

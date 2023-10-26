@@ -167,43 +167,7 @@ function apply_bc_p!(::PeriodicBC, p, β, t, setup; atend, kwargs...)
     else
         _bc_a(get_backend(p), WORKGROUP)(p, Val(β); ndrange)
     end
-    synchronize(get_backend(p))
 end
-
-# function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwargs...)
-#     (; dimension, Nu, x, xp, Iu) = setup.grid
-#     D = dimension()
-#     δ = Offset{D}()
-#     isnothing(bc.u) && return
-#     bcfunc = dudt ? bc.dudt : bc.u
-#     @kernel function _bc_a(u, α, β, I0)
-#         I = @index(Global, Cartesian)
-#         I = I + I0
-#         u[α][I] = bcfunc[α](ntuple(γ -> γ == α ? x[γ][I[α]+1] : xp[γ][I[γ]], D)..., t)
-#     end
-#     @kernel function _bc_b(u, α, β, I0)
-#         I = @index(Global, Cartesian)
-#         I = I + I0
-#         u[α][I] = bcfunc[α](ntuple(γ -> γ == α ? x[γ][I[α]+1] : xp[γ][I[γ]], D)..., t)
-#     end
-#     for α = 1:D
-#         Xu = (xp[1:β-1]..., x[β], xp[β+1:end]...)
-#         ndrange = (Nu[α][1:β-1]..., 1, Nu[α][β+1:end]...)
-#         if atend
-#             I0 = first(Iu[α])
-#             I0 -= oneunit(I0)
-#             I0 += Nu[α][β] * δ(β)
-#             _bc_b(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
-#             synchronize(get_backend(u[1]))
-#         else
-#             I0 = first(Iu[α])
-#             I0 -= oneunit(I0)
-#             I0 -= δ(β)
-#             _bc_a(get_backend(u[1]), WORKGROUP)(u, α, β, I0; ndrange)
-#             synchronize(get_backend(u[1]))
-#         end
-#     end
-# end
 
 function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwargs...)
     (; dimension, x, xp, N) = setup.grid
@@ -214,10 +178,7 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwar
     for α = 1:D
         if atend
             I = CartesianIndices(
-                ntuple(
-                    γ -> γ == β ? isnormal ? (N[γ]-1:N[γ]-1) : (N[γ]:N[γ]) : (1:N[γ]),
-                    D,
-                ),
+                ntuple(γ -> γ == β ? α == β ? (N[γ]-1:N[γ]-1) : (N[γ]:N[γ]) : (1:N[γ]), D),
             )
         else
             I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
@@ -231,7 +192,7 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwar
             ),
             D,
         )
-        u[α][I] .= bcfunc[α].(xI..., t)
+        u[α][I] .= bcfunc.(Val(α), xI..., t)
     end
 end
 
@@ -257,37 +218,43 @@ function apply_bc_u!(::SymmetricBC, u, β, t, setup; atend, kwargs...)
 end
 
 function apply_bc_p!(::SymmetricBC, p, β, t, setup; atend, kwargs...)
-    nothing
+    (; dimension, N) = setup.grid
+    D = dimension()
+    δ = Offset{D}()
+    if atend
+        I = CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
+        p[I] .= p[I.-δ(β)]
+    else
+        I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
+        p[I] .= p[I.+δ(β)]
+    end
 end
 
 function apply_bc_u!(bc::PressureBC, u, β, t, setup; atend, kwargs...)
     (; grid) = setup
-    (; dimension, Nu, Iu) = grid
+    (; dimension, N, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
     @kernel function _bc_a!(u, ::Val{α}, ::Val{β}, I0) where {α,β}
         I = @index(Global, Cartesian)
         I = I + I0
-        u[α][I-δ(β)] = u[α][I]
+        u[α][I] = u[α][I+δ(β)]
     end
     @kernel function _bc_b!(u, ::Val{α}, ::Val{β}, I0) where {α,β}
         I = @index(Global, Cartesian)
         I = I + I0
-        u[α][I+δ(β)] = u[α][I]
+        u[α][I] = u[α][I-δ(β)]
     end
+    ndrange = (N[1:β-1]..., 1, N[β+1:end]...)
     for α = 1:D
         if atend
-            I0 = first(Iu[α]) + (Nu[α][β] - 1) * δ(β)
+            I0 = CartesianIndex(ntuple(γ -> γ == β ? N[β] : 1, D))
             I0 -= oneunit(I0)
-            ndrange = (Nu[α][1:β-1]..., 1, Nu[α][β+1:end]...)
             _bc_b!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β), I0; ndrange)
-            synchronize(get_backend(u[1]))
         else
-            I0 = first(Iu[α])
+            I0 = CartesianIndex(ntuple(γ -> γ == β && α != β ? 2 : 1, D))
             I0 -= oneunit(I0)
-            ndrange = (Nu[α][1:β-1]..., 1, Nu[α][β+1:end]...)
             _bc_a!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β), I0; ndrange)
-            synchronize(get_backend(u[1]))
         end
     end
 end

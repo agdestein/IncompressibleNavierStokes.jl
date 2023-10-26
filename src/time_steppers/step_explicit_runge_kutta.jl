@@ -56,9 +56,9 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
 
         # Solve the Poisson equation
         pressure_poisson!(pressure_solver, p, M)
-        apply_bc_p!(p, t, setup)
 
         # Compute pressure correction term
+        apply_bc_p!(p, t, setup)
         pressuregradient!(G, p, setup)
 
         # Update velocity current stage, which is now divergence free

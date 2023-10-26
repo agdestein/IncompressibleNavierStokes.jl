@@ -18,7 +18,7 @@ struct Offset{D} end
 Compute divergence of velocity field (in-place version).
 """
 function divergence!(M, u, setup)
-    (; boundary_conditions, grid) = setup
+    (; grid) = setup
     (; Δ, N, Ip) = grid
     D = length(u)
     δ = Offset{D}()
@@ -75,7 +75,7 @@ Compute vorticity field.
 vorticity!(ω, u, setup) = vorticity!(setup.grid.dimension, ω, u, setup)
 
 function vorticity!(::Dimension{2}, ω, u, setup)
-    (; boundary_conditions, grid) = setup
+    (; grid) = setup
     (; dimension, Δu, N) = grid
     D = dimension()
     δ = Offset{D}()
@@ -92,7 +92,7 @@ function vorticity!(::Dimension{2}, ω, u, setup)
 end
 
 function vorticity!(::Dimension{3}, ω, u, setup)
-    (; boundary_conditions, grid) = setup
+    (; grid) = setup
     (; dimension, Δu, N) = grid
     D = dimension()
     δ = Offset{D}()
@@ -120,7 +120,7 @@ end
 Compute convective term.
 """
 function convection!(F, u, setup)
-    (; boundary_conditions, grid, Re) = setup
+    (; grid) = setup
     (; dimension, Δ, Δu, Nu, Iu, A) = grid
     D = dimension()
     δ = Offset{D}()
@@ -157,7 +157,7 @@ end
 Compute diffusive term.
 """
 function diffusion!(F, u, setup)
-    (; boundary_conditions, grid, Re) = setup
+    (; grid, Re) = setup
     (; dimension, Δ, Δu, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
@@ -195,14 +195,14 @@ end
 Compute body force.
 """
 function bodyforce!(F, u, t, setup)
-    (; boundary_conditions, grid, Re, bodyforce) = setup
+    (; grid, bodyforce) = setup
     (; dimension, Δ, Δu, Nu, Iu, x, xp) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _bodyforce!(F, force, ::Val{α}, t, I0) where {α}
+    @kernel function _bodyforce!(F, force, valα::Val{α}, t, I0) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
-        F[α][I] += force[α](ntuple(β -> α == β ? x[β][1+I[β]] : xp[β][I[β]], D)..., t)
+        F[α][I] += force(valα, ntuple(β -> α == β ? x[β][1+I[β]] : xp[β][I[β]], D)..., t)
     end
     for α = 1:D
         I0 = first(Iu[α])
@@ -260,7 +260,7 @@ momentum(u, t, setup) = momentum!(
 Compute pressure gradient (in-place).
 """
 function pressuregradient!(G, p, setup)
-    (; boundary_conditions, grid) = setup
+    (; grid) = setup
     (; dimension, Δu, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()

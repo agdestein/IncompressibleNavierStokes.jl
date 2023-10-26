@@ -13,6 +13,7 @@ function pressure_additional_solve!(pressure_solver, u, p, t, setup, F, G, M)
 
     apply_bc_u!(F, t, setup; dudt = true)
 
+    apply_bc_p!(p, t, setup)
     pressuregradient!(G, p, setup)
     for α = 1:D
         F[α] .-= G[α]

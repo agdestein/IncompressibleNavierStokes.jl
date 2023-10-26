@@ -11,15 +11,18 @@ plot_vorticity(setup, u; kwargs...) =
 # 2D version
 function plot_vorticity(::Dimension{2}, setup, u; kwargs...)
     (; grid, boundary_conditions) = setup
-    (; xp, xlims) = grid
+    (; xp, xlims, Ip) = grid
     T = eltype(xp[1])
+
+    xf = Array.(getindex.(xp, Ip.indices))
 
     # Get fields
     ω = vorticity(u, setup)
     ωp = interpolate_ω_p(setup, ω)
+    ωp = Array(ωp)[Ip]
 
     # Levels
-    μ, σ = mean(ω), std(ω)
+    μ, σ = mean(ωp), std(ωp)
     # ≈(μ + σ, μ; rtol = 1e-8, atol = 1e-8) && (σ = 1e-4)
     levels = LinRange(μ - T(1.5) * σ, μ + T(1.5) * σ, 10)
 
@@ -34,7 +37,7 @@ function plot_vorticity(::Dimension{2}, setup, u; kwargs...)
     )
     limits!(ax, xlims[1]..., xlims[2]...)
     # cf = contourf!(ax, xp..., ω; extendlow = :auto, extendhigh = :auto, levels, kwargs...)
-    cf = heatmap!(ax, Array.(xp)..., Array(ωp); kwargs...)
+    cf = heatmap!(ax, xf..., ωp; kwargs...)
     Colorbar(fig[1, 2], cf)
 
     # save("output/vorticity.png", fig, pt_per_unit = 2)

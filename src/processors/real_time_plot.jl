@@ -56,7 +56,7 @@ function field_plot(
     xf = Array.(getindex.(setup.grid.xp, Ip.indices))
 
     (; u, p, t) = state[]
-    if fieldname == :velocity
+    _f = if fieldname == :velocity
         up = interpolate_u_p(setup, u)
     elseif fieldname == :vorticity
         ω = vorticity(u, setup)
@@ -64,7 +64,9 @@ function field_plot(
     elseif fieldname == :streamfunction
         ψ = get_streamfunction(setup, u, t)
     elseif fieldname == :pressure
+        p
     end
+    _f = Array(_f)[Ip]
     field = @lift begin
         isnothing(sleeptime) || sleep(sleeptime)
         (; u, p, t) = $state
@@ -80,7 +82,8 @@ function field_plot(
         elseif fieldname == :pressure
             p
         end
-        Array(f)[Ip]
+        # Array(f)[Ip]
+        copyto!(_f, view(f, Ip))
     end
 
     lims = @lift begin
