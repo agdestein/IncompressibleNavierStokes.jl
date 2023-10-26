@@ -45,19 +45,29 @@ function pressure_poisson!(solver::CGPressureSolver, p, f)
     cg!(p, A, f; abstol, reltol, maxiter)
 end
 
+# Solve L p = f
+# where Lp = Ω * div(pressurgrad(p))
+#
+# L is rank-1 deficient, so we add the constraint sum(p) = 0, i.e. solve
+#
+# [0 1] [0]   [0]
+# [1 L] [p] = [f]
+#
+# instead. This way, the matrix is still positive definite.
+# For initial guess, we already know the average is zero.
 function pressure_poisson!(solver::CGPressureSolverManual, p, f)
-    (; setup, abstol, reltol, maxiter, r, G, M, q) = solver
+    (; setup, abstol, reltol, maxiter, r, L, q) = solver
     (; Ip, Ω) = setup.grid
     T = typeof(reltol)
 
+    p .= 0
+
     # Initial residual
-    pressuregradient!(G, p, setup)
-    divergence!(M, G, setup)
-    @. M *= Ω
+    laplacian!(L, p, setup)
 
     # Intialize
     q .= 0
-    r .= f .- M
+    r .= f .- L
     residual = norm(r[Ip])
     prev_residual = one(residual)
     tolerance = max(reltol * residual, abstol)
@@ -67,16 +77,13 @@ function pressure_poisson!(solver::CGPressureSolverManual, p, f)
         β = residual^2 / prev_residual^2
         q .= r .+ β .* q
 
-        pressuregradient!(G, q, setup)
-        divergence!(M, G, setup)
-        @. M *= Ω
-        α = residual^2 / sum(q[Ip] .* M[Ip])
+        # Periodic paddding (maybe)
+        apply_bc_p!(q, T(0), setup)
+        laplacian!(L, q, setup)
+        α = residual^2 / sum(q[Ip] .* L[Ip])
 
         p .+= α .* q
-        r .-= α .* M
-
-        # Periodic paddding (maybe)
-        apply_bc_p!(p, T(0), setup)
+        r .-= α .* L
 
         prev_residual = residual
         residual = norm(r[Ip])

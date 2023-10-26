@@ -64,14 +64,13 @@ Adapt.adapt_structure(to, s::CGPressureSolver) = CGPressureSolver(
 
 Conjugate gradients iterative pressure solver.
 """
-struct CGPressureSolverManual{T,S,A,AT} <: AbstractPressureSolver{T}
+struct CGPressureSolverManual{T,S,A} <: AbstractPressureSolver{T}
     setup::S
     abstol::T
     reltol::T
     maxiter::Int
     r::A
-    G::AT
-    M::A
+    L::A
     q::A
 end
 
@@ -89,14 +88,6 @@ CGPressureSolverManual(
         get_backend(setup.grid.x[1]),
         eltype(setup.grid.x[1]),
         setup.grid.N,
-    ),
-    ntuple(
-        α -> KernelAbstractions.zeros(
-            get_backend(setup.grid.x[1]),
-            eltype(setup.grid.x[1]),
-            setup.grid.N,
-        ),
-        setup.grid.dimension(),
     ),
     KernelAbstractions.zeros(
         get_backend(setup.grid.x[1]),

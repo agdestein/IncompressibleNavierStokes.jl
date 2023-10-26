@@ -293,6 +293,36 @@ pressuregradient(p, setup) = pressuregradient!(
 )
 
 """
+    laplacian!(L, p, setup)
+
+Compute Laplacian of pressure field (in-place version).
+"""
+function laplacian!(L, p, setup)
+    (; grid) = setup
+    (; dimension, Δ, Δu, N, Np, Ip, Ω) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function _laplacian!(L, p, ::Val{α}, I0) where {α}
+        I = @index(Global, Cartesian)
+        I = I + I0
+        L[I] +=
+            Ω[I] / Δ[α][I[α]] *
+            ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+    end
+    L .= 0
+    # All volumes have a right velocity
+    # All volumes have a left velocity except the first one
+    # Start at second volume
+    ndrange = Np
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    for α = 1:D
+        _laplacian!(get_backend(L), WORKGROUP)(L, p, Val(α), I0; ndrange)
+    end
+    L
+end
+
+"""
     interpolate_u_p(setup, u)
 
 Interpolate velocity to pressure points.
