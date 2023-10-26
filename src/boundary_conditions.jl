@@ -65,7 +65,7 @@ ghost_a!(::DirichletBC, x) = pushfirst!(x, x[1])
 ghost_b!(::DirichletBC, x) = push!(x, x[end])
 
 # Duplicate boundary volume
-ghost_a!(::SymmetricBC, x) = pushfirst!(x, x[1] + (x[2] - x[1]))
+ghost_a!(::SymmetricBC, x) = pushfirst!(x, x[1] - (x[2] - x[1]))
 ghost_b!(::SymmetricBC, x) = push!(x, x[end] + (x[end] - x[end-1]))
 
 # Add infinitely thin boundary volume
