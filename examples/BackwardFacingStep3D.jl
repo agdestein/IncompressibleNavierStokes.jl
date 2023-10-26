@@ -45,15 +45,11 @@ z = LinRange(-T(0.25), T(0.25), 9)
 plot_grid(x, y, z)
 
 # Boundary conditions: steady inflow on the top half
-U(x, y, z, t) = y ≥ 0 ? 24y * (1 - y) / 2 : zero(x)
-V(x, y, z, t) = zero(x)
-W(x, y, z, t) = zero(x)
-dUdt(x, y, z, t) = zero(x)
-dVdt(x, y, z, t) = zero(x)
-dWdt(x, y, z, t) = zero(x)
+U(dim, x, y, z, t) = dim() == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x)
+dUdt(dim, x, y, z, t) = zero(x)
 boundary_conditions = (
     ## x left, x right
-    (DirichletBC((U, V, W), (dUdt, dVdt, dWdt)), PressureBC()),
+    (DirichletBC(U, dUdt), PressureBC()),
 
     ## y rear, y front
     (DirichletBC(), DirichletBC()),
@@ -65,37 +61,30 @@ boundary_conditions = (
 # Build setup and assemble operators
 setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
 
-# Time interval
-t_start, t_end = tlims = T(0), T(7)
-
 # Initial conditions (extend inflow)
-initial_velocity = (
-    (x, y, z) -> U(x, y, z, zero(x)),
-    (x, y, z) -> zero(x),
-    (x, y, z) -> zero(x),
-)
-u₀, p₀ = create_initial_conditions(
-    setup,
-    initial_velocity,
-    t_start;
-);
+u₀, p₀ = create_initial_conditions(setup, (dim, x, y, z) -> U(dim, x, y, z, zero(x)));
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);
-
-# Iteration processors
-processors = (
-    field_plotter(setup; nupdate = 50),
-    ## energy_history_plotter(setup; nupdate = 10),
-    ## energy_spectrum_plotter(setup; nupdate = 10),
-    ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 20, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 10),
-);
+nothing
 
 # Solve unsteady problem
-u, p, outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt = 0.01, processors, inplace = true)
+u, p, outputs = solve_unsteady(
+    setup,
+    u₀,
+    p₀,
+    (T(0), T(7));
+    Δt = T(0.01),
+    processors = (
+        field_plotter(setup; nupdate = 50),
+        ## energy_history_plotter(setup; nupdate = 10),
+        ## energy_spectrum_plotter(setup; nupdate = 10),
+        ## animator(setup, "vorticity.mkv"; nupdate = 4),
+        ## vtk_writer(setup; nupdate = 20, dir = "output/$name", filename = "solution"),
+        ## field_saver(setup; nupdate = 10),
+        step_logger(; nupdate = 10),
+    ),
+)
 #md current_figure()
 
 # ## Post-process

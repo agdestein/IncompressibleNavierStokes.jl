@@ -31,13 +31,18 @@ Ubar = 1.0
 ϵ = (0.082Ubar, 0.012Ubar)
 n = (0.4π, 0.3π)
 ω = (0.22, 0.11)
-U(x, y, t) = 1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * sin(ω * t))
-V(x, y, t) = 0.0
-dUdt(x, y, t) = sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * ω * cos(ω * t))
-dVdt(x, y, t) = 0.0
+U(dim, x, y, t) =
+    dim() == 1 ?
+    1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * sin(ω * t)) :
+    0.0
+dUdt(dim, x, y, t) =
+    dim() == 1 ? sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * ω * cos(ω * t)) : 0.0
 boundary_conditions = (
-    (DirichletBC((U, V), (dUdt, dVdt)), PressureBC()),
-    (SymmetricBC(), SymmetricBC())
+    ## x left, x right
+    (DirichletBC(U, dUdt), PressureBC()),
+
+    ## y rear, y front
+    (SymmetricBC(), SymmetricBC()),
 )
 
 # A 2D grid is a Cartesian product of two vectors
@@ -50,41 +55,26 @@ plot_grid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions);
 
-# Time interval
-t_start, t_end = tlims = 0.0, 100.0
-
-# Initial conditions (exten inflow)
-initial_velocity = (
-    (x, y) -> U(x, y, 0.0),
-    (x, y) -> 0.0,
-)
-u₀, p₀ = create_initial_conditions(
-    setup,
-    initial_velocity,
-    t_start;
-);
-
-# Iteration processors
-processors = (
-    field_plotter(setup; nupdate = 1),
-    ## energy_history_plotter(setup; nupdate = 1),
-    ## energy_spectrum_plotter(setup; nupdate = 100),
-    ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1),
-);
+# Initial conditions (extend inflow)
+u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, 0.0));
 
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
-    tlims;
+    (0.0, 100.0);
     method = RK44P2(),
     Δt = 0.1,
-    processors,
-    inplace = true,
+    processors = (
+        field_plotter(setup; nupdate = 1),
+        ## energy_history_plotter(setup; nupdate = 1),
+        ## energy_spectrum_plotter(setup; nupdate = 100),
+        ## animator(setup, "vorticity.mkv"; nupdate = 4),
+        ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+        ## field_saver(setup; nupdate = 10),
+        step_logger(; nupdate = 1),
+    ),
 );
 
 # ## Post-process

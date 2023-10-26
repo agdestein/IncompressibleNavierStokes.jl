@@ -44,79 +44,60 @@ z = LinRange(-2.0, 2.0, 41)
 plot_grid(x, y, z)
 
 # Boundary conditions: Unsteady BC requires time derivatives
-U(x, y, z, t) = cos(π / 6 * sin(π / 6 * t))
-V(x, y, z, t) = sin(π / 6 * sin(π / 6 * t))
-W(x, y, z, t) = zero(x)
-dUdt(x, y, z, t) = -(π / 6)^2 * cos(π / 6 * t) * sin(π / 6 * sin(π / 6 * t))
-dVdt(x, y, z, t) = (π / 6)^2 * cos(π / 6 * t) * cos(π / 6 * sin(π / 6 * t)) 
-dWdt(x, y, z, t) = zero(x)
 boundary_conditions = (
     ## x left, x right
-    (DirichletBC((U, V, W), (dUdt, dVdt, dWdt)), PressureBC()),
+    (
+        DirichletBC(
+            (dim, x, y, z, t) ->
+                dim() == 1 ? cos(π / 6 * sin(π / 6 * t)) :
+                dim() == 2 ? sin(π / 6 * sin(π / 6 * t)) : zero(x),
+            (dim, x, y, z, t) ->
+                dim() == 1 ? -(π / 6)^2 * cos(π / 6 * t) * sin(π / 6 * sin(π / 6 * t)) :
+                dim() == 2 ? (π / 6)^2 * cos(π / 6 * t) * cos(π / 6 * sin(π / 6 * t)) :
+                zero(x),
+        ),
+        PressureBC(),
+    ),
 
     ## y rear, y front
-    (SymmetricBC(), SymmetricBC()),
+    (PressureBC(), PressureBC()),
 
     ## z rear, z front
-    (SymmetricBC(), SymmetricBC()),
+    (PressureBC(), PressureBC()),
 )
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a short cylinder
 cx, cy, cz = T(2), T(0), T(0) # Disk center
 D = T(1)                      # Disk diameter
 δ = T(0.11)                   # Disk thickness
-Cₜ = T(5e-4)                  # Thrust coefficient
+Cₜ = T(0.2)                  # Thrust coefficient
 cₜ = Cₜ / (π * (D / 2)^2 * δ)
 inside(x, y, z) = abs(x - cx) ≤ δ / 2 && (y - cy)^2 + (z - cz)^2 ≤ (D / 2)^2
-fu(x, y, z) = -cₜ * inside(x, y, z)
-fv(x, y, z) = zero(x)
-fw(x, y, z) = zero(x)
+bodyforce(dim, x, y, z) = dim() == 1 ? -cₜ * inside(x, y, z) : zero(x)
 
 # Build setup and assemble operators
-setup = Setup(
-    x, y, z;
-    Re,
-    boundary_conditions,
-    bodyforce = (fu, fv, fw),
-    ArrayType,
-);
-
-# Time interval
-t_start, t_end = tlims = T(0), T(3)
+setup = Setup(x, y, z; Re, boundary_conditions, bodyforce, ArrayType);
 
 # Initial conditions (extend inflow)
-initial_velocity = (
-    (x, y, z) -> one(x),
-    (x, y, z) -> zero(x),
-    (x, y, z) -> zero(x),
-)
-u₀, p₀ = create_initial_conditions(
-    setup,
-    initial_velocity,
-    t_start;
-);
-
-# Iteration processors
-processors = (
-    field_plotter(setup; nupdate = 5),
-    ## energy_history_plotter(setup; nupdate = 10),
-    ## energy_spectrum_plotter(setup; nupdate = 10),
-    ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 2, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1),
-);
+u₀, p₀ = create_initial_conditions(setup, (dim, x, y, z) -> dim() == 1 ? one(x) : zero(x));
 
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
-    tlims;
+    (T(0), T(3));
     method = RK44P2(),
     Δt = T(0.05),
-    processors,
-    inplace = true,
+    processors = (
+        field_plotter(setup; nupdate = 5),
+        ## energy_history_plotter(setup; nupdate = 10),
+        ## energy_spectrum_plotter(setup; nupdate = 10),
+        ## animator(setup, "vorticity.mkv"; nupdate = 4),
+        ## vtk_writer(setup; nupdate = 2, dir = "output/$name", filename = "solution"),
+        ## field_saver(setup; nupdate = 10),
+        step_logger(; nupdate = 1),
+    );
 );
 
 # ## Post-process

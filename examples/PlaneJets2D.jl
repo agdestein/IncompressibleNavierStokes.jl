@@ -97,18 +97,10 @@ setup = Setup(x, y; Re, ArrayType);
 # spectral pressure solver
 pressure_solver = SpectralPressureSolver(setup)
 
-# Time interval
-t_start, t_end = tlims = T(0), T(1)
-
 # Initial conditions
-initial_velocity = (
-    (x, y) -> U(x, y),
-    (x, y) -> zero(x),
-)
 u₀, p₀ = create_initial_conditions(
     setup,
-    initial_velocity,
-    t_start;
+    (dim, x, y) -> dim() == 1 ? U(x, y) : zero(x);
     pressure_solver,
 );
 
@@ -175,29 +167,25 @@ mean_plotter(setup; nupdate = 1) = processor(
     nupdate,
 )
 
-# Iteration processors
-processors = (
-    field_plotter(setup; nupdate = 1),
-    ## energy_history_plotter(setup; nupdate = 1),
-    ## energy_spectrum_plotter(setup; nupdate = 100),
-    ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    mean_plotter(setup),
-    step_logger(; nupdate = 1),
-);
-
 # Solve unsteady problem
 toto, p, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
-    tlims;
+    (T(0), T(1));
     method = RK44P2(),
     Δt = 0.001,
-    processors,
     pressure_solver,
-    inplace = true,
+    processors = (
+        field_plotter(setup; nupdate = 1),
+        ## energy_history_plotter(setup; nupdate = 1),
+        ## energy_spectrum_plotter(setup; nupdate = 100),
+        ## animator(setup, "vorticity.mkv"; nupdate = 4),
+        ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+        ## field_saver(setup; nupdate = 10),
+        mean_plotter(setup),
+        step_logger(; nupdate = 1),
+    ),
 );
 
 # ## Post-process

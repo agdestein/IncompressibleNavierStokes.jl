@@ -39,13 +39,11 @@ ArrayType = Array
 Re = T(3_000)
 
 # Boundary conditions: steady inflow on the top half
-U(x, y, t::T) where {T} = y ≥ 0 ? 24y * (T(1 / 2) - y) : zero(x)
-V(x, y, t) = zero(x)
-dUdt(x, y, t) = zero(x)
-dVdt(x, y, t) = zero(x)
+U(dim, x, y, t) = dim() == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x)
+dUdt(dim, x, y, t) = zero(x)
 boundary_conditions = (
     ## x left, x right
-    (DirichletBC((U, V), (dUdt, dVdt)), PressureBC()),
+    (DirichletBC(U, dUdt), PressureBC()),
 
     ## y rear, y front
     (DirichletBC(), DirichletBC()),
@@ -60,36 +58,30 @@ plot_grid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 
-# Time interval
-t_start, t_end = tlims = T(0), T(7)
-
 # Initial conditions (extend inflow)
-initial_velocity = (
-    (x, y) -> U(x, y, zero(x)),
-    (x, y) -> zero(x),
-)
-u₀, p₀ = create_initial_conditions(
-    setup,
-    initial_velocity,
-    t_start;
-);
+u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)));
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);
 
-# Iteration processors
-processors = (
-    field_plotter(setup; nupdate = 5),
-    ## energy_history_plotter(setup; nupdate = 10),
-    ## energy_spectrum_plotter(setup; nupdate = 10),
-    ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 20, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1),
-);
-
 # Solve unsteady problem
-u, p, outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt = T(0.002), processors, inplace = true);
+u, p, outputs = solve_unsteady(
+    setup,
+    u₀,
+    p₀,
+    (T(0), T(7));
+    Δt = T(0.002),
+    processors = (
+        field_plotter(setup; nupdate = 5),
+        ## energy_history_plotter(setup; nupdate = 10),
+        ## energy_spectrum_plotter(setup; nupdate = 10),
+        ## animator(setup, "vorticity.mkv"; nupdate = 4),
+        ## vtk_writer(setup; nupdate = 20, dir = "output/$name", filename = "solution"),
+        ## field_saver(setup; nupdate = 10),
+        step_logger(; nupdate = 1),
+    ),
+    inplace = true,
+);
 
 # ## Post-process
 #

@@ -45,22 +45,14 @@ z = LinRange(-T(0.2), T(0.2), 11)
 plot_grid(x, y, z)
 
 # Boundary conditions: horizontal movement of the top lid
-lidvel = (
-    (x, y, z, t) -> one(x),
-    (x, y, z, t) -> zero(x),
-    (x, y, z, t) -> one(x) / 5,
-)
-dlidveldt = (
-    (x, y, z, t) -> zero(x),
-    (x, y, z, t) -> zero(x),
-    (x, y, z, t) -> zero(x),
-)
+U(dim, x, y, z, t) = dim() == 1 ? one(x) : dim() == 2 ? zero(x) : one(x) / 5
+dUdt(dim, x, y, z, t) = zero(x)
 boundary_conditions = (
     ## x left, x right
     (DirichletBC(), DirichletBC()),
 
     ## y rear, y front
-    (DirichletBC(), DirichletBC(lidvel, dlidveldt)),
+    (DirichletBC(), DirichletBC(U, dUdt)),
 
     ## z bottom, z top
     (PeriodicBC(), PeriodicBC()),
@@ -69,39 +61,30 @@ boundary_conditions = (
 # Build setup and assemble operators
 setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
 
-# Time interval
-t_start, t_end = tlims = T(0), T(0.2)
-
 # Initial conditions
-initial_velocity = (
-    (x, y, z) -> zero(x),
-    (x, y, z) -> zero(x),
-    (x, y, z) -> zero(x),
-)
-u₀, p₀ = create_initial_conditions(
-    setup,
-    initial_velocity,
-    t_start;
-    pressure_solver,
-)
+u₀, p₀ = create_initial_conditions(setup, (dim, x, y, z) -> zero(x))
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀; npicard = 5, maxiter = 15);
-
-# Iteration processors
-processors = (
-    field_plotter(setup; nupdate = 1),
-    ## energy_history_plotter(setup; nupdate = 1),
-    ## energy_spectrum_plotter(setup; nupdate = 100),
-    ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 5, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1),
-);
+nothing
 
 # Solve unsteady problem
-u, p, outputs =
-    solve_unsteady(setup, u₀, p₀, tlims; Δt = T(0.001), processors, device);
+u, p, outputs = solve_unsteady(
+    setup,
+    u₀,
+    p₀,
+    (T(0), T(0.2));
+    Δt = T(0.001),
+    processors = (
+        field_plotter(setup; nupdate = 1),
+        ## energy_history_plotter(setup; nupdate = 1),
+        ## energy_spectrum_plotter(setup; nupdate = 100),
+        ## animator(setup, "vorticity.mkv"; nupdate = 4),
+        ## vtk_writer(setup; nupdate = 5, dir = "output/$name", filename = "solution"),
+        ## field_saver(setup; nupdate = 10),
+        step_logger(; nupdate = 1),
+    ),
+);
 
 # ## Post-process
 #

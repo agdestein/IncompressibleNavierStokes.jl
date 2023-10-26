@@ -30,40 +30,46 @@ x = LinRange(0.0, 10.0, 5n + 1)
 y = LinRange(-2.0, 2.0, 2n + 1)
 plot_grid(x, y)
 
-# Boundary conditions: Unsteady BC requires time derivatives
-U(x, y, t) = cos(π / 6 * sin(π / 6 * t))
-V(x, y, t) = sin(π / 6 * sin(π / 6 * t))
-dUdt(x, y, t) = -(π / 6)^2 * cos(π / 6 * t) * sin(π / 6 * sin(π / 6 * t))
-dVdt(x, y, t) = (π / 6)^2 * cos(π / 6 * t) * cos(π / 6 * sin(π / 6 * t))
+# Boundary conditions
 boundary_conditions = (
     ## x left, x right
-    (DirichletBC((U, V), (dUdt, dVdt)), PressureBC()),
+    (
+        ## Unsteady BC requires time derivatives
+        DirichletBC(
+            (dim, x, y, t) -> sin(π / 6 * sin(π / 6 * t) + π / 2 * (dim() == 1)),
+            (dim, x, y, t) ->
+                (π / 6)^2 *
+                cos(π / 6 * t) *
+                cos(π / 6 * sin(π / 6 * t) + π / 2 * (dim() == 1)),
+        ),
+        PressureBC(),
+    ),
 
     ## y rear, y front
-    (SymmetricBC(), SymmetricBC()),
+    (PressureBC(), PressureBC()),
 )
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
 xc, yc = 2.0, 0.0 # Disk center
 D = 1.0           # Disk diameter
 δ = 0.11          # Disk thickness
-Cₜ = 5e-4         # Thrust coefficient
+Cₜ = 0.2          # Thrust coefficient
 cₜ = Cₜ / (D * δ)
 inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
-fu(x, y, t) = -cₜ * inside(x, y)
-fv(x, y, t) = 0.0
+bodyforce(dim, x, y, t) = dim() == 1 ? -cₜ * inside(x, y) : 0.0
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re = 100.0, boundary_conditions, bodyforce = (fu, fv));
+setup = Setup(x, y; Re = 100.0, boundary_conditions, bodyforce);
 
 # Initial conditions (extend inflow)
-u₀, p₀ = create_initial_conditions(setup, ((x, y) -> 1.0, (x, y) -> 0.0));
+u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0);
+u, p = u₀, p₀
 
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
-    u₀,
-    p₀,
+    ## u₀, p₀,
+    u, p,
     (0.0, 12.0);
     method = RK44P2(),
     Δt = 0.05,
@@ -77,6 +83,7 @@ u, p, outputs = solve_unsteady(
         step_logger(; nupdate = 1),
     ),
 );
+
 
 # ## Post-process
 #

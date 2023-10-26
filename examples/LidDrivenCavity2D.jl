@@ -56,15 +56,19 @@ ArrayType = Array
 Re = T(1_000)
 
 # Non-zero Dirichlet boundary conditions are specified as plain Julia functions.
-# Other possible BC types are `PeriodicBC()`, `SymmetricBC`, and `PressureBC`.
-lidvel = ((x, y, t) -> one(x), (x, y, t) -> zero(x))
-dlidveldt = ((x, y, t) -> zero(x), (x, y, t) -> zero(x))
+# Note that time derivatives are required.
 boundary_conditions = (
     ## x left, x right
     (DirichletBC(), DirichletBC()),
 
     ## y bottom, y top
-    (DirichletBC(), DirichletBC(lidvel, dlidveldt)),
+    (
+        DirichletBC(),
+        DirichletBC(
+            (dim, x, y, t) -> dim() == 1 ? one(x) : zero(x),
+            (dim, x, y, t) -> zero(x),
+        ),
+    ),
 )
 
 # We create a two-dimensional domain with a box of size `[1, 1]`. The grid is
@@ -82,7 +86,7 @@ setup = Setup(x, y; boundary_conditions, Re, ArrayType);
 
 # The pressure solver is used to solve the pressure Poisson equation.
 # Available solvers are
-# 
+#
 # - [`DirectPressureSolver`](@ref) (only for CPU with `Float64`)
 # - [`CGPressureSolver`](@ref)
 # - [`SpectralPressureSolver`](@ref) (only for periodic boundary conditions and
@@ -90,15 +94,10 @@ setup = Setup(x, y; boundary_conditions, Re, ArrayType);
 
 pressure_solver = CGPressureSolverManual(setup);
 
-# We will solve for a time interval of ten seconds.
-t_start, t_end = tlims = T(0), T(10)
-
-# The initial conditions are defined as plain Julia functions.
-initial_velocity = (
-    (x, y) -> zero(x),
-    (x, y) -> zero(x),
-)
-u₀, p₀ = create_initial_conditions(setup, initial_velocity, t_start; pressure_solver);
+# The initial conditions are provided in function. The value `dim()` determines
+# the velocity component.
+u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> zero(x); pressure_solver);
+u, p = u₀, p₀
 
 # ## Solve problems
 #
@@ -120,22 +119,15 @@ processors = (
     ## energy_history_plotter(setup; nupdate = 1),
     ## energy_spectrum_plotter(setup; nupdate = 100),
     ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    vtk_writer(setup; nupdate = 100, dir = "output/$name", filename = "solution"),
+    ## vtk_writer(setup; nupdate = 100, dir = "output/$name", filename = "solution"),
     ## field_saver(setup; nupdate = 10),
     step_logger(; nupdate = 1000),
 );
 
 # By default, a standard fourth order Runge-Kutta method is used. If we don't
 # provide the time step explicitly, an adaptive time step is used.
-u, p, outputs = solve_unsteady(
-    setup,
-    u₀,
-    p₀,
-    tlims;
-    Δt = T(0.001),
-    processors,
-    pressure_solver,
-);
+u, p, outputs =
+    solve_unsteady(setup, u, p, (T(0), T(0.1)); Δt = T(0.001), pressure_solver, processors);
 
 # ## Post-process
 #

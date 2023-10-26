@@ -33,11 +33,11 @@ ArrayType = Array
 ## using Metal; ArrayType = MtlArray
 
 # Reynolds number
-Re = T(6_000)
+Re = T(10_000)
 
 # A 3D grid is a Cartesian product of three vectors
 n = 32
-lims = T(0), T(2π)
+lims = T(0), T(1)
 x = LinRange(lims..., n + 1)
 y = LinRange(lims..., n + 1)
 z = LinRange(lims..., n + 1)
@@ -51,17 +51,14 @@ setup = Setup(x, y, z; Re, ArrayType);
 pressure_solver = SpectralPressureSolver(setup);
 
 # Initial conditions
-initial_velocity = (
-    (x, y, z) -> sin(x)cos(y)cos(z),
-    (x, y, z) -> -cos(x)sin(y)cos(z),
-    (x, y, z) -> zero(x),
-)
 u₀, p₀ = create_initial_conditions(
     setup,
-    initial_velocity,
-    T(0);
+    (dim, x, y, z) ->
+        dim() == 1 ? sinpi(2x) * cospi(2y) * sinpi(2z) :
+        dim() == 2 ? -cospi(2x) * sinpi(2y) * sinpi(2z) : zero(x);
     pressure_solver,
 );
+u, p = u₀, p₀
 
 GC.gc()
 CUDA.reclaim()
@@ -70,28 +67,33 @@ CUDA.reclaim()
 ## u, p = solve_steady_state(setup, u₀, p₀; npicard = 6)
 nothing
 
-# Iteration processors
-processors = (
-    # field_plotter(setup; fieldname = :velocity, nupdate = 1),
-    # energy_history_plotter(setup; nupdate = 1),
-    energy_spectrum_plotter(setup; nupdate = 100),
-    ## animator(setup, "vorticity.mp4"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1),
-);
-
-# Time interval
-t_start, t_end = tlims = T(0), T(5)
-
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
-    u₀, p₀,
-    # u, p,
-    tlims;
+    u₀,
+    p₀,
+    (T(0), T(5));
     Δt = T(0.01),
-    processors,
+    processors = (
+        ## field_plotter(setup; nupdate = 1),
+        energy_history_plotter(setup; nupdate = 1),
+        ## energy_spectrum_plotter(setup; nupdate = 100),
+        ## animator(
+        ##     setup,
+        ##     "vorticity3D.mp4";
+        ##     plotter = field_plotter(
+        ##         setup;
+        ##         fieldname = :Dfield,
+        ##         levels = LinRange(-T(3), T(1), 5),
+        ##         docolorbar = false,
+        ##         resolution = (1024, 1024),
+        ##     ),
+        ##     nupdate = 20,
+        ## ),
+        ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+        ## field_saver(setup; nupdate = 10),
+        step_logger(; nupdate = 1),
+    ),
     pressure_solver,
     inplace = true,
 );

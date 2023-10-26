@@ -52,32 +52,26 @@ setup = Setup(x...; Re, ArrayType);
 # spectral pressure solver
 pressure_solver = SpectralPressureSolver(setup);
 
-u₀, p₀ = random_field(setup, T(0); A = T(1_000_000), σ = T(30), s = T(5), pressure_solver);
-
-# Iteration processors
-processors = (
-    field_plotter(setup; nupdate = 20),
-    energy_history_plotter(setup; nupdate = 20, displayfig = false),
-    energy_spectrum_plotter(setup; nupdate = 20, displayfig = false),
-    ## animator(setup, "vorticity.mp4"; nupdate = 16),
-    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 100),
-);
-
-# Time interval
-t_start, t_end = tlims = T(0), T(1)
+u₀, p₀ = random_field(setup, T(0); pressure_solver);
 
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
-    tlims;
-    Δt = T(0.001),
-    processors,
+    (T(0), T(1));
+    Δt = T(1e-3),
     pressure_solver,
     inplace = true,
+    processors = (
+        field_plotter(setup; nupdate = 20),
+        energy_history_plotter(setup; nupdate = 20, displayfig = false),
+        energy_spectrum_plotter(setup; nupdate = 20, displayfig = false),
+        ## animator(setup, "vorticity.mp4"; nupdate = 16),
+        ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+        ## field_saver(setup; nupdate = 10),
+        step_logger(; nupdate = 100),
+    ),
 );
 
 # ## Post-process

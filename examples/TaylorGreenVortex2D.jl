@@ -48,18 +48,10 @@ setup = Setup(x...; Re, ArrayType);
 # spectral pressure solver
 pressure_solver = SpectralPressureSolver(setup)
 
-# Time interval
-t_start, t_end = tlims = T(0), T(5)
-
 # Initial conditions
-initial_velocity = (
-    (x, y) -> -sin(x) * cos(y),
-    (x, y) -> cos(x) * sin(y),
-)
 u₀, p₀ = create_initial_conditions(
     setup,
-    initial_velocity,
-    t_start;
+    (dim, x, y) -> dim() == 1 ? -sin(x) * cos(y) : cos(x) * sin(y);
     pressure_solver,
 );
 
@@ -82,7 +74,7 @@ u, p, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
-    tlims;
+    (T(0), T(5));
     Δt = T(0.01),
     processors,
     pressure_solver,

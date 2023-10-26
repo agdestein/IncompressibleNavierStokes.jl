@@ -47,50 +47,37 @@ setup = Setup(x, y; Re, ArrayType);
 
 pressure_solver = SpectralPressureSolver(setup)
 
-# Time interval
-t_start, t_end = tlims = T(0), T(8)
-
 # Initial conditions: We add 1 to u in order to make global momentum
 # conservation less trivial
 d = T(π / 15)
 e = T(0.05)
-initial_velocity = (
-    (x, y) -> y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d),
-    (x, y) -> e * sin(x),
-)
-## initial_velocity = (
-##     (x, y) -> T(1) + (y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d)),
-##     (x, y) -> e * sin(x),
-## )
+U1(y) = y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d)
+## U1(y) = T(1) + (y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d))
 u₀, p₀ = create_initial_conditions(
     setup,
-    initial_velocity,
-    t_start;
+    (dim, x, y) -> dim() == 1 ? U1(y) : e * sin(x);
     pressure_solver,
 );
 
 # Iteration processors
-processors = (
-    field_plotter(setup; nupdate = 1),
-    ## energy_history_plotter(setup; nupdate = 1),
-    ## energy_spectrum_plotter(setup; nupdate = 100),
-    ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1),
-);
 
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
-    tlims;
-    method = RK44(),
+    (T(0), T(8));
     Δt = T(0.01),
-    processors,
-    inplace = true,
     pressure_solver,
+    processors = (
+        field_plotter(setup; nupdate = 1),
+        ## energy_history_plotter(setup; nupdate = 1),
+        ## energy_spectrum_plotter(setup; nupdate = 100),
+        ## animator(setup, "vorticity.mkv"; nupdate = 4),
+        ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
+        ## field_saver(setup; nupdate = 10),
+        step_logger(; nupdate = 1),
+    ),
 );
 
 # ## Post-process
