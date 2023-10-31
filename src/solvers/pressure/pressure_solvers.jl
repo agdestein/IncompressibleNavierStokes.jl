@@ -64,7 +64,7 @@ Adapt.adapt_structure(to, s::CGPressureSolver) = CGPressureSolver(
 
 Conjugate gradients iterative pressure solver.
 """
-struct CGPressureSolverManual{T,S,A} <: AbstractPressureSolver{T}
+struct CGPressureSolverManual{T,S,A,F} <: AbstractPressureSolver{T}
     setup::S
     abstol::T
     reltol::T
@@ -72,6 +72,30 @@ struct CGPressureSolverManual{T,S,A} <: AbstractPressureSolver{T}
     r::A
     L::A
     q::A
+    preconditioner::F
+end
+
+function create_laplace_diag(setup)
+    (; grid) = setup
+    (; dimension, Δ, Δu, N, Np, Ip, Ω) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function _laplace_diag!(z, p, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        d = zero(eltype(z))
+        for α = 1:length(I)
+            d -= Ω[I] / Δ[α][I[α]] * (1 / Δu[α][I[α]] + 1 / Δu[α][I[α]-1])
+        end
+        z[I] = -p[I] / d
+    end
+    ndrange = Np
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    function laplace_diag(z, p) 
+        _laplace_diag!(get_backend(z), WORKGROUP)(z, p, I0; ndrange)
+        # synchronize(get_backend(z))
+    end
 end
 
 CGPressureSolverManual(
@@ -79,6 +103,8 @@ CGPressureSolverManual(
     abstol = zero(eltype(setup.grid.x[1])),
     reltol = sqrt(eps(eltype(setup.grid.x[1]))),
     maxiter = prod(setup.grid.Np),
+    # preconditioner = copy!,
+    preconditioner = create_laplace_diag(setup),
 ) = CGPressureSolverManual(
     setup,
     abstol,
@@ -99,6 +125,7 @@ CGPressureSolverManual(
         eltype(setup.grid.x[1]),
         setup.grid.N,
     ),
+    preconditioner,
 )
 
 struct SpectralPressureSolver{T,A<:AbstractArray{Complex{T}},S,P} <: AbstractPressureSolver{T}

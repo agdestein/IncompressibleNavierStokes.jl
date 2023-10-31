@@ -26,6 +26,7 @@ diffusion!
 bodyforce!
 momentum!
 momentum
+laplacian!
 pressuregradient!
 pressuregradient
 interpolate_u_p

@@ -197,7 +197,16 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwar
 end
 
 function apply_bc_p!(::DirichletBC, p, β, t, setup; atend, kwargs...)
-    nothing
+    (; dimension, N) = setup.grid
+    D = dimension()
+    δ = Offset{D}()
+    if atend
+        I = CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
+        p[I] .= p[I.-δ(β)]
+    else
+        I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
+        p[I] .= p[I.+δ(β)]
+    end
 end
 
 function apply_bc_u!(::SymmetricBC, u, β, t, setup; atend, kwargs...)

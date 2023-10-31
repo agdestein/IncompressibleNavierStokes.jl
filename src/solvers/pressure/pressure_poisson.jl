@@ -45,7 +45,7 @@ function pressure_poisson!(solver::CGPressureSolver, p, f)
     cg!(p, A, f; abstol, reltol, maxiter)
 end
 
-# Solve L p = f
+# Solve Lp = f
 # where Lp = Ω * div(pressurgrad(p))
 #
 # L is rank-1 deficient, so we add the constraint sum(p) = 0, i.e. solve
@@ -56,9 +56,24 @@ end
 # instead. This way, the matrix is still positive definite.
 # For initial guess, we already know the average is zero.
 function pressure_poisson!(solver::CGPressureSolverManual, p, f)
-    (; setup, abstol, reltol, maxiter, r, L, q) = solver
-    (; Ip, Ω) = setup.grid
+    (; setup, abstol, reltol, maxiter, r, L, q, preconditioner) = solver
+    (; Np, Ip, Ω) = setup.grid
     T = typeof(reltol)
+
+    function innerdot(a, b)
+        @kernel function innerdot!(d, a, b, I0)
+            I = @index(Global, Cartesian)
+            I = I + I0
+            d[I-I+I0] += a[I] * b[I]
+            # a[I] = b[I]
+        end
+        # d = zero(eltype(a))
+        I0 = first(Ip)
+        I0 -= oneunit(I0)
+        d = KernelAbstractions.zeros(get_backend(a), eltype(a), ntuple(Returns(1), length(I0)))
+        innerdot!(get_backend(a), WORKGROUP)(d, a, b, I0; ndrange = Np)
+        d[]
+    end
 
     p .= 0
 
@@ -68,25 +83,40 @@ function pressure_poisson!(solver::CGPressureSolverManual, p, f)
     # Intialize
     q .= 0
     r .= f .- L
-    residual = norm(r[Ip])
-    prev_residual = one(residual)
+    ρ_prev = one(T)
+    # residual = norm(r[Ip])
+    residual = sqrt(sum(abs2, view(r, Ip)))
+    # residual = norm(r)
     tolerance = max(reltol * residual, abstol)
     iteration = 0
 
     while iteration < maxiter && residual > tolerance
-        β = residual^2 / prev_residual^2
-        q .= r .+ β .* q
+        preconditioner(L, r)
 
-        # Periodic paddding (maybe)
+        # ρ = sum(L[Ip] .* r[Ip])
+        ρ = dot(view(L, Ip), view(r, Ip))
+        # ρ = innerdot(L, r)
+        # ρ = dot(L, r)
+
+        β = ρ / ρ_prev
+        q .= L .+ β .* q
+
+        # Periodic/symmetric padding (maybe)
         apply_bc_p!(q, T(0), setup)
         laplacian!(L, q, setup)
-        α = residual^2 / sum(q[Ip] .* L[Ip])
+        # α = ρ / sum(q[Ip] .* L[Ip])
+        # α = ρ / dot(view(q, Ip), view(L, Ip))
+        # α = ρ / innerdot(q, L)
+        α = ρ / dot(q, L)
 
         p .+= α .* q
         r .-= α .* L
 
-        prev_residual = residual
-        residual = norm(r[Ip])
+        ρ_prev = ρ
+        # residual = norm(r[Ip])
+        residual = sqrt(sum(abs2, view(r, Ip)))
+        # residual = sqrt(sum(abs2, r))
+        # residual = sqrt(innerdot(r, r))
 
         iteration += 1
     end
