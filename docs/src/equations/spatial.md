@@ -285,7 +285,7 @@ Finally, the discrete ``\alpha``-momentum equations are given by
         - \frac{
             u^\alpha_{I + \delta(\alpha) / 2} -
             u^\alpha_{I + \delta(\alpha) / 2 - \delta(\beta)}
-        }{\Delta^\beta_{I(\beta) - 1 / 2}}
+        }{\Delta^\beta_{I(\beta) + \delta_{\alpha \beta} / 2 - 1 / 2}}
     \right) \\
     + & f^\alpha(x_{I + \delta(\alpha) / 2}),
 \end{split}
@@ -379,13 +379,45 @@ column-major convention. Note that the ``d`` discrete velocity fields ``u^1_h,
     u^1_{(2, 1, 1)}, \dots u^3_{(N_{u^3}(1), N_{u^3}(2), N_{u^3}(3))})`` in 3D.
 
 
+## Fourth order accurate discretization
+
+The above discretization is second order accurate.
+A fourth order accurate discretization can be obtained by judiciously combining
+the second order discretization with itself on a grid with three times larger
+cells in each dimension [Verstappen2003](@cite) [Sanderse2014](@cite). The
+coarse discretization is identical, but the mass equation is derived for the
+control volume $\bigcup_{\alpha = 1}^d \Omega_{I - \delta(\alpha)} \cup
+\Omega_I \cup \Omega_{I + \delta(\alpha)}$, while the momentum equation is
+derived for the control volume $\bigcup_{\alpha = 1}^d \Omega_{I -
+\delta(\alpha) / 2} \cup \Omega_{I + \delta(\alpha) / 2} \cup \Omega_{I + 3
+\delta(\alpha) / 2}$. The resulting fourth order accurate equations are given
+by
+
+```math
+\sum_{\alpha = 1}^d
+\frac{u^\alpha_{I + \delta(\alpha) / 2} -
+u^\alpha_{I - \delta(\alpha) / 2}}{\Delta^\alpha_{I(\alpha)}}
+-
+\frac{\sum_{e \in \{-1, 0, 1\}^d} | \Omega_{I + e} |}{3^{2 + d} | \Omega_I |}
+\sum_{\alpha = 1}^d
+\frac{u^\alpha_{I + 3 \delta(\alpha) / 2} -
+u^\alpha_{I - 3 \delta(\alpha) / 2}}{\Delta^\alpha_{I(\alpha) - 1}
++ \Delta^\alpha_{I(\alpha)} + \Delta^\alpha_{I(\alpha) + 1}}
+= 0
+```
+
+and
+
 ## Matrix representation
 
-We can write the mass and momentum equations in matrix form. The discrete mass
-equation then becomes
+We can write the mass and momentum equations in matrix form. We will use the
+same matrix notation for the second- and fourth order accurate discretizations.
+The discrete mass equation becomes
+
 ```math
 M u_h + y_M = 0,
 ```
+
 where ``M`` is the discrete divergence operator and ``y_M`` contains the
 boundary value contributions of the velocity to the divergence field.
 
