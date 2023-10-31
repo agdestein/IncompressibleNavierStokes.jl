@@ -101,17 +101,18 @@ CGPressureSolverManual(
     ),
 )
 
-struct SpectralPressureSolver{T,A<:AbstractArray{Complex{T}},S} <: AbstractPressureSolver{T}
+struct SpectralPressureSolver{T,A<:AbstractArray{Complex{T}},S,P} <: AbstractPressureSolver{T}
     setup::S
     Ahat::A
     phat::A
     fhat::A
+    plan::P
 end
 
 # This moves all the inner arrays to the GPU when calling
 # `cu(::SpectralPressureSolver)` from CUDA.jl
 Adapt.adapt_structure(to, s::SpectralPressureSolver) =
-    SpectralPressureSolver(adapt(to, s.Ahat), adapt(to, s.phat), adapt(to, s.fhat))
+    SpectralPressureSolver(adapt(to, s.Ahat), adapt(to, s.phat), adapt(to, s.fhat), adapt(to, s.plan))
 
 """
     SpectralPressureSolver(setup)
@@ -166,6 +167,7 @@ function SpectralPressureSolver(setup)
     # Placeholders for intermediate results
     phat = zero(Ahat)
     fhat = zero(Ahat)
+    plan = plan_fft(fhat)
 
-    SpectralPressureSolver{T,typeof(Ahat),typeof(setup)}(setup, Ahat, phat, fhat)
+    SpectralPressureSolver{T,typeof(Ahat),typeof(setup),typeof(plan)}(setup, Ahat, phat, fhat, plan)
 end

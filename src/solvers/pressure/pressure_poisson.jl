@@ -95,21 +95,21 @@ function pressure_poisson!(solver::CGPressureSolverManual, p, f)
 end
 
 function pressure_poisson!(solver::SpectralPressureSolver, p, f)
-    (; setup, Ahat, fhat, phat) = solver
+    (; setup, plan, Ahat, fhat, phat) = solver
     (; Ip) = setup.grid
 
-    f = @view f[Ip]
+    f = view(f, Ip)
 
-    phat .= complex.(f)
+    fhat .= complex.(f)
 
     # Fourier transform of right hand side
-    fft!(phat)
+    mul!(phat, plan, fhat)
 
     # Solve for coefficients in Fourier space
-    @. phat = -phat / Ahat
+    @. fhat = -phat / Ahat
 
     # Transform back
-    ifft!(phat)
+    ldiv!(phat, plan, fhat)
     @. p[Ip] = real(phat)
 
     p
