@@ -32,9 +32,7 @@ function plot_pressure(::Dimension{2}, setup, p; kwargs...)
         ylabel = "y",
     )
     limits!(ax, xlims[1]..., xlims[2]...)
-    cf = contourf!(ax, xp..., p; extendlow = :auto, extendhigh = :auto, 
-        levels,
-        kwargs...)
+    cf = contourf!(ax, xp..., p; extendlow = :auto, extendhigh = :auto, levels, kwargs...)
     Colorbar(fig[1, 2], cf)
 
     # save("output/pressure.png", fig, pt_per_unit = 2)

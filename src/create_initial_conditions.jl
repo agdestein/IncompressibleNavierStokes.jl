@@ -28,7 +28,10 @@ function create_initial_conditions(
 
     # Initial velocities
     for α = 1:D
-        xin = ntuple(β -> reshape(α == β ? x[β][2:end] : xp[β], ntuple(Returns(1), β - 1)..., :), D)
+        xin = ntuple(
+            β -> reshape(α == β ? x[β][2:end] : xp[β], ntuple(Returns(1), β - 1)..., :),
+            D,
+        )
         u[α][Iu[α]] .= initial_velocity.(Val(α), xin...)[Iu[α]]
     end
 
@@ -66,7 +69,10 @@ function create_spectrum(N; A, σ, s, backend)
     T = typeof(A)
     D = length(N)
     K = N .÷ 2
-    k = ntuple(α -> reshape(1:K[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D-α)...), D)
+    k = ntuple(
+        α -> reshape(1:K[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...),
+        D,
+    )
     a = KernelAbstractions.ones(backend, Complex{T}, K)
     AT = typeof(a)
     # k = AT.(Array{Complex{T}}.(k))
@@ -101,7 +107,8 @@ Create random field.
 - `s` Wavenumber offset before energy starts decaying
 """
 function random_field(
-    setup, t;
+    setup,
+    t;
     A = convert(eltype(setup.grid.x[1]), setup.grid.N[1] * 7_500),
     σ = convert(eltype(setup.grid.x[1]), 30),
     s = convert(eltype(setup.grid.x[1]), 5),

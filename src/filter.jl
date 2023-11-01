@@ -30,7 +30,8 @@ end
 
 face_average(u, setup_les, comp) = face_average!(
     ntuple(
-        α -> KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup_les.grid.N),
+        α ->
+            KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup_les.grid.N),
         length(u),
     ),
     u,

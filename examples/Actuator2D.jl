@@ -69,7 +69,8 @@ u, p = u₀, p₀
 u, p, outputs = solve_unsteady(
     setup,
     ## u₀, p₀,
-    u, p,
+    u,
+    p,
     (0.0, 12.0);
     method = RK44P2(),
     Δt = 0.05,
@@ -83,7 +84,6 @@ u, p, outputs = solve_unsteady(
         step_logger(; nupdate = 1),
     ),
 );
-
 
 # ## Post-process
 #

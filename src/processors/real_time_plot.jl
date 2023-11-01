@@ -109,13 +109,7 @@ function field_plot(
     fig = Figure(; resolution)
 
     if type ∈ (heatmap, image)
-        ax, hm = type(
-            fig[1, 1],
-            xf...,
-            field;
-            colorrange = lims,
-            kwargs...,
-        )
+        ax, hm = type(fig[1, 1], xf..., field; colorrange = lims, kwargs...)
     elseif type ∈ (contour, contourf)
         ax, hm = type(
             fig[1, 1],
@@ -215,7 +209,7 @@ function field_plot(
     fig = Figure(; resolution)
     # ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
     hm = contour(
-        fig[1,1],
+        fig[1, 1],
         # ax,
         xf...,
         field;

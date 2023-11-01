@@ -31,7 +31,10 @@ ArrayType = Array
 ## using Metal; ArrayType = MtlArray
 
 using LuxCUDA
-using CUDA; T = Float32; ArrayType = CuArray; CUDA.allowscalar(false)
+using CUDA;
+T = Float32;
+ArrayType = CuArray;
+CUDA.allowscalar(false);
 
 # Setup
 n = 128
@@ -51,17 +54,8 @@ nvalid = 2
 ntest = 5
 
 # Create LES data from DNS
-params = (;
-    D = 2,
-    Re,
-    lims,
-    nles = n,
-    compression = 4,
-    tburn,
-    tsim,
-    Δt = T(1e-4),
-    ArrayType,
-)
+params =
+    (; D = 2, Re, lims, nles = n, compression = 4, tburn, tsim, Δt = T(1e-4), ArrayType)
 data_train = create_les_data(T; params..., nsim = ntrain);
 data_valid = create_les_data(T; params..., nsim = nvalid);
 data_test = create_les_data(T; params..., nsim = ntest);
@@ -178,7 +172,10 @@ Array(θ)
 # θ .= θθ
 
 relative_error(closure(device(data_train.V[:, 1, :]), θ), device(data_train.cF[:, 1, :]))
-relative_error(closure(device(data_train.V[:, end, :]), θ), device(data_train.cF[:, end, :]))
+relative_error(
+    closure(device(data_train.V[:, end, :]), θ),
+    device(data_train.cF[:, end, :]),
+)
 relative_error(closure(u_test, θ), c_test)
 
 function energy_history(setup, state)

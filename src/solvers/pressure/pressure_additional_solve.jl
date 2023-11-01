@@ -38,8 +38,14 @@ field, resulting in same order pressure as velocity.
 function pressure_additional_solve(pressure_solver, u, t, setup)
     D = setup.grid.dimension()
     p = KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N)
-    F = ntuple(α -> KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N), D)
-    G = ntuple(α -> KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N), D)
+    F = ntuple(
+        α -> KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N),
+        D,
+    )
+    G = ntuple(
+        α -> KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N),
+        D,
+    )
     M = KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N)
     pressure_additional_solve!(pressure_solver, u, p, t, setup, F, G, M)
 end

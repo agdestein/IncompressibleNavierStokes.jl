@@ -97,7 +97,7 @@ u, p, outputs = solve_unsteady(
         ## vtk_writer(setup; nupdate = 2, dir = "output/$name", filename = "solution"),
         ## field_saver(setup; nupdate = 10),
         step_logger(; nupdate = 1),
-    );
+    ),
 );
 
 # ## Post-process

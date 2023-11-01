@@ -67,14 +67,7 @@ function solve_unsteady(
     end
 
     # Time stepper
-    stepper = create_stepper(
-        method;
-        setup,
-        pressure_solver,
-        u = u₀,
-        p = p₀,
-        t = t_start,
-    )
+    stepper = create_stepper(method; setup, pressure_solver, u = u₀, p = p₀, t = t_start)
 
     # Get initial time step
     isadaptive && (Δt = get_timestep(stepper, cfl))

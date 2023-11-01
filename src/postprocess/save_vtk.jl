@@ -21,7 +21,7 @@ function save_vtk(setup, u, p, filename = "output/solution")
             # ParaView prefers 3D vectors. Add zero z-component.
             up3 = zero(up[1])
             up = (up..., up3)
-            ωp = Array(ωp) 
+            ωp = Array(ωp)
         else
             ωp = Array.(ωp)
         end

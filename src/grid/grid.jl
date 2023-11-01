@@ -66,12 +66,12 @@ function Grid(x, boundary_conditions; ArrayType = Array)
     # Infinitely thin widths are set to `eps(T)` to avoid division by zero
     Δ = ntuple(D) do d
         Δ = diff(x[d])
-        Δ[Δ .== 0] .= eps(eltype(Δ))
+        Δ[Δ.==0] .= eps(eltype(Δ))
         Δ
     end
     Δu = ntuple(D) do d
         Δu = push!(diff(xp[d]), Δ[d][end] / 2)
-        Δu[Δu .== 0] .= eps(eltype(Δu))
+        Δu[Δu.==0] .= eps(eltype(Δu))
         Δu
     end
 

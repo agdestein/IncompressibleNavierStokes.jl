@@ -92,7 +92,7 @@ function create_laplace_diag(setup)
     ndrange = Np
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    function laplace_diag(z, p) 
+    function laplace_diag(z, p)
         _laplace_diag!(get_backend(z), WORKGROUP)(z, p, I0; ndrange)
         # synchronize(get_backend(z))
     end
@@ -128,7 +128,8 @@ CGPressureSolverManual(
     preconditioner,
 )
 
-struct SpectralPressureSolver{T,A<:AbstractArray{Complex{T}},S,P} <: AbstractPressureSolver{T}
+struct SpectralPressureSolver{T,A<:AbstractArray{Complex{T}},S,P} <:
+       AbstractPressureSolver{T}
     setup::S
     Ahat::A
     phat::A
@@ -138,8 +139,12 @@ end
 
 # This moves all the inner arrays to the GPU when calling
 # `cu(::SpectralPressureSolver)` from CUDA.jl
-Adapt.adapt_structure(to, s::SpectralPressureSolver) =
-    SpectralPressureSolver(adapt(to, s.Ahat), adapt(to, s.phat), adapt(to, s.fhat), adapt(to, s.plan))
+Adapt.adapt_structure(to, s::SpectralPressureSolver) = SpectralPressureSolver(
+    adapt(to, s.Ahat),
+    adapt(to, s.phat),
+    adapt(to, s.fhat),
+    adapt(to, s.plan),
+)
 
 """
     SpectralPressureSolver(setup)
@@ -196,5 +201,11 @@ function SpectralPressureSolver(setup)
     fhat = zero(Ahat)
     plan = plan_fft(fhat)
 
-    SpectralPressureSolver{T,typeof(Ahat),typeof(setup),typeof(plan)}(setup, Ahat, phat, fhat, plan)
+    SpectralPressureSolver{T,typeof(Ahat),typeof(setup),typeof(plan)}(
+        setup,
+        Ahat,
+        phat,
+        fhat,
+        plan,
+    )
 end

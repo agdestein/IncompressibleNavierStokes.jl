@@ -4,15 +4,7 @@
 Create CNN closure model. Return a tuple `(closure, θ)` where `θ` are the initial
 parameters and `closure(u, θ)` predicts the commutator error.
 """
-function cnn(
-    setup,
-    r,
-    c,
-    σ,
-    b;
-    channel_augmenter = identity,
-    rng = Random.default_rng(),
-)
+function cnn(setup, r, c, σ, b; channel_augmenter = identity, rng = Random.default_rng())
     (; grid) = setup
     (; dimension, x) = grid
     D = dimension()

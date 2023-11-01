@@ -57,7 +57,6 @@ function plot_vorticity(::Dimension{3}, setup, u; kwargs...)
     μ, σ = mean(qp), std(qp)
     levels = LinRange(μ - 3σ, μ + 3σ, 10)
 
-
     xp = Array.(xp)
     qp = Array(qp)
     contour(xp..., qp; levels, kwargs...)
