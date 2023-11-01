@@ -32,6 +32,10 @@ large scale velocity ``\bar{v} \approx \bar{u}``
 M \bar{v} & = 0, \\
 \frac{\mathrm{d} \bar{v}}{\mathrm{d} t} & = F(\bar{v}) + m(\bar{v}, \theta) - G \bar{q}.
 \end{split}
+
+```@docs
+face_average!
+```
 ```
 
 ## Training
