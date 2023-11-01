@@ -54,8 +54,8 @@ pressure_solver = SpectralPressureSolver(setup);
 u₀, p₀ = create_initial_conditions(
     setup,
     (dim, x, y, z) ->
-        dim() == 1 ? sinpi(2x) * cospi(2y) * sinpi(2z) :
-        dim() == 2 ? -cospi(2x) * sinpi(2y) * sinpi(2z) : zero(x);
+        dim() == 1 ? sinpi(2x) * cospi(2y) * sinpi(2z) / 2 :
+        dim() == 2 ? -cospi(2x) * sinpi(2y) * sinpi(2z) / 2 : zero(x);
     pressure_solver,
 );
 u, p = u₀, p₀
@@ -95,7 +95,6 @@ u, p, outputs = solve_unsteady(
         step_logger(; nupdate = 1),
     ),
     pressure_solver,
-    inplace = true,
 );
 
 # ## Post-process

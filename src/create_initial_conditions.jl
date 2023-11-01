@@ -75,8 +75,9 @@ function create_spectrum(N; A, σ, s, backend)
     a .*= A / sqrt(τ^2 * 2σ^2)
     for α = 1:D
         kα = k[α]
-        @. a *= exp(-(kα - s)^2 / 2σ^2 - im * τ * rand(T))
+        @. a *= randn(T) * exp(-(kα - s)^2 / 2σ^2)
     end
+    @. a *= exp(im * τ * rand(T))
     for α = 1:D
         a = cat(a, reverse(a; dims = α); dims = α)
     end

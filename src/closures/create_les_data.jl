@@ -32,55 +32,61 @@ function gaussian_force(
     force
 end
 
-_filter_saver(
-    dns,
-    les,
-    Ku,
-    Kp;
-    nupdate = 1,
-) = processor(
-    function (state)
-        (; dimension, Ω, x) = dns.grid
-        D = dimension()
-        Ωbar = les.grid.Ω
-        T = eltype(x)
-        _t = fill(zero(T), 0)
-        _u = fill(ntuple(α -> zeros(T, 0), D), 0)
-        _p = fill(zeros(T, 0), 0)
-        _F = fill(ntuple(α -> zeros(T, 0), D), 0)
-        _FG = fill(ntuple(α -> zeros(T, 0), D), 0)
-        _cF = fill(ntuple(α -> zeros(T, 0), D), 0)
-        _cFG = fill(ntuple(α -> zeros(T, 0), D), 0)
-        on(state) do (; u, p, t)
-            ubar = Ku .* u
-            pbar = Kp * p
-            F = momentum(u, t, dns)
-            G = pressuregradient(p, dns)
-            FG = F .+ G
-            Fbar = Ku .* F
-            FGbar = Ku .* FG
-            FVbar = momentum(ubar, t, les)
-            GVbar = pressuregradient(pbar, les)
-            FGVbar = FVbar + GVbar
-            cF = Fbar .- FVbar
-            cFG = FGbar .- FGVbar
-            push!(_t, t)
-            push!(_u, Array.(ubar))
-            push!(_p, Array(pbar))
-            push!(_F, Array.(Fbar))
-            push!(_FG, Array.(FGbar))
-            push!(_cF, Array.(cF))
-            push!(_cFG, Array.(cFG))
+_filter_saver(dns, les, comp; nupdate = 1) = processor(function (state)
+    (; dimension, x) = dns.grid
+    D = dimension()
+    F = zero.(state[].u)
+    # pbar = zero(volume_average(state[].p, les, comp))
+    ubar = zero.(face_average(state[].u, les, comp))
+    Fbar = zero.(ubar)
+    Fubar = zero.(ubar)
+    cF = zero.(ubar)
+    _t = fill(zero(eltype(x[1])), 0)
+    _u = fill(Array.(ubar), 0)
+    # _p = fill(Array.(ubar), 0)
+    _F = fill(Array.(ubar), 0)
+    # _FG = fill(Array.(ubar), 0)
+    _cF = fill(Array.(ubar), 0)
+    # _cFG = fill(Array.(ubar), 0)
+    on(state) do (; u, p, t)
+        face_average!(ubar, u, les, comp)
+        apply_bc_u!(ubar, t, les)
+        # pbar = Kp * p
+        momentum!(F, u, t, dns)
+        # G = pressuregradient(p, dns)
+        # FG = F .+ G
+        face_average!(Fbar, F, les, comp)
+        # FGbar = Ku .* FG
+        momentum!(Fubar, ubar, t, les)
+        # Gubar = pressuregradient(pbar, les)
+        # FGubar = Fubar + Gubar
+        for α = 1:D
+            cF[α] .= Fbar[α] .- Fubar[α]
         end
-        state[] = state[]
-        (; t = _t, u = _u, p = _p, F = _F, FG = _FG, cF = _cF, cFG = _cFG)
-    end;
-    nupdate,
-)
+        # cFG = FGbar .- FGVbar
+        push!(_t, t)
+        push!(_u, Array.(ubar))
+        # push!(_p, Array(pbar))
+        push!(_F, Array.(Fubar))
+        # push!(_FG, Array.(FGbar))
+        push!(_cF, Array.(cF))
+        # push!(_cFG, Array.(cFG))
+    end
+    state[] = state[] # Save initial conditions
+    (;
+        t = _t,
+        u = _u,
+        # p = _p,
+        F = _F,
+        # FG = _FG,
+        cF = _cF,
+        # cFG = _cFG,
+    )
+end; nupdate)
 
 function create_les_data(
     T;
-    dimension,
+    D = 2,
     Re = T(2_000),
     lims = (T(0), T(1)),
     nles = 64,
@@ -91,17 +97,13 @@ function create_les_data(
     Δt = T(1e-4),
     ArrayType = Array,
 )
-    D = dimension()
     ndns = compression * nles
     xdns = ntuple(α -> LinRange(lims..., ndns + 1), D)
-    xles = map(x -> x[1:compression:end], xdns)
+    xles = ntuple(α -> LinRange(lims..., nles + 1), D)
 
     # Build setup and assemble operators
     dns = Setup(xdns...; Re, ArrayType)
     les = Setup(xles...; Re, ArrayType)
-
-    # Filter
-    (; Ku, Kp) = operator_filter(dns.grid, dns.boundary_conditions, compression)
 
     # Since the grid is uniform and identical for x and y, we may use a specialized
     # spectral pressure solver
@@ -114,13 +116,14 @@ function create_les_data(
     # Filtered quantities to store
     (; N) = les.grid
     filtered = (;
-        u = zeros(T, N..., D, nt + 1, nsim),
-        p = zeros(T, N..., nt + 1, nsim),
-        F = zeros(T, N..., D, nt + 1, nsim),
-        FG = zeros(T, N..., D, nt + 1, nsim),
-        cF = zeros(T, N..., D, nt + 1, nsim),
-        cFG = zeros(T, N..., D, nt + 1, nsim),
-        force = zeros(T, N..., D, nsim),
+        Δt,
+        u = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
+        # p = fill(fill(zeros(T, N...), 0), 0),
+        F = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
+        # FG = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
+        cF = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
+        # cFG = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
+        # force = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
     )
 
     @info "Generating $(Base.summarysize(filtered) / 1e6) Mb of LES data"
@@ -129,15 +132,17 @@ function create_les_data(
         @info "Generating data for simulation $isim of $nsim"
 
         # Initial conditions
-        u₀, p₀ = random_field(dns; pressure_solver)
+        u₀, p₀ = random_field(dns, T(0); pressure_solver)
 
         # Random body force
-        force_dns = gaussian_force(xdns...) +
-            gaussian_force(xdns...) +
-            # gaussian_force(xdns...) +
-            # gaussian_force(xdns...) +
-            gaussian_force(xdns...)
-        force_les = Ku .* force_dns
+        # force_dns =
+        #     gaussian_force(xdns...) +
+        #     gaussian_force(xdns...) +
+        #     # gaussian_force(xdns...) +
+        #     # gaussian_force(xdns...) +
+        #     gaussian_force(xdns...)
+        force_dns = zero.(u₀)
+        force_les = face_average(force_dns, les, compression)
 
         _dns = (; dns..., force = force_dns)
         _les = (; les..., force = force_les)
@@ -163,30 +168,21 @@ function create_les_data(
             (T(0), tsim);
             Δt,
             processors = (
-                _filter_saver(
-                    device(_dns),
-                    device(_les),
-                    device(Ku),
-                    device(Kp);
-                    bc_vectors_dns = device(get_bc_vectors(_dns, T(0))),
-                    bc_vectors_les = device(get_bc_vectors(_les, T(0))),
-                ),
+                _filter_saver(_dns, _les, compression),
                 step_logger(; nupdate = 10),
             ),
             pressure_solver,
-            inplace = true,
-            device,
         )
         f = outputs[1]
 
         # Store result for current IC
-        filtered.u[ntuple(α -> :, D + 2)..., isim] = stack(stack.(f.u))
-        filtered.p[ntuple(α -> :, D + 1)..., isim] = stack(f.p)
-        filtered.F[ntuple(α -> :, D + 2)..., isim] = stack(stack.(f.F))
-        filtered.FG[ntuple(α -> :, D + 2)..., isim] = stack(stack.(f.FG))
-        filtered.cF[ntuple(α -> :, D + 2)..., isim] = stack(stack.(f.cF))
-        filtered.cFG[ntuple(α -> :, D + 2)..., isim] = stack(stack.(f.cFG))
-        filtered.force[ntuple(α -> :, D + 1)..., isim] = stack.(force_les)
+        push!(filtered.u, f.u)
+        # push!(filtered.p, f.p)
+        push!(filtered.F, f.F)
+        # push!(filtered.FG, f.FG)
+        push!(filtered.cF, f.cF)
+        # push!(filtered.cFG, f.cFG)
+        # push!(filtered.force, f.force)
     end
 
     filtered

@@ -6,6 +6,9 @@
 /docs/src/generated/
 *output/
 # scratch/*
+test.jl
+toto.jl
+tata.jl
 
 # Vim swap
 *.swp

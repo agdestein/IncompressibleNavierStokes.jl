@@ -6,18 +6,11 @@ initial parameters and `closure(V, θ)` predicts the commutator error.
 """
 function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
     (; grid) = setup
-    (; dimension) = grid
+    (; dimension, N) = grid
 
-    N = dimension()
+    D = dimension()
 
-    if N == 2
-        (; Nx, Ny) = grid
-        _nx = (Nx, Ny)
-    elseif N == 3
-        (; Nx, Ny, Nz) = grid
-        _nx = (Nx, Ny, Nz)
-    end
-    @assert all(==(first(_nx)), _nx)
+    @assert all(==(first(N)), N)
 
     # Fourier layers
     @assert length(kmax) == length(c) == length(σ)
@@ -27,44 +20,28 @@ function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
 
     # Create FNO closure model
     NN = Chain(
-        # Unflatten and separate u and v velocities
-        V -> reshape(V, _nx..., 2, :),
-
-        # # uu, uv, vu, vv
-        # V -> reshape(V, Nx, Ny, 2, 1, :) .* reshape(V, Nx, Ny, 1, 2, :),
-        # V -> reshape(V, Nx, Ny, 4, :),
-
         # Some Fourier layers
         (
             FourierLayer(dimension, kmax[i], c[i] => c[i+1]; σ = σ[i]) for i ∈ eachindex(σ)
         )...,
 
         # Put channels in first dimension
-        V -> permutedims(V, (N + 1, (1:N)..., N + 2)),
+        u -> permutedims(u, (D + 1, (1:D)..., D + 2)),
 
         # Compress with a final dense layer
         Dense(c[end] => 2 * c[end], ψ),
         Dense(2 * c[end] => 2; use_bias = false),
 
         # Put channels back after spatial dimensions
-        u -> permutedims(u, ((2:N+1)..., 1, N + 2)),
-
-        # Flatten to vector
-        u -> reshape(u, 2 * prod(_nx), :),
+        u -> permutedims(u, ((2:D+1)..., 1, D + 2)),
     )
 
     # Create parameter vector (empty state)
     params, state = Lux.setup(rng, NN)
     θ = ComponentArray(params)
 
-    """
-        closure(V, θ) 
-
-    Compute closure term for given parameters `θ`.
-    """
-    function closure end
-    closure(V, θ) = first(NN(V, θ, state))
-    closure(V::AbstractVector, θ) = reshape(closure(reshape(V, :, 1), θ), :)
+    # Compute closure term for given parameters
+    closure(u, θ) = first(NN(u, θ, state))
 
     closure, θ
 end

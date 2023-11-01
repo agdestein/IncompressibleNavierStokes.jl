@@ -144,7 +144,6 @@ function apply_bc_u!(::PeriodicBC, u, β, t, setup; atend, kwargs...)
         else
             _bc_a!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β); ndrange)
         end
-        synchronize(get_backend(u[1]))
     end
 end
 

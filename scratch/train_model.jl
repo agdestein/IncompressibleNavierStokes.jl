@@ -21,16 +21,17 @@ using Random
 using Zygote
 
 # Floating point precision
-T = Float32
+T = Float64
 
-# # To use CPU: Do not move any arrays
-# device = identity
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
-# To use GPU, use `cu` to move arrays to the GPU.
-# Note: `cu` converts to Float32
-using CUDA
 using LuxCUDA
-device = cu
+using CUDA; T = Float32; ArrayType = CuArray; CUDA.allowscalar(false)
 
 # Setup
 n = 128
@@ -51,6 +52,7 @@ ntest = 5
 
 # Create LES data from DNS
 params = (;
+    D = 2,
     Re,
     lims,
     nles = n,
@@ -58,95 +60,72 @@ params = (;
     tburn,
     tsim,
     Δt = T(1e-4),
-    device,
+    ArrayType,
 )
-data_train = create_les_data(T; params..., nsim = ntrain)
-data_valid = create_les_data(T; params..., nsim = nvalid)
-data_test = create_les_data(T; params..., nsim = ntest)
+data_train = create_les_data(T; params..., nsim = ntrain);
+data_valid = create_les_data(T; params..., nsim = nvalid);
+data_test = create_les_data(T; params..., nsim = ntest);
 
-# jldsave("output/filtered/data.jld2"; data_train, data_valid, data_test)
+length(data_train.u)
+length(data_train.u[1])
+length(data_train.u[1][1])
+size(data_train.u[1][1][1])
 
-# Load previous LES data
-data_train, data_valid, data_test = load("output/filtered/data.jld2", "data_train", "data_valid", "data_test")
+o = Observable(data_train.u[1][end][1])
+heatmap(o)
+for i = 1:501
+    # o[] = data_train.u[1][i][1]
+    o[] = data_train.cF[1][i][1]
+    sleep(0.001)
+end
 
-nt = size(data_train.V, 2) - 1
+# # Save filtered DNS data
+# jldsave("output/forced/data.jld2"; data_train, data_valid, data_test)
 
-size(data_train.V)
-size(data_valid.V)
-size(data_test.V)
+# # Load previous LES data
+# data_train, data_valid, data_test = load("output/forced/data.jld2", "data_train", "data_valid", "data_test")
 
-# Inspect data
-plot_vorticity(setup, data_valid.V[:, 1, 1], T(0))
-plot_vorticity(setup, data_valid.V[:, end, 1], T(0))
-norm(data_valid.cF[:, 1, 1]) / norm(data_valid.F[:, 1, 1])
-norm(data_valid.cF[:, end, 1]) / norm(data_valid.F[:, end, 1])
+nt = length(data_train.u[1]) - 1
 
 # Uniform periodic grid
 pressure_solver = SpectralPressureSolver(setup);
 
-q = data_valid.V
-# q = data_train.FG
-q = q[:, :, 1]
-q = selectdim(reshape(q, n, n, 2, :), 3, 1)
-
-qc = reshape(selectdim(data_valid.cF, 3, 2), n, n, :)
-
-obs = Observable(randn(T, 1, 1))
-# obs = Observable(selectdim(q, 3, 1))
-# obs = Observable([selectdim(q, 3, 1) selectdim(qc, 3, 1)])
-fig = heatmap(obs)
-fig
-
-# for snap in eachslice(q; dims = 3)
-for (s1, s2) in zip(eachslice(q; dims = 3), eachslice(qc; dims = 3))
-    obs[] = s1
-    # obs[] = [s1 s2]
-    autolimits!(fig.axis)
-    sleep(0.005)
-end
-
-heatmap(selectdim(reshape(data_valid.force[:, 1], n, n, 2), 3, 1))
-
-fx, fy = eachslice(reshape(data_valid.force[:, 1], n, n, 2); dims = 3)
-heatmap(fx)
-arrows(x, y, fx, fy; lengthscale = 1.0f0)
-
-# closure, θ₀ = cnn(
-#     setup,
-#
-#     # Radius
-#     [2, 2, 2, 2],
-#
-#     # Channels
-#     [64, 64, 64, 2],
-#
-#     # Activations
-#     [leakyrelu, leakyrelu, leakyrelu, identity],
-#
-#     # Bias
-#     [true, true, true, false];
-# )
-
-closure, θ₀ = fno(
+closure, θ₀ = cnn(
     setup,
 
-    # Cut-off wavenumbers
-    [32, 32, 32, 32],
+    # Radius
+    [2, 2, 2, 2],
 
-    # Channel sizes
-    [24, 12, 8, 8],
+    # Channels
+    [5, 5, 5, 2],
 
-    # Fourier layer activations
-    [gelu, gelu, gelu, identity],
+    # Activations
+    [leakyrelu, leakyrelu, leakyrelu, identity],
 
-    # Dense activation
-    gelu,
-);
+    # Bias
+    [true, true, true, false];
+)
+
+# closure, θ₀ = fno(
+#     setup,
+#
+#     # Cut-off wavenumbers
+#     [32, 32, 32, 32],
+#
+#     # Channel sizes
+#     [24, 12, 8, 8],
+#
+#     # Fourier layer activations
+#     [gelu, gelu, gelu, identity],
+#
+#     # Dense activation
+#     gelu,
+# );
 
 @info "Closure model has $(length(θ₀)) parameters"
 
 # Test data
-V_test = device(reshape(data_test.V[:, 1:20, 1:2], :, 40))
+u_test = device(reshape(data_test.u[:, 1:20, 1:2], :, 40))
 c_test = device(reshape(data_test.cF[:, 1:20, 1:2], :, 40))
 
 # Prepare training
@@ -177,10 +156,10 @@ first(gradient(randloss, θ));
     randloss,
     opt,
     θ;
-    niter = 1000,
+    niter = 2000,
     ncallback = 10,
     callbackstate,
-    callback = create_callback(closure, V_test, c_test; state = callbackstate),
+    callback = create_callback(closure, u_test, c_test; state = callbackstate),
 )
 GC.gc()
 CUDA.reclaim()
@@ -188,17 +167,19 @@ CUDA.reclaim()
 Array(θ)
 
 # # Save trained parameters
-# jldsave("output/theta.jld2"; θ = Array(θ))
+# jldsave("output/forced/theta_cnn.jld2"; θ = Array(θ))
+# jldsave("output/forced/theta_fno.jld2"; θ = Array(θ))
 
 # # Load trained parameters
-# θθ = load("output/theta.jld2")
+# θθ = load("output/theta_cnn.jld2")
+# θθ = load("output/theta_fno.jld2")
 # θθ = θθ["θ"]
 # θθ = cu(θθ)
 # θ .= θθ
 
 relative_error(closure(device(data_train.V[:, 1, :]), θ), device(data_train.cF[:, 1, :]))
 relative_error(closure(device(data_train.V[:, end, :]), θ), device(data_train.cF[:, end, :]))
-relative_error(closure(V_test, θ), c_test)
+relative_error(closure(u_test, θ), c_test)
 
 function energy_history(setup, state)
     (; Ωp) = setup.grid
@@ -216,16 +197,19 @@ end
 energy_history_writer(setup; nupdate = 1, kwargs...) =
     processor(state -> energy_history(setup, state; kwargs...); nupdate)
 
-devsetup = device(setup);
+isample = 1
+forcedsetup = (; setup..., force = data_train.force[:, isample]);
+
+devsetup = device(forcedsetup);
 V_nm, p_nm, outputs_nm = solve_unsteady(
-    setup,
-    data_train.V[:, 1, 1],
-    data_train.p[:, 1, 1],
+    forcedsetup,
+    data_test.V[:, 1, isample],
+    data_test.p[:, 1, isample],
     (T(0), tsim);
     Δt = T(2e-4),
     processors = (
         field_plotter(devsetup; type = heatmap, nupdate = 1),
-        energy_history_writer(setup),
+        energy_history_writer(forcedsetup),
         step_logger(; nupdate = 10),
     ),
     pressure_solver,
@@ -235,17 +219,17 @@ V_nm, p_nm, outputs_nm = solve_unsteady(
 )
 ehist_nm = outputs_nm[2]
 
-setup_fno = (; setup..., closure_model = V -> closure(V, θ))
+setup_fno = (; forcedsetup..., closure_model = V -> closure(V, θ))
 devsetup = device(setup_fno);
 V_fno, p_fno, outputs_fno = solve_unsteady(
     setup_fno,
-    data_train.V[:, 1, 1],
-    data_train.p[:, 1, 1],
+    data_test.V[:, 1, isample],
+    data_test.p[:, 1, isample],
     (T(0), tsim);
     Δt = T(2e-4),
     processors = (
         field_plotter(devsetup; type = heatmap, nupdate = 1),
-        energy_history_writer(setup),
+        energy_history_writer(forcedsetup),
         step_logger(; nupdate = 10),
     ),
     pressure_solver,
@@ -256,11 +240,11 @@ V_fno, p_fno, outputs_fno = solve_unsteady(
 ehist_fno = outputs_fno[2]
 
 state = Observable((; V = data_train.V[:, 1, 1], p = data_train.p[:, 1, 1], t = T(0)))
-ehist = energy_history(setup, state)
+ehist = energy_history(forcedsetup, state)
 for i = 2:nt+1
     t = (i - 1) / T(nt - 1) * tsim
-    V = data_train.V[:, i, 1]
-    p = data_train.p[:, i, 1]
+    V = data_test.V[:, i, isample]
+    p = data_test.p[:, i, isample]
     state[] = (; V, p, t)
 end
 ehist
@@ -275,8 +259,8 @@ fig
 
 save("output/train/energy.png", fig)
 
-V = data_train.V[:, end, 1]
-p = data_train.p[:, end, 1]
+V = data_train.V[:, end, isample]
+p = data_train.p[:, end, isample]
 
 relative_error(V_nm, V)
 relative_error(V_fno, V)

@@ -27,13 +27,15 @@ function divergence!(M, u, setup)
         I = I + I0
         M[I] += (u[α][I] - u[α][I-δ(α)]) / Δ[α][I[α]]
     end
-    M .= 0
     # All volumes have a right velocity
     # All volumes have a left velocity except the first one
     # Start at second volume
     ndrange = N .- 1
     I0 = 2 * oneunit(first(Ip))
+    # ndrange = Np
+    # I0 = first(Ip)
     I0 -= oneunit(I0)
+    M .= 0
     for α = 1:D
         _divergence!(get_backend(M), WORKGROUP)(M, u, Val(α), I0; ndrange)
     end
@@ -244,15 +246,7 @@ end
 
 Right hand side of momentum equations, excluding pressure gradient.
 """
-momentum(u, t, setup) = momentum!(
-    ntuple(
-        α -> KernelAbstractions.zeros(get_backend(u[1]), typeof(t), setup.grid.N),
-        length(u),
-    ),
-    u,
-    t,
-    setup,
-)
+momentum(u, t, setup) = momentum!(zero.(u), u, t, setup)
 
 """
     pressuregradient!(G, p, setup)
@@ -469,7 +463,7 @@ end
 Compute the ``D``-field.
 """
 Dfield(p, setup) = Dfield!(
-    KernelAbstractions.zeros(get_backend(p), eltype(p), setup.grid.N),
+    zero(p),
     ntuple(
         α -> KernelAbstractions.zeros(get_backend(p), eltype(p), setup.grid.N),
         setup.grid.dimension(),

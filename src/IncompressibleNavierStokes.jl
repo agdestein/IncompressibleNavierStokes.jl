@@ -73,6 +73,7 @@ include("processors/animator.jl")
 
 # Discrete operators
 include("operators.jl")
+include("filter.jl")
 
 # Solvers
 include("solvers/get_timestep.jl")

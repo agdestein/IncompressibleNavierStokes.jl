@@ -41,7 +41,8 @@ function field_plot(
     state;
     fieldname = :vorticity,
     type = heatmap,
-    sleeptime = 0.001,
+    # sleeptime = 0.001,
+    sleeptime = nothing,
     equal_axis = true,
     displayfig = true,
     displayupdates = false,

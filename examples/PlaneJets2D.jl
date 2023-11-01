@@ -42,28 +42,28 @@ Re = T(6_000)
 ## V() = sqrt(T(467.4))
 V() = T(21.619435700313733)
 
-U_A(y) = u() / 2 * (tanh((y + T(0.5)) / T(0.1)) - tanh((y - T(0.5)) / T(0.1)))
+U_A(y) = V() / 2 * (tanh((y + T(0.5)) / T(0.1)) - tanh((y - T(0.5)) / T(0.1)))
 
 U_B(y) =
-    u() / 2 * (tanh((y + 1 + T(0.5)) / T(0.1)) - tanh((y + 1 - T(0.5)) / T(0.1))) +
-    u() / 2 * (tanh((y - 1 + T(0.5)) / T(0.1)) - tanh((y - 1 - T(0.5)) / T(0.1)))
+    V() / 2 * (tanh((y + 1 + T(0.5)) / T(0.1)) - tanh((y + 1 - T(0.5)) / T(0.1))) +
+    V() / 2 * (tanh((y - 1 + T(0.5)) / T(0.1)) - tanh((y - 1 - T(0.5)) / T(0.1)))
 
 U_C(y) =
-    u() / 2 * (
+    V() / 2 * (
         tanh(((y + T(1.0)) / 1 + T(0.5)) / T(0.1)) -
         tanh(((y + T(1.0)) / 1 - T(0.5)) / T(0.1))
     ) +
-    u() / 4 * (
+    V() / 4 * (
         tanh(((y - T(1.5)) / 2 + T(0.5)) / T(0.2)) -
         tanh(((y - T(1.5)) / 2 - T(0.5)) / T(0.2))
     )
 
 U_D(y) =
-    u() / 2 * (
+    V() / 2 * (
         tanh(((y + T(1.0)) / 1 + T(0.5)) / T(0.1)) -
         tanh(((y + T(1.0)) / 1 - T(0.5)) / T(0.1))
     ) -
-    u() / 4 * (
+    V() / 4 * (
         tanh(((y - T(1.5)) / 2 + T(0.5)) / T(0.2)) -
         tanh(((y - T(1.5)) / 2 - T(0.5)) / T(0.2))
     )
@@ -107,24 +107,23 @@ u₀, p₀ = create_initial_conditions(
 # Real time plot: Streamwise average and spectrum
 mean_plotter(setup; nupdate = 1) = processor(
     function (state)
-        (; indu, yu, yin, Nux_in, Nuy_in) = setup.grid
+        (; Ip) = setup.grid
 
         umean = @lift begin
             (; u, p, t) = $state
+            up = IncompressibleNavierStokes.interpolate_u_p(setup, u)
             u1 = u[1]
-            sleep(0.001)
-            reshape(sum(reshape(u1, size(yu)); dims = 1), :) ./ (Nux_in * V())
+            reshape(sum(u1[Ip]; dims = 1), :) ./ size(u1, 1) ./ V()
         end
 
-        K = Nux_in ÷ 2
+        K = size(Ip, 1) ÷ 2
         k = 1:(K-1)
 
         # Find energy spectrum where y = 0
-        n₀ = Nuy_in ÷ 2
+        n₀ = size(Ip, 2) ÷ 2
         E₀ = @lift begin
-            (; V, p, t) = $state
-            u = V[indu]
-            u_y = reshape(u, size(yu))[:, n₀]
+            (; u, p, t) = $state
+            u_y = u[1][:, n₀]
             abs.(fft(u_y .^ 2))[k.+1]
         end
 

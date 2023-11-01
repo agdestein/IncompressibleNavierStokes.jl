@@ -10,7 +10,7 @@ plot_vorticity(setup, u; kwargs...) =
 
 # 2D version
 function plot_vorticity(::Dimension{2}, setup, u; kwargs...)
-    (; grid, boundary_conditions) = setup
+    (; grid) = setup
     (; xp, xlims, Ip) = grid
     T = eltype(xp[1])
 
@@ -47,7 +47,7 @@ end
 
 # 3D version
 function plot_vorticity(::Dimension{3}, setup, u; kwargs...)
-    (; grid, boundary_conditions) = setup
+    (; grid) = setup
     (; xp) = grid
 
     ωp = interpolate_ω_p(setup, vorticity(u, setup))
