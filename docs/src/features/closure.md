@@ -1,8 +1,8 @@
 # Neural closure models
 
 For [large eddy simulation (LES)](../features/les.md), a closure model is
-required. With IncompressibleNavierStokes, a neural closure model can be traine
-d on filtered DNS data. The discrete DNS equations are given by
+required. With IncompressibleNavierStokes, a neural closure model can be
+trained on filtered DNS data. The discrete DNS equations are given by
 
 ```math
 \begin{split}
@@ -19,11 +19,13 @@ M \bar{u} & = 0, \\
 \frac{\mathrm{d} \bar{u}}{\mathrm{d} t} & = F(\bar{u}) + c - G \bar{p},
 \end{split}
 ```
+
 where the discretizations ``M``, ``F``, and ``G`` are adapted to the size of
-their inputs and ``c = \overline{F(u)} - F(\bar{u})`` is a commutator error.
-Replacing ``c`` with a parameterized closure model ``m(\bar{u}, \theta) \approx
-c`` gives the LES equations for the approximate large scale velocity ``\bar{v}
-\approx \bar{u}``
+their inputs and ``c = \overline{F(u)} - F(\bar{u})`` is a commutator error. We
+here assumed that ``M`` and ``\Phi`` commute, which is the case for face
+averaging filters. Replacing ``c`` with a parameterized closure model
+``m(\bar{u}, \theta) \approx c`` gives the LES equations for the approximate
+large scale velocity ``\bar{v} \approx \bar{u}``
 
 ```math
 \begin{split}

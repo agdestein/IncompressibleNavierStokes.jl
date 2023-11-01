@@ -39,6 +39,7 @@ be denoted ``\partial \mathcal{O}``, with normal ``n`` and surface element
 The mass equation in integral form is given by
 
 ```math
+\frac{1}{| \mathcal{O} |}
 \int_{\partial \mathcal{O}} u \cdot n \, \mathrm{d} \Gamma = 0,
 ```
 
@@ -46,9 +47,16 @@ where we have used the divergence theorem to convert the volume integral to a
 surface integral. Similarly, the momentum equations take the form
 
 ```math
-\frac{\partial }{\partial t} \int_\mathcal{O} u \, \mathrm{d} \Omega
-= \int_{\partial \mathcal{O}} \left( - u u^\mathsf{T} - P + \nu S \right) \cdot n \,
-\mathrm{d} \Gamma + \int_\mathcal{O} f \mathrm{d} \Omega
+\frac{\mathrm{d}}{\mathrm{d} t}
+\frac{1}{| \mathcal{O} |}
+\int_\mathcal{O} u \, \mathrm{d} \Omega
+=
+\frac{1}{| \mathcal{O} |}
+\int_{\partial \mathcal{O}}
+\left( - u u^\mathsf{T} - P + \nu S \right) \cdot n
+\, \mathrm{d} \Gamma +
+\frac{1}{| \mathcal{O} |}
+\int_\mathcal{O} f \mathrm{d} \Omega
 ```
 
 where ``P = p \mathrm{I}`` is the hydrostatic stress tensor
