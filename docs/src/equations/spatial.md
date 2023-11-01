@@ -122,7 +122,7 @@ When a quantity is required *outside* of its native point, we will use interpola
 ## Finite volume discretization of the Navier-Stokes equations
 
 We will consider the integral form of the Navier-Stokes equations. This has the
-advantage that some of the spatial derivatives dissapear, reducing the amount
+advantage that some of the spatial derivatives disappear, reducing the amount
 of finite difference approximations we need to perform.
 
 We define the finite difference operator ``\partial_\alpha`` equivalent to

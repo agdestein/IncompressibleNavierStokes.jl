@@ -22,7 +22,7 @@ second order for `θ = 1/2`.
 The LU decomposition of the LHS matrix is computed every time the time step
 changes.
 
-Note that, in constrast to explicit methods, the pressure from previous time
+Note that, in contrast to explicit methods, the pressure from previous time
 steps has an influence on the accuracy of the velocity.
 """
 struct AdamsBashforthCrankNicolsonMethod{T,M} <: AbstractODEMethod{T}

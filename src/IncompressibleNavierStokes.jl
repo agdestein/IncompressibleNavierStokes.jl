@@ -32,7 +32,7 @@ const ⊗ = kron
 # Easily retrieve value from Val
 (::Val{x})() where {x} = x
 
-# Boundary condtions
+# Boundary conditions
 include("boundary_conditions.jl")
 
 # Grid

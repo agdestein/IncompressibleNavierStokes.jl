@@ -10,8 +10,8 @@ of the following extensions:
 - ".webm"
 - ".gif"
 
-The plot is determined by a `plotter` processsor.
-Addtional `kwargs` are passed to Makie's `VideoStream`.
+The plot is determined by a `plotter` processor.
+Additional `kwargs` are passed to Makie's `VideoStream`.
 """
 animator(setup, path; nupdate = 1, plotter = field_plotter(setup), kwargs...) = processor(
     function (state)

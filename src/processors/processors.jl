@@ -24,7 +24,7 @@ function initialize(step_observer)
 end
 
 finalize(s, stepper) = println("The final sum (at time t=$(stepper.t)) is $s")
-p = Processor(intialize; finalize, nupdate = 5)
+p = Processor(initialize; finalize, nupdate = 5)
 ```
 
 When solved for 20 time steps from t=0 to t=2 the displayed output is
@@ -90,7 +90,7 @@ vtk_writer(
                 coords = (xp, yp, zp)
             end
 
-            # Move arryas to CPU before writing
+            # Move arrays to CPU before writing
             V isa Array || (V = Array(V))
             p isa Array || (p = Array(p))
 

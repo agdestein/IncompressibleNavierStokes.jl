@@ -134,7 +134,7 @@ u, p, outputs =
 # We may visualize or export the computed fields `(V, p)`
 
 # Export fields to VTK. The file `output/solution.vti` may be opened for
-# visulization in [ParaView](https://www.paraview.org/). This is particularly
+# visualization in [ParaView](https://www.paraview.org/). This is particularly
 # useful for inspecting results from 3D simulations.
 save_vtk(setup, u, p, "output/solution")
 

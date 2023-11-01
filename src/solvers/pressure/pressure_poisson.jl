@@ -80,7 +80,7 @@ function pressure_poisson!(solver::CGPressureSolverManual, p, f)
     # Initial residual
     laplacian!(L, p, setup)
 
-    # Intialize
+    # Initialize
     q .= 0
     r .= f .- L
     ρ_prev = one(T)
