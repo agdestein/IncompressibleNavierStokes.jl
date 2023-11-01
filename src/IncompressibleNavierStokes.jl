@@ -102,9 +102,6 @@ include("closures/create_les_data.jl")
 # Boundary conditions
 export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
 
-# Force
-export SteadyBodyForce
-
 # Models
 export AbstractViscosityModel, LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
 export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
@@ -132,7 +129,7 @@ export momentum, divergence, pressuregradient, Dfield!, Qfield!
 # Problems
 export solve_unsteady, solve_steady_state
 
-export create_initial_conditions, random_field, get_velocity
+export create_initial_conditions, random_field
 
 export plot_force,
     plot_grid, plot_pressure, plot_streamfunction, plot_velocity, plot_vorticity, save_vtk
