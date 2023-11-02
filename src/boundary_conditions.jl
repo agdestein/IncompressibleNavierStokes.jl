@@ -191,7 +191,7 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwar
             ),
             D,
         )
-        u[α][I] .= bcfunc.(Val(α), xI..., t)
+        u[α][I] .= bcfunc.((Dimension(α),), xI..., t)
     end
 end
 

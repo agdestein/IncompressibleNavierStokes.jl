@@ -8,7 +8,7 @@
 
 Create initial vectors `(u, p)` at starting time `t`.
 The initial conditions of `u[α]` are specified by the function
-`initial_velocity(Val(α), x...)`.
+`initial_velocity(Dimension(α), x...)`.
 """
 function create_initial_conditions(
     setup,
@@ -32,7 +32,7 @@ function create_initial_conditions(
             β -> reshape(α == β ? x[β][2:end] : xp[β], ntuple(Returns(1), β - 1)..., :),
             D,
         )
-        u[α][Iu[α]] .= initial_velocity.(Val(α), xin...)[Iu[α]]
+        u[α][Iu[α]] .= initial_velocity.((Dimension(α),), xin...)[Iu[α]]
     end
 
     apply_bc_u!(u, t, setup)
