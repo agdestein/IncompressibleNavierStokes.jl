@@ -67,7 +67,7 @@ _filter_saver(dns, les, comp; nupdate = 1) = processor(function (state)
         push!(_t, t)
         push!(_u, Array.(ubar))
         # push!(_p, Array(pbar))
-        push!(_F, Array.(Fubar))
+        # push!(_F, Array.(Fubar))
         # push!(_FG, Array.(FGbar))
         push!(_cF, Array.(cF))
         # push!(_cFG, Array.(cFG))
@@ -77,7 +77,7 @@ _filter_saver(dns, les, comp; nupdate = 1) = processor(function (state)
         t = _t,
         u = _u,
         # p = _p,
-        F = _F,
+        # F = _F,
         # FG = _FG,
         cF = _cF,
         # cFG = _cFG,
@@ -119,17 +119,18 @@ function create_les_data(
         Δt,
         u = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
         # p = fill(fill(zeros(T, N...), 0), 0),
-        F = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
+        # F = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
         # FG = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
         cF = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
         # cFG = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
         # force = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
     )
 
-    @info "Generating $(Base.summarysize(filtered) / 1e6) Mb of LES data"
+    # @info "Generating $(Base.summarysize(filtered) / 1e6) Mb of LES data"
+    @info "Generating $(nsim * (nt + 1) * nles * 3 * 2 * length(bitstring(zero(T))) / 8 / 1e6) Mb of LES data"
 
     for isim = 1:nsim
-        @info "Generating data for simulation $isim of $nsim"
+        # @info "Generating data for simulation $isim of $nsim"
 
         # Initial conditions
         u₀, p₀ = random_field(dns, T(0); pressure_solver)
@@ -155,7 +156,7 @@ function create_les_data(
             p₀,
             (T(0), tburn);
             Δt,
-            processors = (step_logger(; nupdate = 10),),
+            # processors = (step_logger(; nupdate = 10),),
             pressure_solver,
         )
 
@@ -169,7 +170,7 @@ function create_les_data(
             Δt,
             processors = (
                 _filter_saver(_dns, _les, compression),
-                step_logger(; nupdate = 10),
+                # step_logger(; nupdate = 10),
             ),
             pressure_solver,
         )
@@ -178,7 +179,7 @@ function create_les_data(
         # Store result for current IC
         push!(filtered.u, f.u)
         # push!(filtered.p, f.p)
-        push!(filtered.F, f.F)
+        # push!(filtered.F, f.F)
         # push!(filtered.FG, f.FG)
         push!(filtered.cF, f.cF)
         # push!(filtered.cFG, f.cFG)

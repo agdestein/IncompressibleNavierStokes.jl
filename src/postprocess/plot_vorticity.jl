@@ -18,7 +18,7 @@ function plot_vorticity(::Dimension{2}, setup, u; kwargs...)
 
     # Get fields
     ω = vorticity(u, setup)
-    ωp = interpolate_ω_p(setup, ω)
+    ωp = interpolate_ω_p(ω, setup)
     ωp = Array(ωp)[Ip]
 
     # Levels
@@ -50,7 +50,7 @@ function plot_vorticity(::Dimension{3}, setup, u; kwargs...)
     (; grid) = setup
     (; xp) = grid
 
-    ωp = interpolate_ω_p(setup, vorticity(u, setup))
+    ωp = interpolate_ω_p(vorticity(u, setup), setup)
     qp = map((u, v, w) -> √sum(u^2 + v^2 + w^2), ωp...)
 
     # Levels

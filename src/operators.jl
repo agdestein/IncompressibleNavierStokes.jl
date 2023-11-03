@@ -317,25 +317,25 @@ function laplacian!(L, p, setup)
 end
 
 """
-    interpolate_u_p(setup, u)
+    interpolate_u_p(u, setup)
 
 Interpolate velocity to pressure points.
 """
-interpolate_u_p(setup, u) = interpolate_u_p!(
-    setup,
+interpolate_u_p(u, setup) = interpolate_u_p!(
     ntuple(
         α -> KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N),
         setup.grid.dimension(),
     ),
     u,
+    setup,
 )
 
 """
-    interpolate_u_p!(setup, up, u)
+    interpolate_u_p!(up, u, setup)
 
 Interpolate velocity to pressure points.
 """
-function interpolate_u_p!(setup, up, u)
+function interpolate_u_p!(up, u, setup)
     (; boundary_conditions, grid, Re, bodyforce) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
@@ -354,12 +354,11 @@ function interpolate_u_p!(setup, up, u)
 end
 
 """
-    interpolate_ω_p(setup, ω)
+    interpolate_ω_p(ω, setup)
 
 Interpolate vorticity to pressure points.
 """
-interpolate_ω_p(setup, ω) = interpolate_ω_p!(
-    setup,
+interpolate_ω_p(ω, setup) = interpolate_ω_p!(
     setup.grid.dimension() == 2 ?
     KernelAbstractions.zeros(get_backend(ω), eltype(ω), setup.grid.N) :
     ntuple(
@@ -367,16 +366,17 @@ interpolate_ω_p(setup, ω) = interpolate_ω_p!(
         setup.grid.dimension(),
     ),
     ω,
+    setup,
 )
 
 """
-    interpolate_ω_p!(setup, ωp, ω)
+    interpolate_ω_p!(ωp, ω, setup)
 
 Interpolate vorticity to pressure points.
 """
-interpolate_ω_p!(setup, ωp, ω) = interpolate_ω_p!(setup.grid.dimension, setup, ωp, ω)
+interpolate_ω_p!(ωp, ω, setup) = interpolate_ω_p!(setup.grid.dimension, ωp, ω, setup)
 
-function interpolate_ω_p!(::Dimension{2}, setup, ωp, ω)
+function interpolate_ω_p!(::Dimension{2}, ωp, ω, setup)
     (; boundary_conditions, grid, Re, bodyforce) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
@@ -392,7 +392,7 @@ function interpolate_ω_p!(::Dimension{2}, setup, ωp, ω)
     ωp
 end
 
-function interpolate_ω_p!(::Dimension{3}, setup, ωp, ω)
+function interpolate_ω_p!(::Dimension{3}, ωp, ω, setup)
     (; boundary_conditions, grid, Re) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
@@ -521,10 +521,10 @@ Qfield(u, setup) = Qfield!(
 Compute total kinetic energy. The velocity components are interpolated to the
 volume centers and squared.
 """
-function kinetic_energy(setup, u)
+function kinetic_energy(u, setup)
     (; dimension, Ω, Ip) = setup.grid
     D = dimension()
-    up = interpolate_u_p(setup, u)
+    up = interpolate_u_p(u, setup)
     E = zero(eltype(up[1]))
     for α = 1:D
         # E += sum(I -> Ω[I] * up[α][I]^2, Ip)

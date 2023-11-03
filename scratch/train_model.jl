@@ -68,8 +68,8 @@ size(data_train.u[1][1][1])
 o = Observable(data_train.u[1][end][1])
 heatmap(o)
 for i = 1:501
-    # o[] = data_train.u[1][i][1]
-    o[] = data_train.cF[1][i][1]
+    o[] = data_train.u[1][i][1]
+    # o[] = data_train.cF[1][i][1]
     sleep(0.001)
 end
 
@@ -98,7 +98,7 @@ closure, θ₀ = cnn(
 
     # Bias
     [true, true, true, false];
-)
+);
 
 # closure, θ₀ = fno(
 #     setup,
@@ -116,28 +116,38 @@ closure, θ₀ = cnn(
 #     gelu,
 # );
 
-@info "Closure model has $(length(θ₀)) parameters"
+closure.NN
 
-# Test data
-u_test = device(reshape(data_test.u[:, 1:20, 1:2], :, 40))
-c_test = device(reshape(data_test.cF[:, 1:20, 1:2], :, 40))
+# Create input/output arrays
+function create_io_arrays(data, setup)
+    nsample = length(data.u)
+    nt = length(data.u[1]) - 1
+    D = setup.grid.dimension()
+    T = eltype(data.u[1][1][1])
+    (; N) = setup.grid
+    u = zeros(T, (N .- 2)..., D, nt + 1, nsample)
+    c = zeros(T, (N .- 2)..., D, nt + 1, nsample)
+    ifield = ntuple(Returns(:), D)
+    for i = 1:nsample, j = 1:nt+1, α = 1:D
+        copyto!(view(u, ifield..., α, j, i), view(data.u[i][j][α], setup.grid.Iu[α]))
+        copyto!(view(c, ifield..., α, j, i), view(data.cF[i][j][α], setup.grid.Iu[α]))
+    end
+    reshape(u, (N .- 2)..., D, :), reshape(c, (N .- 2)..., D, :)
+end
+
+io_train = create_io_arrays(data_train, setup)
+io_valid = create_io_arrays(data_valid, setup)
+io_test = create_io_arrays(data_test, setup)
 
 # Prepare training
-θ = 1.0f-1 * device(θ₀)
-# θ = device(θ₀)
+θ = 1.0f-1 * cu(θ₀)
+# θ = cu(θ₀)
 opt = Optimisers.setup(Adam(1.0f-3), θ)
 callbackstate = Point2f[]
-randloss = create_randloss(
-    mean_squared_error,
-    closure,
-    data_train.V,
-    data_train.cF;
-    nuse = 50,
-    device,
-)
+randloss = create_randloss(mean_squared_error, closure, io_train...; nuse = 50, device = cu)
 
 # Warm-up
-randloss(θ);
+randloss(θ)
 @time randloss(θ);
 first(gradient(randloss, θ));
 @time first(gradient(randloss, θ));
@@ -153,23 +163,21 @@ first(gradient(randloss, θ));
     niter = 2000,
     ncallback = 10,
     callbackstate,
-    callback = create_callback(closure, u_test, c_test; state = callbackstate),
-)
+    callback = create_callback(closure, cu(io_valid)...; state = callbackstate),
+);
 GC.gc()
 CUDA.reclaim()
 
 Array(θ)
 
 # # Save trained parameters
-# jldsave("output/forced/theta_cnn.jld2"; θ = Array(θ))
-# jldsave("output/forced/theta_fno.jld2"; θ = Array(θ))
+# jldsave("output/forced/theta_cnn.jld2"; theta = Array(θ))
+# jldsave("output/forced/theta_fno.jld2"; theta = Array(θ))
 
 # # Load trained parameters
 # θθ = load("output/theta_cnn.jld2")
 # θθ = load("output/theta_fno.jld2")
-# θθ = θθ["θ"]
-# θθ = cu(θθ)
-# θ .= θθ
+# copyto!(θ, θθ["theta"])
 
 relative_error(closure(device(data_train.V[:, 1, :]), θ), device(data_train.cF[:, 1, :]))
 relative_error(

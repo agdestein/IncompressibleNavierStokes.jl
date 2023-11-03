@@ -15,8 +15,8 @@ function save_vtk(setup, u, p, filename = "output/solution")
     D = dimension()
     xp = Array.(xp)
     vtk_grid(filename, xp...) do vtk
-        up = interpolate_u_p(setup, u)
-        ωp = interpolate_ω_p(setup, vorticity(u, setup))
+        up = interpolate_u_p(u, setup)
+        ωp = interpolate_ω_p(vorticity(u, setup), setup)
         if D == 2
             # ParaView prefers 3D vectors. Add zero z-component.
             up3 = zero(up[1])

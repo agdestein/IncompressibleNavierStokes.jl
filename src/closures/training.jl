@@ -43,10 +43,8 @@ The function `loss` should take inputs like `loss(f, x, y, θ)`.
 
 The batch is moved to `device` before the loss is evaluated.
 """
-function create_randloss(loss, f, x, y; nuse = size(x, 2), device = identity)
-    x = reshape(x, size(x, 1), :)
-    y = reshape(y, size(y, 1), :)
-    nsample = size(x, 2)
+function create_randloss(loss, f, x, y; nuse = 50, device = identity)
+    nsample = size(x)[end]
     d = ndims(x)
     function randloss(θ)
         i = Zygote.@ignore sort(shuffle(1:nsample)[1:nuse])

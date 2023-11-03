@@ -58,10 +58,10 @@ function field_plot(
 
     (; u, p, t) = state[]
     _f = if fieldname == :velocity
-        up = interpolate_u_p(setup, u)
+        up = interpolate_u_p(u, setup)
     elseif fieldname == :vorticity
         ω = vorticity(u, setup)
-        ωp = interpolate_ω_p(setup, ω)
+        ωp = interpolate_ω_p(ω, setup)
     elseif fieldname == :streamfunction
         ψ = get_streamfunction(setup, u, t)
     elseif fieldname == :pressure
@@ -72,12 +72,12 @@ function field_plot(
         isnothing(sleeptime) || sleep(sleeptime)
         (; u, p, t) = $state
         f = if fieldname == :velocity
-            interpolate_u_p!(setup, up, u)
+            interpolate_u_p!(up, u, setup)
             map((u, v) -> √sum(u^2 + v^2), up...)
         elseif fieldname == :vorticity
             apply_bc_u!(u, t, setup)
             vorticity!(ω, u, setup)
-            interpolate_ω_p!(setup, ωp, ω)
+            interpolate_ω_p!(ωp, ω, setup)
         elseif fieldname == :streamfunction
             get_streamfunction!(setup, ψ, u, t)
         elseif fieldname == :pressure
@@ -181,10 +181,10 @@ function field_plot(
         isnothing(sleeptime) || sleep(sleeptime)
         (; u, p, t) = $state
         f = if fieldname == :velocity
-            up = interpolate_u_p(setup, u)
+            up = interpolate_u_p(u, setup)
             map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
         elseif fieldname == :vorticity
-            ωp = interpolate_ω_p(setup, vorticity(u, setup))
+            ωp = interpolate_ω_p(vorticity(u, setup), setup)
             map((u, v, w) -> √sum(u^2 + v^2 + w^2), ωp...)
         elseif fieldname == :streamfunction
             get_streamfunction(setup, u, t)
@@ -275,7 +275,7 @@ function energy_spectrum_plot(setup, state; displayfig = true)
     k = Array(reshape(k, :))
     ehat = @lift begin
         (; u, p, t) = $state
-        up = interpolate_u_p(setup, u)
+        up = interpolate_u_p(u, setup)
         e = sum(up -> up[Ip] .^ 2, up)
         Array(reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]), :))
     end

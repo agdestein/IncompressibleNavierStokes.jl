@@ -14,7 +14,7 @@ function plot_velocity(::Dimension{2}, setup, u; kwargs...)
     T = eltype(xp[1])
 
     # Get velocity at pressure points
-    up = interpolate_u_p(setup, u)
+    up = interpolate_u_p(u, setup)
     # qp = map((u, v) -> √(u^2 + v^2), up, vp)
     qp = sqrt.(up[1] .^ 2 .+ up[2] .^ 2)
 
@@ -43,7 +43,7 @@ function plot_velocity(::Dimension{3}, setup, u; kwargs...)
     (; xp) = setup.grid
 
     # Get velocity at pressure points
-    up = interpolate_u_p(setup, u)
+    up = interpolate_u_p(u, setup)
     qp = map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
 
     # Levels
