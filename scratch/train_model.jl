@@ -119,22 +119,6 @@ closure, θ₀ = cnn(
 closure.NN
 
 # Create input/output arrays
-function create_io_arrays(data, setup)
-    nsample = length(data.u)
-    nt = length(data.u[1]) - 1
-    D = setup.grid.dimension()
-    T = eltype(data.u[1][1][1])
-    (; N) = setup.grid
-    u = zeros(T, (N .- 2)..., D, nt + 1, nsample)
-    c = zeros(T, (N .- 2)..., D, nt + 1, nsample)
-    ifield = ntuple(Returns(:), D)
-    for i = 1:nsample, j = 1:nt+1, α = 1:D
-        copyto!(view(u, ifield..., α, j, i), view(data.u[i][j][α], setup.grid.Iu[α]))
-        copyto!(view(c, ifield..., α, j, i), view(data.cF[i][j][α], setup.grid.Iu[α]))
-    end
-    reshape(u, (N .- 2)..., D, :), reshape(c, (N .- 2)..., D, :)
-end
-
 io_train = create_io_arrays(data_train, setup)
 io_valid = create_io_arrays(data_valid, setup)
 io_test = create_io_arrays(data_test, setup)
@@ -185,6 +169,8 @@ relative_error(
     device(data_train.cF[:, end, :]),
 )
 relative_error(closure(u_test, θ), c_test)
+
+
 
 function energy_history(setup, state)
     (; Ωp) = setup.grid

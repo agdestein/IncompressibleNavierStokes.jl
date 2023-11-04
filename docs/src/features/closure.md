@@ -1,3 +1,7 @@
+```@meta
+CurrentModule = IncompressibleNavierStokes
+```
+
 # Neural closure models
 
 For [large eddy simulation (LES)](../features/les.md), a closure model is
@@ -36,6 +40,8 @@ M \bar{v} & = 0, \\
 
 ```@docs
 face_average!
+create_les_data
+create_io_arrays
 ```
 
 ## Training

@@ -84,6 +84,23 @@ _filter_saver(dns, les, comp; nupdate = 1) = processor(function (state)
     )
 end; nupdate)
 
+"""
+    create_les_data(
+    T;
+    D = 2,
+    Re = T(2_000),
+    lims = (T(0), T(1)),
+    nles = 64,
+    compression = 4,
+    nsim = 10,
+    tburn = T(0.1),
+    tsim = T(0.1),
+    Δt = T(1e-4),
+    ArrayType = Array,
+)
+
+Create filtered DNS data.
+"""
 function create_les_data(
     T;
     D = 2,
@@ -187,4 +204,25 @@ function create_les_data(
     end
 
     filtered
+end
+
+"""
+    create_io_arrays(data, setup)
+
+Create ``(\\bar{u}, c)`` pairs for training.
+"""
+function create_io_arrays(data, setup)
+    nsample = length(data.u)
+    nt = length(data.u[1]) - 1
+    D = setup.grid.dimension()
+    T = eltype(data.u[1][1][1])
+    (; N) = setup.grid
+    u = zeros(T, (N .- 2)..., D, nt + 1, nsample)
+    c = zeros(T, (N .- 2)..., D, nt + 1, nsample)
+    ifield = ntuple(Returns(:), D)
+    for i = 1:nsample, j = 1:nt+1, α = 1:D
+        copyto!(view(u, ifield..., α, j, i), view(data.u[i][j][α], setup.grid.Iu[α]))
+        copyto!(view(c, ifield..., α, j, i), view(data.cF[i][j][α], setup.grid.Iu[α]))
+    end
+    reshape(u, (N .- 2)..., D, :), reshape(c, (N .- 2)..., D, :)
 end
