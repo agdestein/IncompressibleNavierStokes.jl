@@ -9,9 +9,9 @@ function cnn(setup, r, c, σ, b; channel_augmenter = identity, rng = Random.defa
     (; dimension, x) = grid
     D = dimension()
 
-    # For now
+    # Weight initializer
     T = eltype(x[1])
-    @assert T == Float32
+    glorot_uniform_T(rng::AbstractRNG, dims...) = glorot_uniform(rng, T, dims...)
 
     # Make sure there are two force fields in output
     @assert c[end] == D
@@ -26,8 +26,13 @@ function cnn(setup, r, c, σ, b; channel_augmenter = identity, rng = Random.defa
 
         # Some convolutional layers
         (
-            Conv(ntuple(α -> 2r[i] + 1, D), c[i] => c[i+1], σ[i]; use_bias = b[i]) for
-            i ∈ eachindex(r)
+            Conv(
+                ntuple(α -> 2r[i] + 1, D),
+                c[i] => c[i+1],
+                σ[i];
+                use_bias = b[i],
+                init_weight = glorot_uniform_T,
+            ) for i ∈ eachindex(r)
         )...,
     )
 

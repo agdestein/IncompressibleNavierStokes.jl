@@ -94,7 +94,7 @@ include("postprocess/plot_streamfunction.jl")
 include("postprocess/save_vtk.jl")
 
 # Closure models
-include("closures/closure.md")
+include("closures/closure.jl")
 include("closures/cnn.jl")
 include("closures/fno.jl")
 include("closures/training.jl")

@@ -124,11 +124,11 @@ io_valid = create_io_arrays(data_valid, setup)
 io_test = create_io_arrays(data_test, setup)
 
 # Prepare training
-θ = 1.0f-1 * cu(θ₀)
+θ = T(1.0e-1) * device(θ₀)
 # θ = cu(θ₀)
-opt = Optimisers.setup(Adam(1.0f-3), θ)
-callbackstate = Point2f[]
-randloss = create_randloss(mean_squared_error, closure, io_train...; nuse = 50, device = cu)
+opt = Optimisers.setup(Adam(T(1.0e-3)), θ);
+callbackstate = Point2f[];
+randloss = create_randloss(mean_squared_error, closure, io_train...; nuse = 50, device);
 
 # Warm-up
 randloss(θ)
@@ -147,7 +147,7 @@ first(gradient(randloss, θ));
     niter = 2000,
     ncallback = 10,
     callbackstate,
-    callback = create_callback(closure, cu(io_valid)...; state = callbackstate),
+    callback = create_callback(closure, device(io_valid)...; state = callbackstate),
 );
 GC.gc()
 CUDA.reclaim()
@@ -169,8 +169,6 @@ relative_error(
     device(data_train.cF[:, end, :]),
 )
 relative_error(closure(u_test, θ), c_test)
-
-
 
 function energy_history(setup, state)
     (; Ωp) = setup.grid
