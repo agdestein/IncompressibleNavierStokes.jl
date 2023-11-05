@@ -25,6 +25,7 @@ T = Float64
 
 # Array type
 ArrayType = Array
+device = identity
 ## using CUDA; ArrayType = CuArray
 ## using AMDGPU; ArrayType = ROCArray
 ## using oneAPI; ArrayType = oneArray
@@ -35,6 +36,7 @@ using CUDA;
 T = Float32;
 ArrayType = CuArray;
 CUDA.allowscalar(false);
+device = cu
 
 # Setup
 n = 128
@@ -46,7 +48,7 @@ tsim = T(0.05)
 # Build LES setup and assemble operators
 x = LinRange(lims..., n + 1)
 y = LinRange(lims..., n + 1)
-setup = Setup(x, y; Re);
+setup = Setup(x, y; Re, ArrayType);
 
 # Number of simulations
 ntrain = 10
@@ -119,9 +121,9 @@ closure, θ₀ = cnn(
 closure.NN
 
 # Create input/output arrays
-io_train = create_io_arrays(data_train, setup)
-io_valid = create_io_arrays(data_valid, setup)
-io_test = create_io_arrays(data_test, setup)
+io_train = create_io_arrays(data_train, setup);
+io_valid = create_io_arrays(data_valid, setup);
+io_test = create_io_arrays(data_test, setup);
 
 # Prepare training
 θ = T(1.0e-1) * device(θ₀)
@@ -162,6 +164,29 @@ Array(θ)
 # θθ = load("output/theta_cnn.jld2")
 # θθ = load("output/theta_fno.jld2")
 # copyto!(θ, θθ["theta"])
+
+u₀ = device(data_test.u[1][1])
+p₀ = pressure_additional_solve(pressure_solver, u₀, T(0), setup)
+
+u, p, outputs = solve_unsteady(
+    setup,
+    copy.(u₀),
+    copy(p₀),
+    (T(0), T(0.1));
+    Δt = T(1e-4),
+    pressure_solver,
+    processors = (field_plotter(setup; nupdate = 10), step_logger(; nupdate = 1)),
+)
+
+u, p, outputs = solve_unsteady(
+    (; setup..., closure_model = create_neural_closure(closure, θ, setup)),
+    copy.(u₀),
+    copy(p₀),
+    (T(0), T(0.1));
+    Δt = T(1e-4),
+    pressure_solver,
+    processors = (field_plotter(setup; nupdate = 10), step_logger(; nupdate = 1)),
+)
 
 relative_error(closure(device(data_train.V[:, 1, :]), θ), device(data_train.cF[:, 1, :]))
 relative_error(

@@ -237,7 +237,12 @@ function momentum!(F, u, t, setup)
     diffusion!(F, u, setup)
     convection!(F, u, setup)
     bodyforce!(F, u, t, setup)
-    isnothing(closure_model) || (F .+= closure_model(u))
+    if !isnothing(closure_model)
+        m = closure_model(u)
+        for α = 1:D
+            F[α] .+= m[α]
+        end
+    end
     F
 end
 
