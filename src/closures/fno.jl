@@ -6,7 +6,7 @@ initial parameters and `closure(V, θ)` predicts the commutator error.
 """
 function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
     (; grid) = setup
-    (; dimension, N) = grid
+    (; dimension, x, N) = grid
 
     D = dimension()
 
@@ -18,11 +18,15 @@ function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
     # Make sure there are two velocity fields in input and output
     c = [2; c]
 
+    # Weight initializer
+    T = eltype(x[1])
+    init_weight(rng::AbstractRNG, dims...) = glorot_uniform(rng, T, dims...)
+
     # Create FNO closure model
     NN = Chain(
         # Some Fourier layers
         (
-            FourierLayer(dimension, kmax[i], c[i] => c[i+1]; σ = σ[i]) for i ∈ eachindex(σ)
+            FourierLayer(dimension, kmax[i], c[i] => c[i+1]; σ = σ[i], init_weight) for i ∈ eachindex(σ)
         )...,
 
         # Put channels in first dimension

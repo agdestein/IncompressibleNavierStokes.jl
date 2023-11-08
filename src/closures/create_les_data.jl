@@ -83,18 +83,19 @@ end; nupdate)
 
 """
     create_les_data(
-    T;
-    D = 2,
-    Re = T(2_000),
-    lims = (T(0), T(1)),
-    nles = 64,
-    compression = 4,
-    nsim = 10,
-    tburn = T(0.1),
-    tsim = T(0.1),
-    Δt = T(1e-4),
-    ArrayType = Array,
-)
+        T;
+        D = 2,
+        Re = T(2_000),
+        lims = (T(0), T(1)),
+        nles = 64,
+        compression = 4,
+        nsim = 10,
+        tburn = T(0.1),
+        tsim = T(0.1),
+        Δt = T(1e-4),
+        ArrayType = Array,
+    )
+
 
 Create filtered DNS data.
 """
