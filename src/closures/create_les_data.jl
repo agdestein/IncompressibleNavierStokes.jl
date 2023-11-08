@@ -32,55 +32,52 @@ function gaussian_force(
     force
 end
 
-_filter_saver(dns, les, comp; nupdate = 1) = processor(function (state)
+_filter_saver(dns, les, comp, pressure_solver; nupdate = 1) = processor(function (state)
     (; dimension, x) = dns.grid
+    T = eltype(x[1])
     D = dimension()
     F = zero.(state[].u)
-    # pbar = zero(volume_average(state[].p, les, comp))
-    ubar = zero.(face_average(state[].u, les, comp))
-    Fbar = zero.(ubar)
-    Fubar = zero.(ubar)
-    cF = zero.(ubar)
+    G = zero.(state[].u)
+    Φu = zero.(face_average(state[].u, les, comp))
+    q = zero(pressure_additional_solve(pressure_solver, Φu, state[].t, les))
+    M = zero(q)
+    ΦF = zero.(Φu)
+    FΦ = zero.(Φu)
+    GΦ = zero.(Φu)
+    c = zero.(Φu)
     _t = fill(zero(eltype(x[1])), 0)
-    _u = fill(Array.(ubar), 0)
-    # _p = fill(Array.(ubar), 0)
-    _F = fill(Array.(ubar), 0)
-    # _FG = fill(Array.(ubar), 0)
-    _cF = fill(Array.(ubar), 0)
-    # _cFG = fill(Array.(ubar), 0)
+    _u = fill(Array.(Φu), 0)
+    _c = fill(Array.(Φu), 0)
     on(state) do (; u, p, t)
-        face_average!(ubar, u, les, comp)
-        apply_bc_u!(ubar, t, les)
-        # pbar = Kp * p
         momentum!(F, u, t, dns)
-        # G = pressuregradient(p, dns)
-        # FG = F .+ G
-        face_average!(Fbar, F, les, comp)
-        # FGbar = Ku .* FG
-        momentum!(Fubar, ubar, t, les)
-        # Gubar = pressuregradient(pbar, les)
-        # FGubar = Fubar + Gubar
+        pressuregradient!(G, p, dns)
         for α = 1:D
-            cF[α] .= Fbar[α] .- Fubar[α]
+            F[α] .-= G[α]
         end
-        # cFG = FGbar .- FGVbar
+        face_average!(Φu, u, les, comp)
+        apply_bc_u!(Φu, t, les)
+        face_average!(ΦF, F, les, comp)
+        momentum!(FΦ, Φu, t, les)
+        apply_bc_u!(FΦ, t, les; dudt = true)
+        divergence!(M, FΦ, les)
+        @. M *= les.grid.Ω
+
+        pressure_poisson!(pressure_solver, q, M)
+        apply_bc_p!(q, t, les)
+        pressuregradient!(GΦ, q, les)
+        for α = 1:D
+            FΦ[α] .-= GΦ[α]
+            c[α] .= ΦF[α] .- FΦ[α]
+        end
         push!(_t, t)
-        push!(_u, Array.(ubar))
-        # push!(_p, Array(pbar))
-        # push!(_F, Array.(Fubar))
-        # push!(_FG, Array.(FGbar))
-        push!(_cF, Array.(cF))
-        # push!(_cFG, Array.(cFG))
+        push!(_u, Array.(Φu))
+        push!(_c, Array.(c))
     end
     state[] = state[] # Save initial conditions
     (;
         t = _t,
         u = _u,
-        # p = _p,
-        # F = _F,
-        # FG = _FG,
-        cF = _cF,
-        # cFG = _cFG,
+        c = _c,
     )
 end; nupdate)
 
@@ -125,6 +122,7 @@ function create_les_data(
     # Since the grid is uniform and identical for x and y, we may use a specialized
     # spectral pressure solver
     pressure_solver = SpectralPressureSolver(dns)
+    pressure_solver_les = SpectralPressureSolver(les)
 
     # Number of time steps to save
     nt = round(Int, tsim / Δt)
@@ -135,12 +133,7 @@ function create_les_data(
     filtered = (;
         Δt,
         u = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
-        # p = fill(fill(zeros(T, N...), 0), 0),
-        # F = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
-        # FG = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
-        cF = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
-        # cFG = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
-        # force = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
+        c = fill(fill(ntuple(α -> zeros(T, N...), D), 0), 0),
     )
 
     # @info "Generating $(Base.summarysize(filtered) / 1e6) Mb of LES data"
@@ -186,7 +179,7 @@ function create_les_data(
             (T(0), tsim);
             Δt,
             processors = (
-                _filter_saver(_dns, _les, compression),
+                _filter_saver(_dns, _les, compression, pressure_solver_les),
                 # step_logger(; nupdate = 10),
             ),
             pressure_solver,
@@ -195,12 +188,7 @@ function create_les_data(
 
         # Store result for current IC
         push!(filtered.u, f.u)
-        # push!(filtered.p, f.p)
-        # push!(filtered.F, f.F)
-        # push!(filtered.FG, f.FG)
-        push!(filtered.cF, f.cF)
-        # push!(filtered.cFG, f.cFG)
-        # push!(filtered.force, f.force)
+        push!(filtered.c, f.c)
     end
 
     filtered
@@ -222,7 +210,7 @@ function create_io_arrays(data, setup)
     ifield = ntuple(Returns(:), D)
     for i = 1:nsample, j = 1:nt+1, α = 1:D
         copyto!(view(u, ifield..., α, j, i), view(data.u[i][j][α], setup.grid.Iu[α]))
-        copyto!(view(c, ifield..., α, j, i), view(data.cF[i][j][α], setup.grid.Iu[α]))
+        copyto!(view(c, ifield..., α, j, i), view(data.c[i][j][α], setup.grid.Iu[α]))
     end
     reshape(u, (N .- 2)..., D, :), reshape(c, (N .- 2)..., D, :)
 end

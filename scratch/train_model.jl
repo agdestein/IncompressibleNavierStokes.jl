@@ -38,40 +38,30 @@ ArrayType = CuArray;
 CUDA.allowscalar(false);
 device = cu
 
-# Setup
-n = 128
-lims = T(0), T(1)
-Re = T(6_000)
-tburn = T(0.05)
-tsim = T(0.05)
-
-# Build LES setup and assemble operators
-x = LinRange(lims..., n + 1)
-y = LinRange(lims..., n + 1)
-setup = Setup(x, y; Re, ArrayType);
-
-# Number of simulations
-ntrain = 10
-nvalid = 2
-ntest = 5
+# Parameters
+params = (;
+    D = 2,
+    Re = T(6_000),
+    lims = (T(0), T(1)),
+    nles = 128,
+    compression = 4,
+    tburn = T(0.05),
+    tsim = T(0.05),
+    Δt = T(1e-4),
+    ArrayType,
+)
 
 # Create LES data from DNS
-params =
-    (; D = 2, Re, lims, nles = n, compression = 4, tburn, tsim, Δt = T(1e-4), ArrayType)
-data_train = create_les_data(T; params..., nsim = ntrain);
-data_valid = create_les_data(T; params..., nsim = nvalid);
-data_test = create_les_data(T; params..., nsim = ntest);
+data_train = create_les_data(T; params..., nsim = 10);
+data_valid = create_les_data(T; params..., nsim = 2);
+data_test = create_les_data(T; params..., nsim = 5);
 
-length(data_train.u)
-length(data_train.u[1])
-length(data_train.u[1][1])
-size(data_train.u[1][1][1])
-
+# Inspect data
 o = Observable(data_train.u[1][end][1])
 heatmap(o)
 for i = 1:501
     o[] = data_train.u[1][i][1]
-    # o[] = data_train.cF[1][i][1]
+    # o[] = data_train.c[1][i][1]
     sleep(0.001)
 end
 
@@ -81,7 +71,10 @@ end
 # # Load previous LES data
 # data_train, data_valid, data_test = load("output/forced/data.jld2", "data_train", "data_valid", "data_test")
 
-nt = length(data_train.u[1]) - 1
+# Build LES setup and assemble operators
+x = LinRange(params.lims..., params.nles + 1)
+y = LinRange(params.lims..., params.nles + 1)
+setup = Setup(x, y; params.Re, ArrayType);
 
 # Uniform periodic grid
 pressure_solver = SpectralPressureSolver(setup);
@@ -126,8 +119,7 @@ io_valid = create_io_arrays(data_valid, setup);
 io_test = create_io_arrays(data_test, setup);
 
 # Prepare training
-θ = T(1.0e-1) * device(θ₀)
-# θ = cu(θ₀)
+θ = T(1.0e-1) * device(θ₀);
 opt = Optimisers.setup(Adam(T(1.0e-3)), θ);
 callbackstate = Point2f[];
 randloss = create_randloss(mean_squared_error, closure, io_train...; nuse = 50, device);
