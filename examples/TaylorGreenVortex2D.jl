@@ -8,98 +8,77 @@ end                                                 #src
 # # Taylor-Green vortex - 2D
 #
 # In this example we consider the Taylor-Green vortex.
-
-# We start by loading packages.
-# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
-# for plotting. `GLMakie` creates an interactive window (useful for real-time
-# plotting), but does not work when building this example on GitHub.
-# `CairoMakie` makes high-quality static vector-graphics plots.
+# In 2D, it has an analytical solution, given by
+#
+# ```math
+# \begin{split}
+#     u^1(x, y, t) & = - \sin(x) \cos(y) \mathrm{e}^{-2 t / Re} \\
+#     u^2(x, y, t) & = + \cos(x) \sin(y) \mathrm{e}^{-2 t / Re}
+# \end{split}
+# ```
+#
+# This allows us to test the convergence of our solver.
 
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
+using LinearAlgebra
 
-# Case name for saving results
-name = "TaylorGreenVortex2D"
+function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType = Array)
+    T = typeof(lims[1])
+    e = zeros(T, length(nlist))
+    for (i, n) in enumerate(nlist)
+        @info "Computing error for n = $n"
+        x = ntuple(α -> LinRange(lims..., n + 1), D)
+        setup = Setup(x...; Re, ArrayType)
+        (; Ip) = setup.grid
+        pressure_solver = SpectralPressureSolver(setup)
+        u₀, p₀ = create_initial_conditions(
+            setup,
+            (dim, x...) -> uref(dim, x..., tlims[1]),
+            tlims[1];
+            pressure_solver,
+        )
+        ut, pt = create_initial_conditions(
+            setup,
+            (dim, x...) -> uref(dim, x..., tlims[2]),
+            tlims[2];
+            pressure_solver,
+        )
+        u, p, outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt, pressure_solver)
+        for α = 1:D
+            e[i] += norm(u[α][Ip] - ut[α][Ip]) / norm(ut[α][Ip])
+        end
+        e[i] /= D
+    end
+    e
+end
 
-# Floating point type
-T = Float64
+solution(Re) =
+    (dim, x, y, t) -> (dim() == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)) * exp(-2t / Re)
 
-# Array type
-ArrayType = Array
-## using CUDA; ArrayType = CuArray
-## using AMDGPU; ArrayType = ROCArray
-## using oneAPI; ArrayType = oneArray
-## using Metal; ArrayType = MtlArray
+Re = 2.0e3
+nlist = [2, 4, 8, 16, 32, 64, 128, 256]
+e = compute_convergence(;
+    D = 2,
+    nlist,
+    lims = (0.0, 2π),
+    Re,
+    tlims = (0.0, 2.0),
+    Δt = 0.01,
+    uref = solution(Re),
+)
 
-# Reynolds number
-Re = T(2_000)
-
-# A 2D grid is a Cartesian product of two vectors
-n = 128
-lims = T(0), T(2π)
-x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
-plot_grid(x...)
-
-# Build setup and assemble operators
-setup = Setup(x...; Re, ArrayType);
-
-# Since the grid is uniform and identical for x and y, we may use a specialized
-# spectral pressure solver
-pressure_solver = SpectralPressureSolver(setup)
-
-# Initial conditions
-u₀, p₀ = create_initial_conditions(
-    setup,
-    (dim, x, y) -> dim() == 1 ? -sin(x) * cos(y) : cos(x) * sin(y);
-    pressure_solver,
-);
-
-# Solve steady state problem
-## u, p = solve_steady_state(setup, u₀, p₀; npicard = 2);
-
-# Iteration processors
-processors = (
-    ## field_plotter(setup; nupdate = 1),
-    energy_history_plotter(setup; nupdate = 1),
-    ## energy_spectrum_plotter(setup; nupdate = 1),
-    ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1),
-);
-
-# Solve unsteady problem
-u, p, outputs = solve_unsteady(
-    setup,
-    u₀,
-    p₀,
-    (T(0), T(5));
-    Δt = T(0.01),
-    processors,
-    pressure_solver,
-    inplace = true,
-);
-
-# ## Post-process
-#
-# We may visualize or export the computed fields `(u, p)`
-
-# Export to VTK
-save_vtk(setup, u, p, "output/solution")
-
-# Plot pressure
-plot_pressure(setup, p)
-
-# Plot velocity
-plot_velocity(setup, u)
-
-# Plot vorticity
-plot_vorticity(setup, u)
-
-# Plot streamfunction
-## plot_streamfunction(setup, u)
-nothing
-
-# Energy history
-outputs[1]
+# Plot convergence
+fig = Figure()
+ax = Axis(
+    fig[1, 1];
+    xscale = log10,
+    yscale = log10,
+    xticks = nlist,
+    xlabel = "n",
+    title = "Relative error",
+)
+scatterlines!(nlist, e; label = "Data")
+lines!(collect(extrema(nlist)), n -> n^-2.0; linestyle = :dash, label = "n^-2")
+axislegend()
