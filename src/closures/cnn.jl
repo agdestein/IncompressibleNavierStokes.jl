@@ -17,7 +17,7 @@ function cnn(setup, r, c, σ, b; channel_augmenter = identity, rng = Random.defa
     @assert c[end] == D
 
     # Add input channel size
-    c = [2; c]
+    c = [D; c]
 
     # Create convolutional closure model
     NN = Chain(

@@ -16,7 +16,7 @@ function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
     @assert length(kmax) == length(c) == length(σ)
 
     # Make sure there are two velocity fields in input and output
-    c = [2; c]
+    c = [D; c]
 
     # Weight initializer
     T = eltype(x[1])
