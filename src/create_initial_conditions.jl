@@ -81,9 +81,9 @@ function create_spectrum(N; A, σ, s, backend)
     a .*= A / sqrt(τ^2 * 2σ^2)
     for α = 1:D
         kα = k[α]
-        @. a *= randn(T) * exp(-(kα - s)^2 / 2σ^2)
+        @. a *= exp(-max(abs(kα) - s, s)^2 / 2σ^2)
     end
-    @. a *= exp(im * τ * rand(T))
+    @. a *= randn(T) * exp(im * τ * rand(T))
     for α = 1:D
         a = cat(a, reverse(a; dims = α); dims = α)
     end
@@ -92,7 +92,7 @@ end
 
 """
     random_field(
-        setup, t;
+        setup, t = 0;
         A = setup.grid.N[1] * 10_000,
         σ = 30,
         s = 5,
@@ -108,7 +108,7 @@ Create random field.
 """
 function random_field(
     setup,
-    t;
+    t = zero(eltype(setup.grid.x[1]));
     A = convert(eltype(setup.grid.x[1]), setup.grid.N[1] * 7_500),
     σ = convert(eltype(setup.grid.x[1]), 30),
     s = convert(eltype(setup.grid.x[1]), 5),
