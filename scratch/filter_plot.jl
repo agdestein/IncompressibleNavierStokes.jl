@@ -18,7 +18,10 @@ ArrayType = Array
 ## using oneAPI; ArrayType = oneArray
 ## using Metal; ArrayType = MtlArray
 
-using CUDA; T = Float32; ArrayType = CuArray; CUDA.allowscalar(false)
+using CUDA;
+T = Float32;
+ArrayType = CuArray;
+CUDA.allowscalar(false);
 
 # Viscosity model
 Re = T(10_000)
@@ -37,19 +40,6 @@ pressure_solver = SpectralPressureSolver(setup);
 
 u₀, p₀ = random_field(setup, T(0); pressure_solver);
 u, p = u₀, p₀
-
-set_theme!(;
-    # theme_black();
-    # colormap = :plasma,
-    # colormap = :lajolla,
-    # colormap = :inferno,
-    colormap = :hot,
-    # colormap = :magma,
-    # colormap = :Oranges,
-    # colormap = :Reds,
-    # colormap = :YlOrRd_9,
-    # colormap = :seaborn_icefire_gradient,
-)
 
 function filter_plot(state, setup, les, comp; resolution = (1200, 600))
     (; boundary_conditions, grid) = setup
@@ -83,22 +73,51 @@ function filter_plot(state, setup, les, comp; resolution = (1200, 600))
     end
     lims = @lift IncompressibleNavierStokes.get_lims($f)
     fig = Figure(; resolution)
-    ax, hm = heatmap(fig[1, 1], xf..., f; colorrange = lims)
-    ax.title = "$(setup.grid.N)"
-    ax.aspect = DataAspect()
-    ax.xlabel = "x"
-    ax.ylabel = "y"
-    limits!(ax, xlims[1]..., xlims[2]...)
-    ax, hm = heatmap(fig[1, 2], xfbar..., g; colorrange = lims)
-    ax.title = "$(les.grid.N)"
-    ax.aspect = DataAspect()
-    ax.xlabel = "x"
-    ax.ylabel = "y"
-    limits!(ax, xlims[1]..., xlims[2]...)
-    Colorbar(fig[1, 3], hm)
+    ax, hm = heatmap(
+        fig[1, 1],
+        xf...,
+        f;
+        colorrange = lims,
+        axis = (;
+            title = "$(setup.grid.N .- 2)",
+            aspect = DataAspect(),
+            xlabel = "x",
+            ylabel = "y",
+            limits = (xlims[1]..., xlims[2]...),
+        ),
+    )
+    ax, hm = heatmap(
+        fig[1, 2],
+        xfbar...,
+        g;
+        colorrange = lims,
+        axis = (;
+            title = "$(les.grid.N .- 2)",
+            aspect = DataAspect(),
+            xlabel = "x",
+            # ylabel = "y",
+            # yticksvisible = false,
+            # yticklabelsvisible = false,
+            limits = (xlims[1]..., xlims[2]...),
+        ),
+    )
+    # Colorbar(fig[1, 3], hm)
     display(fig)
     fig
 end
+
+set_theme!(
+    theme_black();
+    # colormap = :plasma,
+    # colormap = :lajolla,
+    # colormap = :inferno,
+    # colormap = :hot,
+    # colormap = :magma,
+    # colormap = :Oranges,
+    # colormap = :Reds,
+    # colormap = :YlOrRd_9,
+    colormap = :seaborn_icefire_gradient,
+)
 
 comp = 8
 les = Setup(x[1][1:comp:end], x[2][1:comp:end]; Re, ArrayType)
@@ -106,19 +125,24 @@ les = Setup(x[1][1:comp:end], x[2][1:comp:end]; Re, ArrayType)
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
-    copy.(u₀), copy(p₀),
+    copy.(u₀),
+    copy(p₀),
     # u, p,
-    (T(0), T(1e0));
+    (T(0), T(2e0));
     Δt = T(1e-4),
     pressure_solver,
     inplace = true,
     processors = (
         # field_plotter(setup; nupdate = 10, docolorbar = false, displayupdates = false),
-        animator(
-            setup,
-            "vorticity.mp4";
-            plotter = processor(state -> filter_plot(state, setup, les, comp; resolution = (1200, 600)); nupdate = 10),
-            nupdate = 50,
+        # animator(
+        #     setup,
+        #     "filtered.mp4";
+        #     plotter = processor(state -> filter_plot(state, setup, les, comp; resolution = (1200, 600))),
+        #     nupdate = 100,
+        # ),
+        processor(
+            state -> filter_plot(state, setup, les, comp; resolution = (1200, 600));
+            nupdate = 10,
         ),
         # energy_history_plotter(setup; nupdate = 20, displayfig = false),
         # energy_spectrum_plotter(setup; nupdate = 10, displayfig = false),
