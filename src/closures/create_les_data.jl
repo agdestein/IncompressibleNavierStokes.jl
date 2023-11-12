@@ -110,6 +110,7 @@ function create_les_data(
     tsim = T(0.1),
     Δt = T(1e-4),
     ArrayType = Array,
+    ic_params = (;),
 )
     ndns = compression * nles
     xdns = ntuple(α -> LinRange(lims..., ndns + 1), D)
@@ -143,7 +144,7 @@ function create_les_data(
         # @info "Generating data for simulation $isim of $nsim"
 
         # Initial conditions
-        u₀, p₀ = random_field(dns, T(0); pressure_solver)
+        u₀, p₀ = random_field(dns, T(0); pressure_solver, ic_params...)
 
         # Random body force
         # force_dns =
