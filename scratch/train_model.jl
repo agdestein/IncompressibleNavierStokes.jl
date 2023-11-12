@@ -72,9 +72,8 @@ end
 # data_train, data_valid, data_test = load("output/forced/data.jld2", "data_train", "data_valid", "data_test")
 
 # Build LES setup and assemble operators
-x = LinRange(params.lims..., params.nles + 1)
-y = LinRange(params.lims..., params.nles + 1)
-setup = Setup(x, y; params.Re, ArrayType);
+x = ntuple(α -> LinRange(params.lims..., params.nles + 1), params.D)
+setup = Setup(x...; params.Re, ArrayType);
 
 # Uniform periodic grid
 pressure_solver = SpectralPressureSolver(setup);
@@ -86,7 +85,7 @@ closure, θ₀ = cnn(
     [2, 2, 2, 2],
 
     # Channels
-    [5, 5, 5, 2],
+    [5, 5, 5, params.D],
 
     # Activations
     [leakyrelu, leakyrelu, leakyrelu, identity],
@@ -157,35 +156,49 @@ Array(θ)
 # θθ = load("output/theta_fno.jld2")
 # copyto!(θ, θθ["theta"])
 
+function relerr(u, uref, setup)
+    (; dimension, Ip) = setup.grid
+    D = dimension()
+    a, b = T(0), T(0)
+    for α = 1:D
+        a += sum(abs2, u[α][Ip] - uref[α][Ip])
+        b += sum(abs2, uref[α][Ip])
+    end
+    sqrt(a) / sqrt(b)
+end
+
+u = device(data_test.u[1][end])
 u₀ = device(data_test.u[1][1])
 p₀ = pressure_additional_solve(pressure_solver, u₀, T(0), setup)
 
-u, p, outputs = solve_unsteady(
+u_nm, p_nm, outputs = solve_unsteady(
     setup,
     copy.(u₀),
     copy(p₀),
-    (T(0), T(0.1));
-    Δt = T(1e-4),
+    (T(0), params.tsim);
+    Δt = data_test.Δt,
     pressure_solver,
-    processors = (field_plotter(setup; nupdate = 10), step_logger(; nupdate = 1)),
+    processors = (
+        # field_plotter(setup; nupdate = 10),
+        step_logger(; nupdate = 1),
+    ),
 )
 
-u, p, outputs = solve_unsteady(
+u_cnn, p_cnn, outputs = solve_unsteady(
     (; setup..., closure_model = create_neural_closure(closure, θ, setup)),
     copy.(u₀),
     copy(p₀),
-    (T(0), T(0.1));
-    Δt = T(1e-4),
+    (T(0), params.tsim);
+    Δt = data_test.Δt,
     pressure_solver,
-    processors = (field_plotter(setup; nupdate = 10), step_logger(; nupdate = 1)),
+    processors = (
+        # field_plotter(setup; nupdate = 10),
+        step_logger(; nupdate = 1),
+    ),
 )
 
-relative_error(closure(device(data_train.V[:, 1, :]), θ), device(data_train.cF[:, 1, :]))
-relative_error(
-    closure(device(data_train.V[:, end, :]), θ),
-    device(data_train.cF[:, end, :]),
-)
-relative_error(closure(u_test, θ), c_test)
+relerr(u_nm, u, setup)
+relerr(u_cnn, u, setup)
 
 function energy_history(setup, state)
     (; Ωp) = setup.grid
