@@ -26,7 +26,8 @@ function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
     NN = Chain(
         # Some Fourier layers
         (
-            FourierLayer(dimension, kmax[i], c[i] => c[i+1]; σ = σ[i], init_weight) for i ∈ eachindex(σ)
+            FourierLayer(dimension, kmax[i], c[i] => c[i+1]; σ = σ[i], init_weight) for
+            i ∈ eachindex(σ)
         )...,
 
         # Put channels in first dimension

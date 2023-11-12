@@ -32,54 +32,53 @@ function gaussian_force(
     force
 end
 
-_filter_saver(dns, les, comp, pressure_solver; nupdate = 1) = processor(function (state)
-    (; dimension, x) = dns.grid
-    T = eltype(x[1])
-    D = dimension()
-    F = zero.(state[].u)
-    G = zero.(state[].u)
-    Φu = zero.(face_average(state[].u, les, comp))
-    q = zero(pressure_additional_solve(pressure_solver, Φu, state[].t, les))
-    M = zero(q)
-    ΦF = zero.(Φu)
-    FΦ = zero.(Φu)
-    GΦ = zero.(Φu)
-    c = zero.(Φu)
-    _t = fill(zero(eltype(x[1])), 0)
-    _u = fill(Array.(Φu), 0)
-    _c = fill(Array.(Φu), 0)
-    on(state) do (; u, p, t)
-        momentum!(F, u, t, dns)
-        pressuregradient!(G, p, dns)
-        for α = 1:D
-            F[α] .-= G[α]
-        end
-        face_average!(Φu, u, les, comp)
-        apply_bc_u!(Φu, t, les)
-        face_average!(ΦF, F, les, comp)
-        momentum!(FΦ, Φu, t, les)
-        apply_bc_u!(FΦ, t, les; dudt = true)
-        divergence!(M, FΦ, les)
-        @. M *= les.grid.Ω
+_filter_saver(dns, les, comp, pressure_solver; nupdate = 1) = processor(
+    function (state)
+        (; dimension, x) = dns.grid
+        T = eltype(x[1])
+        D = dimension()
+        F = zero.(state[].u)
+        G = zero.(state[].u)
+        Φu = zero.(face_average(state[].u, les, comp))
+        q = zero(pressure_additional_solve(pressure_solver, Φu, state[].t, les))
+        M = zero(q)
+        ΦF = zero.(Φu)
+        FΦ = zero.(Φu)
+        GΦ = zero.(Φu)
+        c = zero.(Φu)
+        _t = fill(zero(eltype(x[1])), 0)
+        _u = fill(Array.(Φu), 0)
+        _c = fill(Array.(Φu), 0)
+        on(state) do (; u, p, t)
+            momentum!(F, u, t, dns)
+            pressuregradient!(G, p, dns)
+            for α = 1:D
+                F[α] .-= G[α]
+            end
+            face_average!(Φu, u, les, comp)
+            apply_bc_u!(Φu, t, les)
+            face_average!(ΦF, F, les, comp)
+            momentum!(FΦ, Φu, t, les)
+            apply_bc_u!(FΦ, t, les; dudt = true)
+            divergence!(M, FΦ, les)
+            @. M *= les.grid.Ω
 
-        pressure_poisson!(pressure_solver, q, M)
-        apply_bc_p!(q, t, les)
-        pressuregradient!(GΦ, q, les)
-        for α = 1:D
-            FΦ[α] .-= GΦ[α]
-            c[α] .= ΦF[α] .- FΦ[α]
+            pressure_poisson!(pressure_solver, q, M)
+            apply_bc_p!(q, t, les)
+            pressuregradient!(GΦ, q, les)
+            for α = 1:D
+                FΦ[α] .-= GΦ[α]
+                c[α] .= ΦF[α] .- FΦ[α]
+            end
+            push!(_t, t)
+            push!(_u, Array.(Φu))
+            push!(_c, Array.(c))
         end
-        push!(_t, t)
-        push!(_u, Array.(Φu))
-        push!(_c, Array.(c))
-    end
-    state[] = state[] # Save initial conditions
-    (;
-        t = _t,
-        u = _u,
-        c = _c,
-    )
-end; nupdate)
+        state[] = state[] # Save initial conditions
+        (; t = _t, u = _u, c = _c)
+    end;
+    nupdate,
+)
 
 """
     create_les_data(
