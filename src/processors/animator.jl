@@ -15,7 +15,7 @@ Additional `kwargs` are passed to Makie's `VideoStream`.
 """
 animator(setup, path; nupdate = 1, plotter = field_plotter(setup), kwargs...) = processor(
     function (state)
-        ispath(dirname(path)) || mkpath(dirname(path)) 
+        ispath(dirname(path)) || mkpath(dirname(path))
         _state = Observable(state[])
         fig = plotter.initialize(_state)
         stream = VideoStream(fig; kwargs...)
