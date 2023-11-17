@@ -124,16 +124,15 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
     # Destructure params
     # The real and imaginary parts of R are stored in two separate channels
     W = params.spatial_weight
-    W = reshape(W, ntuple(Returns(1), N)..., cout, cin)
     R = params.spectral_weights
     R = selectdim(R, N + 3, 1) .+ im .* selectdim(R, N + 3, 2)
 
     # Spatial part (applied point-wise)
-    # Do matrix multiplication manually for now
-    # TODO: Make W*x more efficient with Tullio.jl
-    y = reshape(x, nx..., 1, cin, :)
-    y = sum(W .* y; dims = N + 2)
-    y = reshape(y, nx..., cout, :)
+    if N == 2
+        @tullio y[i₁, i₂, b, s] := W[b, a] * x[i₁, i₂, a, s]
+    elseif N == 3
+        @tullio y[i₁, i₂, i₃, b, s] := W[b, a] * x[i₁, i₂, i₃, a, s]
+    end
 
     # Spectral part (applied mode-wise)
     #
@@ -144,17 +143,15 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
     # - multiply with weights mode-wise
     # - pad with zeros to restore original shape
     # - go back to real valued spatial representation
-    #
-    # We do matrix multiplications manually for now
-    # TODO: Make R*xhat more efficient with Tullio
     ikeep = ntuple(Returns(1:kmax+1), N)
-    nkeep = ntuple(Returns(kmax + 1), N)
     dims = ntuple(identity, N)
-    z = fft(x, dims)
-    z = z[ikeep..., :, :]
-    z = reshape(z, nkeep..., 1, cin, :)
-    z = sum(R .* z; dims = N + 2)
-    z = reshape(z, nkeep..., cout, :)
+    xhat = fft(x, dims)
+    xhat = xhat[ikeep..., :, :]
+    if N == 2
+        @tullio z[k₁, k₂, b, s] := R[k₁, k₂, b, a] * xhat[k₁, k₂, a, s]
+    elseif N == 3
+        @tullio z[k₁, k₂, k₃, b, s] := R[k₁, k₂, k₃, b, a] * xhat[k₁, k₂, k₃, a, s]
+    end
     z = pad_zeros(z, ntuple(i -> isodd(i) ? 0 : first(nx) - kmax - 1, 2N); dims)
     z = real.(ifft(z, dims))
 

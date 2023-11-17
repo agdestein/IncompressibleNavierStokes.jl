@@ -18,9 +18,14 @@ using Optimisers
 using Printf
 using Random
 using SparseArrays
+using StaticArrays
 using Statistics
+using Tullio
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 using Zygote
+
+# Must be loaded inside for Tullio to work correctly
+using CUDA
 
 # Workgroup size for kernels
 # Let this be constant for now
