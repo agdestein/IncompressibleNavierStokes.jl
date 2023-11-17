@@ -27,7 +27,6 @@ using Test
         Aqua.test_all(
             IncompressibleNavierStokes;
             ambiguities = false,
-            project_toml_formatting = true,
         )
     end
 end
