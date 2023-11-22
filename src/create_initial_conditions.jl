@@ -78,7 +78,7 @@ function create_spectrum(N; A, σ, s, backend)
     # k = AT.(Array{Complex{T}}.(k))
     # k = AT.(k)
     τ = T(2π)
-    a .*= A / sqrt(τ^2 * 2σ^2)
+    a .*= prod(N) * A / sqrt(τ^2 * 2σ^2)
     for α = 1:D
         kα = k[α]
         @. a *= exp(-max(abs(kα) - s, 0)^2 / 2σ^2)
@@ -93,7 +93,7 @@ end
 """
     random_field(
         setup, t = 0;
-        A = setup.grid.N[1] * 10_000,
+        A = 10,
         σ = 30,
         s = 5,
         pressure_solver = DirectPressureSolver(setup),
@@ -109,7 +109,7 @@ Create random field.
 function random_field(
     setup,
     t = zero(eltype(setup.grid.x[1]));
-    A = convert(eltype(setup.grid.x[1]), setup.grid.N[1] * 7_500),
+    A = convert(eltype(setup.grid.x[1]), 10),
     σ = convert(eltype(setup.grid.x[1]), 30),
     s = convert(eltype(setup.grid.x[1]), 5),
     pressure_solver = DirectPressureSolver(setup),

@@ -50,17 +50,17 @@ get_params(nles) = (;
     compression = 2048 ÷ nles,
     ArrayType,
     # ic_params = (; A = T(20_000_000), σ = T(5.0), s = T(3)),
-    ic_params = (; A = T(10_000_000)),
+    # ic_params = (; A = T(10)),
 )
 
 # Create LES data from DNS
 data_train = [create_les_data(T; get_params(nles)..., nsim = 5) for nles in [32, 64, 128]];
 data_valid = [create_les_data(T; get_params(nles)..., nsim = 1) for nles in [128]];
-ntest = [8, 16, 32, 64, 128, 256, 512, 1024]
+ntest = [8, 16, 32, 64, 128, 256, 512]
 data_test = [create_les_data(T; get_params(nles)..., nsim = 1) for nles in ntest];
 
 # Inspect data
-g = 3
+g = 4
 j = 1
 α = 1
 data_train[g].u[j][1][α]
@@ -124,7 +124,7 @@ e_cnn = ones(T, length(ntest))
 e_fno_share = ones(T, length(ntest))
 e_fno_spec = ones(T, length(ntest))
 
-using CairoMakie 
+using CairoMakie
 CairoMakie.activate!()
 
 # Plot convergence
@@ -142,7 +142,7 @@ with_theme(;
         xlabel = "n",
         title = "Relative error (DNS: n = 2048)",
     )
-    scatterlines!(ntest, e; label = "No closure")
+    scatterlines!(ntest, e_nm; label = "No closure")
     scatterlines!(ntest, e_cnn; label = "CNN")
     scatterlines!(ntest, e_fno_spec; label = "FNO (retrained)")
     scatterlines!(ntest, e_fno_share; label = "FNO (shared parameters)")
@@ -150,6 +150,7 @@ with_theme(;
     axislegend(; position = :lb)
     fig
 end
+
 save("convergence.pdf", current_figure())
 
 closure, θ₀ = cnn(
