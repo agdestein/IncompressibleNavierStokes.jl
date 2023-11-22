@@ -5,7 +5,7 @@ function create_neural_closure(m, θ, setup)
         u = stack(ntuple(α -> u[α][Iu[α]], D))
         u = reshape(u, size(u)..., 1) # One sample
         mu = m(u, θ)
-        mu = pad_circular(u, 1)
+        mu = pad_circular(mu, 1)
         sz..., _ = size(mu)
         i = ntuple(Returns(:), D)
         mu = ntuple(α -> mu[i..., α, 1], D)

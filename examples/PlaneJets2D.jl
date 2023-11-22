@@ -111,7 +111,7 @@ mean_plotter(setup; nupdate = 1) = processor(
 
         umean = @lift begin
             (; u, p, t) = $state
-            up = IncompressibleNavierStokes.interpolate_u_p(setup, u)
+            up = IncompressibleNavierStokes.interpolate_u_p(u, setup)
             u1 = u[1]
             reshape(sum(u1[Ip]; dims = 1), :) ./ size(u1, 1) ./ V()
         end
@@ -176,7 +176,7 @@ toto, p, outputs = solve_unsteady(
     Δt = 0.001,
     pressure_solver,
     processors = (
-        field_plotter(setup; nupdate = 1),
+        # field_plotter(setup; nupdate = 1),
         ## energy_history_plotter(setup; nupdate = 1),
         ## energy_spectrum_plotter(setup; nupdate = 100),
         ## animator(setup, "vorticity.mkv"; nupdate = 4),

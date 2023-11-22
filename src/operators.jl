@@ -1,7 +1,7 @@
 """
     δ = Offset{D}()
 
-Carsesian index unit vector in `D = 2` or `D = 3` dimensions.
+Cartesian index unit vector in `D = 2` or `D = 3` dimensions.
 Calling `δ(α)` returns a Cartesian index with `1` in the dimension `α` and zeros
 elsewhere.
 
@@ -201,10 +201,10 @@ function bodyforce!(F, u, t, setup)
     (; dimension, Δ, Δu, Nu, Iu, x, xp) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _bodyforce!(F, force, valα::Val{α}, t, I0) where {α}
+    @kernel function _bodyforce!(F, force, ::Val{α}, t, I0) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
-        F[α][I] += force(valα, ntuple(β -> α == β ? x[β][1+I[β]] : xp[β][I[β]], D)..., t)
+        F[α][I] += force(Dimension(α), ntuple(β -> α == β ? x[β][1+I[β]] : xp[β][I[β]], D)..., t)
     end
     for α = 1:D
         I0 = first(Iu[α])

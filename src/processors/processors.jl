@@ -1,4 +1,4 @@
-raw"""
+"""
     processor(
         initialize;
         finalize = (initialized, stepper) -> initialized,
@@ -16,14 +16,14 @@ function initialize(step_observer)
     s = 0
     println("Let's sum up the time steps")
     @lift begin
-        (; n) = $step_observer
-        println("The summand is $n")
+        (; n) = \$step_observer
+        println("The summand is \$n")
         s = s + n
     end
     s
 end
 
-finalize(s, stepper) = println("The final sum (at time t=$(stepper.t)) is $s")
+finalize(s, stepper) = println("The final sum (at time t=\$(stepper.t)) is \$s")
 p = Processor(initialize; finalize, nupdate = 5)
 ```
 
@@ -80,7 +80,7 @@ vtk_writer(
         @lift begin
             (; grid) = setup
             (; dimension, xp, yp) = grid
-            (; V, p, t) = $step_observer
+            (; u, p, t) = $step_observer
 
             N = dimension()
             if N == 2

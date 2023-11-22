@@ -31,7 +31,6 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
         @info "Computing error for n = $n"
         x = ntuple(α -> LinRange(lims..., n + 1), D)
         setup = Setup(x...; Re, ArrayType)
-        (; Ip) = setup.grid
         pressure_solver = SpectralPressureSolver(setup)
         u₀, p₀ = create_initial_conditions(
             setup,
@@ -46,10 +45,13 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
             pressure_solver,
         )
         u, p, outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt, pressure_solver)
+        (; Ip) = setup.grid
+        a, b = T(0), T(0)
         for α = 1:D
-            e[i] += norm(u[α][Ip] - ut[α][Ip]) / norm(ut[α][Ip])
+            a += sum(abs2, u[α][Ip] - ut[α][Ip])
+            b += sum(abs2, ut[α][Ip])
         end
-        e[i] /= D
+        e[i] = sqrt(a) / sqrt(b)
     end
     e
 end
@@ -70,15 +72,22 @@ e = compute_convergence(;
 )
 
 # Plot convergence
-fig = Figure()
-ax = Axis(
-    fig[1, 1];
-    xscale = log10,
-    yscale = log10,
-    xticks = nlist,
-    xlabel = "n",
-    title = "Relative error",
-)
-scatterlines!(nlist, e; label = "Data")
-lines!(collect(extrema(nlist)), n -> n^-2.0; linestyle = :dash, label = "n^-2")
-axislegend()
+with_theme(;
+    # linewidth = 5,
+    # markersize = 20,
+    # fontsize = 20,
+) do
+    fig = Figure()
+    ax = Axis(
+        fig[1, 1];
+        xscale = log10,
+        yscale = log10,
+        xticks = nlist,
+        xlabel = "n",
+        title = "Relative error",
+    )
+    scatterlines!(nlist, e; label = "Data")
+    lines!(collect(extrema(nlist)), n -> n^-2.0; linestyle = :dash, label = "n^-2")
+    axislegend()
+    fig
+end

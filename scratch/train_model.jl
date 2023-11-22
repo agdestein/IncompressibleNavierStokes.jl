@@ -44,24 +44,30 @@ params = (;
     Re = T(6_000),
     lims = (T(0), T(1)),
     nles = 128,
-    compression = 4,
+    compression = 8,
     tburn = T(0.05),
-    tsim = T(0.05),
+    tsim = T(0.2),
     Δt = T(1e-4),
     ArrayType,
+    # ic_params = (; A = T(20_000_000), σ = T(5.0), s = T(3)),
+    ic_params = (; A = T(10_000_000)),
 )
 
 # Create LES data from DNS
 data_train = create_les_data(T; params..., nsim = 10);
-data_valid = create_les_data(T; params..., nsim = 2);
+data_valid = create_les_data(T; params..., nsim = 1);
 data_test = create_les_data(T; params..., nsim = 5);
 
 # Inspect data
-o = Observable(data_train.u[1][end][1])
+isim = 1
+α = 1
+# j = 13
+o = Observable(data_train.u[isim][1][α])
+# o = Observable(data_train.u[isim][1][α][:, :, j])
 heatmap(o)
-for i = 1:501
-    o[] = data_train.u[1][i][1]
-    # o[] = data_train.c[1][i][1]
+for i = 1:length(data_train.u[isim])
+    o[] = data_train.u[isim][i][α]
+    # o[] = data_train.u[isim][i][α][:, :, j]
     sleep(0.001)
 end
 
@@ -78,30 +84,28 @@ setup = Setup(x...; params.Re, ArrayType);
 # Uniform periodic grid
 pressure_solver = SpectralPressureSolver(setup);
 
-closure, θ₀ = cnn(
+closure, θ₀ = cnn(;
     setup,
-
-    # Radius
-    [2, 2, 2, 2],
-
-    # Channels
-    [5, 5, 5, params.D],
-
-    # Activations
-    [leakyrelu, leakyrelu, leakyrelu, identity],
-
-    # Bias
-    [true, true, true, false];
+    radii = [2, 2, 2, 2],
+    channels = [32, 32, 32, params.D],
+    activations = [leakyrelu, leakyrelu, leakyrelu, identity],
+    bias = [true, true, true, false],
 );
+closure.NN
+sample = io_train[1][:, :, :, 1:5]
+closure(sample, θ₀) |> size
+
+θ.layer_5
+θ.layer_6
 
 # closure, θ₀ = fno(
 #     setup,
 #
 #     # Cut-off wavenumbers
-#     [32, 32, 32, 32],
+#     [8, 8, 8, 8],
 #
 #     # Channel sizes
-#     [24, 12, 8, 8],
+#     [16, 16, 16, 16],
 #
 #     # Fourier layer activations
 #     [gelu, gelu, gelu, identity],
@@ -109,16 +113,18 @@ closure, θ₀ = cnn(
 #     # Dense activation
 #     gelu,
 # );
-
-closure.NN
+# closure.NN
 
 # Create input/output arrays
 io_train = create_io_arrays(data_train, setup);
 io_valid = create_io_arrays(data_valid, setup);
 io_test = create_io_arrays(data_test, setup);
 
+size(io_train[1])
+
 # Prepare training
 θ = T(1.0e-1) * device(θ₀);
+# θ = device(θ₀);
 opt = Optimisers.setup(Adam(T(1.0e-3)), θ);
 callbackstate = Point2f[];
 randloss = create_randloss(mean_squared_error, closure, io_train...; nuse = 50, device);
@@ -128,6 +134,8 @@ randloss(θ)
 @time randloss(θ);
 first(gradient(randloss, θ));
 @time first(gradient(randloss, θ));
+GC.gc()
+CUDA.reclaim()
 
 # Training
 # Note: The states `opt`, `θ`, and `callbackstate`
@@ -137,8 +145,8 @@ first(gradient(randloss, θ));
     randloss,
     opt,
     θ;
-    niter = 2000,
-    ncallback = 10,
+    niter = 1000,
+    ncallback = 20,
     callbackstate,
     callback = create_callback(closure, device(io_valid)...; state = callbackstate),
 );
@@ -167,9 +175,28 @@ function relerr(u, uref, setup)
     sqrt(a) / sqrt(b)
 end
 
-u = device(data_test.u[1][end])
+relerr_track(uref, setup) = processor(function (state)
+    (; dimension, x, Ip) = setup.grid
+    D = dimension()
+    T = eltype(x[1])
+    e = Ref(T(0))
+    on(state) do (; u, n)
+        a, b = T(0), T(0)
+        for α = 1:D
+            # @show size(uref[n + 1])
+            a += sum(abs2, u[α][Ip] - uref[n+1][α][Ip])
+            b += sum(abs2, uref[n+1][α][Ip])
+        end
+        e[] += sqrt(a) / sqrt(b) / (length(uref) - 1)
+    end
+    e
+end)
+
+u, u₀, p₀ = nothing, nothing, nothing
+u = device.(data_test.u[1])
 u₀ = device(data_test.u[1][1])
 p₀ = pressure_additional_solve(pressure_solver, u₀, T(0), setup)
+length(u)
 
 u_nm, p_nm, outputs = solve_unsteady(
     setup,
@@ -179,10 +206,22 @@ u_nm, p_nm, outputs = solve_unsteady(
     Δt = data_test.Δt,
     pressure_solver,
     processors = (
+        relerr_track(u, setup),
         # field_plotter(setup; nupdate = 10),
+        # field_plotter(
+        #     setup;
+        #     nupdate = 10,
+        #     fieldname = :λ₂field,
+        #     levels = LinRange(-T(2), T(3), 5),
+        #     # levels = LinRange(-1.0f0, 3.0f0, 5),
+        #     # levels = LinRange(-2.0f0, 2.0f0, 5),
+        #     # levels=5,
+        #     docolorbar = false,
+        # ),
         step_logger(; nupdate = 1),
     ),
 )
+relerr_nm = outputs[1][]
 
 u_cnn, p_cnn, outputs = solve_unsteady(
     (; setup..., closure_model = create_neural_closure(closure, θ, setup)),
@@ -192,13 +231,15 @@ u_cnn, p_cnn, outputs = solve_unsteady(
     Δt = data_test.Δt,
     pressure_solver,
     processors = (
+        relerr_track(u, setup),
         # field_plotter(setup; nupdate = 10),
         step_logger(; nupdate = 1),
     ),
 )
+relerr_cnn = outputs[1][]
 
-relerr(u_nm, u, setup)
-relerr(u_cnn, u, setup)
+relerr_nm
+relerr_cnn
 
 function energy_history(setup, state)
     (; Ωp) = setup.grid

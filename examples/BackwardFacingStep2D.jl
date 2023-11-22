@@ -39,7 +39,7 @@ ArrayType = Array
 Re = T(3_000)
 
 # Boundary conditions: steady inflow on the top half
-U(dim, x, y, t) = dim() == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x)
+U(dim, x, y, t) = dim() == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x) + randn(typeof(x)) / 1_000
 dUdt(dim, x, y, t) = zero(x)
 boundary_conditions = (
     ## x left, x right
@@ -58,8 +58,11 @@ plot_grid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 
+pressure_solver = CGPressureSolverManual(setup);
+
 # Initial conditions (extend inflow)
-u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)));
+u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)); pressure_solver);
+u, p = copy.(u₀), copy(p₀)
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);
@@ -67,12 +70,13 @@ u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
-    u₀,
-    p₀,
+    copy.(u₀), copy(p₀),
+    # u, p,
     (T(0), T(7));
     Δt = T(0.002),
+    pressure_solver,
     processors = (
-        field_plotter(setup; nupdate = 5),
+        field_plotter(setup; nupdate = 1),
         ## energy_history_plotter(setup; nupdate = 10),
         ## energy_spectrum_plotter(setup; nupdate = 10),
         ## animator(setup, "vorticity.mkv"; nupdate = 4),
@@ -80,7 +84,6 @@ u, p, outputs = solve_unsteady(
         ## field_saver(setup; nupdate = 10),
         step_logger(; nupdate = 1),
     ),
-    inplace = true,
 );
 
 # ## Post-process

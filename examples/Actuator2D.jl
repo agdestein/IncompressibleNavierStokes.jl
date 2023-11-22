@@ -68,9 +68,8 @@ u, p = u₀, p₀
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
-    ## u₀, p₀,
-    u,
-    p,
+    copy.(u₀), copy(p₀),
+    # u, p,
     (0.0, 12.0);
     method = RK44P2(),
     Δt = 0.05,
@@ -87,7 +86,7 @@ u, p, outputs = solve_unsteady(
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(V, p)`.
+# We may visualize or export the computed fields `(u, p)`.
 
 # We create a box to visualize the actuator.
 box = (

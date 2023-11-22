@@ -41,26 +41,26 @@ device = cu
 # Parameters
 get_params(nles) = (;
     D = 2,
-    Re = T(10_000),
+    Re = T(6_000),
     lims = (T(0), T(1)),
-    tburn = T(0.0),
-    tsim = T(1.0),
-    Δt = T(5e-4),
+    tburn = T(0.05),
+    tsim = T(0.05),
+    Δt = T(1e-4),
     nles,
-    compression = 1024 ÷ nles,
+    compression = 2048 ÷ nles,
     ArrayType,
     # ic_params = (; A = T(20_000_000), σ = T(5.0), s = T(3)),
+    ic_params = (; A = T(10_000_000)),
 )
 
-nles = [8, 16, 32, 64, 128]
-
 # Create LES data from DNS
-data_train = [create_les_data(T; get_params(nles)..., nsim = 5) for nles in nles];
-data_valid = [create_les_data(T; get_params(nles)..., nsim = 1) for nles in nles];
-data_test = [create_les_data(T; get_params(nles)..., nsim = 1) for nles in nles];
+data_train = [create_les_data(T; get_params(nles)..., nsim = 5) for nles in [32, 64, 128]];
+data_valid = [create_les_data(T; get_params(nles)..., nsim = 1) for nles in [128]];
+ntest = [8, 16, 32, 64, 128, 256, 512, 1024]
+data_test = [create_les_data(T; get_params(nles)..., nsim = 1) for nles in ntest];
 
 # Inspect data
-g = 5
+g = 3
 j = 1
 α = 1
 data_train[g].u[j][1][α]
@@ -77,12 +77,80 @@ end
 # # Load previous LES data
 # data_train, data_valid, data_test = load("output/forced/data.jld2", "data_train", "data_valid", "data_test")
 
-# Build LES setup and assemble operators
-x = ntuple(α -> LinRange(params.lims..., params.nles + 1), params.D)
-setup = Setup(x...; params.Re, ArrayType);
+relerr_track(uref, setup) = processor(function (state)
+    (; dimension, x, Ip) = setup.grid
+    D = dimension()
+    T = eltype(x[1])
+    e = Ref(T(0))
+    on(state) do (; u, n)
+        a, b = T(0), T(0)
+        for α = 1:D
+            # @show size(uref[n + 1])
+            a += sum(abs2, u[α][Ip] - uref[n+1][α][Ip])
+            b += sum(abs2, uref[n+1][α][Ip])
+        end
+        e[] += sqrt(a) / sqrt(b) / (length(uref) - 1)
+    end
+    e
+end)
 
-# Uniform periodic grid
-pressure_solver = SpectralPressureSolver(setup);
+e_nm = zeros(T, length(ntest))
+for (i, n) in enumerate(ntest)
+    params = get_params(n)
+    # Build LES setup and assemble operators
+    x = ntuple(α -> LinRange(params.lims..., params.nles + 1), params.D)
+    setup = Setup(x...; params.Re, ArrayType)
+    # Uniform periodic grid
+    pressure_solver = SpectralPressureSolver(setup)
+    u = device.(data_test[i].u[1])
+    u₀ = device(data_test[i].u[1][1])
+    p₀ = pressure_additional_solve(pressure_solver, u₀, T(0), setup)
+    u_nm, p_nm, outputs = solve_unsteady(
+        setup,
+        copy.(u₀),
+        copy(p₀),
+        (T(0), params.tsim);
+        Δt = data_test[i].Δt,
+        pressure_solver,
+        processors = (
+            relerr_track(u, setup),
+            # step_logger(; nupdate = 1),
+        ),
+    )
+    e_nm[i] = outputs[1][]
+end
+e_nm
+e_cnn = ones(T, length(ntest))
+e_fno_share = ones(T, length(ntest))
+e_fno_spec = ones(T, length(ntest))
+
+using CairoMakie 
+CairoMakie.activate!()
+
+# Plot convergence
+with_theme(;
+# linewidth = 5,
+# markersize = 20,
+# fontsize = 20,
+) do
+    fig = Figure()
+    ax = Axis(
+        fig[1, 1];
+        xscale = log10,
+        yscale = log10,
+        xticks = ntest,
+        xlabel = "n",
+        title = "Relative error (DNS: n = 2048)",
+    )
+    scatterlines!(ntest, e; label = "No closure")
+    scatterlines!(ntest, e_cnn; label = "CNN")
+    scatterlines!(ntest, e_fno_spec; label = "FNO (retrained)")
+    scatterlines!(ntest, e_fno_share; label = "FNO (shared parameters)")
+    lines!(collect(extrema(ntest)), n -> 100n^-2.0; linestyle = :dash, label = "n^-2")
+    axislegend(; position = :lb)
+    fig
+end
+save("convergence.pdf", current_figure())
 
 closure, θ₀ = cnn(
     setup,
