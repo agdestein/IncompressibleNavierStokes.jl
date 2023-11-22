@@ -98,20 +98,20 @@ closure(sample, θ₀) |> size
 θ.layer_5
 θ.layer_6
 
-# closure, θ₀ = fno(
+# closure, θ₀ = fno(;
 #     setup,
 #
 #     # Cut-off wavenumbers
-#     [8, 8, 8, 8],
+#     k = [8, 8, 8, 8],
 #
 #     # Channel sizes
-#     [16, 16, 16, 16],
+#     c = [16, 16, 16, 16],
 #
 #     # Fourier layer activations
-#     [gelu, gelu, gelu, identity],
+#     σ = [gelu, gelu, gelu, identity],
 #
 #     # Dense activation
-#     gelu,
+#     ψ = gelu,
 # );
 # closure.NN
 

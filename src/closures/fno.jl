@@ -1,10 +1,10 @@
 """
-    fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
+    fno(; setup, kmax, c, σ, ψ, rng = Random.default_rng(), kwargs...)
 
 Create FNO closure model. Return a tuple `(closure, θ)` where `θ` are the
 initial parameters and `closure(V, θ)` predicts the commutator error.
 """
-function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
+function fno(; setup, kmax, c, σ, ψ, rng = Random.default_rng(), kwargs...)
     (; grid) = setup
     (; dimension, x, N) = grid
 
@@ -24,6 +24,35 @@ function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
 
     # Create FNO closure model
     NN = Chain(
+        # Put inputs in pressure points
+        function (u)
+            sz..., _, _ = size(u)
+            # for α = 1:D
+            #     v = selectdim(u, D + 1, α)
+            #     v = (v + circshift(v, ntuple(β -> α == β ? -1 : 0, D + 1))) / 2
+            # end
+            if D == 2
+                a = selectdim(u, 3, 1)
+                b = selectdim(u, 3, 2)
+                a = (a + circshift(a, (-1, 0, 0))) / 2
+                b = (b + circshift(b, (0, -1, 0))) / 2
+                a = reshape(a, sz..., 1, :)
+                b = reshape(b, sz..., 1, :)
+                cat(a, b; dims = 3)
+            elseif D == 3
+                a = selectdim(u, 4, 1)
+                b = selectdim(u, 4, 2)
+                c = selectdim(u, 4, 3)
+                a = (a + circshift(a, (-1, 0, 0, 0))) / 2
+                b = (b + circshift(b, (0, -1, 0, 0))) / 2
+                c = (c + circshift(c, (0, 0, -1, 0))) / 2
+                a = reshape(a, sz..., 1, :)
+                b = reshape(b, sz..., 1, :)
+                c = reshape(c, sz..., 1, :)
+                cat(a, b, c; dims = 4)
+            end
+        end,
+
         # Some Fourier layers
         (
             FourierLayer(dimension, kmax[i], c[i] => c[i+1]; σ = σ[i], init_weight) for
@@ -39,6 +68,40 @@ function fno(setup, kmax, c, σ, ψ; rng = Random.default_rng(), kwargs...)
 
         # Put channels back after spatial dimensions
         u -> permutedims(u, ((2:D+1)..., 1, D + 2)),
+
+        # Differentiate output to velocity points
+        function (u)
+            sz..., _, _ = size(u)
+            # for α = 1:D
+            #     v = selectdim(u, D + 1, α)
+            #     v = (v + circshift(v, ntuple(β -> α == β ? -1 : 0, D + 1))) / 2
+            # end
+            if D == 2
+                a = selectdim(u, 3, 1)
+                b = selectdim(u, 3, 2)
+                # a = (a + circshift(a, (1, 0, 0, 0))) / 2
+                # b = (b + circshift(b, (0, 1, 0, 0))) / 2
+                a = circshift(a, (1, 0, 0)) - a
+                b = circshift(b, (0, 1, 0)) - b
+                a = reshape(a, sz..., 1, :)
+                b = reshape(b, sz..., 1, :)
+                cat(a, b; dims = 3)
+            elseif D == 3
+                a = selectdim(u, 4, 1)
+                b = selectdim(u, 4, 2)
+                c = selectdim(u, 4, 3)
+                # a = (a + circshift(a, (1, 0, 0, 0))) / 2
+                # b = (b + circshift(b, (0, 1, 0, 0))) / 2
+                # c = (c + circshift(c, (0, 0, 1, 0))) / 2
+                a = circshift(a, (1, 0, 0, 0)) - a
+                b = circshift(b, (0, 1, 0, 0)) - b
+                c = circshift(c, (0, 0, 1, 0)) - c
+                a = reshape(a, sz..., 1, :)
+                b = reshape(b, sz..., 1, :)
+                c = reshape(c, sz..., 1, :)
+                cat(a, b, c; dims = 4)
+            end
+        end,
     )
 
     # Create parameter vector (empty state)
