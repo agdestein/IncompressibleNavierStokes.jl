@@ -77,7 +77,7 @@ end
 # # Load previous LES data
 # data_train, data_valid, data_test = load("output/forced/data.jld2", "data_train", "data_valid", "data_test")
 
-relerr_track(uref, setup) = processor(function (state)
+relerr_track(uref, setup) = processor() do state
     (; dimension, x, Ip) = setup.grid
     D = dimension()
     T = eltype(x[1])
@@ -92,32 +92,24 @@ relerr_track(uref, setup) = processor(function (state)
         e[] += sqrt(a) / sqrt(b) / (length(uref) - 1)
     end
     e
-end)
+end
 
 e_nm = zeros(T, length(ntest))
 for (i, n) in enumerate(ntest)
     params = get_params(n)
-    # Build LES setup and assemble operators
     x = ntuple(α -> LinRange(params.lims..., params.nles + 1), params.D)
     setup = Setup(x...; params.Re, ArrayType)
-    # Uniform periodic grid
     pressure_solver = SpectralPressureSolver(setup)
     u = device.(data_test[i].u[1])
     u₀ = device(data_test[i].u[1][1])
     p₀ = pressure_additional_solve(pressure_solver, u₀, T(0), setup)
-    u_nm, p_nm, outputs = solve_unsteady(
-        setup,
-        copy.(u₀),
-        copy(p₀),
-        (T(0), params.tsim);
-        Δt = data_test[i].Δt,
-        pressure_solver,
-        processors = (
-            relerr_track(u, setup),
-            # step_logger(; nupdate = 1),
-        ),
-    )
-    e_nm[i] = outputs[1][]
+    tlims = (T(0), params.tsim)
+    (; Δt) = data_test[i]
+    processors = (; relerr = relerr_track(u, setup))
+    _, _, o = solve_unsteady(setup, u₀, p₀, tlims; Δt, pressure_solver, processors)
+    e_nm[i] = o.relerr[]
+    _, _, o = solve_unsteady(setup, u₀, p₀, tlims; Δt, pressure_solver, processors)
+    e_cnn[i] = o.relerr[]
 end
 e_nm
 e_cnn = ones(T, length(ntest))
@@ -155,18 +147,10 @@ save("convergence.pdf", current_figure())
 
 closure, θ₀ = cnn(
     setup,
-
-    # Radius
-    [2, 2, 2, 2],
-
-    # Channels
-    [5, 5, 5, params.D],
-
-    # Activations
-    [leakyrelu, leakyrelu, leakyrelu, leakyrelu, identity],
-
-    # Bias
-    [true, true, true, true, false];
+    radii = [2, 2, 2, 2],
+    channels = [5, 5, 5, params.D],
+    activations = [leakyrelu, leakyrelu, leakyrelu, identity],
+    use_bias = [true, true, true, false],
 );
 closure.NN
 

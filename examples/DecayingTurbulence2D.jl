@@ -62,15 +62,18 @@ u, p, outputs = solve_unsteady(
     (T(0), T(1));
     Δt = T(1e-3),
     pressure_solver,
-    inplace = true,
     processors = (
-        field_plotter(setup; nupdate = 20),
-        energy_history_plotter(setup; nupdate = 20, displayfig = false),
-        energy_spectrum_plotter(setup; nupdate = 20, displayfig = false),
-        ## animator(setup, "vorticity.mp4"; nupdate = 16),
-        ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-        ## field_saver(setup; nupdate = 10),
-        step_logger(; nupdate = 100),
+        rtp = realtimeplotter(;
+            setup,
+            plot = fieldplot,
+            ## plot = energy_history_plot,
+            ## plot = energy_spectrum_plot,
+            nupdate = 1,
+        ),
+        ## anim = animator(; setup, path = "vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "output/$name", filename = "solution"),
+        ## field = fieldsaver(; setup, nupdate = 10),
+        log = timelogger(; nupdate = 1),
     ),
 );
 
@@ -78,14 +81,8 @@ u, p, outputs = solve_unsteady(
 #
 # We may visualize or export the computed fields `(u, p)`
 
-# Field plot
-outputs[1]
-
-# Energy history plot
-outputs[2]
-
-# Energy spectrum plot
-outputs[3]
+# Plot
+outputs.rtp
 
 # Export to VTK
 save_vtk(setup, u, p, "output/solution")

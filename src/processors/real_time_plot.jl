@@ -1,16 +1,48 @@
 """
-    field_plotter(
-        setup;
-        fieldname = :vorticity,
-        type = nothing,
-        sleeptime = 0.001,
-        alpha = 0.05,
+    realtimeplotter(;
+        setup,
+        plot = fieldplot,
+        nupdate = 1,
+        displayfig = true,
+        displayupdates = false,
+        sleeptime = nothing,
+        kwargs...,
     )
 
-Plot the solution every time the state `o` is updated.
+Processor for plotting the solution every `nupdate` time step.
 
 The `sleeptime` is slept at every update, to give Makie time to update the
 plot. Set this to `nothing` to skip sleeping.
+"""
+realtimeplotter(;
+    setup,
+    plot = fieldplot,
+    nupdate = 1,
+    displayfig = true,
+    displayupdates = false,
+    sleeptime = nothing,
+    kwargs...,
+) =
+    processor() do outerstate
+        state = Observable(outerstate[])
+        fig = plot(; setup, state = outerstate, kwargs...)
+        displayfig && display(fig)
+        on(outerstate) do outerstate
+            outerstate.n % nupdate == 0 || return
+            state[] = outerstate
+            displayupdates && display(fig)
+            isnothing(sleeptime) || sleep(sleeptime)
+        end
+        fig
+    end
+
+"""
+    fieldplot(;
+        setup,
+        fieldname = :vorticity,
+        type = nothing,
+        alpha = 0.05,
+    )
 
 Available fieldnames are:
 
@@ -32,22 +64,17 @@ Available plot `type`s for 3D are:
 
 The `alpha` value gets passed to `contour` in 3D.
 """
-field_plotter(setup; nupdate = 1, kwargs...) =
-    processor(state -> field_plot(setup.grid.dimension, setup, state; kwargs...); nupdate)
+fieldplot(; setup, kwargs...) = fieldplot(setup.grid.dimension; setup, kwargs...)
 
-function field_plot(
-    ::Dimension{2},
+function fieldplot(
+    ::Dimension{2};
     setup,
-    state;
+    state,
     fieldname = :vorticity,
     type = heatmap,
-    # sleeptime = 0.001,
-    sleeptime = nothing,
     equal_axis = true,
-    displayfig = true,
-    displayupdates = false,
     docolorbar = true,
-    resolution = (800, 600),
+    size = nothing,
     kwargs...,
 )
     (; boundary_conditions, grid) = setup
@@ -69,7 +96,6 @@ function field_plot(
     end
     _f = Array(_f)[Ip]
     field = @lift begin
-        isnothing(sleeptime) || sleep(sleeptime)
         (; u, p, t) = $state
         f = if fieldname == :velocity
             interpolate_u_p!(up, u, setup)
@@ -106,53 +132,45 @@ function field_plot(
         lims
     end
 
-    fig = Figure(; resolution)
-
     if type ∈ (heatmap, image)
-        ax, hm = type(fig[1, 1], xf..., field; colorrange = lims, kwargs...)
+        kwargs = (; colorrange = lims, kwargs...)
     elseif type ∈ (contour, contourf)
-        ax, hm = type(
-            fig[1, 1],
-            xf...,
-            field;
+        kwargs = (;
             extendlow = :auto,
             extendhigh = :auto,
             levels = @lift(LinRange($(lims)..., 10)),
             colorrange = lims,
             kwargs...,
         )
-    else
-        error("Unknown plot type")
     end
 
-    ax.title = titlecase(string(fieldname))
-    equal_axis && (ax.aspect = DataAspect())
-    ax.xlabel = "x"
-    ax.ylabel = "y"
-    limits!(ax, xlims[1]..., xlims[2]...)
+    axis = (;
+        title = titlecase(string(fieldname)),
+        xlabel = "x",
+        ylabel = "y",
+        limits = (xlims[1]..., xlims[2]...),
+    )
+    equal_axis && (axis = (axis..., aspect = DataAspect()))
+
+    size = isnothing(size) ? (;) : (; size)
+    fig = Figure(; size...)
+    ax, hm = type(fig[1, 1], xf..., field; axis, kwargs...)
     docolorbar && Colorbar(fig[1, 2], hm)
-
-    displayfig && display(fig)
-    displayupdates && on(state) do _
-        display(fig)
-    end
 
     fig
 end
 
-function field_plot(
+function fieldplot(
     ::Dimension{3},
     setup,
-    state;
+    state,
     fieldname = :Dfield,
-    sleeptime = 0.001,
     alpha = convert(eltype(setup.grid.x[1]), 0.1),
     isorange = convert(eltype(setup.grid.x[1]), 0.5),
     equal_axis = true,
     levels = 3,
-    displayfig = true,
-    docolorbar = true,
-    resolution = (800, 600),
+    docolorbar = false,
+    size = (800, 600),
     kwargs...,
 )
     (; boundary_conditions, grid) = setup
@@ -178,7 +196,6 @@ function field_plot(
     end
 
     field = @lift begin
-        isnothing(sleeptime) || sleep(sleeptime)
         (; u, p, t) = $state
         f = if fieldname == :velocity
             up = interpolate_u_p(u, setup)
@@ -206,7 +223,7 @@ function field_plot(
     isnothing(levels) && (levels = @lift(LinRange($(lims)..., 10)))
 
     aspect = equal_axis ? (; aspect = :data) : (;)
-    fig = Figure(; resolution)
+    fig = Figure(; size)
     # ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
     hm = contour(
         fig[1, 1],
@@ -225,42 +242,35 @@ function field_plot(
     )
 
     docolorbar && Colorbar(fig[1, 2], hm)
-
-    displayfig && display(fig)
-
     fig
 end
 
-"""
-    energy_history_plotter(setup)
-
-Create energy history plot, with a history point added every time `step_observer` is updated.
-"""
 energy_history_plotter(setup; nupdate = 1, kwargs...) =
     processor(state -> energy_history_plot(setup, state; kwargs...); nupdate)
 
-function energy_history_plot(setup, state; displayfig = true)
+"""
+    energy_history_plot(; setup, state)
+
+Create energy history plot.
+"""
+function energy_history_plot(; setup, state)
     _points = Point2f[]
     points = @lift begin
         (; u, p, t) = $state
-        E = kinetic_energy(setup, u)
+        E = kinetic_energy(u, setup)
         push!(_points, Point2f(t, E))
     end
     fig = lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))
-    displayfig && display(fig)
     on(_ -> autolimits!(fig.axis), points)
     fig
 end
 
 """
-    energy_spectrum_plotter(setup; nupdate = 1)
+    energy_spectrum_plot(; setup, state)
 
-Create energy spectrum plot, redrawn every time `step_observer` is updated.
+Create energy spectrum plot.
 """
-energy_spectrum_plotter(setup; nupdate = 1, kwargs...) =
-    processor(state -> energy_spectrum_plot(setup, state; kwargs...); nupdate)
-
-function energy_spectrum_plot(setup, state; displayfig = true)
+function energy_spectrum_plot(; setup, state)
     (; dimension, xp, Ip) = setup.grid
     T = eltype(xp[1])
     D = dimension()
@@ -279,8 +289,8 @@ function energy_spectrum_plot(setup, state; displayfig = true)
         e = sum(up -> up[Ip] .^ 2, up)
         Array(reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]), :))
     end
-    espec = Figure()
-    ax = Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
+    fig = Figure()
+    ax = Axis(fig[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
     ## ylims!(ax, (1e-20, 1))
     scatter!(ax, k, ehat; label = "Kinetic energy")
     krange = LinRange(extrema(k)..., 100)
@@ -288,11 +298,10 @@ function energy_spectrum_plot(setup, state; displayfig = true)
     D == 3 &&
         lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = "\$k^{-5/3}\$", color = :red)
     axislegend(ax)
-    displayfig && display(espec)
     on(ehat) do _
         autolimits!(ax)
     end
-    espec
+    fig
 end
 
 # # Make sure the figure is fully rendered before allowing code to continue

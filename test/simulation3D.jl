@@ -39,7 +39,7 @@
     end
 
     # Iteration processors
-    processors = (step_logger(),)
+    processors = (timelogger(),)
 
     @testset "Unsteady problem" begin
         V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors)

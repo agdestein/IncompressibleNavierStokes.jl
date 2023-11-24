@@ -113,8 +113,8 @@ export AbstractViscosityModel, LaminarModel, MixingLengthModel, SmagorinskyModel
 export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors
-export processor, step_logger, vtk_writer, field_saver
-export field_plotter, energy_history_plotter, energy_spectrum_plotter
+export processor, timelogger, vtk_writer, fieldsaver, realtimeplotter
+export fieldplot, energy_history_plot, energy_spectrum_plot
 export animator
 
 # Setup

@@ -105,66 +105,62 @@ u₀, p₀ = create_initial_conditions(
 );
 
 # Real time plot: Streamwise average and spectrum
-mean_plotter(setup; nupdate = 1) = processor(
-    function (state)
-        (; Ip) = setup.grid
+function meanplot(; setup, state)
+    (; Ip) = setup.grid
 
-        umean = @lift begin
-            (; u, p, t) = $state
-            up = IncompressibleNavierStokes.interpolate_u_p(u, setup)
-            u1 = u[1]
-            reshape(sum(u1[Ip]; dims = 1), :) ./ size(u1, 1) ./ V()
-        end
+    umean = @lift begin
+        (; u, p, t) = $state
+        up = IncompressibleNavierStokes.interpolate_u_p(u, setup)
+        u1 = u[1]
+        reshape(sum(u1[Ip]; dims = 1), :) ./ size(u1, 1) ./ V()
+    end
 
-        K = size(Ip, 1) ÷ 2
-        k = 1:(K-1)
+    K = size(Ip, 1) ÷ 2
+    k = 1:(K-1)
 
-        # Find energy spectrum where y = 0
-        n₀ = size(Ip, 2) ÷ 2
-        E₀ = @lift begin
-            (; u, p, t) = $state
-            u_y = u[1][:, n₀]
-            abs.(fft(u_y .^ 2))[k.+1]
-        end
+    # Find energy spectrum where y = 0
+    n₀ = size(Ip, 2) ÷ 2
+    E₀ = @lift begin
+        (; u, p, t) = $state
+        u_y = u[1][:, n₀]
+        abs.(fft(u_y .^ 2))[k.+1]
+    end
 
-        # Find energy spectrum where y = 1
-        n₁ = argmin(n -> abs(yin[n] .- 1), 1:Nuy_in)
-        E₁ = @lift begin
-            (; V, p, t) = $state
-            u = V[indu]
-            u_y = reshape(u, size(yu))[:, n₁]
-            abs.(fft(u_y .^ 2))[k.+1]
-        end
+    # Find energy spectrum where y = 1
+    n₁ = argmin(n -> abs(yin[n] .- 1), 1:Nuy_in)
+    E₁ = @lift begin
+        (; V, p, t) = $state
+        u = V[indu]
+        u_y = reshape(u, size(yu))[:, n₁]
+        abs.(fft(u_y .^ 2))[k.+1]
+    end
 
-        fig = Figure()
-        ax = Axis(
-            fig[1, 1];
-            title = "Mean streamwise flow",
-            xlabel = "y",
-            ylabel = L"\langle u \rangle / U_0",
-        )
-        lines!(ax, yu[1, :], umean)
-        ax = Axis(
-            fig[1, 2];
-            title = "Streamwise energy spectrum",
-            xscale = log10,
-            yscale = log10,
-            xlabel = L"k_x",
-            ylabel = L"\hat{U}_{cl} / U_0",
-        )
-        # ylims!(ax, (10^(0.0), 10^4.0))
-        ksub = k[10:end]
-        lines!(ax, ksub, 1000 .* ksub .^ (-3 / 5); label = L"k^{-3/5}")
-        lines!(ax, ksub, 1e7 .* ksub .^ -3; label = L"k^{-3}")
-        scatter!(ax, k, E₀; label = "y = $(yin[n₀])")
-        scatter!(ax, k, E₁; label = "y = $(yin[n₁])")
-        axislegend(ax; position = :lb)
+    fig = Figure()
+    ax = Axis(
+        fig[1, 1];
+        title = "Mean streamwise flow",
+        xlabel = "y",
+        ylabel = L"\langle u \rangle / U_0",
+    )
+    lines!(ax, yu[1, :], umean)
+    ax = Axis(
+        fig[1, 2];
+        title = "Streamwise energy spectrum",
+        xscale = log10,
+        yscale = log10,
+        xlabel = L"k_x",
+        ylabel = L"\hat{U}_{cl} / U_0",
+    )
+    # ylims!(ax, (10^(0.0), 10^4.0))
+    ksub = k[10:end]
+    lines!(ax, ksub, 1000 .* ksub .^ (-3 / 5); label = L"k^{-3/5}")
+    lines!(ax, ksub, 1e7 .* ksub .^ -3; label = L"k^{-3}")
+    scatter!(ax, k, E₀; label = "y = $(yin[n₀])")
+    scatter!(ax, k, E₁; label = "y = $(yin[n₁])")
+    axislegend(ax; position = :lb)
 
-        display(fig)
-        fig
-    end;
-    nupdate,
-)
+    fig
+end
 
 # Solve unsteady problem
 toto, p, outputs = solve_unsteady(
@@ -176,26 +172,26 @@ toto, p, outputs = solve_unsteady(
     Δt = 0.001,
     pressure_solver,
     processors = (
-        # field_plotter(setup; nupdate = 1),
-        ## energy_history_plotter(setup; nupdate = 1),
-        ## energy_spectrum_plotter(setup; nupdate = 100),
-        ## animator(setup, "vorticity.mkv"; nupdate = 4),
-        ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-        ## field_saver(setup; nupdate = 10),
-        mean_plotter(setup),
-        step_logger(; nupdate = 1),
+        rtp = realtimeplotter(;
+            setup,
+            ## plot = fieldplot,
+            ## plot = energy_history_plot,
+            ## plot = energy_spectrum_plot,
+            plot = meanplot,
+            nupdate = 1,
+        ),
+        ## anim = animator(; setup, path = "vorticity.mkv", nupdate = 4),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "output/$name", filename = "solution"),
+        ## field = fieldsaver(; setup, nupdate = 10),
+        log = timelogger(; nupdate = 1),
     ),
 );
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(V, p)`
+# We may visualize or export the computed fields `(u, p)`
 
-outputs[1]
-
-#-
-
-outputs[2]
+outputs.rtp
 
 # Export to VTK
 save_vtk(setup, toto, p, "output/solution")

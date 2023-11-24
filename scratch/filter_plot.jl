@@ -133,7 +133,7 @@ u, p, outputs = solve_unsteady(
     pressure_solver,
     inplace = true,
     processors = (
-        # field_plotter(setup; nupdate = 10, docolorbar = false, displayupdates = false),
+        # realtimeplotter(; setup, nupdate = 10, docolorbar = false, displayupdates = false),
         # animator(
         #     setup,
         #     "filtered.mp4";
@@ -147,7 +147,7 @@ u, p, outputs = solve_unsteady(
         # energy_history_plotter(setup; nupdate = 20, displayfig = false),
         # energy_spectrum_plotter(setup; nupdate = 10, displayfig = false),
         ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-        ## field_saver(setup; nupdate = 10),
-        step_logger(; nupdate = 10),
+        ## fieldsaver(setup; nupdate = 10),
+        timelogger(; nupdate = 10),
     ),
 );

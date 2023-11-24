@@ -52,10 +52,11 @@ random_field
 ## Processors
 
 ```@docs
-step_logger
+timelogger
 vtk_writer
-field_saver
-field_plotter
+fieldsaver
+realtimeplotter
+fieldplot
 energy_history_plotter
 energy_spectrum_plotter
 animator

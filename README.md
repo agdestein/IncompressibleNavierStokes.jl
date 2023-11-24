@@ -100,7 +100,7 @@ u, p, outputs = solve_unsteady(
     Δt = 0.05,
     processors = (
         animator(setup, "vorticity.mp4"; nupdate = 4),
-        step_logger(),
+        timelogger(),
     ),
 )
 ```

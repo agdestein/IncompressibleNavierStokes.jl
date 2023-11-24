@@ -1,5 +1,5 @@
 """
-    animator(setup, path; nupdate = 1, plotter = field_plotter(setup); kwargs...)
+    animator(; setup, path, plot = fieldplot, nupdate = 1, kwargs...)
 
 Animate a plot of the solution every `update` iteration.
 The animation is saved to `path`, which should have one
@@ -13,18 +13,16 @@ of the following extensions:
 The plot is determined by a `plotter` processor.
 Additional `kwargs` are passed to Makie's `VideoStream`.
 """
-animator(setup, path; nupdate = 1, plotter = field_plotter(setup), kwargs...) = processor(
-    function (state)
+animator(; setup, path, plot = fieldplot, nupdate = 1, kwargs...) =
+    processor((stream, state) -> save(path, stream)) do outerstate
         ispath(dirname(path)) || mkpath(dirname(path))
-        _state = Observable(state[])
-        fig = plotter.initialize(_state)
+        state = Observable(outerstate[])
+        fig = plot(; setup, state)
         stream = VideoStream(fig; kwargs...)
-        @lift begin
-            _state[] = $state
+        on(outerstate) do outerstate
+            outerstate.n % nupdate == 0 || return
+            state[] = outerstate
             recordframe!(stream)
         end
         stream
-    end;
-    finalize = (stream, step_observer) -> save(path, stream),
-    nupdate,
-)
+    end

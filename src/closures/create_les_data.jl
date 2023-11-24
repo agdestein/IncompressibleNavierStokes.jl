@@ -32,8 +32,8 @@ function gaussian_force(
     force
 end
 
-_filter_saver(dns, les, comp, pressure_solver; nupdate = 1) = processor(
-    function (state)
+_filter_saver(dns, les, comp, pressure_solver; nupdate = 1) =
+    processor() do state
         (; dimension, x) = dns.grid
         T = eltype(x[1])
         D = dimension()
@@ -76,9 +76,7 @@ _filter_saver(dns, les, comp, pressure_solver; nupdate = 1) = processor(
         end
         state[] = state[] # Save initial conditions
         (; t = _t, u = _u, c = _c)
-    end;
-    nupdate,
-)
+    end
 
 """
     create_les_data(
@@ -167,7 +165,7 @@ function create_les_data(
             p₀,
             (T(0), tburn);
             Δt,
-            # processors = (step_logger(; nupdate = 10),),
+            # processors = (timelogger(; nupdate = 10),),
             pressure_solver,
         )
 

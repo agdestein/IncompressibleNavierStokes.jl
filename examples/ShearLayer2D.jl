@@ -59,8 +59,6 @@ u₀, p₀ = create_initial_conditions(
     pressure_solver,
 );
 
-# Iteration processors
-
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
@@ -70,13 +68,17 @@ u, p, outputs = solve_unsteady(
     Δt = T(0.01),
     pressure_solver,
     processors = (
-        field_plotter(setup; nupdate = 1),
-        ## energy_history_plotter(setup; nupdate = 1),
-        ## energy_spectrum_plotter(setup; nupdate = 100),
-        ## animator(setup, "vorticity.mkv"; nupdate = 4),
-        ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-        ## field_saver(setup; nupdate = 10),
-        step_logger(; nupdate = 1),
+        rtp = realtimeplotter(;
+            setup,
+            plot = fieldplot,
+            ## plot = energy_history_plot,
+            ## plot = energy_spectrum_plot,
+            nupdate = 1,
+        ),
+        ## anim = animator(; setup, path = "vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "output/$name", filename = "solution"),
+        ## field = fieldsaver(; setup, nupdate = 10),
+        log = timelogger(; nupdate = 1),
     ),
 );
 
@@ -84,7 +86,7 @@ u, p, outputs = solve_unsteady(
 #
 # We may visualize or export the computed fields `(u, p)`
 
-outputs[1]
+outputs.rtp
 
 # Export to VTK
 save_vtk(setup, u, p, "output/solution")

@@ -92,6 +92,7 @@ closure, θ₀ = cnn(;
     bias = [true, true, true, false],
 );
 closure.NN
+
 sample = io_train[1][:, :, :, 1:5]
 closure(sample, θ₀) |> size
 
@@ -175,7 +176,7 @@ function relerr(u, uref, setup)
     sqrt(a) / sqrt(b)
 end
 
-relerr_track(uref, setup) = processor(function (state)
+relerr_track(uref, setup) = processor() do state
     (; dimension, x, Ip) = setup.grid
     D = dimension()
     T = eltype(x[1])
@@ -190,7 +191,7 @@ relerr_track(uref, setup) = processor(function (state)
         e[] += sqrt(a) / sqrt(b) / (length(uref) - 1)
     end
     e
-end)
+end
 
 u, u₀, p₀ = nothing, nothing, nothing
 u = device.(data_test.u[1])
@@ -200,43 +201,31 @@ length(u)
 
 u_nm, p_nm, outputs = solve_unsteady(
     setup,
-    copy.(u₀),
-    copy(p₀),
+    u₀,
+    p₀,
     (T(0), params.tsim);
     Δt = data_test.Δt,
     pressure_solver,
     processors = (
-        relerr_track(u, setup),
-        # field_plotter(setup; nupdate = 10),
-        # field_plotter(
-        #     setup;
-        #     nupdate = 10,
-        #     fieldname = :λ₂field,
-        #     levels = LinRange(-T(2), T(3), 5),
-        #     # levels = LinRange(-1.0f0, 3.0f0, 5),
-        #     # levels = LinRange(-2.0f0, 2.0f0, 5),
-        #     # levels=5,
-        #     docolorbar = false,
-        # ),
-        step_logger(; nupdate = 1),
+        relerr = relerr_track(u, setup),
+        log = timelogger(; nupdate = 1),
     ),
 )
-relerr_nm = outputs[1][]
+relerr_nm = outputs.relerr[]
 
 u_cnn, p_cnn, outputs = solve_unsteady(
     (; setup..., closure_model = create_neural_closure(closure, θ, setup)),
-    copy.(u₀),
-    copy(p₀),
+    u₀,
+    p₀,
     (T(0), params.tsim);
     Δt = data_test.Δt,
     pressure_solver,
     processors = (
-        relerr_track(u, setup),
-        # field_plotter(setup; nupdate = 10),
-        step_logger(; nupdate = 1),
+        relerr = relerr_track(u, setup),
+        log = timelogger(; nupdate = 1),
     ),
 )
-relerr_cnn = outputs[1][]
+relerr_cnn = outputs.relerr[]
 
 relerr_nm
 relerr_cnn

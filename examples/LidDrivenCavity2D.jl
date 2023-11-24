@@ -115,13 +115,17 @@ u, p = u₀, p₀
 # later returned by `solve_unsteady`.
 
 processors = (
-    field_plotter(setup; nupdate = 50),
-    ## energy_history_plotter(setup; nupdate = 1),
-    ## energy_spectrum_plotter(setup; nupdate = 100),
-    ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 100, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1000),
+    rtp = realtimeplotter(;
+        setup,
+        plot = fieldplot,
+        ## plot = energy_history_plot,
+        ## plot = energy_spectrum_plot,
+        nupdate = 50,
+    ),
+    ## anim = animator(; setup, path = "vorticity.mkv", nupdate = 20),
+    ## vtk = vtk_writer(; setup, nupdate = 10, dir = "output/$name", filename = "solution"),
+    ## field = fieldsaver(; setup, nupdate = 10),
+    log = timelogger(; nupdate = 1000),
 );
 
 # By default, a standard fourth order Runge-Kutta method is used. If we don't

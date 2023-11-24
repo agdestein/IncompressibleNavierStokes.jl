@@ -66,13 +66,17 @@ u, p, outputs = solve_unsteady(
     Δt = T(0.001),
     pressure_solver,
     processors = (
-        field_plotter(setup; nupdate = 10),
-        energy_history_plotter(setup; nupdate = 10),
-        energy_spectrum_plotter(setup; nupdate = 10),
-        ## animator(setup, "vorticity.mp4"; nupdate = 4),
-        ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-        ## field_saver(setup; nupdate = 10),
-        step_logger(; nupdate = 1),
+        rtp = realtimeplotter(;
+            setup,
+            plot = fieldplot,
+            ## plot = energy_history_plot,
+            ## plot = energy_spectrum_plot,
+            nupdate = 1,
+        ),
+        ## anim = animator(; setup, path = "vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "output/$name", filename = "solution"),
+        ## field = fieldsaver(; setup, nupdate = 10),
+        log = timelogger(; nupdate = 1),
     ),
 );
 

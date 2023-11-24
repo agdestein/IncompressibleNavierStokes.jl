@@ -28,7 +28,7 @@
 
     # Iteration processors
     processors = (
-        field_plotter(setup; nupdate = 1, displayfig = false),
+        realtimeplotter(; setup, nupdate = 1, displayfig = false),
         vtk_writer(setup; nupdate = 5, dir = "output", filename = "solution2D"),
         animator(
             setup,
@@ -36,7 +36,7 @@
             nupdate = 10,
             plotter = field_plotter(setup; displayfig = false),
         ),
-        step_logger(),
+        timelogger(),
     )
 
     # Solve unsteady problem

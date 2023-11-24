@@ -7,7 +7,7 @@
         cfl = 1,
         n_adapt_Δt = 1,
         inplace = true,
-        processors = (),
+        processors = (;),
     )
 
 Solve unsteady problem using `method`.
@@ -17,26 +17,9 @@ an integer.
 If `Δt = nothing`, the time step is chosen every `n_adapt_Δt` iteration with
 CFL-number `cfl` .
 
-Each `processor` is called after every `processor.nupdate` time step.
+The `processors` are called after every time step.
 
-All arrays and operators are passed through the `device` function.
-This allows for performing computations on a different device than the host (CPU).
-To compute on an Nvidia GPU using CUDA, change
-
-```
-solve_unsteady(setup, u₀, p₀, tlims; kwargs...)
-```
-
-to the following:
-
-```
-using CUDA
-solve_unsteady(
-    setup, u₀, p₀, tlims;
-    device = cu,
-    kwargs...
-)
-```
+Return a named tuple with the outputs of `processors` with the same field names.
 
 Note that the `state` observable passed to the `processor.initialize` function
 contains vector living on the device, and you may have to move them back to
@@ -54,7 +37,7 @@ function solve_unsteady(
     n_adapt_Δt = 1,
     inplace = true,
     docopy = true,
-    processors = (),
+    processors = (;),
 )
     if docopy
         u₀ = copy.(u₀)
@@ -79,9 +62,8 @@ function solve_unsteady(
     isadaptive && (Δt = get_timestep(stepper, cfl))
 
     # Initialize processors for iteration results  
-    state = get_state(stepper)
-    states = map(ps -> Observable(state), processors)
-    initialized = map((ps, o) -> ps.initialize(o), processors, states)
+    state = Observable(get_state(stepper))
+    initialized = (; (k => v.initialize(state) for (k, v) in pairs(processors))...)
 
     while stepper.t < t_end
         if isadaptive
@@ -102,14 +84,12 @@ function solve_unsteady(
         end
 
         # Process iteration results with each processor
-        for (ps, o) ∈ zip(processors, states)
-            # Only update each `nupdate`-th iteration
-            stepper.n % ps.nupdate == 0 && (o[] = get_state(stepper))
-        end
+        state[] = get_state(stepper)
     end
 
-    (; u, p, t, n) = stepper
-    finalized = map((ps, i) -> ps.finalize(i, get_state(stepper)), processors, initialized)
+    finalized = (;
+        (k => processors[k].finalize(initialized[k], state) for k in keys(processors))...
+    )
 
     # Final state
     (; u, p) = stepper
