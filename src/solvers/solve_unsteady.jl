@@ -53,8 +53,14 @@ function solve_unsteady(
     cfl = 1,
     n_adapt_Δt = 1,
     inplace = true,
+    docopy = true,
     processors = (),
 )
+    if docopy
+        u₀ = copy.(u₀)
+        p₀ = copy(p₀)
+    end
+
     t_start, t_end = tlims
     isadaptive = isnothing(Δt)
     if !isadaptive
