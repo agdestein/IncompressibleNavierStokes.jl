@@ -46,7 +46,7 @@ processor(initialize, finalize = (initialized, state) -> initialized) =
 
 Create processor that logs time step information.
 """
-step_logger(; nupdate = 1) = processor(function (state)
+timelogger(; nupdate = 1) = processor(function (state)
     on(state) do (; t, n)
         n % nupdate == 0 || return
         @printf "Iteration %d\tt = %g\n" n t
