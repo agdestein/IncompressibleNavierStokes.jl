@@ -39,7 +39,8 @@ ArrayType = Array
 Re = T(3_000)
 
 # Boundary conditions: steady inflow on the top half
-U(dim, x, y, t) = dim() == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x) + randn(typeof(x)) / 1_000
+U(dim, x, y, t) =
+    dim() == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x) + randn(typeof(x)) / 1_000
 dUdt(dim, x, y, t) = zero(x)
 boundary_conditions = (
     ## x left, x right
@@ -61,7 +62,8 @@ setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 pressure_solver = CGPressureSolverManual(setup);
 
 # Initial conditions (extend inflow)
-u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)); pressure_solver);
+u₀, p₀ =
+    create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)); pressure_solver);
 u, p = copy.(u₀), copy(p₀)
 
 # Solve steady state problem
@@ -70,7 +72,8 @@ u, p = copy.(u₀), copy(p₀)
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
-    u₀, p₀,
+    u₀,
+    p₀,
     # u, p,
     (T(0), T(7));
     Δt = T(0.002),

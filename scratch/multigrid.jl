@@ -77,22 +77,23 @@ end
 # # Load previous LES data
 # data_train, data_valid, data_test = load("output/forced/data.jld2", "data_train", "data_valid", "data_test")
 
-relerr_track(uref, setup) = processor() do state
-    (; dimension, x, Ip) = setup.grid
-    D = dimension()
-    T = eltype(x[1])
-    e = Ref(T(0))
-    on(state) do (; u, n)
-        a, b = T(0), T(0)
-        for α = 1:D
-            # @show size(uref[n + 1])
-            a += sum(abs2, u[α][Ip] - uref[n+1][α][Ip])
-            b += sum(abs2, uref[n+1][α][Ip])
+relerr_track(uref, setup) =
+    processor() do state
+        (; dimension, x, Ip) = setup.grid
+        D = dimension()
+        T = eltype(x[1])
+        e = Ref(T(0))
+        on(state) do (; u, n)
+            a, b = T(0), T(0)
+            for α = 1:D
+                # @show size(uref[n + 1])
+                a += sum(abs2, u[α][Ip] - uref[n+1][α][Ip])
+                b += sum(abs2, uref[n+1][α][Ip])
+            end
+            e[] += sqrt(a) / sqrt(b) / (length(uref) - 1)
         end
-        e[] += sqrt(a) / sqrt(b) / (length(uref) - 1)
+        e
     end
-    e
-end
 
 e_nm = zeros(T, length(ntest))
 for (i, n) in enumerate(ntest)

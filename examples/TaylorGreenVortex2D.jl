@@ -73,9 +73,9 @@ e = compute_convergence(;
 
 # Plot convergence
 with_theme(;
-    # linewidth = 5,
-    # markersize = 20,
-    # fontsize = 20,
+# linewidth = 5,
+# markersize = 20,
+# fontsize = 20,
 ) do
     fig = Figure()
     ax = Axis(

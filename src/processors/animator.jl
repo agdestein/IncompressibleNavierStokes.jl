@@ -13,7 +13,15 @@ of the following extensions:
 The plot is determined by a `plotter` processor.
 Additional `kwargs` are passed to `plot`.
 """
-animator(; setup, path, plot = fieldplot, nupdate = 1, framerate = 24, visible = true, kwargs...) =
+animator(;
+    setup,
+    path,
+    plot = fieldplot,
+    nupdate = 1,
+    framerate = 24,
+    visible = true,
+    kwargs...,
+) =
     processor((stream, state) -> save(path, stream)) do outerstate
         ispath(dirname(path)) || mkpath(dirname(path))
         state = Observable(outerstate[])

@@ -10,11 +10,7 @@ See also [`pressure_poisson!`](@ref).
 """
 function pressure_poisson end
 
-pressure_poisson(solver, f) = pressure_poisson!(
-    solver,
-    zero(f),
-    f,
-)
+pressure_poisson(solver, f) = pressure_poisson!(solver, zero(f), f)
 
 """
     pressure_poisson!(solver, p, f)

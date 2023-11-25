@@ -399,7 +399,7 @@ function laplacian_mat(setup)
     linear = LinearIndices(Ip)
     I = linear[I]
     J = linear[J]
-    
+
     # Assemble on CPU, since CUDA overwrites instead of adding
     L = sparse(I, J, Array(val))
     # II = copyto!(KernelAbstractions.zeros(backend, Int, length(I)), I)
@@ -549,7 +549,6 @@ function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
     _Dfield!(get_backend(p), WORKGROUP)(d, G, p, I0; ndrange = Np)
     d
 end
-
 
 """
     Dfield(p, setup)

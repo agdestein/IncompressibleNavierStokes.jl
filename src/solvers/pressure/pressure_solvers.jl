@@ -23,7 +23,7 @@ struct DirectPressureSolver{T,S,F,A} <: AbstractPressureSolver{T}
         p = KernelAbstractions.zeros(backend, T, prod(Np))
         L = laplacian_mat(setup)
         fact = lu(L)
-        new{T,typeof(setup),typeof(fact),typeof(f)}(setup,fact, f, p)
+        new{T,typeof(setup),typeof(fact),typeof(f)}(setup, fact, f, p)
     end
 end
 

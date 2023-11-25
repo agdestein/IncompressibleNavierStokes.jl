@@ -68,7 +68,8 @@ u, p = u₀, p₀
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
-    copy.(u₀), copy(p₀),
+    copy.(u₀),
+    copy(p₀),
     # u, p,
     (0.0, 12.0);
     method = RK44P2(),

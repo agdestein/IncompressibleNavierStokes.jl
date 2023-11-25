@@ -301,8 +301,8 @@ function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
     ib = KernelAbstractions.zeros(backend, Int, nbin * naverage)
     ia = KernelAbstractions.zeros(backend, Int, nbin * naverage)
     for j = 1:naverage
-        copyto!(view(ia, (j-1) * nbin + 1:j * nbin), collect(1:nbin))
-        ib[(j-1) * nbin + 1:j * nbin] = i[j:naverage:end-r]
+        copyto!(view(ia, (j-1)*nbin+1:j*nbin), collect(1:nbin))
+        ib[(j-1)*nbin+1:j*nbin] = i[j:naverage:end-r]
     end
     vals = KernelAbstractions.ones(backend, T, nbin * naverage) / naverage
     A = sparse(ia, ib, vals, nbin, length(i))
