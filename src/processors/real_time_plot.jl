@@ -282,35 +282,56 @@ Create energy spectrum plot.
 function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
     state isa Observable || (state = Observable(state))
     (; dimension, xp, Ip) = setup.grid
+    backend = get_backend(xp[1])
     T = eltype(xp[1])
     D = dimension()
     K = size(Ip) .÷ 2
     kx = ntuple(α -> 1:K[α]-1, D)
-    k = KernelAbstractions.zeros(get_backend(xp[1]), T, length.(kx)...)
+    k = KernelAbstractions.zeros(backend, T, length.(kx)...)
     for α = 1:D
         kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
         k .+= kα .^ 2
     end
     k .= sqrt.(k)
-    k = Array(reshape(k, :))
+    k = reshape(k, :)
+
+    # Make averaging matrix
+    i = sortperm(k)
+    nbin, r = divrem(length(i), naverage)
+    ib = KernelAbstractions.zeros(backend, Int, nbin * naverage)
+    ia = KernelAbstractions.zeros(backend, Int, nbin * naverage)
+    for j = 1:naverage
+        copyto!(view(ia, (j-1) * nbin + 1:j * nbin), collect(1:nbin))
+        ib[(j-1) * nbin + 1:j * nbin] = i[j:naverage:end-r]
+    end
+    vals = KernelAbstractions.ones(backend, T, nbin * naverage) / naverage
+    A = sparse(ia, ib, vals, nbin, length(i))
+    k = Array(A * k)
+
+    up = interpolate_u_p(state[].u, setup)
     ehat = @lift begin
         (; u, p, t) = $state
-        up = interpolate_u_p(u, setup)
+        interpolate_u_p!(up, u, setup)
         e = sum(up -> up[Ip] .^ 2, up)
-        Array(reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]), :))
+        Array(A * reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]) ./ size(e, 1), :))
     end
     fig = Figure()
-    ax = Axis(fig[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
-    ## ylims!(ax, (1e-20, 1))
-    scatter!(ax, k, ehat; label = "Kinetic energy")
+    ax = Axis(
+        fig[1, 1];
+        xlabel = "k",
+        ylabel = "e(k)",
+        xscale = log10,
+        yscale = log10,
+        limits = (extrema(k)..., T(1e-8), T(1)),
+    )
+    lines!(ax, k, ehat; label = "Kinetic energy")
     krange = LinRange(extrema(k)..., 100)
-    D == 2 && lines!(ax, krange, 1e7 * krange .^ (-3); label = "k⁻³", color = :red)
+    D == 2 && lines!(ax, krange, 1e4 * krange .^ (-3); label = "k⁻³", color = :red)
     D == 3 &&
-        lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = "\$k^{-5/3}\$", color = :red)
+        lines!(ax, krange, 1e2 * krange .^ (-5 / 3); label = L"$k^{-5/3}$", color = :red)
     axislegend(ax)
-    on(ehat) do _
-        autolimits!(ax)
-    end
+    # autolimits!(ax)
+    on(e -> autolimits!(ax), ehat)
     fig
 end
 
