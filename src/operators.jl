@@ -204,7 +204,8 @@ function bodyforce!(F, u, t, setup)
     @kernel function _bodyforce!(F, force, ::Val{α}, t, I0) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
-        F[α][I] += force(Dimension(α), ntuple(β -> α == β ? x[β][1+I[β]] : xp[β][I[β]], D)..., t)
+        F[α][I] +=
+            force(Dimension(α), ntuple(β -> α == β ? x[β][1+I[β]] : xp[β][I[β]], D)..., t)
     end
     for α = 1:D
         I0 = first(Iu[α])
@@ -319,6 +320,93 @@ function laplacian!(L, p, setup)
         _laplacian!(get_backend(L), WORKGROUP)(L, p, Val(α), I0; ndrange)
     end
     L
+end
+
+function laplacian_mat(setup)
+    (; grid, boundary_conditions) = setup
+    (; dimension, x, N, Np, Ip, Δ, Δu, Ω) = grid
+    backend = get_backend(x[1])
+    T = eltype(x[1])
+    D = dimension()
+    δ = Offset{D}()
+    Ia = first(Ip)
+    Ib = last(Ip)
+    I = KernelAbstractions.zeros(backend, CartesianIndex{D}, 0)
+    J = KernelAbstractions.zeros(backend, CartesianIndex{D}, 0)
+    val = KernelAbstractions.zeros(backend, T, 0)
+    I0 = Ia - oneunit(Ia)
+    for α = 1:D
+        a, b = boundary_conditions[α]
+        # i = Ip[ntuple(β -> α == β ? (Ia[α]+1:Ib[α]-1) : (:), D)...][:]
+        # ia = Ip[ntuple(β -> α == β ? (Ia[α]:Ia[α]) : (:), D)...][:]
+        # ib = Ip[ntuple(β -> α == β ? (Ib[α]:Ib[α]) : (:), D)...][:]
+        i = Ip[ntuple(β -> α == β ? (2:Np[α]-1) : (:), D)...][:]
+        ia = Ip[ntuple(β -> α == β ? (1:1) : (:), D)...][:]
+        ib = Ip[ntuple(β -> α == β ? (Np[α]:Np[α]) : (:), D)...][:]
+        for (aa, bb, j) in [(a, nothing, ia), (nothing, nothing, i), (nothing, b, ib)]
+            ja = if isnothing(aa)
+                j .- δ(α)
+            elseif aa isa PressureBC
+                error()
+            elseif aa isa PeriodicBC
+                ib
+            elseif aa isa SymmetricBC
+                ia
+            elseif aa isa DirichletBC
+                # The weight of the "left" is zero, but still needs a J in Ip, so
+                # just set it to ia
+                ia
+            end
+            jb = if isnothing(bb)
+                j .+ δ(α)
+            elseif bb isa PressureBC
+                error()
+            elseif bb isa PeriodicBC
+                ia
+            elseif bb isa SymmetricBC
+                ib
+            elseif bb isa DirichletBC
+                # The weight of the "right" bc is zero, but still needs a J in Ip, so
+                # just set it to ib
+                ib
+            end
+            J = [J; ja; j; jb]
+            I = [I; j; j; j]
+            # val = vcat(
+            #     val,
+            #     map(I -> Ω[I] / Δ[α][I[α]] / Δu[α][I[α]-1], j),
+            #     map(I -> -Ω[I] / Δ[α][I[α]] * (1 / Δu[α][I[α]] + 1 / Δu[α][I[α]-1]), j),
+            #     map(I -> Ω[I] / Δ[α][I[α]] / Δu[α][I[α]], j),
+            # )
+            val = vcat(
+                val,
+                @.(Ω[j] / Δ[α][getindex.(j, α)] / Δu[α][getindex.(j, α)-1]),
+                @.(
+                    -Ω[j] / Δ[α][getindex.(j, α)] *
+                    (1 / Δu[α][getindex.(j, α)] + 1 / Δu[α][getindex.(j, α)-1])
+                ),
+                @.(Ω[j] / Δ[α][getindex.(j, α)] / Δu[α][getindex.(j, α)]),
+            )
+        end
+    end
+    # Go back to CPU, otherwise get following error:
+    # ERROR: CUDA error: an illegal memory access was encountered (code 700, ERROR_ILLEGAL_ADDRESS)
+    I = Array(I)
+    J = Array(J)
+    I = I .- I0
+    J = J .- I0
+    # linear = copyto!(KernelAbstractions.zeros(backend, Int, Np), collect(LinearIndices(Ip)))
+    linear = LinearIndices(Ip)
+    I = linear[I]
+    J = linear[J]
+    
+    # Assemble on CPU, since CUDA overwrites instead of adding
+    L = sparse(I, J, Array(val))
+    # II = copyto!(KernelAbstractions.zeros(backend, Int, length(I)), I)
+    # JJ = copyto!(KernelAbstractions.zeros(backend, Int, length(J)), J)
+    # sparse(II, JJ, val)
+
+    Ω isa CuArray ? cu(L) : L
 end
 
 """

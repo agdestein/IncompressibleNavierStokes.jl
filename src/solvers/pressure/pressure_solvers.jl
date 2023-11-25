@@ -10,13 +10,20 @@ abstract type AbstractPressureSolver{T} end
 
 Direct pressure solver using a LU decomposition.
 """
-struct DirectPressureSolver{T,F<:Factorization{T}} <: AbstractPressureSolver{T}
-    A_fact::F
+struct DirectPressureSolver{T,S,F,A} <: AbstractPressureSolver{T}
+    setup::S
+    fact::F
+    f::A
+    p::A
     function DirectPressureSolver(setup)
-        (; A) = setup.operators
-        T = eltype(A)
-        fact = factorize(setup.operators.A)
-        new{T,typeof(fact)}(fact)
+        (; x, Np) = setup.grid
+        T = eltype(x[1])
+        backend = get_backend(x[1])
+        f = KernelAbstractions.zeros(backend, T, prod(Np))
+        p = KernelAbstractions.zeros(backend, T, prod(Np))
+        L = laplacian_mat(setup)
+        fact = lu(L)
+        new{T,typeof(setup),typeof(fact),typeof(f)}(setup,fact, f, p)
     end
 end
 

@@ -12,7 +12,7 @@ function pressure_poisson end
 
 pressure_poisson(solver, f) = pressure_poisson!(
     solver,
-    KernelAbstractions.zeros(get_backend(f), typeof(solver.setup.Re), solver.setup.grid.N),
+    zero(f),
     f,
 )
 
@@ -29,13 +29,15 @@ See also [`pressure_poisson`](@ref).
 function pressure_poisson! end
 
 function pressure_poisson!(solver::DirectPressureSolver, p, f)
-    # Assume the Laplace matrix is known (A) and is possibly factorized
-
-    f = view(f, :)
-    p = view(p, :)
-
-    # Use pre-determined decomposition
-    p .= solver.A_fact \ f
+    (; setup, fact) = solver
+    (; Ip) = setup.grid
+    solver.f .= view(view(f, Ip), :)
+    # @infiltrate
+    solver.p .= fact \ solver.f
+    # ldiv!(pp, fact, ff)
+    pp = view(view(p, Ip), :)
+    pp .= solver.p
+    p
 end
 
 function pressure_poisson!(solver::CGPressureSolver, p, f)
