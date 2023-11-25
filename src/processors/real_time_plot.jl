@@ -13,6 +13,8 @@ Processor for plotting the solution every `nupdate` time step.
 
 The `sleeptime` is slept at every update, to give Makie time to update the
 plot. Set this to `nothing` to skip sleeping.
+
+Additional `kwargs` are passed to the `plot` function.
 """
 realtimeplotter(;
     setup,
@@ -25,7 +27,7 @@ realtimeplotter(;
 ) =
     processor() do outerstate
         state = Observable(outerstate[])
-        fig = plot(; setup, state = outerstate, kwargs...)
+        fig = plot(state; setup, kwargs...)
         displayfig && display(fig)
         on(outerstate) do outerstate
             outerstate.n % nupdate == 0 || return
@@ -37,12 +39,16 @@ realtimeplotter(;
     end
 
 """
-    fieldplot(;
+    fieldplot(
+        state;
         setup,
         fieldname = :vorticity,
         type = nothing,
-        alpha = 0.05,
+        kwargs...,
     )
+
+Plot `state` field in pressure points.
+If `state` is `Observable`, then the plot is interactive.
 
 Available fieldnames are:
 
@@ -64,12 +70,17 @@ Available plot `type`s for 3D are:
 
 The `alpha` value gets passed to `contour` in 3D.
 """
-fieldplot(; setup, kwargs...) = fieldplot(setup.grid.dimension; setup, kwargs...)
+fieldplot(state; setup, kwargs...) = fieldplot(
+    setup.grid.dimension,
+    state isa Observable ? state : Observable(state);
+    setup,
+    kwargs...,
+)
 
 function fieldplot(
-    ::Dimension{2};
+    ::Dimension{2},
+    state;
     setup,
-    state,
     fieldname = :vorticity,
     type = heatmap,
     equal_axis = true,
@@ -162,15 +173,15 @@ end
 
 function fieldplot(
     ::Dimension{3},
+    state;
     setup,
-    state,
     fieldname = :Dfield,
     alpha = convert(eltype(setup.grid.x[1]), 0.1),
     isorange = convert(eltype(setup.grid.x[1]), 0.5),
     equal_axis = true,
     levels = 3,
     docolorbar = false,
-    size = (800, 600),
+    size = nothing,
     kwargs...,
 )
     (; boundary_conditions, grid) = setup
@@ -222,8 +233,9 @@ function fieldplot(
 
     isnothing(levels) && (levels = @lift(LinRange($(lims)..., 10)))
 
-    aspect = equal_axis ? (; aspect = :data) : (;)
-    fig = Figure(; size)
+    # aspect = equal_axis ? (; aspect = :data) : (;)
+    size = isnothing(size) ? (;) : (; size)
+    fig = Figure(; size...)
     # ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
     hm = contour(
         fig[1, 1],
@@ -233,7 +245,6 @@ function fieldplot(
         levels,
         colorrange = lims,
         # colorrange = extrema(levels),
-        shading = false,
         alpha,
         isorange,
         # highclip = :red,
@@ -245,15 +256,13 @@ function fieldplot(
     fig
 end
 
-energy_history_plotter(setup; nupdate = 1, kwargs...) =
-    processor(state -> energy_history_plot(setup, state; kwargs...); nupdate)
-
 """
-    energy_history_plot(; setup, state)
+    energy_history_plot(state; setup)
 
 Create energy history plot.
 """
-function energy_history_plot(; setup, state)
+function energy_history_plot(state; setup)
+    @assert state isa Observable "Energy history requires observable state."
     _points = Point2f[]
     points = @lift begin
         (; u, p, t) = $state
@@ -266,11 +275,12 @@ function energy_history_plot(; setup, state)
 end
 
 """
-    energy_spectrum_plot(; setup, state)
+    energy_spectrum_plot(state; setup)
 
 Create energy spectrum plot.
 """
-function energy_spectrum_plot(; setup, state)
+function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
+    state isa Observable || (state = Observable(state))
     (; dimension, xp, Ip) = setup.grid
     T = eltype(xp[1])
     D = dimension()

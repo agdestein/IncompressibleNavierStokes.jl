@@ -11,14 +11,15 @@ of the following extensions:
 - ".gif"
 
 The plot is determined by a `plotter` processor.
-Additional `kwargs` are passed to Makie's `VideoStream`.
+Additional `kwargs` are passed to `plot`.
 """
-animator(; setup, path, plot = fieldplot, nupdate = 1, kwargs...) =
+animator(; setup, path, plot = fieldplot, nupdate = 1, framerate = 24, visible = true, kwargs...) =
     processor((stream, state) -> save(path, stream)) do outerstate
         ispath(dirname(path)) || mkpath(dirname(path))
         state = Observable(outerstate[])
-        fig = plot(; setup, state)
-        stream = VideoStream(fig; kwargs...)
+        fig = plot(state; setup, kwargs...)
+        visible && display(fig)
+        stream = VideoStream(fig; framerate, visible)
         on(outerstate) do outerstate
             outerstate.n % nupdate == 0 || return
             state[] = outerstate
