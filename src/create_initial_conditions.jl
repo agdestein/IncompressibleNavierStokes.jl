@@ -4,6 +4,7 @@
         initial_velocity,
         t = 0;
         pressure_solver = CGPressureSolverManual(setup),
+        project = true,
     )
 
 Create initial vectors `(u, p)` at starting time `t`.
@@ -15,6 +16,7 @@ function create_initial_conditions(
     initial_velocity,
     t = convert(eltype(setup.grid.x[1]), 0);
     pressure_solver = CGPressureSolverManual(setup),
+    project = true,
 )
     (; grid) = setup
     (; dimension, N, Iu, Ip, x, xp, Ω) = grid
@@ -42,7 +44,7 @@ function create_initial_conditions(
     maxdiv = maximum(abs, divergence(u, setup))
 
     # TODO: Maybe eps(T)^(3//4)
-    if maxdiv > 1e-12
+    if project && maxdiv > 1e-12
         @warn "Initial velocity field not (discretely) divergence free: $maxdiv.\n" *
               "Performing additional projection."
 
