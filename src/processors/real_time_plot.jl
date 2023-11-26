@@ -325,7 +325,7 @@ function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
         Array(A * reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]) ./ size(e, 1), :))
     end
 
-    # Buid inertial slope above energy
+    # Build inertial slope above energy
     krange = LinRange(extrema(k)..., 100)
     slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
     inertia = @lift begin
