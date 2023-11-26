@@ -342,8 +342,7 @@ function laplacian_mat(setup)
         ib = Ip[ntuple(β -> α == β ? (Np[α]:Np[α]) : (:), D)...][:]
         for (aa, bb, j) in [(a, nothing, ia), (nothing, nothing, i), (nothing, b, ib)]
             ja = if isnothing(aa)
-                # j .- δ(α)
-                CartesianIndex.(Tuple.(j) .- Tuple(δ(α)))
+                j .- [δ(α)]
             elseif aa isa PressureBC
                 # The weight of the "left" BC is zero, but still needs a J inside Ip, so
                 # just set it to ia
@@ -358,8 +357,7 @@ function laplacian_mat(setup)
                 ia
             end
             jb = if isnothing(bb)
-                # j .+ δ(α)
-                CartesianIndex.(Tuple.(j) .+ Tuple(δ(α)))
+                j .+ [δ(α)]
             elseif bb isa PressureBC
                 # The weight of the "right" BC is zero, but still needs a J inside Ip, so
                 # just set it to ib
@@ -398,8 +396,8 @@ function laplacian_mat(setup)
     J = Array(J)
     # I = I .- I0
     # J = J .- I0
-    I = CartesianIndex.(Tuple.(I) .- Tuple(I0))
-    J = CartesianIndex.(Tuple.(J) .- Tuple(I0))
+    I = I .- [I0]
+    J = J .- [I0]
     # linear = copyto!(KernelAbstractions.zeros(backend, Int, Np), collect(LinearIndices(Ip)))
     linear = LinearIndices(Ip)
     I = linear[I]

@@ -14,6 +14,7 @@ end                                                 #src
 
 # We start by loading packages.
 # A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
+#
 # for plotting. `GLMakie` creates an interactive window (useful for real-time
 # plotting), but does not work when building this example on GitHub.
 # `CairoMakie` makes high-quality static vector-graphics plots.
@@ -126,7 +127,7 @@ processors = (
 
 # By default, a standard fourth order Runge-Kutta method is used. If we don't
 # provide the time step explicitly, an adaptive time step is used.
-tlims = (T(0), T(10.0))
+tlims = (T(0), T(10))
 u, p, outputs =
     solve_unsteady(setup, u₀, p₀, tlims; Δt = T(1e-3), pressure_solver, processors);
 
