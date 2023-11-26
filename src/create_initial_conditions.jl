@@ -15,7 +15,7 @@ function create_initial_conditions(
     setup,
     initial_velocity,
     t = convert(eltype(setup.grid.x[1]), 0);
-    pressure_solver = CGPressureSolverManual(setup),
+    pressure_solver = DirectPressureSolver(setup),
     project = true,
 )
     (; grid) = setup

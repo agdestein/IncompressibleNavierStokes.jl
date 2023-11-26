@@ -13,18 +13,12 @@ end                                                 #src
 # specific energy spectrum. Due to viscous dissipation, the turbulent features
 # eventually group to form larger visible eddies.
 
-# We start by loading packages.
-# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
-# for plotting. `GLMakie` creates an interactive window (useful for real-time
-# plotting), but does not work when building this example on GitHub.
-# `CairoMakie` makes high-quality static vector-graphics plots.
-
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-# Case name for saving results
-name = "DecayingTurbulence2D"
+# Output directory
+output = "output/DecayingTurbulence2D"
 
 # Floating point precision
 T = Float64
@@ -43,7 +37,6 @@ Re = T(10_000)
 n = 256
 lims = T(0), T(1)
 x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
-# plot_grid(x...)
 
 # Build setup and assemble operators
 setup = Setup(x...; Re, ArrayType);
@@ -52,6 +45,7 @@ setup = Setup(x...; Re, ArrayType);
 # spectral pressure solver
 pressure_solver = SpectralPressureSolver(setup);
 
+# Create random initial conditions
 u₀, p₀ = random_field(setup, T(0); pressure_solver);
 
 # Solve unsteady problem
@@ -63,17 +57,18 @@ u, p, outputs = solve_unsteady(
     Δt = T(1e-3),
     pressure_solver,
     processors = (
-        rtp = realtimeplotter(;
+        ## rtp = realtimeplotter(; setup, nupdate = 1),
+        ehist = realtimeplotter(;
             setup,
-            plot = fieldplot,
-            ## plot = energy_history_plot,
-            ## plot = energy_spectrum_plot,
-            nupdate = 1,
+            plot = energy_history_plot,
+            nupdate = 10,
+            displayfig = false,
         ),
-        ## anim = animator(; setup, path = "vorticity.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "output/$name", filename = "solution"),
+        espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 10),
+        ## anim = animator(; setup, path = "$output/solution.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
-        log = timelogger(; nupdate = 1),
+        log = timelogger(; nupdate = 100),
     ),
 );
 
@@ -81,17 +76,16 @@ u, p, outputs = solve_unsteady(
 #
 # We may visualize or export the computed fields `(u, p)`
 
-# Plot
-outputs.rtp
+state = (; u, p, t = T(1));
+
+# Energy history
+outputs.ehist
+
+# Energy spectrum
+outputs.espec
 
 # Export to VTK
-save_vtk(setup, u, p, "output/solution")
+save_vtk(setup, u, p, "$output/solution")
 
-# Plot pressure
-plot_pressure(setup, p₀)
-
-# Plot velocity
-plot_velocity(setup, u)
-
-# Plot vorticity
-plot_vorticity(setup, u)
+# Plot field
+fieldplot(state; setup)

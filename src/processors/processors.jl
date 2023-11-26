@@ -80,24 +80,39 @@ vtk_writer(;
         D = dimension()
         ispath(dir) || mkpath(dir)
         pvd = paraview_collection(joinpath(dir, filename))
-        xp = Array.(xp)
+        xparr = Array.(xp)
+        (; u, p) = state[]
+        if :velocity ∈ fields
+            up = interpolate_u_p(u, setup)
+            uparr = Array.(up)
+            # ParaView prefers 3D vectors. Add zero z-component.
+            D == 2 && (uparr = (uparr..., zero(up[1])))
+        end
+        if :pressure ∈ fields
+            parr = Array(p)
+        end
+        if :vorticity ∈ fields
+            ω = vorticity(u, setup)
+            ωp = interpolate_ω_p(ω, setup)
+            ωparr = D == 2 ? Array(ωp) : Array.(ωp)
+        end
         on(state) do (; u, p, t, n)
             n % nupdate == 0 || return
             tformat = replace(string(t), "." => "p")
-            vtk_grid("$(dir)/$(filename)_t=$tformat", xp...) do vtk
+            vtk_grid("$(dir)/$(filename)_t=$tformat", xparr...) do vtk
                 if :velocity ∈ fields
-                    up = interpolate_u_p(u, setup)
-                    if D == 2
-                        # ParaView prefers 3D vectors. Add zero z-component.
-                        up = (up..., zero(up[1]))
+                    interpolate_u_p!(up, u, setup)
+                    for α = 1:D
+                        copyto!(uparr[α], up[α])
                     end
-                    vtk["velocity"] = Array.(up)
+                    vtk["velocity"] = uparr
                 end
-                :pressure ∈ fields && (vtk["pressure"] = Array(p))
+                :pressure ∈ fields && (vtk["pressure"] = copyto!(parr, p))
                 if :vorticity ∈ fields
-                    ω = interpolate_ω_p(vorticity(u, setup), setup)
-                    ω = D == 2 ? Array(ω) : Array.(ω)
-                    vtk["vorticity"] = ω
+                    vorticity!(ω, u, setup)
+                    interpolate_ω_p!(ωp, ω, setup)
+                    D == 2 ? copyto!(ωparr, ωp) : copyto!.(ωparr, ωp)
+                    vtk["vorticity"] = ωparr
                 end
                 pvd[t] = vtk
             end

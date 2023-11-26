@@ -27,12 +27,17 @@ function pressure_poisson! end
 function pressure_poisson!(solver::DirectPressureSolver, p, f)
     (; setup, fact) = solver
     (; Ip) = setup.grid
-    solver.f .= view(view(f, Ip), :)
+    T = eltype(p)
+    # solver.f .= view(view(f, Ip), :)
+    # copyto!(solver.f, view(view(f, Ip), :))
+    copyto!(view(solver.f, 1:length(solver.f)-1), Array(view(view(f, Ip), :)))
     # @infiltrate
     solver.p .= fact \ solver.f
-    # ldiv!(pp, fact, ff)
+    # ldiv!(solver.p, fact, solver.f)
     pp = view(view(p, Ip), :)
-    pp .= solver.p
+    # pp .= solver.p
+    # copyto!(pp, solver.p)
+    copyto!(pp, T.(view(solver.p, 1:length(solver.p)-1)))
     p
 end
 

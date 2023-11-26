@@ -9,18 +9,12 @@ end                                                 #src
 #
 # In this example we consider the Taylor-Green vortex.
 
-# We start by loading packages.
-# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
-# for plotting. `GLMakie` creates an interactive window (useful for real-time
-# plotting), but does not work when building this example on GitHub.
-# `CairoMakie` makes high-quality static vector-graphics plots.
-
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-# Case name for saving results
-name = "TaylorGreenVortex3D"
+# Output directory
+output = "output/TaylorGreenVortex3D"
 
 # Floating point precision
 T = Float64
@@ -33,7 +27,7 @@ ArrayType = Array
 ## using Metal; ArrayType = MtlArray
 
 # Reynolds number
-Re = T(10_000)
+Re = T(6_000)
 
 # A 3D grid is a Cartesian product of three vectors
 n = 32
@@ -41,7 +35,6 @@ lims = T(0), T(1)
 x = LinRange(lims..., n + 1)
 y = LinRange(lims..., n + 1)
 z = LinRange(lims..., n + 1)
-plot_grid(x, y, z)
 
 # Build setup and assemble operators
 setup = Setup(x, y, z; Re, ArrayType);
@@ -58,34 +51,27 @@ u₀, p₀ = create_initial_conditions(
         dim() == 2 ? -cospi(2x) * sinpi(2y) * sinpi(2z) / 2 : zero(x);
     pressure_solver,
 );
-u, p = u₀, p₀
-
-GC.gc()
-CUDA.reclaim()
-
-# Solve steady state problem
-## u, p = solve_steady_state(setup, u₀, p₀; npicard = 6)
-nothing
 
 # Solve unsteady problem
 u, p, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
-    (T(0), T(5));
-    Δt = T(0.01),
+    (T(0), T(1.0));
+    Δt = T(1e-3),
     processors = (
-        rtp = realtimeplotter(;
+        ## rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 10),
+        ehist = realtimeplotter(;
             setup,
-            plot = fieldplot,
-            ## plot = energy_history_plot,
-            ## plot = energy_spectrum_plot,
+            plot = energy_history_plot,
             nupdate = 1,
+            displayfig = false,
         ),
-        ## anim = animator(; setup, path = "vorticity.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "output/$name", filename = "solution"),
+        espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 10),
+        ## anim = animator(; setup, path = "$output/solution.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
-        log = timelogger(; nupdate = 1),
+        log = timelogger(; nupdate = 100),
     ),
     pressure_solver,
 );
@@ -94,24 +80,11 @@ u, p, outputs = solve_unsteady(
 #
 # We may visualize or export the computed fields `(u, p)`
 
+# Energy history
+outputs.ehist
+
+# Energy spectrum
+outputs.espec
+
 # Export to VTK
-save_vtk(setup, u, p, "output/solution")
-
-# Plot pressure
-nothing #md
-plot_pressure(setup, p; levels = 3, alpha = 0.05) #!md
-
-# Plot velocity
-nothing #md
-plot_velocity(setup, u; levels = 3, alpha = 0.05) #!md
-
-# Plot vorticity
-nothing #md
-plot_vorticity(setup, u; levels = 5, alpha = 0.05) #!md
-
-# Plot streamfunction
-## plot_streamfunction(setup, u)
-nothing
-
-# Field plot
-outputs[1]
+save_vtk(setup, u, p, "$output/solution")

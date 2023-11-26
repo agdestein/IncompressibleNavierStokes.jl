@@ -85,8 +85,8 @@ U(x, y) = (1 + T(0.1) * (rand(T) - T(0.5))) * U(y)
 n = 64
 ## n = 128
 ## n = 256
-x = LinRange(T(0), T(16), 4n)
-y = LinRange(-T(10), T(10), 5n)
+x = LinRange(T(0), T(16), 4n + 1)
+y = LinRange(-T(10), T(10), 5n + 1)
 plot_grid(x, y)
 
 # Build setup and assemble operators

@@ -1,12 +1,16 @@
 """
-    function solve_unsteady(
-        setup, u₀, p₀, tlims;
-        method = RK44(; T = eltype(u₀)),
+    solve_unsteady(
+        setup,
+        u₀,
+        p₀,
+        tlims;
+        method = RK44(; T = eltype(u₀[1])),
         pressure_solver = DirectPressureSolver(setup),
-        Δt = zero(eltype(u₀)),
+        Δt = zero(eltype(u₀[1])),
         cfl = 1,
         n_adapt_Δt = 1,
         inplace = true,
+        docopy = true,
         processors = (;),
     )
 
@@ -31,7 +35,7 @@ function solve_unsteady(
     p₀,
     tlims;
     method = RK44(; T = eltype(u₀[1])),
-    pressure_solver = CGPressureSolverManual(setup),
+    pressure_solver = DirectPressureSolver(setup),
     Δt = zero(eltype(u₀[1])),
     cfl = 1,
     n_adapt_Δt = 1,

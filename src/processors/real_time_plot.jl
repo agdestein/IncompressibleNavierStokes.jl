@@ -97,6 +97,7 @@ function fieldplot(
     (; u, p, t) = state[]
     _f = if fieldname == :velocity
         up = interpolate_u_p(u, setup)
+        upnorm = zero(p)
     elseif fieldname == :vorticity
         ω = vorticity(u, setup)
         ωp = interpolate_ω_p(ω, setup)
@@ -111,6 +112,7 @@ function fieldplot(
         f = if fieldname == :velocity
             interpolate_u_p!(up, u, setup)
             map((u, v) -> √sum(u^2 + v^2), up...)
+            @. upnorm = sqrt(up[1]^2 + up[2]^2)
         elseif fieldname == :vorticity
             apply_bc_u!(u, t, setup)
             vorticity!(ω, u, setup)
@@ -175,7 +177,7 @@ function fieldplot(
     ::Dimension{3},
     state;
     setup,
-    fieldname = :Dfield,
+    fieldname = :eig2field,
     alpha = convert(eltype(setup.grid.x[1]), 0.1),
     isorange = convert(eltype(setup.grid.x[1]), 0.5),
     equal_axis = true,
@@ -202,6 +204,9 @@ function fieldplot(
     elseif fieldname == :Qfield
         u = state[].u
         Q = KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N)
+    elseif fieldname == :eig2field
+        u = state[].u
+        λ = KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N)
     else
         error("Unknown fieldname")
     end
@@ -224,6 +229,9 @@ function fieldplot(
         elseif fieldname == :Qfield
             Qfield!(Q, u, setup)
             Q
+        elseif fieldname == :eig2field
+            eig2field!(λ, u, setup)
+            λ
         end
         Array(f)[Ip]
     end
@@ -275,9 +283,10 @@ function energy_history_plot(state; setup)
 end
 
 """
-    energy_spectrum_plot(state; setup)
+    energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
 
 Create energy spectrum plot.
+The energy modes are averaged over the `naverage` nearest modes.
 """
 function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
     state isa Observable || (state = Observable(state))
@@ -315,6 +324,15 @@ function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
         e = sum(up -> up[Ip] .^ 2, up)
         Array(A * reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]) ./ size(e, 1), :))
     end
+
+    # Buid inertial slope above energy
+    krange = LinRange(extrema(k)..., 100)
+    slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
+    inertia = @lift begin
+        slopeconst = maximum($ehat ./ k .^ slope)
+        2 .* slopeconst .* krange .^ slope
+    end
+
     fig = Figure()
     ax = Axis(
         fig[1, 1];
@@ -325,10 +343,7 @@ function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
         limits = (extrema(k)..., T(1e-8), T(1)),
     )
     lines!(ax, k, ehat; label = "Kinetic energy")
-    krange = LinRange(extrema(k)..., 100)
-    D == 2 && lines!(ax, krange, 1e4 * krange .^ (-3); label = "k⁻³", color = :red)
-    D == 3 &&
-        lines!(ax, krange, 1e2 * krange .^ (-5 / 3); label = L"$k^{-5/3}$", color = :red)
+    lines!(ax, krange, inertia; label = slopelabel, color = :red)
     axislegend(ax)
     # autolimits!(ax)
     on(e -> autolimits!(ax), ehat)

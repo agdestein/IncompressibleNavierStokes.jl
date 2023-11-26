@@ -5,7 +5,7 @@ if isdefined(@__MODULE__, :LanguageServer)          #src
     using .IncompressibleNavierStokes               #src
 end                                                 #src
 
-# # Taylor-Green vortex - 2D
+# # Convergence study: Taylor-Green vortex (2D)
 #
 # In this example we consider the Taylor-Green vortex.
 # In 2D, it has an analytical solution, given by
@@ -24,6 +24,9 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 using LinearAlgebra
 
+"""
+Compare numerical solution with analytical solution at final time.
+"""
 function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType = Array)
     T = typeof(lims[1])
     e = zeros(T, length(nlist))
@@ -43,6 +46,7 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
             (dim, x...) -> uref(dim, x..., tlims[2]),
             tlims[2];
             pressure_solver,
+            project = false,
         )
         u, p, outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt, pressure_solver)
         (; Ip) = setup.grid
@@ -56,9 +60,11 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
     e
 end
 
+# Analytical solution for 2D Taylor-Green vortex
 solution(Re) =
     (dim, x, y, t) -> (dim() == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)) * exp(-2t / Re)
 
+# Compute error for different resolutions
 Re = 2.0e3
 nlist = [2, 4, 8, 16, 32, 64, 128, 256]
 e = compute_convergence(;
@@ -72,22 +78,16 @@ e = compute_convergence(;
 )
 
 # Plot convergence
-with_theme(;
-# linewidth = 5,
-# markersize = 20,
-# fontsize = 20,
-) do
-    fig = Figure()
-    ax = Axis(
-        fig[1, 1];
-        xscale = log10,
-        yscale = log10,
-        xticks = nlist,
-        xlabel = "n",
-        title = "Relative error",
-    )
-    scatterlines!(nlist, e; label = "Data")
-    lines!(collect(extrema(nlist)), n -> n^-2.0; linestyle = :dash, label = "n^-2")
-    axislegend()
-    fig
-end
+fig = Figure()
+ax = Axis(
+    fig[1, 1];
+    xscale = log10,
+    yscale = log10,
+    xticks = nlist,
+    xlabel = "n",
+    title = "Relative error",
+)
+scatterlines!(ax, nlist, e; label = "Data")
+lines!(ax, collect(extrema(nlist)), n -> n^-2.0; linestyle = :dash, label = "n^-2")
+axislegend(ax)
+fig

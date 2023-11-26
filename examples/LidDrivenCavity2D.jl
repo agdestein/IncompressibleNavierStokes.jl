@@ -23,7 +23,7 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 
 # Case name for saving results
-name = "LidDrivenCavity2D"
+output = "output/LidDrivenCavity2D"
 
 # The code allows for using different floating point number types, including single
 # precision (`Float32`) and double precision (`Float64`). On the CPU, the speed
@@ -92,12 +92,11 @@ setup = Setup(x, y; boundary_conditions, Re, ArrayType);
 # - [`SpectralPressureSolver`](@ref) (only for periodic boundary conditions and
 #   uniform grids)
 
-pressure_solver = CGPressureSolverManual(setup);
+pressure_solver = DirectPressureSolver(setup);
 
 # The initial conditions are provided in function. The value `dim()` determines
 # the velocity component.
 u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> zero(x); pressure_solver);
-u, p = u₀, p₀
 
 # ## Solve problems
 #
@@ -115,56 +114,46 @@ u, p = u₀, p₀
 # later returned by `solve_unsteady`.
 
 processors = (
-    rtp = realtimeplotter(;
-        setup,
-        plot = fieldplot,
-        ## plot = energy_history_plot,
-        ## plot = energy_spectrum_plot,
-        nupdate = 50,
-    ),
-    ## anim = animator(; setup, path = "vorticity.mkv", nupdate = 20),
-    ## vtk = vtk_writer(; setup, nupdate = 10, dir = "output/$name", filename = "solution"),
+    ## rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 50),
+    ## ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 10),
+    ## espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 10),
+    ## anim = animator(; setup, path = "$output/solution.mkv", nupdate = 20),
+    vtk = vtk_writer(; setup, nupdate = 100, dir = output, filename = "solution"),
     ## field = fieldsaver(; setup, nupdate = 10),
     log = timelogger(; nupdate = 1000),
 );
 
 # By default, a standard fourth order Runge-Kutta method is used. If we don't
 # provide the time step explicitly, an adaptive time step is used.
+tlims = (T(0), T(10.0))
 u, p, outputs =
-    solve_unsteady(setup, u, p, (T(0), T(0.1)); Δt = T(0.001), pressure_solver, processors);
+    solve_unsteady(setup, u₀, p₀, tlims; Δt = T(1e-3), pressure_solver, processors);
 
 # ## Post-process
 #
 # We may visualize or export the computed fields `(V, p)`
 
+state = (; u, p, t = tlims[end])
+
 # Export fields to VTK. The file `output/solution.vti` may be opened for
 # visualization in [ParaView](https://www.paraview.org/). This is particularly
 # useful for inspecting results from 3D simulations.
-save_vtk(setup, u, p, "output/solution")
+save_vtk(setup, u, p, "$output/solution")
 
 # Plot pressure
-plot_pressure(setup, p)
+fieldplot(state; setup, fieldname = :pressure)
 
 # Plot velocity. Note the time stamp used for computing boundary conditions, if
 # any.
-plot_velocity(setup, u)
+fieldplot(state; setup, fieldname = :velocity)
 
-# Plot vorticity (with custom levels)
-levels = [-7, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 7]
-plot_vorticity(setup, u; levels)
-
-# Plot streamfunction. Note the time stamp used for computing boundary
-# conditions, if any
-plot_streamfunction(setup, u)
+# Plot vorticity
+fieldplot(state; setup, fieldname = :vorticity)
 
 # In addition, the tuple `outputs` contains quantities from our processors.
-#
-# The [`field_plotter`](@ref) returns the field plot figure.
-outputs[1]
-
 # The [`vtk_writer`](@ref) returns the file name of the ParaView collection
 # file. This allows for visualizing the solution time series in ParaView.
-outputs[2]
+outputs.vtk
 
 # The logger returns nothing.
-outputs[3]
+outputs.log

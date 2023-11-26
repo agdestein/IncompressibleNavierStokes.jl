@@ -17,12 +17,18 @@ struct DirectPressureSolver{T,S,F,A} <: AbstractPressureSolver{T}
     p::A
     function DirectPressureSolver(setup)
         (; x, Np) = setup.grid
-        T = eltype(x[1])
+        # T = eltype(x[1])
+        T = Float64
         backend = get_backend(x[1])
-        f = KernelAbstractions.zeros(backend, T, prod(Np))
-        p = KernelAbstractions.zeros(backend, T, prod(Np))
+        # f = KernelAbstractions.zeros(backend, T, prod(Np))
+        # p = KernelAbstractions.zeros(backend, T, prod(Np))
+        f = zeros(T, prod(Np) + 1)
+        p = zeros(T, prod(Np) + 1)
         L = laplacian_mat(setup)
-        fact = lu(L)
+        e = ones(T, size(L, 2))
+        L = [L e; e' 0]
+        # fact = lu(L)
+        fact = factorize(L)
         new{T,typeof(setup),typeof(fact),typeof(f)}(setup, fact, f, p)
     end
 end

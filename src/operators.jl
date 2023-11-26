@@ -337,9 +337,6 @@ function laplacian_mat(setup)
     I0 = Ia - oneunit(Ia)
     for α = 1:D
         a, b = boundary_conditions[α]
-        # i = Ip[ntuple(β -> α == β ? (Ia[α]+1:Ib[α]-1) : (:), D)...][:]
-        # ia = Ip[ntuple(β -> α == β ? (Ia[α]:Ia[α]) : (:), D)...][:]
-        # ib = Ip[ntuple(β -> α == β ? (Ib[α]:Ib[α]) : (:), D)...][:]
         i = Ip[ntuple(β -> α == β ? (2:Np[α]-1) : (:), D)...][:]
         ia = Ip[ntuple(β -> α == β ? (1:1) : (:), D)...][:]
         ib = Ip[ntuple(β -> α == β ? (Np[α]:Np[α]) : (:), D)...][:]
@@ -347,26 +344,30 @@ function laplacian_mat(setup)
             ja = if isnothing(aa)
                 j .- δ(α)
             elseif aa isa PressureBC
-                error()
+                # The weight of the "left" BC is zero, but still needs a J inside Ip, so
+                # just set it to ia
+                ia
             elseif aa isa PeriodicBC
                 ib
             elseif aa isa SymmetricBC
                 ia
             elseif aa isa DirichletBC
-                # The weight of the "left" is zero, but still needs a J in Ip, so
+                # The weight of the "left" BC is zero, but still needs a J inside Ip, so
                 # just set it to ia
                 ia
             end
             jb = if isnothing(bb)
                 j .+ δ(α)
             elseif bb isa PressureBC
-                error()
+                # The weight of the "right" BC is zero, but still needs a J inside Ip, so
+                # just set it to ib
+                ib
             elseif bb isa PeriodicBC
                 ia
             elseif bb isa SymmetricBC
                 ib
             elseif bb isa DirichletBC
-                # The weight of the "right" bc is zero, but still needs a J in Ip, so
+                # The weight of the "right" BC is zero, but still needs a J inside Ip, so
                 # just set it to ib
                 ib
             end
@@ -406,7 +407,8 @@ function laplacian_mat(setup)
     # JJ = copyto!(KernelAbstractions.zeros(backend, Int, length(J)), J)
     # sparse(II, JJ, val)
 
-    Ω isa CuArray ? cu(L) : L
+    L
+    # Ω isa CuArray ? cu(L) : L
 end
 
 """
@@ -603,6 +605,61 @@ end
 Compute the ``Q``-field.
 """
 Qfield(u, setup) = Qfield!(
+    KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N),
+    u,
+    setup,
+)
+
+"""
+    eig2field!(λ, u, setup)
+
+Compute the second eigenvalue of ``S^2 + \\Omega^2``.
+"""
+function eig2field!(λ, u, setup)
+    (; boundary_conditions, grid) = setup
+    (; dimension, Np, Ip, Δ, Δu) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @assert D == 3 "eig2 only implemented in 3D"
+    @kernel function _eig2field!(λ, u, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        ∂x(uα, I, ::Val{α}, ::Val{β}, Δβ, Δuβ) where {α,β} =
+            α == β ? (uα[I] - uα[I-δ(β)]) / Δβ[I[β]] :
+            (
+                (uα[I+δ(β)] - uα[I]) / Δuβ[I[β]] +
+                (uα[I-δ(α)+δ(β)] - uα[I-δ(α)]) / Δuβ[I[β]] +
+                (uα[I] - uα[I-δ(β)]) / Δuβ[I[β]-1] +
+                (uα[I-δ(α)] - uα[I-δ(α)-δ(β)]) / Δuβ[I[β]-1]
+            ) / 4
+        ∇u = SMatrix{3,3,eltype(λ),9}(
+            ∂x(u[1], I, Val(1), Val(1), Δ[1], Δu[1]),
+            ∂x(u[2], I, Val(2), Val(1), Δ[1], Δu[1]),
+            ∂x(u[3], I, Val(3), Val(1), Δ[1], Δu[1]),
+            ∂x(u[1], I, Val(1), Val(2), Δ[2], Δu[2]),
+            ∂x(u[2], I, Val(2), Val(2), Δ[2], Δu[2]),
+            ∂x(u[3], I, Val(3), Val(2), Δ[2], Δu[2]),
+            ∂x(u[1], I, Val(1), Val(3), Δ[3], Δu[3]),
+            ∂x(u[2], I, Val(2), Val(3), Δ[3], Δu[3]),
+            ∂x(u[3], I, Val(3), Val(3), Δ[3], Δu[3]),
+        )
+        S = @. (∇u + ∇u') / 2
+        Ω = @. (∇u - ∇u') / 2
+        λ[I] = eigvals(S^2 + Ω^2)[2]
+    end
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    _eig2field!(get_backend(u[1]), WORKGROUP)(λ, u, I0; ndrange = Np)
+    # synchronize(get_backend(u[1]))
+    λ
+end
+
+"""
+    eig2field(u, setup)
+
+Compute the second eigenvalue of ``S^2 + \\Omega^2``.
+"""
+eig2field(u, setup) = eig2field!(
     KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N),
     u,
     setup,
