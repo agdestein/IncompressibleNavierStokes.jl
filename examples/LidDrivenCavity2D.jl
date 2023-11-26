@@ -132,7 +132,7 @@ u, p, outputs =
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(V, p)`
+# We may visualize or export the computed fields `(u, p)`
 
 state = (; u, p, t = tlims[end])
 
@@ -154,6 +154,7 @@ fieldplot(state; setup, fieldname = :vorticity)
 # In addition, the named tuple `outputs` contains quantities from our
 # processors.
 # The logger returns nothing.
+
 ## outputs.rtp
 ## outputs.ehist
 ## outputs.espec
