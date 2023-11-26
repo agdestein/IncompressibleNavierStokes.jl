@@ -1,3 +1,7 @@
+```@meta
+CurrentModule = IncompressibleNavierStokes
+```
+
 # Boundary conditions
 
 Each boundary has exactly one type of boundary conditions. For periodic
@@ -12,6 +16,6 @@ PressureBC
 ```
 
 ```@docs
-IncompressibleNavierStokes.offset_p
-IncompressibleNavierStokes.offset_u
+offset_p
+offset_u
 ```

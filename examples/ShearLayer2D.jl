@@ -40,7 +40,7 @@ n = 128
 lims = T(0), T(2π)
 x = LinRange(lims..., n + 1)
 y = LinRange(lims..., n + 1)
-plot_grid(x, y)
+plotgrid(x, y)
 
 # Build setup and assemble operators
 setup = Setup(x, y; Re, ArrayType);

@@ -1,3 +1,7 @@
+```@meta
+CurrentModule = IncompressibleNavierStokes
+```
+
 # Large eddy simulation
 
 Depending on the problem specification, a given grid resolution may not be

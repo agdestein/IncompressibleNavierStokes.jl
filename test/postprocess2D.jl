@@ -7,7 +7,7 @@
 
     setup = Setup(x, y)
 
-    @test plot_grid(x, y) isa Makie.FigureAxisPlot
+    @test plotgrid(x, y) isa Makie.FigureAxisPlot
 
     pressure_solver = SpectralPressureSolver(setup)
 

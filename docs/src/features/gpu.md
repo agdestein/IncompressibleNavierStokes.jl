@@ -8,12 +8,10 @@ Even if a GPU is not available, the operators are multithreaded if  Julia is sta
 
 Limitations:
 
-- [`DirectPressureSolver`](@ref) is currently not supported on the GPU. Use [`CGPressureSolver`](@ref) instead.
-- Unsteady boundary conditions are currently not supported on the GPU.
+- [`DirectPressureSolver`](@ref) is currently used on the CPU with double precision. [`CGPressureSolver`](@ref) works on the GPU.
 - This has not been tested with other GPU interfaces, such as
     - [AMDGPU.jl](https://github.com/JuliaGPU/AMDGPU.jl)
     - [Metal.jl](https://github.com/JuliaGPU/Metal.jl)
     - [oneAPI.jl](https://github.com/JuliaGPU/oneAPI.jl)
   If they start supporting sparse matrices and fast Fourier transforms they
-  could also be used. Alternatively, IncompressibleNavierStokes may also be
-  refactored to apply the operators without assembling any sparse arrays.
+  could also be used. 

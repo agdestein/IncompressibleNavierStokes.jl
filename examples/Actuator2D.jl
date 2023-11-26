@@ -28,7 +28,7 @@ name = "Actuator2D"
 n = 40
 x = LinRange(0.0, 10.0, 5n + 1)
 y = LinRange(-2.0, 2.0, 2n + 1)
-plot_grid(x, y)
+plotgrid(x, y)
 
 # Boundary conditions
 boundary_conditions = (

@@ -37,5 +37,7 @@ Dfield!
 Dfield
 Qfield!
 Qfield
+eig2field!
+eig2field
 kinetic_energy
 ```

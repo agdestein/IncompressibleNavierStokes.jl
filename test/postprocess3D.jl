@@ -10,7 +10,7 @@
     z = LinRange(lims..., n)
     setup = Setup(x, y, z)
 
-    @test plot_grid(x, y, z) isa Makie.Figure
+    @test plotgrid(x, y, z) isa Makie.Figure
 
     pressure_solver = SpectralPressureSolver(setup)
 

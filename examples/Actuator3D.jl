@@ -41,7 +41,7 @@ Re = T(100)
 x = LinRange(0.0, 6.0, 31)
 y = LinRange(-2.0, 2.0, 41)
 z = LinRange(-2.0, 2.0, 41)
-plot_grid(x, y, z)
+plotgrid(x, y, z)
 
 # Boundary conditions: Unsteady BC requires time derivatives
 boundary_conditions = (

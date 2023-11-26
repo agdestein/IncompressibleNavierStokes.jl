@@ -50,7 +50,7 @@ n = 64
 ## n = 256
 x = LinRange(0.0, 256.0, 4n)
 y = LinRange(-32.0, 32.0, n)
-plot_grid(x, y)
+plotgrid(x, y)
 
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions);

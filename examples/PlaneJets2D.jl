@@ -87,7 +87,7 @@ n = 64
 ## n = 256
 x = LinRange(T(0), T(16), 4n + 1)
 y = LinRange(-T(10), T(10), 5n + 1)
-plot_grid(x, y)
+plotgrid(x, y)
 
 # Build setup and assemble operators
 setup = Setup(x, y; Re, ArrayType);

@@ -1,3 +1,7 @@
+```@meta
+CurrentModule = IncompressibleNavierStokes
+```
+
 # Pressure solvers
 
 The discrete pressure Poisson equation

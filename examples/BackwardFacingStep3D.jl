@@ -42,7 +42,7 @@ Re = T(3000)
 x = LinRange(T(0), T(10), 129)
 y = LinRange(-T(0.5), T(0.5), 17)
 z = LinRange(-T(0.25), T(0.25), 9)
-plot_grid(x, y, z)
+plotgrid(x, y, z)
 
 # Boundary conditions: steady inflow on the top half
 U(dim, x, y, z, t) = dim() == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x)

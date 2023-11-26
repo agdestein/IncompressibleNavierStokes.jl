@@ -54,7 +54,7 @@ boundary_conditions = (
 # the walls.
 x = LinRange(T(0), T(10), 301)
 y = cosine_grid(-T(0.5), T(0.5), 51)
-plot_grid(x, y)
+plotgrid(x, y)
 
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions, ArrayType);

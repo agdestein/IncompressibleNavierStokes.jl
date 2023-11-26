@@ -33,12 +33,12 @@ output = "output/LidDrivenCavity2D"
 # scaled judiciously to avoid vanishing digits when applying differential
 # operators of the form "right minus left divided by small distance".
 
+# Note how floating point type hygiene is enforced in the following using `T`
+# to avoid mixing different precisions.
+
 T = Float64
 ## T = Float32
 ## T = Float16
-
-# Note how floating point type hygiene is enforced in the following using `T`
-# to avoid mixing different precisions.
 
 # We can also choose to do the computations on a different device. By default,
 # the computations are performed on the host (CPU). An optional `ArrayType`
@@ -78,7 +78,7 @@ n = 32
 lims = T(0), T(1)
 x = cosine_grid(lims..., n)
 y = cosine_grid(lims..., n)
-plot_grid(x, y)
+plotgrid(x, y)
 
 # We can now build the setup and assemble operators.
 # A 3D setup is built if we also provide a vector of z-coordinates.
@@ -105,6 +105,7 @@ u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> zero(x); pressure_s
 # The [`solve_steady_state`](@ref) function is for computing a state where the right hand side of the
 # momentum equation is zero.
 ## u, p = solve_steady_state(setup, u₀, p₀)
+nothing
 
 # For this test case, the same steady state may be obtained by solving an
 # unsteady problem for a sufficiently long time.
@@ -118,7 +119,7 @@ processors = (
     ## ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 10),
     ## espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 10),
     ## anim = animator(; setup, path = "$output/solution.mkv", nupdate = 20),
-    vtk = vtk_writer(; setup, nupdate = 100, dir = output, filename = "solution"),
+    ## vtk = vtk_writer(; setup, nupdate = 100, dir = output, filename = "solution"),
     ## field = fieldsaver(; setup, nupdate = 10),
     log = timelogger(; nupdate = 1000),
 );
@@ -150,10 +151,13 @@ fieldplot(state; setup, fieldname = :velocity)
 # Plot vorticity
 fieldplot(state; setup, fieldname = :vorticity)
 
-# In addition, the tuple `outputs` contains quantities from our processors.
-# The [`vtk_writer`](@ref) returns the file name of the ParaView collection
-# file. This allows for visualizing the solution time series in ParaView.
-outputs.vtk
-
+# In addition, the named tuple `outputs` contains quantities from our
+# processors.
 # The logger returns nothing.
+## outputs.rtp
+## outputs.ehist
+## outputs.espec
+## outputs.anim 
+## outputs.vtk
+## outputs.field
 outputs.log

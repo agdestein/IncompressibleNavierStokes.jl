@@ -36,7 +36,7 @@ Re = T(1_000)
 x = cosine_grid(T(0), T(1), 25)
 y = cosine_grid(T(0), T(1), 25)
 z = LinRange(-T(0.2), T(0.2), 11)
-plot_grid(x, y, z)
+plotgrid(x, y, z)
 
 # Boundary conditions: horizontal movement of the top lid
 U(dim, x, y, z, t) = dim() == 1 ? one(x) : dim() == 2 ? zero(x) : one(x) / 5

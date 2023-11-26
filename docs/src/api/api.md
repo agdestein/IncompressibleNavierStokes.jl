@@ -20,28 +20,6 @@ max_size
 stretched_grid
 ```
 
-## Convection Models
-
-```@docs
-AbstractConvectionModel
-NoRegConvectionModel
-C2ConvectionModel
-C4ConvectionModel
-LerayConvectionModel
-```
-
-## Postprocess
-
-```@docs
-plot_force
-plot_grid
-plot_pressure
-plot_streamfunction
-plot_velocity
-plot_vorticity
-save_vtk
-```
-
 ## Preprocess
 
 ```@docs
@@ -52,13 +30,14 @@ random_field
 ## Processors
 
 ```@docs
+processor
 timelogger
 vtk_writer
 fieldsaver
 realtimeplotter
 fieldplot
-energy_history_plotter
-energy_spectrum_plotter
+energy_history_plot
+energy_spectrum_plot
 animator
 ```
 
@@ -73,6 +52,8 @@ solve_steady_state
 ## Utils
 
 ```@docs
+save_vtk
+plotgrid
 get_lims
 plotmat
 ```

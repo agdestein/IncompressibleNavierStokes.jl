@@ -31,9 +31,6 @@ using CUDA
 # Let this be constant for now
 const WORKGROUP = 64
 
-# Convenience notation
-const ⊗ = kron
-
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
 
@@ -49,7 +46,6 @@ include("grid/max_size.jl")
 
 # Models
 include("models/viscosity_models.jl")
-include("models/convection_models.jl")
 
 # Setup
 include("setup.jl")
@@ -86,17 +82,10 @@ include("solvers/solve_steady_state.jl")
 include("solvers/solve_unsteady.jl")
 
 # Utils
+include("utils/plotgrid.jl")
+include("utils/save_vtk.jl")
 include("utils/get_lims.jl")
 include("utils/plotmat.jl")
-
-# Postprocess
-include("postprocess/plot_force.jl")
-include("postprocess/plot_grid.jl")
-include("postprocess/plot_pressure.jl")
-include("postprocess/plot_velocity.jl")
-include("postprocess/plot_vorticity.jl")
-include("postprocess/plot_streamfunction.jl")
-include("postprocess/save_vtk.jl")
 
 # Closure models
 include("closures/closure.jl")
@@ -109,8 +98,7 @@ include("closures/create_les_data.jl")
 export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
 
 # Models
-export AbstractViscosityModel, LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
-export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
+export LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
 
 # Processors
 export processor, timelogger, vtk_writer, fieldsaver, realtimeplotter
@@ -124,21 +112,14 @@ export Setup
 export stretched_grid, cosine_grid
 
 # Pressure solvers
-export AbstractPressureSolver,
-    DirectPressureSolver, CGPressureSolver, CGPressureSolverManual, SpectralPressureSolver
-export pressure_poisson,
-    pressure_poisson!, pressure_additional_solve, pressure_additional_solve!
+export DirectPressureSolver, CGPressureSolver, SpectralPressureSolver
 
-# Operators
-export momentum, divergence, pressuregradient, Dfield!, Qfield!
-
-# Problems
+# Solvers
 export solve_unsteady, solve_steady_state
 
 export create_initial_conditions, random_field
 
-export plot_force,
-    plot_grid, plot_pressure, plot_streamfunction, plot_velocity, plot_vorticity, save_vtk
+export plotgrid, save_vtk
 export plotmat
 
 # Closure models
@@ -151,9 +132,6 @@ export create_neural_closure
 # ODE methods
 
 export AdamsBashforthCrankNicolsonMethod, OneLegMethod
-
-# Runge Kutta methods
-export ExplicitRungeKuttaMethod, ImplicitRungeKuttaMethod, runge_kutta_method
 
 # Explicit Methods
 export FE11, SSP22, SSP42, SSP33, SSP43, SSP104, rSSPs2, rSSPs3, Wray3, RK56, DOPRI6

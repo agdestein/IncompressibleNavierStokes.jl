@@ -125,7 +125,7 @@ vtk_writer(;
 
 Create processor that stores the solution every `nupdate` time step to the vector of vectors `V` and `p`. The solution times are stored in the vector `t`.
 """
-field_saver(; setup, nupdate = 1) =
+fieldsaver(; setup, nupdate = 1) =
     processor() do state
         T = eltype(setup.grid.x[1])
         (; u, p) = state[]
