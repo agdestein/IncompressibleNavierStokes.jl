@@ -59,7 +59,7 @@ plotgrid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 
-pressure_solver = CGPressureSolverManual(setup);
+pressure_solver = CGPressureSolver(setup);
 
 # Initial conditions (extend inflow)
 u₀, p₀ =

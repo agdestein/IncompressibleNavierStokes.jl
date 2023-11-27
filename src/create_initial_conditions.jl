@@ -3,7 +3,7 @@
         setup,
         initial_velocity,
         t = 0;
-        pressure_solver = CGPressureSolverManual(setup),
+        pressure_solver = DirectPressureSolver(setup),
         project = true,
     )
 
