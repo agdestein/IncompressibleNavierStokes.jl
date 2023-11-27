@@ -296,6 +296,13 @@ function laplacian!(L, p, setup)
     L
 end
 
+"""
+    laplacian(p, setup)
+
+Compute Laplacian of pressure field.
+"""
+laplacian(p, setup) = laplacian!(similar(p), p, setup)
+
 function laplacian_mat(setup)
     (; grid, boundary_conditions) = setup
     (; dimension, x, N, Np, Ip, Δ, Δu, Ω) = grid
