@@ -41,43 +41,43 @@ Adapt.adapt_structure(to, s::DirectPressureSolver) = error(
     "`DirectPressureSolver` is not yet implemented for CUDA. Consider using `CGPressureSolver`.",
 )
 
+# """
+#     CGPressureSolver(setup; [abstol], [reltol], [maxiter])
+#
+# Conjugate gradients iterative pressure solver.
+# """
+# struct CGPressureSolver{T,M<:AbstractMatrix{T}} <: AbstractPressureSolver{T}
+#     A::M
+#     abstol::T
+#     reltol::T
+#     maxiter::Int
+# end
+
+# function CGPressureSolver(
+#     setup;
+#     abstol = 0,
+#     reltol = √eps(eltype(setup.operators.A)),
+#     maxiter = size(setup.operators.A, 2),
+# )
+#     (; A) = setup.operators
+#     CGPressureSolver{eltype(A),typeof(A)}(A, abstol, reltol, maxiter)
+# end
+
+# # This moves all the inner arrays to the GPU when calling
+# # `cu(::SpectralPressureSolver)` from CUDA.jl
+# Adapt.adapt_structure(to, s::CGPressureSolver) = CGPressureSolver(
+#     adapt(to, s.A),
+#     adapt(to, s.abstol),
+#     adapt(to, s.reltol),
+#     adapt(to, s.maxiter),
+# )
+
 """
     CGPressureSolver(setup; [abstol], [reltol], [maxiter])
 
 Conjugate gradients iterative pressure solver.
 """
-struct CGPressureSolver{T,M<:AbstractMatrix{T}} <: AbstractPressureSolver{T}
-    A::M
-    abstol::T
-    reltol::T
-    maxiter::Int
-end
-
-function CGPressureSolver(
-    setup;
-    abstol = 0,
-    reltol = √eps(eltype(setup.operators.A)),
-    maxiter = size(setup.operators.A, 2),
-)
-    (; A) = setup.operators
-    CGPressureSolver{eltype(A),typeof(A)}(A, abstol, reltol, maxiter)
-end
-
-# This moves all the inner arrays to the GPU when calling
-# `cu(::SpectralPressureSolver)` from CUDA.jl
-Adapt.adapt_structure(to, s::CGPressureSolver) = CGPressureSolver(
-    adapt(to, s.A),
-    adapt(to, s.abstol),
-    adapt(to, s.reltol),
-    adapt(to, s.maxiter),
-)
-
-"""
-    CGPressureSolverManual(setup; [abstol], [reltol], [maxiter])
-
-Conjugate gradients iterative pressure solver.
-"""
-struct CGPressureSolverManual{T,S,A,F} <: AbstractPressureSolver{T}
+struct CGPressureSolver{T,S,A,F} <: AbstractPressureSolver{T}
     setup::S
     abstol::T
     reltol::T
@@ -111,33 +111,21 @@ function create_laplace_diag(setup)
     end
 end
 
-CGPressureSolverManual(
+CGPressureSolver(
     setup;
     abstol = zero(eltype(setup.grid.x[1])),
     reltol = sqrt(eps(eltype(setup.grid.x[1]))),
     maxiter = prod(setup.grid.Np),
     # preconditioner = copy!,
     preconditioner = create_laplace_diag(setup),
-) = CGPressureSolverManual(
+) = CGPressureSolver(
     setup,
     abstol,
     reltol,
     maxiter,
-    KernelAbstractions.zeros(
-        get_backend(setup.grid.x[1]),
-        eltype(setup.grid.x[1]),
-        setup.grid.N,
-    ),
-    KernelAbstractions.zeros(
-        get_backend(setup.grid.x[1]),
-        eltype(setup.grid.x[1]),
-        setup.grid.N,
-    ),
-    KernelAbstractions.zeros(
-        get_backend(setup.grid.x[1]),
-        eltype(setup.grid.x[1]),
-        setup.grid.N,
-    ),
+    similar(setup.grid.x[1], setup.grid.N),
+    similar(setup.grid.x[1], setup.grid.N),
+    similar(setup.grid.x[1], setup.grid.N),
     preconditioner,
 )
 

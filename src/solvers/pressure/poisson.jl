@@ -41,12 +41,12 @@ function poisson!(solver::DirectPressureSolver, p, f)
     p
 end
 
-function poisson!(solver::CGPressureSolver, p, f)
-    (; A, abstol, reltol, maxiter) = solver
-    f = view(f, :)
-    p = view(p, :)
-    cg!(p, A, f; abstol, reltol, maxiter)
-end
+# function poisson!(solver::CGPressureSolver, p, f)
+#     (; A, abstol, reltol, maxiter) = solver
+#     f = view(f, :)
+#     p = view(p, :)
+#     cg!(p, A, f; abstol, reltol, maxiter)
+# end
 
 # Solve Lp = f
 # where Lp = Ω * div(pressurgrad(p))
@@ -58,7 +58,7 @@ end
 #
 # instead. This way, the matrix is still positive definite.
 # For initial guess, we already know the average is zero.
-function poisson!(solver::CGPressureSolverManual, p, f)
+function poisson!(solver::CGPressureSolver, p, f)
     (; setup, abstol, reltol, maxiter, r, L, q, preconditioner) = solver
     (; Np, Ip, Ω) = setup.grid
     T = typeof(reltol)
