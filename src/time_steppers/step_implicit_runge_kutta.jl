@@ -148,7 +148,7 @@ function timestep(method::ImplicitRungeKuttaMethod, stepper, Δt)
         V = @. V - Δtₙ / Ω * Gp
 
         if p_add_solve
-            p = pressure_additional_solve(
+            p = pressure(
                 pressure_solver,
                 V,
                 p,
@@ -163,7 +163,7 @@ function timestep(method::ImplicitRungeKuttaMethod, stepper, Δt)
     else
         # For steady BC we do an additional pressure solve
         # That saves a pressure solve for iter = 1 in the next time step
-        # pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+        # pressure!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
 
         # Standard method; take pressure of last stage
         p = pⱼ[(end-Np+1):end]
@@ -372,13 +372,13 @@ function timestep!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, moment
         f .= yM
         mul!(f, M, V, 1 / Δtₙ, 1 / Δtₙ)
         # f .= 1 / Δtₙ .* (M * V .+ yM)
-        pressure_poisson!(pressure_solver, p, f)
+        poisson!(pressure_solver, p, f)
 
         mul!(Gp, G, p)
         @. V -= Δtₙ / Ω * Gp
 
         if p_add_solve
-            pressure_additional_solve!(
+            pressure!(
                 pressure_solver,
                 V,
                 p,
@@ -397,7 +397,7 @@ function timestep!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, moment
     else
         # For steady BC we do an additional pressure solve
         # That saves a pressure solve for iter = 1 in the next time step
-        # pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+        # pressure!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
 
         # Standard method; take pressure of last stage
         p .= pⱼ[(end-Np+1):end]

@@ -103,7 +103,7 @@ for (i, n) in enumerate(ntest)
     pressure_solver = SpectralPressureSolver(setup)
     u = device.(data_test[i].u[1])
     u₀ = device(data_test[i].u[1][1])
-    p₀ = pressure_additional_solve(pressure_solver, u₀, T(0), setup)
+    p₀ = pressure(pressure_solver, u₀, T(0), setup)
     tlims = (T(0), params.tsim)
     (; Δt) = data_test[i]
     processors = (; relerr = relerr_track(u, setup))

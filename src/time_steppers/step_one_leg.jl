@@ -97,7 +97,7 @@ function timestep(method::OneLegMethod, stepper, Δt)
 
     # Alternatively, do an additional Poisson solve
     if p_add_solve
-        p = pressure_additional_solve(pressure_solver, V, p, tₙ + Δtₙ, setup; bc_vectors)
+        p = pressure(pressure_solver, V, p, tₙ + Δtₙ, setup; bc_vectors)
     end
 
     t = tₙ + Δtₙ
@@ -182,7 +182,7 @@ function timestep!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
     # f .= (M * V + yM) / Δtᵦ
 
     # Solve the Poisson equation for the pressure
-    pressure_poisson!(pressure_solver, Δp, f)
+    poisson!(pressure_solver, Δp, f)
     mul!(GΔp, G, Δp)
 
     # Update velocity field
@@ -193,7 +193,7 @@ function timestep!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
 
     # Alternatively, do an additional Poisson solve
     if p_add_solve
-        pressure_additional_solve!(
+        pressure!(
             pressure_solver,
             V,
             p,

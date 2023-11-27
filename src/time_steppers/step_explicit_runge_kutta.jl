@@ -73,7 +73,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
     t = t₀ + Δt
 
     # Do additional pressure solve to avoid first order pressure
-    p_add_solve && pressure_additional_solve!(pressure_solver, u, p, t, setup, F, G, M)
+    p_add_solve && pressure!(pressure_solver, u, p, t, setup, F, G, M)
 
     create_stepper(method; setup, pressure_solver, u, p, t, n = n + 1)
 end

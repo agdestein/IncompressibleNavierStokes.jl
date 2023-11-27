@@ -17,8 +17,8 @@ DirectPressureSolver
 CGPressureSolver
 CGPressureSolverManual
 SpectralPressureSolver
-pressure_additional_solve
-pressure_additional_solve!
+pressure
+pressure!
 poisson
-pressure_poisson!
+poisson!
 ```

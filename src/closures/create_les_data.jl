@@ -40,7 +40,7 @@ _filter_saver(dns, les, comp, pressure_solver; nupdate = 1) =
         F = zero.(state[].u)
         G = zero.(state[].u)
         Φu = zero.(face_average(state[].u, les, comp))
-        q = zero(pressure_additional_solve(pressure_solver, Φu, state[].t, les))
+        q = zero(pressure(pressure_solver, Φu, state[].t, les))
         M = zero(q)
         ΦF = zero.(Φu)
         FΦ = zero.(Φu)

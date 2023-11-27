@@ -138,7 +138,7 @@ function timestep(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     p = pₙ .+ Δp
 
     if p_add_solve
-        p = pressure_additional_solve(pressure_solver, V, p, tₙ + Δt, setup; bc_vectors)
+        p = pressure(pressure_solver, V, p, tₙ + Δt, setup; bc_vectors)
     end
 
     t = tₙ + Δtₙ
@@ -283,7 +283,7 @@ function timestep!(
     f = (M * V + yM) / Δt - M * y_Δp
 
     # Solve the Poisson equation for the pressure
-    pressure_poisson!(pressure_solver, Δp, f)
+    poisson!(pressure_solver, Δp, f)
 
     # Update velocity field
     V .-= Δt ./ Ω .* (G * Δp .+ y_Δp)
@@ -292,7 +292,7 @@ function timestep!(
     p .= pₙ .+ Δp
 
     if p_add_solve
-        pressure_additional_solve!(
+        pressure!(
             pressure_solver,
             V,
             p,

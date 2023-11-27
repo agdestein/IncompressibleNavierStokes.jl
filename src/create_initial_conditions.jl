@@ -52,7 +52,7 @@ function create_initial_conditions(
         end
     end
 
-    p = pressure_additional_solve(pressure_solver, u, t, setup)
+    p = pressure(pressure_solver, u, t, setup)
     apply_bc_p!(p, t, setup)
 
     # Initial conditions, including initial boundary condititions
@@ -121,14 +121,14 @@ function random_field(
     p = zero(M)
 
     # Make velocity field divergence free
-    pressure_poisson!(pressure_solver, p, M)
+    poisson!(pressure_solver, p, M)
     apply_bc_p!(p, t, setup)
     G = pressuregradient(p, setup)
     for α = 1:D
         @. u[α] -= G[α]
     end
     apply_bc_u!(u, t, setup)
-    p = pressure_additional_solve(pressure_solver, u, t, setup)
+    p = pressure(pressure_solver, u, t, setup)
     apply_bc_p!(p, t, setup)
 
     u, p

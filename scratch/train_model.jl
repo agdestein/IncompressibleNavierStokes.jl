@@ -197,7 +197,7 @@ relerr_track(uref, setup) =
 u, u₀, p₀ = nothing, nothing, nothing
 u = device.(data_test.u[1])
 u₀ = device(data_test.u[1][1])
-p₀ = pressure_additional_solve(pressure_solver, u₀, T(0), setup)
+p₀ = pressure(pressure_solver, u₀, T(0), setup)
 length(u)
 
 u_nm, p_nm, outputs = solve_unsteady(

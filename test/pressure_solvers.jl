@@ -16,7 +16,7 @@
     f = A * p_exact
 
     p_direct = poisson(direct, f)
-    p_cg = pressure_poisson(cg, f)
+    p_cg = poisson(cg, f)
     p_spectral = pressure_poisson(spectral, f)
 
     # Test that in-place and out-of-place versions give same result
