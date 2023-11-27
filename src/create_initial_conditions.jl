@@ -39,16 +39,8 @@ function create_initial_conditions(
 
     apply_bc_u!(u, t, setup)
 
-    # Kinetic energy and momentum of initial velocity field
-    # Iteration 1 corresponds to t₀ = 0 (for unsteady simulations)
-    maxdiv = maximum(abs, divergence(u, setup))
-
-    # TODO: Maybe eps(T)^(3//4)
-    if project && maxdiv > 1e-12
-        @warn "Initial velocity field not (discretely) divergence free: $maxdiv.\n" *
-              "Performing additional projection."
-
-        # Make velocity field divergence free
+    # Make velocity field divergence free
+    if project
         f = divergence(u, setup)
         @. f *= Ω
         Δp = pressure_poisson(pressure_solver, f)
