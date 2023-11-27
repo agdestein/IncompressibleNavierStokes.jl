@@ -20,6 +20,8 @@ using Optimisers
 using Random
 using Zygote
 
+set_theme!(; GLMakie = (; scalefactor = 1.5))
+
 # Floating point precision
 T = Float64
 
@@ -43,20 +45,20 @@ params = (;
     D = 2,
     Re = T(6_000),
     lims = (T(0), T(1)),
-    nles = 128,
+    nles = 64,
     compression = 8,
     tburn = T(0.05),
     tsim = T(0.2),
     Δt = T(1e-4),
     ArrayType,
     # ic_params = (; A = T(20_000_000), σ = T(5.0), s = T(3)),
-    ic_params = (; A = T(10_000_000)),
+    # ic_params = (; A = T(10_000_000)),
 )
 
 # Create LES data from DNS
 data_train = create_les_data(T; params..., nsim = 10);
 data_valid = create_les_data(T; params..., nsim = 1);
-data_test = create_les_data(T; params..., nsim = 5);
+data_test = create_les_data(T; params..., nsim = 1);
 
 # Inspect data
 isim = 1
@@ -87,9 +89,9 @@ pressure_solver = SpectralPressureSolver(setup);
 closure, θ₀ = cnn(;
     setup,
     radii = [2, 2, 2, 2],
-    channels = [32, 32, 32, params.D],
+    channels = [5, 5, 5, params.D],
     activations = [leakyrelu, leakyrelu, leakyrelu, identity],
-    bias = [true, true, true, false],
+    use_bias = [true, true, true, false],
 );
 closure.NN
 

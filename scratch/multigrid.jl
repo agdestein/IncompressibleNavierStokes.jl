@@ -20,6 +20,8 @@ using Optimisers
 using Random
 using Zygote
 
+set_theme!(; GLMakie = (; scalefactor = 1.5))
+
 # Floating point precision
 T = Float64
 
@@ -58,6 +60,7 @@ data_train = [create_les_data(T; get_params(nles)..., nsim = 5) for nles in [32,
 data_valid = [create_les_data(T; get_params(nles)..., nsim = 1) for nles in [128]];
 ntest = [8, 16, 32, 64, 128, 256, 512]
 data_test = [create_les_data(T; get_params(nles)..., nsim = 1) for nles in ntest];
+data_train = data_test
 
 # Inspect data
 g = 4
@@ -122,9 +125,10 @@ CairoMakie.activate!()
 
 # Plot convergence
 with_theme(;
-# linewidth = 5,
-# markersize = 20,
-# fontsize = 20,
+    # linewidth = 5,
+    # markersize = 20,
+    # fontsize = 20,
+    palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
 ) do
     fig = Figure()
     ax = Axis(
@@ -137,6 +141,7 @@ with_theme(;
     )
     scatterlines!(ntest, e_nm; label = "No closure")
     scatterlines!(ntest, e_cnn; label = "CNN")
+    scatterlines!(ntest, e_cnn_share; label = "CNN (shared parameters)")
     scatterlines!(ntest, e_fno_spec; label = "FNO (retrained)")
     scatterlines!(ntest, e_fno_share; label = "FNO (shared parameters)")
     lines!(collect(extrema(ntest)), n -> 100n^-2.0; linestyle = :dash, label = "n^-2")
@@ -173,9 +178,7 @@ closure.NN
 # closure.NN
 
 # Create input/output arrays
-io_train = create_io_arrays(data_train, setup);
-io_valid = create_io_arrays(data_valid, setup);
-io_test = create_io_arrays(data_test, setup);
+io_train = create_io_arrays(data_train[end], setup);
 
 size(io_train[1])
 
