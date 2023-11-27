@@ -148,14 +148,7 @@ function timestep(method::ImplicitRungeKuttaMethod, stepper, Δt)
         V = @. V - Δtₙ / Ω * Gp
 
         if p_add_solve
-            p = pressure(
-                pressure_solver,
-                V,
-                p,
-                tₙ + Δtₙ,
-                setup;
-                bc_vectors,
-            )
+            p = pressure(pressure_solver, V, p, tₙ + Δtₙ, setup; bc_vectors)
         else
             # Standard method; take last pressure
             p = pⱼ[(end-Np+1):end]
