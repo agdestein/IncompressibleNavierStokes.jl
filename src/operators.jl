@@ -634,5 +634,5 @@ function kinetic_energy(u, setup)
         # E += sum(I -> Ω[I] * up[α][I]^2, Ip)
         E += sum(Ω[Ip] .* up[α][Ip] .^ 2)
     end
-    sqrt(E)
+    E
 end
