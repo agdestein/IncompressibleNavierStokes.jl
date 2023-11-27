@@ -48,11 +48,7 @@ end
 
 Compute divergence of velocity field.
 """
-divergence(u, setup) = divergence!(
-    KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N...),
-    u,
-    setup,
-)
+divergence(u, setup) = divergence!(similar(u[1], setup.grid.N), u, setup)
 
 """
     vorticity(u, setup)
@@ -60,12 +56,8 @@ divergence(u, setup) = divergence!(
 Compute vorticity field.
 """
 vorticity(u, setup) = vorticity!(
-    setup.grid.dimension() == 2 ?
-    KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N) :
-    ntuple(
-        α -> KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N),
-        setup.grid.dimension(),
-    ),
+    length(u) == 2 ? similar(u[1], setup.grid.N) :
+    ntuple(α -> similar(u[1], setup.grid.N), length(u)),
     u,
     setup,
 )
@@ -268,10 +260,7 @@ end
 Compute pressure gradient.
 """
 pressuregradient(p, setup) = pressuregradient!(
-    ntuple(
-        α -> KernelAbstractions.zeros(get_backend(p), eltype(p), setup.grid.N),
-        setup.grid.dimension(),
-    ),
+    ntuple(α -> similar(p, setup.grid.N), setup.grid.dimension()),
     p,
     setup,
 )
@@ -403,14 +392,8 @@ end
 
 Interpolate velocity to pressure points.
 """
-interpolate_u_p(u, setup) = interpolate_u_p!(
-    ntuple(
-        α -> KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N),
-        setup.grid.dimension(),
-    ),
-    u,
-    setup,
-)
+interpolate_u_p(u, setup) =
+    interpolate_u_p!(ntuple(α -> similar(u[1], setup.grid.N), length(u)), u, setup)
 
 """
     interpolate_u_p!(up, u, setup)
@@ -441,12 +424,8 @@ end
 Interpolate vorticity to pressure points.
 """
 interpolate_ω_p(ω, setup) = interpolate_ω_p!(
-    setup.grid.dimension() == 2 ?
-    KernelAbstractions.zeros(get_backend(ω), eltype(ω), setup.grid.N) :
-    ntuple(
-        α -> KernelAbstractions.zeros(get_backend(ω[1]), eltype(ω[1]), setup.grid.N),
-        setup.grid.dimension(),
-    ),
+    setup.grid.dimension() == 2 ? similar(ω, setup.grid.N) :
+    ntuple(α -> similar(ω[1], setup.grid.N), length(ω)),
     ω,
     setup,
 )
@@ -546,10 +525,7 @@ Compute the ``D``-field.
 """
 Dfield(p, setup) = Dfield!(
     zero(p),
-    ntuple(
-        α -> KernelAbstractions.zeros(get_backend(p), eltype(p), setup.grid.N),
-        setup.grid.dimension(),
-    ),
+    ntuple(α -> similar(p, setup.grid.N), setup.grid.dimension()),
     p,
     setup,
 )
@@ -591,11 +567,7 @@ end
 
 Compute the ``Q``-field.
 """
-Qfield(u, setup) = Qfield!(
-    KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N),
-    u,
-    setup,
-)
+Qfield(u, setup) = Qfield!(similar(u[1], setup.grid.N), u, setup)
 
 """
     eig2field!(λ, u, setup)
@@ -645,11 +617,7 @@ end
 
 Compute the second eigenvalue of ``S^2 + \\Omega^2``.
 """
-eig2field(u, setup) = eig2field!(
-    KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N),
-    u,
-    setup,
-)
+eig2field(u, setup) = eig2field!(similar(u[1], setup.grid.N), u, setup)
 
 """
     kinetic_energy(setup, u)
