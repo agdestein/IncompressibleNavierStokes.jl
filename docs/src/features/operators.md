@@ -27,6 +27,7 @@ bodyforce!
 momentum!
 momentum
 laplacian!
+laplacian
 pressuregradient!
 pressuregradient
 interpolate_u_p

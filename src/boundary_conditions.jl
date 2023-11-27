@@ -112,6 +112,7 @@ function apply_bc_u!(u, t, setup; kwargs...)
         apply_bc_u!(boundary_conditions[β][1], u, β, t, setup; atend = false, kwargs...)
         apply_bc_u!(boundary_conditions[β][2], u, β, t, setup; atend = true, kwargs...)
     end
+    u
 end
 
 function apply_bc_p!(p, t, setup; kwargs...)
@@ -122,6 +123,7 @@ function apply_bc_p!(p, t, setup; kwargs...)
         apply_bc_p!(boundary_conditions[β][1], p, β, t, setup; atend = false)
         apply_bc_p!(boundary_conditions[β][2], p, β, t, setup; atend = true)
     end
+    p
 end
 
 function apply_bc_u!(::PeriodicBC, u, β, t, setup; atend, kwargs...)
@@ -145,6 +147,7 @@ function apply_bc_u!(::PeriodicBC, u, β, t, setup; atend, kwargs...)
             _bc_a!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β); ndrange)
         end
     end
+    u
 end
 
 function apply_bc_p!(::PeriodicBC, p, β, t, setup; atend, kwargs...)
@@ -166,6 +169,7 @@ function apply_bc_p!(::PeriodicBC, p, β, t, setup; atend, kwargs...)
     else
         _bc_a(get_backend(p), WORKGROUP)(p, Val(β); ndrange)
     end
+    p
 end
 
 function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwargs...)
@@ -193,6 +197,7 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwar
         )
         u[α][I] .= bcfunc.((Dimension(α),), xI..., t)
     end
+    u
 end
 
 function apply_bc_p!(::DirichletBC, p, β, t, setup; atend, kwargs...)
@@ -206,6 +211,7 @@ function apply_bc_p!(::DirichletBC, p, β, t, setup; atend, kwargs...)
         I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
         p[I] .= p[I.+δ(β)]
     end
+    p
 end
 
 function apply_bc_u!(::SymmetricBC, u, β, t, setup; atend, kwargs...)
@@ -223,6 +229,7 @@ function apply_bc_u!(::SymmetricBC, u, β, t, setup; atend, kwargs...)
             end
         end
     end
+    u
 end
 
 function apply_bc_p!(::SymmetricBC, p, β, t, setup; atend, kwargs...)
@@ -236,6 +243,7 @@ function apply_bc_p!(::SymmetricBC, p, β, t, setup; atend, kwargs...)
         I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
         p[I] .= p[I.+δ(β)]
     end
+    p
 end
 
 function apply_bc_u!(bc::PressureBC, u, β, t, setup; atend, kwargs...)
@@ -265,9 +273,10 @@ function apply_bc_u!(bc::PressureBC, u, β, t, setup; atend, kwargs...)
             _bc_a!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β), I0; ndrange)
         end
     end
+    u
 end
 
 function apply_bc_p!(bc::PressureBC, p, β, t, setup; atend, kwargs...)
     # p is already zero at boundary
-    nothing
+    p
 end
