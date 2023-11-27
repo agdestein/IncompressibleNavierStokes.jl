@@ -22,10 +22,14 @@ function divergence!(M, u, setup)
     (; Δ, N, Ip) = grid
     D = length(u)
     δ = Offset{D}()
-    @kernel function _divergence!(M, u, ::Val{α}, I0) where {α}
+    @kernel function _divergence!(M, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
-        M[I] += (u[α][I] - u[α][I-δ(α)]) / Δ[α][I[α]]
+        m = zero(eltype(M))
+        for α = 1:D
+            m += (u[α][I] - u[α][I-δ(α)]) / Δ[α][I[α]]
+        end
+        M[I] = m
     end
     # All volumes have a right velocity
     # All volumes have a left velocity except the first one
@@ -35,10 +39,7 @@ function divergence!(M, u, setup)
     # ndrange = Np
     # I0 = first(Ip)
     I0 -= oneunit(I0)
-    M .= 0
-    for α = 1:D
-        _divergence!(get_backend(M), WORKGROUP)(M, u, Val(α), I0; ndrange)
-    end
+    _divergence!(get_backend(M), WORKGROUP)(M, u, I0; ndrange)
     M
 end
 
@@ -98,21 +99,21 @@ function vorticity!(::Dimension{3}, ω, u, setup)
     (; dimension, Δu, N) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _vorticity!(ω, u, ::Val{α}, I0) where {α}
+    @kernel function _vorticity!(ω, u, I0)
         T = eltype(ω)
         I = @index(Global, Cartesian)
         I = I + I0
-        α₊ = mod1(α + 1, D)
-        α₋ = mod1(α - 1, D)
-        ω[α][I] =
-            (u[α₋][I+δ(α₊)] - u[α₋][I]) / Δu[α₊][I[α₊]] -
-            (u[α₊][I+δ(α₋)] - u[α₊][I]) / Δu[α₋][I[α₋]]
+        for (α, α₊, α₋) in ((1, 2, 3), (2, 3, 1), (3, 1, 2))
+            # α₊ = mod1(α + 1, D)
+            # α₋ = mod1(α - 1, D)
+            ω[α][I] =
+                (u[α₋][I+δ(α₊)] - u[α₋][I]) / Δu[α₊][I[α₊]] -
+                (u[α₊][I+δ(α₋)] - u[α₊][I]) / Δu[α₋][I[α₋]]
+        end
     end
     I0 = CartesianIndex(ntuple(Returns(1), D))
     I0 -= oneunit(I0)
-    for α = 1:D
-        _vorticity!(get_backend(ω[1]), WORKGROUP)(ω, u, Val(α), I0; ndrange = N .- 1)
-    end
+    _vorticity!(get_backend(ω[1]), WORKGROUP)(ω, u, I0; ndrange = N .- 1)
     ω
 end
 
@@ -126,29 +127,31 @@ function convection!(F, u, setup)
     (; dimension, Δ, Δu, Nu, Iu, A) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _convection!(F, u, ::Val{α}, ::Val{β}, I0) where {α,β}
+    @kernel function _convection!(F, u, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
         I = @index(Global, Cartesian)
         I = I + I0
-        Δuαβ = α == β ? Δu[β] : Δ[β]
-        uαβ1 = A[α][β][2][I[β]-1] * u[α][I-δ(β)] + A[α][β][1][I[β]] * u[α][I]
-        uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
-        uβα1 = A[β][α][2][I[α]-1] * u[β][I-δ(β)] + A[β][α][1][I[α]+1] * u[β][I-δ(β)+δ(α)]
-        uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]] * u[β][I+δ(α)]
-        F[α][I] -= (uαβ2 * uβα2 - uαβ1 * uβα1) / Δuαβ[I[β]]
+        # for β = 1:D
+        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+            Δuαβ = α == β ? Δu[β] : Δ[β]
+            uαβ1 = A[α][β][2][I[β]-1] * u[α][I-δ(β)] + A[α][β][1][I[β]] * u[α][I]
+            uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
+            uβα1 =
+                A[β][α][2][I[α]-1] * u[β][I-δ(β)] + A[β][α][1][I[α]+1] * u[β][I-δ(β)+δ(α)]
+            uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]] * u[β][I+δ(α)]
+            F[α][I] -= (uαβ2 * uβα2 - uαβ1 * uβα1) / Δuαβ[I[β]]
+        end
     end
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        for β = 1:D
-            _convection!(get_backend(F[1]), WORKGROUP)(
-                F,
-                u,
-                Val(α),
-                Val(β),
-                I0;
-                ndrange = Nu[α],
-            )
-        end
+        _convection!(get_backend(F[1]), WORKGROUP)(
+            F,
+            u,
+            Val(α),
+            Val(1:D),
+            I0;
+            ndrange = Nu[α],
+        )
     end
     F
 end
@@ -164,29 +167,30 @@ function diffusion!(F, u, setup)
     D = dimension()
     δ = Offset{D}()
     ν = 1 / Re
-    @kernel function _diffusion!(F, u, ::Val{α}, ::Val{β}, I0) where {α,β}
+    @kernel function _diffusion!(F, u, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
         I = @index(Global, Cartesian)
         I = I + I0
-        Δuαβ = (α == β ? Δu[β] : Δ[β])
-        F[α][I] +=
-            ν * (
-                (u[α][I+δ(β)] - u[α][I]) / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) -
-                (u[α][I] - u[α][I-δ(β)]) / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
-            ) / Δuαβ[I[β]]
+        # for β = 1:D
+        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+            Δuαβ = (α == β ? Δu[β] : Δ[β])
+            F[α][I] +=
+                ν * (
+                    (u[α][I+δ(β)] - u[α][I]) / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) -
+                    (u[α][I] - u[α][I-δ(β)]) / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
+                ) / Δuαβ[I[β]]
+        end
     end
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        for β = 1:D
-            _diffusion!(get_backend(F[1]), WORKGROUP)(
-                F,
-                u,
-                Val(α),
-                Val(β),
-                I0;
-                ndrange = Nu[α],
-            )
-        end
+        _diffusion!(get_backend(F[1]), WORKGROUP)(
+            F,
+            u,
+            Val(α),
+            Val(1:D),
+            I0;
+            ndrange = Nu[α],
+        )
     end
     F
 end
@@ -302,23 +306,24 @@ function laplacian!(L, p, setup)
     (; dimension, Δ, Δu, N, Np, Ip, Ω) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _laplacian!(L, p, ::Val{α}, I0) where {α}
+    @kernel function _laplacian!(L, p, I0)
         I = @index(Global, Cartesian)
         I = I + I0
-        L[I] +=
-            Ω[I] / Δ[α][I[α]] *
-            ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+        lap = zero(eltype(p))
+        for α = 1:D
+            lap +=
+                Ω[I] / Δ[α][I[α]] *
+                ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+        end
+        L[I] = lap
     end
-    L .= 0
     # All volumes have a right velocity
     # All volumes have a left velocity except the first one
     # Start at second volume
     ndrange = Np
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    for α = 1:D
-        _laplacian!(get_backend(L), WORKGROUP)(L, p, Val(α), I0; ndrange)
-    end
+    _laplacian!(get_backend(L), WORKGROUP)(L, p, I0; ndrange)
     L
 end
 
