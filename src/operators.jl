@@ -13,23 +13,23 @@ struct Offset{D} end
 (::Offset{D})(α) where {D} = CartesianIndex(ntuple(β -> β == α ? 1 : 0, D))
 
 """
-    divergence!(M, u, setup)
+    divergence!(div, u, setup)
 
 Compute divergence of velocity field (in-place version).
 """
-function divergence!(M, u, setup)
+function divergence!(div, u, setup)
     (; grid) = setup
     (; Δ, N, Ip) = grid
     D = length(u)
     δ = Offset{D}()
-    @kernel function _divergence!(M, u, I0)
+    @kernel function div!(div, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
-        m = zero(eltype(M))
+        d = zero(eltype(div))
         for α = 1:D
-            m += (u[α][I] - u[α][I-δ(α)]) / Δ[α][I[α]]
+            d += (u[α][I] - u[α][I-δ(α)]) / Δ[α][I[α]]
         end
-        M[I] = m
+        div[I] = d
     end
     # All volumes have a right velocity
     # All volumes have a left velocity except the first one
@@ -39,8 +39,8 @@ function divergence!(M, u, setup)
     # ndrange = Np
     # I0 = first(Ip)
     I0 -= oneunit(I0)
-    _divergence!(get_backend(M), WORKGROUP)(M, u, I0; ndrange)
-    M
+    div!(get_backend(div), WORKGROUP)(div, u, I0; ndrange)
+    div
 end
 
 """
@@ -82,7 +82,7 @@ function vorticity!(::Dimension{2}, ω, u, setup)
     (; dimension, Δu, N) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _vorticity!(ω, u, I0)
+    @kernel function ω!(ω, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
         ω[I] =
@@ -90,7 +90,7 @@ function vorticity!(::Dimension{2}, ω, u, setup)
     end
     I0 = CartesianIndex(ntuple(Returns(1), D))
     I0 -= oneunit(I0)
-    _vorticity!(get_backend(ω), WORKGROUP)(ω, u, I0; ndrange = N .- 1)
+    ω!(get_backend(ω), WORKGROUP)(ω, u, I0; ndrange = N .- 1)
     ω
 end
 
@@ -99,7 +99,7 @@ function vorticity!(::Dimension{3}, ω, u, setup)
     (; dimension, Δu, N) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _vorticity!(ω, u, I0)
+    @kernel function ω!(ω, u, I0)
         T = eltype(ω)
         I = @index(Global, Cartesian)
         I = I + I0
@@ -113,7 +113,7 @@ function vorticity!(::Dimension{3}, ω, u, setup)
     end
     I0 = CartesianIndex(ntuple(Returns(1), D))
     I0 -= oneunit(I0)
-    _vorticity!(get_backend(ω[1]), WORKGROUP)(ω, u, I0; ndrange = N .- 1)
+    ω!(get_backend(ω[1]), WORKGROUP)(ω, u, I0; ndrange = N .- 1)
     ω
 end
 
@@ -127,7 +127,7 @@ function convection!(F, u, setup)
     (; dimension, Δ, Δu, Nu, Iu, A) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _convection!(F, u, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
+    @kernel function conv!(F, u, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
         I = @index(Global, Cartesian)
         I = I + I0
         # for β = 1:D
@@ -144,14 +144,7 @@ function convection!(F, u, setup)
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        _convection!(get_backend(F[1]), WORKGROUP)(
-            F,
-            u,
-            Val(α),
-            Val(1:D),
-            I0;
-            ndrange = Nu[α],
-        )
+        conv!(get_backend(F[1]), WORKGROUP)(F, u, Val(α), Val(1:D), I0; ndrange = Nu[α])
     end
     F
 end
@@ -167,7 +160,7 @@ function diffusion!(F, u, setup)
     D = dimension()
     δ = Offset{D}()
     ν = 1 / Re
-    @kernel function _diffusion!(F, u, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
+    @kernel function diff!(F, u, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
         I = @index(Global, Cartesian)
         I = I + I0
         # for β = 1:D
@@ -183,14 +176,7 @@ function diffusion!(F, u, setup)
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        _diffusion!(get_backend(F[1]), WORKGROUP)(
-            F,
-            u,
-            Val(α),
-            Val(1:D),
-            I0;
-            ndrange = Nu[α],
-        )
+        diff!(get_backend(F[1]), WORKGROUP)(F, u, Val(α), Val(1:D), I0; ndrange = Nu[α])
     end
     F
 end
@@ -203,9 +189,10 @@ Compute body force.
 function bodyforce!(F, u, t, setup)
     (; grid, bodyforce) = setup
     (; dimension, Δ, Δu, Nu, Iu, x, xp) = grid
+    isnothing(bodyforce) && return F
     D = dimension()
     δ = Offset{D}()
-    @kernel function _bodyforce!(F, force, ::Val{α}, t, I0) where {α}
+    @kernel function f!(F, force, ::Val{α}, t, I0) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
         F[α][I] +=
@@ -214,14 +201,7 @@ function bodyforce!(F, u, t, setup)
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        isnothing(bodyforce) || _bodyforce!(get_backend(F[1]), WORKGROUP)(
-            F,
-            bodyforce,
-            Val(α),
-            t,
-            I0;
-            ndrange = Nu[α],
-        )
+        f!(get_backend(F[1]), WORKGROUP)(F, bodyforce, Val(α), t, I0; ndrange = Nu[α])
     end
     F
 end
@@ -268,7 +248,7 @@ function pressuregradient!(G, p, setup)
     (; dimension, Δu, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _pressuregradient!(G, p, ::Val{α}, I0) where {α}
+    @kernel function G!(G, p, ::Val{α}, I0) where {α}
         I = @index(Global, Cartesian)
         I = I0 + I
         G[α][I] = (p[I+δ(α)] - p[I]) / Δu[α][I[α]]
@@ -277,7 +257,7 @@ function pressuregradient!(G, p, setup)
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        _pressuregradient!(get_backend(G[1]), WORKGROUP)(G, p, Val(α), I0; ndrange = Nu[α])
+        G!(get_backend(G[1]), WORKGROUP)(G, p, Val(α), I0; ndrange = Nu[α])
     end
     G
 end
@@ -306,7 +286,7 @@ function laplacian!(L, p, setup)
     (; dimension, Δ, Δu, N, Np, Ip, Ω) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _laplacian!(L, p, I0)
+    @kernel function lap!(L, p, I0)
         I = @index(Global, Cartesian)
         I = I + I0
         lap = zero(eltype(p))
@@ -323,7 +303,7 @@ function laplacian!(L, p, setup)
     ndrange = Np
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    _laplacian!(get_backend(L), WORKGROUP)(L, p, I0; ndrange)
+    lap!(get_backend(L), WORKGROUP)(L, p, I0; ndrange)
     L
 end
 
@@ -442,7 +422,7 @@ function interpolate_u_p!(up, u, setup)
     (; dimension, Np, Ip) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _interpolate_u_p!(up, u, ::Val{α}, I0) where {α}
+    @kernel function int!(up, u, ::Val{α}, I0) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
         up[α][I] = (u[α][I-δ(α)] + u[α][I]) / 2
@@ -450,7 +430,7 @@ function interpolate_u_p!(up, u, setup)
     for α = 1:D
         I0 = first(Ip)
         I0 -= oneunit(I0)
-        _interpolate_u_p!(get_backend(up[1]), WORKGROUP)(up, u, Val(α), I0; ndrange = Np)
+        int!(get_backend(up[1]), WORKGROUP)(up, u, Val(α), I0; ndrange = Np)
     end
     up
 end
@@ -483,14 +463,14 @@ function interpolate_ω_p!(::Dimension{2}, ωp, ω, setup)
     (; dimension, Np, Ip) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _interpolate_ω_p!(ωp, ω, I0)
+    @kernel function int!(ωp, ω, I0)
         I = @index(Global, Cartesian)
         I = I + I0
         ωp[I] = (ω[I-δ(1)-δ(2)] + ω[I]) / 2
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    _interpolate_ω_p!(get_backend(ωp), WORKGROUP)(ωp, ω, I0; ndrange = Np)
+    int!(get_backend(ωp), WORKGROUP)(ωp, ω, I0; ndrange = Np)
     ωp
 end
 
@@ -499,7 +479,7 @@ function interpolate_ω_p!(::Dimension{3}, ωp, ω, setup)
     (; dimension, Np, Ip) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _interpolate_ω_p!(ωp, ω, ::Val{α}, I0) where {α}
+    @kernel function int!(ωp, ω, ::Val{α}, I0) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
         α₊ = mod1(α + 1, D)
@@ -509,7 +489,7 @@ function interpolate_ω_p!(::Dimension{3}, ωp, ω, setup)
     I0 = first(Ip)
     I0 -= oneunit(I0)
     for α = 1:D
-        _interpolate_ω_p!(get_backend(ωp[1]), WORKGROUP)(ωp, ω, Val(α), I0; ndrange = Np)
+        int!(get_backend(ωp[1]), WORKGROUP)(ωp, ω, Val(α), I0; ndrange = Np)
     end
     ωp
 end
@@ -529,7 +509,7 @@ function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
     T = eltype(p)
     D = dimension()
     δ = Offset{D}()
-    @kernel function _Dfield!(d, G, p, I0)
+    @kernel function D!(d, G, p, I0)
         I = @index(Global, Cartesian)
         I = I + I0
         g = zero(eltype(p))
@@ -555,7 +535,7 @@ function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
     pressuregradient!(G, p, setup)
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    _Dfield!(get_backend(p), WORKGROUP)(d, G, p, I0; ndrange = Np)
+    D!(get_backend(p), WORKGROUP)(d, G, p, I0; ndrange = Np)
     d
 end
 
@@ -589,7 +569,7 @@ function Qfield!(Q, u, setup; ϵ = eps(eltype(Q)))
     (; dimension, Np, Ip, Δ) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function _Qfield!(Q, u, I0)
+    @kernel function Q!(Q, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
         q = zero(eltype(Q))
@@ -602,7 +582,7 @@ function Qfield!(Q, u, setup; ϵ = eps(eltype(Q)))
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    _Qfield!(get_backend(u[1]), WORKGROUP)(Q, u, I0; ndrange = Np)
+    Q!(get_backend(u[1]), WORKGROUP)(Q, u, I0; ndrange = Np)
     Q
 end
 
@@ -628,7 +608,7 @@ function eig2field!(λ, u, setup)
     D = dimension()
     δ = Offset{D}()
     @assert D == 3 "eig2 only implemented in 3D"
-    @kernel function _eig2field!(λ, u, I0)
+    @kernel function λ!(λ, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
         ∂x(uα, I, ::Val{α}, ::Val{β}, Δβ, Δuβ) where {α,β} =
@@ -656,8 +636,7 @@ function eig2field!(λ, u, setup)
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    _eig2field!(get_backend(u[1]), WORKGROUP)(λ, u, I0; ndrange = Np)
-    # synchronize(get_backend(u[1]))
+    λ!(get_backend(u[1]), WORKGROUP)(λ, u, I0; ndrange = Np)
     λ
 end
 
