@@ -51,9 +51,9 @@ include("models/viscosity_models.jl")
 include("setup.jl")
 
 # Pressure solvers
-include("solvers/pressure/pressure_solvers.jl")
+include("solvers/pressure/solvers.jl")
 include("solvers/pressure/poisson.jl")
-include("solvers/pressure/pressure_additional_solve.jl")
+include("solvers/pressure/pressure.jl")
 
 # Time steppers
 include("time_steppers/methods.jl")
