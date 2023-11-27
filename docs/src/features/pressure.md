@@ -19,6 +19,6 @@ CGPressureSolverManual
 SpectralPressureSolver
 pressure_additional_solve
 pressure_additional_solve!
-pressure_poisson
+poisson
 pressure_poisson!
 ```

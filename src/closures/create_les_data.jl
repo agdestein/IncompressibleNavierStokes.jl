@@ -63,7 +63,7 @@ _filter_saver(dns, les, comp, pressure_solver; nupdate = 1) =
             divergence!(M, FΦ, les)
             @. M *= les.grid.Ω
 
-            pressure_poisson!(pressure_solver, q, M)
+            poisson!(pressure_solver, q, M)
             apply_bc_p!(q, t, les)
             pressuregradient!(GΦ, q, les)
             for α = 1:D

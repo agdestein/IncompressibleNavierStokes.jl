@@ -22,7 +22,7 @@ function pressure_additional_solve!(pressure_solver, u, p, t, setup, F, G, M)
     divergence!(M, F, setup)
     @. M *= Ω
 
-    pressure_poisson!(pressure_solver, p, M)
+    poisson!(pressure_solver, p, M)
     # dp = pressure_poisson(pressure_solver, M)
     # p .+= dp
     apply_bc_p!(p, t, setup)

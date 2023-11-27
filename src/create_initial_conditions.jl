@@ -43,7 +43,7 @@ function create_initial_conditions(
     if project
         f = divergence(u, setup)
         @. f *= Ω
-        Δp = pressure_poisson(pressure_solver, f)
+        Δp = poisson(pressure_solver, f)
         p .= Δp
         apply_bc_p!(p, t, setup)
         G = pressuregradient(p, setup)

@@ -55,7 +55,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
         @. M *= Ω / (c[i] * Δt)
 
         # Solve the Poisson equation
-        pressure_poisson!(pressure_solver, p, M)
+        poisson!(pressure_solver, p, M)
 
         # Compute pressure correction term
         apply_bc_p!(p, t, setup)

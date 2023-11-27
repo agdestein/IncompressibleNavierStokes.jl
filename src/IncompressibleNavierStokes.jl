@@ -52,7 +52,7 @@ include("setup.jl")
 
 # Pressure solvers
 include("solvers/pressure/pressure_solvers.jl")
-include("solvers/pressure/pressure_poisson.jl")
+include("solvers/pressure/poisson.jl")
 include("solvers/pressure/pressure_additional_solve.jl")
 
 # Time steppers

@@ -15,7 +15,7 @@
     p_exact = reshape(initial_pressure.(setup.grid.xpp, setup.grid.ypp), :)
     f = A * p_exact
 
-    p_direct = pressure_poisson(direct, f)
+    p_direct = poisson(direct, f)
     p_cg = pressure_poisson(cg, f)
     p_spectral = pressure_poisson(spectral, f)
 

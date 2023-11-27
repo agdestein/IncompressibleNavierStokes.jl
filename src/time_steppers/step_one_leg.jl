@@ -86,7 +86,7 @@ function timestep(method::OneLegMethod, stepper, Δt)
     f = (M * V + yM) / Δtᵦ
 
     # Solve the Poisson equation for the pressure
-    Δp = pressure_poisson(pressure_solver, f)
+    Δp = poisson(pressure_solver, f)
     GΔp = G * Δp
 
     # Update velocity field

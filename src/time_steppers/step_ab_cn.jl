@@ -129,7 +129,7 @@ function timestep(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     f = (M * V + yM) / Δt - M * y_Δp
 
     # Solve the Poisson equation for the pressure
-    Δp = pressure_poisson(pressure_solver, f)
+    Δp = poisson(pressure_solver, f)
 
     # Update velocity field
     V -= Δt ./ Ω .* (G * Δp .+ y_Δp)

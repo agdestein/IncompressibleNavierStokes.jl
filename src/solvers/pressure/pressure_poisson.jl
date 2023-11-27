@@ -1,30 +1,30 @@
 """
-    pressure_poisson(solver, f)
+    poisson(solver, f)
 
 Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
 For periodic and no-slip BC, the sum of `f` should be zero.
 
 Non-mutating/allocating/out-of-place version.
 
-See also [`pressure_poisson!`](@ref).
+See also [`poisson!`](@ref).
 """
-function pressure_poisson end
+function poisson end
 
-pressure_poisson(solver, f) = pressure_poisson!(solver, zero(f), f)
+poisson(solver, f) = poisson!(solver, zero(f), f)
 
 """
-    pressure_poisson!(solver, p, f)
+    poisson!(solver, p, f)
 
 Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
 For periodic and no-slip BC, the sum of `f` should be zero.
 
 Mutating/non-allocating/in-place version.
 
-See also [`pressure_poisson`](@ref).
+See also [`poisson`](@ref).
 """
-function pressure_poisson! end
+function poisson! end
 
-function pressure_poisson!(solver::DirectPressureSolver, p, f)
+function poisson!(solver::DirectPressureSolver, p, f)
     (; setup, fact) = solver
     (; Ip) = setup.grid
     T = eltype(p)
@@ -41,7 +41,7 @@ function pressure_poisson!(solver::DirectPressureSolver, p, f)
     p
 end
 
-function pressure_poisson!(solver::CGPressureSolver, p, f)
+function poisson!(solver::CGPressureSolver, p, f)
     (; A, abstol, reltol, maxiter) = solver
     f = view(f, :)
     p = view(p, :)
@@ -58,7 +58,7 @@ end
 #
 # instead. This way, the matrix is still positive definite.
 # For initial guess, we already know the average is zero.
-function pressure_poisson!(solver::CGPressureSolverManual, p, f)
+function poisson!(solver::CGPressureSolverManual, p, f)
     (; setup, abstol, reltol, maxiter, r, L, q, preconditioner) = solver
     (; Np, Ip, Ω) = setup.grid
     T = typeof(reltol)
@@ -131,7 +131,7 @@ function pressure_poisson!(solver::CGPressureSolverManual, p, f)
     p
 end
 
-function pressure_poisson!(solver::SpectralPressureSolver, p, f)
+function poisson!(solver::SpectralPressureSolver, p, f)
     (; setup, plan, Ahat, fhat, phat) = solver
     (; Ip) = setup.grid
 

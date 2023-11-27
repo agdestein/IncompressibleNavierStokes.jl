@@ -142,7 +142,7 @@ function timestep(method::ImplicitRungeKuttaMethod, stepper, Δt)
         (; yM) = bc_vectors
 
         f = 1 / Δtₙ .* (M * V .+ yM)
-        p = pressure_poisson!(pressure_solver, f)
+        p = poisson!(pressure_solver, f)
 
         mul!(Gp, G, p)
         V = @. V - Δtₙ / Ω * Gp
