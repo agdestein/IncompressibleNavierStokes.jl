@@ -173,6 +173,38 @@ function diffusion!(F, u, setup)
     F
 end
 
+function convectiondiffusion!(F, u, setup)
+    (; grid, Re) = setup
+    (; dimension, Δ, Δu, Nu, Iu, A) = grid
+    D = dimension()
+    δ = Offset{D}()
+    ν = 1 / Re
+    @kernel function cd!(F, u, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
+        I = @index(Global, Cartesian)
+        I = I + I0
+        # for β = 1:D
+        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+            Δuαβ = α == β ? Δu[β] : Δ[β]
+            uαβ1 = A[α][β][2][I[β]-1] * u[α][I-δ(β)] + A[α][β][1][I[β]] * u[α][I]
+            uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
+            uβα1 =
+                A[β][α][2][I[α]-1] * u[β][I-δ(β)] + A[β][α][1][I[α]+1] * u[β][I-δ(β)+δ(α)]
+            uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]] * u[β][I+δ(α)]
+            uαuβ1 = uαβ1 * uβα1
+            uαuβ2 = uαβ2 * uβα2
+            ∂βuα1 = (u[α][I] - u[α][I-δ(β)]) / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
+            ∂βuα2 = (u[α][I+δ(β)] - u[α][I]) / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
+            F[α][I] += (ν * (∂βuα2 - ∂βuα1) - (uαuβ2 - uαuβ1)) / Δuαβ[I[β]]
+        end
+    end
+    for α = 1:D
+        I0 = first(Iu[α])
+        I0 -= oneunit(I0)
+        cd!(get_backend(F[1]), WORKGROUP)(F, u, Val(α), Val(1:D), I0; ndrange = Nu[α])
+    end
+    F
+end
+
 """
     bodyforce!(F, u, setup)
 
@@ -211,8 +243,9 @@ function momentum!(F, u, t, setup)
     for α = 1:D
         F[α] .= 0
     end
-    diffusion!(F, u, setup)
-    convection!(F, u, setup)
+    # diffusion!(F, u, setup)
+    # convection!(F, u, setup)
+    convectiondiffusion!(F, u, setup)
     bodyforce!(F, u, t, setup)
     if !isnothing(closure_model)
         m = closure_model(u)
