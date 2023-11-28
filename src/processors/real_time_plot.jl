@@ -107,8 +107,7 @@ function fieldplot(
         p
     end
     _f = Array(_f)[Ip]
-    field = @lift begin
-        (; u, p, t) = $state
+    field = lift(state) do (; u, p, t)
         f = if fieldname == :velocity
             interpolate_u_p!(up, u, setup)
             map((u, v) -> √sum(u^2 + v^2), up...)
@@ -126,8 +125,7 @@ function fieldplot(
         copyto!(_f, view(f, Ip))
     end
 
-    lims = @lift begin
-        f = $field
+    lims = lift(field) do f
         if type ∈ (heatmap, image)
             lims = get_lims(f)
         elseif type ∈ (contour, contourf)
@@ -190,29 +188,23 @@ function fieldplot(
     (; xlims, x, xp, Ip) = grid
 
     xf = Array.(getindex.(setup.grid.xp, Ip.indices))
+    (; u, p) = state[]
     if fieldname == :velocity
     elseif fieldname == :vorticity
     elseif fieldname == :streamfunction
     elseif fieldname == :pressure
     elseif fieldname == :Dfield
-        p = state[].p
-        d = KernelAbstractions.zeros(get_backend(p), eltype(p), setup.grid.N)
-        G = ntuple(
-            α -> KernelAbstractions.zeros(get_backend(p), eltype(p), setup.grid.N),
-            setup.grid.dimension(),
-        )
+        G = similar.(state[].u)
+        d = similar(state[].p)
     elseif fieldname == :Qfield
-        u = state[].u
-        Q = KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N)
+        Q = similar(state[].p)
     elseif fieldname == :eig2field
-        u = state[].u
-        λ = KernelAbstractions.zeros(get_backend(u[1]), eltype(u[1]), setup.grid.N)
+        λ = similar(state[].p)
     else
         error("Unknown fieldname")
     end
 
-    field = @lift begin
-        (; u, p, t) = $state
+    field = lift(state) do (; u, p, t)
         f = if fieldname == :velocity
             up = interpolate_u_p(u, setup)
             map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
@@ -222,7 +214,7 @@ function fieldplot(
         elseif fieldname == :streamfunction
             get_streamfunction(setup, u, t)
         elseif fieldname == :pressure
-            reshape(copy(p), length(xp), length(yp), length(zp))
+            p
         elseif fieldname == :Dfield
             Dfield!(d, G, p, setup)
             d
@@ -237,7 +229,7 @@ function fieldplot(
     end
 
     # lims = @lift get_lims($field)
-    lims = isnothing(levels) ? @lift(get_lims($field)) : extrema(levels)
+    lims = isnothing(levels) ? lift(get_lims, field) : extrema(levels)
 
     isnothing(levels) && (levels = @lift(LinRange($(lims)..., 10)))
 
@@ -272,8 +264,7 @@ Create energy history plot.
 function energy_history_plot(state; setup)
     @assert state isa Observable "Energy history requires observable state."
     _points = Point2f[]
-    points = @lift begin
-        (; u, p, t) = $state
+    points = lift(state) do (; u, p, t)
         E = kinetic_energy(u, setup)
         push!(_points, Point2f(t, E))
     end
@@ -296,7 +287,7 @@ function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
     D = dimension()
     K = size(Ip) .÷ 2
     kx = ntuple(α -> 1:K[α]-1, D)
-    k = KernelAbstractions.zeros(backend, T, length.(kx)...)
+    k = KernelAbstractions.zeros(backend, T, length.(kx))
     for α = 1:D
         kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
         k .+= kα .^ 2
@@ -318,8 +309,7 @@ function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
     k = Array(A * k)
 
     up = interpolate_u_p(state[].u, setup)
-    ehat = @lift begin
-        (; u, p, t) = $state
+    ehat = lift(state) do (; u, p, t)
         interpolate_u_p!(up, u, setup)
         e = sum(up -> up[Ip] .^ 2, up)
         Array(A * reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]) ./ size(e, 1), :))
@@ -328,8 +318,8 @@ function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
     # Build inertial slope above energy
     krange = LinRange(extrema(k)..., 100)
     slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
-    inertia = @lift begin
-        slopeconst = maximum($ehat ./ k .^ slope)
+    inertia = lift(ehat) do ehat
+        slopeconst = maximum(ehat ./ k .^ slope)
         2 .* slopeconst .* krange .^ slope
     end
 

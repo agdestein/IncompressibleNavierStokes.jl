@@ -112,9 +112,9 @@ function poisson!(solver::CGPressureSolver, p, f)
         apply_bc_p!(q, T(0), setup)
         laplacian!(L, q, setup)
         # α = ρ / sum(q[Ip] .* L[Ip])
-        # α = ρ / dot(view(q, Ip), view(L, Ip))
+        α = ρ / dot(view(q, Ip), view(L, Ip))
         # α = ρ / innerdot(q, L)
-        α = ρ / dot(q, L)
+        # α = ρ / dot(q, L)
 
         p .+= α .* q
         r .-= α .* L

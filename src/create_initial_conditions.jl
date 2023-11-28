@@ -24,9 +24,8 @@ function create_initial_conditions(
     T = eltype(x[1])
     D = dimension()
 
-    # Allocate velocity and pressure
-    u = ntuple(d -> KernelAbstractions.zeros(get_backend(x[1]), T, N...), D)
-    p = KernelAbstractions.zeros(get_backend(x[1]), T, N...)
+    # Allocate velocity
+    u = ntuple(d -> similar(x[1], N), D)
 
     # Initial velocities
     for α = 1:D
@@ -43,14 +42,14 @@ function create_initial_conditions(
     if project
         f = divergence(u, setup)
         @. f *= Ω
-        Δp = poisson(pressure_solver, f)
-        p .= Δp
+        p = poisson(pressure_solver, f)
         apply_bc_p!(p, t, setup)
         G = pressuregradient(p, setup)
         for α = 1:D
             u[α] .-= G[α]
         end
     end
+    apply_bc_u!(u, t, setup)
 
     p = pressure(pressure_solver, u, t, setup)
     apply_bc_p!(p, t, setup)
@@ -109,25 +108,26 @@ function random_field(
     pressure_solver = DirectPressureSolver(setup),
 )
     (; dimension, x, N, Ip, Ω) = setup.grid
-
     D = dimension()
     T = eltype(x[1])
     backend = get_backend(x[1])
 
+    # Create random velocity field
     u = ntuple(α -> real.(ifft(create_spectrum(N; A, σ, s, backend))), D)
     apply_bc_u!(u, t, setup)
-    M = divergence(u, setup)
-    @. M *= Ω
-    p = zero(M)
 
     # Make velocity field divergence free
-    poisson!(pressure_solver, p, M)
+    M = divergence(u, setup)
+    @. M *= Ω
+    p = poisson(pressure_solver, M)
     apply_bc_p!(p, t, setup)
     G = pressuregradient(p, setup)
     for α = 1:D
         @. u[α] -= G[α]
     end
     apply_bc_u!(u, t, setup)
+
+    # Compute pressure
     p = pressure(pressure_solver, u, t, setup)
     apply_bc_p!(p, t, setup)
 
