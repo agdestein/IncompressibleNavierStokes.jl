@@ -23,11 +23,12 @@ CFL-number `cfl` .
 
 The `processors` are called after every time step.
 
-Return a named tuple with the outputs of `processors` with the same field names.
-
 Note that the `state` observable passed to the `processor.initialize` function
 contains vector living on the device, and you may have to move them back to
 the host using `Array(u)` and `Array(p)` in the processor.
+
+Return `(; u, p, t), outputs`, where `outputs` is a  named tuple with the
+outputs of `processors` with the same field names.
 """
 function solve_unsteady(
     setup,
@@ -91,15 +92,16 @@ function solve_unsteady(
         state[] = get_state(stepper)
     end
 
-    finalized = (;
+    # Final state
+    (; u, p, t) = stepper
+
+    # Processor outputs
+    outputs = (;
         (k => processors[k].finalize(initialized[k], state) for k in keys(processors))...
     )
 
-    # Final state
-    (; u, p) = stepper
-
-    # Move output arrays to host
-    u, p, finalized
+    # Return state and outputs
+    (; u, p, t), outputs
 end
 
 function get_state(stepper)

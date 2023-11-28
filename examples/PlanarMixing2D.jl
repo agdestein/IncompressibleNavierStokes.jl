@@ -19,8 +19,8 @@ end                                                 #src
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-# Case name for saving results
-name = "PlanarMixing2D"
+# Output directory
+output = "output/PlanarMixing2D"
 
 # Viscosity model
 Re = 500.0
@@ -59,7 +59,7 @@ setup = Setup(x, y; Re, boundary_conditions);
 u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, 0.0));
 
 # Solve unsteady problem
-u, p, outputs = solve_unsteady(
+state, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
@@ -74,8 +74,8 @@ u, p, outputs = solve_unsteady(
             ## plot = energy_spectrum_plot,
             nupdate = 1,
         ),
-        ## anim = animator(; setup, path = "vorticity.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "output/$name", filename = "solution"),
+        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 1),
     ),
@@ -85,19 +85,7 @@ u, p, outputs = solve_unsteady(
 #
 # We may visualize or export the computed fields `(u, p)`
 
-outputs[1]
+outputs.rtp
 
 # Export to VTK
-save_vtk(setup, u, p, "output/solution")
-
-# Plot pressure
-plot_pressure(setup, p)
-
-# Plot velocity
-plot_velocity(setup, u)
-
-# Plot vorticity
-plot_vorticity(setup, u)
-
-# Plot streamfunction
-plot_streamfunction(setup, u)
+save_vtk(setup, state.u, state.p, "$output/solution")

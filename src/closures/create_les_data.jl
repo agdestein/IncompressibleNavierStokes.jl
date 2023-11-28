@@ -161,7 +161,7 @@ function create_les_data(
 
         # Solve burn-in DNS
         @info "Burn-in for simulation $isim of $nsim"
-        u, p, outputs = solve_unsteady(
+        (; u, p, t), outputs = solve_unsteady(
             _dns,
             u₀,
             p₀,
@@ -173,7 +173,7 @@ function create_les_data(
 
         # Solve DNS and store filtered quantities
         @info "Solving DNS for simulation $isim of $nsim"
-        u, p, outputs = solve_unsteady(
+        (; u, p, t), outputs = solve_unsteady(
             _dns,
             u,
             p,

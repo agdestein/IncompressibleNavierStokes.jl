@@ -22,8 +22,8 @@ end                                                 #src
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-# Case name for saving results
-name = "BackwardFacingStep2D"
+# Output directory
+output = "output/BackwardFacingStep2D"
 
 # Floating point type
 T = Float64
@@ -64,7 +64,6 @@ pressure_solver = CGPressureSolver(setup);
 # Initial conditions (extend inflow)
 u₀, p₀ =
     create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)); pressure_solver);
-u, p = copy.(u₀), copy(p₀)
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);
@@ -74,7 +73,6 @@ u, p, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
-    # u, p,
     (T(0), T(7));
     Δt = T(0.002),
     pressure_solver,
@@ -86,8 +84,8 @@ u, p, outputs = solve_unsteady(
             ## plot = energy_spectrum_plot,
             nupdate = 1,
         ),
-        ## anim = animator(; setup, path = "vorticity.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "output/$name", filename = "solution"),
+        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 1),
     ),
@@ -95,19 +93,16 @@ u, p, outputs = solve_unsteady(
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(V, p)`
+# We may visualize or export the computed fields
 
 # Export to VTK
-save_vtk(setup, u, p, "output/solution")
+save_vtk(setup, state.u, state.p, "$output/solution")
 
 # Plot pressure
-plot_pressure(setup, p)
+fieldplot(state; setup, fieldname = :pressure)
 
 # Plot velocity
-plot_velocity(setup, u)
+fieldplot(state; setup, fieldname = :velocity)
 
 # Plot vorticity
-plot_vorticity(setup, u)
-
-# Plot streamfunction
-plot_streamfunction(setup, u)
+fieldplot(state; setup, fieldname = :vorticity)

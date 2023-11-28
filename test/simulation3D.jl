@@ -28,27 +28,27 @@
     )
 
     @testset "Steady state problem" begin
-        V, p = solve_steady_state(setup, V₀, p₀)
+        u, p = solve_steady_state(setup, V₀, p₀)
 
         # Check that solution did not explode
-        @test all(!isnan, V)
+        @test all(!isnan, u)
         @test all(!isnan, p)
 
         # Check that the average velocity is smaller than the lid velocity
-        @test sum(abs, V) / length(V) < norm(lid_vel)
+        @test sum(abs, u) / length(u) < norm(lid_vel)
     end
 
     # Iteration processors
     processors = (timelogger(),)
 
     @testset "Unsteady problem" begin
-        V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors)
+        (; u, p, t), outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors)
 
         # Check that solution did not explode
-        @test all(!isnan, V)
+        @test all(!isnan, u)
         @test all(!isnan, p)
 
         # Check that the average velocity is smaller than the lid velocity
-        @test sum(abs, V) / length(V) < norm(lid_vel)
+        @test sum(abs, u) / length(u) < norm(lid_vel)
     end
 end

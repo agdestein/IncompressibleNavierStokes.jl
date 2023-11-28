@@ -51,7 +51,7 @@ pressure_solver = SpectralPressureSolver(setup);
 u₀, p₀ = random_field(setup; pressure_solver);
 
 # Solve unsteady problem
-u, p, outputs = solve_unsteady(
+(; u, p, t), outputs = solve_unsteady(
     setup,
     u₀,
     p₀,

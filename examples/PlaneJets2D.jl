@@ -22,8 +22,8 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 using LaTeXStrings
 
-# Case name for saving results
-name = "PlaneJets2D"
+# Output directory
+output = "output/PlaneJets2D"
 
 # Floating point type
 T = Float64
@@ -163,7 +163,7 @@ function meanplot(; setup, state)
 end
 
 # Solve unsteady problem
-toto, p, outputs = solve_unsteady(
+state, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
@@ -174,14 +174,14 @@ toto, p, outputs = solve_unsteady(
     processors = (
         rtp = realtimeplotter(;
             setup,
-            ## plot = fieldplot,
-            ## plot = energy_history_plot,
-            ## plot = energy_spectrum_plot,
+            # plot = fieldplot,
+            # plot = energy_history_plot,
+            # plot = energy_spectrum_plot,
             plot = meanplot,
             nupdate = 1,
         ),
-        ## anim = animator(; setup, path = "vorticity.mkv", nupdate = 4),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "output/$name", filename = "solution"),
+        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 4),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 1),
     ),
@@ -194,17 +194,14 @@ toto, p, outputs = solve_unsteady(
 outputs.rtp
 
 # Export to VTK
-save_vtk(setup, toto, p, "output/solution")
+save_vtk(setup, state.u, state.p, "$output/solution")
 
 # Plot pressure
-plot_pressure(setup, p)
+fieldplot(state; setup, fieldname = :pressure)
 
 # Plot velocity
-plot_velocity(setup, u₀)
-plot_velocity(setup, toto)
+fieldplot((; u = u₀, p = p₀, t = T(0)); setup, fieldname = :velocity)
+fieldplot(state; setup, fieldname = :velocity)
 
 # Plot vorticity
-plot_vorticity(setup, toto)
-
-# Plot stream function
-plot_streamfunction(setup, toto)
+fieldplot(state; setup, fieldname = :vorticity)

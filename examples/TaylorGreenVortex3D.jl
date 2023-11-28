@@ -53,7 +53,7 @@ u₀, p₀ = create_initial_conditions(
 );
 
 # Solve unsteady problem
-u, p, outputs = solve_unsteady(
+(; u, p, t), outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
@@ -78,7 +78,7 @@ u, p, outputs = solve_unsteady(
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(u, p)`
+# We may visualize or export the computed fields
 
 # Energy history
 outputs.ehist

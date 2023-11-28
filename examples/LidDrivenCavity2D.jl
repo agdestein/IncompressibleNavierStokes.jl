@@ -128,19 +128,17 @@ processors = (
 # By default, a standard fourth order Runge-Kutta method is used. If we don't
 # provide the time step explicitly, an adaptive time step is used.
 tlims = (T(0), T(10))
-u, p, outputs =
+state, outputs =
     solve_unsteady(setup, u₀, p₀, tlims; Δt = T(1e-3), pressure_solver, processors);
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(u, p)`
-
-state = (; u, p, t = tlims[end])
+# We may visualize or export the computed fields
 
 # Export fields to VTK. The file `output/solution.vti` may be opened for
 # visualization in [ParaView](https://www.paraview.org/). This is particularly
 # useful for inspecting results from 3D simulations.
-save_vtk(setup, u, p, "$output/solution")
+save_vtk(setup, state.u, state.p, "$output/solution")
 
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)

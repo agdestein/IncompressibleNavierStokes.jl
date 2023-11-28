@@ -49,7 +49,7 @@ pressure_solver = SpectralPressureSolver(setup);
 u₀, p₀ = random_field(setup, T(0); pressure_solver);
 
 # Solve unsteady problem
-u, p, outputs = solve_unsteady(
+state, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
@@ -76,8 +76,6 @@ u, p, outputs = solve_unsteady(
 #
 # We may visualize or export the computed fields `(u, p)`
 
-state = (; u, p, t = T(1));
-
 # Energy history
 outputs.ehist
 
@@ -85,7 +83,7 @@ outputs.ehist
 outputs.espec
 
 # Export to VTK
-save_vtk(setup, u, p, "$output/solution")
+save_vtk(setup, state.u, state.p, "$output/solution")
 
 # Plot field
 fieldplot(state; setup)

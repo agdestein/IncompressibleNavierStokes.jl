@@ -95,12 +95,12 @@ setup = Setup(x, y; Re = 100.0, boundary_conditions, bodyforce);
 u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0);
 
 # Solve unsteady Navier-Stokes equations
-u, p, outputs = solve_unsteady(
+solve_unsteady(
     setup, u₀, p₀, (0.0, 12.0);
     Δt = 0.05,
     processors = (
-        animator(setup, "vorticity.mp4"; nupdate = 4),
-        timelogger(),
+        anim = animator(; setup, path ="vorticity.mp4", nupdate = 4),
+        log = timelogger(),
     ),
 )
 ```

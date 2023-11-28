@@ -44,7 +44,7 @@
     @testset "Unsteady solvers" begin
         @testset "Explicit Runge Kutta" begin
             @info "Testing explicit Runge-Kutta, out-of-place version"
-            V, p, outputs = solve_unsteady(
+            state, outputs = solve_unsteady(
                 setup,
                 V₀,
                 p₀,
@@ -53,9 +53,9 @@
                 pressure_solver,
                 inplace = false,
             )
-            @test norm(V - V_exact) / norm(V_exact) < 1e-4
+            @test norm(state.u - u_exact) / norm(u_exact) < 1e-4
             @info "Testing explicit Runge-Kutta, in-place version"
-            Vip, pip, outputsip = solve_unsteady(
+            stateip, outputsip = solve_unsteady(
                 setup,
                 V₀,
                 p₀,
@@ -64,8 +64,8 @@
                 pressure_solver,
                 inplace = true,
             )
-            @test Vip ≈ V
-            @test pip ≈ p
+            @test stateip.u ≈ state.u
+            @test stateip.p ≈ state.p
         end
 
         @testset "Implicit Runge Kutta" begin
@@ -81,7 +81,7 @@
                 inplace = false,
             ) isa Tuple
             @info "Testing implicit Runge-Kutta, in-place version"
-            V, p, outputs = solve_unsteady(
+            (; u, p, t), outputs = solve_unsteady(
                 setup,
                 V₀,
                 p₀,
@@ -92,12 +92,12 @@
                 inplace = true,
                 processors = (timelogger(),),
             )
-            @test_broken norm(V - V_exact) / norm(V_exact) < 1e-3
+            @test_broken norm(u - u_exact) / norm(u_exact) < 1e-3
         end
 
         @testset "One-leg beta method" begin
             @info "Testing one-leg beta method, out-of-place version"
-            V, p, outputs = solve_unsteady(
+            state, outputs = solve_unsteady(
                 setup,
                 V₀,
                 p₀,
@@ -107,9 +107,9 @@
                 pressure_solver,
                 inplace = false,
             )
-            @test norm(V - V_exact) / norm(V_exact) < 1e-4
+            @test norm(state.u - u_exact) / norm(u_exact) < 1e-4
             @info "Testing one-leg beta method, in-place version"
-            Vip, pip, outputsip = solve_unsteady(
+            stateip, outputsip = solve_unsteady(
                 setup,
                 V₀,
                 p₀,
@@ -119,13 +119,13 @@
                 pressure_solver,
                 inplace = true,
             )
-            @test Vip ≈ V
-            @test pip ≈ p
+            @test stateip.u ≈ state.u
+            @test stateip.p ≈ state.p
         end
 
         @testset "Adams-Bashforth Crank-Nicolson" begin
             @info "Testing Adams-Bashforth Crank-Nicolson method, out-of-place version"
-            V, p, outputs = solve_unsteady(
+            state, outputs = solve_unsteady(
                 setup,
                 V₀,
                 p₀,
@@ -135,9 +135,9 @@
                 pressure_solver,
                 inplace = false,
             )
-            @test norm(V - V_exact) / norm(V_exact) < 1e-4
+            @test norm(state.u - u_exact) / norm(u_exact) < 1e-4
             @info "Testing Adams-Bashforth Crank-Nicolson method, in-place version"
-            Vip, pip, outputs = solve_unsteady(
+            stateip, outputs = solve_unsteady(
                 setup,
                 V₀,
                 p₀,
@@ -147,8 +147,8 @@
                 pressure_solver,
                 inplace = true,
             )
-            @test Vip ≈ V
-            @test pip ≈ p
+            @test stateip.u ≈ state.u
+            @test stateip.p ≈ state.p
         end
     end
 end

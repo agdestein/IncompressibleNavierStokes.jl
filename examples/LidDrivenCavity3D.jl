@@ -59,7 +59,7 @@ setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
 u₀, p₀ = create_initial_conditions(setup, (dim, x, y, z) -> zero(x))
 
 # Solve unsteady problem
-u, p, outputs = solve_unsteady(
+(; u, p, t), outputs = solve_unsteady(
     setup,
     u₀,
     p₀,

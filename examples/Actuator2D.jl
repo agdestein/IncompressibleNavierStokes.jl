@@ -21,8 +21,8 @@ end                                                 #src
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-# Case name for saving results
-name = "Actuator2D"
+# Output directory
+output = "output/Actuator2D"
 
 # A 2D grid is a Cartesian product of two vectors
 n = 40
@@ -66,24 +66,19 @@ u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 
 u, p = u₀, p₀
 
 # Solve unsteady problem
-u, p, outputs = solve_unsteady(
+state, outputs = solve_unsteady(
     setup,
-    copy.(u₀),
-    copy(p₀),
-    # u, p,
+    u₀,
+    p₀,
     (0.0, 12.0);
     method = RK44P2(),
     Δt = 0.05,
     processors = (
-        rtp = realtimeplotter(;
-            setup,
-            plot = fieldplot,
-            ## plot = energy_history_plot,
-            ## plot = energy_spectrum_plot,
-            nupdate = 1,
-        ),
-        ## anim = animator(; setup, path = "vorticity.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "output/$name", filename = "solution"),
+        rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 1),
+        # ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 1),
+        # espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 1),
+        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "$output", filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 1),
     ),
@@ -93,41 +88,26 @@ u, p, outputs = solve_unsteady(
 #
 # We may visualize or export the computed fields `(u, p)`.
 
+# Export to VTK
+save_vtk(setup, state.u, state.p, "$output/solution")
+
 # We create a box to visualize the actuator.
 box = (
     [xc - δ / 2, xc - δ / 2, xc + δ / 2, xc + δ / 2, xc - δ / 2],
     [yc + D / 2, yc - D / 2, yc - D / 2, yc + D / 2, yc + D / 2],
 )
 
-# Export to VTK
-save_vtk(setup, u, p, "output/solution")
-
-# Field plot
-fig = outputs[1]
-lines!(box...; color = :red)
-fig
-
 # Plot pressure
-fig = plot_pressure(setup, p)
+fig = fieldplot(state; setup, fieldname = :pressure)
 lines!(box...; color = :red)
 fig
 
 # Plot velocity
-fig = plot_velocity(setup, u)
+fig = fieldplot(state; setup, fieldname = :velocity)
 lines!(box...; color = :red)
 fig
 
 # Plot vorticity
-fig = plot_vorticity(setup, u)
-lines!(box...; color = :red)
-fig
-
-# Plot streamfunction
-fig = plot_streamfunction(setup, u)
-lines!(box...; color = :red)
-fig
-
-# Plot force
-fig = plot_force(setup)
+fig = fieldplot(state; setup, fieldname = :vorticity)
 lines!(box...; color = :red)
 fig

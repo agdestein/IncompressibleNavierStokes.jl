@@ -44,23 +44,14 @@
     )
 
     # Solve unsteady problem
-    # FIXME: using too many processors results in endless compilation
-    V, p, outputs = solve_unsteady(
-        setup,
-        V₀,
-        p₀,
-        tlims;
-        Δt = T(0.01),
-        processors,
-        pressure_solver,
-        inplace = true,
-    )
+    state, outputs =
+        solve_unsteady(setup, u₀, p₀, tlims; Δt = T(0.01), processors, pressure_solver)
 
     @testset "VTK files" begin
         @info "Testing 3D processors: VTK files"
         @test isfile("output/solution3D.pvd")
         @test isfile("output/solution3D_t=0p0.vti")
-        save_vtk(setup, V, p, t_end, "output/field3D")
+        save_vtk(setup, state.u, state.v, t_end, "output/field3D")
         @test isfile("output/field3D.vti")
     end
 

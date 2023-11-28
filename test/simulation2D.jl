@@ -43,13 +43,13 @@
     processors = (timelogger(),)
 
     @testset "Unsteady problem" begin
-        V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors)
+        (; u, p, t), outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors)
 
         # Check that solution did not explode
-        @test all(!isnan, V)
+        @test all(!isnan, u)
         @test all(!isnan, p)
 
         # Check that the average velocity is smaller than the lid velocity
-        @test sum(abs, V) / length(V) < lid_vel
+        @test sum(abs, u) / length(u) < lid_vel
     end
 end

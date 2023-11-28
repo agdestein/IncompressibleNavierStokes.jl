@@ -48,7 +48,7 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
             pressure_solver,
             project = false,
         )
-        u, p, outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt, pressure_solver)
+        (; u, p, t), outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt, pressure_solver)
         (; Ip) = setup.grid
         a, b = T(0), T(0)
         for α = 1:D
