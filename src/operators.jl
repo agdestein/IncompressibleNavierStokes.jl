@@ -18,7 +18,7 @@ struct Offset{D} end
 Compute divergence of velocity field (in-place version).
 """
 function divergence!(div, u, setup)
-    (; grid) = setup
+    (; grid, workgroupsize) = setup
     (; Δ, N, Ip) = grid
     D = length(u)
     δ = Offset{D}()
@@ -39,7 +39,7 @@ function divergence!(div, u, setup)
     # ndrange = Np
     # I0 = first(Ip)
     I0 -= oneunit(I0)
-    div!(get_backend(div), WORKGROUP)(div, u, I0; ndrange)
+    div!(get_backend(div), workgroupsize)(div, u, I0; ndrange)
     div
 end
 
@@ -70,7 +70,7 @@ Compute vorticity field.
 vorticity!(ω, u, setup) = vorticity!(setup.grid.dimension, ω, u, setup)
 
 function vorticity!(::Dimension{2}, ω, u, setup)
-    (; grid) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Δu, N) = grid
     D = dimension()
     δ = Offset{D}()
@@ -82,12 +82,12 @@ function vorticity!(::Dimension{2}, ω, u, setup)
     end
     I0 = CartesianIndex(ntuple(Returns(1), D))
     I0 -= oneunit(I0)
-    ω!(get_backend(ω), WORKGROUP)(ω, u, I0; ndrange = N .- 1)
+    ω!(get_backend(ω), workgroupsize)(ω, u, I0; ndrange = N .- 1)
     ω
 end
 
 function vorticity!(::Dimension{3}, ω, u, setup)
-    (; grid) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Δu, N) = grid
     D = dimension()
     δ = Offset{D}()
@@ -105,7 +105,7 @@ function vorticity!(::Dimension{3}, ω, u, setup)
     end
     I0 = CartesianIndex(ntuple(Returns(1), D))
     I0 -= oneunit(I0)
-    ω!(get_backend(ω[1]), WORKGROUP)(ω, u, I0; ndrange = N .- 1)
+    ω!(get_backend(ω[1]), workgroupsize)(ω, u, I0; ndrange = N .- 1)
     ω
 end
 
@@ -115,7 +115,7 @@ end
 Compute convective term.
 """
 function convection!(F, u, setup)
-    (; grid) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Δ, Δu, Nu, Iu, A) = grid
     D = dimension()
     δ = Offset{D}()
@@ -136,7 +136,7 @@ function convection!(F, u, setup)
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        conv!(get_backend(F[1]), WORKGROUP)(F, u, Val(α), Val(1:D), I0; ndrange = Nu[α])
+        conv!(get_backend(F[1]), workgroupsize)(F, u, Val(α), Val(1:D), I0; ndrange = Nu[α])
     end
     F
 end
@@ -147,7 +147,7 @@ end
 Compute diffusive term.
 """
 function diffusion!(F, u, setup)
-    (; grid, Re) = setup
+    (; grid, workgroupsize, Re) = setup
     (; dimension, Δ, Δu, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
@@ -168,13 +168,13 @@ function diffusion!(F, u, setup)
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        diff!(get_backend(F[1]), WORKGROUP)(F, u, Val(α), Val(1:D), I0; ndrange = Nu[α])
+        diff!(get_backend(F[1]), workgroupsize)(F, u, Val(α), Val(1:D), I0; ndrange = Nu[α])
     end
     F
 end
 
 function convectiondiffusion!(F, u, setup)
-    (; grid, Re) = setup
+    (; grid, workgroupsize, Re) = setup
     (; dimension, Δ, Δu, Nu, Iu, A) = grid
     D = dimension()
     δ = Offset{D}()
@@ -200,7 +200,7 @@ function convectiondiffusion!(F, u, setup)
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        cd!(get_backend(F[1]), WORKGROUP)(F, u, Val(α), Val(1:D), I0; ndrange = Nu[α])
+        cd!(get_backend(F[1]), workgroupsize)(F, u, Val(α), Val(1:D), I0; ndrange = Nu[α])
     end
     F
 end
@@ -211,7 +211,7 @@ end
 Compute body force.
 """
 function bodyforce!(F, u, t, setup)
-    (; grid, bodyforce) = setup
+    (; grid, workgroupsize, bodyforce) = setup
     (; dimension, Δ, Δu, Nu, Iu, x, xp) = grid
     isnothing(bodyforce) && return F
     D = dimension()
@@ -225,7 +225,7 @@ function bodyforce!(F, u, t, setup)
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        f!(get_backend(F[1]), WORKGROUP)(F, bodyforce, Val(α), t, I0; ndrange = Nu[α])
+        f!(get_backend(F[1]), workgroupsize)(F, bodyforce, Val(α), t, I0; ndrange = Nu[α])
     end
     F
 end
@@ -269,7 +269,7 @@ momentum(u, t, setup) = momentum!(zero.(u), u, t, setup)
 Compute pressure gradient (in-place).
 """
 function pressuregradient!(G, p, setup)
-    (; grid) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Δu, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
@@ -282,7 +282,7 @@ function pressuregradient!(G, p, setup)
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        G!(get_backend(G[1]), WORKGROUP)(G, p, Val(α), I0; ndrange = Nu[α])
+        G!(get_backend(G[1]), workgroupsize)(G, p, Val(α), I0; ndrange = Nu[α])
     end
     G
 end
@@ -304,7 +304,7 @@ pressuregradient(p, setup) = pressuregradient!(
 Compute Laplacian of pressure field (in-place version).
 """
 function laplacian!(L, p, setup)
-    (; grid) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Δ, Δu, N, Np, Ip, Ω) = grid
     D = dimension()
     δ = Offset{D}()
@@ -325,7 +325,7 @@ function laplacian!(L, p, setup)
     ndrange = Np
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    lap!(get_backend(L), WORKGROUP)(L, p, I0; ndrange)
+    lap!(get_backend(L), workgroupsize)(L, p, I0; ndrange)
     L
 end
 
@@ -441,7 +441,7 @@ interpolate_u_p(u, setup) =
 Interpolate velocity to pressure points.
 """
 function interpolate_u_p!(up, u, setup)
-    (; boundary_conditions, grid, Re, bodyforce) = setup
+    (; boundary_conditions, grid, workgroupsize, Re, bodyforce) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
     δ = Offset{D}()
@@ -453,7 +453,7 @@ function interpolate_u_p!(up, u, setup)
     for α = 1:D
         I0 = first(Ip)
         I0 -= oneunit(I0)
-        int!(get_backend(up[1]), WORKGROUP)(up, u, Val(α), I0; ndrange = Np)
+        int!(get_backend(up[1]), workgroupsize)(up, u, Val(α), I0; ndrange = Np)
     end
     up
 end
@@ -478,7 +478,7 @@ Interpolate vorticity to pressure points.
 interpolate_ω_p!(ωp, ω, setup) = interpolate_ω_p!(setup.grid.dimension, ωp, ω, setup)
 
 function interpolate_ω_p!(::Dimension{2}, ωp, ω, setup)
-    (; boundary_conditions, grid, Re, bodyforce) = setup
+    (; boundary_conditions, grid, workgroupsize, Re, bodyforce) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
     δ = Offset{D}()
@@ -489,12 +489,12 @@ function interpolate_ω_p!(::Dimension{2}, ωp, ω, setup)
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    int!(get_backend(ωp), WORKGROUP)(ωp, ω, I0; ndrange = Np)
+    int!(get_backend(ωp), workgroupsize)(ωp, ω, I0; ndrange = Np)
     ωp
 end
 
 function interpolate_ω_p!(::Dimension{3}, ωp, ω, setup)
-    (; boundary_conditions, grid, Re) = setup
+    (; boundary_conditions, grid, workgroupsize, Re) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
     δ = Offset{D}()
@@ -508,7 +508,7 @@ function interpolate_ω_p!(::Dimension{3}, ωp, ω, setup)
     I0 = first(Ip)
     I0 -= oneunit(I0)
     for α = 1:D
-        int!(get_backend(ωp[1]), WORKGROUP)(ωp, ω, Val(α), I0; ndrange = Np)
+        int!(get_backend(ωp[1]), workgroupsize)(ωp, ω, Val(α), I0; ndrange = Np)
     end
     ωp
 end
@@ -523,7 +523,7 @@ D = \\frac{2 | \\nabla p |}{\\nabla^2 p}.
 ```
 """
 function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
-    (; boundary_conditions, grid) = setup
+    (; boundary_conditions, grid, workgroupsize) = setup
     (; dimension, Np, Ip, Δ) = grid
     T = eltype(p)
     D = dimension()
@@ -554,7 +554,7 @@ function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
     pressuregradient!(G, p, setup)
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    D!(get_backend(p), WORKGROUP)(d, G, p, I0; ndrange = Np)
+    D!(get_backend(p), workgroupsize)(d, G, p, I0; ndrange = Np)
     d
 end
 
@@ -581,7 +581,7 @@ Q = - \\frac{1}{2} \\sum_{α, β} \\frac{\\partial u^α}{\\partial x^β}
 ```
 """
 function Qfield!(Q, u, setup; ϵ = eps(eltype(Q)))
-    (; boundary_conditions, grid) = setup
+    (; boundary_conditions, grid, workgroupsize) = setup
     (; dimension, Np, Ip, Δ) = grid
     D = dimension()
     δ = Offset{D}()
@@ -598,7 +598,7 @@ function Qfield!(Q, u, setup; ϵ = eps(eltype(Q)))
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    Q!(get_backend(u[1]), WORKGROUP)(Q, u, I0; ndrange = Np)
+    Q!(get_backend(u[1]), workgroupsize)(Q, u, I0; ndrange = Np)
     Q
 end
 
@@ -615,7 +615,7 @@ Qfield(u, setup) = Qfield!(similar(u[1], setup.grid.N), u, setup)
 Compute the second eigenvalue of ``S^2 + \\Omega^2``.
 """
 function eig2field!(λ, u, setup)
-    (; boundary_conditions, grid) = setup
+    (; boundary_conditions, grid, workgroupsize) = setup
     (; dimension, Np, Ip, Δ, Δu) = grid
     D = dimension()
     δ = Offset{D}()
@@ -648,7 +648,7 @@ function eig2field!(λ, u, setup)
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    λ!(get_backend(u[1]), WORKGROUP)(λ, u, I0; ndrange = Np)
+    λ!(get_backend(u[1]), workgroupsize)(λ, u, I0; ndrange = Np)
     λ
 end
 

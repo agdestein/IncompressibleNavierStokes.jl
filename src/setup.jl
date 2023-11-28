@@ -7,6 +7,7 @@
         bodyforce = nothing,
         closure_model = nothing,
         ArrayType = Array,
+        workgroupsize = 64,
     )
 
 Create setup.
@@ -19,6 +20,7 @@ Setup(
     bodyforce = nothing,
     closure_model = nothing,
     ArrayType = Array,
+    workgroupsize = 64,
 ) = (;
     grid = Grid(x, boundary_conditions; ArrayType),
     boundary_conditions,
@@ -27,4 +29,5 @@ Setup(
     bodyforce,
     closure_model,
     ArrayType,
+    workgroupsize,
 )

@@ -60,7 +60,8 @@ end
 # For initial guess, we already know the average is zero.
 function poisson!(solver::CGPressureSolver, p, f)
     (; setup, abstol, reltol, maxiter, r, L, q, preconditioner) = solver
-    (; Np, Ip, Ω) = setup.grid
+    (; grid, workgroupsize) = setup
+    (; Np, Ip, Ω) = setup
     T = typeof(reltol)
 
     function innerdot(a, b)
@@ -78,7 +79,7 @@ function poisson!(solver::CGPressureSolver, p, f)
             eltype(a),
             ntuple(Returns(1), length(I0)),
         )
-        innerdot!(get_backend(a), WORKGROUP)(d, a, b, I0; ndrange = Np)
+        innerdot!(get_backend(a), workgroupsize)(d, a, b, I0; ndrange = Np)
         d[]
     end
 

@@ -4,7 +4,7 @@
 Average `u` over volume faces. Put result in `v`.
 """
 function face_average!(v, u, setup_les, comp)
-    (; grid) = setup_les
+    (; grid, workgroupsize) = setup_les
     (; Nu, Iu) = grid
     D = length(u)
     δ = Offset{D}()
@@ -22,7 +22,7 @@ function face_average!(v, u, setup_les, comp)
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
         face = CartesianIndices(ntuple(β -> β == α ? (comp:comp) : (1:comp), D))
-        Φ!(get_backend(v[1]), WORKGROUP)(v, u, Val(α), face, I0; ndrange)
+        Φ!(get_backend(v[1]), workgroupsize)(v, u, Val(α), face, I0; ndrange)
     end
     # synchronize(get_backend(u[1]))
     v

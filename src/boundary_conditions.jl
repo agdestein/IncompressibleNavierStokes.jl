@@ -127,7 +127,7 @@ function apply_bc_p!(p, t, setup; kwargs...)
 end
 
 function apply_bc_u!(::PeriodicBC, u, β, t, setup; atend, kwargs...)
-    (; grid) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, N) = grid
     D = dimension()
     δ = Offset{D}()
@@ -142,16 +142,16 @@ function apply_bc_u!(::PeriodicBC, u, β, t, setup; atend, kwargs...)
     ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     for α = 1:D
         if atend
-            _bc_b!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β); ndrange)
+            _bc_b!(get_backend(u[1]), workgroupsize)(u, Val(α), Val(β); ndrange)
         else
-            _bc_a!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β); ndrange)
+            _bc_a!(get_backend(u[1]), workgroupsize)(u, Val(α), Val(β); ndrange)
         end
     end
     u
 end
 
 function apply_bc_p!(::PeriodicBC, p, β, t, setup; atend, kwargs...)
-    (; grid) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, N) = grid
     D = dimension()
     δ = Offset{D}()
@@ -165,9 +165,9 @@ function apply_bc_p!(::PeriodicBC, p, β, t, setup; atend, kwargs...)
     end
     ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     if atend
-        _bc_b(get_backend(p), WORKGROUP)(p, Val(β); ndrange)
+        _bc_b(get_backend(p), workgroupsize)(p, Val(β); ndrange)
     else
-        _bc_a(get_backend(p), WORKGROUP)(p, Val(β); ndrange)
+        _bc_a(get_backend(p), workgroupsize)(p, Val(β); ndrange)
     end
     p
 end
@@ -247,7 +247,7 @@ function apply_bc_p!(::SymmetricBC, p, β, t, setup; atend, kwargs...)
 end
 
 function apply_bc_u!(bc::PressureBC, u, β, t, setup; atend, kwargs...)
-    (; grid) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, N, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
@@ -266,11 +266,11 @@ function apply_bc_u!(bc::PressureBC, u, β, t, setup; atend, kwargs...)
         if atend
             I0 = CartesianIndex(ntuple(γ -> γ == β ? N[β] : 1, D))
             I0 -= oneunit(I0)
-            _bc_b!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β), I0; ndrange)
+            _bc_b!(get_backend(u[1]), workgroupsize)(u, Val(α), Val(β), I0; ndrange)
         else
             I0 = CartesianIndex(ntuple(γ -> γ == β && α != β ? 2 : 1, D))
             I0 -= oneunit(I0)
-            _bc_a!(get_backend(u[1]), WORKGROUP)(u, Val(α), Val(β), I0; ndrange)
+            _bc_a!(get_backend(u[1]), workgroupsize)(u, Val(α), Val(β), I0; ndrange)
         end
     end
     u

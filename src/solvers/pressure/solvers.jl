@@ -89,7 +89,7 @@ struct CGPressureSolver{T,S,A,F} <: AbstractPressureSolver{T}
 end
 
 function create_laplace_diag(setup)
-    (; grid) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Δ, Δu, N, Np, Ip, Ω) = grid
     D = dimension()
     δ = Offset{D}()
@@ -106,7 +106,7 @@ function create_laplace_diag(setup)
     I0 = first(Ip)
     I0 -= oneunit(I0)
     function laplace_diag(z, p)
-        _laplace_diag!(get_backend(z), WORKGROUP)(z, p, I0; ndrange)
+        _laplace_diag!(get_backend(z), workgroupsize)(z, p, I0; ndrange)
         # synchronize(get_backend(z))
     end
 end

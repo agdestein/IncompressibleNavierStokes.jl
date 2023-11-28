@@ -27,10 +27,6 @@ using Zygote
 # Must be loaded inside for Tullio to work correctly
 using CUDA
 
-# Workgroup size for kernels
-# Let this be constant for now
-const WORKGROUP = 64
-
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
 
