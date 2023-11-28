@@ -154,8 +154,10 @@ function create_les_data(
         force_dns = zero.(u₀)
         force_les = face_average(force_dns, les, compression)
 
-        _dns = (; dns..., force = force_dns)
-        _les = (; les..., force = force_les)
+        _dns = dns
+        _les = les
+        # _dns = (; dns..., bodyforce = force_dns)
+        # _les = (; les..., bodyforce = force_les)
 
         # Solve burn-in DNS
         @info "Burn-in for simulation $isim of $nsim"
@@ -178,16 +180,15 @@ function create_les_data(
             (T(0), tsim);
             Δt,
             processors = (
-                _filter_saver(_dns, _les, compression, pressure_solver_les),
+                f = _filter_saver(_dns, _les, compression, pressure_solver_les),
                 # step_logger(; nupdate = 10),
             ),
             pressure_solver,
         )
-        f = outputs[1]
 
         # Store result for current IC
-        push!(filtered.u, f.u)
-        push!(filtered.c, f.c)
+        push!(filtered.u, outputs.f.u)
+        push!(filtered.c, outputs.f.c)
     end
 
     filtered
