@@ -23,35 +23,9 @@ function fno(; setup, kmax, c, σ, ψ, rng = Random.default_rng(), kwargs...)
     init_weight(rng::AbstractRNG, dims...) = glorot_uniform(rng, T, dims...)
 
     # Create FNO closure model
-    NN = Chain(
+    create_closure(
         # Put inputs in pressure points
-        function (u)
-            sz..., _, _ = size(u)
-            # for α = 1:D
-            #     v = selectdim(u, D + 1, α)
-            #     v = (v + circshift(v, ntuple(β -> α == β ? -1 : 0, D + 1))) / 2
-            # end
-            if D == 2
-                a = selectdim(u, 3, 1)
-                b = selectdim(u, 3, 2)
-                a = (a + circshift(a, (-1, 0, 0))) / 2
-                b = (b + circshift(b, (0, -1, 0))) / 2
-                a = reshape(a, sz..., 1, :)
-                b = reshape(b, sz..., 1, :)
-                cat(a, b; dims = 3)
-            elseif D == 3
-                a = selectdim(u, 4, 1)
-                b = selectdim(u, 4, 2)
-                c = selectdim(u, 4, 3)
-                a = (a + circshift(a, (-1, 0, 0, 0))) / 2
-                b = (b + circshift(b, (0, -1, 0, 0))) / 2
-                c = (c + circshift(c, (0, 0, -1, 0))) / 2
-                a = reshape(a, sz..., 1, :)
-                b = reshape(b, sz..., 1, :)
-                c = reshape(c, sz..., 1, :)
-                cat(a, b, c; dims = 4)
-            end
-        end,
+        collocate,
 
         # Some Fourier layers
         (
@@ -59,59 +33,14 @@ function fno(; setup, kmax, c, σ, ψ, rng = Random.default_rng(), kwargs...)
             i ∈ eachindex(σ)
         )...,
 
-        # Put channels in first dimension
-        u -> permutedims(u, (D + 1, (1:D)..., D + 2)),
-
         # Compress with a final dense layer
-        Dense(c[end] => 2 * c[end], ψ),
-        Dense(2 * c[end] => 2; use_bias = false),
-
-        # Put channels back after spatial dimensions
-        u -> permutedims(u, ((2:D+1)..., 1, D + 2)),
+        Conv(ntuple(Returns(1), D), c[end] => D; use_bias = false),
+        # Conv(ntuple(Returns(1), D), c[end] => 2 * c[end], ψ; use_bias = false),
+        # Conv(ntuple(Returns(1), D), 2 * c[end] => D; use_bias = false),
 
         # Differentiate output to velocity points
-        function (u)
-            sz..., _, _ = size(u)
-            # for α = 1:D
-            #     v = selectdim(u, D + 1, α)
-            #     v = (v + circshift(v, ntuple(β -> α == β ? -1 : 0, D + 1))) / 2
-            # end
-            if D == 2
-                a = selectdim(u, 3, 1)
-                b = selectdim(u, 3, 2)
-                # a = (a + circshift(a, (1, 0, 0, 0))) / 2
-                # b = (b + circshift(b, (0, 1, 0, 0))) / 2
-                a = circshift(a, (1, 0, 0)) - a
-                b = circshift(b, (0, 1, 0)) - b
-                a = reshape(a, sz..., 1, :)
-                b = reshape(b, sz..., 1, :)
-                cat(a, b; dims = 3)
-            elseif D == 3
-                a = selectdim(u, 4, 1)
-                b = selectdim(u, 4, 2)
-                c = selectdim(u, 4, 3)
-                # a = (a + circshift(a, (1, 0, 0, 0))) / 2
-                # b = (b + circshift(b, (0, 1, 0, 0))) / 2
-                # c = (c + circshift(c, (0, 0, 1, 0))) / 2
-                a = circshift(a, (1, 0, 0, 0)) - a
-                b = circshift(b, (0, 1, 0, 0)) - b
-                c = circshift(c, (0, 0, 1, 0)) - c
-                a = reshape(a, sz..., 1, :)
-                b = reshape(b, sz..., 1, :)
-                c = reshape(c, sz..., 1, :)
-                cat(a, b, c; dims = 4)
-            end
-        end,
+        decollocate,
     )
-
-    # Create parameter vector (empty state)
-    params, state = Lux.setup(rng, NN)
-    θ = ComponentArray(params)
-
-    # Compute closure term for given parameters
-    closure(u, θ) = first(NN(u, θ, state))
-
-    closure, θ
 end
 
 """
@@ -130,8 +59,8 @@ Some important sizes:
 - `kmax`: Cut-off wavenumber
 - `nsample`: Number of input samples (treated independently)
 """
-struct FourierLayer{N,A,F} <: Lux.AbstractExplicitLayer
-    dimension::Dimension{N}
+struct FourierLayer{D,A,F} <: Lux.AbstractExplicitLayer
+    dimension::Dimension{D}
     kmax::Int
     cin::Int
     cout::Int
@@ -177,7 +106,7 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
     # TODO: Set FFT normalization so that layer is truly grid independent
 
     # Spatial dimension
-    N = dimension()
+    D = dimension()
 
     nx..., _cin, nsample = size(x)
     @assert _cin == cin "Number of input channels must be compatible with weights"
@@ -188,12 +117,12 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
     # The real and imaginary parts of R are stored in two separate channels
     W = params.spatial_weight
     R = params.spectral_weights
-    R = selectdim(R, N + 3, 1) .+ im .* selectdim(R, N + 3, 2)
+    R = selectdim(R, D + 3, 1) .+ im .* selectdim(R, D + 3, 2)
 
     # Spatial part (applied point-wise)
-    if N == 2
+    if D == 2
         @tullio y[i₁, i₂, b, s] := W[b, a] * x[i₁, i₂, a, s]
-    elseif N == 3
+    elseif D == 3
         @tullio y[i₁, i₂, i₃, b, s] := W[b, a] * x[i₁, i₂, i₃, a, s]
     end
 
@@ -206,13 +135,13 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
     # - multiply with weights mode-wise
     # - pad with zeros to restore original shape
     # - go back to real valued spatial representation
-    ikeep = ntuple(Returns(1:kmax+1), N)
-    dims = ntuple(identity, N)
+    ikeep = ntuple(Returns(1:kmax+1), D)
+    dims = ntuple(identity, D)
     xhat = fft(x, dims)
     xhat = xhat[ikeep..., :, :]
-    if N == 2
+    if D == 2
         @tullio z[k₁, k₂, b, s] := R[k₁, k₂, b, a] * xhat[k₁, k₂, a, s]
-    elseif N == 3
+    elseif D == 3
         @tullio z[k₁, k₂, k₃, b, s] := R[k₁, k₂, k₃, b, a] * xhat[k₁, k₂, k₃, a, s]
     end
     z = pad_zeros(z, ntuple(i -> isodd(i) ? 0 : first(nx) - kmax - 1, 2N); dims)

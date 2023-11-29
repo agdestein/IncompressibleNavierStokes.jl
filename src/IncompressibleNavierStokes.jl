@@ -123,7 +123,7 @@ export cnn, fno, FourierLayer
 export train
 export mean_squared_error, relative_error
 export create_randloss, create_callback, create_les_data, create_io_arrays
-export create_neural_closure
+export wrappedclosure
 
 # ODE methods
 

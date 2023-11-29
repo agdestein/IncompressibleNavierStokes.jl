@@ -45,8 +45,8 @@ params = (;
     D = 2,
     Re = T(6_000),
     lims = (T(0), T(1)),
-    nles = 64,
-    compression = 8,
+    nles = 128,
+    ndns = 1024,
     tburn = T(0.05),
     tsim = T(0.2),
     Δt = T(1e-4),
@@ -60,19 +60,6 @@ data_train = create_les_data(T; params..., nsim = 10);
 data_valid = create_les_data(T; params..., nsim = 1);
 data_test = create_les_data(T; params..., nsim = 1);
 
-# Inspect data
-isim = 1
-α = 1
-# j = 13
-o = Observable(data_train.u[isim][1][α])
-# o = Observable(data_train.u[isim][1][α][:, :, j])
-heatmap(o)
-for i = 1:length(data_train.u[isim])
-    o[] = data_train.u[isim][i][α]
-    # o[] = data_train.u[isim][i][α][:, :, j]
-    sleep(0.001)
-end
-
 # # Save filtered DNS data
 # jldsave("output/forced/data.jld2"; data_train, data_valid, data_test)
 
@@ -83,40 +70,22 @@ end
 x = ntuple(α -> LinRange(params.lims..., params.nles + 1), params.D)
 setup = Setup(x...; params.Re, ArrayType);
 
+# Inspect data
+(; Ip) = setup.grid;
+field = data_train.u[1];
+α = 1
+# j = 13
+o = Observable(field[1][α][Ip])
+# o = Observable(field[1][α][:, :, j])
+heatmap(o)
+for i = 1:length(field)
+    o[] = field[i][α][Ip]
+    # o[] = field[i][α][:, :, j]
+    sleep(0.001)
+end
+
 # Uniform periodic grid
 pressure_solver = SpectralPressureSolver(setup);
-
-closure, θ₀ = cnn(;
-    setup,
-    radii = [2, 2, 2, 2],
-    channels = [5, 5, 5, params.D],
-    activations = [leakyrelu, leakyrelu, leakyrelu, identity],
-    use_bias = [true, true, true, false],
-);
-closure.NN
-
-sample = io_train[1][:, :, :, 1:5]
-closure(sample, θ₀) |> size
-
-θ.layer_5
-θ.layer_6
-
-# closure, θ₀ = fno(;
-#     setup,
-#
-#     # Cut-off wavenumbers
-#     k = [8, 8, 8, 8],
-#
-#     # Channel sizes
-#     c = [16, 16, 16, 16],
-#
-#     # Fourier layer activations
-#     σ = [gelu, gelu, gelu, identity],
-#
-#     # Dense activation
-#     ψ = gelu,
-# );
-# closure.NN
 
 # Create input/output arrays
 io_train = create_io_arrays(data_train, setup);
@@ -124,6 +93,33 @@ io_valid = create_io_arrays(data_valid, setup);
 io_test = create_io_arrays(data_test, setup);
 
 size(io_train[1])
+
+Base.summarysize(io_train) / 1e9
+
+# closure, θ₀ = cnn(;
+#     setup,
+#     radii = [2, 2, 2, 2],
+#     channels = [5, 5, 5, params.D],
+#     activations = [leakyrelu, leakyrelu, leakyrelu, identity],
+#     use_bias = [true, true, true, false],
+# );
+# closure.NN
+#
+# sample = io_train[1][:, :, :, 1:5]
+# closure(sample, θ₀) |> size
+#
+# θ.layer_5
+# θ.layer_6
+
+closure, θ₀ = fno(;
+    setup,
+    kmax = [8, 8, 8, 8],
+    c = [5, 5, 5, 5],
+    σ = [gelu, gelu, gelu, identity],
+    ψ = gelu,
+);
+
+closure.NN
 
 # Prepare training
 θ = T(1.0e-1) * device(θ₀);
@@ -197,24 +193,24 @@ relerr_track(uref, setup) =
     end
 
 u, u₀, p₀ = nothing, nothing, nothing
-u = device.(data_test.u[1])
-u₀ = device(data_test.u[1][1])
-p₀ = pressure(pressure_solver, u₀, T(0), setup)
+u = device.(data_test.u[1]);
+u₀ = device(data_test.u[1][1]);
+p₀ = IncompressibleNavierStokes.pressure(pressure_solver, u₀, T(0), setup);
 length(u)
 
-u_nm, p_nm, outputs = solve_unsteady(
+state_nm, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
     (T(0), params.tsim);
     Δt = data_test.Δt,
     pressure_solver,
-    processors = (relerr = relerr_track(u, setup), log = timelogger(; nupdate = 1)),
+    processors = (; relerr = relerr_track(u, setup), log = timelogger(; nupdate = 1)),
 )
 relerr_nm = outputs.relerr[]
 
-u_cnn, p_cnn, outputs = solve_unsteady(
-    (; setup..., closure_model = create_neural_closure(closure, θ, setup)),
+state_cnn, outputs = solve_unsteady(
+    (; setup..., closure_model = wrappedclosure(closure, θ, setup)),
     u₀,
     p₀,
     (T(0), params.tsim);

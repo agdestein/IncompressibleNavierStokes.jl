@@ -85,7 +85,7 @@ _filter_saver(dns, les, comp, pressure_solver; nupdate = 1) =
         Re = T(2_000),
         lims = (T(0), T(1)),
         nles = 64,
-        compression = 4,
+        ndns = 256,
         nsim = 10,
         tburn = T(0.1),
         tsim = T(0.1),
@@ -102,7 +102,7 @@ function create_les_data(
     Re = T(2_000),
     lims = (T(0), T(1)),
     nles = 64,
-    compression = 4,
+    ndns = 256,
     nsim = 10,
     tburn = T(0.1),
     tsim = T(0.1),
@@ -110,7 +110,9 @@ function create_les_data(
     ArrayType = Array,
     ic_params = (;),
 )
-    ndns = compression * nles
+    compression = ndns ÷ nles
+    @assert compression * nles == ndns
+
     xdns = ntuple(α -> LinRange(lims..., ndns + 1), D)
     xles = ntuple(α -> LinRange(lims..., nles + 1), D)
 
