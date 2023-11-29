@@ -35,7 +35,6 @@ function create_initial_conditions(
         )
         u[α][Iu[α]] .= initial_velocity.((Dimension(α),), xin...)[Iu[α]]
     end
-
     apply_bc_u!(u, t, setup)
 
     # Make velocity field divergence free

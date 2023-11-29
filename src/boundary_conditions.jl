@@ -176,15 +176,15 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwar
     (; dimension, x, xp, N) = setup.grid
     D = dimension()
     δ = Offset{D}()
-    isnothing(bc.u) && return
+    # isnothing(bc.u) && return
     bcfunc = dudt ? bc.dudt : bc.u
     for α = 1:D
-        if atend
-            I = CartesianIndices(
+        I = if atend
+            CartesianIndices(
                 ntuple(γ -> γ == β ? α == β ? (N[γ]-1:N[γ]-1) : (N[γ]:N[γ]) : (1:N[γ]), D),
             )
         else
-            I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
+            CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
         end
         xI = ntuple(
             γ -> reshape(
@@ -195,7 +195,11 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwar
             ),
             D,
         )
-        u[α][I] .= bcfunc.((Dimension(α),), xI..., t)
+        if isnothing(bc.u)
+            u[α][I] .= 0
+        else
+            u[α][I] .= bcfunc.((Dimension(α),), xI..., t)
+        end
     end
     u
 end
@@ -277,6 +281,15 @@ function apply_bc_u!(bc::PressureBC, u, β, t, setup; atend, kwargs...)
 end
 
 function apply_bc_p!(bc::PressureBC, p, β, t, setup; atend, kwargs...)
-    # p is already zero at boundary
+    (; dimension, N) = setup.grid
+    D = dimension()
+    I = if atend
+        CartesianIndices(
+            ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D),
+        )
+    else
+        CartesianIndices(ntuple(γ -> γ == β ? (2:2) : (1:N[γ]), D))
+    end
+    p[I] .= 0
     p
 end
