@@ -30,7 +30,7 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
             pressure_solver,
             project = false,
         )
-        u, p, outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt, pressure_solver)
+        (; u, p, t), outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt, pressure_solver)
         (; Ip) = setup.grid
         a, b = T(0), T(0)
         for α = 1:D
@@ -53,13 +53,13 @@ e = compute_convergence(;
     uref = solution(Re),
 )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">8-element Vector{Float64}:
  0.4242656052086717
- 0.00037893283863524963
- 0.00010072266508337734
- 2.557066539077308e-5
- 6.4172925006904986e-6
- 1.6058662108513348e-6
- 4.015630573925813e-7
- 1.0039679672124311e-7</code></pre><p>Plot convergence</p><pre><code class="language-julia hljs">fig = Figure()
+ 0.000378932838635171
+ 0.00010072266508323336
+ 2.557066539075373e-5
+ 6.417292500671815e-6
+ 1.605866210855735e-6
+ 4.01563057392094e-7
+ 1.003967967145333e-7</code></pre><p>Plot convergence</p><pre><code class="language-julia hljs">fig = Figure()
 ax = Axis(
     fig[1, 1];
     xscale = log10,
@@ -71,4 +71,4 @@ ax = Axis(
 scatterlines!(ax, nlist, e; label = &quot;Data&quot;)
 lines!(ax, collect(extrema(nlist)), n -&gt; n^-2.0; linestyle = :dash, label = &quot;n^-2&quot;)
 axislegend(ax)
-fig</code></pre><img src="af9d29a7.png" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../LidDrivenCavity2D/">« Tutorial: Lid-Driven Cavity (2D)</a><a class="docs-footer-nextpage" href="../../equations/ns/">Incompressible Navier-Stokes equations »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.2 on <span class="colophon-date" title="Sunday 26 November 2023 23:10">Sunday 26 November 2023</span>. Using Julia version 1.9.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+fig</code></pre><img src="af9d29a7.png" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../LidDrivenCavity2D/">« Tutorial: Lid-Driven Cavity (2D)</a><a class="docs-footer-nextpage" href="../../equations/ns/">Incompressible Navier-Stokes equations »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.0 on <span class="colophon-date" title="Wednesday 29 November 2023 15:27">Wednesday 29 November 2023</span>. Using Julia version 1.9.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
