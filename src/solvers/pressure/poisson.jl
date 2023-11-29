@@ -61,7 +61,7 @@ end
 function poisson!(solver::CGPressureSolver, p, f)
     (; setup, abstol, reltol, maxiter, r, L, q, preconditioner) = solver
     (; grid, workgroupsize) = setup
-    (; Np, Ip, Ω) = setup
+    (; Np, Ip, Ω) = grid
     T = typeof(reltol)
 
     function innerdot(a, b)
