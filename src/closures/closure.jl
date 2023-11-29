@@ -1,3 +1,8 @@
+"""
+    wrappedclosure(m, θ, setup)
+
+Wrap closure model and parameters so that it can be used in the solver.
+"""
 function wrappedclosure(m, θ, setup)
     (; dimension, Iu) = setup.grid
     D = dimension()
@@ -12,6 +17,11 @@ function wrappedclosure(m, θ, setup)
     end
 end
 
+"""
+    create_closure(layers...)
+
+Create neural closure model from layers.
+"""
 function create_closure(layers...)
     chain = Chain(layers...)
 
@@ -25,6 +35,11 @@ function create_closure(layers...)
     closure, θ
 end
 
+"""
+    collocate(u)
+
+Interpolate velocity components to volume centers.
+"""
 function collocate(u)
     sz..., D, _ = size(u)
     # for α = 1:D
@@ -53,6 +68,11 @@ function collocate(u)
     end
 end
 
+"""
+    decollocate(u)
+
+Interpolate closure force from volume centers to volume faces.
+"""
 function decollocate(u)
     sz..., D, _ = size(u)
     # for α = 1:D

@@ -80,6 +80,10 @@ create_callback
 We provide two neural architectures: A convolutional neural network (CNN) and a Fourier neural operator (FNO).
 
 ```@docs
+wrappedclosure
+create_closure
+collocate
+decollocate
 cnn
 fno
 FourierLayer
