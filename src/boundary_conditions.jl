@@ -284,9 +284,7 @@ function apply_bc_p!(bc::PressureBC, p, β, t, setup; atend, kwargs...)
     (; dimension, N) = setup.grid
     D = dimension()
     I = if atend
-        CartesianIndices(
-            ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D),
-        )
+        CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
     else
         CartesianIndices(ntuple(γ -> γ == β ? (2:2) : (1:N[γ]), D))
     end

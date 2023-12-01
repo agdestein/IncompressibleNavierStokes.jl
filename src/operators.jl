@@ -126,10 +126,11 @@ function convection!(F, u, setup)
         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
             Δuαβ = α == β ? Δu[β] : Δ[β]
             uαβ1 = A[α][β][2][I[β]-1] * u[α][I-δ(β)] + A[α][β][1][I[β]] * u[α][I]
-            uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
             uβα1 =
-                A[β][α][2][I[α]-1] * u[β][I-δ(β)] + A[β][α][1][I[α]+1] * u[β][I-δ(β)+δ(α)]
-            uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]] * u[β][I+δ(α)]
+                A[β][α][2][I[α]-(α==β)] * u[β][I-δ(β)] +
+                A[β][α][1][I[α]+(α!=β)] * u[β][I-δ(β)+δ(α)]
+            uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
+            uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+δ(α)]
             F[α][I] -= (uαβ2 * uβα2 - uαβ1 * uβα1) / Δuαβ[I[β]]
         end
     end
@@ -140,6 +141,7 @@ function convection!(F, u, setup)
     end
     F
 end
+convection(u, setup) = convection!(zero.(u), u, setup)
 
 """
     diffusion!(F, u, setup)
@@ -172,6 +174,7 @@ function diffusion!(F, u, setup)
     end
     F
 end
+diffusion(u, setup) = diffusion!(zero.(u), u, setup)
 
 function convectiondiffusion!(F, u, setup)
     (; grid, workgroupsize, Re) = setup
@@ -186,10 +189,11 @@ function convectiondiffusion!(F, u, setup)
         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
             Δuαβ = α == β ? Δu[β] : Δ[β]
             uαβ1 = A[α][β][2][I[β]-1] * u[α][I-δ(β)] + A[α][β][1][I[β]] * u[α][I]
-            uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
             uβα1 =
-                A[β][α][2][I[α]-1] * u[β][I-δ(β)] + A[β][α][1][I[α]+1] * u[β][I-δ(β)+δ(α)]
-            uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]] * u[β][I+δ(α)]
+                A[β][α][2][I[α]-(α==β)] * u[β][I-δ(β)] +
+                A[β][α][1][I[α]+(α!=β)] * u[β][I-δ(β)+δ(α)]
+            uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
+            uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+δ(α)]
             uαuβ1 = uαβ1 * uβα1
             uαuβ2 = uαβ2 * uβα2
             ∂βuα1 = (u[α][I] - u[α][I-δ(β)]) / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
@@ -204,6 +208,7 @@ function convectiondiffusion!(F, u, setup)
     end
     F
 end
+convectiondiffusion(u, setup) = convectiondiffusion!(zero.(u), u, setup)
 
 """
     bodyforce!(F, u, setup)
@@ -243,9 +248,9 @@ function momentum!(F, u, t, setup)
     for α = 1:D
         F[α] .= 0
     end
-    diffusion!(F, u, setup)
-    convection!(F, u, setup)
-    # convectiondiffusion!(F, u, setup)
+    # diffusion!(F, u, setup)
+    # convection!(F, u, setup)
+    convectiondiffusion!(F, u, setup)
     bodyforce!(F, u, t, setup)
     if !isnothing(closure_model)
         m = closure_model(u)

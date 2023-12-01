@@ -115,7 +115,7 @@ function Grid(x, boundary_conditions; ArrayType = Array)
                     Aαβ2[end] = 1
                 else
                     # Interpolation from α-face center to left (1) or right (2) α-face β-edge
-                    Aαβ1 = [(xp[β][i] - x[β][i]) / Δu[β][i-1] for i = 2:N[β]]
+                    Aαβ1 = [(x[β][i] - xp[β][i-1]) / Δu[β][i-1] for i = 2:N[β]]
                     Aαβ2 = 1 .- Aαβ1
                     pushfirst!(Aαβ1, 1)
                     push!(Aαβ2, 1)
