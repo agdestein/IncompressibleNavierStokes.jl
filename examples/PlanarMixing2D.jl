@@ -42,7 +42,7 @@ boundary_conditions = (
     (DirichletBC(U, dUdt), PressureBC()),
 
     ## y rear, y front
-    (SymmetricBC(), SymmetricBC()),
+    (PressureBC(), PressureBC()),
 )
 
 # A 2D grid is a Cartesian product of two vectors

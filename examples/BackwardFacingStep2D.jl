@@ -59,7 +59,7 @@ plotgrid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 
-pressure_solver = CGPressureSolver(setup);
+pressure_solver = DirectPressureSolver(setup);
 
 # Initial conditions (extend inflow)
 u₀, p₀ =
@@ -69,7 +69,7 @@ u₀, p₀ =
 ## u, p = solve_steady_state(setup, u₀, p₀);
 
 # Solve unsteady problem
-u, p, outputs = solve_unsteady(
+state, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,

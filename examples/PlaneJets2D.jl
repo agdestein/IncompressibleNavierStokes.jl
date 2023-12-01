@@ -105,35 +105,31 @@ u₀, p₀ = create_initial_conditions(
 );
 
 # Real time plot: Streamwise average and spectrum
-function meanplot(; setup, state)
-    (; Ip) = setup.grid
+function meanplot(state; setup)
+    (; xp, Iu, Ip, Nu, N) = setup.grid
 
-    umean = @lift begin
-        (; u, p, t) = $state
-        up = IncompressibleNavierStokes.interpolate_u_p(u, setup)
-        u1 = u[1]
-        reshape(sum(u1[Ip]; dims = 1), :) ./ size(u1, 1) ./ V()
+    umean = lift(state) do (; u, p, t)
+        reshape(sum(u[1][Iu[1]]; dims = 1), :) ./ Nu[1][1] ./ V()
     end
 
-    K = size(Ip, 1) ÷ 2
+    K = Nu[1][2] ÷ 2
     k = 1:(K-1)
 
     # Find energy spectrum where y = 0
-    n₀ = size(Ip, 2) ÷ 2
-    E₀ = @lift begin
-        (; u, p, t) = $state
+    n₀ = findmin(abs, xp[2])[2]
+    E₀ = lift(state) do (; u, p, t)
         u_y = u[1][:, n₀]
         abs.(fft(u_y .^ 2))[k.+1]
     end
+    y₀ = xp[2][n₀]
 
     # Find energy spectrum where y = 1
-    n₁ = argmin(n -> abs(yin[n] .- 1), 1:Nuy_in)
-    E₁ = @lift begin
-        (; V, p, t) = $state
-        u = V[indu]
-        u_y = reshape(u, size(yu))[:, n₁]
+    n₁ = findmin(y -> abs(y - 1), xp[2])[2]
+    E₁ = lift(state) do (; u, p, t)
+        u_y = u[1][:, n₁]
         abs.(fft(u_y .^ 2))[k.+1]
     end
+    y₁ = xp[2][n₁]
 
     fig = Figure()
     ax = Axis(
@@ -142,7 +138,7 @@ function meanplot(; setup, state)
         xlabel = "y",
         ylabel = L"\langle u \rangle / U_0",
     )
-    lines!(ax, yu[1, :], umean)
+    lines!(ax, xp[2][2:end-1], umean)
     ax = Axis(
         fig[1, 2];
         title = "Streamwise energy spectrum",
@@ -153,11 +149,12 @@ function meanplot(; setup, state)
     )
     # ylims!(ax, (10^(0.0), 10^4.0))
     ksub = k[10:end]
-    lines!(ax, ksub, 1000 .* ksub .^ (-3 / 5); label = L"k^{-3/5}")
+    # lines!(ax, ksub, 1000 .* ksub .^ (-5 / 3); label = L"k^{-5/3}")
     lines!(ax, ksub, 1e7 .* ksub .^ -3; label = L"k^{-3}")
-    scatter!(ax, k, E₀; label = "y = $(yin[n₀])")
-    scatter!(ax, k, E₁; label = "y = $(yin[n₁])")
+    scatter!(ax, k, E₀; label = "y = $y₀")
+    scatter!(ax, k, E₁; label = "y = $y₁")
     axislegend(ax; position = :lb)
+    # on(_ -> autolimits!(ax), E₁)
 
     fig
 end
@@ -199,8 +196,10 @@ save_vtk(setup, state.u, state.p, "$output/solution")
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)
 
-# Plot velocity
+# Plot initial velocity
 fieldplot((; u = u₀, p = p₀, t = T(0)); setup, fieldname = :velocity)
+
+# Plot final velocity
 fieldplot(state; setup, fieldname = :velocity)
 
 # Plot vorticity
