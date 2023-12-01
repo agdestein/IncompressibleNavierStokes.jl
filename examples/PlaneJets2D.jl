@@ -115,7 +115,7 @@ function meanplot(state; setup)
     K = Nu[1][2] ÷ 2
     k = 1:(K-1)
 
-    # Find energy spectrum where y = 0
+    ## Find energy spectrum where y = 0
     n₀ = findmin(abs, xp[2])[2]
     E₀ = lift(state) do (; u, p, t)
         u_y = u[1][:, n₀]
@@ -123,7 +123,7 @@ function meanplot(state; setup)
     end
     y₀ = xp[2][n₀]
 
-    # Find energy spectrum where y = 1
+    ## Find energy spectrum where y = 1
     n₁ = findmin(y -> abs(y - 1), xp[2])[2]
     E₁ = lift(state) do (; u, p, t)
         u_y = u[1][:, n₁]
@@ -147,14 +147,14 @@ function meanplot(state; setup)
         xlabel = L"k_x",
         ylabel = L"\hat{U}_{cl} / U_0",
     )
-    # ylims!(ax, (10^(0.0), 10^4.0))
+    ## ylims!(ax, (10^(0.0), 10^4.0))
     ksub = k[10:end]
-    # lines!(ax, ksub, 1000 .* ksub .^ (-5 / 3); label = L"k^{-5/3}")
+    ## lines!(ax, ksub, 1000 .* ksub .^ (-5 / 3); label = L"k^{-5/3}")
     lines!(ax, ksub, 1e7 .* ksub .^ -3; label = L"k^{-3}")
     scatter!(ax, k, E₀; label = "y = $y₀")
     scatter!(ax, k, E₁; label = "y = $y₁")
     axislegend(ax; position = :lb)
-    # on(_ -> autolimits!(ax), E₁)
+    ## on(_ -> autolimits!(ax), E₁)
 
     fig
 end
@@ -171,9 +171,9 @@ state, outputs = solve_unsteady(
     processors = (
         rtp = realtimeplotter(;
             setup,
-            # plot = fieldplot,
-            # plot = energy_history_plot,
-            # plot = energy_spectrum_plot,
+            ## plot = fieldplot,
+            ## plot = energy_history_plot,
+            ## plot = energy_spectrum_plot,
             plot = meanplot,
             nupdate = 1,
         ),

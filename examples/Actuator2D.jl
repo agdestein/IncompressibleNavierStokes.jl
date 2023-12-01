@@ -75,8 +75,8 @@ state, outputs = solve_unsteady(
     Δt = 0.05,
     processors = (
         rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 1),
-        # ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 1),
-        # espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 1),
+        ## ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 1),
+        ## espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 1),
         ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
         ## vtk = vtk_writer(; setup, nupdate = 10, dir = "$output", filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
