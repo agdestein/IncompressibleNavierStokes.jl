@@ -5,6 +5,8 @@ if isdefined(@__MODULE__, :LanguageServer)
     using .IncompressibleNavierStokes
 end
 
+@info "" Threads.nthreads()
+
 using IncompressibleNavierStokes
 using Literate
 using Documenter
