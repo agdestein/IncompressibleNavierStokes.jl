@@ -360,53 +360,52 @@ function laplacian_mat(setup)
         ia = Ip[ntuple(β -> α == β ? (1:1) : (:), D)...][:]
         ib = Ip[ntuple(β -> α == β ? (Np[α]:Np[α]) : (:), D)...][:]
         for (aa, bb, j) in [(a, nothing, ia), (nothing, nothing, i), (nothing, b, ib)]
-            ja = if isnothing(aa)
-                j .- [δ(α)]
+            vala = @.(Ω[j] / Δ[α][getindex.(j, α)] / Δu[α][getindex.(j, α)-1])
+            if isnothing(aa)
+                J = [J; j .- [δ(α)]; j]
+                I = [I; j; j]
+                val = [val; vala; -vala]
             elseif aa isa PressureBC
-                # The weight of the "left" BC is zero, but still needs a J inside Ip, so
-                # just set it to ia
-                ia
+                J = [J; j]
+                I = [I; j]
+                val = [val; -vala]
             elseif aa isa PeriodicBC
-                ib
+                J = [J; ib; j]
+                I = [I; j; j]
+                val = [val; vala; -vala]
             elseif aa isa SymmetricBC
-                ia
+                J = [J; ia; j]
+                I = [I; j; j]
+                val = [val; vala; -vala]
             elseif aa isa DirichletBC
-                # The weight of the "left" BC is zero, but still needs a J inside Ip, so
-                # just set it to ia
-                ia
             end
-            jb = if isnothing(bb)
-                j .+ [δ(α)]
+
+            valb = @.(Ω[j] / Δ[α][getindex.(j, α)] / Δu[α][getindex.(j, α)])
+            if isnothing(bb)
+                J = [J; j; j .+ [δ(α)]]
+                I = [I; j; j]
+                val = [val; -valb; valb]
             elseif bb isa PressureBC
                 # The weight of the "right" BC is zero, but still needs a J inside Ip, so
                 # just set it to ib
-                ib
+                J = [J; j]
+                I = [I; j]
+                val = [val; -valb]
             elseif bb isa PeriodicBC
-                ia
+                J = [J; j; ia]
+                I = [I; j; j]
+                val = [val; -valb; valb]
             elseif bb isa SymmetricBC
-                ib
+                J = [J; j; ib]
+                I = [I; j; j]
+                val = [val; -valb; valb]
             elseif bb isa DirichletBC
-                # The weight of the "right" BC is zero, but still needs a J inside Ip, so
-                # just set it to ib
-                ib
             end
-            J = [J; ja; j; jb]
-            I = [I; j; j; j]
             # val = vcat(
             #     val,
             #     map(I -> Ω[I] / Δ[α][I[α]] / Δu[α][I[α]-1], j),
             #     map(I -> -Ω[I] / Δ[α][I[α]] * (1 / Δu[α][I[α]] + 1 / Δu[α][I[α]-1]), j),
             #     map(I -> Ω[I] / Δ[α][I[α]] / Δu[α][I[α]], j),
-            # )
-            val = vcat(
-                val,
-                @.(Ω[j] / Δ[α][getindex.(j, α)] / Δu[α][getindex.(j, α)-1]),
-                @.(
-                    -Ω[j] / Δ[α][getindex.(j, α)] *
-                    (1 / Δu[α][getindex.(j, α)] + 1 / Δu[α][getindex.(j, α)-1])
-                ),
-                @.(Ω[j] / Δ[α][getindex.(j, α)] / Δu[α][getindex.(j, α)]),
-            )
         end
     end
     # Go back to CPU, otherwise get following error:
