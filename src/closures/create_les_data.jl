@@ -140,7 +140,7 @@ function create_les_data(
     )
 
     # @info "Generating $(Base.summarysize(filtered) / 1e6) Mb of LES data"
-    @info "Generating $(nsim * (nt + 1) * nles * 3 * 2 * length(bitstring(zero(T))) / 8 / 1e6) Mb of LES data"
+    @info "Generating $(nsim * (nt ÷ savefreq + 1) * nles^D * 3 * 2 * length(bitstring(zero(T))) / 8 / 1e6) Mb of LES data"
 
     for isim = 1:nsim
         # @info "Generating data for simulation $isim of $nsim"
