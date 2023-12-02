@@ -95,7 +95,10 @@ function fieldplot(
     xf = Array.(getindex.(setup.grid.xp, Ip.indices))
 
     (; u, p, t) = state[]
-    _f = if fieldname == :velocity
+    _f = if fieldname in (1, 2)
+        up = interpolate_u_p(u, setup)
+        up[fieldname]
+    elseif fieldname == :velocity
         up = interpolate_u_p(u, setup)
         upnorm = zero(p)
     elseif fieldname == :vorticity
@@ -108,7 +111,10 @@ function fieldplot(
     end
     _f = Array(_f)[Ip]
     field = lift(state) do (; u, p, t)
-        f = if fieldname == :velocity
+        f = if fieldname in (1, 2)
+            interpolate_u_p!(up, u, setup)
+            up[fieldname]
+        elseif fieldname == :velocity
             interpolate_u_p!(up, u, setup)
             map((u, v) -> √sum(u^2 + v^2), up...)
             @. upnorm = sqrt(up[1]^2 + up[2]^2)
