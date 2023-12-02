@@ -23,7 +23,7 @@ function fno(; setup, kmax, c, σ, ψ, rng = Random.default_rng(), kwargs...)
     init_weight(rng::AbstractRNG, dims...) = glorot_uniform(rng, T, dims...)
 
     # Create FNO closure model
-    create_closure(
+    layers = (
         # Put inputs in pressure points
         collocate,
 
@@ -41,6 +41,7 @@ function fno(; setup, kmax, c, σ, ψ, rng = Random.default_rng(), kwargs...)
         # Differentiate output to velocity points
         decollocate,
     )
+    create_closure(layers...; rng)
 end
 
 """

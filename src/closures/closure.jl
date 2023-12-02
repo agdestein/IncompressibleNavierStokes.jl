@@ -22,7 +22,7 @@ end
 
 Create neural closure model from layers.
 """
-function create_closure(layers...)
+function create_closure(layers...; rng)
     chain = Chain(layers...)
 
     # Create parameter vector (empty state)

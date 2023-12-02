@@ -39,7 +39,7 @@ function cnn(;
     c = [D; c]
 
     # Create convolutional closure model
-    create_closure(
+    layers = (
         # Put inputs in pressure points
         collocate,
 
@@ -60,4 +60,6 @@ function cnn(;
         # Differentiate output to velocity points
         decollocate,
     )
+
+    create_closure(layers...; rng)
 end
