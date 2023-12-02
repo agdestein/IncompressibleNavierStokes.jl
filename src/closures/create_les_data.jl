@@ -49,7 +49,8 @@ _filter_saver(dns, les, comp, pressure_solver; nupdate = 1) =
         _t = fill(zero(eltype(x[1])), 0)
         _u = fill(Array.(Φu), 0)
         _c = fill(Array.(Φu), 0)
-        on(state) do (; u, p, t)
+        on(state) do (; u, p, t, n)
+            n % nupdate == 0 || return
             momentum!(F, u, t, dns)
             pressuregradient!(G, p, dns)
             for α = 1:D
@@ -107,6 +108,7 @@ function create_les_data(
     tburn = T(0.1),
     tsim = T(0.1),
     Δt = T(1e-4),
+    savefreq = 1,
     ArrayType = Array,
     ic_params = (;),
 )
@@ -182,7 +184,7 @@ function create_les_data(
             (T(0), tsim);
             Δt,
             processors = (
-                f = _filter_saver(_dns, _les, compression, pressure_solver_les),
+                f = _filter_saver(_dns, _les, compression, pressure_solver_les; nupdate = savefreq),
                 # step_logger(; nupdate = 10),
             ),
             pressure_solver,
