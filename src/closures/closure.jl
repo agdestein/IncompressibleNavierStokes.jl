@@ -6,7 +6,7 @@ Wrap closure model and parameters so that it can be used in the solver.
 function wrappedclosure(m, θ, setup)
     (; dimension, Iu) = setup.grid
     D = dimension()
-    function neural_closure(u)
+    function neuralclosure(u)
         u = stack(ntuple(α -> u[α][Iu[α]], D))
         u = reshape(u, size(u)..., 1) # One sample
         mu = m(u, θ)

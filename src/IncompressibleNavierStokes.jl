@@ -122,7 +122,7 @@ export plotmat
 export cnn, fno, FourierLayer
 export train
 export mean_squared_error, relative_error
-export create_randloss, create_callback, create_les_data, create_io_arrays
+export createloss, createdataloader, create_callback, create_les_data, create_io_arrays
 export wrappedclosure
 
 # ODE methods

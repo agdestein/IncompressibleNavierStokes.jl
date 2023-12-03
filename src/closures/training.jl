@@ -1,5 +1,23 @@
 """
+    createdataloader(data; nuse = 50, device = identity)
+
+Create dataloader that uses a batch of `batchsize` random samples from
+`data` at each evaluation.
+The batch is moved to `device`.
+"""
+createdataloader(data; batchsize = 50, device = identity) = function dataloader()
+    x, y = data
+    nsample = size(x)[end]
+    d = ndims(x)
+    i = sort(shuffle(1:nsample)[1:batchsize])
+    xuse = device(Array(selectdim(x, d, i)))
+    yuse = device(Array(selectdim(y, d, i)))
+    xuse, yuse
+end
+
+"""
     train(
+        dataloader,
         loss,
         opt,
         θ;
@@ -8,13 +26,14 @@
         callback = (i, θ) -> println("Iteration \$i of \$niter"),
     )
 
-Update parameters `θ` to minimize `loss(θ)` using the optimiser `opt` for
-`niter` iterations.
+Update parameters `θ` to minimize `loss(dataloader(), θ)` using the
+optimiser `opt` for `niter` iterations.
 
-Return the a new named tuple `(; opt, θ, callbackstate)` with updated state and
-parameters.
+Return the a new named tuple `(; opt, θ, callbackstate)` with
+updated state and parameters.
 """
 function train(
+    dataloader,
     loss,
     opt,
     θ;
@@ -24,7 +43,8 @@ function train(
     callbackstate = nothing,
 )
     for i = 1:niter
-        g = first(gradient(loss, θ))
+        b = dataloader()
+        g = first(gradient(θ -> loss(b, θ), θ))
         opt, θ = Optimisers.update(opt, θ, g)
         if i % ncallback == 0
             callbackstate = callback(callbackstate, i, θ)
@@ -34,25 +54,13 @@ function train(
 end
 
 """
-    create_randloss(loss, f, x, y; nuse = size(x, 2), device = identity)
+    createloss(loss, f)
 
-Create loss function `randloss(θ)` that uses a batch of `nuse` random samples from
-`(x, y)` at each evaluation.
+Wrap loss function `loss(batch, θ)`.
 
 The function `loss` should take inputs like `loss(f, x, y, θ)`.
-
-The batch is moved to `device` before the loss is evaluated.
 """
-function create_randloss(loss, f, x, y; nuse = 50, device = identity)
-    nsample = size(x)[end]
-    d = ndims(x)
-    function randloss(θ)
-        i = Zygote.@ignore sort(shuffle(1:nsample)[1:nuse])
-        xuse = Zygote.@ignore device(Array(selectdim(x, d, i)))
-        yuse = Zygote.@ignore device(Array(selectdim(y, d, i)))
-        loss(f, xuse, yuse, θ)
-    end
-end
+createloss(loss, f) = ((x, y), θ) -> loss(f, x, y, θ)
 
 """
     mean_squared_error(f, x, y, θ; normalize = y -> sum(abs2, y), λ = sqrt(eps(eltype(x))))
