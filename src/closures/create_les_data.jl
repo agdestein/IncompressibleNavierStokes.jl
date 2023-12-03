@@ -32,23 +32,25 @@ function gaussian_force(
     force
 end
 
-_filter_saver(dns, les, comp, pressure_solver; nupdate = 1) =
+_filter_saver(dns, les, compression, pressure_solver; nupdate = 1) =
     processor() do state
         (; dimension, x) = dns.grid
         T = eltype(x[1])
         D = dimension()
         F = zero.(state[].u)
         G = zero.(state[].u)
-        Φu = zero.(face_average(state[].u, les, comp))
+        Φu = zero.(face_average(state[].u, les, compression))
         q = zero(pressure(pressure_solver, Φu, state[].t, les))
         M = zero(q)
         ΦF = zero.(Φu)
         FΦ = zero.(Φu)
         GΦ = zero.(Φu)
         c = zero.(Φu)
-        _t = fill(zero(eltype(x[1])), 0)
-        _u = fill(Array.(Φu), 0)
-        _c = fill(Array.(Φu), 0)
+        results = (;
+        t = fill(zero(eltype(x[1])), 0),
+        u = fill(Array.(Φu), 0),
+        c = fill(Array.(Φu), 0),
+    )
         on(state) do (; u, p, t, n)
             n % nupdate == 0 || return
             momentum!(F, u, t, dns)
@@ -56,9 +58,9 @@ _filter_saver(dns, les, comp, pressure_solver; nupdate = 1) =
             for α = 1:D
                 F[α] .-= G[α]
             end
-            face_average!(Φu, u, les, comp)
+            face_average!(Φu, u, les, compression)
             apply_bc_u!(Φu, t, les)
-            face_average!(ΦF, F, les, comp)
+            face_average!(ΦF, F, les, compression)
             momentum!(FΦ, Φu, t, les)
             apply_bc_u!(FΦ, t, les; dudt = true)
             divergence!(M, FΦ, les)
@@ -71,12 +73,12 @@ _filter_saver(dns, les, comp, pressure_solver; nupdate = 1) =
                 FΦ[α] .-= GΦ[α]
                 c[α] .= ΦF[α] .- FΦ[α]
             end
-            push!(_t, t)
-            push!(_u, Array.(Φu))
-            push!(_c, Array.(c))
+            push!(results.t, t)
+            push!(results.u, Array.(Φu))
+            push!(results.c, Array.(c))
         end
         state[] = state[] # Save initial conditions
-        (; t = _t, u = _u, c = _c)
+        results
     end
 
 """
