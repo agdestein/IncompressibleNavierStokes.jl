@@ -122,7 +122,7 @@ export plotmat
 export smagorinsky_closure
 export cnn, fno, FourierLayer
 export train
-export mean_squared_error, relative_error
+export mean_squared_error, relative_error, relerr_trajectory
 export createloss, createdataloader, create_callback, create_les_data, create_io_arrays
 export wrappedclosure
 

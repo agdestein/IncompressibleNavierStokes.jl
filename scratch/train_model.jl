@@ -20,6 +20,10 @@ using Optimisers
 using Random
 using Zygote
 
+# Random number generator
+rng = Random.default_rng()
+Random.seed!(rng, 123)
+
 set_theme!(; GLMakie = (; scalefactor = 1.5))
 
 # Floating point precision
@@ -41,24 +45,30 @@ CUDA.allowscalar(false);
 device = cu
 
 # Parameters
+# nles = 50
+nles = 128
+# ndns = 200
+# nles = 256
 params = (;
     D = 2,
     Re = T(6_000),
     lims = (T(0), T(1)),
-    nles = 128,
-    ndns = 1024,
+    nles = [nles],
+    ndns = 512,
+    # ndns = 1024,
     tburn = T(0.05),
-    tsim = T(0.2),
+    tsim = T(0.5),
     Δt = T(1e-4),
+    savefreq = 5,
     ArrayType,
-    # ic_params = (; A = T(20_000_000), σ = T(5.0), s = T(3)),
-    # ic_params = (; A = T(10_000_000)),
 )
 
 # Create LES data from DNS
-data_train = create_les_data(T; params..., nsim = 10);
-data_valid = create_les_data(T; params..., nsim = 1);
-data_test = create_les_data(T; params..., nsim = 1);
+data_train = [create_les_data(T; params...) for _ = 1:3];
+data_valid = [create_les_data(T; params...) for _ = 1:1];
+data_test = [create_les_data(T; params..., tsim = T(0.2)) for _ = 1:1];
+
+data_test[1].u[1][1][1]
 
 # # Save filtered DNS data
 # jldsave("output/forced/data.jld2"; data_train, data_valid, data_test)
@@ -67,13 +77,16 @@ data_test = create_les_data(T; params..., nsim = 1);
 # data_train, data_valid, data_test = load("output/forced/data.jld2", "data_train", "data_valid", "data_test")
 
 # Build LES setup and assemble operators
-x = ntuple(α -> LinRange(params.lims..., params.nles + 1), params.D)
+x = ntuple(α -> LinRange(params.lims..., nles + 1), params.D)
 setup = Setup(x...; params.Re, ArrayType);
+
+# Uniform periodic grid
+pressure_solver = SpectralPressureSolver(setup);
 
 # Inspect data
 (; Ip) = setup.grid;
-field = data_train.u[1];
-α = 1
+field = data_train[1].u[1];
+α = 2
 # j = 13
 o = Observable(field[1][α][Ip])
 # o = Observable(field[1][α][:, :, j])
@@ -84,55 +97,90 @@ for i = 1:length(field)
     sleep(0.001)
 end
 
-# Uniform periodic grid
-pressure_solver = SpectralPressureSolver(setup);
+# Inspect data
+field = data_train[1].u[1];
+u = device(field[1])
+o = Observable((;
+    u,
+    p = IncompressibleNavierStokes.pressure(pressure_solver, u, T(0), setup),
+    t = nothing,
+))
+fieldplot(
+    o;
+    setup,
+    # fieldname = :velocity,
+    fieldname = 2,
+)
+for i = 1:length(field)
+    o[] = (; o[]..., u = device(field[i]))
+    sleep(0.001)
+end
 
 # Create input/output arrays
-io_train = create_io_arrays(data_train, setup);
-io_valid = create_io_arrays(data_valid, setup);
-io_test = create_io_arrays(data_test, setup);
+io_train = create_io_arrays(data_train, [setup]);
+io_valid = create_io_arrays(data_valid, [setup]);
+io_test = create_io_arrays(data_test, [setup]);
 
-size(io_train[1])
+size(io_train[1].u)
+size(io_valid[1].u)
+size(io_test[1].u)
 
 Base.summarysize(io_train) / 1e9
 
-# closure, θ₀ = cnn(;
-#     setup,
-#     radii = [2, 2, 2, 2],
-#     channels = [5, 5, 5, params.D],
-#     activations = [leakyrelu, leakyrelu, leakyrelu, identity],
-#     use_bias = [true, true, true, false],
-# );
-# closure.NN
-#
-# sample = io_train[1][:, :, :, 1:5]
-# closure(sample, θ₀) |> size
-#
-# θ.layer_5
-# θ.layer_6
-
-closure, θ₀ = fno(;
+closure, θ₀ = cnn(;
     setup,
-    kmax = [8, 8, 8, 8],
-    c = [5, 5, 5, 5],
-    σ = [gelu, gelu, gelu, identity],
-    ψ = gelu,
+    radii = [2, 2, 2, 2],
+    channels = [5, 5, 5, params.D],
+    activations = [leakyrelu, leakyrelu, leakyrelu, identity],
+    use_bias = [true, true, true, false],
 );
+closure.chain
 
-closure.NN
+sample = io_train[1].u[:, :, :, 1:5]
+closure(sample, θ₀) |> size
+
+θ₀.layer_5
+θ₀.layer_6
+
+# closure, θ₀ = fno(;
+#     setup,
+#     kmax = [20, 20, 20, 20],
+#     c = [24, 12, 8, 8],
+#     # σ = [gelu, gelu, gelu, identity],
+#     σ = [leakyrelu, leakyrelu, leakyrelu, identity],
+#     # σ = [tanh, tanh, tanh, identity],
+#     # ψ = gelu,
+#     ψ = tanh,
+#     rng,
+# );
+#
+# closure.chain
+#
+# θ₀.layer_4.spectral_weights |> size
+
+# θ₀
+# θ₀ = 2*θ₀
+# θ₀.layer_6 ./= 20
 
 # Prepare training
 θ = T(1.0e-1) * device(θ₀);
 # θ = device(θ₀);
+# θ = 2 * device(θ₀);
 opt = Optimisers.setup(Adam(T(1.0e-3)), θ);
 callbackstate = Point2f[];
-randloss = create_randloss(mean_squared_error, closure, io_train...; nuse = 50, device);
+loss = createloss(mean_squared_error, closure);
+dataloader = createdataloader(io_train[1]; batchsize = 50, device);
+dataloader()
+loss(dataloader(), θ)
+it = rand(1:size(io_valid[1].u, 4), 50);
+validset = map(v -> v[:, :, :, it], io_valid[1]);
 
 # Warm-up
-randloss(θ)
-@time randloss(θ);
-first(gradient(randloss, θ));
-@time first(gradient(randloss, θ));
+loss(dataloader(), θ)
+@time loss(dataloader(), θ);
+b = dataloader()
+first(gradient(θ -> loss(b, θ), θ));
+@time first(gradient(θ -> loss(b, θ), θ));
 GC.gc()
 CUDA.reclaim()
 
@@ -141,13 +189,14 @@ CUDA.reclaim()
 # will not be overwritten until training is finished.
 # This allows for cancelling with "Control-C" should errors explode.
 (; opt, θ, callbackstate) = train(
-    randloss,
+    dataloader,
+    loss,
     opt,
     θ;
     niter = 1000,
-    ncallback = 20,
+    ncallback = 10,
     callbackstate,
-    callback = create_callback(closure, device(io_valid)...; state = callbackstate),
+    callback = create_callback(closure, device(validset)...; state = callbackstate),
 );
 GC.gc()
 CUDA.reclaim()
@@ -174,38 +223,23 @@ function relerr(u, uref, setup)
     sqrt(a) / sqrt(b)
 end
 
-relerr_track(uref, setup) =
-    processor() do state
-        (; dimension, x, Ip) = setup.grid
-        D = dimension()
-        T = eltype(x[1])
-        e = Ref(T(0))
-        on(state) do (; u, n)
-            a, b = T(0), T(0)
-            for α = 1:D
-                # @show size(uref[n + 1])
-                a += sum(abs2, u[α][Ip] - uref[n+1][α][Ip])
-                b += sum(abs2, uref[n+1][α][Ip])
-            end
-            e[] += sqrt(a) / sqrt(b) / (length(uref) - 1)
-        end
-        e
-    end
-
 u, u₀, p₀ = nothing, nothing, nothing
-u = device.(data_test.u[1]);
-u₀ = device(data_test.u[1][1]);
+u = device.(data_test[1].u[1]);
+u₀ = device(data_test[1].u[1][1]);
 p₀ = IncompressibleNavierStokes.pressure(pressure_solver, u₀, T(0), setup);
+Δt = data_test[1].t[2] - data_test[1].t[1]
+tlims = extrema(data_test[1].t)
 length(u)
+length(data_test[1].t)
 
 state_nm, outputs = solve_unsteady(
     setup,
     u₀,
     p₀,
-    (T(0), params.tsim);
-    Δt = data_test.Δt,
+    tlims;
+    Δt,
     pressure_solver,
-    processors = (; relerr = relerr_track(u, setup), log = timelogger(; nupdate = 1)),
+    processors = (; relerr = relerr_trajectory(u, setup), log = timelogger(; nupdate = 1000)),
 )
 relerr_nm = outputs.relerr[]
 
@@ -213,15 +247,21 @@ state_cnn, outputs = solve_unsteady(
     (; setup..., closure_model = wrappedclosure(closure, θ, setup)),
     u₀,
     p₀,
-    (T(0), params.tsim);
-    Δt = data_test.Δt,
+    tlims;
+    Δt,
     pressure_solver,
-    processors = (relerr = relerr_track(u, setup), log = timelogger(; nupdate = 1)),
+    processors = (relerr = relerr_trajectory(u, setup), log = timelogger(; nupdate = 1)),
 )
 relerr_cnn = outputs.relerr[]
 
 relerr_nm
 relerr_cnn
+
+# dnm = relerr_nm
+# dcnn = relerr_cnn
+
+dnm
+dcnn
 
 function energy_history(setup, state)
     (; Ωp) = setup.grid
@@ -260,52 +300,6 @@ V_nm, p_nm, outputs_nm = solve_unsteady(
     devsetup,
 )
 ehist_nm = outputs_nm[2]
-
-setup_fno = (; forcedsetup..., closure_model = V -> closure(V, θ))
-devsetup = device(setup_fno);
-V_fno, p_fno, outputs_fno = solve_unsteady(
-    setup_fno,
-    data_test.V[:, 1, isample],
-    data_test.p[:, 1, isample],
-    (T(0), tsim);
-    Δt = T(2e-4),
-    processors = (
-        field_plotter(devsetup; type = heatmap, nupdate = 1),
-        energy_history_writer(forcedsetup),
-        step_logger(; nupdate = 10),
-    ),
-    pressure_solver,
-    inplace = false,
-    device,
-    devsetup,
-)
-ehist_fno = outputs_fno[2]
-
-state = Observable((; V = data_train.V[:, 1, 1], p = data_train.p[:, 1, 1], t = T(0)))
-ehist = energy_history(forcedsetup, state)
-for i = 2:nt+1
-    t = (i - 1) / T(nt - 1) * tsim
-    V = data_test.V[:, i, isample]
-    p = data_test.p[:, i, isample]
-    state[] = (; V, p, t)
-end
-ehist
-
-fig = Figure()
-ax = Axis(fig[1, 1]; xlabel = "t", ylabel = "Kinetic energy")
-lines!(ax, ehist; label = "Reference")
-lines!(ax, ehist_nm; label = "No closure")
-lines!(ax, ehist_fno; label = "FNO")
-axislegend(ax)
-fig
-
-save("output/train/energy.png", fig)
-
-V = data_train.V[:, end, isample]
-p = data_train.p[:, end, isample]
-
-relative_error(V_nm, V)
-relative_error(V_fno, V)
 
 box = [
     Point2f(0.72, 0.42),
