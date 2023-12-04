@@ -22,14 +22,13 @@ function cnn(;
     rng = Random.default_rng(),
 )
     r, c, σ, b = radii, channels, activations, use_bias
-    (; grid) = setup
-    (; dimension, x, Δu) = grid
+    (; T, grid) = setup
+    (; dimension) = grid
     D = dimension()
 
     dx = map(d -> d[2:end-1], Δu)
 
     # Weight initializer
-    T = eltype(x[1])
     glorot_uniform_T(rng::AbstractRNG, dims...) = glorot_uniform(rng, T, dims...)
 
     # Make sure there are two force fields in output

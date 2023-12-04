@@ -9,7 +9,6 @@
         Δt = zero(eltype(u₀[1])),
         cfl = 1,
         n_adapt_Δt = 1,
-        inplace = true,
         docopy = true,
         processors = (;),
     )
@@ -40,7 +39,6 @@ function solve_unsteady(
     Δt = zero(eltype(u₀[1])),
     cfl = 1,
     n_adapt_Δt = 1,
-    inplace = true,
     docopy = true,
     processors = (;),
 )
@@ -51,27 +49,19 @@ function solve_unsteady(
 
     t_start, t_end = tlims
     isadaptive = isnothing(Δt)
-    if !isadaptive
-        nstep = round(Int, (t_end - t_start) / Δt)
-        Δt = (t_end - t_start) / nstep
-    end
 
-    if inplace
-        cache = ode_method_cache(method, setup, u₀, p₀)
-    end
+    # Cache arrays for intermediate computations
+    cache = ode_method_cache(method, setup, u₀, p₀)
 
     # Time stepper
     stepper = create_stepper(method; setup, pressure_solver, u = u₀, p = p₀, t = t_start)
-
-    # Get initial time step
-    isadaptive && (Δt = get_timestep(stepper, cfl))
 
     # Initialize processors for iteration results  
     state = Observable(get_state(stepper))
     initialized = (; (k => v.initialize(state) for (k, v) in pairs(processors))...)
 
-    while stepper.t < t_end
-        if isadaptive
+    if isadaptive
+        while stepper.t < t_end
             if stepper.n % n_adapt_Δt == 0
                 # Change timestep based on operators
                 Δt = get_timestep(stepper, cfl)
@@ -79,17 +69,23 @@ function solve_unsteady(
 
             # Make sure not to step past `t_end`
             Δt = min(Δt, t_end - stepper.t)
-        end
 
-        # Perform a single time step with the time integration method
-        if inplace
+            # Perform a single time step with the time integration method
             stepper = timestep!(method, stepper, Δt; cache)
-        else
-            stepper = timestep(method, stepper, Δt)
-        end
 
-        # Process iteration results with each processor
-        state[] = get_state(stepper)
+            # Process iteration results with each processor
+            state[] = get_state(stepper)
+        end
+    else
+        nstep = round(Int, (t_end - t_start) / Δt)
+        Δt = (t_end - t_start) / nstep
+        for it = 1:nstep
+            # Perform a single time step with the time integration method
+            stepper = timestep!(method, stepper, Δt; cache)
+
+            # Process iteration results with each processor
+            state[] = get_state(stepper)
+        end
     end
 
     # Final state
