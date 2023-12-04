@@ -29,5 +29,6 @@ Setup(
     bodyforce,
     closure_model,
     ArrayType,
+    T = eltype(x[1]),
     workgroupsize,
 )

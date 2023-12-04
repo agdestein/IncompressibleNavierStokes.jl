@@ -431,6 +431,153 @@ function laplacian_mat(setup)
     # Ω isa CuArray ? cu(L) : L
 end
 
+# @inline function ∂x(uα, I, ::Val{α}, ::Val{β}, Δβ, Δuβ) where {α,β}
+#     D = length(I)
+#     δ = Offset{D}()
+#     α == β ? (uα[I] - uα[I-δ(β)]) / Δβ[I[β]] :
+#     (
+#         (uα[I+δ(β)] - uα[I]) / Δuβ[I[β]] +
+#         (uα[I-δ(α)+δ(β)] - uα[I-δ(α)]) / Δuβ[I[β]] +
+#         (uα[I] - uα[I-δ(β)]) / Δuβ[I[β]-1] +
+#         (uα[I-δ(α)] - uα[I-δ(α)-δ(β)]) / Δuβ[I[β]-1]
+#     ) / 4
+# end
+# @inline ∇(::Val{2}, u, I, Δ, Δu) = SMatrix{2,2,eltype(u[1]),4}(
+#     ∂x(u[1], I, Val(1), Val(1), Δ[1], Δu[1]),
+#     ∂x(u[2], I, Val(2), Val(1), Δ[1], Δu[1]),
+#     ∂x(u[1], I, Val(1), Val(2), Δ[2], Δu[2]),
+#     ∂x(u[2], I, Val(2), Val(2), Δ[2], Δu[2]),
+# )
+# @inline ∇(::Val{3}, u, I, Δ, Δu) = SMatrix{3,3,eltype(u[1]),9}(
+#     ∂x(u[1], I, Val(1), Val(1), Δ[1], Δu[1]),
+#     ∂x(u[2], I, Val(2), Val(1), Δ[1], Δu[1]),
+#     ∂x(u[3], I, Val(3), Val(1), Δ[1], Δu[1]),
+#     ∂x(u[1], I, Val(1), Val(2), Δ[2], Δu[2]),
+#     ∂x(u[2], I, Val(2), Val(2), Δ[2], Δu[2]),
+#     ∂x(u[3], I, Val(3), Val(2), Δ[2], Δu[2]),
+#     ∂x(u[1], I, Val(1), Val(3), Δ[3], Δu[3]),
+#     ∂x(u[2], I, Val(2), Val(3), Δ[3], Δu[3]),
+#     ∂x(u[3], I, Val(3), Val(3), Δ[3], Δu[3]),
+# )
+#
+# @inline function strain(valD, u, I, Δ, Δu)
+#     ∇u = ∇(valD, u, I, Δ, Δu)
+#     (∇u + ∇u') / 2
+# end
+#
+# @inline gridsize(::Val{2}, Δ, I) = sqrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2)
+# @inline gridsize(::Val{3}, Δ, I) = sqrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2 + Δ[3][I[3]]^2)
+
+function smagtensor!(σ, u, θ, setup)
+    # TODO: Combine with normal diffusion tensor
+    (; boundary_conditions, grid, workgroupsize) = setup
+    (; dimension, Np, Ip, Δ, Δu) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @assert D == 2
+    @kernel function σ!(σ, u, I0)
+        ∂x(uα, I, ::Val{α}, ::Val{β}, Δβ, Δuβ) where {α,β} =
+            α == β ? (uα[I] - uα[I-δ(β)]) / Δβ[I[β]] :
+            (
+                (uα[I+δ(β)] - uα[I]) / Δuβ[I[β]] +
+                (uα[I-δ(α)+δ(β)] - uα[I-δ(α)]) / Δuβ[I[β]] +
+                (uα[I] - uα[I-δ(β)]) / Δuβ[I[β]-1] +
+                (uα[I-δ(α)] - uα[I-δ(α)-δ(β)]) / Δuβ[I[β]-1]
+            ) / 4
+        I = @index(Global, Cartesian)
+        I = I + I0
+        if D == 2
+            ∇u = SMatrix{2,2,eltype(u[1]),4}(
+                ∂x(u[1], I, Val(1), Val(1), Δ[1], Δu[1]),
+                ∂x(u[2], I, Val(2), Val(1), Δ[1], Δu[1]),
+                ∂x(u[1], I, Val(1), Val(2), Δ[2], Δu[2]),
+                ∂x(u[2], I, Val(2), Val(2), Δ[2], Δu[2]),
+            )
+            d = sqrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2)
+        elseif D == 3
+            # TODO: Figure out why KA doesn't like I[3] when D == 2
+            # ∇u = SMatrix{3,3,eltype(u[1]),9}(
+            #     ∂x(u[1], I, Val(1), Val(1), Δ[1], Δu[1]),
+            #     ∂x(u[2], I, Val(2), Val(1), Δ[1], Δu[1]),
+            #     ∂x(u[3], I, Val(3), Val(1), Δ[1], Δu[1]),
+            #     ∂x(u[1], I, Val(1), Val(2), Δ[2], Δu[2]),
+            #     ∂x(u[2], I, Val(2), Val(2), Δ[2], Δu[2]),
+            #     ∂x(u[3], I, Val(3), Val(2), Δ[2], Δu[2]),
+            #     ∂x(u[1], I, Val(1), Val(3), Δ[3], Δu[3]),
+            #     ∂x(u[2], I, Val(2), Val(3), Δ[3], Δu[3]),
+            #     ∂x(u[3], I, Val(3), Val(3), Δ[3], Δu[3]),
+            # )
+            # d = sqrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2 + Δ[3][I[3]]^2)
+        end
+        # S = strain(Val(D), u, I, Δ, Δu)
+        # d = gridsize(Val(D), Δ, I)
+        S = (∇u + ∇u') / 2
+        # νt = θ^2 * d^2 * sqrt(2 * dot(S, S))
+        νt = θ^2 * d^2 * sqrt(2 * sum(S .* S))
+        σ[I] = 2 * νt * S
+    end
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    σ!(get_backend(u[1]), workgroupsize)(σ, u, I0; ndrange = Np)
+    σ
+end
+
+function smagorinsky!(s, σ, setup)
+    (; boundary_conditions, grid, workgroupsize) = setup
+    (; dimension, Nu, Iu, Δ, Δu, A) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function s!(s, σ, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
+        I = @index(Global, Cartesian)
+        I = I + I0
+        s[α][I] = 0
+        # for β = 1:D
+        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+            Δuαβ = α == β ? Δu[β] : Δ[β]
+            if α == β
+                σαβ2 = σ[I+δ(β)][α, β]
+                σαβ1 = σ[I][α, β]
+            else
+                # TODO: Add interpolation weights for non-uniform case
+                σαβ2 =
+                    (
+                        σ[I][α, β] +
+                        σ[I+δ(β)][α, β] +
+                        σ[I+δ(α)+δ(β)][α, β] +
+                        σ[I+δ(α)][α, β]
+                    ) / 4
+                σαβ1 =
+                    (
+                        σ[I-δ(β)][α, β] +
+                        σ[I][α, β] +
+                        σ[I+δ(α)-δ(β)][α, β] +
+                        σ[I+δ(α)][α, β]
+                    ) / 4
+            end
+            s[α][I] += (σαβ2 - σαβ1) / Δuαβ[I[β]]
+        end
+    end
+    for α = 1:D
+        I0 = first(Iu[α])
+        I0 -= oneunit(I0)
+        s!(get_backend(s[1]), workgroupsize)(s, σ, Val(α), Val(1:D), I0; ndrange = Nu[α])
+    end
+    s
+end
+
+function smagorinsky_closure(setup)
+    (; dimension, x, N) = setup.grid
+    D = dimension()
+    backend = get_backend(x[1])
+    T = eltype(x[1])
+    σ = KernelAbstractions.zeros(backend, SMatrix{D,D,T,D * D}, N)
+    s = ntuple(α -> KernelAbstractions.zeros(backend, T, N), D)
+    function closure(u, θ)
+        smagtensor!(σ, u, θ, setup)
+        smagorinsky!(s, σ, setup)
+    end
+end
+
 """
     interpolate_u_p(u, setup)
 

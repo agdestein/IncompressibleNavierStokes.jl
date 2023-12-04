@@ -119,6 +119,7 @@ export plotgrid, save_vtk
 export plotmat
 
 # Closure models
+export smagorinsky_closure
 export cnn, fno, FourierLayer
 export train
 export mean_squared_error, relative_error
