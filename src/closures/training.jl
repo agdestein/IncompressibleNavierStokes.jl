@@ -17,7 +17,7 @@ end
 
 """
     train(
-        dataloader,
+        dataloaders,
         loss,
         opt,
         θ;
@@ -33,7 +33,7 @@ Return the a new named tuple `(; opt, θ, callbackstate)` with
 updated state and parameters.
 """
 function train(
-    dataloader,
+    dataloaders,
     loss,
     opt,
     θ;
@@ -43,8 +43,10 @@ function train(
     callbackstate = nothing,
 )
     for i = 1:niter
-        b = dataloader()
-        g = first(gradient(θ -> loss(b, θ), θ))
+        g = sum(dataloaders) do d
+            b = d()
+            first(gradient(θ -> loss(b, θ), θ))
+        end
         opt, θ = Optimisers.update(opt, θ, g)
         if i % ncallback == 0
             callbackstate = callback(callbackstate, i, θ)
@@ -79,6 +81,31 @@ Compute average column relative error between matrices `x` and `y`.
 """
 relative_error(x, y) =
     sum(norm(x - y) / norm(y) for (x, y) ∈ zip(eachcol(x), eachcol(y))) / size(x, 2)
+
+"""
+    relerr_trajectory(uref, setup)
+
+Processor to compute relative error between `uref` and `u` at each iteration.
+"""
+relerr_trajectory(uref, setup; nupdate = 1) =
+    processor() do state
+        (; dimension, x, Ip) = setup.grid
+        D = dimension()
+        T = eltype(x[1])
+        e = Ref(T(0))
+        on(state) do (; u, n)
+            n % nupdate == 0 || return
+            neff = n ÷ nupdate
+            a, b = T(0), T(0)
+            for α = 1:D
+                # @show size(uref[n + 1])
+                a += sum(abs2, u[α][Ip] - uref[neff+1][α][Ip])
+                b += sum(abs2, uref[neff+1][α][Ip])
+            end
+            e[] += sqrt(a) / sqrt(b) / (length(uref) - 1)
+        end
+        e
+    end
 
 """
     create_callback(
