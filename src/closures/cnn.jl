@@ -26,7 +26,7 @@ function cnn(;
     (; dimension) = grid
     D = dimension()
 
-    dx = map(d -> d[2:end-1], Δu)
+    # dx = map(d -> d[2:end-1], Δu)
 
     # Weight initializer
     glorot_uniform_T(rng::AbstractRNG, dims...) = glorot_uniform(rng, T, dims...)
