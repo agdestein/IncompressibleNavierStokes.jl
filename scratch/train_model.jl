@@ -239,7 +239,10 @@ state_nm, outputs = solve_unsteady(
     tlims;
     Δt,
     pressure_solver,
-    processors = (; relerr = relerr_trajectory(u, setup), log = timelogger(; nupdate = 1000)),
+    processors = (;
+        relerr = relerr_trajectory(u, setup),
+        log = timelogger(; nupdate = 1000),
+    ),
 )
 relerr_nm = outputs.relerr[]
 
