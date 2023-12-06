@@ -1,4 +1,5 @@
-![Logo](docs/src/assets/logo_text_dots.png)
+![Logo](docs/src/assets/logo_text_dots.png#gh-light-mode-only)
+![Logo](docs/src/assets/logo_text_dots_dark_mode.png#gh-dark-mode-only)
 
 # IncompressibleNavierStokes
 
