@@ -74,11 +74,7 @@ function poisson!(solver::CGPressureSolver, p, f)
         # d = zero(eltype(a))
         I0 = first(Ip)
         I0 -= oneunit(I0)
-        d = KernelAbstractions.zeros(
-            get_backend(a),
-            eltype(a),
-            ntuple(Returns(1), length(I0)),
-        )
+        d = fill!(similar(a, ntuple(Returns(1), length(I0))), 0),
         innerdot!(get_backend(a), workgroupsize)(d, a, b, I0; ndrange = Np)
         d[]
     end

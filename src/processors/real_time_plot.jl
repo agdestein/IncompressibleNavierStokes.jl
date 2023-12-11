@@ -293,7 +293,7 @@ function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
     D = dimension()
     K = size(Ip) .÷ 2
     kx = ntuple(α -> 1:K[α]-1, D)
-    k = KernelAbstractions.zeros(backend, T, length.(kx))
+    k = fill!(similar(xp[1], length.(kx)), 0)
     for α = 1:D
         kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
         k .+= kα .^ 2
@@ -304,13 +304,13 @@ function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
     # Make averaging matrix
     i = sortperm(k)
     nbin, r = divrem(length(i), naverage)
-    ib = KernelAbstractions.zeros(backend, Int, nbin * naverage)
-    ia = KernelAbstractions.zeros(backend, Int, nbin * naverage)
+    ib = similar(xp[1], Int, nbin * naverage)
+    ia = similar(xp[1], Int, nbin * naverage)
     for j = 1:naverage
         copyto!(view(ia, (j-1)*nbin+1:j*nbin), collect(1:nbin))
         ib[(j-1)*nbin+1:j*nbin] = i[j:naverage:end-r]
     end
-    vals = KernelAbstractions.ones(backend, T, nbin * naverage) / naverage
+    k = fill!(similar(xp[1], nbin * naverage), T(1) / naverage)
     A = sparse(ia, ib, vals, nbin, length(i))
     k = Array(A * k)
 

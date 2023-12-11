@@ -20,8 +20,8 @@ struct DirectPressureSolver{T,S,F,A} <: AbstractPressureSolver{T}
         # T = eltype(x[1])
         T = Float64
         backend = get_backend(x[1])
-        # f = KernelAbstractions.zeros(backend, T, prod(Np))
-        # p = KernelAbstractions.zeros(backend, T, prod(Np))
+        # f = similar(x[1], prod(Np))
+        # p = similar(x[1], prod(Np))
         f = zeros(T, prod(Np) + 1)
         p = zeros(T, prod(Np) + 1)
         L = laplacian_mat(setup)
@@ -184,7 +184,7 @@ function SpectralPressureSolver(setup)
         D,
     )
 
-    Ahat = KernelAbstractions.zeros(get_backend(x[1]), Complex{T}, Np...)
+    Ahat = fill!(similar(x[1], Complex{T}, Np), 0)
     Tπ = T(π) # CUDA doesn't like pi
     for d = 1:D
         @. Ahat += sin(k[d] * Tπ / Np[d])^2 / Δx[d]^2

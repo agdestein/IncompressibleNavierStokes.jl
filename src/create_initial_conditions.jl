@@ -57,18 +57,16 @@ function create_initial_conditions(
     u, p
 end
 
-function create_spectrum(N; A, σ, s, backend)
-    T = typeof(A)
-    D = length(N)
+function create_spectrum(; setup, A, σ, s)
+    (; dimension, x, N) = setup.grid
+    T = eltype(x[1])
+    D = dimension()
     K = N .÷ 2
     k = ntuple(
         α -> reshape(1:K[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...),
         D,
     )
-    a = KernelAbstractions.ones(backend, Complex{T}, K)
-    AT = typeof(a)
-    # k = AT.(Array{Complex{T}}.(k))
-    # k = AT.(k)
+    a = fill!(similar(x[1], Complex{T}, K), 1)
     τ = T(2π)
     a .*= prod(N) * A / sqrt(τ^2 * 2σ^2)
     for α = 1:D
@@ -106,13 +104,13 @@ function random_field(
     s = convert(eltype(setup.grid.x[1]), 5),
     pressure_solver = DirectPressureSolver(setup),
 )
-    (; dimension, x, N, Ip, Ω) = setup.grid
+    (; dimension, x, Ip, Ω) = setup.grid
     D = dimension()
     T = eltype(x[1])
     backend = get_backend(x[1])
 
     # Create random velocity field
-    u = ntuple(α -> real.(ifft(create_spectrum(N; A, σ, s, backend))), D)
+    u = ntuple(α -> real.(ifft(create_spectrum(; setup, A, σ, s))), D)
     apply_bc_u!(u, t, setup)
 
     # Make velocity field divergence free

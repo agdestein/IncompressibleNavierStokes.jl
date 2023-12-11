@@ -236,7 +236,7 @@ function bodyforce!(F, u, t, setup)
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        if issteadybodyforce 
+        if issteadybodyforce
             F[α] .+= bodyforce[α]
         else
             f!(get_backend(F[1]), workgroupsize)(F, Val(α), t, I0; ndrange = Nu[α])
@@ -360,9 +360,9 @@ function laplacian_mat(setup)
     δ = Offset{D}()
     Ia = first(Ip)
     Ib = last(Ip)
-    I = KernelAbstractions.zeros(backend, CartesianIndex{D}, 0)
-    J = KernelAbstractions.zeros(backend, CartesianIndex{D}, 0)
-    val = KernelAbstractions.zeros(backend, T, 0)
+    I = similar(x[1], CartesianIndex{D}, 0)
+    J = similar(x[1], CartesianIndex{D}, 0)
+    val = similar(x[1], 0)
     I0 = Ia - oneunit(Ia)
     for α = 1:D
         a, b = boundary_conditions[α]
@@ -426,15 +426,15 @@ function laplacian_mat(setup)
     # J = J .- I0
     I = I .- [I0]
     J = J .- [I0]
-    # linear = copyto!(KernelAbstractions.zeros(backend, Int, Np), collect(LinearIndices(Ip)))
+    # linear = copyto!(similar(x[1], Int, Np), collect(LinearIndices(Ip)))
     linear = LinearIndices(Ip)
     I = linear[I]
     J = linear[J]
 
     # Assemble on CPU, since CUDA overwrites instead of adding
     L = sparse(I, J, Array(val))
-    # II = copyto!(KernelAbstractions.zeros(backend, Int, length(I)), I)
-    # JJ = copyto!(KernelAbstractions.zeros(backend, Int, length(J)), J)
+    # II = copyto!(similar(x[1], Int, length(I)), I)
+    # JJ = copyto!(similar(x[1], Int, length(J)), J)
     # sparse(II, JJ, val)
 
     L
@@ -580,8 +580,8 @@ function smagorinsky_closure(setup)
     D = dimension()
     backend = get_backend(x[1])
     T = eltype(x[1])
-    σ = KernelAbstractions.zeros(backend, SMatrix{D,D,T,D * D}, N)
-    s = ntuple(α -> KernelAbstractions.zeros(backend, T, N), D)
+    σ = similar(x[1], SMatrix{D,D,T,D * D}, N)
+    s = ntuple(α -> similar(x[1], N), D)
     function closure(u, θ)
         smagtensor!(σ, u, θ, setup)
         smagorinsky!(s, σ, setup)
