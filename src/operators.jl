@@ -211,26 +211,36 @@ end
 convectiondiffusion(u, setup) = convectiondiffusion!(zero.(u), u, setup)
 
 """
-    bodyforce!(F, u, setup)
+    bodyforce!(F, u, t, setup)
 
 Compute body force.
 """
 function bodyforce!(F, u, t, setup)
-    (; grid, workgroupsize, bodyforce) = setup
+    (; grid, workgroupsize, bodyforce, issteadybodyforce) = setup
     (; dimension, Δ, Δu, Nu, Iu, x, xp) = grid
     isnothing(bodyforce) && return F
     D = dimension()
     δ = Offset{D}()
-    @kernel function f!(F, force, ::Val{α}, t, I0) where {α}
+    @assert D == 2
+    @kernel function f!(F, ::Val{α}, t, I0) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
-        F[α][I] +=
-            force(Dimension(α), ntuple(β -> α == β ? x[β][1+I[β]] : xp[β][I[β]], D)..., t)
+        # xI = ntuple(β -> α == β ? x[β][1+I[β]] : xp[β][I[β]], D)
+        xI = (
+            α == 1 ? x[1][1+I[1]] : xp[1][I[1]],
+            α == 2 ? x[2][1+I[2]] : xp[2][I[2]],
+            # α == 3 ? x[3][1+I[3]] : xp[3][I[3]],
+        )
+        F[α][I] += bodyforce(Dimension(α), xI..., t)
     end
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        f!(get_backend(F[1]), workgroupsize)(F, bodyforce, Val(α), t, I0; ndrange = Nu[α])
+        if issteadybodyforce 
+            F[α] .+= bodyforce[α]
+        else
+            f!(get_backend(F[1]), workgroupsize)(F, Val(α), t, I0; ndrange = Nu[α])
+        end
     end
     F
 end
@@ -309,7 +319,7 @@ pressuregradient(p, setup) = pressuregradient!(
 Compute Laplacian of pressure field (in-place version).
 """
 function laplacian!(L, p, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, workgroupsize, boundary_conditions) = setup
     (; dimension, Δ, Δu, N, Np, Ip, Ω) = grid
     D = dimension()
     δ = Offset{D}()
