@@ -30,23 +30,41 @@ function poisson!(solver::DirectPressureSolver, p, f)
     T = eltype(p)
     # solver.f .= view(view(f, Ip), :)
     # copyto!(solver.f, view(view(f, Ip), :))
-    copyto!(view(solver.f, 1:length(solver.f)-1), Array(view(view(f, Ip), :)))
-    # @infiltrate
-    solver.p .= fact \ solver.f
-    # ldiv!(solver.p, fact, solver.f)
     pp = view(view(p, Ip), :)
+    if false # p isa CuArray 
+        ldiv!(solver.p, fact, solver.f)
+    elseif false # p isa CuArray
+        copyto!(view(solver.f, 1:length(solver.f)-1), view(view(f, Ip), :))
+        F = fact
+        a, b = solver.f, solver.p
+        # solver.p .= F.Q * (F.U \ (F.L \ (F.P * (F.Rs .* solver.f))))
+        # copyto!(pp, view(solver.p, 1:length(solver.p)-1))
+        a .*= F.Rs
+        mul!(b, F.P, a)
+        ldiv!(a, F.L, b)
+        ldiv!(b, F.U, a)
+        mul!(a, F.U, b)
+        copyto!(pp, view(a, 1:length(a)-1))
+    else
+        copyto!(view(solver.f, 1:length(solver.f)-1), Array(view(view(f, Ip), :)))
+        solver.p .= fact \ solver.f
+        copyto!(pp, T.(view(solver.p, 1:length(solver.p)-1)))
+    end
+    # @infiltrate
+    # ldiv!(solver.p, fact, solver.f)
     # pp .= solver.p
     # copyto!(pp, solver.p)
-    copyto!(pp, T.(view(solver.p, 1:length(solver.p)-1)))
     p
 end
 
-# function poisson!(solver::CGPressureSolver, p, f)
-#     (; A, abstol, reltol, maxiter) = solver
-#     f = view(f, :)
-#     p = view(p, :)
-#     cg!(p, A, f; abstol, reltol, maxiter)
-# end
+function poisson!(solver::CGMatrixPressureSolver, p, f)
+    (; L, qin, qout, abstol, reltol, maxiter) = solver
+    copyto!(qin, view(view(f, Ip), :))
+    p = view(p, :)
+    cg!(qout, L, qin; abstol, reltol, maxiter)
+    copyto!(view(view(p, Ip), :), qout)
+    p
+end
 
 # Solve Lp = f
 # where Lp = Ω * div(pressurgrad(p))
@@ -124,6 +142,8 @@ function poisson!(solver::CGPressureSolver, p, f)
 
         iteration += 1
     end
+
+    # @show iteration residual tolerance
 
     p
 end

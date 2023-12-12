@@ -26,6 +26,8 @@ using Zygote
 
 # Must be loaded inside for Tullio to work correctly
 using CUDA
+using CUDA.CUSPARSE
+using CUSOLVERRF
 
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x

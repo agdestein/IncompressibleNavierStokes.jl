@@ -10,7 +10,7 @@ for writing kernel loops using Cartesian indices.
 """
 struct Offset{D} end
 
-(::Offset{D})(α) where {D} = CartesianIndex(ntuple(β -> β == α ? 1 : 0, D))
+@inline (::Offset{D})(α) where {D} = CartesianIndex(ntuple(β -> β == α ? 1 : 0, D))
 
 """
     divergence!(div, u, setup)
@@ -323,16 +323,54 @@ function laplacian!(L, p, setup)
     (; dimension, Δ, Δu, N, Np, Ip, Ω) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function lap!(L, p, I0)
+    # @kernel function lap!(L, p, I0)
+    #     I = @index(Global, Cartesian)
+    #     I = I + I0
+    #     lap = zero(eltype(p))
+    #     for α = 1:D
+    #         # bc = boundary_conditions[α]
+    #         if bc[1] isa PressureBC && I[α] == I0[α] + 1
+    #             lap +=
+    #                 Ω[I] / Δ[α][I[α]] *
+    #                 ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I]) / Δu[α][I[α]-1])
+    #         elseif bc[2] isa PressureBC && I[α] == I0[α] + Np[α]
+    #             lap +=
+    #                 Ω[I] / Δ[α][I[α]] *
+    #                 ((-p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+    #         elseif bc[1] isa DirichletBC && I[α] == I0[α] + 1
+    #             lap += Ω[I] / Δ[α][I[α]] * ((p[I+δ(α)] - p[I]) / Δu[α][I[α]])
+    #         elseif bc[2] isa DirichletBC && I[α] == I0[α] + Np[α]
+    #             lap += Ω[I] / Δ[α][I[α]] * (-(p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+    #         else
+    #             lap +=
+    #                 Ω[I] / Δ[α][I[α]] *
+    #                 ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+    #         end
+    #     end
+    #     L[I] = lap
+    # end
+    @kernel function lapα!(L, p, I0, ::Val{α}, bc) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
-        lap = zero(eltype(p))
-        for α = 1:D
-            lap +=
+        # bc = boundary_conditions[α]
+        if bc[1] isa PressureBC && I[α] == I0[α] + 1
+            L[I] +=
+                Ω[I] / Δ[α][I[α]] *
+                ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I]) / Δu[α][I[α]-1])
+        elseif bc[2] isa PressureBC && I[α] == I0[α] + Np[α]
+            L[I] +=
+                Ω[I] / Δ[α][I[α]] *
+                ((-p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+        elseif bc[1] isa DirichletBC && I[α] == I0[α] + 1
+            L[I] += Ω[I] / Δ[α][I[α]] * ((p[I+δ(α)] - p[I]) / Δu[α][I[α]])
+        elseif bc[2] isa DirichletBC && I[α] == I0[α] + Np[α]
+            L[I] += Ω[I] / Δ[α][I[α]] * (-(p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+        else
+            L[I] +=
                 Ω[I] / Δ[α][I[α]] *
                 ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
         end
-        L[I] = lap
+        # L[I] = lap
     end
     # All volumes have a right velocity
     # All volumes have a left velocity except the first one
@@ -340,7 +378,18 @@ function laplacian!(L, p, setup)
     ndrange = Np
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    lap!(get_backend(L), workgroupsize)(L, p, I0; ndrange)
+    # lap!(get_backend(L), workgroupsize)(L, p, I0; ndrange)
+    L .= 0
+    for α = 1:D
+        lapα!(get_backend(L), workgroupsize)(
+            L,
+            p,
+            I0,
+            Val(α),
+            boundary_conditions[α];
+            ndrange,
+        )
+    end
     L
 end
 
@@ -441,88 +490,34 @@ function laplacian_mat(setup)
     # Ω isa CuArray ? cu(L) : L
 end
 
-# @inline function ∂x(uα, I, ::Val{α}, ::Val{β}, Δβ, Δuβ) where {α,β}
-#     D = length(I)
-#     δ = Offset{D}()
-#     α == β ? (uα[I] - uα[I-δ(β)]) / Δβ[I[β]] :
-#     (
-#         (uα[I+δ(β)] - uα[I]) / Δuβ[I[β]] +
-#         (uα[I-δ(α)+δ(β)] - uα[I-δ(α)]) / Δuβ[I[β]] +
-#         (uα[I] - uα[I-δ(β)]) / Δuβ[I[β]-1] +
-#         (uα[I-δ(α)] - uα[I-δ(α)-δ(β)]) / Δuβ[I[β]-1]
-#     ) / 4
-# end
-# @inline ∇(::Val{2}, u, I, Δ, Δu) = SMatrix{2,2,eltype(u[1]),4}(
-#     ∂x(u[1], I, Val(1), Val(1), Δ[1], Δu[1]),
-#     ∂x(u[2], I, Val(2), Val(1), Δ[1], Δu[1]),
-#     ∂x(u[1], I, Val(1), Val(2), Δ[2], Δu[2]),
-#     ∂x(u[2], I, Val(2), Val(2), Δ[2], Δu[2]),
-# )
-# @inline ∇(::Val{3}, u, I, Δ, Δu) = SMatrix{3,3,eltype(u[1]),9}(
-#     ∂x(u[1], I, Val(1), Val(1), Δ[1], Δu[1]),
-#     ∂x(u[2], I, Val(2), Val(1), Δ[1], Δu[1]),
-#     ∂x(u[3], I, Val(3), Val(1), Δ[1], Δu[1]),
-#     ∂x(u[1], I, Val(1), Val(2), Δ[2], Δu[2]),
-#     ∂x(u[2], I, Val(2), Val(2), Δ[2], Δu[2]),
-#     ∂x(u[3], I, Val(3), Val(2), Δ[2], Δu[2]),
-#     ∂x(u[1], I, Val(1), Val(3), Δ[3], Δu[3]),
-#     ∂x(u[2], I, Val(2), Val(3), Δ[3], Δu[3]),
-#     ∂x(u[3], I, Val(3), Val(3), Δ[3], Δu[3]),
-# )
-#
-# @inline function strain(valD, u, I, Δ, Δu)
-#     ∇u = ∇(valD, u, I, Δ, Δu)
-#     (∇u + ∇u') / 2
-# end
-#
-# @inline gridsize(::Val{2}, Δ, I) = sqrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2)
-# @inline gridsize(::Val{3}, Δ, I) = sqrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2 + Δ[3][I[3]]^2)
+@inline ∂x(uα, I::CartesianIndex{D}, α, β, Δβ, Δuβ; δ = Offset{D}()) where {D} =
+    α == β ? (uα[I] - uα[I-δ(β)]) / Δβ[I[β]] :
+    (
+        (uα[I+δ(β)] - uα[I]) / Δuβ[I[β]] +
+        (uα[I-δ(α)+δ(β)] - uα[I-δ(α)]) / Δuβ[I[β]] +
+        (uα[I] - uα[I-δ(β)]) / Δuβ[I[β]-1] +
+        (uα[I-δ(α)] - uα[I-δ(α)-δ(β)]) / Δuβ[I[β]-1]
+    ) / 4
+@inline ∇(u, I::CartesianIndex{2}, Δ, Δu) =
+    @SMatrix [∂x(u[α], I, α, β, Δ[β], Δu[β]) for α = 1:2, β = 1:2]
+∇(u, I::CartesianIndex{3}, Δ, Δu) =
+    @SMatrix [∂x(u[α], I, α, β, Δ[β], Δu[β]) for α = 1:3, β = 1:3]
+@inline function strain(u, I, Δ, Δu)
+    ∇u = ∇(u, I, Δ, Δu)
+    (∇u + ∇u') / 2
+end
+@inline gridsize(Δ, I::CartesianIndex{D}) where {D} =
+    sqrt(sum(ntuple(α -> Δ[α][I[α]]^2, D)))
 
 function smagtensor!(σ, u, θ, setup)
     # TODO: Combine with normal diffusion tensor
     (; boundary_conditions, grid, workgroupsize) = setup
-    (; dimension, Np, Ip, Δ, Δu) = grid
-    D = dimension()
-    δ = Offset{D}()
-    @assert D == 2
+    (; Np, Ip, Δ, Δu) = grid
     @kernel function σ!(σ, u, I0)
-        ∂x(uα, I, ::Val{α}, ::Val{β}, Δβ, Δuβ) where {α,β} =
-            α == β ? (uα[I] - uα[I-δ(β)]) / Δβ[I[β]] :
-            (
-                (uα[I+δ(β)] - uα[I]) / Δuβ[I[β]] +
-                (uα[I-δ(α)+δ(β)] - uα[I-δ(α)]) / Δuβ[I[β]] +
-                (uα[I] - uα[I-δ(β)]) / Δuβ[I[β]-1] +
-                (uα[I-δ(α)] - uα[I-δ(α)-δ(β)]) / Δuβ[I[β]-1]
-            ) / 4
         I = @index(Global, Cartesian)
         I = I + I0
-        if D == 2
-            ∇u = SMatrix{2,2,eltype(u[1]),4}(
-                ∂x(u[1], I, Val(1), Val(1), Δ[1], Δu[1]),
-                ∂x(u[2], I, Val(2), Val(1), Δ[1], Δu[1]),
-                ∂x(u[1], I, Val(1), Val(2), Δ[2], Δu[2]),
-                ∂x(u[2], I, Val(2), Val(2), Δ[2], Δu[2]),
-            )
-            d = sqrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2)
-        elseif D == 3
-            # TODO: Figure out why KA doesn't like I[3] when D == 2
-            # ∇u = SMatrix{3,3,eltype(u[1]),9}(
-            #     ∂x(u[1], I, Val(1), Val(1), Δ[1], Δu[1]),
-            #     ∂x(u[2], I, Val(2), Val(1), Δ[1], Δu[1]),
-            #     ∂x(u[3], I, Val(3), Val(1), Δ[1], Δu[1]),
-            #     ∂x(u[1], I, Val(1), Val(2), Δ[2], Δu[2]),
-            #     ∂x(u[2], I, Val(2), Val(2), Δ[2], Δu[2]),
-            #     ∂x(u[3], I, Val(3), Val(2), Δ[2], Δu[2]),
-            #     ∂x(u[1], I, Val(1), Val(3), Δ[3], Δu[3]),
-            #     ∂x(u[2], I, Val(2), Val(3), Δ[3], Δu[3]),
-            #     ∂x(u[3], I, Val(3), Val(3), Δ[3], Δu[3]),
-            # )
-            # d = sqrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2 + Δ[3][I[3]]^2)
-        end
-        # S = strain(Val(D), u, I, Δ, Δu)
-        # d = gridsize(Val(D), Δ, I)
-        S = (∇u + ∇u') / 2
-        # νt = θ^2 * d^2 * sqrt(2 * dot(S, S))
+        S = strain(u, I, Δ, Δu)
+        d = gridsize(Δ, I)
         νt = θ^2 * d^2 * sqrt(2 * sum(S .* S))
         σ[I] = 2 * νt * S
     end
@@ -540,7 +535,7 @@ function smagorinsky!(s, σ, setup)
     @kernel function s!(s, σ, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
         I = @index(Global, Cartesian)
         I = I + I0
-        s[α][I] = 0
+        s[α][I] = zero(eltype(s[1]))
         # for β = 1:D
         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
             Δuαβ = α == β ? Δu[β] : Δ[β]
@@ -578,12 +573,14 @@ end
 function smagorinsky_closure(setup)
     (; dimension, x, N) = setup.grid
     D = dimension()
-    backend = get_backend(x[1])
     T = eltype(x[1])
     σ = similar(x[1], SMatrix{D,D,T,D * D}, N)
     s = ntuple(α -> similar(x[1], N), D)
+    # σ = zero(similar(x[1], SMatrix{D,D,T,D * D}, N))
+    # s = ntuple(α -> zero(similar(x[1], N)), D)
     function closure(u, θ)
         smagtensor!(σ, u, θ, setup)
+        apply_bc_p!(σ, zero(T), setup)
         smagorinsky!(s, σ, setup)
     end
 end
@@ -776,33 +773,14 @@ Qfield(u, setup) = Qfield!(similar(u[1], setup.grid.N), u, setup)
 Compute the second eigenvalue of ``S^2 + \\Omega^2``.
 """
 function eig2field!(λ, u, setup)
-    (; boundary_conditions, grid, workgroupsize) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Np, Ip, Δ, Δu) = grid
     D = dimension()
-    δ = Offset{D}()
     @assert D == 3 "eig2 only implemented in 3D"
     @kernel function λ!(λ, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
-        ∂x(uα, I, ::Val{α}, ::Val{β}, Δβ, Δuβ) where {α,β} =
-            α == β ? (uα[I] - uα[I-δ(β)]) / Δβ[I[β]] :
-            (
-                (uα[I+δ(β)] - uα[I]) / Δuβ[I[β]] +
-                (uα[I-δ(α)+δ(β)] - uα[I-δ(α)]) / Δuβ[I[β]] +
-                (uα[I] - uα[I-δ(β)]) / Δuβ[I[β]-1] +
-                (uα[I-δ(α)] - uα[I-δ(α)-δ(β)]) / Δuβ[I[β]-1]
-            ) / 4
-        ∇u = SMatrix{3,3,eltype(λ),9}(
-            ∂x(u[1], I, Val(1), Val(1), Δ[1], Δu[1]),
-            ∂x(u[2], I, Val(2), Val(1), Δ[1], Δu[1]),
-            ∂x(u[3], I, Val(3), Val(1), Δ[1], Δu[1]),
-            ∂x(u[1], I, Val(1), Val(2), Δ[2], Δu[2]),
-            ∂x(u[2], I, Val(2), Val(2), Δ[2], Δu[2]),
-            ∂x(u[3], I, Val(3), Val(2), Δ[2], Δu[2]),
-            ∂x(u[1], I, Val(1), Val(3), Δ[3], Δu[3]),
-            ∂x(u[2], I, Val(2), Val(3), Δ[3], Δu[3]),
-            ∂x(u[3], I, Val(3), Val(3), Δ[3], Δu[3]),
-        )
+        ∇u = ∇(u, I, Δ, Δu)
         S = @. (∇u + ∇u') / 2
         Ω = @. (∇u - ∇u') / 2
         λ[I] = eigvals(S^2 + Ω^2)[2]

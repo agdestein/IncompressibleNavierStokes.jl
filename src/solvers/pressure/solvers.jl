@@ -16,19 +16,54 @@ struct DirectPressureSolver{T,S,F,A} <: AbstractPressureSolver{T}
     f::A
     p::A
     function DirectPressureSolver(setup)
-        (; x, Np) = setup.grid
-        # T = eltype(x[1])
-        T = Float64
-        backend = get_backend(x[1])
-        # f = similar(x[1], prod(Np))
-        # p = similar(x[1], prod(Np))
-        f = zeros(T, prod(Np) + 1)
-        p = zeros(T, prod(Np) + 1)
-        L = laplacian_mat(setup)
-        e = ones(T, size(L, 2))
-        L = [L e; e' 0]
-        # fact = lu(L)
-        fact = factorize(L)
+        (; grid, ArrayType) = setup
+        (; x, Np) = grid
+        if false #ArrayType == CuArray
+            # T = eltype(x[1])
+            T = Float64
+            f = similar(x[1], T, prod(Np) + 1)
+            p = similar(x[1], T, prod(Np) + 1)
+            L = laplacian_mat(setup)
+            e = ones(T, size(L, 2))
+            L = [L e; e' 0]
+            L = L |> CuSparseMatrixCSR{Float64}
+            fact = CUSOLVERRF.RFLU(L; symbolic = :RF)
+        elseif false #ArrayType == CuArray
+            T = eltype(x[1])
+            f = similar(x[1], prod(Np) + 1)
+            p = similar(x[1], prod(Np) + 1)
+            L = laplacian_mat(setup)
+            e = ones(Float64, size(L, 2))
+            L = [L e; e' 0]
+            F = lu(L)
+            P = sparse(1:length(F.p), F.p, ones(length(F.p)))
+            Q = sparse(F.q, 1:length(F.q), ones(length(F.q)))
+            L = F.L |> CuSparseMatrixCSR{T}
+            U = F.U |> CuSparseMatrixCSR{T}
+            CUDA.@allowscalar L = L |> LowerTriangular
+            CUDA.@allowscalar U = U |> UpperTriangular
+            # CUDA.@allowscalar L = F.L |> CuSparseMatrixCSR{Float64} |> LowerTriangular
+            # CUDA.@allowscalar U = F.U |> CuSparseMatrixCSR{Float64} |> UpperTriangular
+            fact = (;
+                L,
+                U,
+                Rs = F.Rs |> CuArray{T},
+                P = P |> CuSparseMatrixCSR{T},
+                Q = Q |> CuSparseMatrixCSR{T},
+            )
+        else
+            # T = eltype(x[1])
+            T = Float64
+            backend = get_backend(x[1])
+            f = zeros(T, prod(Np) + 1)
+            p = zeros(T, prod(Np) + 1)
+            L = laplacian_mat(setup)
+            e = ones(T, size(L, 2))
+            L = [L e; e' 0]
+            # fact = lu(L)
+            # fact = ldlt(Symmetric(L))
+            fact = factorize(L)
+        end
         new{T,typeof(setup),typeof(fact),typeof(f)}(setup, fact, f, p)
     end
 end
@@ -71,6 +106,29 @@ Adapt.adapt_structure(to, s::DirectPressureSolver) = error(
 #     adapt(to, s.reltol),
 #     adapt(to, s.maxiter),
 # )
+
+"""
+    CGMatrixPressureSolver(setup; [abstol], [reltol], [maxiter])
+
+Conjugate gradients iterative pressure solver.
+"""
+struct CGMatrixPressureSolver{T,M} <: AbstractPressureSolver{T}
+    L::M
+    abstol::T
+    reltol::T
+    maxiter::Int
+end
+
+function CGMatrixPressureSolver(
+    setup;
+    abstol = 0,
+    reltol = sqrt(eps(eltype(setup.grid.x[1]))),
+    maxiter = prod(setup.grid.Np),
+)
+    L = laplacian_mat(setup) |> setup.device
+    L = L |> CuSparseMatrixCSR
+    CGPressureSolver{eltype(L),typeof(L)}(L, abstol, reltol, maxiter)
+end
 
 """
     CGPressureSolver(setup; [abstol], [reltol], [maxiter])

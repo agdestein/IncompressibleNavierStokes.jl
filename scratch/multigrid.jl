@@ -14,6 +14,7 @@ using CairoMakie
 using GLMakie
 using IncompressibleNavierStokes
 using JLD2
+using LaTeXStrings
 using LinearAlgebra
 using Lux
 using NNlib
@@ -101,12 +102,13 @@ ig = 5
 field, setup = data_test.u[ig], setups_test[ig];
 u = device(field[1]);
 o = Observable((; u, p = similar(u[1], setup.grid.N), t = nothing));
-fieldplot(
-    o;
-    setup,
-    # fieldname = :velocity,
-    # fieldname = 2,
-)
+energy_spectrum_plot(o; setup)
+# fieldplot(
+#     o;
+#     setup,
+#     # fieldname = :velocity,
+#     # fieldname = 2,
+# )
 # energy_spectrum_plot( o; setup,)
 for i = 1:length(field)
     o[] = (; o[]..., u = device(field[i]))
@@ -172,58 +174,77 @@ save("training_data.pdf", fig)
 fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
     ig = 3
     setup = setups_train[ig]
+    (; xp, Ip) = setup.grid
     D = params_train.D
-    backend = KernelAbstractions.get_backend(setup.grid.x[1])
     sample = data_train[1]
-    K = size(setup.grid.Ip) .÷ 2
-    kx = ntuple(α -> 1:K[α]-1, params_train.D)
-    k = zero(similar(setup.grid.x[1], length.(kx)))
+    K = size(Ip) .÷ 2
+    kx = ntuple(α -> 0:K[α]-1, D)
+    k = fill!(similar(xp[1], length.(kx)), 0)
     for α = 1:D
         kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
         k .+= kα .^ 2
     end
     k .= sqrt.(k)
     k = reshape(k, :)
-    # Make averaging matrix
-    naverage = 5^D
-    i = sortperm(k)
-    nbin, r = divrem(length(i), naverage)
-    ib = KernelAbstractions.zeros(backend, Int, nbin * naverage)
-    ia = KernelAbstractions.zeros(backend, Int, nbin * naverage)
-    for j = 1:naverage
-        copyto!(view(ia, (j-1)*nbin+1:j*nbin), collect(1:nbin))
-        ib[(j-1)*nbin+1:j*nbin] = i[j:naverage:end-r]
+    # Sum or average wavenumbers between k and k+1
+    nk = ceil(Int, maximum(k))
+    # kmax = minimum(K) - 1
+    kmax = nk - 1
+    kint = 1:kmax
+    ia = similar(xp[1], Int, 0)
+    ib = sortperm(k)
+    vals = similar(xp[1], 0)
+    ksort = k[ib]
+    jprev = 2 # Do not include constant mode
+    for ki = 1:kmax
+        j = findfirst(>(ki+1), ksort)
+        isnothing(j) && (j = length(k) + 1)
+        ia = [ia; fill!(similar(ia, j - jprev), ki)]
+        # val = doaverage ? T(1) / (j - jprev) : T(1)
+        val = T(π) * ((ki+1)^2 - ki^2) / (j - jprev)
+        vals = [vals; fill!(similar(vals, j - jprev), val)]
+        jprev = j
     end
-    vals = KernelAbstractions.ones(backend, T, nbin * naverage) / naverage
-    A = sparse(ia, ib, vals, nbin, length(i))
-    k = Array(A * k)
+    ib = ib[2:jprev-1]
+    A = sparse(ia, ib, vals, kmax, length(k))
     # Build inertial slope above energy
-    @show length(k)
-    krange = collect(extrema(k[20:end]))
-    # slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
-    slope, slopelabel = D == 2 ? (-T(3), "||k||₂⁻³") : (-T(5 / 3), L"k⁻⁵³")
+    krange = [T(kmax)^(T(2)/3), T(kmax)]
+    # slope, slopelabel = D == 2 ? (-T(3), L"k^{-3}") : (-T(5 / 3), L"k^{-5/3}")
+    # slope, slopelabel = D == 2 ? (-T(3), "||k||₂⁻³") : (-T(5 / 3), "k⁻⁵³")
+    slope, slopelabel = D == 2 ? (-T(3), "|k|⁻³") : (-T(5 / 3), "|k|⁻⁵³")
     slopeconst = T(0)
+    # Nice ticks
+    logmax = round(Int, log2(kmax + 1))
+    xticks = T(2) .^ (0:logmax)
     # Make plot
     fig = Figure(; size = (500, 400))
     ax = Axis(
         fig[1, 1];
-        xlabel = "||k||₂",
-        ylabel = "e(k)",
+        xticks,
+        # xlabel = "||k||₂",
+        xlabel = "|k|",
+        # xlabel = "k",
+        # xlabel = L"\| k \|_2",
+        # xlabel = L"|k|_2",
+        # ylabel = "e(k)",
+        ylabel = "e(|k|)",
+        # ylabel = L"e(\| k \|_2)",
+        # ylabel = L"e(|k|_2)",
         title = "Kinetic energy (n = $(params_train.nles[ig]))",
         xscale = log10,
         yscale = log10,
-        xticks = [4, 8, 16, 32, 64, 128],
-        limits = (extrema(k)..., T(1e-8), T(1)),
+        limits = (extrema(kint)..., T(1e-8), T(1)),
     )
     for (i, it) in enumerate((1, length(sample.t)))
         u = device.(sample.u[ig][it])
         up = IncompressibleNavierStokes.interpolate_u_p(u, setup)
-        e = sum(up -> up[setup.grid.Ip] .^ 2, up)
-        ehat = Array(
-            A * reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]) ./ size(e, 1), :),
-        )
-        slopeconst = max(slopeconst, maximum(ehat ./ k .^ slope))
-        lines!(ax, k, ehat; label = "t = $(round(sample.t[it]; digits = 1))")
+        e = sum(up -> up[Ip] .^ 2, up)
+        e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
+        e = abs.(e) ./ size(e, 1)
+        e = A * reshape(e, :)
+        ehat = max.(e, eps(T)) # Avoid log(0)
+        slopeconst = max(slopeconst, maximum(ehat ./ kint .^ slope))
+        lines!(ax, kint, Array(ehat); label = "t = $(round(sample.t[it]; digits = 1))")
     end
     inertia = 2 .* slopeconst .* krange .^ slope
     lines!(ax, krange, inertia; linestyle = :dash, label = slopelabel)
@@ -236,10 +257,10 @@ save("training_spectra.pdf", fig)
 
 closure, θ₀ = cnn(;
     setup = setups_train[1],
-    radii = [2, 2, 2, 2, 2, 2],
-    channels = [32, 32, 32, 32, 32, params_train.D],
-    activations = [leakyrelu, leakyrelu, leakyrelu, leakyrelu, leakyrelu, identity],
-    use_bias = [true, true, true, true, true, false],
+    radii = [2, 2, 2, 2],
+    channels = [20, 20, 20, params_train.D],
+    activations = [leakyrelu, leakyrelu, leakyrelu, identity],
+    use_bias = [true, true, true, false],
     rng,
 );
 closure.chain
@@ -263,7 +284,7 @@ callbackstate = Point2f[];
     loss,
     opt,
     θ;
-    niter = 1000,
+    niter = 5000,
     ncallback = 20,
     callbackstate,
     callback = create_callback(closure, device(validset)...; state = callbackstate),
@@ -478,48 +499,60 @@ state_cnn, outputs = solve_unsteady(closedsetup, u₀, p₀, tlims; Δt, pressur
 
 # Plot predicted spectra
 fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
+    (; xp, Ip) = setup.grid
     D = params.D
-    backend = KernelAbstractions.get_backend(setup.grid.x[1])
-    K = size(setup.grid.Ip) .÷ 2
-    kx = ntuple(α -> 1:K[α]-1, params_train.D)
-    k = zero(similar(setup.grid.x[1], length.(kx)))
+    K = size(Ip) .÷ 2
+    kx = ntuple(α -> 0:K[α]-1, D)
+    k = fill!(similar(xp[1], length.(kx)), 0)
     for α = 1:D
         kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
         k .+= kα .^ 2
     end
     k .= sqrt.(k)
     k = reshape(k, :)
-    # Make averaging matrix
-    naverage = 20^D
-    i = sortperm(k)
-    nbin, r = divrem(length(i), naverage)
-    ib = KernelAbstractions.zeros(backend, Int, nbin * naverage)
-    ia = KernelAbstractions.zeros(backend, Int, nbin * naverage)
-    for j = 1:naverage
-        copyto!(view(ia, (j-1)*nbin+1:j*nbin), collect(1:nbin))
-        ib[(j-1)*nbin+1:j*nbin] = i[j:naverage:end-r]
+    # Sum or average wavenumbers between k and k+1
+    nk = ceil(Int, maximum(k))
+    kmax = nk - 1
+    # kmax = minimum(K) - 1
+    kint = 1:kmax
+    ia = similar(xp[1], Int, 0)
+    ib = sortperm(k)
+    vals = similar(xp[1], 0)
+    ksort = k[ib]
+    jprev = 2 # Do not include constant mode
+    for ki = 1:kmax
+        j = findfirst(>(ki+1), ksort)
+        isnothing(j) && (j = length(k) + 1)
+        ia = [ia; fill!(similar(ia, j - jprev), ki)]
+        # val = doaverage ? T(1) / (j - jprev) : T(1)
+        val = T(π) * ((ki+1)^2 - ki^2) / (j - jprev)
+        # val = T(1) / (j - jprev)
+        vals = [vals; fill!(similar(vals, j - jprev), val)]
+        jprev = j
     end
-    vals = KernelAbstractions.ones(backend, T, nbin * naverage) / naverage
-    A = sparse(ia, ib, vals, nbin, length(i))
-    k = Array(A * k)
+    ib = ib[2:jprev-1]
+    A = sparse(ia, ib, vals, kmax, length(k))
     # Build inertial slope above energy
-    @show length(k)
-    krange = collect(extrema(k[3:end-5]))
-    # slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
-    slope, slopelabel = D == 2 ? (-T(3), "||k||₂⁻³") : (-T(5 / 3), L"k⁻⁵³")
+    # krange = [cbrt(T(kmax)), T(kmax)]
+    krange = [T(kmax)^(T(2)/3), T(kmax)]
+    # slope, slopelabel = D == 2 ? (-T(3), L"k^{-3}") : (-T(5 / 3), L"k^{-5/3}")
+    slope, slopelabel = D == 2 ? (-T(3), "|k|⁻³") : (-T(5 / 3), "|k|⁻⁵³")
     slopeconst = T(0)
+    # Nice ticks
+    logmax = round(Int, log2(kmax + 1))
+    xticks = T(2) .^ (0:logmax)
     # Make plot
     fig = Figure(; size = (500, 400))
     ax = Axis(
         fig[1, 1];
-        xlabel = "||k||₂",
-        ylabel = "e(k)",
+        xticks,
+        xlabel = "|k|",
+        ylabel = "e(|k|)",
         # title = "Kinetic energy (n = $(params.nles[ig])) at time t = $(round(data_test.t[end]; digits = 1))",
         title = "Kinetic energy (n = $(params.nles[ig]))",
         xscale = log10,
         yscale = log10,
-        xticks = [4, 8, 16, 32, 64, 128],
-        limits = (extrema(k)..., T(1e-8), T(1)),
+        limits = (extrema(kint)..., T(1e-8), T(1)),
     )
     for (u, label) in (
         # (uref, "Reference"),
@@ -529,12 +562,13 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         (uref, "Reference"),
     )
         up = IncompressibleNavierStokes.interpolate_u_p(u, setup)
-        e = sum(up -> up[setup.grid.Ip] .^ 2, up)
-        ehat = Array(
-            A * reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]) ./ size(e, 1), :),
-        )
-        slopeconst = max(slopeconst, maximum(ehat ./ k .^ slope))
-        lines!(ax, k, ehat; label)
+        e = sum(up -> up[Ip] .^ 2, up)
+        e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
+        e = abs.(e) ./ size(e, 1)
+        e = A * reshape(e, :)
+        ehat = max.(e, eps(T)) # Avoid log(0)
+        slopeconst = max(slopeconst, maximum(ehat ./ kint .^ slope))
+        lines!(ax, kint, Array(ehat); label)
     end
     inertia = 2 .* slopeconst .* krange .^ slope
     lines!(ax, krange, inertia; linestyle = :dash, label = slopelabel)
@@ -547,65 +581,79 @@ save("predicted_spectra.pdf", fig)
 
 # Plot spectrum errors
 fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
+    (; xp, Ip) = setup.grid
     D = params.D
-    backend = KernelAbstractions.get_backend(setup.grid.x[1])
-    K = size(setup.grid.Ip) .÷ 2
-    kx = ntuple(α -> 1:K[α]-1, params_train.D)
-    k = zero(similar(setup.grid.x[1], length.(kx)))
+    K = size(Ip) .÷ 2
+    kx = ntuple(α -> 0:K[α]-1, D)
+    k = fill!(similar(xp[1], length.(kx)), 0)
     for α = 1:D
         kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
         k .+= kα .^ 2
     end
     k .= sqrt.(k)
     k = reshape(k, :)
-    # Make averaging matrix
-    naverage = 20^D
-    i = sortperm(k)
-    nbin, r = divrem(length(i), naverage)
-    ib = KernelAbstractions.zeros(backend, Int, nbin * naverage)
-    ia = KernelAbstractions.zeros(backend, Int, nbin * naverage)
-    for j = 1:naverage
-        copyto!(view(ia, (j-1)*nbin+1:j*nbin), collect(1:nbin))
-        ib[(j-1)*nbin+1:j*nbin] = i[j:naverage:end-r]
+    # Sum or average wavenumbers between k and k+1
+    nk = ceil(Int, maximum(k))
+    # kmax = nk - 1
+    kmax = minimum(K) - 1
+    kint = 1:kmax
+    ia = similar(xp[1], Int, 0)
+    ib = sortperm(k)
+    vals = similar(xp[1], 0)
+    ksort = k[ib]
+    jprev = 2 # Do not include constant mode
+    for ki = 1:kmax
+        j = findfirst(>(ki+1), ksort)
+        isnothing(j) && (j = length(k) + 1)
+        ia = [ia; fill!(similar(ia, j - jprev), ki)]
+        # val = doaverage ? T(1) / (j - jprev) : T(1)
+        val = T(π) * ((ki+1)^2 - ki^2) / (j - jprev)
+        vals = [vals; fill!(similar(vals, j - jprev), val)]
+        jprev = j
     end
-    vals = KernelAbstractions.ones(backend, T, nbin * naverage) / naverage
-    A = sparse(ia, ib, vals, nbin, length(i))
-    k = Array(A * k)
+    ib = ib[2:jprev-1]
+    A = sparse(ia, ib, vals, kmax, length(k))
     # Build inertial slope above energy
-    @show length(k)
-    krange = collect(extrema(k[20:end]))
-    # slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
-    slope, slopelabel = D == 2 ? (-T(3), "||k||₂⁻³") : (-T(5 / 3), L"k⁻⁵³")
+    # krange = [cbrt(T(kmax)), T(kmax)]
+    krange = [T(kmax)^(T(2)/3), T(kmax)]
+    # slope, slopelabel = D == 2 ? (-T(3), L"k^{-3}") : (-T(5 / 3), L"k^{-5/3}")
+    slope, slopelabel = D == 2 ? (-T(3), "|k|⁻³") : (-T(5 / 3), "|k|⁻⁵³")
     slopeconst = T(0)
+    # Nice ticks
+    logmax = round(Int, log2(kmax + 1))
+    xticks = T(2) .^ (0:logmax)
     # Make plot
     fig = Figure(; size = (500, 400))
     ax = Axis(
         fig[1, 1];
-        xlabel = "||k||₂",
-        ylabel = "e(k)",
+        xticks,
+        xlabel = "|k|",
+        ylabel = "e(|k|)",
         # title = "Kinetic energy (n = $(params.nles[ig])) at time t = $(round(data_test.t[end]; digits = 1))",
         title = "Relative energy error (n = $(params.nles[ig]))",
         xscale = log10,
         yscale = log10,
-        xticks = [4, 8, 16, 32, 64, 128],
-        limits = (extrema(k)..., T(1e-8), T(1)),
+        limits = (extrema(kint)..., T(1e-8), T(1)),
     )
     up = IncompressibleNavierStokes.interpolate_u_p(uref, setup)
-    e = sum(up -> up[setup.grid.Ip] .^ 2, up)
-    eref =
-        Array(A * reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]) ./ size(e, 1), :))
+    e = sum(up -> up[Ip] .^ 2, up)
+    e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
+    e = abs.(e) ./ size(e, 1)
+    e = A * reshape(e, :)
+    eref = max.(e, eps(T)) # Avoid log(0)
     for (u, label) in (
         (state_nm.u, "No closure"),
         (state_smag.u, "Smagorinsky"),
         (state_cnn.u, "CNN (specialized)"),
     )
         up = IncompressibleNavierStokes.interpolate_u_p(u, setup)
-        e = sum(up -> up[setup.grid.Ip] .^ 2, up)
-        ehat = Array(
-            A * reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]) ./ size(e, 1), :),
-        )
+        e = sum(up -> up[Ip] .^ 2, up)
+        e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
+        e = abs.(e) ./ size(e, 1)
+        e = A * reshape(e, :)
+        ehat = max.(e, eps(T)) # Avoid log(0)
         ee = @. abs(ehat - eref) / abs(eref)
-        lines!(ax, k, ee; label)
+        lines!(ax, kint, Array(ee); label)
     end
     axislegend(ax; position = :lt)
     autolimits!(ax)
