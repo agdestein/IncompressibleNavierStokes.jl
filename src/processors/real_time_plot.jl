@@ -280,19 +280,25 @@ function energy_history_plot(state; setup)
 end
 
 """
-    energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
+    energy_spectrum_plot(state; setup, doaverage = false)
 
 Create energy spectrum plot.
-The energy modes are averaged over the `naverage` nearest modes.
+The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is defined by
+
+```math
+\\hat{e}(\\kappa) = \\int_{\\kappa \\leq \\| k \\|_2 < \\kappa + 1} | \\hat{e}(k) | \\mathrm{d} k,
+```
+
+as in San and Staples [San2012](@cite).
 """
-function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
+function energy_spectrum_plot(state; setup)
     state isa Observable || (state = Observable(state))
     (; dimension, xp, Ip) = setup.grid
     backend = get_backend(xp[1])
     T = eltype(xp[1])
     D = dimension()
     K = size(Ip) .÷ 2
-    kx = ntuple(α -> 1:K[α]-1, D)
+    kx = ntuple(α -> 0:K[α]-1, D)
     k = fill!(similar(xp[1], length.(kx)), 0)
     for α = 1:D
         kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
@@ -301,48 +307,69 @@ function energy_spectrum_plot(state; setup, naverage = 5^setup.grid.dimension())
     k .= sqrt.(k)
     k = reshape(k, :)
 
-    # Make averaging matrix
-    i = sortperm(k)
-    nbin, r = divrem(length(i), naverage)
-    ib = similar(xp[1], Int, nbin * naverage)
-    ia = similar(xp[1], Int, nbin * naverage)
-    for j = 1:naverage
-        copyto!(view(ia, (j-1)*nbin+1:j*nbin), collect(1:nbin))
-        ib[(j-1)*nbin+1:j*nbin] = i[j:naverage:end-r]
+    # Sum or average wavenumbers between k and k+1
+    kmax = minimum(K) - 1
+    nk = ceil(Int, maximum(k))
+    kint = 1:kmax
+    ia = similar(xp[1], Int, 0)
+    ib = sortperm(k)
+    vals = similar(xp[1], 0)
+    ksort = k[ib]
+    jprev = 2 # Do not include constant mode
+    for ki = 1:kmax
+        j = findfirst(>(ki+1), ksort)
+        isnothing(j) && (j = length(k) + 1)
+        ia = [ia; fill!(similar(ia, j - jprev), ki)]
+        # val = doaverage ? T(1) / (j - jprev) : T(1)
+        val = T(π) * ((ki+1)^2 - ki^2) / (j - jprev)
+        vals = [vals; fill!(similar(vals, j - jprev), val)]
+        jprev = j
     end
-    k = fill!(similar(xp[1], nbin * naverage), T(1) / naverage)
-    A = sparse(ia, ib, vals, nbin, length(i))
-    k = Array(A * k)
+    ib = ib[2:jprev-1]
+    A = sparse(ia, ib, vals, kmax, length(k))
 
+    # Energy
     up = interpolate_u_p(state[].u, setup)
     ehat = lift(state) do (; u, p, t)
         interpolate_u_p!(up, u, setup)
         e = sum(up -> up[Ip] .^ 2, up)
-        Array(A * reshape(abs.(fft(e)[ntuple(α -> kx[α] .+ 1, D)...]) ./ size(e, 1), :))
+        e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
+        e = abs.(e) ./ size(e, 1)
+        e = A * reshape(e, :)
+        e = max.(e, eps(T)) # Avoid log(0)
+        Array(e)
     end
 
     # Build inertial slope above energy
-    krange = LinRange(extrema(k)..., 100)
+    # krange = LinRange(extrema(kint)..., 100)
+    # krange = collect(extrema(kint))
+    krange = [cbrt(T(kmax)), T(kmax)]
     slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
     inertia = lift(ehat) do ehat
-        slopeconst = maximum(ehat ./ k .^ slope)
+        slopeconst = maximum(ehat ./ kint .^ slope)
         2 .* slopeconst .* krange .^ slope
     end
+
+    # Nice ticks
+    logmax = round(Int, log2(kmax + 1))
+    xticks = T(2) .^ (0:logmax)
 
     fig = Figure()
     ax = Axis(
         fig[1, 1];
+        xticks,
         xlabel = "k",
         ylabel = "e(k)",
         xscale = log10,
         yscale = log10,
-        limits = (extrema(k)..., T(1e-8), T(1)),
+        limits = (extrema(kint)..., T(1e-8), T(1)),
     )
-    lines!(ax, k, ehat; label = "Kinetic energy")
+    lines!(ax, kint, ehat; label = "Kinetic energy")
     lines!(ax, krange, inertia; label = slopelabel, color = :red)
     axislegend(ax)
     # autolimits!(ax)
     on(e -> autolimits!(ax), ehat)
+    autolimits!(ax)
     fig
 end
 
