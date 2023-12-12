@@ -240,6 +240,7 @@ closure, θ₀ = cnn(;
     channels = [32, 32, 32, 32, 32, params_train.D],
     activations = [leakyrelu, leakyrelu, leakyrelu, leakyrelu, leakyrelu, identity],
     use_bias = [true, true, true, true, true, false],
+    rng,
 );
 closure.chain
 
