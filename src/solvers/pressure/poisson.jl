@@ -43,7 +43,7 @@ function poisson!(solver::DirectPressureSolver, p, f)
         mul!(b, F.P, a)
         ldiv!(a, F.L, b)
         ldiv!(b, F.U, a)
-        mul!(a, F.U, b)
+        mul!(a, F.Q, b)
         copyto!(pp, view(a, 1:length(a)-1))
     else
         copyto!(view(solver.f, 1:length(solver.f)-1), Array(view(view(f, Ip), :)))
