@@ -511,7 +511,7 @@ The Smagorinsky constant `θ` should be a scalar between `0` and `1`.
 """
 function smagtensor!(σ, u, θ, setup)
     # TODO: Combine with normal diffusion tensor
-    (; boundary_conditions, grid, workgroupsize) = setup
+    (; grid, workgroupsize) = setup
     (; Np, Ip, Δ, Δu) = grid
     @kernel function σ!(σ, u, I0)
         I = @index(Global, Cartesian)
@@ -534,7 +534,7 @@ Compute the Smagorinsky closure term `s` (additional diffusive force).
 The Smagorinsky stress tensors should be precomputed and stored in `σ`.
 """
 function smagorinsky!(s, σ, setup)
-    (; boundary_conditions, grid, workgroupsize) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Nu, Iu, Δ, Δu, A) = grid
     D = dimension()
     δ = Offset{D}()
@@ -579,7 +579,7 @@ end
 """
     m = smagorinsky_closure(setup)
 
-Create Smagoinsky closure model `m`.
+Create Smagorinsky closure model `m`.
 The model is called as `m(u, θ)`, where the Smagorinsky constant
 `θ` should be a scalar between `0` and `1` (for example `θ = 0.1`).
 """
@@ -612,7 +612,7 @@ interpolate_u_p(u, setup) =
 Interpolate velocity to pressure points.
 """
 function interpolate_u_p!(up, u, setup)
-    (; boundary_conditions, grid, workgroupsize, Re, bodyforce) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
     δ = Offset{D}()
@@ -649,7 +649,7 @@ Interpolate vorticity to pressure points.
 interpolate_ω_p!(ωp, ω, setup) = interpolate_ω_p!(setup.grid.dimension, ωp, ω, setup)
 
 function interpolate_ω_p!(::Dimension{2}, ωp, ω, setup)
-    (; boundary_conditions, grid, workgroupsize, Re, bodyforce) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
     δ = Offset{D}()
@@ -665,7 +665,7 @@ function interpolate_ω_p!(::Dimension{2}, ωp, ω, setup)
 end
 
 function interpolate_ω_p!(::Dimension{3}, ωp, ω, setup)
-    (; boundary_conditions, grid, workgroupsize, Re) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
     δ = Offset{D}()
@@ -694,7 +694,7 @@ D = \\frac{2 | \\nabla p |}{\\nabla^2 p}.
 ```
 """
 function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
-    (; boundary_conditions, grid, workgroupsize) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Np, Ip, Δ) = grid
     T = eltype(p)
     D = dimension()
@@ -752,7 +752,7 @@ Q = - \\frac{1}{2} \\sum_{α, β} \\frac{\\partial u^α}{\\partial x^β}
 ```
 """
 function Qfield!(Q, u, setup; ϵ = eps(eltype(Q)))
-    (; boundary_conditions, grid, workgroupsize) = setup
+    (; grid, workgroupsize) = setup
     (; dimension, Np, Ip, Δ) = grid
     D = dimension()
     δ = Offset{D}()
