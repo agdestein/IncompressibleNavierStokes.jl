@@ -882,13 +882,8 @@ Compute total kinetic energy. The velocity components are interpolated to the
 volume centers and squared.
 """
 function total_kinetic_energy(u, setup)
-    (; dimension, Ω, Ip) = setup.grid
-    D = dimension()
-    up = interpolate_u_p(u, setup)
-    E = zero(eltype(up[1]))
-    for α = 1:D
-        # E += sum(I -> Ω[I] * up[α][I]^2, Ip)
-        E += sum(Ω[Ip] .* up[α][Ip] .^ 2)
-    end
-    E
+    (; Ω, Ip) = setup.grid
+    e = kinetic_energy(u, setup)
+    e .*= Ω
+    sum(e[Ip])
 end
