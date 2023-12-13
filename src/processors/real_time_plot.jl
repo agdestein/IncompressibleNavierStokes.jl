@@ -291,7 +291,7 @@ The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is defined 
 
 as in San and Staples [San2012](@cite).
 """
-function energy_spectrum_plot(state; setup)
+function energy_spectrum_plot(state; setup, doaverage = false)
     state isa Observable || (state = Observable(state))
     (; dimension, xp, Ip) = setup.grid
     backend = get_backend(xp[1])
@@ -317,11 +317,10 @@ function energy_spectrum_plot(state; setup)
     ksort = k[ib]
     jprev = 2 # Do not include constant mode
     for ki = 1:kmax
-        j = findfirst(>(ki+1), ksort)
+        j = findfirst(>(ki + 1), ksort)
         isnothing(j) && (j = length(k) + 1)
         ia = [ia; fill!(similar(ia, j - jprev), ki)]
-        # val = doaverage ? T(1) / (j - jprev) : T(1)
-        val = T(π) * ((ki+1)^2 - ki^2) / (j - jprev)
+        val = doaverage ? T(1) / (j - jprev) : T(π) * ((ki + 1)^2 - ki^2) / (j - jprev)
         vals = [vals; fill!(similar(vals, j - jprev), val)]
         jprev = j
     end
@@ -365,7 +364,7 @@ function energy_spectrum_plot(state; setup)
         limits = (extrema(kint)..., T(1e-8), T(1)),
     )
     lines!(ax, kint, ehat; label = "Kinetic energy")
-    lines!(ax, krange, inertia; label = slopelabel, color = :red)
+    lines!(ax, krange, inertia; label = slopelabel, linestyle = :dash)
     axislegend(ax)
     # autolimits!(ax)
     on(e -> autolimits!(ax), ehat)
