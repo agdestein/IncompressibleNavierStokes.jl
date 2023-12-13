@@ -19,7 +19,7 @@ Compute divergence of velocity field (in-place version).
 """
 function divergence!(div, u, setup)
     (; grid, workgroupsize) = setup
-    (; Δ, N, Ip) = grid
+    (; Δ, N, Ip, Np) = grid
     D = length(u)
     δ = Offset{D}()
     @kernel function div!(div, u, I0)
@@ -31,15 +31,9 @@ function divergence!(div, u, setup)
         end
         div[I] = d
     end
-    # All volumes have a right velocity
-    # All volumes have a left velocity except the first one
-    # Start at second volume
-    ndrange = N .- 1
-    I0 = 2 * oneunit(first(Ip))
-    # ndrange = Np
-    # I0 = first(Ip)
+    I0 = first(Ip)
     I0 -= oneunit(I0)
-    div!(get_backend(div), workgroupsize)(div, u, I0; ndrange)
+    div!(get_backend(div), workgroupsize)(div, u, I0; ndrange = Np)
     div
 end
 
@@ -787,11 +781,11 @@ Compute the ``Q``-field.
 Qfield(u, setup) = Qfield!(similar(u[1], setup.grid.N), u, setup)
 
 """
-    eig2field!(λ, u, setup)
+    eig2field!(λ, u, setup; ϵ = eps(eltype(λ)))
 
 Compute the second eigenvalue of ``S^2 + \\Omega^2``.
 """
-function eig2field!(λ, u, setup)
+function eig2field!(λ, u, setup; ϵ = eps(eltype(λ)))
     (; grid, workgroupsize) = setup
     (; dimension, Np, Ip, Δ, Δu) = grid
     D = dimension()
@@ -802,7 +796,8 @@ function eig2field!(λ, u, setup)
         ∇u = ∇(u, I, Δ, Δu)
         S = @. (∇u + ∇u') / 2
         Ω = @. (∇u - ∇u') / 2
-        λ[I] = eigvals(S^2 + Ω^2)[2]
+        e2 = eigvals(S^2 + Ω^2)[2]
+        λ[I] = log10(max(ϵ, -e2))
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
