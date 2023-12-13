@@ -328,10 +328,10 @@ function energy_spectrum_plot(state; setup, doaverage = false)
     A = sparse(ia, ib, vals, kmax, length(k))
 
     # Energy
-    up = interpolate_u_p(state[].u, setup)
+    ke = kinetic_energy(state[].u, setup)
     ehat = lift(state) do (; u, p, t)
-        interpolate_u_p!(up, u, setup)
-        e = sum(up -> up[Ip] .^ 2, up)
+        kinetic_energy!(ke, u, setup)
+        e = ke[Ip]
         e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
         e = abs.(e) ./ size(e, 1)
         e = A * reshape(e, :)

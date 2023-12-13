@@ -799,12 +799,70 @@ Compute the second eigenvalue of ``S^2 + \\Omega^2``.
 eig2field(u, setup) = eig2field!(similar(u[1], setup.grid.N), u, setup)
 
 """
-    kinetic_energy(setup, u)
+    kinetic_energy!(e, u, setup; interpolate_first = false)
+
+Compute kinetic energy field ``e`` (in-place version).
+If `interpolate_first` is true, it is given by
+
+```math
+e_I = \\frac{1}{8} \\sum_\\alpha (u^\\alpha_{I + \\delta(\\alpha) / 2} + u^\\alpha_{I - \\delta(\\alpha) / 2})^2.
+```
+
+Otherwise, it is given by
+
+```math
+e_I = \\frac{1}{4} \\sum_\\alpha (u^\\alpha_{I + \\delta(\\alpha) / 2}^2 + u^\\alpha_{I - \\delta(\\alpha) / 2}^2),
+```
+
+as in [Sanderse2023](@cite).
+"""
+function kinetic_energy!(e, u, setup; interpolate_first = false)
+    (; grid, workgroupsize) = setup
+    (; dimension, Np, Ip) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function efirst!(e, u, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        k = zero(eltype(e))
+        for α = 1:D
+            k += (u[α][I] + u[α][I-δ(α)])^2
+        end
+        k = k / 8
+        e[I] = k
+    end
+    @kernel function elast!(e, u, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        k = zero(eltype(e))
+        for α = 1:D
+            k += u[α][I]^2 + u[α][I-δ(α)]^2
+        end
+        k = k / 4
+        e[I] = k
+    end
+    e! = interpolate_first ? efirst! : elast!
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    e!(get_backend(u[1]), workgroupsize)(e, u, I0; ndrange = Np)
+    e
+end
+
+"""
+    kinetic_energy(u, setup; kwargs...)
+
+Compute kinetic energy field ``e`` (out-of-place version).
+"""
+kinetic_energy(u, setup; kwargs...) =
+    kinetic_energy!(similar(u[1], setup.grid.N), u, setup; kwargs...)
+
+"""
+    total_kinetic_energy(setup, u)
 
 Compute total kinetic energy. The velocity components are interpolated to the
 volume centers and squared.
 """
-function kinetic_energy(u, setup)
+function total_kinetic_energy(u, setup)
     (; dimension, Ω, Ip) = setup.grid
     D = dimension()
     up = interpolate_u_p(u, setup)
