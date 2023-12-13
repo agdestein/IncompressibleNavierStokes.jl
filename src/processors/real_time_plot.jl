@@ -271,7 +271,7 @@ function energy_history_plot(state; setup)
     @assert state isa Observable "Energy history requires observable state."
     _points = Point2f[]
     points = lift(state) do (; u, p, t)
-        E = kinetic_energy(u, setup)
+        E = total_kinetic_energy(u, setup)
         push!(_points, Point2f(t, E))
     end
     fig = lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))
