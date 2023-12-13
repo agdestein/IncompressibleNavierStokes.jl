@@ -1,3 +1,40 @@
+# Note on implementation:
+# This file contains various differential operators.
+#
+# Each operator comes with
+#
+# - an modifying in-place version, e.g. `divergence!(div, u, setup)`,
+# - an allocating out-of-place version, e.g. `div = divergence(u, setup)`.
+#
+# The out-of-place versions can be used as building blocks in a
+# Zygote-differentiable program, thanks to the `rrule` methods
+# defined.
+#
+# The domain is divided into `N = (N[1], ..., N[D])` finite volumes.
+# For a Cartesian index `I`, volume center fields are naturally in the center,
+# but volume face fields are always to the _right_ of volume I.
+#
+# _All_ fields have the size `N`. These `N` components include
+#
+# - degrees of freedom
+# - boundary values, which are still used, but are filled in separately
+# - unused values, which are never used at all. These are still there so that
+#   we can guarantee that `ω[I]`, `u[1][I]`, `u[2][I]`, and `p[I]` etc. are
+#   at their canonical position in to the volume `I`. Otherwise we would
+#   need an offset for each BC type and each combination. Asymptotically
+#   speaking (for large `N`), the additional memory footprint of having these
+#   around is negligible.
+#
+# The operators are implemented as kernels.
+# The kernels are called for each index in `ndrange`, typically set
+# to the degrees of freedom of the output quantity. Boundary values for the
+# output quantity are filled in separately, by calling `apply_bc_*` when needed.
+# It is assumed that the appropriate boundary values for the input fields are
+# already filled in.
+#
+# The adjoint kernels are written manually for now.
+# In the future, Enzyme.jl might be able to do this automatically.
+
 """
     δ = Offset{D}()
 
@@ -37,12 +74,38 @@ function divergence!(div, u, setup)
     div
 end
 
+function divergence_adjoint!(u, div, setup)
+    (; grid, workgroupsize) = setup
+    (; Δ, N, Ip) = grid
+    D = length(u)
+    δ = Offset{D}()
+    @kernel function adj!(u, div)
+        I = @index(Global, Cartesian)
+        for α = 1:D
+            u[α][I] = zero(eltype(u[1]))
+            I ∈ Ip && (u[α][I] += div[I] / Δ[α][I[α]])
+            I + δ(α) ∈ Ip && (u[α][I] -= div[I+δ(α)] / Δ[α][I[α]+1])
+        end
+    end
+    adj!(get_backend(u[1]), workgroupsize)(u, div; ndrange = N)
+    u
+end
+
 """
     divergence(u, setup)
 
 Compute divergence of velocity field.
 """
 divergence(u, setup) = divergence!(similar(u[1], setup.grid.N), u, setup)
+
+ChainRulesCore.rrule(::typeof(divergence), u, setup) = (
+    divergence(u, setup),
+    divbar -> (
+        NoTangent(),
+        divergence_adjoint!(similar.(u), divbar, setup),
+        NoTangent(),
+    ),
+)
 
 """
     vorticity(u, setup)
