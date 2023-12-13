@@ -693,7 +693,7 @@ Compute the ``D``-field [LiJiajia2019](@cite) given by
 D = \\frac{2 | \\nabla p |}{\\nabla^2 p}.
 ```
 """
-function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
+function Dfield!(d, G, p, setup)
     (; grid, workgroupsize) = setup
     (; dimension, Np, Ip, Δ) = grid
     T = eltype(p)
@@ -742,7 +742,7 @@ Dfield(p, setup) = Dfield!(
 )
 
 """
-    Qfield!(Q, u, setup; ϵ = eps(eltype(Q)))
+    Qfield!(Q, u, setup)
 
 Compute ``Q``-field [Jeong1995](@cite) given by
 
@@ -751,7 +751,7 @@ Q = - \\frac{1}{2} \\sum_{α, β} \\frac{\\partial u^α}{\\partial x^β}
 \\frac{\\partial u^β}{\\partial x^α}.
 ```
 """
-function Qfield!(Q, u, setup; ϵ = eps(eltype(Q)))
+function Qfield!(Q, u, setup)
     (; grid, workgroupsize) = setup
     (; dimension, Np, Ip, Δ) = grid
     D = dimension()
@@ -785,7 +785,7 @@ Qfield(u, setup) = Qfield!(similar(u[1], setup.grid.N), u, setup)
 
 Compute the second eigenvalue of ``S^2 + \\Omega^2``.
 """
-function eig2field!(λ, u, setup; ϵ = eps(eltype(λ)))
+function eig2field!(λ, u, setup)
     (; grid, workgroupsize) = setup
     (; dimension, Np, Ip, Δ, Δu) = grid
     D = dimension()
@@ -796,8 +796,7 @@ function eig2field!(λ, u, setup; ϵ = eps(eltype(λ)))
         ∇u = ∇(u, I, Δ, Δu)
         S = @. (∇u + ∇u') / 2
         Ω = @. (∇u - ∇u') / 2
-        e2 = eigvals(S^2 + Ω^2)[2]
-        λ[I] = log10(max(ϵ, -e2))
+        λ[I] = eigvals(S^2 + Ω^2)[2]
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)

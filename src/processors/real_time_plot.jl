@@ -185,9 +185,10 @@ function fieldplot(
     alpha = convert(eltype(setup.grid.x[1]), 0.1),
     isorange = convert(eltype(setup.grid.x[1]), 0.5),
     equal_axis = true,
-    levels = 3,
+    levels = LinRange{eltype(setup.grid.x[1])}(-10, 5, 10),
     docolorbar = false,
     size = nothing,
+    logtol = eps(setup.T),
     kwargs...,
 )
     (; boundary_conditions, grid) = setup
@@ -223,12 +224,18 @@ function fieldplot(
             p
         elseif fieldname == :Dfield
             Dfield!(d, G, p, setup)
+            din = view(d, Ip)
+            @. din = log(max(logtol, din))
             d
         elseif fieldname == :Qfield
             Qfield!(Q, u, setup)
+            Qin = view(Q, Ip)
+            @. Qin = log(max(logtol, Qin))
             Q
         elseif fieldname == :eig2field
             eig2field!(λ, u, setup)
+            λin = view(λ, Ip)
+            @. λin .= log(max(logtol, -λin))
             λ
         end
         Array(f)[Ip]
