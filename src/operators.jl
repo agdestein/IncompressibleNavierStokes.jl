@@ -509,6 +509,12 @@ end
 @inline gridsize(Δ, I::CartesianIndex{D}) where {D} =
     sqrt(sum(ntuple(α -> Δ[α][I[α]]^2, D)))
 
+"""
+    smagtensor!(σ, u, θ, setup)
+
+Compute Smagorinsky stress tensors `σ[I]`.
+The Smagorinsky constant `θ` should be a scalar between `0` and `1`.
+"""
 function smagtensor!(σ, u, θ, setup)
     # TODO: Combine with normal diffusion tensor
     (; boundary_conditions, grid, workgroupsize) = setup
@@ -527,6 +533,12 @@ function smagtensor!(σ, u, θ, setup)
     σ
 end
 
+"""
+    smagorinsky!(s, σ, setup)
+
+Compute the Smagorinsky closure term `s` (additional diffusive force).
+The Smagorinsky stress tensors should be precomputed and stored in `σ`.
+"""
 function smagorinsky!(s, σ, setup)
     (; boundary_conditions, grid, workgroupsize) = setup
     (; dimension, Nu, Iu, Δ, Δu, A) = grid
@@ -570,6 +582,13 @@ function smagorinsky!(s, σ, setup)
     s
 end
 
+"""
+    m = smagorinsky_closure(setup)
+
+Create Smagoinsky closure model `m`.
+The model is called as `m(u, θ)`, where the Smagorinsky constant
+`θ` should be a scalar between `0` and `1` (for example `θ = 0.1`).
+"""
 function smagorinsky_closure(setup)
     (; dimension, x, N) = setup.grid
     D = dimension()
