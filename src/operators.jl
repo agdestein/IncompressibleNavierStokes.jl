@@ -11,6 +11,7 @@
 # defined.
 #
 # The domain is divided into `N = (N[1], ..., N[D])` finite volumes.
+# These also include ghost volumes, possibly outside the domain.
 # For a Cartesian index `I`, volume center fields are naturally in the center,
 # but volume face fields are always to the _right_ of volume I.
 #
@@ -198,7 +199,45 @@ function convection!(F, u, setup)
     end
     F
 end
+
+function convection_adjoint!(ubar, Fbar, u, setup)
+    (; grid, workgroupsize) = setup
+    (; dimension, Δ, Δu, N, Nu, Iu, A) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function adj!(ubar, Fbar, u, F, ::Val{α}, ::Val{βrange}) where {α,βrange}
+        I = @index(Global, Cartesian)
+        # for β = 1:D
+        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+            # Δuαβ = α == β ? Δu[β] : Δ[β]
+            # uαβ1 = A[α][β][2][I[β]-1] * u[α][I-δ(β)] + A[α][β][1][I[β]] * u[α][I]
+            # uβα1 =
+            #     A[β][α][2][I[α]-(α==β)] * u[β][I-δ(β)] +
+            #     A[β][α][1][I[α]+(α!=β)] * u[β][I-δ(β)+δ(α)]
+            # uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
+            # uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+δ(α)]
+            # F[α][I] -= (uαβ2 * uβα2 - uαβ1 * uβα1) / Δuαβ[I[β]]
+
+            ubar[α][I] += Fbar[β][I]
+        end
+    end
+    error()
+    for α = 1:D
+        adj!(get_backend(F[1]), workgroupsize)(ubar, Fbar, u, Val(α), Val(1:D); ndrange = N)
+    end
+    F
+end
+
 convection(u, setup) = convection!(zero.(u), u, setup)
+
+ChainRulesCore.rrule(::typeof(convection), u, setup) = (
+    convection(u, setup),
+    φ -> (
+        NoTangent(),
+        convection_adjoint!(similar.(u), φ, setup),
+        NoTangent(),
+    ),
+)
 
 """
     diffusion!(F, u, setup)
@@ -231,7 +270,44 @@ function diffusion!(F, u, setup)
     end
     F
 end
+
+function diffusion_adjoint!(u, F, setup)
+    (; grid, workgroupsize, Re) = setup
+    (; dimension, N, Δ, Δu, Iu) = grid
+    D = dimension()
+    δ = Offset{D}()
+    ν = 1 / Re
+    @kernel function adj!(u, F, ::Val{α}, ::Val{βrange}) where {α,βrange}
+        I = @index(Global, Cartesian)
+        # for β = 1:D
+        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+            Δuαβ = (α == β ? Δu[β] : Δ[β])
+            # F[α][I] += ν * u[α][I+δ(β)] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
+            # F[α][I] -= ν * u[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
+            # F[α][I] -= ν * u[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
+            # F[α][I] += ν * u[α][I-δ(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
+            I - δ(β) ∈ Iu[α] && (u[α][I] += ν * F[α][I-δ(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β] - 1])
+            I ∈ Iu[α] && (u[α][I] -= ν * F[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]])
+            I ∈ Iu[α] && (u[α][I] -= ν * F[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]])
+            I + δ(β) ∈ Iu[α] && (u[α][I] += ν * F[α][I+δ(β)] / (β == α ? Δ[β][I[β] + 1] : Δu[β][I[β]]) / Δuαβ[I[β] + 1])
+        end
+    end
+    for α = 1:D
+        adj!(get_backend(u[1]), workgroupsize)(u, F, Val(α), Val(1:D); ndrange = N)
+    end
+    u
+end
+
 diffusion(u, setup) = diffusion!(zero.(u), u, setup)
+
+ChainRulesCore.rrule(::typeof(diffusion), u, setup) = (
+    diffusion(u, setup),
+    φ -> (
+        NoTangent(),
+        diffusion_adjoint!(zero.(u), φ, setup),
+        NoTangent(),
+    ),
+)
 
 function convectiondiffusion!(F, u, setup)
     (; grid, workgroupsize, Re) = setup
@@ -265,7 +341,17 @@ function convectiondiffusion!(F, u, setup)
     end
     F
 end
+
 convectiondiffusion(u, setup) = convectiondiffusion!(zero.(u), u, setup)
+
+ChainRulesCore.rrule(::typeof(convectiondiffusion), u, setup) = (
+    convection(u, setup),
+    φ -> (
+        NoTangent(),
+        convectiondiffusion_adjoint!(similar.(u), φ, setup),
+        NoTangent(),
+    ),
+)
 
 """
     bodyforce!(F, u, t, setup)
