@@ -30,9 +30,6 @@ using CUDA
 using CUDA.CUSPARSE
 # using CUSOLVERRF
 
-# Must be loaded inside for debugging with breakpoints
-using Infiltrator
-
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
 
