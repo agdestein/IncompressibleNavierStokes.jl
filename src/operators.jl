@@ -455,6 +455,12 @@ function bodyforce!(F, u, t, setup)
     end
     F
 end
+bodyforce(u, t, setup) = bodyforce!(zero.(u), u, t, setup)
+
+ChainRulesCore.rrule(::typeof(bodyforce), u, t, setup) = (
+    bodyforce(u, t, setup),
+    φ -> (NoTangent(), ZeroTangent(), NoTangent(), NoTangent()),
+)
 
 """
     momentum!(F, u, t, setup)
@@ -487,7 +493,23 @@ end
 
 Right hand side of momentum equations, excluding pressure gradient.
 """
-momentum(u, t, setup) = momentum!(zero.(u), u, t, setup)
+# momentum(u, t, setup) = momentum!(zero.(u), u, t, setup)
+function momentum(u, t, setup)
+    (; grid, closure_model) = setup
+    (; dimension) = grid
+    D = dimension()
+    d = diffusion(u, setup)
+    c = convection(u, setup)
+    f = bodyforce(u, t, setup)
+    F = ntuple(D) do α
+        d[α] .+ c[α] .+ f[α]
+    end
+    if !isnothing(closure_model)
+        m = closure_model(u)
+        F = F .+ m
+    end
+    F
+end
 
 """
     pressuregradient!(G, p, setup)
@@ -536,7 +558,7 @@ end
 Compute pressure gradient.
 """
 pressuregradient(p, setup) = pressuregradient!(
-    ntuple(α -> similar(p, setup.grid.N), setup.grid.dimension()),
+    ntuple(α -> similar(p), setup.grid.dimension()),
     p,
     setup,
 )

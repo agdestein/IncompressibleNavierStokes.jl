@@ -105,8 +105,8 @@ offset_p(::PressureBC, atend) = 1 + !atend
 function apply_bc_u! end
 function apply_bc_p! end
 
-apply_bc_u(u, t, setup; kwargs...) = apply_bc_u!(copy(u), t, setup; kwargs...)
-apply_bc_p(u, t, setup; kwargs...) = apply_bc_p!(copy(p), t, setup; kwargs...)
+apply_bc_u(u, t, setup; kwargs...) = apply_bc_u!(copy.(u), t, setup; kwargs...)
+apply_bc_p(p, t, setup; kwargs...) = apply_bc_p!(copy(p), t, setup; kwargs...)
 
 ChainRulesCore.rrule(::typeof(apply_bc_u), u, t, setup) = (
     apply_bc_u(u, t, setup),
@@ -142,7 +142,7 @@ end
 
 function apply_bc_u_pullback!(ubar, φbar, t, setup; kwargs...)
     (; boundary_conditions) = setup
-    D = length(u)
+    D = length(ubar)
     for β = 1:D
         apply_bc_u_pullback!(
             boundary_conditions[β][1],
@@ -240,17 +240,17 @@ function apply_bc_u_pullback!(::PeriodicBC, ubar, φbar, β, t, setup; atend, kw
     end
     @kernel function adj_b!(u, φ, ::Val{α}, ::Val{β}) where {α,β}
         I = @index(Global, Cartesian)
-        φ[α][I+δ(β)] += u[α][I+(N[β]-1)*δ(β)]
+        u[α][I+δ(β)] += φ[α][I+(N[β]-1)*δ(β)]
     end
     ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     for α = 1:D
         if atend
-            _bc_b!(get_backend(u[1]), workgroupsize)(ubar, φbar, Val(α), Val(β); ndrange)
+            adj_b!(get_backend(ubar[1]), workgroupsize)(ubar, φbar, Val(α), Val(β); ndrange)
         else
-            _bc_a!(get_backend(u[1]), workgroupsize)(ubar, φbar, Val(α), Val(β); ndrange)
+            adj_a!(get_backend(ubar[1]), workgroupsize)(ubar, φbar, Val(α), Val(β); ndrange)
         end
     end
-    u
+    ubar
 end
 
 function apply_bc_p!(::PeriodicBC, p, β, t, setup; atend, kwargs...)
