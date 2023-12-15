@@ -12,6 +12,10 @@ function poisson end
 
 poisson(solver, f) = poisson!(solver, zero(f), f)
 
+# Laplacian is auto-adjoint
+ChainRulesCore.rrule(::typeof(poisson), f, setup) =
+    (poisson(p, setup), φ -> (NoTangent(), poisson(φ, setup), NoTangent()))
+
 """
     poisson!(solver, p, f)
 

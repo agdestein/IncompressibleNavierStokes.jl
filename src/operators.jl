@@ -75,20 +75,20 @@ function divergence!(div, u, setup)
     div
 end
 
-function divergence_adjoint!(u, div, setup)
+function divergence_adjoint!(u, φ, setup)
     (; grid, workgroupsize) = setup
     (; Δ, N, Ip) = grid
     D = length(u)
     δ = Offset{D}()
-    @kernel function adj!(u, div)
+    @kernel function adj!(u, φ)
         I = @index(Global, Cartesian)
         for α = 1:D
             u[α][I] = zero(eltype(u[1]))
-            I ∈ Ip && (u[α][I] += div[I] / Δ[α][I[α]])
-            I + δ(α) ∈ Ip && (u[α][I] -= div[I+δ(α)] / Δ[α][I[α]+1])
+            I ∈ Ip && (u[α][I] += φ[I] / Δ[α][I[α]])
+            I + δ(α) ∈ Ip && (u[α][I] -= φ[I+δ(α)] / Δ[α][I[α]+1])
         end
     end
-    adj!(get_backend(u[1]), workgroupsize)(u, div; ndrange = N)
+    adj!(get_backend(u[1]), workgroupsize)(u, φ; ndrange = N)
     u
 end
 
@@ -101,11 +101,7 @@ divergence(u, setup) = divergence!(similar(u[1], setup.grid.N), u, setup)
 
 ChainRulesCore.rrule(::typeof(divergence), u, setup) = (
     divergence(u, setup),
-    divbar -> (
-        NoTangent(),
-        divergence_adjoint!(similar.(u), divbar, setup),
-        NoTangent(),
-    ),
+    φ -> (NoTangent(), divergence_adjoint!(similar.(u), φ, setup), NoTangent()),
 )
 
 """
@@ -200,43 +196,110 @@ function convection!(F, u, setup)
     F
 end
 
-function convection_adjoint!(ubar, Fbar, u, setup)
+function convection_adjoint!(ubar, φbar, u, setup)
     (; grid, workgroupsize) = setup
-    (; dimension, Δ, Δu, N, Nu, Iu, A) = grid
+    (; dimension, Δ, Δu, N, Iu, A) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function adj!(ubar, Fbar, u, F, ::Val{α}, ::Val{βrange}) where {α,βrange}
-        I = @index(Global, Cartesian)
-        # for β = 1:D
-        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
-            # Δuαβ = α == β ? Δu[β] : Δ[β]
-            # uαβ1 = A[α][β][2][I[β]-1] * u[α][I-δ(β)] + A[α][β][1][I[β]] * u[α][I]
-            # uβα1 =
-            #     A[β][α][2][I[α]-(α==β)] * u[β][I-δ(β)] +
-            #     A[β][α][1][I[α]+(α!=β)] * u[β][I-δ(β)+δ(α)]
-            # uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
-            # uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+δ(α)]
-            # F[α][I] -= (uαβ2 * uβα2 - uαβ1 * uβα1) / Δuαβ[I[β]]
+    @kernel function adj!(ubar, φbar, u, ::Val{γ}, ::Val{looprange}) where {γ,looprange}
+        J = @index(Global, Cartesian)
+        KernelAbstractions.Extras.LoopInfo.@unroll for α in looprange
+            KernelAbstractions.Extras.LoopInfo.@unroll for β in looprange
+                Δuαβ = α == β ? Δu[β] : Δ[β]
+                Aαβ1 = A[α][β][1]
+                Aαβ2 = A[α][β][2]
+                Aβα1 = A[β][α][1]
+                Aβα2 = A[β][α][2]
 
-            ubar[α][I] += Fbar[β][I]
+                # 1
+                I = J
+                if α == γ && I in Iu[α]
+                    uαβ2 = Aαβ2[I[β]]
+                    uβα2 = Aβα2[I[α]] * u[β][I] + Aβα1[I[α]+1] * u[β][I+δ(α)]
+                    dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
+                    ubar[γ][J] += φbar[α][I] * dφdu
+                end
+
+                # 2
+                I = J - δ(β)
+                if α == γ && I in Iu[α]
+                    uαβ2 = Aαβ1[I[β]+1]
+                    uβα2 = Aβα2[I[α]] * u[β][I] + Aβα1[I[α]+1] * u[β][I+δ(α)]
+                    dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
+                    ubar[γ][J] += φbar[α][I] * dφdu
+                end
+
+                # 3
+                I = J
+                if β == γ && I in Iu[α]
+                    uαβ2 = Aαβ2[I[β]] * u[α][I] + Aαβ1[I[β]+1] * u[α][I+δ(β)]
+                    uβα2 = Aβα2[I[α]]
+                    dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
+                    ubar[γ][J] += φbar[α][I] * dφdu
+                end
+
+                # 4
+                I = J - δ(α)
+                if β == γ && I in Iu[α]
+                    uαβ2 = Aαβ2[I[β]] * u[α][I] + Aαβ1[I[β]+1] * u[α][I+δ(β)]
+                    uβα2 = Aβα1[I[α]+1]
+                    dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
+                    ubar[γ][J] += φbar[α][I] * dφdu
+                end
+
+                # 5
+                I = J + δ(β)
+                if α == γ && I in Iu[α]
+                    uαβ1 = Aαβ2[I[β]-1]
+                    uβα1 =
+                        Aβα2[I[α]-(α==β)] * u[β][I-δ(β)] +
+                        Aβα1[I[α]+(α!=β)] * u[β][I-δ(β)+δ(α)]
+                    dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
+                    ubar[γ][J] += φbar[α][I] * dφdu
+                end
+
+                # 6
+                I = J
+                if α == γ && I in Iu[α]
+                    uαβ1 = Aαβ1[I[β]]
+                    uβα1 =
+                        Aβα2[I[α]-(α==β)] * u[β][I-δ(β)] +
+                        Aβα1[I[α]+(α!=β)] * u[β][I-δ(β)+δ(α)]
+                    dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
+                    ubar[γ][J] += φbar[α][I] * dφdu
+                end
+
+                # 7
+                I = J + δ(β)
+                if β == γ && I in Iu[α]
+                    uαβ1 = Aαβ2[I[β]-1] * u[α][I-δ(β)] + Aαβ1[I[β]] * u[α][I]
+                    uβα1 = Aβα2[I[α]-(α==β)]
+                    dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
+                    ubar[γ][J] += φbar[α][I] * dφdu
+                end
+
+                # 8
+                I = J + δ(β) - δ(α)
+                if β == γ && I in Iu[α]
+                    uαβ1 = Aαβ2[I[β]-1] * u[α][I-δ(β)] + Aαβ1[I[β]] * u[α][I]
+                    uβα1 = Aβα1[I[α]+(α!=β)]
+                    dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
+                    ubar[γ][J] += φbar[α][I] * dφdu
+                end
+            end
         end
     end
-    error()
-    for α = 1:D
-        adj!(get_backend(F[1]), workgroupsize)(ubar, Fbar, u, Val(α), Val(1:D); ndrange = N)
+    for γ = 1:D
+        adj!(get_backend(u[1]), workgroupsize)(ubar, φbar, u, Val(γ), Val(1:D); ndrange = N)
     end
-    F
+    ubar
 end
 
 convection(u, setup) = convection!(zero.(u), u, setup)
 
 ChainRulesCore.rrule(::typeof(convection), u, setup) = (
     convection(u, setup),
-    φ -> (
-        NoTangent(),
-        convection_adjoint!(similar.(u), φ, setup),
-        NoTangent(),
-    ),
+    φ -> (NoTangent(), convection_adjoint!(similar.(u), (φ...,), u, setup), NoTangent()),
 )
 
 """
@@ -271,13 +334,13 @@ function diffusion!(F, u, setup)
     F
 end
 
-function diffusion_adjoint!(u, F, setup)
+function diffusion_adjoint!(u, φ, setup)
     (; grid, workgroupsize, Re) = setup
     (; dimension, N, Δ, Δu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
     ν = 1 / Re
-    @kernel function adj!(u, F, ::Val{α}, ::Val{βrange}) where {α,βrange}
+    @kernel function adj!(u, φ, ::Val{α}, ::Val{βrange}) where {α,βrange}
         I = @index(Global, Cartesian)
         # for β = 1:D
         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
@@ -286,14 +349,26 @@ function diffusion_adjoint!(u, F, setup)
             # F[α][I] -= ν * u[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
             # F[α][I] -= ν * u[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
             # F[α][I] += ν * u[α][I-δ(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
-            I - δ(β) ∈ Iu[α] && (u[α][I] += ν * F[α][I-δ(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β] - 1])
-            I ∈ Iu[α] && (u[α][I] -= ν * F[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]])
-            I ∈ Iu[α] && (u[α][I] -= ν * F[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]])
-            I + δ(β) ∈ Iu[α] && (u[α][I] += ν * F[α][I+δ(β)] / (β == α ? Δ[β][I[β] + 1] : Δu[β][I[β]]) / Δuαβ[I[β] + 1])
+            I - δ(β) ∈ Iu[α] && (
+                u[α][I] +=
+                    ν * φ[α][I-δ(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]-1]
+            )
+            I ∈ Iu[α] && (
+                u[α][I] -=
+                    ν * φ[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]]
+            )
+            I ∈ Iu[α] && (
+                u[α][I] -=
+                    ν * φ[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]]
+            )
+            I + δ(β) ∈ Iu[α] && (
+                u[α][I] +=
+                    ν * φ[α][I+δ(β)] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]+1]
+            )
         end
     end
     for α = 1:D
-        adj!(get_backend(u[1]), workgroupsize)(u, F, Val(α), Val(1:D); ndrange = N)
+        adj!(get_backend(u[1]), workgroupsize)(u, φ, Val(α), Val(1:D); ndrange = N)
     end
     u
 end
@@ -302,11 +377,7 @@ diffusion(u, setup) = diffusion!(zero.(u), u, setup)
 
 ChainRulesCore.rrule(::typeof(diffusion), u, setup) = (
     diffusion(u, setup),
-    φ -> (
-        NoTangent(),
-        diffusion_adjoint!(zero.(u), φ, setup),
-        NoTangent(),
-    ),
+    φ -> (NoTangent(), diffusion_adjoint!(zero.(u), (φ...,), setup), NoTangent()),
 )
 
 function convectiondiffusion!(F, u, setup)
@@ -346,11 +417,8 @@ convectiondiffusion(u, setup) = convectiondiffusion!(zero.(u), u, setup)
 
 ChainRulesCore.rrule(::typeof(convectiondiffusion), u, setup) = (
     convection(u, setup),
-    φ -> (
-        NoTangent(),
-        convectiondiffusion_adjoint!(similar.(u), φ, setup),
-        NoTangent(),
-    ),
+    φ ->
+        (NoTangent(), convectiondiffusion_adjoint!(similar.(u), φ, setup), NoTangent()),
 )
 
 """
@@ -445,6 +513,23 @@ function pressuregradient!(G, p, setup)
     G
 end
 
+function pressuregradient_adjoint!(pbar, φ, setup)
+    (; grid, workgroupsize) = setup
+    (; dimension, Δu, N, Iu) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function adj!(p, φ)
+        I = @index(Global, Cartesian)
+        p[I] = zero(eltype(p))
+        for α = 1:D
+            I - δ(α) ∈ Iu[α] && (p[I] += φ[α][I-δ(α)] / Δu[α][I[α] - 1])
+            I ∈ Iu[α] && (p[I] -= φ[α][I] / Δu[α][I[α]])
+        end
+    end
+    adj!(get_backend(pbar), workgroupsize)(pbar, φ; ndrange = N)
+    pbar
+end
+
 """
     pressuregradient(p, setup)
 
@@ -454,6 +539,11 @@ pressuregradient(p, setup) = pressuregradient!(
     ntuple(α -> similar(p, setup.grid.N), setup.grid.dimension()),
     p,
     setup,
+)
+
+ChainRulesCore.rrule(::typeof(pressuregradient), p, setup) = (
+    pressuregradient(p, setup),
+    φ -> (NoTangent(), pressuregradient_adjoint!(similar(p), (φ...,), setup), NoTangent()),
 )
 
 """
