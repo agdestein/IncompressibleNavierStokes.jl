@@ -6,6 +6,7 @@ Energy-conserving solvers for the incompressible Navier-Stokes equations.
 module IncompressibleNavierStokes
 
 using Adapt
+using ChainRulesCore
 using ComponentArrays: ComponentArray
 using FFTW
 using IterativeSolvers
@@ -27,7 +28,10 @@ using Zygote
 # Must be loaded inside for Tullio to work correctly
 using CUDA
 using CUDA.CUSPARSE
-using CUSOLVERRF
+# using CUSOLVERRF
+
+# Must be loaded inside for debugging with breakpoints
+using Infiltrator
 
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
