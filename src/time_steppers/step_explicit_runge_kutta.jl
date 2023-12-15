@@ -3,7 +3,7 @@ create_stepper(::ExplicitRungeKuttaMethod; setup, pressure_solver, u, p, t, n = 
 
 function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
     (; setup, pressure_solver, u, p, t, n) = stepper
-    (; grid, boundary_conditions) = setup
+    (; grid) = setup
     (; dimension, Iu, Ip, Ω) = grid
     (; A, b, c, p_add_solve) = method
     (; u₀, ku, v, F, M, G) = cache
@@ -74,6 +74,61 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
 
     # Do additional pressure solve to avoid first order pressure
     p_add_solve && pressure!(pressure_solver, u, p, t, setup, F, G, M)
+
+    create_stepper(method; setup, pressure_solver, u, p, t, n = n + 1)
+end
+
+function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt)
+    (; setup, pressure_solver, u, p, t, n) = stepper
+    (; grid) = setup
+    (; dimension) = grid
+    (; A, b, c) = method
+
+    D = dimension()
+
+    # Update current solution (does not depend on previous step size)
+    t₀ = t
+    u₀ = u
+
+    # Number of stages
+    nstage = length(b)
+
+    ku = ()
+
+    ## Start looping over stages
+
+    # At i = 1 we calculate F₁ = F(u₀), p₁ and u₁
+    # ⋮
+    # At i = s we calculate Fₛ = F(uₛ₋₁), pₛ, and uₛ
+    for i = 1:nstage
+        # Right-hand side for tᵢ₋₁ based on current velocity field uᵢ₋₁, vᵢ₋₁ at
+        # level i-1. This includes force evaluation at tᵢ₋₁.
+        F = momentum(u, t, setup)
+
+        # Store right-hand side of stage i
+        ku = (ku..., F) 
+
+        # Intermediate time step
+        t = t₀ + c[i] * Δt
+
+        # Update velocity current stage by sum of Fᵢ's until this stage, weighted
+        # with Butcher tableau coefficients. This gives vᵢ
+        u = ntuple(D) do α
+            uα = u₀[α]
+            for j = 1:i
+                uα = @. uα + Δt * A[i, j] * ku[j][α]
+            end
+            uα
+        end
+
+        # Boundary conditions at tᵢ
+        u = apply_bc_u(u, t, setup)
+        u = project(pressure_solver, u, setup)
+        u = apply_bc_u(u, t, setup)
+    end
+
+    # Complete time step
+    t = t₀ + Δt
 
     create_stepper(method; setup, pressure_solver, u, p, t, n = n + 1)
 end
