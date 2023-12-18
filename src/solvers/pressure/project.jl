@@ -3,18 +3,18 @@ function project(solver, u, setup)
     T = eltype(u[1])
 
     # Divergence of tentative velocity field
-    M = divergence(v, setup)
+    M = divergence(u, setup)
     M = @. M * Ω 
 
     # Solve the Poisson equation
-    p = poisson(pressure_solver, M)
+    p = poisson(solver, M)
     p = apply_bc_p(p, T(0), setup)
 
     # Compute pressure correction term
     G = pressuregradient(p, setup)
 
     # Update velocity, which is now divergence free
-    v .- G
+    u .- G
 end
 
 function project!(solver, u, setup; M, p, G)
@@ -26,7 +26,7 @@ function project!(solver, u, setup; M, p, G)
     @. M *= Ω
 
     # Solve the Poisson equation
-    poisson!(pressure_solver, p, M)
+    poisson!(solver, p, M)
     apply_bc_p!(p, T(0), setup)
 
     # Compute pressure correction term

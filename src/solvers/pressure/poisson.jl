@@ -8,13 +8,13 @@ Non-mutating/allocating/out-of-place version.
 
 See also [`poisson!`](@ref).
 """
-function poisson end
-
 poisson(solver, f) = poisson!(solver, zero(f), f)
 
 # Laplacian is auto-adjoint
-ChainRulesCore.rrule(::typeof(poisson), f, setup) =
-    (poisson(p, setup), φ -> (NoTangent(), poisson(φ, setup), NoTangent()))
+ChainRulesCore.rrule(::typeof(poisson), solver, f) = (
+    poisson(solver, f),
+    φ -> (NoTangent(), NoTangent(), poisson(solver, φ)),
+)
 
 """
     poisson!(solver, p, f)

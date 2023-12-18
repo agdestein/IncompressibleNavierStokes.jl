@@ -299,7 +299,8 @@ convection(u, setup) = convection!(zero.(u), u, setup)
 
 ChainRulesCore.rrule(::typeof(convection), u, setup) = (
     convection(u, setup),
-    φ -> (NoTangent(), convection_adjoint!(similar.(u), (φ...,), u, setup), NoTangent()),
+    φ ->
+        (NoTangent(), convection_adjoint!(zero.(u), (φ...,), u, setup), NoTangent()),
 )
 
 """
@@ -457,10 +458,8 @@ function bodyforce!(F, u, t, setup)
 end
 bodyforce(u, t, setup) = bodyforce!(zero.(u), u, t, setup)
 
-ChainRulesCore.rrule(::typeof(bodyforce), u, t, setup) = (
-    bodyforce(u, t, setup),
-    φ -> (NoTangent(), ZeroTangent(), NoTangent(), NoTangent()),
-)
+ChainRulesCore.rrule(::typeof(bodyforce), u, t, setup) =
+    (bodyforce(u, t, setup), φ -> (NoTangent(), ZeroTangent(), NoTangent(), NoTangent()))
 
 """
     momentum!(F, u, t, setup)
@@ -488,6 +487,14 @@ function momentum!(F, u, t, setup)
     F
 end
 
+monitor(u) = (@info("Forward", typeof(u)); u)
+ChainRulesCore.rrule(::typeof(monitor), u) =
+    (monitor(u), φ -> (@info("Reverse", typeof(φ)); (NoTangent(), φ)))
+
+tupleadd(u...) = ntuple(α -> sum(u -> u[α], u), length(u[1]))
+ChainRulesCore.rrule(::typeof(tupleadd), u...) =
+    (tupleadd(u...), φ -> (NoTangent(), map(u -> φ, u)...))
+
 """
     momentum(u, t, setup)
 
@@ -501,15 +508,28 @@ function momentum(u, t, setup)
     d = diffusion(u, setup)
     c = convection(u, setup)
     f = bodyforce(u, t, setup)
-    F = ntuple(D) do α
-        d[α] .+ c[α] .+ f[α]
-    end
+    # F = ntuple(D) do α
+    #     d[α] .+ c[α] .+ f[α]
+    # end
+    # F = @. d + c + f
+    F = tupleadd(d, c, f)
     if !isnothing(closure_model)
         m = closure_model(u)
-        F = F .+ m
+        # F = F .+ m
+        F = tupleadd(F, m)
     end
     F
 end
+
+# ChainRulesCore.rrule(::typeof(momentum), u, t, setup) = (
+#     (error(); momentum(u, t, setup)),
+#     φ -> (
+#         NoTangent(),
+#         momentum_pullback!(zero.(φ), φ, u, t, setup),
+#         NoTangent(),
+#         NoTangent(),
+#     ),
+# )
 
 """
     pressuregradient!(G, p, setup)
@@ -544,7 +564,7 @@ function pressuregradient_adjoint!(pbar, φ, setup)
         I = @index(Global, Cartesian)
         p[I] = zero(eltype(p))
         for α = 1:D
-            I - δ(α) ∈ Iu[α] && (p[I] += φ[α][I-δ(α)] / Δu[α][I[α] - 1])
+            I - δ(α) ∈ Iu[α] && (p[I] += φ[α][I-δ(α)] / Δu[α][I[α]-1])
             I ∈ Iu[α] && (p[I] -= φ[α][I] / Δu[α][I[α]])
         end
     end
@@ -557,11 +577,8 @@ end
 
 Compute pressure gradient.
 """
-pressuregradient(p, setup) = pressuregradient!(
-    ntuple(α -> similar(p), setup.grid.dimension()),
-    p,
-    setup,
-)
+pressuregradient(p, setup) =
+    pressuregradient!(ntuple(α -> zero(p), setup.grid.dimension()), p, setup)
 
 ChainRulesCore.rrule(::typeof(pressuregradient), p, setup) = (
     pressuregradient(p, setup),

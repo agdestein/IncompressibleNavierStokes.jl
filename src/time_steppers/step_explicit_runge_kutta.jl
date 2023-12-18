@@ -103,28 +103,28 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt)
     for i = 1:nstage
         # Right-hand side for tᵢ₋₁ based on current velocity field uᵢ₋₁, vᵢ₋₁ at
         # level i-1. This includes force evaluation at tᵢ₋₁.
+        u = apply_bc_u(u, t, setup)
         F = momentum(u, t, setup)
 
         # Store right-hand side of stage i
-        ku = (ku..., F) 
+        ku = (ku..., F)
 
         # Intermediate time step
         t = t₀ + c[i] * Δt
 
         # Update velocity current stage by sum of Fᵢ's until this stage, weighted
         # with Butcher tableau coefficients. This gives vᵢ
-        u = ntuple(D) do α
-            uα = u₀[α]
-            for j = 1:i
-                uα = @. uα + Δt * A[i, j] * ku[j][α]
-            end
-            uα
+        u = u₀
+        for j = 1:i
+            # u = @. u + Δt * A[i, j] * ku[j]
+            u = tupleadd(u, @.(Δt * A[i, j] * ku[j]))
         end
 
         # Boundary conditions at tᵢ
         u = apply_bc_u(u, t, setup)
+
+        # Make divergence free
         u = project(pressure_solver, u, setup)
-        u = apply_bc_u(u, t, setup)
     end
 
     # Complete time step
