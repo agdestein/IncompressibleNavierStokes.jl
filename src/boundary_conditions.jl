@@ -113,7 +113,7 @@ ChainRulesCore.rrule(::typeof(apply_bc_u), u, t, setup) = (
     # With respect to (apply_bc_u, u, t, setup)
     φbar -> (
         NoTangent(),
-        apply_bc_u_pullback!(copy.(φbar), φbar, t, setup),
+        apply_bc_u_pullback!(copy.((φbar...,)), (φbar...,), t, setup),
         NoTangent(),
         NoTangent(),
     ),

@@ -72,6 +72,26 @@ using LinearAlgebra
 using Random
 (; Iu, Ip) = setup.grid
 
+function finitediff(f, u::Tuple, I; h = sqrt(eps(eltype(u[1]))))
+    u1 = copy.(u)
+    CUDA.@allowscalar u1[1][I] -= h / 2
+    r1 = f(u1)
+    u2 = copy.(u)
+    CUDA.@allowscalar u2[1][I] += h / 2
+    r2 = f(u2)
+    (r2 - r1) / h
+end
+
+function finitediff(f, p, I; h = sqrt(eps(eltype(p))))
+    p1 = copy(p)
+    CUDA.@allowscalar p1[I] -= h / 2
+    r1 = f(p1)
+    p2 = copy(p)
+    CUDA.@allowscalar p2[I] += h / 2
+    r2 = f(p2)
+    (r2 - r1) / h
+end
+
 IncompressibleNavierStokes.diffusion(u, setup)[1]
 IncompressibleNavierStokes.diffusion_adjoint!(zero.(u), u, setup)[1]
 
@@ -103,36 +123,6 @@ ur = randn!.(similar.(u))
 ubar = IncompressibleNavierStokes.convection_adjoint!(zero.(ur), φbar, ur, setup)
 dot(φbar, φ)
 dot(ubar, ur) / 2
-
-I = CartesianIndex(14, 17)
-g1 = gradient(p) do p
-    φ = IncompressibleNavierStokes.pressuregradient(p, setup)
-    dot(φ, φ)
-    # sum(φ[1])
-end
-g2 = begin
-    p1 = copy(p)
-    CUDA.@allowscalar p1[I] -= sqrt(eps(T)) / 2
-    φ = IncompressibleNavierStokes.pressuregradient(p1, setup)
-    r1 = dot(φ, φ)
-    p2 = copy(p)
-    CUDA.@allowscalar p2[I] += sqrt(eps(T)) / 2
-    φ = IncompressibleNavierStokes.pressuregradient(p2, setup)
-    r2 = dot(φ, φ)
-    (r2 - r1) / sqrt(eps(T))
-end
-CUDA.@allowscalar g1[1][I]
-g2
-
-g1 = gradient(u) do u
-    # φ = IncompressibleNavierStokes.convection(u, setup)
-    dot(φ, φ)
-    # sum(φ[1])
-end
-
-IncompressibleNavierStokes.momentum(u, T(0), setup)
-IncompressibleNavierStokes.apply_bc_u(u, T(0), setup)[1]
-u[1]
 
 function f(u, setup)
     (; Iu) = setup.grid
@@ -186,6 +176,8 @@ end
 
 IncompressibleNavierStokes.tupleadd(u, u)
 
+f(u, setup)
+
 (g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
 (g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
 (g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
@@ -198,19 +190,9 @@ IncompressibleNavierStokes.tupleadd(u, u)
 (g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
 (g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
 
-I = CartesianIndex(2, 3)
-g1 = gradient(u -> f(u, setup), u)[1]
-g2 = begin
-    u1 = copy.(u)
-    CUDA.@allowscalar u1[1][I] -= sqrt(eps(T)) / 2
-    r1 = f(u1, setup)
-    u2 = copy.(u)
-    CUDA.@allowscalar u2[1][I] += sqrt(eps(T)) / 2
-    r2 = f(u2, setup)
-    (r2 - r1) / sqrt(eps(T))
-end
-CUDA.@allowscalar g1[1][I]
-g2
+I = CartesianIndex(2, 2)
+CUDA.@allowscalar gradient(u -> f(u, setup), u)[1][1][I]
+finitediff(u -> f(u, setup), u, I)
 
 function fp(p, setup)
     (; Ip) = setup.grid
@@ -222,18 +204,8 @@ function fp(p, setup)
 end
 
 I = CartesianIndex(2, 2)
-g1 = gradient(p -> fp(p, setup), p)[1]
-g2 = begin
-    p1 = copy(p)
-    CUDA.@allowscalar p1[I] -= sqrt(eps(T)) / 2
-    r1 = fp(p1, setup)
-    p2 = copy(p)
-    CUDA.@allowscalar p2[I] += sqrt(eps(T)) / 2
-    r2 = fp(p2, setup)
-    (r2 - r1) / sqrt(eps(T))
-end
-CUDA.@allowscalar g1[I]
-g2
+CUDA.@allowscalar gradient(p -> fp(p, setup), p)[1][I]
+finitediff(p -> fp(p, setup), p, I)
 
 φ[1]
 φbar[1]

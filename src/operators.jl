@@ -491,9 +491,9 @@ monitor(u) = (@info("Forward", typeof(u)); u)
 ChainRulesCore.rrule(::typeof(monitor), u) =
     (monitor(u), φ -> (@info("Reverse", typeof(φ)); (NoTangent(), φ)))
 
-tupleadd(u...) = ntuple(α -> sum(u -> u[α], u), length(u[1]))
-ChainRulesCore.rrule(::typeof(tupleadd), u...) =
-    (tupleadd(u...), φ -> (NoTangent(), map(u -> φ, u)...))
+# tupleadd(u...) = ntuple(α -> sum(u -> u[α], u), length(u[1]))
+# ChainRulesCore.rrule(::typeof(tupleadd), u...) =
+#     (tupleadd(u...), φ -> (NoTangent(), map(u -> φ, u)...))
 
 """
     momentum(u, t, setup)
@@ -511,12 +511,12 @@ function momentum(u, t, setup)
     # F = ntuple(D) do α
     #     d[α] .+ c[α] .+ f[α]
     # end
-    # F = @. d + c + f
-    F = tupleadd(d, c, f)
+    F = @. d + c + f
+    # F = tupleadd(d, c, f)
     if !isnothing(closure_model)
         m = closure_model(u)
-        # F = F .+ m
-        F = tupleadd(F, m)
+        F = F .+ m
+        # F = tupleadd(F, m)
     end
     F
 end

@@ -116,8 +116,8 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt)
         # with Butcher tableau coefficients. This gives vᵢ
         u = u₀
         for j = 1:i
-            # u = @. u + Δt * A[i, j] * ku[j]
-            u = tupleadd(u, @.(Δt * A[i, j] * ku[j]))
+            u = @. u + Δt * A[i, j] * ku[j]
+            # u = tupleadd(u, @.(Δt * A[i, j] * ku[j]))
         end
 
         # Boundary conditions at tᵢ
