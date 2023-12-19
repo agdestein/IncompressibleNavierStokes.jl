@@ -1,7 +1,7 @@
 create_stepper(::ExplicitRungeKuttaMethod; setup, pressure_solver, u, p, t, n = 0) =
     (; setup, pressure_solver, u, p, t, n)
 
-function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
+function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache, θ = nothing)
     (; setup, pressure_solver, u, p, t, n) = stepper
     (; grid) = setup
     (; dimension, Iu, Ip, Ω) = grid
@@ -27,7 +27,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
     for i = 1:nstage
         # Right-hand side for tᵢ₋₁ based on current velocity field uᵢ₋₁, vᵢ₋₁ at
         # level i-1. This includes force evaluation at tᵢ₋₁.
-        momentum!(F, u, t, setup)
+        momentum!(F, u, t, setup; θ)
 
         # Store right-hand side of stage i
         for α = 1:D
@@ -78,7 +78,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache)
     create_stepper(method; setup, pressure_solver, u, p, t, n = n + 1)
 end
 
-function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt)
+function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     (; setup, pressure_solver, u, p, t, n) = stepper
     (; grid) = setup
     (; dimension) = grid
@@ -104,7 +104,7 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt)
         # Right-hand side for tᵢ₋₁ based on current velocity field uᵢ₋₁, vᵢ₋₁ at
         # level i-1. This includes force evaluation at tᵢ₋₁.
         u = apply_bc_u(u, t, setup)
-        F = momentum(u, t, setup)
+        F = momentum(u, t, setup; θ)
 
         # Store right-hand side of stage i
         ku = (ku..., F)

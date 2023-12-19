@@ -467,7 +467,7 @@ ChainRulesCore.rrule(::typeof(bodyforce), u, t, setup) =
 Right hand side of momentum equations, excluding pressure gradient.
 Put the result in ``F``.
 """
-function momentum!(F, u, t, setup)
+function momentum!(F, u, t, setup; θ = nothing)
     (; grid, closure_model) = setup
     (; dimension) = grid
     D = dimension()
@@ -479,9 +479,10 @@ function momentum!(F, u, t, setup)
     convectiondiffusion!(F, u, setup)
     bodyforce!(F, u, t, setup)
     if !isnothing(closure_model)
-        m = closure_model(u)
+        m = closure_model
+        mu = m(u, θ)
         for α = 1:D
-            F[α] .+= m[α]
+            F[α] .+= mu[α]
         end
     end
     F
@@ -501,7 +502,7 @@ ChainRulesCore.rrule(::typeof(monitor), u) =
 Right hand side of momentum equations, excluding pressure gradient.
 """
 # momentum(u, t, setup) = momentum!(zero.(u), u, t, setup)
-function momentum(u, t, setup)
+function momentum(u, t, setup; θ = nothing)
     (; grid, closure_model) = setup
     (; dimension) = grid
     D = dimension()
@@ -514,8 +515,8 @@ function momentum(u, t, setup)
     F = @. d + c + f
     # F = tupleadd(d, c, f)
     if !isnothing(closure_model)
-        m = closure_model(u)
-        F = F .+ m
+        m = closure_model
+        F = F .+ m(u, θ)
         # F = tupleadd(F, m)
     end
     F

@@ -10,6 +10,7 @@ end                                                 #src
 # Here, we consider a periodic box ``[0, 1]^2``. It is discretized with a
 # uniform Cartesian grid with square cells.
 
+using Adapt
 using GLMakie
 using IncompressibleNavierStokes
 using JLD2
@@ -40,22 +41,25 @@ device = identity
 using LuxCUDA
 using CUDA;
 T = Float32;
+# T = Float64;
 ArrayType = CuArray;
 CUDA.allowscalar(false);
-device = cu
+# device = cu
+device = x -> adapt(CuArray{T}, x)
 
 # Parameters
 # nles = 50
-nles = 128
+# nles = 64
+# nles = 128
 # ndns = 200
-# nles = 256
+nles = 256
 params = (;
     D = 2,
     Re = T(6_000),
     lims = (T(0), T(1)),
     nles = [nles],
-    ndns = 512,
-    # ndns = 1024,
+    # ndns = 512,
+    ndns = 1024,
     tburn = T(0.05),
     tsim = T(0.5),
     Δt = T(1e-4),
@@ -109,8 +113,9 @@ fieldplot(
     o;
     setup,
     # fieldname = :velocity,
-    fieldname = 2,
+    # fieldname = 2,
 )
+# energy_spectrum_plot(o; setup)
 for i = 1:length(field)
     o[] = (; o[]..., u = device(field[i]))
     sleep(0.001)
@@ -169,28 +174,53 @@ closure(sample, θ₀) |> size
 # θ = 2 * device(θ₀);
 opt = Optimisers.setup(Adam(T(1.0e-3)), θ);
 callbackstate = Point2f[];
-loss = createloss(mean_squared_error, closure);
-dataloader = createdataloader(io_train[1]; batchsize = 50, device);
-dataloader()
-loss(dataloader(), θ)
 it = rand(1:size(io_valid[1].u, 4), 50);
 validset = map(v -> v[:, :, :, it], io_valid[1]);
 
+# A-priori loss
+loss = createloss(mean_squared_error, closure);
+dataloader = createdataloader(io_train[1]; batchsize = 50, device);
+dataloaders = [dataloader]
+dataloader()
+
+# A-posteriori loss
+loss = IncompressibleNavierStokes.create_trajectory_loss(; setup, pressure_solver, closure);
+dataloaders = [
+    IncompressibleNavierStokes.createtrajectoryloader(data_train; device, nunroll = 20)
+    for _ = 1:4
+];
+loss(dataloaders[1](), device(θ₀))
+
 # Warm-up
-loss(dataloader(), θ)
-@time loss(dataloader(), θ);
-b = dataloader()
+loss(dataloaders[1](), θ)
+@time loss(dataloaders[1](), θ);
+b = dataloaders[1]();
 first(gradient(θ -> loss(b, θ), θ));
 @time first(gradient(θ -> loss(b, θ), θ));
 GC.gc()
 CUDA.reclaim()
+
+map() do
+    i = 3
+    # h = 1000 * sqrt(eps(T))
+    h = cbrt(eps(T))
+    θ1 = copy(θ)
+    θ2 = copy(θ)
+    CUDA.@allowscalar θ1[i] -= h / 2
+    CUDA.@allowscalar θ2[i] += h / 2
+    b = dataloaders[1]()
+    @show loss(b, θ2) loss(b, θ1)
+    a = (loss(b, θ2) - loss(b, θ1)) / h
+    b = CUDA.@allowscalar first(gradient(θ -> loss(b, θ), θ))[i]
+    [a; b]
+end
 
 # Training
 # Note: The states `opt`, `θ`, and `callbackstate`
 # will not be overwritten until training is finished.
 # This allows for cancelling with "Control-C" should errors explode.
 (; opt, θ, callbackstate) = train(
-    dataloader,
+    dataloaders,
     loss,
     opt,
     θ;

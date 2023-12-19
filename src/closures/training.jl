@@ -15,6 +15,16 @@ createdataloader(data; batchsize = 50, device = identity) = function dataloader(
     xuse, yuse
 end
 
+createtrajectoryloader(trajectories; nunroll = 10, device = identity) =
+    function dataloader()
+        (; u, t) = rand(trajectories)
+        nt = length(t)
+        @assert nt ≥ nunroll
+        istart = rand(1:nt-nunroll)
+        it = istart:istart+nunroll
+        (; u = device.(u[1][it]), t = t[it])
+    end
+
 """
     train(
         dataloaders,
@@ -107,6 +117,31 @@ relerr_trajectory(uref, setup; nupdate = 1) =
         e
     end
 
+function create_trajectory_loss(;
+    setup,
+    method = RK44(; T = eltype(setup.grid.x[1])),
+    pressure_solver = DirectPressureSolver(setup),
+    closure,
+)
+    closure_model = wrappedclosure(closure, setup)
+    setup = (; setup..., closure_model)
+    function trajectory_loss(traj, θ)
+        (; u, t) = traj
+        v = u[1]
+        stepper =
+            create_stepper(method; setup, pressure_solver, u = v, p = zero(v[1]), t = t[1])
+        loss = zero(eltype(v[1]))
+        for it = 2:length(t)
+            Δt = t[it] - t[it-1]
+            stepper = timestep(method, stepper, Δt; θ)
+            for α = 1:length(u[1])
+                loss += sum(abs2, stepper.u[α] - u[it][α]) / sum(abs2, u[it][α])
+            end
+        end
+        loss / (length(t) - 1)
+    end
+end
+
 """
     create_callback(
         f,
@@ -136,7 +171,7 @@ function create_callback(f, x, y; state = Point2f[], display_each_iteration = fa
         @info "Iteration $i \trelative error: $e"
         state = push!(copy(state), Point2f(istart + i, e))
         obs[] = state
-        autolimits!(fig.axis)
+        i < 10 || autolimits!(fig.axis)
         display_each_iteration && display(fig)
         state
     end

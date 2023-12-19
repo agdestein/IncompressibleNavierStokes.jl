@@ -41,6 +41,7 @@ function solve_unsteady(
     n_adapt_Δt = 1,
     docopy = true,
     processors = (;),
+    θ = nothing,
 )
     if docopy
         u₀ = copy.(u₀)
@@ -71,7 +72,7 @@ function solve_unsteady(
             Δt = min(Δt, t_end - stepper.t)
 
             # Perform a single time step with the time integration method
-            stepper = timestep!(method, stepper, Δt; cache)
+            stepper = timestep!(method, stepper, Δt; cache, θ)
 
             # Process iteration results with each processor
             state[] = get_state(stepper)
@@ -81,7 +82,7 @@ function solve_unsteady(
         Δt = (t_end - t_start) / nstep
         for it = 1:nstep
             # Perform a single time step with the time integration method
-            stepper = timestep!(method, stepper, Δt; cache)
+            stepper = timestep!(method, stepper, Δt; cache, θ)
 
             # Process iteration results with each processor
             state[] = get_state(stepper)
