@@ -39,7 +39,8 @@ function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup, u) where {
     ns = nstage(method)
     ku = [zero.(u) for i = 1:ns]
     div = zero(u[1])
-    (; u₀, ku, div)
+    p = zero(u[1])
+    (; u₀, ku, div, p)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup, V, p) where {T}

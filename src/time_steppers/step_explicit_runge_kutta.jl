@@ -2,7 +2,7 @@ create_stepper(::ExplicitRungeKuttaMethod; setup, psolver, u, t, n = 0) =
     (; setup, psolver, u, t, n)
 
 function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing, cache)
-    (; setup, psolver, u, p, t, n) = stepper
+    (; setup, psolver, u, t, n) = stepper
     (; grid) = setup
     (; dimension, Iu, Ip, Ω) = grid
     (; A, b, c, p_add_solve) = method
@@ -34,14 +34,14 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
 
         # Make velocity divergence free at time tᵢ
         apply_bc_u!(u, t, setup)
-        project!(u, p, setup; psolver, div, p)
+        project!(u, setup; psolver, div, p)
     end
 
     create_stepper(method; setup, psolver, u, t, n = n + 1)
 end
 
 function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
-    (; setup, psolver, u, p, t, n) = stepper
+    (; setup, psolver, u, t, n) = stepper
     (; grid) = setup
     (; dimension) = grid
     (; A, b, c) = method
@@ -76,5 +76,5 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
         u = project(psolver, u, setup)
     end
 
-    create_stepper(method; setup, psolver, u, p, t, n = n + 1)
+    create_stepper(method; setup, psolver, u, t, n = n + 1)
 end
