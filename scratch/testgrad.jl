@@ -63,8 +63,8 @@ setup = Setup(x...; Re, ArrayType);
 # spectral pressure solver
 pressure_solver = SpectralPressureSolver(setup);
 
-u₀, p₀ = random_field(setup, T(0); pressure_solver);
-u, p = u₀, p₀
+u₀ = random_field(setup, T(0); pressure_solver);
+u = u₀
 
 using KernelAbstractions
 using Zygote
@@ -99,7 +99,7 @@ gradient(u -> sum(IncompressibleNavierStokes.diffusion(u, setup)[1]), u)[1][1]
 
 # Divergence
 ur = randn!.(similar.(u))
-φ = IncompressibleNavierStokes.divergence!(zero(p), ur, setup)
+φ = IncompressibleNavierStokes.divergence(ur, setup)
 φbar = randn!(similar(φ))
 dot(φbar, φ)
 dot(IncompressibleNavierStokes.divergence_adjoint!(zero.(ur), φbar, setup), ur)
@@ -158,7 +158,6 @@ function f(u, setup)
         setup,
         pressure_solver,
         u,
-        p,
         t = T(0),
     )
     stepper = IncompressibleNavierStokes.timestep(method, stepper, T(1e-4))

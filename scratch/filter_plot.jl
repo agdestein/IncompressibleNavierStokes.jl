@@ -38,8 +38,8 @@ setup = Setup(x...; Re, ArrayType);
 # spectral pressure solver
 pressure_solver = SpectralPressureSolver(setup);
 
-u₀, p₀ = random_field(setup, T(0); pressure_solver);
-u, p = u₀, p₀
+u₀ = random_field(setup, T(0); pressure_solver);
+u = u₀
 
 function filter_plot(state, setup, les, comp; resolution = (1200, 600))
     (; boundary_conditions, grid) = setup
@@ -47,13 +47,13 @@ function filter_plot(state, setup, les, comp; resolution = (1200, 600))
     D = dimension()
     xf = Array.(getindex.(setup.grid.xp, Ip.indices))
     xfbar = Array.(getindex.(les.grid.xp, les.grid.Ip.indices))
-    (; u, p, t) = state[]
+    (; u, t) = state[]
     ω = IncompressibleNavierStokes.vorticity(u, setup)
     ωp = IncompressibleNavierStokes.interpolate_ω_p(ω, setup)
     _f = Array(ωp)[Ip]
     f = @lift begin
         sleep(0.001)
-        (; u, p, t) = $state
+        (; u, t) = $state
         IncompressibleNavierStokes.apply_bc_u!(u, t, setup)
         IncompressibleNavierStokes.vorticity!(ω, u, setup)
         IncompressibleNavierStokes.interpolate_ω_p!(ωp, ω, setup)
@@ -64,7 +64,7 @@ function filter_plot(state, setup, les, comp; resolution = (1200, 600))
     ωpbar = IncompressibleNavierStokes.interpolate_ω_p(ωbar, les)
     _g = Array(ωpbar)[les.grid.Ip]
     g = @lift begin
-        (; u, p, t) = $state
+        (; u, t) = $state
         IncompressibleNavierStokes.face_average!(ubar, u, les, comp)
         IncompressibleNavierStokes.apply_bc_u!(ubar, t, les)
         IncompressibleNavierStokes.vorticity!(ωbar, ubar, les)
@@ -123,11 +123,9 @@ comp = 8
 les = Setup(x[1][1:comp:end], x[2][1:comp:end]; Re, ArrayType)
 
 # Solve unsteady problem
-u, p, outputs = solve_unsteady(
+(; u)outputs = solve_unsteady(
     setup,
-    copy.(u₀),
-    copy(p₀),
-    # u, p,
+    u₀,
     (T(0), T(2e0));
     Δt = T(1e-4),
     pressure_solver,

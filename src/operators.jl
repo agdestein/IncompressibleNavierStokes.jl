@@ -639,7 +639,6 @@ end
 #     φ -> (NoTangent(), applypressure_adjoint!(similar(p), (φ...,), setup), NoTangent()),
 # )
 
-
 """
     laplacian!(L, p, setup)
 

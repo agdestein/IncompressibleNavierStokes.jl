@@ -104,11 +104,7 @@ end
 # Inspect data
 field = data_train[1].u[1];
 u = device(field[1])
-o = Observable((;
-    u,
-    p = IncompressibleNavierStokes.pressure(pressure_solver, u, T(0), setup),
-    t = nothing,
-))
+o = Observable((; u, t = nothing))
 fieldplot(
     o;
     setup,
@@ -254,10 +250,9 @@ function relerr(u, uref, setup)
     sqrt(a) / sqrt(b)
 end
 
-u, u₀, p₀ = nothing, nothing, nothing
+u, u₀, = nothing, nothing
 u = device.(data_test[1].u[1]);
 u₀ = device(data_test[1].u[1][1]);
-p₀ = IncompressibleNavierStokes.pressure(pressure_solver, u₀, T(0), setup);
 Δt = data_test[1].t[2] - data_test[1].t[1]
 tlims = extrema(data_test[1].t)
 length(u)
@@ -266,7 +261,6 @@ length(data_test[1].t)
 state_nm, outputs = solve_unsteady(
     setup,
     u₀,
-    p₀,
     tlims;
     Δt,
     pressure_solver,
@@ -280,7 +274,6 @@ relerr_nm = outputs.relerr[]
 state_cnn, outputs = solve_unsteady(
     (; setup..., closure_model = wrappedclosure(closure, θ, setup)),
     u₀,
-    p₀,
     tlims;
     Δt,
     pressure_solver,
@@ -300,7 +293,7 @@ dcnn
 function energy_history(setup, state)
     (; Ωp) = setup.grid
     points = Point2f[]
-    on(state) do (; V, p, t)
+    on(state) do (; V, t)
         V = Array(V)
         vels = get_velocity(setup, V, t)
         vels = reshape.(vels, :)
@@ -317,10 +310,9 @@ isample = 1
 forcedsetup = (; setup..., force = data_train.force[:, isample]);
 
 devsetup = device(forcedsetup);
-V_nm, p_nm, outputs_nm = solve_unsteady(
+V_nm, outputs_nm = solve_unsteady(
     forcedsetup,
     data_test.V[:, 1, isample],
-    data_test.p[:, 1, isample],
     (T(0), tsim);
     Δt = T(2e-4),
     processors = (

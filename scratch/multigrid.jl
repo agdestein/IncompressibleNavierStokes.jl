@@ -101,7 +101,7 @@ ig = 5
 # field, setup = data_valid[1].u[ig], setups_valid[ig];
 field, setup = data_test.u[ig], setups_test[ig];
 u = device(field[1]);
-o = Observable((; u, p = similar(u[1], setup.grid.N), t = nothing));
+o = Observable((; u, t = nothing));
 energy_spectrum_plot(o; setup)
 # fieldplot(
 #     o;
@@ -364,14 +364,13 @@ for (i, setup) in enumerate(setups_test[2:4])
     pressure_solver = SpectralPressureSolver(setup)
     u = device.(data_test.u[ig])
     u₀ = device(data_test.u[ig][1])
-    p₀ = IncompressibleNavierStokes.pressure(pressure_solver, u₀, T(0), setup)
     Δt = params_test.Δt * params_test.savefreq
     tlims = extrema(data_test.t)
     nupdate = 4
     Δt /= nupdate
     processors = (; relerr = relerr_trajectory(u, setup; nupdate))
     closedsetup = (; setup..., closure_model = wrappedclosure(closure, θ_cnn[i], setup))
-    _, outputs = solve_unsteady(closedsetup, u₀, p₀, tlims; Δt, pressure_solver, processors)
+    _, outputs = solve_unsteady(closedsetup, u₀, tlims; Δt, pressure_solver, processors)
     e_cnn[i] = outputs.relerr[]
 end
 
@@ -385,20 +384,19 @@ for (ig, setup) in enumerate(setups_test)
     pressure_solver = SpectralPressureSolver(setup)
     u = device.(data_test.u[ig])
     u₀ = device(data_test.u[ig][1])
-    p₀ = IncompressibleNavierStokes.pressure(pressure_solver, u₀, T(0), setup)
     Δt = params_test.Δt * params_test.savefreq
     tlims = extrema(data_test.t)
     nupdate = 4
     Δt /= nupdate
     processors = (; relerr = relerr_trajectory(u, setup; nupdate))
-    _, outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt, pressure_solver, processors)
+    _, outputs = solve_unsteady(setup, u₀, tlims; Δt, pressure_solver, processors)
     e_nm[ig] = outputs.relerr[]
     m = smagorinsky_closure(setup)
     closedsetup = (; setup..., closure_model = u -> m(u, T(0.1)))
-    _, outputs = solve_unsteady(closedsetup, u₀, p₀, tlims; Δt, pressure_solver, processors)
+    _, outputs = solve_unsteady(closedsetup, u₀, tlims; Δt, pressure_solver, processors)
     e_smag[ig] = outputs.relerr[]
     closedsetup = (; setup..., closure_model = wrappedclosure(closure, θ_cnn_shared, setup))
-    _, outputs = solve_unsteady(closedsetup, u₀, p₀, tlims; Δt, pressure_solver, processors)
+    _, outputs = solve_unsteady(closedsetup, u₀, tlims; Δt, pressure_solver, processors)
     e_cnn_shared[ig] = outputs.relerr[]
 end
 
@@ -484,18 +482,17 @@ params = params_test
 pressure_solver = SpectralPressureSolver(setup);
 uref = device(data_test.u[ig][end]);
 u₀ = device(data_test.u[ig][1]);
-p₀ = IncompressibleNavierStokes.pressure(pressure_solver, u₀, T(0), setup);
 Δt = params_test.Δt * params_test.savefreq;
 tlims = extrema(data_test.t);
 nupdate = 4;
 Δt /= nupdate;
-state_nm, outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt, pressure_solver);
+state_nm, outputs = solve_unsteady(setup, u₀, tlims; Δt, pressure_solver);
 m = smagorinsky_closure(setup);
 closedsetup = (; setup..., closure_model = u -> m(u, T(0.1)));
-state_smag, outputs = solve_unsteady(closedsetup, u₀, p₀, tlims; Δt, pressure_solver);
+state_smag, outputs = solve_unsteady(closedsetup, u₀, tlims; Δt, pressure_solver);
 # closedsetup = (; setup..., closure_model = wrappedclosure(closure, θ_cnn_shared, setup));
 closedsetup = (; setup..., closure_model = wrappedclosure(closure, θ_cnn[ig-1], setup));
-state_cnn, outputs = solve_unsteady(closedsetup, u₀, p₀, tlims; Δt, pressure_solver);
+state_cnn, outputs = solve_unsteady(closedsetup, u₀, tlims; Δt, pressure_solver);
 
 # Plot predicted spectra
 fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
