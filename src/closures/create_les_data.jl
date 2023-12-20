@@ -34,8 +34,8 @@ end
 
 function lesdatagen(dnsobs, les, compression, psolver)
     Φu = zero.(face_average(dnsobs[].u, les, compression))
-    q = zero(Φu[1])
-    div = zero(q)
+    p = zero(Φu[1])
+    div = zero(p)
     ΦF = zero.(Φu)
     FΦ = zero.(Φu)
     c = zero.(Φu)
@@ -46,7 +46,7 @@ function lesdatagen(dnsobs, les, compression, psolver)
         face_average!(ΦF, F, les, compression)
         momentum!(FΦ, Φu, t, les)
         apply_bc_u!(FΦ, t, les; dudt = true)
-        project!(FΦ, setup; psolver, div, q)
+        project!(FΦ, les; psolver, div, p)
         for α = 1:length(u)
             c[α] .= ΦF[α] .- FΦ[α]
         end

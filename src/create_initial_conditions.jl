@@ -38,9 +38,12 @@ function create_initial_conditions(
 
     # Make velocity field divergence free
     apply_bc_u!(u, t, setup)
-    doproject && (u = project(u, setup; psolver))
+    if doproject 
+        u = project(u, setup; psolver)
+        apply_bc_u!(u, t, setup)
+    end
 
-    # Initial conditions, including initial boundary condititions
+    # Initial conditions, including initial boundary conditions
     u
 end
 
@@ -102,4 +105,5 @@ function random_field(
     # Make velocity field divergence free
     apply_bc_u!(u, t, setup)
     project(u, setup; psolver)
+    apply_bc_u!(u, t, setup)
 end

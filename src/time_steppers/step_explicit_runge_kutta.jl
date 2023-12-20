@@ -4,26 +4,25 @@ create_stepper(::ExplicitRungeKuttaMethod; setup, psolver, u, t, n = 0) =
 function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing, cache)
     (; setup, psolver, u, t, n) = stepper
     (; grid) = setup
-    (; dimension, Iu, Ip, Ω) = grid
-    (; A, b, c, p_add_solve) = method
+    (; dimension, Iu) = grid
+    (; A, b, c) = method
     (; u₀, ku, div, p) = cache
     D = dimension()
     nstage = length(b)
 
-    # Update current solution (does not depend on previous step size)
+    # Update current solution
     t₀ = t
     copyto!.(u₀, u)
 
     for i = 1:nstage
-        # Right-hand side for tᵢ₋₁ based on current velocity field uᵢ₋₁, vᵢ₋₁ at
-        # level i-1. This includes force evaluation at tᵢ₋₁.
+        # Compute force at current stage i
+        apply_bc_u!(u, t, setup)
         momentum!(ku[i], u, t, setup; θ)
 
         # Intermediate time step
         t = t₀ + c[i] * Δt
 
-        # Update velocity current stage by sum of Fᵢ's until this stage, weighted
-        # with Butcher tableau coefficients. This gives vᵢ
+        # Apply stage forces
         for α = 1:D
             u[α] .= u₀[α]
             for j = 1:i
@@ -32,10 +31,15 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
             end
         end
 
-        # Make velocity divergence free at time tᵢ
+        # Make velocity divergence free at time t
         apply_bc_u!(u, t, setup)
         project!(u, setup; psolver, div, p)
     end
+
+    # This is redundant, but Neumann BC need to have _exact_ copies
+    # since we divide by an infinitely thin (eps(T)) volume width in the
+    # diffusion term
+    apply_bc_u!(u, t, setup)
 
     create_stepper(method; setup, psolver, u, t, n = n + 1)
 end
@@ -54,6 +58,7 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     ku = ()
 
     for i = 1:nstage
+        # Compute force at current stage i
         u = apply_bc_u(u, t, setup)
         F = momentum(u, t, setup; θ)
 
@@ -63,8 +68,7 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
         # Intermediate time step
         t = t₀ + c[i] * Δt
 
-        # Update velocity current stage by sum of Fᵢ's until this stage, weighted
-        # with Butcher tableau coefficients. This gives vᵢ
+        # Apply stage forces
         u = u₀
         for j = 1:i
             u = @. u + Δt * A[i, j] * ku[j]
@@ -73,8 +77,13 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
 
         # Make velocity divergence free at time t
         u = apply_bc_u(u, t, setup)
-        u = project(psolver, u, setup)
+        u = project(u, setup; psolver)
     end
+
+    # This is redundant, but Neumann BC need to have _exact_ copies
+    # since we divide by an infinitely thin (eps(T)) volume width in the
+    # diffusion term
+    u = apply_bc_u(u, t, setup)
 
     create_stepper(method; setup, psolver, u, t, n = n + 1)
 end

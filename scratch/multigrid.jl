@@ -237,7 +237,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     )
     for (i, it) in enumerate((1, length(sample.t)))
         u = device.(sample.u[ig][it])
-        ke = kinetic_energy(u, setup)
+        ke = IncompressibleNavierStokes.kinetic_energy(u, setup)
         e = ke[Ip]
         e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
         e = abs.(e) ./ size(e, 1)
@@ -558,7 +558,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         (state_cnn.u, "CNN (specialized)"),
         (uref, "Reference"),
     )
-        ke = kinetic_energy(u, setup)
+        ke = IncompressibleNavierStokes.kinetic_energy(u, setup)
         e = ke[Ip]
         e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
         e = abs.(e) ./ size(e, 1)
@@ -632,7 +632,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         yscale = log10,
         limits = (extrema(kint)..., T(1e-8), T(1)),
     )
-    ke = kinetic_energy(uref, setup)
+    ke = IncompressibleNavierStokes.kinetic_energy(uref, setup)
     e = ke[Ip]
     e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
     e = abs.(e) ./ size(e, 1)
@@ -643,7 +643,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         (state_smag.u, "Smagorinsky"),
         (state_cnn.u, "CNN (specialized)"),
     )
-        ke = kinetic_energy(u, setup)
+        ke = IncompressibleNavierStokes.kinetic_energy(u, setup)
         e = ke[Ip]
         e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
         e = abs.(e) ./ size(e, 1)

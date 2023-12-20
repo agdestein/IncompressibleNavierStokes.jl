@@ -487,9 +487,9 @@ function momentum!(F, u, t, setup; θ = nothing)
     F
 end
 
-monitor(u) = (@info("Forward", typeof(u)); u)
-ChainRulesCore.rrule(::typeof(monitor), u) =
-    (monitor(u), φ -> (@info("Reverse", typeof(φ)); (NoTangent(), φ)))
+# monitor(u) = (@info("Forward", typeof(u)); u)
+# ChainRulesCore.rrule(::typeof(monitor), u) =
+#     (monitor(u), φ -> (@info("Reverse", typeof(φ)); (NoTangent(), φ)))
 
 # tupleadd(u...) = ntuple(α -> sum(u -> u[α], u), length(u[1]))
 # ChainRulesCore.rrule(::typeof(tupleadd), u...) =
