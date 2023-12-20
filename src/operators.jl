@@ -586,6 +586,61 @@ ChainRulesCore.rrule(::typeof(pressuregradient), p, setup) = (
 )
 
 """
+    applypressure!(u, p, setup)
+
+Subtract pressure gradient (in-place).
+"""
+function applypressure!(u, p, setup)
+    (; grid, workgroupsize) = setup
+    (; dimension, Δu, Nu, Iu) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function apply!(u, p, ::Val{α}, I0) where {α}
+        I = @index(Global, Cartesian)
+        I = I0 + I
+        u[α][I] -= (p[I+δ(α)] - p[I]) / Δu[α][I[α]]
+    end
+    D = dimension()
+    for α = 1:D
+        I0 = first(Iu[α])
+        I0 -= oneunit(I0)
+        apply!(get_backend(u[1]), workgroupsize)(u, p, Val(α), I0; ndrange = Nu[α])
+    end
+    u
+end
+
+# function applypressure_adjoint!(pbar, φ, u, setup)
+#     (; grid, workgroupsize) = setup
+#     (; dimension, Δu, N, Iu) = grid
+#     D = dimension()
+#     δ = Offset{D}()
+#     @kernel function adj!(p, φ)
+#         I = @index(Global, Cartesian)
+#         p[I] = zero(eltype(p))
+#         for α = 1:D
+#             I - δ(α) ∈ Iu[α] && (p[I] += φ[α][I-δ(α)] / Δu[α][I[α]-1])
+#             I ∈ Iu[α] && (p[I] -= φ[α][I] / Δu[α][I[α]])
+#         end
+#     end
+#     adj!(get_backend(pbar), workgroupsize)(pbar, φ; ndrange = N)
+#     pbar
+# end
+#
+# """
+#     applypressure(p, setup)
+#
+# Compute pressure gradient.
+# """
+# applypressure(u, p, setup) =
+#     applypressure!(copy.(u), p, setup)
+#
+# ChainRulesCore.rrule(::typeof(applypressure), p, setup) = (
+#     applypressure(u, p, setup),
+#     φ -> (NoTangent(), applypressure_adjoint!(similar(p), (φ...,), setup), NoTangent()),
+# )
+
+
+"""
     laplacian!(L, p, setup)
 
 Compute Laplacian of pressure field (in-place version).

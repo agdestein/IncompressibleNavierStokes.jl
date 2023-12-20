@@ -11,7 +11,8 @@ function project(u, setup; psolver)
 
     # Apply pressure correction term
     p = apply_bc_p(p, T(0), setup)
-    applypressure(u, p, setup)
+    G = pressuregradient(p, setup)
+    u .- G
 end
 
 function project!(u, setup; psolver, div, p)
