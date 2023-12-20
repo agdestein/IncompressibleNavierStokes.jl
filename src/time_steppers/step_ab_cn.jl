@@ -1,7 +1,7 @@
 create_stepper(
     method::AdamsBashforthCrankNicolsonMethod;
     setup,
-    pressure_solver,
+    psolver,
     bc_vectors,
     V,
     p,
@@ -14,10 +14,10 @@ create_stepper(
     cₙ = copy(V),
     tₙ = t,
     Diff_fact = spzeros(eltype(V), 0, 0),
-) = (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, cₙ, tₙ, Diff_fact)
+) = (; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, cₙ, tₙ, Diff_fact)
 
 function timestep(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
-    (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, cₙ, tₙ, Diff_fact) = stepper
+    (; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, cₙ, tₙ, Diff_fact) = stepper
     (; convection_model, viscosity_model, Re, force, grid, operators, boundary_conditions) =
         setup
     (; bc_unsteady) = boundary_conditions
@@ -32,7 +32,7 @@ function timestep(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     # the first iteration. Do one startup step instead
     if n == 0
         stepper_startup =
-            create_stepper(method_startup; setup, pressure_solver, bc_vectors, V, p, t)
+            create_stepper(method_startup; setup, psolver, bc_vectors, V, p, t)
         n += 1
         Vₙ = V
         pₙ = p
@@ -51,7 +51,7 @@ function timestep(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
         return create_stepper(
             method;
             setup,
-            pressure_solver,
+            psolver,
             bc_vectors,
             V,
             p,
@@ -129,7 +129,7 @@ function timestep(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     f = (M * V + yM) / Δt - M * y_Δp
 
     # Solve the Poisson equation for the pressure
-    Δp = poisson(pressure_solver, f)
+    Δp = poisson(psolver, f)
 
     # Update velocity field
     V -= Δt ./ Ω .* (G * Δp .+ y_Δp)
@@ -138,7 +138,7 @@ function timestep(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     p = pₙ .+ Δp
 
     if p_add_solve
-        p = pressure(pressure_solver, V, p, tₙ + Δt, setup; bc_vectors)
+        p = pressure(psolver, V, p, tₙ + Δt, setup; bc_vectors)
     end
 
     t = tₙ + Δtₙ
@@ -146,7 +146,7 @@ function timestep(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     create_stepper(
         method;
         setup,
-        pressure_solver,
+        psolver,
         bc_vectors,
         V,
         p,
@@ -167,7 +167,7 @@ function timestep!(
     cache,
     momentum_cache,
 )
-    (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, cₙ, tₙ, Diff_fact) = stepper
+    (; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, cₙ, tₙ, Diff_fact) = stepper
     (; convection_model, viscosity_model, Re, force, grid, operators, boundary_conditions) =
         setup
     (; bc_unsteady) = boundary_conditions
@@ -184,7 +184,7 @@ function timestep!(
     # the first iteration. Do one startup step instead
     if n == 0
         stepper_startup =
-            create_stepper(method_startup; setup, pressure_solver, bc_vectors, V, p, t)
+            create_stepper(method_startup; setup, psolver, bc_vectors, V, p, t)
         n += 1
         Vₙ = V
         pₙ = p
@@ -202,7 +202,7 @@ function timestep!(
         return create_stepper(
             method;
             setup,
-            pressure_solver,
+            psolver,
             bc_vectors,
             V,
             p,
@@ -283,7 +283,7 @@ function timestep!(
     f = (M * V + yM) / Δt - M * y_Δp
 
     # Solve the Poisson equation for the pressure
-    poisson!(pressure_solver, Δp, f)
+    poisson!(psolver, Δp, f)
 
     # Update velocity field
     V .-= Δt ./ Ω .* (G * Δp .+ y_Δp)
@@ -292,18 +292,7 @@ function timestep!(
     p .= pₙ .+ Δp
 
     if p_add_solve
-        pressure!(
-            pressure_solver,
-            V,
-            p,
-            tₙ + Δt,
-            setup,
-            momentum_cache,
-            F,
-            f,
-            Δp;
-            bc_vectors,
-        )
+        pressure!(psolver, V, p, tₙ + Δt, setup, momentum_cache, F, f, Δp; bc_vectors)
     end
 
     t = tₙ + Δtₙ
@@ -311,7 +300,7 @@ function timestep!(
     create_stepper(
         method;
         setup,
-        pressure_solver,
+        psolver,
         bc_vectors,
         V,
         p,

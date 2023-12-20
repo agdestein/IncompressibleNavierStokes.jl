@@ -1,10 +1,10 @@
 """
-    pressure!(solver, u, p, t, setup, F, f, M)
+    pressure!(psolver, u, p, t, setup, F, f, M)
 
 Compute pressure from velocity field. This makes the pressure compatible with the velocity
 field, resulting in same order pressure as velocity.
 """
-function pressure!(solver, u, p, t, setup, F, G, M)
+function pressure!(psolver, u, p, t, setup, F, G, M)
     (; grid) = setup
     (; dimension, Iu, Ip, Ω) = grid
     D = dimension()
@@ -12,13 +12,13 @@ function pressure!(solver, u, p, t, setup, F, G, M)
     apply_bc_u!(F, t, setup; dudt = true)
     divergence!(M, F, setup)
     @. M *= Ω
-    poisson!(solver, p, M)
+    poisson!(psolver, p, M)
     apply_bc_p!(p, t, setup)
     p
 end
 
 """
-    pressure(solver, u, t, setup)
+    pressure(psolver, u, t, setup)
 
 Do additional pressure solve. This makes the pressure compatible with the velocity
 field, resulting in same order pressure as velocity.
@@ -31,7 +31,7 @@ function pressure(solver, u, t, setup)
     F = apply_bc_u(F, t, setup; dudt = true)
     M = divergence(F, setup)
     M = @. M * Ω
-    p = poisson(solver, M)
+    p = poisson(psolver, M)
     p = apply_bc_p(p, t, setup)
     p
 end

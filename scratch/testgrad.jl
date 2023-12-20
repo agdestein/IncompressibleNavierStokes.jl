@@ -178,18 +178,6 @@ IncompressibleNavierStokes.tupleadd(u, u)
 
 f(u, setup)
 
-(g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
-(g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
-(g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
-(g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
-(g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
-(g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
-(g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
-(g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
-(g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
-(g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
-(g1 = gradient(u -> f(u, setup), u)[1]; KernelAbstractions.synchronize(get_backend(u[1])); g1[1][Iu[1]])
-
 I = CartesianIndex(2, 2)
 CUDA.@allowscalar gradient(u -> f(u, setup), u)[1][1][I]
 finitediff(u -> f(u, setup), u, I)

@@ -43,10 +43,10 @@ setup = Setup(x...; Re, ArrayType);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
 # spectral pressure solver
-pressure_solver = SpectralPressureSolver(setup);
+psolver = SpectralPressureSolver(setup);
 
 # Create random initial conditions
-u₀, p₀ = random_field(setup, T(0); pressure_solver);
+u₀, p₀ = random_field(setup, T(0); psolver);
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(
@@ -55,7 +55,7 @@ state, outputs = solve_unsteady(
     p₀,
     (T(0), T(1));
     Δt = T(1e-3),
-    pressure_solver,
+    psolver,
     processors = (
         ## rtp = realtimeplotter(; setup, nupdate = 1),
         ehist = realtimeplotter(;

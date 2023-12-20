@@ -32,9 +32,9 @@ function gaussian_force(
     force
 end
 
-function lesdatagen(dnsobs, les, compression, pressure_solver)
+function lesdatagen(dnsobs, les, compression, psolver)
     Φu = zero.(face_average(dnsobs[].u, les, compression))
-    q = zero(pressure(pressure_solver, Φu, dnsobs[].t, les))
+    q = zero(pressure(psolver, Φu, dnsobs[].t, les))
     M = zero(q)
     ΦF = zero.(Φu)
     FΦ = zero.(Φu)
@@ -49,7 +49,7 @@ function lesdatagen(dnsobs, les, compression, pressure_solver)
         apply_bc_u!(FΦ, t, les; dudt = true)
         divergence!(M, FΦ, les)
         @. M *= les.grid.Ω
-        poisson!(pressure_solver, q, M)
+        poisson!(psolver, q, M)
         apply_bc_p!(q, t, les)
         pressuregradient!(GΦ, q, les)
         for α = 1:length(u)
@@ -62,7 +62,7 @@ function lesdatagen(dnsobs, les, compression, pressure_solver)
     results
 end
 
-filtersaver(dns, les, compression, pressure_solver; nupdate = 1) =
+filtersaver(dns, les, compression, psolver; nupdate = 1) =
     processor() do state
         (; dimension, x) = dns.grid
         T = eltype(x[1])
@@ -70,10 +70,8 @@ filtersaver(dns, les, compression, pressure_solver; nupdate = 1) =
         F = zero.(state[].u)
         G = zero.(state[].u)
         dnsobs = Observable((; state[].u, F, state[].t))
-        data = [
-            lesdatagen(dnsobs, les[i], compression[i], pressure_solver[i]) for
-            i = 1:length(les)
-        ]
+        data =
+            [lesdatagen(dnsobs, les[i], compression[i], psolver[i]) for i = 1:length(les)]
         results = (;
             t = fill(zero(eltype(x[1])), 0),
             u = [d.u for d in data],
@@ -135,8 +133,8 @@ function create_les_data(
 
     # Since the grid is uniform and identical for x and y, we may use a specialized
     # spectral pressure solver
-    pressure_solver = SpectralPressureSolver(dns)
-    pressure_solver_les = SpectralPressureSolver.(les)
+    psolver = SpectralPressureSolver(dns)
+    psolver_les = SpectralPressureSolver.(les)
 
     # Number of time steps to save
     nt = round(Int, tsim / Δt)
@@ -148,7 +146,7 @@ function create_les_data(
     @info "Generating $datasize Mb of LES data"
 
     # Initial conditions
-    u₀, p₀ = random_field(dns, T(0); pressure_solver, ic_params...)
+    u₀, p₀ = random_field(dns, T(0); psolver, ic_params...)
 
     # Random body force
     # force_dns =
@@ -166,7 +164,7 @@ function create_les_data(
     # _les = (; les..., bodyforce = force_les)
 
     # Solve burn-in DNS
-    (; u, p, t), outputs = solve_unsteady(_dns, u₀, p₀, (T(0), tburn); Δt, pressure_solver)
+    (; u, p, t), outputs = solve_unsteady(_dns, u₀, p₀, (T(0), tburn); Δt, psolver)
 
     # Solve DNS and store filtered quantities
     (; u, p, t), outputs = solve_unsteady(
@@ -176,15 +174,9 @@ function create_les_data(
         (T(0), tsim);
         Δt,
         processors = (;
-            f = filtersaver(
-                _dns,
-                _les,
-                compression,
-                pressure_solver_les;
-                nupdate = savefreq,
-            ),
+            f = filtersaver(_dns, _les, compression, psolver_les; nupdate = savefreq),
         ),
-        pressure_solver,
+        psolver,
     )
 
     # Store result for current IC

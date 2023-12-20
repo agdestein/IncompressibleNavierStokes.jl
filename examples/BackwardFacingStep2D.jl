@@ -59,11 +59,10 @@ plotgrid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 
-pressure_solver = DirectPressureSolver(setup);
+psolver = DirectPressureSolver(setup);
 
 # Initial conditions (extend inflow)
-u₀, p₀ =
-    create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)); pressure_solver);
+u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)); psolver);
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);
@@ -75,7 +74,7 @@ state, outputs = solve_unsteady(
     p₀,
     (T(0), T(7));
     Δt = T(0.002),
-    pressure_solver,
+    psolver,
     processors = (
         rtp = realtimeplotter(;
             setup,

@@ -45,7 +45,7 @@ plotgrid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; Re, ArrayType);
 
-pressure_solver = SpectralPressureSolver(setup)
+psolver = SpectralPressureSolver(setup)
 
 # Initial conditions: We add 1 to u in order to make global momentum
 # conservation less trivial
@@ -56,7 +56,7 @@ U1(y) = y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d)
 u₀, p₀ = create_initial_conditions(
     setup,
     (dim, x, y) -> dim() == 1 ? U1(y) : e * sin(x);
-    pressure_solver,
+    psolver,
 );
 
 # Solve unsteady problem
@@ -66,7 +66,7 @@ state, outputs = solve_unsteady(
     p₀,
     (T(0), T(8));
     Δt = T(0.01),
-    pressure_solver,
+    psolver,
     processors = (
         rtp = realtimeplotter(;
             setup,

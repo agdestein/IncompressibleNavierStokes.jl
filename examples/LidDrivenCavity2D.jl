@@ -93,11 +93,11 @@ setup = Setup(x, y; boundary_conditions, Re, ArrayType);
 # - [`SpectralPressureSolver`](@ref) (only for periodic boundary conditions and
 #   uniform grids)
 
-pressure_solver = DirectPressureSolver(setup);
+psolver = DirectPressureSolver(setup);
 
 # The initial conditions are provided in function. The value `dim()` determines
 # the velocity component.
-u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> zero(x); pressure_solver);
+u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> zero(x); psolver);
 
 # ## Solve problems
 #
@@ -128,8 +128,7 @@ processors = (
 # By default, a standard fourth order Runge-Kutta method is used. If we don't
 # provide the time step explicitly, an adaptive time step is used.
 tlims = (T(0), T(10))
-state, outputs =
-    solve_unsteady(setup, u₀, p₀, tlims; Δt = T(1e-3), pressure_solver, processors);
+state, outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt = T(1e-3), psolver, processors);
 
 # ## Post-process
 #

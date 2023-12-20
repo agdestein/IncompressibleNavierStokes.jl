@@ -5,7 +5,7 @@
         p₀,
         tlims;
         method = RK44(; T = eltype(u₀[1])),
-        pressure_solver = DirectPressureSolver(setup),
+        psolver = DirectPressureSolver(setup),
         Δt = zero(eltype(u₀[1])),
         cfl = 1,
         n_adapt_Δt = 1,
@@ -35,7 +35,7 @@ function solve_unsteady(
     p₀,
     tlims;
     method = RK44(; T = eltype(u₀[1])),
-    pressure_solver = DirectPressureSolver(setup),
+    psolver = DirectPressureSolver(setup),
     Δt = zero(eltype(u₀[1])),
     cfl = 1,
     n_adapt_Δt = 1,
@@ -55,7 +55,7 @@ function solve_unsteady(
     cache = ode_method_cache(method, setup, u₀, p₀)
 
     # Time stepper
-    stepper = create_stepper(method; setup, pressure_solver, u = u₀, p = p₀, t = t_start)
+    stepper = create_stepper(method; setup, psolver, u = u₀, p = p₀, t = t_start)
 
     # Initialize processors for iteration results  
     state = Observable(get_state(stepper))

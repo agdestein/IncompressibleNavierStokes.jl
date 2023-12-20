@@ -197,18 +197,18 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     ksort = k[ib]
     jprev = 2 # Do not include constant mode
     for ki = 1:kmax
-        j = findfirst(>(ki+1), ksort)
+        j = findfirst(>(ki + 1), ksort)
         isnothing(j) && (j = length(k) + 1)
         ia = [ia; fill!(similar(ia, j - jprev), ki)]
         # val = doaverage ? T(1) / (j - jprev) : T(1)
-        val = T(π) * ((ki+1)^2 - ki^2) / (j - jprev)
+        val = T(π) * ((ki + 1)^2 - ki^2) / (j - jprev)
         vals = [vals; fill!(similar(vals, j - jprev), val)]
         jprev = j
     end
     ib = ib[2:jprev-1]
     A = sparse(ia, ib, vals, kmax, length(k))
     # Build inertial slope above energy
-    krange = [T(kmax)^(T(2)/3), T(kmax)]
+    krange = [T(kmax)^(T(2) / 3), T(kmax)]
     # slope, slopelabel = D == 2 ? (-T(3), L"k^{-3}") : (-T(5 / 3), L"k^{-5/3}")
     # slope, slopelabel = D == 2 ? (-T(3), "||k||₂⁻³") : (-T(5 / 3), "k⁻⁵³")
     slope, slopelabel = D == 2 ? (-T(3), "|k|⁻³") : (-T(5 / 3), "|k|⁻⁵³")
@@ -521,11 +521,11 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     ksort = k[ib]
     jprev = 2 # Do not include constant mode
     for ki = 1:kmax
-        j = findfirst(>(ki+1), ksort)
+        j = findfirst(>(ki + 1), ksort)
         isnothing(j) && (j = length(k) + 1)
         ia = [ia; fill!(similar(ia, j - jprev), ki)]
         # val = doaverage ? T(1) / (j - jprev) : T(1)
-        val = T(π) * ((ki+1)^2 - ki^2) / (j - jprev)
+        val = T(π) * ((ki + 1)^2 - ki^2) / (j - jprev)
         # val = T(1) / (j - jprev)
         vals = [vals; fill!(similar(vals, j - jprev), val)]
         jprev = j
@@ -534,7 +534,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     A = sparse(ia, ib, vals, kmax, length(k))
     # Build inertial slope above energy
     # krange = [cbrt(T(kmax)), T(kmax)]
-    krange = [T(kmax)^(T(2)/3), T(kmax)]
+    krange = [T(kmax)^(T(2) / 3), T(kmax)]
     # slope, slopelabel = D == 2 ? (-T(3), L"k^{-3}") : (-T(5 / 3), L"k^{-5/3}")
     slope, slopelabel = D == 2 ? (-T(3), "|k|⁻³") : (-T(5 / 3), "|k|⁻⁵³")
     slopeconst = T(0)
@@ -603,11 +603,11 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     ksort = k[ib]
     jprev = 2 # Do not include constant mode
     for ki = 1:kmax
-        j = findfirst(>(ki+1), ksort)
+        j = findfirst(>(ki + 1), ksort)
         isnothing(j) && (j = length(k) + 1)
         ia = [ia; fill!(similar(ia, j - jprev), ki)]
         # val = doaverage ? T(1) / (j - jprev) : T(1)
-        val = T(π) * ((ki+1)^2 - ki^2) / (j - jprev)
+        val = T(π) * ((ki + 1)^2 - ki^2) / (j - jprev)
         vals = [vals; fill!(similar(vals, j - jprev), val)]
         jprev = j
     end
@@ -615,7 +615,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     A = sparse(ia, ib, vals, kmax, length(k))
     # Build inertial slope above energy
     # krange = [cbrt(T(kmax)), T(kmax)]
-    krange = [T(kmax)^(T(2)/3), T(kmax)]
+    krange = [T(kmax)^(T(2) / 3), T(kmax)]
     # slope, slopelabel = D == 2 ? (-T(3), L"k^{-3}") : (-T(5 / 3), L"k^{-5/3}")
     slope, slopelabel = D == 2 ? (-T(3), "|k|⁻³") : (-T(5 / 3), "|k|⁻⁵³")
     slopeconst = T(0)

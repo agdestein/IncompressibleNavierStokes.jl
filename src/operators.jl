@@ -299,8 +299,7 @@ convection(u, setup) = convection!(zero.(u), u, setup)
 
 ChainRulesCore.rrule(::typeof(convection), u, setup) = (
     convection(u, setup),
-    φ ->
-        (NoTangent(), convection_adjoint!(zero.(u), (φ...,), u, setup), NoTangent()),
+    φ -> (NoTangent(), convection_adjoint!(zero.(u), (φ...,), u, setup), NoTangent()),
 )
 
 """

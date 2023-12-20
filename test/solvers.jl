@@ -7,7 +7,7 @@
     y = LinRange(0, 2π, n + 1)
     setup = Setup(x, y; Re)
 
-    pressure_solver = SpectralPressureSolver(setup)
+    psolver = SpectralPressureSolver(setup)
 
     t_start, t_end = tlims = (0.0, 5.0)
 
@@ -20,7 +20,7 @@
         initial_velocity_v,
         t_start;
         initial_pressure,
-        pressure_solver,
+        psolver,
     )
 
     @testset "Steady state" begin
@@ -44,26 +44,12 @@
     @testset "Unsteady solvers" begin
         @testset "Explicit Runge Kutta" begin
             @info "Testing explicit Runge-Kutta, out-of-place version"
-            state, outputs = solve_unsteady(
-                setup,
-                V₀,
-                p₀,
-                tlims;
-                Δt = 0.01,
-                pressure_solver,
-                inplace = false,
-            )
+            state, outputs =
+                solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, psolver, inplace = false)
             @test norm(state.u - u_exact) / norm(u_exact) < 1e-4
             @info "Testing explicit Runge-Kutta, in-place version"
-            stateip, outputsip = solve_unsteady(
-                setup,
-                V₀,
-                p₀,
-                tlims;
-                Δt = 0.01,
-                pressure_solver,
-                inplace = true,
-            )
+            stateip, outputsip =
+                solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, psolver, inplace = true)
             @test stateip.u ≈ state.u
             @test stateip.p ≈ state.p
         end
@@ -77,7 +63,7 @@
                 tlims;
                 method = RIA2(),
                 Δt = 0.01,
-                pressure_solver,
+                psolver,
                 inplace = false,
             ) isa Tuple
             @info "Testing implicit Runge-Kutta, in-place version"
@@ -88,7 +74,7 @@
                 tlims;
                 method = RIA2(),
                 Δt = 0.01,
-                pressure_solver,
+                psolver,
                 inplace = true,
                 processors = (timelogger(),),
             )
@@ -104,7 +90,7 @@
                 tlims;
                 method = OneLegMethod(T),
                 Δt = 0.01,
-                pressure_solver,
+                psolver,
                 inplace = false,
             )
             @test norm(state.u - u_exact) / norm(u_exact) < 1e-4
@@ -116,7 +102,7 @@
                 tlims;
                 method = OneLegMethod(T),
                 Δt = 0.01,
-                pressure_solver,
+                psolver,
                 inplace = true,
             )
             @test stateip.u ≈ state.u
@@ -132,7 +118,7 @@
                 tlims;
                 method = AdamsBashforthCrankNicolsonMethod(T),
                 Δt = 0.01,
-                pressure_solver,
+                psolver,
                 inplace = false,
             )
             @test norm(state.u - u_exact) / norm(u_exact) < 1e-4
@@ -144,7 +130,7 @@
                 tlims;
                 method = AdamsBashforthCrankNicolsonMethod(T),
                 Δt = 0.01,
-                pressure_solver,
+                psolver,
                 inplace = true,
             )
             @test stateip.u ≈ state.u

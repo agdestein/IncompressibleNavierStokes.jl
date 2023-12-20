@@ -1,8 +1,8 @@
-create_stepper(::ExplicitRungeKuttaMethod; setup, pressure_solver, u, p, t, n = 0) =
-    (; setup, pressure_solver, u, p, t, n)
+create_stepper(::ExplicitRungeKuttaMethod; setup, psolver, u, p, t, n = 0) =
+    (; setup, psolver, u, p, t, n)
 
 function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache, θ = nothing)
-    (; setup, pressure_solver, u, p, t, n) = stepper
+    (; setup, psolver, u, p, t, n) = stepper
     (; grid) = setup
     (; dimension, Iu, Ip, Ω) = grid
     (; A, b, c, p_add_solve) = method
@@ -55,7 +55,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache, θ = n
         @. M *= Ω / (c[i] * Δt)
 
         # Solve the Poisson equation
-        poisson!(pressure_solver, p, M)
+        poisson!(psolver, p, M)
         apply_bc_p!(p, t, setup)
 
         # Compute pressure correction term
@@ -73,13 +73,13 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; cache, θ = n
     t = t₀ + Δt
 
     # Do additional pressure solve to avoid first order pressure
-    p_add_solve && pressure!(pressure_solver, u, p, t, setup, F, G, M)
+    p_add_solve && pressure!(psolver, u, p, t, setup, F, G, M)
 
-    create_stepper(method; setup, pressure_solver, u, p, t, n = n + 1)
+    create_stepper(method; setup, psolver, u, p, t, n = n + 1)
 end
 
 function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
-    (; setup, pressure_solver, u, p, t, n) = stepper
+    (; setup, psolver, u, p, t, n) = stepper
     (; grid) = setup
     (; dimension) = grid
     (; A, b, c) = method
@@ -124,11 +124,11 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
         u = apply_bc_u(u, t, setup)
 
         # Make divergence free
-        u = project(pressure_solver, u, setup)
+        u = project(psolver, u, setup)
     end
 
     # Complete time step
     t = t₀ + Δt
 
-    create_stepper(method; setup, pressure_solver, u, p, t, n = n + 1)
+    create_stepper(method; setup, psolver, u, p, t, n = n + 1)
 end

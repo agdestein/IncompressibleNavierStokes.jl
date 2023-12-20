@@ -4,7 +4,7 @@ function project(solver, u, setup)
 
     # Divergence of tentative velocity field
     M = divergence(u, setup)
-    M = @. M * Ω 
+    M = @. M * Ω
 
     # Solve the Poisson equation
     p = poisson(solver, M)

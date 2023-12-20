@@ -152,7 +152,7 @@ function apply_bc_u_pullback!(ubar, φbar, t, setup; kwargs...)
             t,
             setup;
             atend = false,
-            kwargs...
+            kwargs...,
         )
         apply_bc_u_pullback!(
             boundary_conditions[β][2],
@@ -162,7 +162,7 @@ function apply_bc_u_pullback!(ubar, φbar, t, setup; kwargs...)
             t,
             setup;
             atend = true,
-            kwargs...
+            kwargs...,
         )
     end
     ubar

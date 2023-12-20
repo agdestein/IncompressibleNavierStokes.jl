@@ -41,7 +41,7 @@ setup = Setup(x, y, z; Re, ArrayType);
 
 # Since the grid is uniform and identical for x, y, and z, we may use a
 # specialized spectral pressure solver
-pressure_solver = SpectralPressureSolver(setup);
+psolver = SpectralPressureSolver(setup);
 
 # Initial conditions
 u₀, p₀ = create_initial_conditions(
@@ -49,7 +49,7 @@ u₀, p₀ = create_initial_conditions(
     (dim, x, y, z) ->
         dim() == 1 ? sinpi(2x) * cospi(2y) * sinpi(2z) / 2 :
         dim() == 2 ? -cospi(2x) * sinpi(2y) * sinpi(2z) / 2 : zero(x);
-    pressure_solver,
+    psolver,
 );
 
 # Solve unsteady problem
@@ -73,7 +73,7 @@ u₀, p₀ = create_initial_conditions(
         ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 100),
     ),
-    pressure_solver,
+    psolver,
 );
 
 # ## Post-process

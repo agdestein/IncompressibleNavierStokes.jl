@@ -3,7 +3,7 @@
         setup,
         initial_velocity,
         t = 0;
-        pressure_solver = DirectPressureSolver(setup),
+        psolver = DirectPressureSolver(setup),
         project = true,
     )
 
@@ -15,7 +15,7 @@ function create_initial_conditions(
     setup,
     initial_velocity,
     t = convert(eltype(setup.grid.x[1]), 0);
-    pressure_solver = DirectPressureSolver(setup),
+    psolver = DirectPressureSolver(setup),
     project = true,
 )
     (; grid) = setup
@@ -41,7 +41,7 @@ function create_initial_conditions(
     if project
         f = divergence(u, setup)
         @. f *= Ω
-        p = poisson(pressure_solver, f)
+        p = poisson(psolver, f)
         apply_bc_p!(p, t, setup)
         G = pressuregradient(p, setup)
         for α = 1:D
@@ -50,7 +50,7 @@ function create_initial_conditions(
     end
     apply_bc_u!(u, t, setup)
 
-    p = pressure(pressure_solver, u, t, setup)
+    p = pressure(psolver, u, t, setup)
     apply_bc_p!(p, t, setup)
 
     # Initial conditions, including initial boundary condititions
@@ -86,7 +86,7 @@ end
         A = 10,
         σ = 30,
         s = 5,
-        pressure_solver = DirectPressureSolver(setup),
+        psolver = DirectPressureSolver(setup),
     )
 
 Create random field.
@@ -102,7 +102,7 @@ function random_field(
     A = convert(eltype(setup.grid.x[1]), 10),
     σ = convert(eltype(setup.grid.x[1]), 30),
     s = convert(eltype(setup.grid.x[1]), 5),
-    pressure_solver = DirectPressureSolver(setup),
+    psolver = DirectPressureSolver(setup),
 )
     (; dimension, x, Ip, Ω) = setup.grid
     D = dimension()
@@ -116,7 +116,7 @@ function random_field(
     # Make velocity field divergence free
     M = divergence(u, setup)
     @. M *= Ω
-    p = poisson(pressure_solver, M)
+    p = poisson(psolver, M)
     apply_bc_p!(p, t, setup)
     G = pressuregradient(p, setup)
     for α = 1:D
@@ -125,7 +125,7 @@ function random_field(
     apply_bc_u!(u, t, setup)
 
     # Compute pressure
-    p = pressure(pressure_solver, u, t, setup)
+    p = pressure(psolver, u, t, setup)
     apply_bc_p!(p, t, setup)
 
     u, p

@@ -1,7 +1,7 @@
 create_stepper(
     method::OneLegMethod;
     setup,
-    pressure_solver,
+    psolver,
     bc_vectors,
     V,
     p,
@@ -12,10 +12,10 @@ create_stepper(
     Vₙ = copy(V),
     pₙ = copy(p),
     tₙ = t,
-) = (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
+) = (; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
 
 function timestep(method::OneLegMethod, stepper, Δt)
-    (; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ) = stepper
+    (; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ) = stepper
     (; p_add_solve, β, method_startup) = method
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
@@ -26,25 +26,13 @@ function timestep(method::OneLegMethod, stepper, Δt)
     # the first iteration. Do one startup step instead
     if n == 0
         stepper_startup =
-            create_stepper(method_startup; setup, pressure_solver, bc_vectors, V, p, t)
+            create_stepper(method_startup; setup, psolver, bc_vectors, V, p, t)
         n += 1
         Vₙ = V
         pₙ = p
         tₙ = t
         (; V, p, t) = timestep(method_startup, stepper_startup, Δt)
-        return create_stepper(
-            method;
-            setup,
-            pressure_solver,
-            bc_vectors,
-            V,
-            p,
-            t,
-            n,
-            Vₙ,
-            pₙ,
-            tₙ,
-        )
+        return create_stepper(method; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
     end
 
     # Update current solution
@@ -86,7 +74,7 @@ function timestep(method::OneLegMethod, stepper, Δt)
     f = (M * V + yM) / Δtᵦ
 
     # Solve the Poisson equation for the pressure
-    Δp = poisson(pressure_solver, f)
+    Δp = poisson(psolver, f)
     GΔp = G * Δp
 
     # Update velocity field
@@ -97,16 +85,16 @@ function timestep(method::OneLegMethod, stepper, Δt)
 
     # Alternatively, do an additional Poisson solve
     if p_add_solve
-        p = pressure(pressure_solver, V, p, tₙ + Δtₙ, setup; bc_vectors)
+        p = pressure(psolver, V, p, tₙ + Δtₙ, setup; bc_vectors)
     end
 
     t = tₙ + Δtₙ
 
-    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
 end
 
 function timestep!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
-    (; setup, pressure_solver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+    (; setup, psolver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
     (; p_add_solve, β, method_startup) = method
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
@@ -118,7 +106,7 @@ function timestep!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
     # the first iteration. Do one startup step instead
     if n == 0
         stepper_startup =
-            create_stepper(method_startup; setup, pressure_solver, bc_vectors, V, p, t)
+            create_stepper(method_startup; setup, psolver, bc_vectors, V, p, t)
         n += 1
         Vₙ = V
         pₙ = p
@@ -126,19 +114,7 @@ function timestep!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
 
         # Note: We do one out-of-place step here, with a few allocations
         (; V, p, t) = timestep(method_startup, stepper_startup, Δt)
-        return create_stepper(
-            method;
-            setup,
-            pressure_solver,
-            bc_vectors,
-            V,
-            p,
-            t,
-            n,
-            Vₙ,
-            pₙ,
-            tₙ,
-        )
+        return create_stepper(method; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
     end
 
     # Update current solution
@@ -182,7 +158,7 @@ function timestep!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
     # f .= (M * V + yM) / Δtᵦ
 
     # Solve the Poisson equation for the pressure
-    poisson!(pressure_solver, Δp, f)
+    poisson!(psolver, Δp, f)
     mul!(GΔp, G, Δp)
 
     # Update velocity field
@@ -193,21 +169,10 @@ function timestep!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
 
     # Alternatively, do an additional Poisson solve
     if p_add_solve
-        pressure!(
-            pressure_solver,
-            V,
-            p,
-            tₙ + Δtₙ,
-            setup,
-            momentum_cache,
-            F,
-            f,
-            Δp;
-            bc_vectors,
-        )
+        pressure!(psolver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp; bc_vectors)
     end
 
     t = tₙ + Δtₙ
 
-    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
 end

@@ -12,7 +12,7 @@
 
     @test plotgrid(x, y, z) isa Makie.Figure
 
-    pressure_solver = SpectralPressureSolver(setup)
+    psolver = SpectralPressureSolver(setup)
 
     t_start, t_end = tlims = (T(0), T(1))
 
@@ -27,7 +27,7 @@
         initial_velocity_w,
         t_start;
         initial_pressure,
-        pressure_solver,
+        psolver,
     )
 
     # Iteration processors
@@ -44,8 +44,7 @@
     )
 
     # Solve unsteady problem
-    state, outputs =
-        solve_unsteady(setup, u₀, p₀, tlims; Δt = T(0.01), processors, pressure_solver)
+    state, outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt = T(0.01), processors, psolver)
 
     @testset "VTK files" begin
         @info "Testing 3D processors: VTK files"

@@ -120,7 +120,7 @@ relerr_trajectory(uref, setup; nupdate = 1) =
 function create_trajectory_loss(;
     setup,
     method = RK44(; T = eltype(setup.grid.x[1])),
-    pressure_solver = DirectPressureSolver(setup),
+    psolver = DirectPressureSolver(setup),
     closure,
 )
     closure_model = wrappedclosure(closure, setup)
@@ -128,8 +128,7 @@ function create_trajectory_loss(;
     function trajectory_loss(traj, θ)
         (; u, t) = traj
         v = u[1]
-        stepper =
-            create_stepper(method; setup, pressure_solver, u = v, p = zero(v[1]), t = t[1])
+        stepper = create_stepper(method; setup, psolver, u = v, p = zero(v[1]), t = t[1])
         loss = zero(eltype(v[1]))
         for it = 2:length(t)
             Δt = t[it] - t[it-1]
