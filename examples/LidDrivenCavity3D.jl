@@ -56,13 +56,12 @@ boundary_conditions = (
 setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
 
 # Initial conditions
-u₀, p₀ = create_initial_conditions(setup, (dim, x, y, z) -> zero(x))
+u₀ = create_initial_conditions(setup, (dim, x, y, z) -> zero(x))
 
 # Solve unsteady problem
-(; u, p, t), outputs = solve_unsteady(
+(; u, t), outputs = solve_unsteady(
     setup,
     u₀,
-    p₀,
     (T(0), T(0.2));
     Δt = T(1e-3),
     processors = (

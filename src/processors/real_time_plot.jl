@@ -82,6 +82,7 @@ function fieldplot(
     state;
     setup,
     fieldname = :vorticity,
+    psolver = nothing,
     type = heatmap,
     equal_axis = true,
     docolorbar = true,
@@ -94,23 +95,29 @@ function fieldplot(
 
     xf = Array.(getindex.(setup.grid.xp, Ip.indices))
 
-    (; u, p, t) = state[]
+    (; u, t) = state[]
     _f = if fieldname in (1, 2)
         up = interpolate_u_p(u, setup)
         up[fieldname]
     elseif fieldname == :velocity
         up = interpolate_u_p(u, setup)
-        upnorm = zero(p)
+        upnorm = zero(up[1])
     elseif fieldname == :vorticity
         ω = vorticity(u, setup)
         ωp = interpolate_ω_p(ω, setup)
     elseif fieldname == :streamfunction
         ψ = get_streamfunction(setup, u, t)
     elseif fieldname == :pressure
-        p
+        if isnothing(psolver)
+            @info "Creating new pressure solver for fieldplot"
+            psolver = DirectPressureSolver(setup)
+        end
+        F = zero.(u)
+        div = zero(u[1])
+        p = zero(u[1])
     end
     _f = Array(_f)[Ip]
-    field = lift(state) do (; u, p, t)
+    field = lift(state) do (; u, t)
         f = if fieldname in (1, 2)
             interpolate_u_p!(up, u, setup)
             up[fieldname]
@@ -125,7 +132,7 @@ function fieldplot(
         elseif fieldname == :streamfunction
             get_streamfunction!(setup, ψ, u, t)
         elseif fieldname == :pressure
-            p
+            pressure!(p, u, t, setup; psolver, F, div)
         end
         # Array(f)[Ip]
         copyto!(_f, view(f, Ip))
@@ -181,6 +188,7 @@ function fieldplot(
     ::Dimension{3},
     state;
     setup,
+    psolver = nothing,
     fieldname = :eig2field,
     alpha = convert(eltype(setup.grid.x[1]), 0.1),
     isorange = convert(eltype(setup.grid.x[1]), 0.5),
@@ -195,23 +203,37 @@ function fieldplot(
     (; xlims, x, xp, Ip) = grid
 
     xf = Array.(getindex.(setup.grid.xp, Ip.indices))
-    (; u, p) = state[]
+    (; u) = state[]
     if fieldname == :velocity
     elseif fieldname == :vorticity
     elseif fieldname == :streamfunction
     elseif fieldname == :pressure
+        if isnothing(psolver)
+            @info "Creating new pressure solver for fieldplot"
+            psolver = DirectPressureSolver(setup)
+        end
+        F = zero.(u)
+        div = zero(u[1])
+        p = zero(u[1])
     elseif fieldname == :Dfield
-        G = similar.(state[].u)
-        d = similar(state[].p)
+        if isnothing(psolver)
+            @info "Creating new pressure solver for fieldplot"
+            psolver = DirectPressureSolver(setup)
+        end
+        F = zero.(u)
+        div = zero(u[1])
+        p = zero(u[1])
+        G = similar.(u)
+        d = similar(u[1])
     elseif fieldname == :Qfield
-        Q = similar(state[].p)
+        Q = similar(u[1])
     elseif fieldname == :eig2field
-        λ = similar(state[].p)
+        λ = similar(u[1])
     else
         error("Unknown fieldname")
     end
 
-    field = lift(state) do (; u, p, t)
+    field = lift(state) do (; u, t)
         f = if fieldname == :velocity
             up = interpolate_u_p(u, setup)
             map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
@@ -221,8 +243,9 @@ function fieldplot(
         elseif fieldname == :streamfunction
             get_streamfunction(setup, u, t)
         elseif fieldname == :pressure
-            p
+            pressure!(p, u, t, setup; psolver, F, div)
         elseif fieldname == :Dfield
+            pressure!(p, u, t, setup; psolver, F, div)
             Dfield!(d, G, p, setup)
             din = view(d, Ip)
             @. din = log(max(logtol, din))
@@ -277,7 +300,7 @@ Create energy history plot.
 function energy_history_plot(state; setup)
     @assert state isa Observable "Energy history requires observable state."
     _points = Point2f[]
-    points = lift(state) do (; u, p, t)
+    points = lift(state) do (; u, t)
         E = total_kinetic_energy(u, setup)
         push!(_points, Point2f(t, E))
     end
@@ -336,7 +359,7 @@ function energy_spectrum_plot(state; setup, doaverage = false)
 
     # Energy
     ke = kinetic_energy(state[].u, setup)
-    ehat = lift(state) do (; u, p, t)
+    ehat = lift(state) do (; u, t)
         kinetic_energy!(ke, u, setup)
         e = ke[Ip]
         e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]

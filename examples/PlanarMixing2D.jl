@@ -56,13 +56,12 @@ plotgrid(x, y)
 setup = Setup(x, y; Re, boundary_conditions);
 
 # Initial conditions (extend inflow)
-u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, 0.0));
+u₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, 0.0));
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(
     setup,
     u₀,
-    p₀,
     (0.0, 100.0);
     method = RK44P2(),
     Δt = 0.1,

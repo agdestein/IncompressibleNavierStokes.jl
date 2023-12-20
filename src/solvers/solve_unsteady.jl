@@ -2,7 +2,6 @@
     solve_unsteady(
         setup,
         u₀,
-        p₀,
         tlims;
         method = RK44(; T = eltype(u₀[1])),
         psolver = DirectPressureSolver(setup),
@@ -24,15 +23,14 @@ The `processors` are called after every time step.
 
 Note that the `state` observable passed to the `processor.initialize` function
 contains vector living on the device, and you may have to move them back to
-the host using `Array(u)` and `Array(p)` in the processor.
+the host using `Array(u)` in the processor.
 
-Return `(; u, p, t), outputs`, where `outputs` is a  named tuple with the
+Return `(; u, t), outputs`, where `outputs` is a  named tuple with the
 outputs of `processors` with the same field names.
 """
 function solve_unsteady(
     setup,
     u₀,
-    p₀,
     tlims;
     method = RK44(; T = eltype(u₀[1])),
     psolver = DirectPressureSolver(setup),
@@ -43,19 +41,16 @@ function solve_unsteady(
     processors = (;),
     θ = nothing,
 )
-    if docopy
-        u₀ = copy.(u₀)
-        p₀ = copy(p₀)
-    end
+    docopy && (u₀ = copy.(u₀))
 
     t_start, t_end = tlims
     isadaptive = isnothing(Δt)
 
     # Cache arrays for intermediate computations
-    cache = ode_method_cache(method, setup, u₀, p₀)
+    cache = ode_method_cache(method, setup, u₀)
 
     # Time stepper
-    stepper = create_stepper(method; setup, psolver, u = u₀, p = p₀, t = t_start)
+    stepper = create_stepper(method; setup, psolver, u = u₀, t = t_start)
 
     # Initialize processors for iteration results  
     state = Observable(get_state(stepper))
@@ -72,7 +67,7 @@ function solve_unsteady(
             Δt = min(Δt, t_end - stepper.t)
 
             # Perform a single time step with the time integration method
-            stepper = timestep!(method, stepper, Δt; cache, θ)
+            stepper = timestep!(method, stepper, Δt; θ, cache)
 
             # Process iteration results with each processor
             state[] = get_state(stepper)
@@ -82,7 +77,7 @@ function solve_unsteady(
         Δt = (t_end - t_start) / nstep
         for it = 1:nstep
             # Perform a single time step with the time integration method
-            stepper = timestep!(method, stepper, Δt; cache, θ)
+            stepper = timestep!(method, stepper, Δt; θ, cache)
 
             # Process iteration results with each processor
             state[] = get_state(stepper)
@@ -90,7 +85,7 @@ function solve_unsteady(
     end
 
     # Final state
-    (; u, p, t) = stepper
+    (; u, t) = stepper
 
     # Processor outputs
     outputs = (;
@@ -98,10 +93,10 @@ function solve_unsteady(
     )
 
     # Return state and outputs
-    (; u, p, t), outputs
+    (; u, t), outputs
 end
 
 function get_state(stepper)
-    (; u, p, t, n) = stepper
-    (; u, p, t, n)
+    (; u, t, n) = stepper
+    (; u, t, n)
 end

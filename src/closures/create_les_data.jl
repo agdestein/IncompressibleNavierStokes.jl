@@ -34,11 +34,10 @@ end
 
 function lesdatagen(dnsobs, les, compression, psolver)
     Φu = zero.(face_average(dnsobs[].u, les, compression))
-    q = zero(pressure(psolver, Φu, dnsobs[].t, les))
-    M = zero(q)
+    q = zero(Φu[1])
+    div = zero(q)
     ΦF = zero.(Φu)
     FΦ = zero.(Φu)
-    GΦ = zero.(Φu)
     c = zero.(Φu)
     results = (; u = fill(Array.(dnsobs[].u), 0), c = fill(Array.(dnsobs[].u), 0))
     on(dnsobs) do (; u, F, t)
@@ -47,13 +46,8 @@ function lesdatagen(dnsobs, les, compression, psolver)
         face_average!(ΦF, F, les, compression)
         momentum!(FΦ, Φu, t, les)
         apply_bc_u!(FΦ, t, les; dudt = true)
-        divergence!(M, FΦ, les)
-        @. M *= les.grid.Ω
-        poisson!(psolver, q, M)
-        apply_bc_p!(q, t, les)
-        pressuregradient!(GΦ, q, les)
+        project!(FΦ, setup; psolver, div, q)
         for α = 1:length(u)
-            FΦ[α] .-= GΦ[α]
             c[α] .= ΦF[α] .- FΦ[α]
         end
         push!(results.u, Array.(Φu))
@@ -62,28 +56,28 @@ function lesdatagen(dnsobs, les, compression, psolver)
     results
 end
 
-filtersaver(dns, les, compression, psolver; nupdate = 1) =
+filtersaver(dns, les, compression, psolver_dns, psolver_les; nupdate = 1) =
     processor() do state
         (; dimension, x) = dns.grid
         T = eltype(x[1])
         D = dimension()
         F = zero.(state[].u)
-        G = zero.(state[].u)
+        div = zero(state[].u[1])
+        p = zero(state[].u[1])
         dnsobs = Observable((; state[].u, F, state[].t))
-        data =
-            [lesdatagen(dnsobs, les[i], compression[i], psolver[i]) for i = 1:length(les)]
+        data = [
+            lesdatagen(dnsobs, les[i], compression[i], psolver_les[i]) for i = 1:length(les)
+        ]
         results = (;
             t = fill(zero(eltype(x[1])), 0),
             u = [d.u for d in data],
             c = [d.c for d in data],
         )
-        on(state) do (; u, p, t, n)
+        on(state) do (; u, t, n)
             n % nupdate == 0 || return
             momentum!(F, u, t, dns)
-            pressuregradient!(G, p, dns)
-            for α = 1:D
-                F[α] .-= G[α]
-            end
+            apply_bc_u!(F, t, dns; dudt = true)
+            project!(F, dns; psolver = psolver_dns, div, p)
             push!(results.t, t)
             dnsobs[] = (; u, F, t)
         end
@@ -146,7 +140,7 @@ function create_les_data(
     @info "Generating $datasize Mb of LES data"
 
     # Initial conditions
-    u₀, p₀ = random_field(dns, T(0); psolver, ic_params...)
+    u₀ = random_field(dns, T(0); psolver, ic_params...)
 
     # Random body force
     # force_dns =
@@ -164,17 +158,23 @@ function create_les_data(
     # _les = (; les..., bodyforce = force_les)
 
     # Solve burn-in DNS
-    (; u, p, t), outputs = solve_unsteady(_dns, u₀, p₀, (T(0), tburn); Δt, psolver)
+    (; u, t), outputs = solve_unsteady(_dns, u₀, (T(0), tburn); Δt, psolver)
 
     # Solve DNS and store filtered quantities
-    (; u, p, t), outputs = solve_unsteady(
+    (; u, t), outputs = solve_unsteady(
         _dns,
         u,
-        p,
         (T(0), tsim);
         Δt,
         processors = (;
-            f = filtersaver(_dns, _les, compression, psolver_les; nupdate = savefreq),
+            f = filtersaver(
+                _dns,
+                _les,
+                compression,
+                psolver,
+                psolver_les;
+                nupdate = savefreq,
+            ),
         ),
         psolver,
     )

@@ -46,13 +46,12 @@ setup = Setup(x...; Re, ArrayType);
 psolver = SpectralPressureSolver(setup);
 
 # Create random initial conditions
-u₀, p₀ = random_field(setup, T(0); psolver);
+u₀ = random_field(setup, T(0); psolver);
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(
     setup,
     u₀,
-    p₀,
     (T(0), T(1));
     Δt = T(1e-3),
     psolver,

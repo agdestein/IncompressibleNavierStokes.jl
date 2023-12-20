@@ -4,10 +4,10 @@
         initial_velocity,
         t = 0;
         psolver = DirectPressureSolver(setup),
-        project = true,
+        doproject = true,
     )
 
-Create initial vectors `(u, p)` at starting time `t`.
+Create divergence free initial velocity field `u` at starting time `t`.
 The initial conditions of `u[α]` are specified by the function
 `initial_velocity(Dimension(α), x...)`.
 """
@@ -16,7 +16,7 @@ function create_initial_conditions(
     initial_velocity,
     t = convert(eltype(setup.grid.x[1]), 0);
     psolver = DirectPressureSolver(setup),
-    project = true,
+    doproject = true,
 )
     (; grid) = setup
     (; dimension, N, Iu, Ip, x, xp, Ω) = grid
@@ -35,26 +35,13 @@ function create_initial_conditions(
         )
         u[α][Iu[α]] .= initial_velocity.((Dimension(α),), xin...)[Iu[α]]
     end
-    apply_bc_u!(u, t, setup)
 
     # Make velocity field divergence free
-    if project
-        f = divergence(u, setup)
-        @. f *= Ω
-        p = poisson(psolver, f)
-        apply_bc_p!(p, t, setup)
-        G = pressuregradient(p, setup)
-        for α = 1:D
-            u[α] .-= G[α]
-        end
-    end
     apply_bc_u!(u, t, setup)
-
-    p = pressure(psolver, u, t, setup)
-    apply_bc_p!(p, t, setup)
+    doproject && (u = project(u, setup; psolver))
 
     # Initial conditions, including initial boundary condititions
-    u, p
+    u
 end
 
 function create_spectrum(; setup, A, σ, s)
@@ -111,22 +98,8 @@ function random_field(
 
     # Create random velocity field
     u = ntuple(α -> real.(ifft(create_spectrum(; setup, A, σ, s))), D)
-    apply_bc_u!(u, t, setup)
 
     # Make velocity field divergence free
-    M = divergence(u, setup)
-    @. M *= Ω
-    p = poisson(psolver, M)
-    apply_bc_p!(p, t, setup)
-    G = pressuregradient(p, setup)
-    for α = 1:D
-        @. u[α] -= G[α]
-    end
     apply_bc_u!(u, t, setup)
-
-    # Compute pressure
-    p = pressure(psolver, u, t, setup)
-    apply_bc_p!(p, t, setup)
-
-    u, p
+    project(u, setup; psolver)
 end

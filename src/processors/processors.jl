@@ -73,6 +73,7 @@ vtk_writer(;
     dir = "output",
     filename = "solution",
     fields = (:velocity, :pressure, :vorticity),
+    psolver = nothing,
 ) =
     processor((pvd, state) -> vtk_save(pvd)) do state
         (; grid) = setup
@@ -81,7 +82,7 @@ vtk_writer(;
         ispath(dir) || mkpath(dir)
         pvd = paraview_collection(joinpath(dir, filename))
         xparr = Array.(xp)
-        (; u, p) = state[]
+        (; u) = state[]
         if :velocity ∈ fields
             up = interpolate_u_p(u, setup)
             uparr = Array.(up)
@@ -89,25 +90,33 @@ vtk_writer(;
             D == 2 && (uparr = (uparr..., zero(up[1])))
         end
         if :pressure ∈ fields
-            parr = Array(p)
+            if isnothing(psolver)
+                @info "Creating new pressure solver for vtk_writer"
+                psolver = DirectPressureSolver(setup)
+            end
+            F = zero.(u)
+            div = zero(u[1])
+            p = zero(u[1])
+            parr = adapt(Array, p)
         end
         if :vorticity ∈ fields
             ω = vorticity(u, setup)
             ωp = interpolate_ω_p(ω, setup)
-            ωparr = D == 2 ? Array(ωp) : Array.(ωp)
+            ωparr = adapt(Array, ωp)
         end
-        on(state) do (; u, p, t, n)
+        on(state) do (; u, t, n)
             n % nupdate == 0 || return
             tformat = replace(string(t), "." => "p")
             vtk_grid("$(dir)/$(filename)_t=$tformat", xparr...) do vtk
                 if :velocity ∈ fields
                     interpolate_u_p!(up, u, setup)
-                    for α = 1:D
-                        copyto!(uparr[α], up[α])
-                    end
+                    copyto!.(uparr, up)
                     vtk["velocity"] = uparr
                 end
-                :pressure ∈ fields && (vtk["pressure"] = copyto!(parr, p))
+                if :pressure ∈ fields
+                    pressure!(p, u, setup; psolver, F, div)
+                    vtk["pressure"] = copyto!(parr, p)
+                end
                 if :vorticity ∈ fields
                     vorticity!(ω, u, setup)
                     interpolate_ω_p!(ωp, ω, setup)
@@ -123,17 +132,16 @@ vtk_writer(;
 """
     fieldsaver(; setup, nupdate = 1)
 
-Create processor that stores the solution every `nupdate` time step to the vector of vectors `V` and `p`. The solution times are stored in the vector `t`.
+Create processor that stores the solution and time every `nupdate` time step.
 """
 fieldsaver(; setup, nupdate = 1) =
     processor() do state
         T = eltype(setup.grid.x[1])
-        (; u, p) = state[]
-        fields = (; u = fill(Array.(u), 0), p = fill(Array(p), 0), t = zeros(T, 0))
+        (; u) = state[]
+        fields = (; u = fill(Array.(u), 0), t = zeros(T, 0))
         on(state) do (; u, p, t, n)
             n % nupdate == 0 || return
             push!(fields.u, Array.(u))
-            push!(fields.p, Array(p))
             push!(fields.t, t)
         end
         fields

@@ -62,7 +62,7 @@ boundary_conditions = (
 setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
 
 # Initial conditions (extend inflow)
-u₀, p₀ = create_initial_conditions(setup, (dim, x, y, z) -> U(dim, x, y, z, zero(x)));
+u₀ = create_initial_conditions(setup, (dim, x, y, z) -> U(dim, x, y, z, zero(x)));
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);
@@ -72,7 +72,6 @@ nothing
 state, outputs = solve_unsteady(
     setup,
     u₀,
-    p₀,
     (T(0), T(7));
     Δt = T(0.01),
     processors = (

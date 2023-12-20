@@ -35,20 +35,20 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
         x = ntuple(α -> LinRange(lims..., n + 1), D)
         setup = Setup(x...; Re, ArrayType)
         psolver = SpectralPressureSolver(setup)
-        u₀, p₀ = create_initial_conditions(
+        u = create_initial_conditions(
             setup,
             (dim, x...) -> uref(dim, x..., tlims[1]),
             tlims[1];
             psolver,
         )
-        ut, pt = create_initial_conditions(
+        ut = create_initial_conditions(
             setup,
             (dim, x...) -> uref(dim, x..., tlims[2]),
             tlims[2];
             psolver,
-            project = false,
+            doproject = false,
         )
-        (; u, p, t), outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt, psolver)
+        (; u, t), outputs = solve_unsteady(setup, u₀, tlims; Δt, psolver)
         (; Ip) = setup.grid
         a, b = T(0), T(0)
         for α = 1:D

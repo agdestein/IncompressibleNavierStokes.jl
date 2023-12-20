@@ -79,13 +79,12 @@ bodyforce(dim, x, y, z) = dim() == 1 ? -cₜ * inside(x, y, z) : zero(x)
 setup = Setup(x, y, z; Re, boundary_conditions, bodyforce, ArrayType);
 
 # Initial conditions (extend inflow)
-u₀, p₀ = create_initial_conditions(setup, (dim, x, y, z) -> dim() == 1 ? one(x) : zero(x));
+u₀ = create_initial_conditions(setup, (dim, x, y, z) -> dim() == 1 ? one(x) : zero(x));
 
 # Solve unsteady problem
-(; u, p, t), outputs = solve_unsteady(
+(; u, t), outputs = solve_unsteady(
     setup,
     u₀,
-    p₀,
     (T(0), T(3));
     method = RK44P2(),
     Δt = T(0.05),

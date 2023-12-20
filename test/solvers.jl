@@ -14,7 +14,7 @@
     initial_velocity_u(x, y) = cos(x)sin(y)
     initial_velocity_v(x, y) = -sin(x)cos(y)
     initial_pressure(x, y) = -1 / 4 * (cos(2x) + cos(2y))
-    V₀, p₀ = create_initial_conditions(
+    V = create_initial_conditions(
         setup,
         initial_velocity_u,
         initial_velocity_v,
@@ -45,11 +45,11 @@
         @testset "Explicit Runge Kutta" begin
             @info "Testing explicit Runge-Kutta, out-of-place version"
             state, outputs =
-                solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, psolver, inplace = false)
+                solve_unsteady(setup, V₀, tlims; Δt = 0.01, psolver, inplace = false)
             @test norm(state.u - u_exact) / norm(u_exact) < 1e-4
             @info "Testing explicit Runge-Kutta, in-place version"
             stateip, outputsip =
-                solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, psolver, inplace = true)
+                solve_unsteady(setup, V₀, tlims; Δt = 0.01, psolver, inplace = true)
             @test stateip.u ≈ state.u
             @test stateip.p ≈ state.p
         end
@@ -59,7 +59,6 @@
             @test_broken solve_unsteady(
                 setup,
                 V₀,
-                p₀,
                 tlims;
                 method = RIA2(),
                 Δt = 0.01,
@@ -67,10 +66,9 @@
                 inplace = false,
             ) isa Tuple
             @info "Testing implicit Runge-Kutta, in-place version"
-            (; u, p, t), outputs = solve_unsteady(
+            (; u, t), outputs = solve_unsteady(
                 setup,
                 V₀,
-                p₀,
                 tlims;
                 method = RIA2(),
                 Δt = 0.01,
@@ -86,7 +84,6 @@
             state, outputs = solve_unsteady(
                 setup,
                 V₀,
-                p₀,
                 tlims;
                 method = OneLegMethod(T),
                 Δt = 0.01,
@@ -98,7 +95,6 @@
             stateip, outputsip = solve_unsteady(
                 setup,
                 V₀,
-                p₀,
                 tlims;
                 method = OneLegMethod(T),
                 Δt = 0.01,
@@ -114,7 +110,6 @@
             state, outputs = solve_unsteady(
                 setup,
                 V₀,
-                p₀,
                 tlims;
                 method = AdamsBashforthCrankNicolsonMethod(T),
                 Δt = 0.01,
@@ -126,7 +121,6 @@
             stateip, outputs = solve_unsteady(
                 setup,
                 V₀,
-                p₀,
                 tlims;
                 method = AdamsBashforthCrankNicolsonMethod(T),
                 Δt = 0.01,

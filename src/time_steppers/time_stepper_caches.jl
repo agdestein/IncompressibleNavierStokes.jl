@@ -34,15 +34,12 @@ function ode_method_cache(::OneLegMethod{T}, setup, V, p) where {T}
     (; u₋₁, p₋₁, F, f, Δp, GΔp)
 end
 
-function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup, u, p) where {T}
+function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup, u) where {T}
     u₀ = zero.(u)
     ns = nstage(method)
     ku = [zero.(u) for i = 1:ns]
-    v = zero.(u)
-    F = zero.(u)
-    G = zero.(u)
-    M = zero(p)
-    (; u₀, ku, v, F, M, G)
+    div = zero(u[1])
+    (; u₀, ku, div)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup, V, p) where {T}

@@ -62,7 +62,7 @@ setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 psolver = DirectPressureSolver(setup);
 
 # Initial conditions (extend inflow)
-u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)); psolver);
+u₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)); psolver);
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);
@@ -71,7 +71,6 @@ u₀, p₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x
 state, outputs = solve_unsteady(
     setup,
     u₀,
-    p₀,
     (T(0), T(7));
     Δt = T(0.002),
     psolver,

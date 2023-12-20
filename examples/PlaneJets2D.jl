@@ -98,7 +98,7 @@ setup = Setup(x, y; Re, ArrayType);
 psolver = SpectralPressureSolver(setup)
 
 # Initial conditions
-u₀, p₀ =
+u₀ =
     create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? U(x, y) : zero(x); psolver);
 
 # Real time plot: Streamwise average and spectrum
@@ -160,7 +160,6 @@ end
 state, outputs = solve_unsteady(
     setup,
     u₀,
-    p₀,
     (T(0), T(1));
     method = RK44P2(),
     Δt = 0.001,

@@ -48,7 +48,7 @@
             @info "Testing $(typeof(viscosity_model)) and $(typeof(convection_model))"
             setup = Setup(x, y; Re, viscosity_model, convection_model, u_bc, v_bc, bc_type)
 
-            V₀, p₀ = create_initial_conditions(
+            V = create_initial_conditions(
                 setup,
                 initial_velocity_u,
                 initial_velocity_v,
@@ -60,7 +60,7 @@
             broken = convection_model isa Union{C2ConvectionModel,C4ConvectionModel}
             @test sum(abs, V) / length(V) < lid_vel broken = broken
 
-            (; u, p, t), outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01)
+            (; u, t), outputs = solve_unsteady(setup, V₀, tlims; Δt = 0.01)
 
             # Check that the average velocity is smaller than the lid velocity
             broken = convection_model isa Union{C2ConvectionModel,C4ConvectionModel}

@@ -44,7 +44,7 @@ setup = Setup(x, y, z; Re, ArrayType);
 psolver = SpectralPressureSolver(setup);
 
 # Initial conditions
-u₀, p₀ = create_initial_conditions(
+u₀ = create_initial_conditions(
     setup,
     (dim, x, y, z) ->
         dim() == 1 ? sinpi(2x) * cospi(2y) * sinpi(2z) / 2 :
@@ -53,10 +53,9 @@ u₀, p₀ = create_initial_conditions(
 );
 
 # Solve unsteady problem
-(; u, p, t), outputs = solve_unsteady(
+(; u, t), outputs = solve_unsteady(
     setup,
     u₀,
-    p₀,
     (T(0), T(1.0));
     Δt = T(1e-3),
     processors = (

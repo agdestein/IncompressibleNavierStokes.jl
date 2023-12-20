@@ -20,7 +20,7 @@
     initial_velocity_v(x, y, z) = -cos(x)sin(y)cos(z)
     initial_velocity_w(x, y, z) = zero(x)
     initial_pressure(x, y, z) = 1 // 4 * (cos(2x) + cos(2y) + cos(2z))
-    V₀, p₀ = create_initial_conditions(
+    V = create_initial_conditions(
         setup,
         initial_velocity_u,
         initial_velocity_v,
@@ -44,7 +44,7 @@
     )
 
     # Solve unsteady problem
-    state, outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt = T(0.01), processors, psolver)
+    state, outputs = solve_unsteady(setup, u₀, tlims; Δt = T(0.01), processors, psolver)
 
     @testset "VTK files" begin
         @info "Testing 3D processors: VTK files"
