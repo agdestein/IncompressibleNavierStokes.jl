@@ -105,30 +105,41 @@ function create_les_data(
     T;
     D = 2,
     Re = T(2_000),
-    lims = (T(0), T(1)),
-    nles = [64],
-    ndns = 256,
+    lims = ntuple(α -> (T(0), T(1)), D),
+    nles = [ntuple(α -> 64, D)],
+    ndns = ntuple(α -> 256, D),
     tburn = T(0.1),
     tsim = T(0.1),
     Δt = T(1e-4),
+    PSolver = SpectralPressureSolver,
     savefreq = 1,
     ArrayType = Array,
-    ic_params = (;),
+    icfunc = (setup, psolver) -> random_field(setup, T(0); psolver),
+    boundary_conditions = ntuple(α -> (PeriodicBC(), PeriodicBC()), D),
 )
     compression = @. ndns ÷ nles
     @assert all(@.(compression * nles == ndns))
 
     # Build setup and assemble operators
-    dns = Setup(ntuple(α -> LinRange(lims..., ndns + 1), D)...; Re, ArrayType)
+    dns = Setup(
+        ntuple(α -> LinRange(lims[α]..., ndns[α] + 1), D)...;
+        Re,
+        boundary_conditions,
+        ArrayType,
+    )
     les = [
-        Setup(ntuple(α -> LinRange(lims..., nles + 1), D)...; Re, ArrayType) for
-        nles in nles
+        Setup(
+            ntuple(α -> LinRange(lims[α], nles[α] + 1), D)...;
+            Re,
+            boundary_conditions,
+            ArrayType,
+        ) for nles in nles
     ]
 
     # Since the grid is uniform and identical for x and y, we may use a specialized
     # spectral pressure solver
-    psolver = SpectralPressureSolver(dns)
-    psolver_les = SpectralPressureSolver.(les)
+    psolver = PSolver(dns)
+    psolver_les = PSolver.(les)
 
     # Number of time steps to save
     nt = round(Int, tsim / Δt)
@@ -136,11 +147,11 @@ function create_les_data(
 
     # datasize = Base.summarysize(filtered) / 1e6
     datasize =
-        (nt ÷ savefreq + 1) * sum(nles .^ D) * 3 * 2 * length(bitstring(zero(T))) / 8 / 1e6
+        (nt ÷ savefreq + 1) * sum(prod.(nles)) * D * 2 * length(bitstring(zero(T))) / 8 / 1e6
     @info "Generating $datasize Mb of LES data"
 
     # Initial conditions
-    u₀ = random_field(dns, T(0); psolver, ic_params...)
+    u₀ = icfunc(dns, psolver)
 
     # Random body force
     # force_dns =

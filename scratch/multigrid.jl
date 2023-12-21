@@ -59,9 +59,10 @@ get_params(nles) = (;
     tburn = T(0.05),
     tsim = T(0.5),
     Δt = T(1e-4),
-    nles,
-    ndns = 2048,
+    nles = map(n -> (n, n), nles),
+    ndns = (2048, 2048),
     ArrayType,
+    PSolver = SpectralPressureSolver,
 )
 
 params_train = (; get_params([64, 128, 256])..., savefreq = 5);

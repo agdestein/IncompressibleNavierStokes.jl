@@ -57,14 +57,15 @@ params = (;
     D = 2,
     Re = T(6_000),
     lims = (T(0), T(1)),
-    nles = [nles],
-    # ndns = 512,
-    ndns = 1024,
+    nles = [(nles, nles)],
+    # ndns = (512, 512),
+    ndns = (1024, 1024),
     tburn = T(0.05),
     tsim = T(0.5),
     Δt = T(1e-4),
     savefreq = 5,
     ArrayType,
+    PSolver = SpectralPressureSolver,
 )
 
 # Create LES data from DNS
