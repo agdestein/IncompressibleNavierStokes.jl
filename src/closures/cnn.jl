@@ -22,7 +22,7 @@ function cnn(;
     rng = Random.default_rng(),
 )
     r, c, σ, b = radii, channels, activations, use_bias
-    (; T, grid) = setup
+    (; T, grid, boundary_conditions) = setup
     (; dimension) = grid
     D = dimension()
 
@@ -43,7 +43,13 @@ function cnn(;
         collocate,
 
         # Add padding so that output has same shape as commutator error
-        u -> pad_circular(u, sum(r)),
+        ntuple(
+            α ->
+                boundary_conditions[α][1] isa PeriodicBC ?
+                u -> pad_circular(u, sum(r); dims = α) :
+                u -> pad_repeat(u, sum(r); dims = α),
+            D,
+        ),
 
         # Some convolutional layers
         (

@@ -115,24 +115,26 @@ function create_les_data(
     savefreq = 1,
     ArrayType = Array,
     icfunc = (setup, psolver) -> random_field(setup, T(0); psolver),
-    boundary_conditions = ntuple(α -> (PeriodicBC(), PeriodicBC()), D),
+    kwargs...,
 )
-    compression = @. ndns ÷ nles
-    @assert all(@.(compression * nles == ndns))
+    compression = [ndns[1] ÷ nles[1] for nles in nles]
+    for (c, n) in zip(compression, nles), α = 1:D
+        @assert c * n[α] == ndns[α]
+    end
 
     # Build setup and assemble operators
     dns = Setup(
         ntuple(α -> LinRange(lims[α]..., ndns[α] + 1), D)...;
         Re,
-        boundary_conditions,
         ArrayType,
+        kwargs...,
     )
     les = [
         Setup(
-            ntuple(α -> LinRange(lims[α], nles[α] + 1), D)...;
+            ntuple(α -> LinRange(lims[α]..., nles[α] + 1), D)...;
             Re,
-            boundary_conditions,
             ArrayType,
+            kwargs...,
         ) for nles in nles
     ]
 
@@ -147,7 +149,8 @@ function create_les_data(
 
     # datasize = Base.summarysize(filtered) / 1e6
     datasize =
-        (nt ÷ savefreq + 1) * sum(prod.(nles)) * D * 2 * length(bitstring(zero(T))) / 8 / 1e6
+        (nt ÷ savefreq + 1) * sum(prod.(nles)) * D * 2 * length(bitstring(zero(T))) / 8 /
+        1e6
     @info "Generating $datasize Mb of LES data"
 
     # Initial conditions

@@ -86,7 +86,7 @@ x = ntuple(α -> LinRange(params.lims..., nles + 1), params.D)
 setup = Setup(x...; params.Re, ArrayType);
 
 # Uniform periodic grid
-pressure_solver = SpectralPressureSolver(setup);
+psolver = SpectralPressureSolver(setup);
 
 # Inspect data
 (; Ip) = setup.grid;
@@ -181,7 +181,7 @@ dataloaders = [dataloader]
 dataloader()
 
 # A-posteriori loss
-loss = IncompressibleNavierStokes.create_trajectory_loss(; setup, pressure_solver, closure);
+loss = IncompressibleNavierStokes.create_trajectory_loss(; setup, psolver, closure);
 dataloaders = [
     IncompressibleNavierStokes.createtrajectoryloader(data_train; device, nunroll = 20)
     for _ = 1:4
@@ -264,7 +264,7 @@ state_nm, outputs = solve_unsteady(
     u₀,
     tlims;
     Δt,
-    pressure_solver,
+    psolver,
     processors = (;
         relerr = relerr_trajectory(u, setup),
         log = timelogger(; nupdate = 1000),
@@ -277,7 +277,7 @@ state_cnn, outputs = solve_unsteady(
     u₀,
     tlims;
     Δt,
-    pressure_solver,
+    psolver,
     processors = (relerr = relerr_trajectory(u, setup), log = timelogger(; nupdate = 1)),
 )
 relerr_cnn = outputs.relerr[]
@@ -321,7 +321,7 @@ V_nm, outputs_nm = solve_unsteady(
         energy_history_writer(forcedsetup),
         step_logger(; nupdate = 10),
     ),
-    pressure_solver,
+    psolver,
     inplace = false,
     device,
     devsetup,
