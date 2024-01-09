@@ -40,6 +40,7 @@ M \bar{v} & = 0, \\
 
 ```@docs
 face_average!
+volume_average!
 create_les_data
 create_io_arrays
 ```
