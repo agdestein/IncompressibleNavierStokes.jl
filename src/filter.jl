@@ -1,9 +1,17 @@
+abstract type AbstractFilter end
+
+struct FaceAverage <: AbstractFilter end
+struct VolumeAverage <: AbstractFilter end
+
+(Φ::AbstractFilter)(u, setup_les, compression) =
+    Φ(ntuple(α -> similar(u[1], setup_les.grid.N), length(u)), u, setup_les, compression)
+
 """
-    face_average!(v, u, setup, comp)
+    (::FaceAverage)(v, u, setup_les)
 
 Average fine grid `u` over coarse volume face. Put result in `v`.
 """
-function face_average!(v, u, setup_les, comp)
+function (::FaceAverage)(v, u, setup_les, comp)
     (; grid, workgroupsize) = setup_les
     (; Nu, Iu) = grid
     D = length(u)
@@ -27,19 +35,12 @@ function face_average!(v, u, setup_les, comp)
     v
 end
 
-face_average(u, setup_les, comp) = face_average!(
-    ntuple(α -> similar(u[1], setup_les.grid.N), length(u)),
-    u,
-    setup_les,
-    comp,
-)
-
 """
-    volume_average!(v, u, setup, comp)
+    (::VolumeAverage)(v, u, setup_les, comp)
 
 Average fine grid `u` over coarse volume. Put result in `v`.
 """
-function volume_average!(v, u, setup_les, comp)
+function (::VolumeAverage)(v, u, setup_les, comp)
     (; grid, boundary_conditions, workgroupsize) = setup_les
     (; N, Nu, Iu) = grid
     D = length(u)
@@ -51,7 +52,7 @@ function volume_average!(v, u, setup_les, comp)
         s = zero(eltype(v[α]))
         for i in volume
             # Periodic extension
-            K = J+i
+            K = J + i
             K = mod1.(K.I, comp .* (N .- 2))
             K = CartesianIndex(K)
             s += u[α][K]
@@ -66,8 +67,8 @@ function volume_average!(v, u, setup_les, comp)
         volume = CartesianIndices(
             ntuple(
                 β ->
-                    α == β ? iseven(comp) ? (comp÷2:comp÷2+comp)
-                             : (comp+1:2comp+1) : (1:comp),
+                    α == β ? iseven(comp) ? (comp÷2:comp÷2+comp) : (comp+1:2comp+1) :
+                    (1:comp),
                 D,
             ),
         )
@@ -75,10 +76,3 @@ function volume_average!(v, u, setup_les, comp)
     end
     v
 end
-
-volume_average(u, setup_les, comp) = volume_average!(
-    ntuple(α -> similar(u[1], setup_les.grid.N), length(u)),
-    u,
-    setup_les,
-    comp,
-)

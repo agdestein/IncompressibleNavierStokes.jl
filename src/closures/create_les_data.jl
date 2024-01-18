@@ -32,8 +32,8 @@ function gaussian_force(
     force
 end
 
-function lesdatagen(dnsobs, les, compression, psolver)
-    Φu = zero.(face_average(dnsobs[].u, les, compression))
+function lesdatagen(dnsobs, les, Φ, compression, psolver)
+    Φu = zero.(Φ(dnsobs[].u, les, compression))
     p = zero(Φu[1])
     div = zero(p)
     ΦF = zero.(Φu)
@@ -41,9 +41,9 @@ function lesdatagen(dnsobs, les, compression, psolver)
     c = zero.(Φu)
     results = (; u = fill(Array.(dnsobs[].u), 0), c = fill(Array.(dnsobs[].u), 0))
     on(dnsobs) do (; u, F, t)
-        face_average!(Φu, u, les, compression)
+        Φ(Φu, u, les, compression)
         apply_bc_u!(Φu, t, les)
-        face_average!(ΦF, F, les, compression)
+        Φ(ΦF, F, les, compression)
         momentum!(FΦ, Φu, t, les)
         apply_bc_u!(FΦ, t, les; dudt = true)
         project!(FΦ, les; psolver, div, p)
@@ -56,7 +56,7 @@ function lesdatagen(dnsobs, les, compression, psolver)
     results
 end
 
-filtersaver(dns, les, compression, psolver_dns, psolver_les; nupdate = 1) =
+filtersaver(dns, les, Φ, compression, psolver_dns, psolver_les; nupdate = 1) =
     processor() do state
         (; dimension, x) = dns.grid
         T = eltype(x[1])
@@ -66,7 +66,7 @@ filtersaver(dns, les, compression, psolver_dns, psolver_les; nupdate = 1) =
         p = zero(state[].u[1])
         dnsobs = Observable((; state[].u, F, state[].t))
         data = [
-            lesdatagen(dnsobs, les[i], compression[i], psolver_les[i]) for i = 1:length(les)
+            lesdatagen(dnsobs, les[i], Φ[i], compression[i], psolver_les[i]) for i = 1:length(les)
         ]
         results = (;
             t = fill(zero(eltype(x[1])), 0),
@@ -115,6 +115,7 @@ function create_les_data(
     savefreq = 1,
     ArrayType = Array,
     icfunc = (setup, psolver) -> random_field(setup, T(0); psolver),
+    Φ = map(() -> FaceAverage(), nles),
     kwargs...,
 )
     compression = [ndns[1] ÷ nles[1] for nles in nles]
@@ -184,6 +185,7 @@ function create_les_data(
             f = filtersaver(
                 _dns,
                 _les,
+                Φ,
                 compression,
                 psolver,
                 psolver_les;

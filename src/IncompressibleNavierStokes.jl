@@ -130,6 +130,8 @@ export mean_squared_error, relative_error, relerr_trajectory
 export createloss, createdataloader, create_callback, create_les_data, create_io_arrays
 export wrappedclosure
 
+export FaceAverage, VolumeAverage
+
 # ODE methods
 
 export AdamsBashforthCrankNicolsonMethod, OneLegMethod
