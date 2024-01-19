@@ -20,10 +20,18 @@ T = Float64
 
 # Array type
 ArrayType = Array
-## using CUDA; ArrayType = CuArray
+# using CUDA; ArrayType = CuArray;
 ## using AMDGPU; ArrayType = ROCArray
 ## using oneAPI; ArrayType = oneArray
 ## using Metal; ArrayType = MtlArray
+
+using CUDA;
+# T = Float64;
+T = Float32;
+ArrayType = CuArray;
+CUDA.allowscalar(false);
+
+set_theme!(; GLMakie = (; scalefactor = 1.5))
 
 function observe_v(dnsobs, Φ, les, compression, psolver)
     (; ArrayType, grid) = les
@@ -109,21 +117,25 @@ observe_u(dns, psolver_dns, filters; nupdate = 1) =
     end
 
 # Viscosity model
-Re = T(10_000)
+# Re = T(10_000)
+Re = T(6_000)
 
 # A 2D grid is a Cartesian product of two vectors
-ndns = 1024
+# ndns = 4096
+ndns = 512
 lims = T(0), T(1)
-D = 2
+D = 3
 dns = Setup(ntuple(α -> LinRange(lims..., ndns + 1), D)...; Re, ArrayType);
 
 filters = map([
+    (FaceAverage(), 32),
     (FaceAverage(), 64),
     (FaceAverage(), 128),
-    (FaceAverage(), 256),
+    # (FaceAverage(), 256),
+    (VolumeAverage(), 32),
     (VolumeAverage(), 64),
     (VolumeAverage(), 128),
-    (VolumeAverage(), 256),
+    # (VolumeAverage(), 256),
 ]) do (Φ, nles)
     compression = ndns ÷ nles
     setup = Setup(ntuple(α -> LinRange(lims..., nles + 1), D)...; Re, ArrayType)
@@ -138,15 +150,19 @@ psolver_dns = SpectralPressureSolver(dns);
 # Create random initial conditions
 u₀ = random_field(dns, T(0); psolver = psolver_dns);
 
+GC.gc()
+CUDA.reclaim()
+
 # Solve unsteady problem
-state, outputs = solve_unsteady(
+@time state, outputs = solve_unsteady(
     dns,
     u₀,
-    (T(0), T(0.01));
-    Δt = T(1e-4),
+    (T(0), T(0.1));
+    Δt = T(5e-5),
+    docopy = false,
     psolver = psolver_dns,
     processors = (
-        rtp = realtimeplotter(; setup = dns, nupdate = 1),
+        # rtp = realtimeplotter(; setup = dns, nupdate = 5),
         obs = observe_u(dns, psolver_dns, filters),
         # ehist = realtimeplotter(;
         #     setup,
@@ -158,10 +174,54 @@ state, outputs = solve_unsteady(
         # anim = animator(; setup, path = "$output/solution.mkv", nupdate = 20),
         # vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
         # field = fieldsaver(; setup, nupdate = 10),
-        log = timelogger(; nupdate = 100),
+        log = timelogger(; nupdate = 1),
     ),
 );
-(; u, t) = state;
+
+fieldplot(
+    state;
+    setup = dns,
+    fieldname = :eig2field,
+    levels = LinRange(T(12), T(16), 5),
+    # levels = LinRange(-1.0f0, 3.0f0, 5),
+    # levels = LinRange(-2.0f0, 2.0f0, 5),
+    # levels = 5,
+    docolorbar = false,
+)
+
+field = IncompressibleNavierStokes.eig2field(state.u, dns)[dns.grid.Ip]
+# hist(vec(Array(log(max(eps(T), field)))
+hist(vec(Array(log.(max.(eps(T), .-field)))))
+field = nothing
+
+# Float32, 1024^2:
+#
+# 5.711019 seconds (46.76 M allocations: 2.594 GiB, 4.59% gc time, 2.47% compilation time)
+# 5.584943 seconds (46.60 M allocations: 2.583 GiB, 4.43% gc time)
+
+# Float64, 1024^2:
+#
+# 9.584393 seconds (46.67 M allocations: 2.601 GiB, 2.93% gc time)
+# 9.672491 seconds (46.67 M allocations: 2.601 GiB, 2.93% gc time)
+
+# Float64, 4096^2:
+#
+# 114.006495 seconds (47.90 M allocations: 15.499 GiB, 0.28% gc time)
+# 100.907239 seconds (46.45 M allocations: 2.588 GiB, 0.26% gc time)
+
+# Float32, 512^3:
+#
+# 788.762194 seconds (162.34 M allocations: 11.175 GiB, 0.12% gc time)
+
+9.584393 / 5.711019
+9.672491 / 5.584943
+
+# 1.0 * nbyte(Float32) * N * α * (u0 + ui + k1,k2,k3,k4 + p + maybe(complexFFT(Lap)) + maybe(boundaryfree p))
+1.0 * 4 * 1024^3 * 3 * (1 + 1 + 4 + 1 / 3 + 0 * 1 * 2 + 0 * 1 / 3) # RK4: 81.6GB (111GB)
+1.0 * 4 * 1024^3 * 3 * (1 + 0 + 1 + 1 / 3 + 0 * 1 * 2 + 0 * 1 / 3) # RK1: 30.0GB (60.1 GB)
+
+1.0 * 4 * 512^3 * 3 * (1 + 1 + 4 + 1 / 3 + 0 * 1 * 2 + 0 * 1 / 3) # RK4: 10.2GB (13.9GB)
+1.0 * 4 * 512^3 * 3 * (1 + 0 + 1 + 1 / 3 + 1 * 1 * 2 + 1 * 1 / 3) # RK1: 3.76GB (7.52GB)
 
 begin
     println("Φ\t\tM\tDu\tPv\tPc\tc")
@@ -184,6 +244,8 @@ begin
         )
     end
 end;
+
+(; u, t) = state;
 
 o = outputs.obs[1]
 o.Dv
