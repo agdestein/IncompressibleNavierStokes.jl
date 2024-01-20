@@ -38,7 +38,7 @@ function create_initial_conditions(
 
     # Make velocity field divergence free
     apply_bc_u!(u, t, setup)
-    if doproject 
+    if doproject
         u = project(u, setup; psolver)
         apply_bc_u!(u, t, setup)
     end
@@ -47,52 +47,148 @@ function create_initial_conditions(
     u
 end
 
-function create_spectrum(; setup, A, σ, s)
+# function create_spectrum(; setup, A, σ, s)
+#     (; dimension, x, N) = setup.grid
+#     T = eltype(x[1])
+#     D = dimension()
+#     K = N .÷ 2
+#     k = ntuple(
+#         α -> reshape(1:K[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...),
+#         D,
+#     )
+#     a = fill!(similar(x[1], Complex{T}, K), 1)
+#     τ = T(2π)
+#     a .*= prod(N) * A / sqrt(τ^2 * 2σ^2)
+#     for α = 1:D
+#         kα = k[α]
+#         @. a *= exp(-max(abs(kα) - s, 0)^2 / 2σ^2)
+#     end
+#     @. a *= randn(T) * exp(im * τ * rand(T))
+#     for α = 1:D
+#         a = cat(a, reverse(a; dims = α); dims = α)
+#     end
+#     a
+# end
+
+function create_spectrum(; setup, kp)
     (; dimension, x, N) = setup.grid
     T = eltype(x[1])
     D = dimension()
-    K = N .÷ 2
-    k = ntuple(
-        α -> reshape(1:K[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...),
+    τ = T(2π)
+
+    # Maximum wavenumber (remove ghost volumes)
+    K = @. (N - 2) ÷ 2
+
+    # Wavenumber vectors
+    kk = ntuple(
+        α -> reshape(
+            0:K[α]-1,
+            ntuple(Returns(1), α - 1)...,
+            :,
+            ntuple(Returns(1), D - α)...,
+        ),
         D,
     )
-    a = fill!(similar(x[1], Complex{T}, K), 1)
-    τ = T(2π)
-    a .*= prod(N) * A / sqrt(τ^2 * 2σ^2)
+
+    # Wavevector magnitude
+    k = fill!(similar(x[1], K), 0)
     for α = 1:D
-        kα = k[α]
-        @. a *= exp(-max(abs(kα) - s, 0)^2 / 2σ^2)
+        @. k += kk[α]^2
     end
-    @. a *= randn(T) * exp(im * τ * rand(T))
+    k .= sqrt.(k)
+
+    # Shared magnitude
+    A = T(8τ / 3) / kp^5
+
+    # Velocity magnitude
+    a = @. complex(1) * sqrt(A * k^4 * exp(-τ * (k / kp)^2))
+    a .*= prod(N)
+
+    # Apply random phase shift
+    ξ = ntuple(α -> rand!(similar(x[1], K)), D)
     for α = 1:D
         a = cat(a, reverse(a; dims = α); dims = α)
+        ξ = ntuple(D) do β
+            s = α == β ? -1 : 1
+            ξβ = ξ[β]
+            cat(ξβ, reverse(s .* ξβ; dims = α); dims = α)
+        end
     end
-    a
+    ξ = sum(ξ)
+    a = @. exp(im * τ * ξ) * a
+
+    KK = 2 .* K
+    kkkk = ntuple(
+        α -> reshape(
+            0:KK[α]-1,
+            ntuple(Returns(1), α - 1)...,
+            :,
+            ntuple(Returns(1), D - α)...,
+        ),
+        D,
+    )
+    knorm = fill!(similar(x[1], KK), 0)
+    for α = 1:D
+        @. knorm += kkkk[α]^2
+    end
+    knorm .= sqrt.(knorm)
+
+    # Create random unit vector for each wavenumber
+    if D == 2
+        θ = rand!(similar(x[1], KK))
+        e = (cospi.(2 .* θ), sinpi.(2 .* θ))
+    elseif D == 3
+        θ = rand!(similar(x[1], KK))
+        ϕ = rand!(similar(x[1], KK))
+        e = (sinpi.(θ) .* cospi.(2 .* ϕ), sinpi.(θ) .* sinpi.(2 .* ϕ), cospi.(θ))
+    end
+
+    # Remove non-divergence free part: (I - k k^T / k^2) e
+    ke = sum(α -> e[α] .* kkkk[α], 1:D)
+    CUDA.@allowscalar e0 = getindex.(e, 1)
+    for α = 1:D
+        @. e[α] -= kkkk[α] * ke / knorm ^ 2
+    end
+
+    # Restore k=0 component, which is divergence free anyways
+    CUDA.@allowscalar setindex!.(e, e0, 1)
+
+    # Normalize
+    enorm = sqrt.(sum(α -> e[α] .^ 2, 1:D))
+    for α = 1:D
+        e[α] ./= enorm
+    end
+
+    # Split velocity magnitude a into velocity components a*eα
+    uhat = ntuple(D) do α
+        eα = e[α]
+        # for β = 1:D
+        #     eα = cat(eα, reverse(eα; dims = β); dims = β)
+        # end
+        a .* eα
+    end
 end
 
 """
     random_field(
         setup, t = 0;
-        A = 10,
-        σ = 30,
-        s = 5,
-        psolver = DirectPressureSolver(setup),
+        A = 1,
+        kp = 10,
+        psolver = SpectralPressureSolver(setup),
     )
 
-Create random field.
+Create random field, as in [Orlandi2000](@cite).
 
 - `K`: Maximum wavenumber
-- `A`: Eddy amplitude
-- `σ`: Variance
-- `s` Wavenumber offset before energy starts decaying
+- `A`: Eddy amplitude scaling
+- `kp`: Peak energy wavenumber
 """
 function random_field(
     setup,
     t = zero(eltype(setup.grid.x[1]));
-    A = convert(eltype(setup.grid.x[1]), 10),
-    σ = convert(eltype(setup.grid.x[1]), 30),
-    s = convert(eltype(setup.grid.x[1]), 5),
-    psolver = DirectPressureSolver(setup),
+    A = 1,
+    kp = 10,
+    psolver = SpectralPressureSolver(setup),
 )
     (; dimension, x, Ip, Ω) = setup.grid
     D = dimension()
@@ -100,9 +196,15 @@ function random_field(
     backend = get_backend(x[1])
 
     # Create random velocity field
-    u = ntuple(α -> real.(ifft(create_spectrum(; setup, A, σ, s))), D)
+    uhat = create_spectrum(; setup, kp)
+    u = ifft.(uhat)
+    u = map(u -> A .* real.(u), u)
 
-    # Make velocity field divergence free
+    # Add ghost volumes (one on each side for periodic)
+    u = pad_circular.(u, 1; dims = 1:D)
+
+    # Make velocity field divergence free on staggered grid
+    # (it is already diergence free on the "spectral grid")
     apply_bc_u!(u, t, setup)
     project(u, setup; psolver)
     apply_bc_u!(u, t, setup)
