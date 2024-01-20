@@ -90,7 +90,7 @@ function fieldplot(
     kwargs...,
 )
     (; boundary_conditions, grid) = setup
-    (; dimension, xlims, x, xp, Ip) = grid
+    (; dimension, xlims, x, xp, Ip, Δ) = grid
     D = dimension()
 
     xf = Array.(getindex.(setup.grid.xp, Ip.indices))
@@ -175,6 +175,14 @@ function fieldplot(
         limits = (xlims[1]..., xlims[2]...),
     )
     equal_axis && (axis = (axis..., aspect = DataAspect()))
+
+    # Image requires boundary coordinates only
+    if type == image
+        Δx = first.(Array.(Δ))
+        @assert all(≈(Δx[1]), Δx) "Image requires rectangular pixels"
+        @assert(all(α -> all(≈(Δx[α]), Δ[α]), 1:D), "Image requires uniform grid",)
+        xf = map(extrema, xf)
+    end
 
     size = isnothing(size) ? (;) : (; size)
     fig = Figure(; size...)
