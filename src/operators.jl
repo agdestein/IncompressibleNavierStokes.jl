@@ -1115,7 +1115,8 @@ Qfield(u, setup) = Qfield!(similar(u[1], setup.grid.N), u, setup)
 """
     eig2field!(λ, u, setup; ϵ = eps(eltype(λ)))
 
-Compute the second eigenvalue of ``S^2 + \\Omega^2``.
+Compute the second eigenvalue of ``S^2 + \\Omega^2``,
+as proposed by Jeong and Hussain [Jeong1995](@cite).
 """
 function eig2field!(λ, u, setup)
     (; grid, workgroupsize) = setup
@@ -1139,7 +1140,8 @@ end
 """
     eig2field(u, setup)
 
-Compute the second eigenvalue of ``S^2 + \\Omega^2``.
+Compute the second eigenvalue of ``S^2 + \\Omega^2``,
+as proposed by Jeong and Hussain [Jeong1995](@cite).
 """
 eig2field(u, setup) = eig2field!(similar(u[1], setup.grid.N), u, setup)
 
