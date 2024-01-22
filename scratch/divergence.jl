@@ -7,13 +7,16 @@ end                                                 #src
 
 #md using CairoMakie
 using GLMakie
+# using CairoMakie
 using IncompressibleNavierStokes
-using IncompressibleNavierStokes: momentum!, divergence!, project!, apply_bc_u!
+using IncompressibleNavierStokes: momentum!, divergence!, project!, apply_bc_u!, spectral_stuff, kinetic_energy
 using LinearAlgebra
 using Printf
+using FFTW
 
 # Output directory
-output = "output/DecayingTurbulence2D"
+output = "output/divergence"
+output = "../SupervisedClosure/figures"
 
 # Floating point precision
 T = Float64
@@ -26,15 +29,16 @@ ArrayType = Array
 ## using Metal; ArrayType = MtlArray
 
 using CUDA;
-# T = Float64;
-T = Float32;
+T = Float64;
+# T = Float32;
 ArrayType = CuArray;
 CUDA.allowscalar(false);
 
+set_theme!()
 set_theme!(; GLMakie = (; scalefactor = 1.5))
 
 function observe_v(dnsobs, Φ, les, compression, psolver)
-    (; ArrayType, grid) = les
+    (; grid) = les
     (; dimension, N, Iu, Ip) = grid
     D = dimension()
     Mα = N[1] - 2
@@ -93,9 +97,6 @@ end
 
 observe_u(dns, psolver_dns, filters; nupdate = 1) =
     processor() do state
-        (; dimension, x) = dns.grid
-        T = eltype(x[1])
-        D = dimension()
         PF = zero.(state[].u)
         div = zero(state[].u[1])
         p = zero(state[].u[1])
@@ -117,25 +118,27 @@ observe_u(dns, psolver_dns, filters; nupdate = 1) =
     end
 
 # Viscosity model
-# Re = T(10_000)
-Re = T(6_000)
+Re = T(10_000)
+# Re = T(6_000)
 
 # A 2D grid is a Cartesian product of two vectors
-# ndns = 4096
-ndns = 512
+ndns = 4096
+# ndns = 256
+# ndns = 512
 lims = T(0), T(1)
-D = 3
+D = 2
+# D = 3
 dns = Setup(ntuple(α -> LinRange(lims..., ndns + 1), D)...; Re, ArrayType);
 
 filters = map([
-    (FaceAverage(), 32),
+    # (FaceAverage(), 32),
     (FaceAverage(), 64),
     (FaceAverage(), 128),
-    # (FaceAverage(), 256),
-    (VolumeAverage(), 32),
+    (FaceAverage(), 256),
+    # (VolumeAverage(), 32),
     (VolumeAverage(), 64),
     (VolumeAverage(), 128),
-    # (VolumeAverage(), 256),
+    (VolumeAverage(), 256),
 ]) do (Φ, nles)
     compression = ndns ÷ nles
     setup = Setup(ntuple(α -> LinRange(lims..., nles + 1), D)...; Re, ArrayType)
@@ -148,22 +151,42 @@ end;
 psolver_dns = SpectralPressureSolver(dns);
 
 # Create random initial conditions
-u₀ = random_field(dns, T(0); psolver = psolver_dns);
+# u₀ = random_field(dns, T(0); kp = 5, psolver = psolver_dns);
+u₀ = random_field(dns, T(0); kp = 20, psolver = psolver_dns);
+state = (; u = u₀, t = T(0));
 
 GC.gc()
 CUDA.reclaim()
+
+energy_spectrum_plot((; u = u₀, t = T(0)); setup = dns, doaverage = false)
+
+fieldplot(
+    (; u = u₀, t = T(0));
+    setup = dns,
+    # type = image,
+    # colormap = :viridis,
+)
 
 # Solve unsteady problem
 @time state, outputs = solve_unsteady(
     dns,
     u₀,
-    (T(0), T(0.1));
+    (T(0), T(1e-1));
+    # Δt = T(1e-4),
     Δt = T(5e-5),
-    docopy = false,
+    docopy = true,
     psolver = psolver_dns,
     processors = (
-        # rtp = realtimeplotter(; setup = dns, nupdate = 5),
-        obs = observe_u(dns, psolver_dns, filters),
+        # anim = animator(; path = "$output/solution.mkv",
+        # rtp = realtimeplotter(;
+        #     setup = dns,
+        #     nupdate = 50,
+        #     fieldname = :eig2field,
+        #     levels = LinRange(T(2), T(10), 10),
+        #     # levels = 5,
+        #     docolorbar = false,
+        # ),
+        obs = observe_u(dns, psolver_dns, filters; nupdate = 20),
         # ehist = realtimeplotter(;
         #     setup,
         #     plot = energy_history_plot,
@@ -178,21 +201,74 @@ CUDA.reclaim()
     ),
 );
 
+# 103.5320324
+
+state.u[1]
+
 fieldplot(
-    state;
+    (; u = u₀, t = T(0));
+    setup = dns,
+    # type = image,
+    # colormap = :viridis,
+    docolorbar = false,
+    size = (500, 500),
+)
+
+save("$output/vorticity_start.png", current_figure())
+
+fieldplot(
+    state,
+    setup = dns,
+    # type = image,
+    # colormap = :viridis,
+    docolorbar = false,
+    size = (500, 500),
+)
+
+save("$output/vorticity_end.png", current_figure())
+
+i = 1
+fieldplot(
+    (; u = filters[i].Φ(state.u, filters[i].setup, filters[i].compression), t = T(0));
+    setup = filters[i].setup,
+    # type = image,
+    # colormap = :viridis,
+    docolorbar = false,
+    size = (500, 500),
+)
+
+save("$output/vorticity_end_$(filters[i].compression).png", current_figure())
+
+fieldplot(
+    (; u = u₀, t = T(0));
+    # state;
     setup = dns,
     fieldname = :eig2field,
-    levels = LinRange(T(12), T(16), 5),
+    levels = LinRange(T(2), T(10), 10),
+    # levels = LinRange(T(4), T(12), 10),
     # levels = LinRange(-1.0f0, 3.0f0, 5),
     # levels = LinRange(-2.0f0, 2.0f0, 5),
     # levels = 5,
     docolorbar = false,
+    size = (800, 800),
 )
+
+save("$output/lambda2_start.png", current_figure())
+save("$output/lambda2_end.png", current_figure())
 
 field = IncompressibleNavierStokes.eig2field(state.u, dns)[dns.grid.Ip]
 # hist(vec(Array(log(max(eps(T), field)))
 hist(vec(Array(log.(max.(eps(T), .-field)))))
 field = nothing
+
+energy_spectrum_plot(state; setup = dns, doaverage = false)
+
+i = 6
+ubar = filters[i].Φ(state.u, filters[i].setup, filters[i].compression)
+energy_spectrum_plot((; u = ubar, t = T(0)); filters[i].setup, doaverage = false)
+
+state.u
+
 
 # Float32, 1024^2:
 #
@@ -222,6 +298,8 @@ field = nothing
 
 1.0 * 4 * 512^3 * 3 * (1 + 1 + 4 + 1 / 3 + 0 * 1 * 2 + 0 * 1 / 3) # RK4: 10.2GB (13.9GB)
 1.0 * 4 * 512^3 * 3 * (1 + 0 + 1 + 1 / 3 + 1 * 1 * 2 + 1 * 1 / 3) # RK1: 3.76GB (7.52GB)
+
+1.0 * 8 * 512^3 * 3 * (1 + 1 + 3 + 1 / 3 + 0 * 1 * 2 + 0 * 1 / 3) # RK4: 10.2GB (13.9GB)
 
 begin
     println("Φ\t\tM\tDu\tPv\tPc\tc")
@@ -265,3 +343,83 @@ div = IncompressibleNavierStokes.divergence(ubar, les)[les.grid.Ip]
 
 norm(div)
 norm(ubar[1][les.grid.Iu[1]])
+
+GLMakie.activate!()
+
+using CairoMakie
+CairoMakie.activate!()
+
+# Plot predicted spectra
+fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
+    fields = [state.u, u₀, (f.Φ(state.u, f.setup, f.compression) for f in filters)...]
+    setups = [dns, dns, (f.setup for f in filters)...]
+    specs = map(fields, setups) do u, setup
+        GC.gc()
+        CUDA.reclaim()
+        (; dimension, xp, Ip) = setup.grid
+        T = eltype(xp[1])
+        D = dimension()
+        (; K, kmax, k, A) = spectral_stuff(setup; doaverage = false)
+        ke = kinetic_energy(u, setup; interpolate_first = false)
+        e = ke[Ip]
+        e = fft(e)[ntuple(α -> 1:K[α], D)...]
+        e = abs.(e) ./ prod(size(e))
+        # nn = sqrt(T(prod(size(e))))
+        # nn = T(size(e, 1))^T(3.1)
+        # e = abs.(e) ./ nn
+        e = A * reshape(e, :)
+        e = max.(e, eps(T)) # Avoid log(0)
+        ehat = Array(e)
+        (; kmax, ehat)
+    end
+    (; kmax) = specs[1]
+    # Build inertial slope above energy
+    if D == 2
+        # krange = [T(kmax)^(T(1) / 2), T(kmax)]
+        krange = [T(50), T(400)]
+    elseif D == 3
+        krange = [T(kmax)^(T(2) / 3), T(kmax)]
+    end
+    slope, slopelabel = D == 2 ? (-T(3), L"$\kappa^{-3}") : (-T(5 / 3), L"$\kappa^{-5/3}")
+    # slope, slopelabel = D == 2 ? (-T(3), "|k|⁻³") : (-T(5 / 3), "|k|⁻⁵³")
+    # slope, slopelabel = D == 2 ? (-T(3), "κ⁻³") : (-T(5 / 3), "κ⁻⁵³")
+    slopeconst = maximum(specs[1].ehat ./ (1:kmax) .^ slope)
+    inertia = 2 .* slopeconst .* krange .^ slope
+    # Nice ticks
+    logmax = round(Int, log2(kmax + 1))
+    xticks = T(2) .^ (0:logmax)
+    # Make plot
+    fig = Figure(; size = (500, 400))
+    ax = Axis(
+        fig[1, 1];
+        xticks,
+        # xlabel = "k",
+        xlabel = "κ",
+        ylabel = "e(κ)",
+        xscale = log10,
+        yscale = log10,
+        limits = (1, kmax, T(1e-8), T(1)),
+        title = "Kinetic energy",
+    )
+    lines!(ax, 1:specs[1].kmax, specs[1].ehat; color = Cycled(1), label = "DNS")
+    lines!(ax, 1:specs[2].kmax, specs[2].ehat; color = Cycled(4), label = "DNS, t = 0")
+    lines!(ax, 1:specs[3].kmax, specs[3].ehat; color = Cycled(2), label = "Face average")
+    lines!(ax, 1:specs[4].kmax, specs[4].ehat; color = Cycled(2))
+    lines!(ax, 1:specs[5].kmax, specs[5].ehat; color = Cycled(2))
+    lines!(ax, 1:specs[6].kmax, specs[6].ehat; color = Cycled(3), label = "Volume average")
+    lines!(ax, 1:specs[7].kmax, specs[7].ehat; color = Cycled(3))
+    lines!(ax, 1:specs[8].kmax, specs[8].ehat; color = Cycled(3))
+    lines!(ax, krange, inertia; color = Cycled(1), label = slopelabel, linestyle = :dash)
+    axislegend(ax; position = :lb)
+    autolimits!(ax)
+    if D == 2
+        limits!(ax, (T(0.68), T(520)), (T(1e-3), T(3e1)))
+    elseif D == 3
+        limits!(ax, ax.xaxis.attributes.limits[], (T(1e-1), T(3e1)))
+    end
+    fig
+end
+GC.gc()
+CUDA.reclaim()
+
+save("$output/priorspectra_$(D)D.pdf", fig)

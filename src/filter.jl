@@ -3,8 +3,12 @@ abstract type AbstractFilter end
 struct FaceAverage <: AbstractFilter end
 struct VolumeAverage <: AbstractFilter end
 
-(Φ::AbstractFilter)(u, setup_les, compression) =
-    Φ(ntuple(α -> similar(u[1], setup_les.grid.N), length(u)), u, setup_les, compression)
+(Φ::AbstractFilter)(u, setup_les, compression) = Φ(
+    ntuple(α -> fill!(similar(u[1], setup_les.grid.N), 0), length(u)),
+    u,
+    setup_les,
+    compression,
+)
 
 """
     (::FaceAverage)(v, u, setup_les)
@@ -50,14 +54,16 @@ function (::VolumeAverage)(v, u, setup_les, comp)
         I = @index(Global, Cartesian)
         J = I0 + comp * (I - oneunit(I))
         s = zero(eltype(v[α]))
+        # n = 0
         for i in volume
             # Periodic extension
             K = J + i
             K = mod1.(K.I, comp .* (N .- 2))
             K = CartesianIndex(K)
             s += u[α][K]
+            # n += 1
         end
-        n = (iseven(comp) ? comp : comp + 1) * comp^(D - 1)
+        n = (iseven(comp) ? comp + 1 : comp) * comp^(D - 1)
         v[α][I0+I] = s / n
     end
     for α = 1:D
