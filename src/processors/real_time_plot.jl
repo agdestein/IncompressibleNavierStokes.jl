@@ -331,59 +331,34 @@ as in San and Staples [San2012](@cite).
 """
 function energy_spectrum_plot(state; setup, doaverage = false)
     state isa Observable || (state = Observable(state))
+
     (; dimension, xp, Ip) = setup.grid
-    backend = get_backend(xp[1])
     T = eltype(xp[1])
     D = dimension()
-    K = size(Ip) .÷ 2
-    kx = ntuple(α -> 0:K[α]-1, D)
-    k = fill!(similar(xp[1], length.(kx)), 0)
-    for α = 1:D
-        kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
-        k .+= kα .^ 2
-    end
-    k .= sqrt.(k)
-    k = reshape(k, :)
 
-    # Sum or average wavenumbers between k and k+1
-    kmax = minimum(K) - 1
-    nk = ceil(Int, maximum(k))
-    kint = 1:kmax
-    ia = similar(xp[1], Int, 0)
-    ib = sortperm(k)
-    vals = similar(xp[1], 0)
-    ksort = k[ib]
-    jprev = 2 # Do not include constant mode
-    for ki = 1:kmax
-        j = findfirst(>(ki + 1), ksort)
-        isnothing(j) && (j = length(k) + 1)
-        ia = [ia; fill!(similar(ia, j - jprev), ki)]
-        val = doaverage ? T(1) / (j - jprev) : T(π) * ((ki + 1)^2 - ki^2) / (j - jprev)
-        vals = [vals; fill!(similar(vals, j - jprev), val)]
-        jprev = j
-    end
-    ib = ib[2:jprev-1]
-    A = sparse(ia, ib, vals, kmax, length(k))
+    (; K, kmax, k, A) = spectral_stuff(setup; doaverage)
 
     # Energy
     ke = kinetic_energy(state[].u, setup)
     ehat = lift(state) do (; u, t)
         kinetic_energy!(ke, u, setup)
         e = ke[Ip]
-        e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
-        e = abs.(e) ./ size(e, 1)
+        e = fft(e)[ntuple(α -> 1:K[α], D)...]
+        # e = abs.(e) ./ size(e, 1)
+        e = abs.(e) ./ prod(size(e))
         e = A * reshape(e, :)
         e = max.(e, eps(T)) # Avoid log(0)
         Array(e)
     end
 
     # Build inertial slope above energy
-    # krange = LinRange(extrema(kint)..., 100)
-    # krange = collect(extrema(kint))
-    krange = [cbrt(T(kmax)), T(kmax)]
+    # krange = LinRange(1, kmax, 100)
+    # krange = collect(1, kmax)
+    # krange = [cbrt(T(kmax)), T(kmax)]
+    krange = [T(kmax)^(T(2) / 3), T(kmax)]
     slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
     inertia = lift(ehat) do ehat
-        slopeconst = maximum(ehat ./ kint .^ slope)
+        slopeconst = maximum(ehat ./ (1:kmax) .^ slope)
         2 .* slopeconst .* krange .^ slope
     end
 
@@ -399,9 +374,9 @@ function energy_spectrum_plot(state; setup, doaverage = false)
         ylabel = "e(k)",
         xscale = log10,
         yscale = log10,
-        limits = (extrema(kint)..., T(1e-8), T(1)),
+        limits = (1, kmax, T(1e-8), T(1)),
     )
-    lines!(ax, kint, ehat; label = "Kinetic energy")
+    lines!(ax, 1:kmax, ehat; label = "Kinetic energy")
     lines!(ax, krange, inertia; label = slopelabel, linestyle = :dash)
     axislegend(ax)
     # autolimits!(ax)
