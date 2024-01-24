@@ -9,7 +9,8 @@ end                                                 #src
 using GLMakie
 # using CairoMakie
 using IncompressibleNavierStokes
-using IncompressibleNavierStokes: momentum!, divergence!, project!, apply_bc_u!, spectral_stuff, kinetic_energy
+using IncompressibleNavierStokes:
+    momentum!, divergence!, project!, apply_bc_u!, spectral_stuff, kinetic_energy
 using LinearAlgebra
 using Printf
 using FFTW
@@ -197,7 +198,7 @@ fieldplot(
         # anim = animator(; setup, path = "$output/solution.mkv", nupdate = 20),
         # vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
         # field = fieldsaver(; setup, nupdate = 10),
-        log = timelogger(; nupdate = 1),
+        log = timelogger(; nupdate = 5),
     ),
 );
 
@@ -240,8 +241,8 @@ fieldplot(
 save("$output/vorticity_end_$(filters[i].compression).png", current_figure())
 
 fieldplot(
-    (; u = u₀, t = T(0));
-    # state;
+    # (; u = u₀, t = T(0));
+    state;
     setup = dns,
     fieldname = :eig2field,
     levels = LinRange(T(2), T(10), 10),
@@ -250,13 +251,36 @@ fieldplot(
     # levels = LinRange(-2.0f0, 2.0f0, 5),
     # levels = 5,
     docolorbar = false,
-    size = (800, 800),
+    # size = (800, 800),
+    size = (500, 500),
 )
 
 save("$output/lambda2_start.png", current_figure())
 save("$output/lambda2_end.png", current_figure())
 
-field = IncompressibleNavierStokes.eig2field(state.u, dns)[dns.grid.Ip]
+i = 2
+fieldplot(
+    (; u = filters[i].Φ(state.u, filters[i].setup, filters[i].compression), t = T(0));
+    setup = filters[i].setup,
+    fieldname = :eig2field,
+    levels = LinRange(T(2), T(10), 10),
+    # levels = LinRange(T(4), T(12), 10),
+    # levels = LinRange(-1.0f0, 3.0f0, 5),
+    # levels = LinRange(-2.0f0, 2.0f0, 5),
+    # levels = 5,
+    docolorbar = false,
+    # size = (800, 800),
+    size = (500, 500),
+)
+
+save("$output/lambda2_end_filtered.png", current_figure())
+
+i = 2
+# field = IncompressibleNavierStokes.eig2field(state.u, dns)[dns.grid.Ip]
+field = IncompressibleNavierStokes.eig2field(
+    filters[i].Φ(state.u, filters[i].setup, filters[i].compression),
+    filters[i].setup,
+)[filters[i].setup.grid.Ip]
 # hist(vec(Array(log(max(eps(T), field)))
 hist(vec(Array(log.(max.(eps(T), .-field)))))
 field = nothing
@@ -268,7 +292,6 @@ ubar = filters[i].Φ(state.u, filters[i].setup, filters[i].compression)
 energy_spectrum_plot((; u = ubar, t = T(0)); filters[i].setup, doaverage = false)
 
 state.u
-
 
 # Float32, 1024^2:
 #
@@ -380,7 +403,8 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     elseif D == 3
         krange = [T(kmax)^(T(2) / 3), T(kmax)]
     end
-    slope, slopelabel = D == 2 ? (-T(3), L"$\kappa^{-3}") : (-T(5 / 3), L"$\kappa^{-5/3}")
+    slope, slopelabel =
+        D == 2 ? (-T(3), L"$\kappa^{-3}") : (-T(5 / 3), L"$\kappa^{-5/3}")
     # slope, slopelabel = D == 2 ? (-T(3), "|k|⁻³") : (-T(5 / 3), "|k|⁻⁵³")
     # slope, slopelabel = D == 2 ? (-T(3), "κ⁻³") : (-T(5 / 3), "κ⁻⁵³")
     slopeconst = maximum(specs[1].ehat ./ (1:kmax) .^ slope)
@@ -401,16 +425,18 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         limits = (1, kmax, T(1e-8), T(1)),
         title = "Kinetic energy",
     )
+    # plotparts(i) = 1:specs[i].kmax, specs[i].ehat
+    plotparts(i) = 1:specs[i].kmax+1, [specs[i].ehat; eps(T)]
     lines!(ax, 1:specs[1].kmax, specs[1].ehat; color = Cycled(1), label = "DNS")
     lines!(ax, 1:specs[2].kmax, specs[2].ehat; color = Cycled(4), label = "DNS, t = 0")
-    lines!(ax, 1:specs[3].kmax, specs[3].ehat; color = Cycled(2), label = "Face average")
-    lines!(ax, 1:specs[4].kmax, specs[4].ehat; color = Cycled(2))
-    lines!(ax, 1:specs[5].kmax, specs[5].ehat; color = Cycled(2))
-    lines!(ax, 1:specs[6].kmax, specs[6].ehat; color = Cycled(3), label = "Volume average")
-    lines!(ax, 1:specs[7].kmax, specs[7].ehat; color = Cycled(3))
-    lines!(ax, 1:specs[8].kmax, specs[8].ehat; color = Cycled(3))
+    lines!(ax, plotparts(3)...; color = Cycled(2), label = "Face average")
+    lines!(ax, plotparts(4)...; color = Cycled(2))
+    lines!(ax, plotparts(5)...; color = Cycled(2))
+    lines!(ax, plotparts(6)...; color = Cycled(3), label = "Volume average")
+    lines!(ax, plotparts(7)...; color = Cycled(3))
+    lines!(ax, plotparts(8)...; color = Cycled(3))
     lines!(ax, krange, inertia; color = Cycled(1), label = slopelabel, linestyle = :dash)
-    axislegend(ax; position = :lb)
+    # axislegend(ax; position = :lb)
     autolimits!(ax)
     if D == 2
         limits!(ax, (T(0.68), T(520)), (T(1e-3), T(3e1)))

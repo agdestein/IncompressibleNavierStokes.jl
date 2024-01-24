@@ -467,7 +467,7 @@ Right hand side of momentum equations, excluding pressure gradient.
 Put the result in ``F``.
 """
 function momentum!(F, u, t, setup; θ = nothing)
-    (; grid, closure_model) = setup
+    (; grid, closure_model, unproject_closure) = setup
     (; dimension) = grid
     D = dimension()
     for α = 1:D
@@ -477,7 +477,7 @@ function momentum!(F, u, t, setup; θ = nothing)
     # convection!(F, u, setup)
     convectiondiffusion!(F, u, setup)
     bodyforce!(F, u, t, setup)
-    if !isnothing(closure_model)
+    if !isnothing(closure_model) && !unproject_closure
         m = closure_model
         mu = m(u, θ)
         for α = 1:D
@@ -502,7 +502,7 @@ Right hand side of momentum equations, excluding pressure gradient.
 """
 # momentum(u, t, setup) = momentum!(zero.(u), u, t, setup)
 function momentum(u, t, setup; θ = nothing)
-    (; grid, closure_model) = setup
+    (; grid, closure_model, unproject_closure) = setup
     (; dimension) = grid
     D = dimension()
     d = diffusion(u, setup)
@@ -513,7 +513,7 @@ function momentum(u, t, setup; θ = nothing)
     # end
     F = @. d + c + f
     # F = tupleadd(d, c, f)
-    if !isnothing(closure_model)
+    if !isnothing(closure_model) && !unproject_closure
         m = closure_model
         F = F .+ m(u, θ)
         # F = tupleadd(F, m)

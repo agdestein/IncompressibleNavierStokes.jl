@@ -32,14 +32,17 @@ function gaussian_force(
     force
 end
 
-function lesdatagen(dnsobs, les, Φ, compression, psolver)
+function lesdatagen(dnsobs, Φ, les, compression, psolver)
     Φu = zero.(Φ(dnsobs[].u, les, compression))
     p = zero(Φu[1])
     div = zero(p)
     ΦF = zero.(Φu)
     FΦ = zero.(Φu)
     c = zero.(Φu)
-    results = (; u = fill(Array.(dnsobs[].u), 0), c = fill(Array.(dnsobs[].u), 0))
+    results = (;
+        u = fill(Array.(dnsobs[].u), 0),
+        c = fill(Array.(dnsobs[].u), 0),
+    )
     on(dnsobs) do (; u, F, t)
         Φ(Φu, u, les, compression)
         apply_bc_u!(Φu, t, les)
@@ -56,23 +59,22 @@ function lesdatagen(dnsobs, les, Φ, compression, psolver)
     results
 end
 
-filtersaver(dns, les, Φ, compression, psolver_dns, psolver_les; nupdate = 1) =
+filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 1) =
     processor() do state
-        (; dimension, x) = dns.grid
+        (; x) = dns.grid
         T = eltype(x[1])
-        D = dimension()
         F = zero.(state[].u)
         div = zero(state[].u[1])
         p = zero(state[].u[1])
         dnsobs = Observable((; state[].u, F, state[].t))
         data = [
-            lesdatagen(dnsobs, les[i], Φ[i], compression[i], psolver_les[i]) for i = 1:length(les)
+            lesdatagen(dnsobs, Φ, les[i], compression[i], psolver_les[i]) for
+            i = 1:length(les), Φ in filters
         ]
         results = (;
-            t = fill(zero(eltype(x[1])), 0),
-            u = [d.u for d in data],
-            c = [d.c for d in data],
-        )
+            data,
+            t = zeros(T, 0),
+      )
         on(state) do (; u, t, n)
             n % nupdate == 0 || return
             momentum!(F, u, t, dns)
@@ -93,6 +95,7 @@ filtersaver(dns, les, Φ, compression, psolver_dns, psolver_les; nupdate = 1) =
         lims = (T(0), T(1)),
         nles = [64],
         ndns = 256,
+        filters = (FaceAverage(),),
         tburn = T(0.1),
         tsim = T(0.1),
         Δt = T(1e-4),
@@ -101,23 +104,24 @@ filtersaver(dns, les, Φ, compression, psolver_dns, psolver_les; nupdate = 1) =
 
 Create filtered DNS data.
 """
-function create_les_data(
-    T;
+function create_les_data(;
     D = 2,
-    Re = T(2_000),
-    lims = ntuple(α -> (T(0), T(1)), D),
+    Re = 2e3,
+    lims = ntuple(α -> (typeof(Re)(0), typeof(Re)(1)), D),
     nles = [ntuple(α -> 64, D)],
     ndns = ntuple(α -> 256, D),
-    tburn = T(0.1),
-    tsim = T(0.1),
-    Δt = T(1e-4),
+    filters = (FaceAverage(),),
+    tburn = typeof(Re)(0.1),
+    tsim = typeof(Re)(0.1),
+    Δt = typeof(Re)(1e-4),
     PSolver = SpectralPressureSolver,
     savefreq = 1,
     ArrayType = Array,
-    icfunc = (setup, psolver) -> random_field(setup, T(0); psolver),
-    Φ = map(() -> FaceAverage(), nles),
+    icfunc = (setup, psolver) -> random_field(setup, typeof(Re)(0); psolver),
     kwargs...,
 )
+    T = typeof(Re)
+
     compression = [ndns[1] ÷ nles[1] for nles in nles]
     for (c, n) in zip(compression, nles), α = 1:D
         @assert c * n[α] == ndns[α]
@@ -150,8 +154,12 @@ function create_les_data(
 
     # datasize = Base.summarysize(filtered) / 1e6
     datasize =
-        (nt ÷ savefreq + 1) * sum(prod.(nles)) * D * 2 * length(bitstring(zero(T))) / 8 /
-        1e6
+        length(filters) *
+        (nt ÷ savefreq + 1) *
+        sum(prod.(nles)) *
+        D *
+        2 *
+        length(bitstring(zero(T))) / 8 / 1e6
     @info "Generating $datasize Mb of LES data"
 
     # Initial conditions
@@ -185,18 +193,20 @@ function create_les_data(
             f = filtersaver(
                 _dns,
                 _les,
-                Φ,
+                filters,
                 compression,
                 psolver,
                 psolver_les;
                 nupdate = savefreq,
             ),
+            # plot = realtimeplotter(; setup = dns, nupdate = 10),
+            log = timelogger(; nupdate = 100),
         ),
         psolver,
     )
 
     # Store result for current IC
-    outputs[1]
+    outputs.f
 end
 
 """
@@ -206,18 +216,19 @@ Create ``(\\bar{u}, c)`` pairs for training.
 """
 function create_io_arrays(data, setups)
     nsample = length(data)
-    ngrid = length(setups)
-    nt = length(data[1].u[1]) - 1
-    T = eltype(data[1].u[1][1][1])
-    map(1:ngrid) do ig
+    ngrid, nfilter = size(data[1].data)
+    nt = length(data[1].t) - 1
+    T = eltype(data[1].t)
+    map(CartesianIndices((ngrid, nfilter))) do I
+        ig, ifil = I.I
         (; dimension, N, Iu) = setups[ig].grid
         D = dimension()
         u = zeros(T, (N .- 2)..., D, nt + 1, nsample)
         c = zeros(T, (N .- 2)..., D, nt + 1, nsample)
         ifield = ntuple(Returns(:), D)
         for is = 1:nsample, it = 1:nt+1, α = 1:D
-            copyto!(view(u, ifield..., α, it, is), view(data[is].u[ig][it][α], Iu[α]))
-            copyto!(view(c, ifield..., α, it, is), view(data[is].c[ig][it][α], Iu[α]))
+            copyto!(view(u, ifield..., α, it, is), view(data[is].data[ig, ifil].u[it][α], Iu[α]))
+            copyto!(view(c, ifield..., α, it, is), view(data[is].data[ig, ifil].c[it][α], Iu[α]))
         end
         (; u = reshape(u, (N .- 2)..., D, :), c = reshape(c, (N .- 2)..., D, :))
     end

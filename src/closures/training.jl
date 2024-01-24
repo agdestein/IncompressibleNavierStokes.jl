@@ -81,8 +81,8 @@ Compute MSE between `f(x, θ)` and `y`.
 
 The MSE is further divided by `normalize(y)`.
 """
-mean_squared_error(f, x, y, θ; normalize = y -> sum(abs2, y), λ = sqrt(eps(eltype(x)))) =
-    sum(abs2, f(x, θ) - y) / normalize(y) + λ * sum(abs2, θ) / length(θ)
+mean_squared_error(f, x, y, θ; normalize = y -> sum(abs2, y), λ = sqrt(eltype(x)(1e-8))) =
+    sum(abs2, f(x, θ) - y) / normalize(y) + λ * sum(abs2, θ)
 
 """
     relative_error(x, y)
@@ -170,7 +170,7 @@ function create_callback(f, x, y; state = Point2f[], display_each_iteration = fa
         @info "Iteration $i \trelative error: $e"
         state = push!(copy(state), Point2f(istart + i, e))
         obs[] = state
-        i < 10 || autolimits!(fig.axis)
+        i < 30 || autolimits!(fig.axis)
         display_each_iteration && display(fig)
         state
     end

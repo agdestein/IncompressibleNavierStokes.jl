@@ -21,6 +21,7 @@ function Setup(
     bodyforce = nothing,
     issteadybodyforce = true,
     closure_model = nothing,
+    unproject_closure = false,
     ArrayType = Array,
     workgroupsize = 64,
 )
@@ -32,6 +33,7 @@ function Setup(
         bodyforce,
         issteadybodyforce = false,
         closure_model,
+        unproject_closure,
         ArrayType,
         T = eltype(x[1]),
         workgroupsize,
