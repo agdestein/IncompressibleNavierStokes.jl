@@ -329,14 +329,14 @@ The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is defined 
 
 as in San and Staples [San2012](@cite).
 """
-function energy_spectrum_plot(state; setup)
+function energy_spectrum_plot(state; setup, dyadic = true, a = 2)
     state isa Observable || (state = Observable(state))
 
     (; dimension, xp, Ip) = setup.grid
     T = eltype(xp[1])
     D = dimension()
 
-    (; K, kmax, k, A) = spectral_stuff(setup)
+    (; K, kmax, κ, A) = spectral_stuff(setup; dyadic, a)
 
     # Energy
     # up = interpolate_u_p(state[].u, setup)
@@ -362,7 +362,7 @@ function energy_spectrum_plot(state; setup)
     # krange = [T(kmax)^(T(2) / 3), T(kmax)]
     slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
     inertia = lift(ehat) do ehat
-        slopeconst = maximum(ehat ./ (1:kmax) .^ slope)
+        slopeconst = maximum(ehat ./ κ .^ slope)
         2 .* slopeconst .* krange .^ slope
     end
 
@@ -380,7 +380,7 @@ function energy_spectrum_plot(state; setup)
         yscale = log10,
         limits = (1, kmax, T(1e-8), T(1)),
     )
-    lines!(ax, 1:kmax, ehat; label = "Kinetic energy")
+    lines!(ax, κ, ehat; label = "Kinetic energy")
     lines!(ax, krange, inertia; label = slopelabel, linestyle = :dash)
     axislegend(ax)
     # autolimits!(ax)

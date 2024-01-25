@@ -1,4 +1,4 @@
-function spectral_stuff(setup)
+function spectral_stuff(setup; dyadic = true, a = 2)
     (; dimension, xp, Ip) = setup.grid
     T = eltype(xp[1])
     D = dimension()
@@ -15,7 +15,6 @@ function spectral_stuff(setup)
     # Sum or average wavenumbers between k and k+1
     kmax = minimum(K) - 1
     nk = ceil(Int, maximum(k))
-    kint = 1:kmax
     # ia = similar(xp[1], Int, 0)
     ia = similar(xp[1], Int, length(k))
     ib = sortperm(k)
@@ -23,11 +22,23 @@ function spectral_stuff(setup)
     vals = similar(xp[1], length(k))
     ksort = k[ib]
     jprev = 2 # Do not include constant mode
-    for ki = 1:kmax
-        j = findfirst(≥(ki + 1 / 2), ksort)
+    
+    if dyadic
+        a = T(a)
+        nκ = round(Int, log(T(kmax)) / log(a)) + 1
+        κ = a .^ (0:nκ-1)
+        nextκ = κ -> κ * sqrt(a)
+    else
+        nκ = kmax
+        κ = 1:nκ
+        nextκ = κ -> κ + T(1) / 2
+    end
+
+    for i = 1:nκ
+        j = findfirst(≥(nextκ(κ[i])), ksort)
         isnothing(j) && (j = length(k) + 1)
         # ia = [ia; fill!(similar(ia, j - jprev), ki)]
-        ia[jprev:j-1] .= ki
+        ia[jprev:j-1] .= i
         # val = doaverage ? T(1) / (j - jprev) : T(π) * ((ki + 1)^2 - ki^2) / (j - jprev)
         # val = doaverage ? T(1) / (j - jprev) : T(1)
         val = T(1)
@@ -38,7 +49,7 @@ function spectral_stuff(setup)
     ia = ia[2:jprev-1]
     ib = ib[2:jprev-1]
     vals = vals[2:jprev-1]
-    A = sparse(ia, ib, vals, kmax, length(k))
+    A = sparse(ia, ib, vals, nκ, length(k))
 
-    (; K, kmax, kx, k, A)
+    (; K, kmax, κ, A)
 end
