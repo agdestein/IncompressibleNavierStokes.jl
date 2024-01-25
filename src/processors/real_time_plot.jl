@@ -318,7 +318,7 @@ function energy_history_plot(state; setup)
 end
 
 """
-    energy_spectrum_plot(state; setup, doaverage = false)
+    energy_spectrum_plot(state; setup)
 
 Create energy spectrum plot.
 The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is defined by
@@ -329,25 +329,28 @@ The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is defined 
 
 as in San and Staples [San2012](@cite).
 """
-function energy_spectrum_plot(state; setup, doaverage = false)
+function energy_spectrum_plot(state; setup)
     state isa Observable || (state = Observable(state))
 
     (; dimension, xp, Ip) = setup.grid
     T = eltype(xp[1])
     D = dimension()
 
-    (; K, kmax, k, A) = spectral_stuff(setup; doaverage)
+    (; K, kmax, k, A) = spectral_stuff(setup)
 
     # Energy
-    ke = kinetic_energy(state[].u, setup)
+    # up = interpolate_u_p(state[].u, setup)
     ehat = lift(state) do (; u, t)
-        kinetic_energy!(ke, u, setup)
-        e = ke[Ip]
-        e = fft(e)[ntuple(α -> 1:K[α], D)...]
-        # e = abs.(e) ./ size(e, 1)
-        e = abs.(e) ./ prod(size(e))
+        # interpolate_u_p!(up, u, setup)
+        up = u
+        e = sum(up) do u
+            u = u[Ip]
+            uhat = fft(u)[ntuple(α -> 1:K[α], D)...]
+            abs2.(uhat) ./ (2 * prod(size(uhat))^2)
+        end
         e = A * reshape(e, :)
-        e = max.(e, eps(T)) # Avoid log(0)
+        # e = max.(e, eps(T)) # Avoid log(0)
+        # (1:kmax) .* Array(e)
         Array(e)
     end
 
@@ -355,7 +358,8 @@ function energy_spectrum_plot(state; setup, doaverage = false)
     # krange = LinRange(1, kmax, 100)
     # krange = collect(1, kmax)
     # krange = [cbrt(T(kmax)), T(kmax)]
-    krange = [T(kmax)^(T(2) / 3), T(kmax)]
+    krange = [kmax^T(0.3), kmax ^ (T(0.8))]
+    # krange = [T(kmax)^(T(2) / 3), T(kmax)]
     slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
     inertia = lift(ehat) do ehat
         slopeconst = maximum(ehat ./ (1:kmax) .^ slope)

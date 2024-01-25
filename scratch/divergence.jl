@@ -5,38 +5,14 @@ if isdefined(@__MODULE__, :LanguageServer)          #src
     using .IncompressibleNavierStokes               #src
 end                                                 #src
 
-#md using CairoMakie
 using GLMakie
-# using CairoMakie
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes:
-    momentum!, divergence!, project!, apply_bc_u!, spectral_stuff, kinetic_energy
+    momentum!, divergence!, project!, apply_bc_u!, spectral_stuff, kinetic_energy,
+    interpolate_u_p
 using LinearAlgebra
 using Printf
 using FFTW
-
-# Output directory
-output = "output/divergence"
-output = "../SupervisedClosure/figures"
-
-# Floating point precision
-T = Float64
-
-# Array type
-ArrayType = Array
-# using CUDA; ArrayType = CuArray;
-## using AMDGPU; ArrayType = ROCArray
-## using oneAPI; ArrayType = oneArray
-## using Metal; ArrayType = MtlArray
-
-using CUDA;
-T = Float64;
-# T = Float32;
-ArrayType = CuArray;
-CUDA.allowscalar(false);
-
-set_theme!()
-set_theme!(; GLMakie = (; scalefactor = 1.5))
 
 function observe_v(dnsobs, Φ, les, compression, psolver)
     (; grid) = les
@@ -118,48 +94,73 @@ observe_u(dns, psolver_dns, filters; nupdate = 1) =
         results
     end
 
-# Viscosity model
+# Output directory
+output = "output/divergence"
+output = "../SupervisedClosure/figures"
+
+# Array type
+ArrayType = Array
+# using CUDA; ArrayType = CuArray;
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
+
+using CUDA;
+ArrayType = CuArray;
+CUDA.allowscalar(false);
+
+set_theme!()
+set_theme!(; GLMakie = (; scalefactor = 1.5))
+
+# 3D
+T = Float32
 Re = T(10_000)
-# Re = T(6_000)
+ndns = 512
+D = 3
+kp = 5
+filterdefs = [
+    (FaceAverage(), 32),
+    (FaceAverage(), 64),
+    (FaceAverage(), 128),
+    (VolumeAverage(), 32),
+    (VolumeAverage(), 64),
+    (VolumeAverage(), 128),
+]
 
-# A 2D grid is a Cartesian product of two vectors
+# 2D 
+T = Float64;
+Re = T(10_000)
 ndns = 4096
-# ndns = 256
-# ndns = 512
-lims = T(0), T(1)
 D = 2
-# D = 3
-dns = Setup(ntuple(α -> LinRange(lims..., ndns + 1), D)...; Re, ArrayType);
-
-filters = map([
-    # (FaceAverage(), 32),
+kp = 30
+filterdefs = [
     (FaceAverage(), 64),
     (FaceAverage(), 128),
     (FaceAverage(), 256),
-    # (VolumeAverage(), 32),
     (VolumeAverage(), 64),
     (VolumeAverage(), 128),
     (VolumeAverage(), 256),
-]) do (Φ, nles)
+]
+
+# Setup
+lims = T(0), T(1)
+dns = Setup(ntuple(α -> LinRange(lims..., ndns + 1), D)...; Re, ArrayType);
+filters = map(filterdefs) do (Φ, nles)
     compression = ndns ÷ nles
     setup = Setup(ntuple(α -> LinRange(lims..., nles + 1), D)...; Re, ArrayType)
     psolver = SpectralPressureSolver(setup)
     (; setup, Φ, compression, psolver)
 end;
-
-# Since the grid is uniform and identical for x and y, we may use a specialized
-# spectral pressure solver
 psolver_dns = SpectralPressureSolver(dns);
 
 # Create random initial conditions
-# u₀ = random_field(dns, T(0); kp = 5, psolver = psolver_dns);
-u₀ = random_field(dns, T(0); kp = 20, psolver = psolver_dns);
+u₀ = random_field(dns, T(0); kp, psolver = psolver_dns);
 state = (; u = u₀, t = T(0));
 
 GC.gc()
 CUDA.reclaim()
 
-energy_spectrum_plot((; u = u₀, t = T(0)); setup = dns, doaverage = false)
+energy_spectrum_plot((; u = u₀, t = T(0)); setup = dns)
 
 fieldplot(
     (; u = u₀, t = T(0));
@@ -201,6 +202,8 @@ fieldplot(
         log = timelogger(; nupdate = 5),
     ),
 );
+GC.gc()
+CUDA.reclaim()
 
 # 103.5320324
 
@@ -252,11 +255,13 @@ fieldplot(
     # levels = 5,
     docolorbar = false,
     # size = (800, 800),
-    size = (500, 500),
+    size = (600, 600),
 )
 
-save("$output/lambda2_start.png", current_figure())
-save("$output/lambda2_end.png", current_figure())
+fname = "$output/lambda2_start.png"
+fname = "$output/lambda2_end.png"
+save(fname, current_figure())
+run(`convert $fname -trim $fname`) # Requires imagemagick
 
 i = 2
 fieldplot(
@@ -270,26 +275,32 @@ fieldplot(
     # levels = 5,
     docolorbar = false,
     # size = (800, 800),
-    size = (500, 500),
+    size = (600, 600),
 )
 
-save("$output/lambda2_end_filtered.png", current_figure())
+fname = "$output/lambda2_end_filtered.png"
+save(fname, current_figure())
+run(`convert $fname -trim $fname`) # Requires imagemagick
+
+field = IncompressibleNavierStokes.eig2field(state.u, dns)[dns.grid.Ip]
+hist(vec(Array(log.(max.(eps(T), .-field)))))
+field = nothing
 
 i = 2
-# field = IncompressibleNavierStokes.eig2field(state.u, dns)[dns.grid.Ip]
 field = IncompressibleNavierStokes.eig2field(
     filters[i].Φ(state.u, filters[i].setup, filters[i].compression),
     filters[i].setup,
 )[filters[i].setup.grid.Ip]
-# hist(vec(Array(log(max(eps(T), field)))
 hist(vec(Array(log.(max.(eps(T), .-field)))))
 field = nothing
 
-energy_spectrum_plot(state; setup = dns, doaverage = false)
+energy_spectrum_plot(state; setup = dns)
+
+save("spectrum.png", current_figure())
 
 i = 6
 ubar = filters[i].Φ(state.u, filters[i].setup, filters[i].compression)
-energy_spectrum_plot((; u = ubar, t = T(0)); filters[i].setup, doaverage = false)
+energy_spectrum_plot((; u = ubar, t = T(0)); filters[i].setup)
 
 state.u
 
@@ -382,16 +393,19 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         (; dimension, xp, Ip) = setup.grid
         T = eltype(xp[1])
         D = dimension()
-        (; K, kmax, k, A) = spectral_stuff(setup; doaverage = false)
-        ke = kinetic_energy(u, setup; interpolate_first = false)
-        e = ke[Ip]
-        e = fft(e)[ntuple(α -> 1:K[α], D)...]
-        e = abs.(e) ./ prod(size(e))
-        # nn = sqrt(T(prod(size(e))))
-        # nn = T(size(e, 1))^T(3.1)
-        # e = abs.(e) ./ nn
+        (; K, kmax, k, A) = spectral_stuff(setup)
+        # up = interpolate_u_p(u, setup)
+        up = u
+        e = sum(up) do u
+            u = u[Ip]
+            uhat = fft(u)[ntuple(α -> 1:K[α], D)...]
+            # abs2.(uhat)
+            abs2.(uhat) ./ (2 * prod(size(u))^2)
+            # abs2.(uhat) ./ size(u, 1)
+        end
         e = A * reshape(e, :)
         e = max.(e, eps(T)) # Avoid log(0)
+        # ehat = (1:kmax) .* Array(e)
         ehat = Array(e)
         (; kmax, ehat)
     end
@@ -399,9 +413,10 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     # Build inertial slope above energy
     if D == 2
         # krange = [T(kmax)^(T(1) / 2), T(kmax)]
-        krange = [T(50), T(400)]
+        # krange = [T(50), T(400)]
+        krange = [T(30), T(400)]
     elseif D == 3
-        krange = [T(kmax)^(T(2) / 3), T(kmax)]
+        krange = [T(kmax)^(T(1.1) / 3), T(kmax)]
     end
     slope, slopelabel =
         D == 2 ? (-T(3), L"$\kappa^{-3}") : (-T(5 / 3), L"$\kappa^{-5/3}")
@@ -427,8 +442,10 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     )
     # plotparts(i) = 1:specs[i].kmax, specs[i].ehat
     plotparts(i) = 1:specs[i].kmax+1, [specs[i].ehat; eps(T)]
-    lines!(ax, 1:specs[1].kmax, specs[1].ehat; color = Cycled(1), label = "DNS")
-    lines!(ax, 1:specs[2].kmax, specs[2].ehat; color = Cycled(4), label = "DNS, t = 0")
+    # lines!(ax, 1:specs[1].kmax, specs[1].ehat; color = Cycled(1), label = "DNS")
+    # lines!(ax, 1:specs[2].kmax, specs[2].ehat; color = Cycled(4), label = "DNS, t = 0")
+    lines!(ax, plotparts(1)...; color = Cycled(1), label = "DNS")
+    lines!(ax, plotparts(2)...; color = Cycled(4), label = "DNS, t = 0")
     lines!(ax, plotparts(3)...; color = Cycled(2), label = "Face average")
     lines!(ax, plotparts(4)...; color = Cycled(2))
     lines!(ax, plotparts(5)...; color = Cycled(2))
@@ -436,12 +453,14 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     lines!(ax, plotparts(7)...; color = Cycled(3))
     lines!(ax, plotparts(8)...; color = Cycled(3))
     lines!(ax, krange, inertia; color = Cycled(1), label = slopelabel, linestyle = :dash)
-    # axislegend(ax; position = :lb)
+    axislegend(ax; position = :lb)
     autolimits!(ax)
     if D == 2
-        limits!(ax, (T(0.68), T(520)), (T(1e-3), T(3e1)))
+        # limits!(ax, (T(0.68), T(520)), (T(1e-3), T(3e1)))
+        limits!(ax, (ax.xaxis.attributes.limits[][1], T(1000)), (T(1e-15), ax.yaxis.attributes.limits[][2]))
     elseif D == 3
-        limits!(ax, ax.xaxis.attributes.limits[], (T(1e-1), T(3e1)))
+        # limits!(ax, ax.xaxis.attributes.limits[], (T(1e-1), T(3e1)))
+        limits!(ax, ax.xaxis.attributes.limits[], (T(5e-6), ax.yaxis.attributes.limits[][2]))
     end
     fig
 end

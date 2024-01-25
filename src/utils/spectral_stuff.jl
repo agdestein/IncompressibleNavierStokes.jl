@@ -1,4 +1,4 @@
-function spectral_stuff(setup; doaverage)
+function spectral_stuff(setup)
     (; dimension, xp, Ip) = setup.grid
     T = eltype(xp[1])
     D = dimension()
@@ -24,11 +24,13 @@ function spectral_stuff(setup; doaverage)
     ksort = k[ib]
     jprev = 2 # Do not include constant mode
     for ki = 1:kmax
-        j = findfirst(>(ki + 1), ksort)
+        j = findfirst(≥(ki + 1 / 2), ksort)
         isnothing(j) && (j = length(k) + 1)
         # ia = [ia; fill!(similar(ia, j - jprev), ki)]
         ia[jprev:j-1] .= ki
-        val = doaverage ? T(1) / (j - jprev) : T(π) * ((ki + 1)^2 - ki^2) / (j - jprev)
+        # val = doaverage ? T(1) / (j - jprev) : T(π) * ((ki + 1)^2 - ki^2) / (j - jprev)
+        # val = doaverage ? T(1) / (j - jprev) : T(1)
+        val = T(1)
         # vals = [vals; fill!(similar(vals, j - jprev), val)]
         vals[jprev:j-1] .= val
         jprev = j

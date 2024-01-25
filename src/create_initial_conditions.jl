@@ -101,6 +101,7 @@ function create_spectrum(; setup, kp)
     A = T(8τ / 3) / kp^5
 
     # Velocity magnitude
+    # a = @. complex(1) * sqrt(A * k^4 * exp(-(k / kp)^2))
     a = @. complex(1) * sqrt(A * k^4 * exp(-τ * (k / kp)^2))
     a .*= prod(N)
 
@@ -202,6 +203,9 @@ function random_field(
 
     # Add ghost volumes (one on each side for periodic)
     u = pad_circular.(u, 1; dims = 1:D)
+
+    # # Interpolate to staggered grid
+    # interpolate_p_u!(u, setup)
 
     # Make velocity field divergence free on staggered grid
     # (it is already diergence free on the "spectral grid")

@@ -54,31 +54,31 @@ CUDA.allowscalar(false);
 device = cu
 
 # Parameters
-get_params() = (;
+get_params(nlesscalar) = (;
     D = 2,
     Re = T(10_000),
     tburn = T(0.05),
     tsim = T(0.5),
-    Δt = T(1e-4),
-    nles = map(n -> (n, n), [32, 64, 128, 256]),
+    Δt = T(5e-5),
+    nles = map(n -> (n, n), nlesscalar),
     # ndns = (n -> (n, n))(1024),
-    ndns = (n -> (n, n))(2048),
-    # ndns = (n -> (n, n))(4096),
+    # ndns = (n -> (n, n))(2048),
+    ndns = (n -> (n, n))(4096),
     filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
     PSolver = SpectralPressureSolver,
     icfunc = (setup, psolver) -> random_field(
         setup,
-        t = zero(eltype(setup.grid.x[1]));
+        zero(eltype(setup.grid.x[1]));
         A = 1,
         kp = 20,
         psolver,
     ),
 )
 
-params_train = (; get_params()..., savefreq = 5);
-params_valid = (; get_params()..., savefreq = 20);
-params_test = (; get_params()..., tsim = T(0.2), savefreq = 5);
+params_train = (; get_params([32, 64, 128, 256])..., savefreq = 10);
+params_valid = (; get_params([32, 64, 128, 256])..., savefreq = 40);
+params_test = (; get_params([32, 64, 128, 256, 512, 1024])..., tsim = T(0.2), savefreq = 20);
 
 # Create LES data from DNS
 data_train = [create_les_data(; params_train...) for _ = 1:5];
