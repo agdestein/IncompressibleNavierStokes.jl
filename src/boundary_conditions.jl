@@ -113,7 +113,7 @@ ChainRulesCore.rrule(::typeof(apply_bc_u), u, t, setup; kwargs...) = (
     # With respect to (apply_bc_u, u, t, setup)
     φbar -> (
         NoTangent(),
-        apply_bc_u_pullback!(copy.((φbar...,)), (φbar...,), t, setup; kwargs...),
+        apply_bc_u_pullback!(copy.((φbar...,)), t, setup; kwargs...),
         NoTangent(),
         NoTangent(),
     ),
@@ -124,7 +124,7 @@ ChainRulesCore.rrule(::typeof(apply_bc_p), p, t, setup) = (
     # With respect to (apply_bc_p, p, t, setup)
     φbar -> (
         NoTangent(),
-        apply_bc_p_pullback!(copy(φbar), φbar, t, setup),
+        apply_bc_p_pullback!(copy(φbar), t, setup),
         NoTangent(),
         NoTangent(),
     ),
@@ -140,13 +140,13 @@ function apply_bc_u!(u, t, setup; kwargs...)
     u
 end
 
-function apply_bc_u_pullback!(ubar, φbar, t, setup; kwargs...)
-    (; boundary_conditions) = setup
-    D = length(ubar)
+function apply_bc_u_pullback!(φbar, t, setup; kwargs...)
+    (; grid, boundary_conditions) = setup
+    (; dimension) = grid
+    D = dimension()
     for β = 1:D
         apply_bc_u_pullback!(
             boundary_conditions[β][1],
-            ubar,
             φbar,
             β,
             t,
@@ -156,7 +156,6 @@ function apply_bc_u_pullback!(ubar, φbar, t, setup; kwargs...)
         )
         apply_bc_u_pullback!(
             boundary_conditions[β][2],
-            ubar,
             φbar,
             β,
             t,
@@ -165,7 +164,7 @@ function apply_bc_u_pullback!(ubar, φbar, t, setup; kwargs...)
             kwargs...,
         )
     end
-    ubar
+    φbar
 end
 
 function apply_bc_p!(p, t, setup; kwargs...)
@@ -179,14 +178,13 @@ function apply_bc_p!(p, t, setup; kwargs...)
     p
 end
 
-function apply_bc_p_pullback!(pbar, φbar, t, setup; kwargs...)
+function apply_bc_p_pullback!(φbar, t, setup; kwargs...)
     (; grid, boundary_conditions) = setup
     (; dimension) = grid
     D = dimension()
     for β = 1:D
         apply_bc_p_pullback!(
             boundary_conditions[β][1],
-            pbar,
             φbar,
             β,
             t,
@@ -195,7 +193,6 @@ function apply_bc_p_pullback!(pbar, φbar, t, setup; kwargs...)
         )
         apply_bc_p_pullback!(
             boundary_conditions[β][2],
-            pbar,
             φbar,
             β,
             t,
@@ -203,7 +200,7 @@ function apply_bc_p_pullback!(pbar, φbar, t, setup; kwargs...)
             atend = true,
         )
     end
-    pbar
+    φbar
 end
 
 function apply_bc_u!(::PeriodicBC, u, β, t, setup; atend, kwargs...)
@@ -230,28 +227,30 @@ function apply_bc_u!(::PeriodicBC, u, β, t, setup; atend, kwargs...)
     u
 end
 
-function apply_bc_u_pullback!(::PeriodicBC, ubar, φbar, β, t, setup; atend, kwargs...)
+function apply_bc_u_pullback!(::PeriodicBC, φbar, β, t, setup; atend, kwargs...)
     (; grid, workgroupsize) = setup
     (; dimension, N) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function adj_a!(u, φ, ::Val{α}, ::Val{β}) where {α,β}
+    @kernel function adj_a!(φ, ::Val{α}, ::Val{β}) where {α,β}
         I = @index(Global, Cartesian)
-        u[α][I+(N[β]-2)*δ(β)] += φ[α][I]
+        φ[α][I+(N[β]-2)*δ(β)] += φ[α][I]
+        φ[α][I] = 0
     end
-    @kernel function adj_b!(u, φ, ::Val{α}, ::Val{β}) where {α,β}
+    @kernel function adj_b!(φ, ::Val{α}, ::Val{β}) where {α,β}
         I = @index(Global, Cartesian)
-        u[α][I+δ(β)] += φ[α][I+(N[β]-1)*δ(β)]
+        φ[α][I+δ(β)] += φ[α][I+(N[β]-1)*δ(β)]
+        φ[α][I+(N[β]-1)*δ(β)] = 0
     end
     ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     for α = 1:D
         if atend
-            adj_b!(get_backend(ubar[1]), workgroupsize)(ubar, φbar, Val(α), Val(β); ndrange)
+            adj_b!(get_backend(φbar[1]), workgroupsize)(φbar, Val(α), Val(β); ndrange)
         else
-            adj_a!(get_backend(ubar[1]), workgroupsize)(ubar, φbar, Val(α), Val(β); ndrange)
+            adj_a!(get_backend(φbar[1]), workgroupsize)(φbar, Val(α), Val(β); ndrange)
         end
     end
-    ubar
+    φbar
 end
 
 function apply_bc_p!(::PeriodicBC, p, β, t, setup; atend, kwargs...)
@@ -276,26 +275,28 @@ function apply_bc_p!(::PeriodicBC, p, β, t, setup; atend, kwargs...)
     p
 end
 
-function apply_bc_p_pullback!(::PeriodicBC, pbar, φbar, β, t, setup; atend, kwargs...)
+function apply_bc_p_pullback!(::PeriodicBC, φbar, β, t, setup; atend, kwargs...)
     (; grid, workgroupsize) = setup
     (; dimension, N) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function adj_a!(p, φ, ::Val{β}) where {β}
+    @kernel function adj_a!(φ, ::Val{β}) where {β}
         I = @index(Global, Cartesian)
-        p[I+(N[β]-2)*δ(β)] += φ[I]
+        φ[I+(N[β]-2)*δ(β)] += φ[I]
+        φ[I] = 0
     end
-    @kernel function adj_b!(p, φ, ::Val{β}) where {β}
+    @kernel function adj_b!(φ, ::Val{β}) where {β}
         I = @index(Global, Cartesian)
-        p[I+δ(β)] += φ[I+(N[β]-1)*δ(β)]
+        φ[I+δ(β)] += φ[I+(N[β]-1)*δ(β)]
+        φ[I+(N[β]-1)*δ(β)] = 0
     end
     ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     if atend
-        adj_b!(get_backend(pbar), workgroupsize)(pbar, φbar, Val(β); ndrange)
+        adj_b!(get_backend(φbar), workgroupsize)(φbar, Val(β); ndrange)
     else
-        adj_a!(get_backend(pbar), workgroupsize)(pbar, φbar, Val(β); ndrange)
+        adj_a!(get_backend(φbar), workgroupsize)(φbar, Val(β); ndrange)
     end
-    pbar
+    φbar
 end
 
 function apply_bc_u!(bc::DirichletBC, u, β, t, setup; atend, dudt = false, kwargs...)

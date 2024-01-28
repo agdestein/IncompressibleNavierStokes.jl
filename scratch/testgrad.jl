@@ -5,28 +5,15 @@ if isdefined(@__MODULE__, :LanguageServer)          #src
     using .IncompressibleNavierStokes               #src
 end                                                 #src
 
-# # Decaying Homogeneous Isotropic Turbulence - 2D
-#
-# In this example we consider decaying homogeneous isotropic turbulence,
-# similar to the cases considered in [Kochkov2021](@cite) and
-# [Kurz2022](@cite). The initial velocity field is created randomly, but with a
-# specific energy spectrum. Due to viscous dissipation, the turbulent features
-# eventually group to form larger visible eddies.
-
-# We start by loading packages.
-# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
-# for plotting. `GLMakie` creates an interactive window (useful for real-time
-# plotting), but does not work when building this example on GitHub.
-# `CairoMakie` makes high-quality static vector-graphics plots.
-
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
+using KernelAbstractions
+using Zygote
+using LinearAlgebra
+using Random
 
 set_theme!(; GLMakie = (; scalefactor = 1.5))
-
-# Output directory
-output = "output/DecayingTurbulence2D"
 
 # Floating point precision
 T = Float64
@@ -44,10 +31,11 @@ ArrayType = CuArray;
 CUDA.allowscalar(false);
 
 # Viscosity model
-Re = T(10_000)
+Re = T(100)
 
 # A 2D grid is a Cartesian product of two vectors
-n = 8
+# n = 8
+n = 16
 # n = 32
 # n = 128
 # n = 1024
@@ -61,23 +49,19 @@ setup = Setup(x...; Re, ArrayType);
 
 # Since the grid is uniform and identical for x and y, we may use a specialized
 # spectral pressure solver
-pressure_solver = SpectralPressureSolver(setup);
+psolver = SpectralPressureSolver(setup);
 
-u₀ = random_field(setup, T(0); pressure_solver);
+u₀ = random_field(setup, T(0); psolver);
 u = u₀
 
-using KernelAbstractions
-using Zygote
-using LinearAlgebra
-using Random
 (; Iu, Ip) = setup.grid
 
-function finitediff(f, u::Tuple, I; h = sqrt(eps(eltype(u[1]))))
+function finitediff(f, u::Tuple, α, I; h = sqrt(eps(eltype(u[1]))))
     u1 = copy.(u)
-    CUDA.@allowscalar u1[1][I] -= h / 2
+    CUDA.@allowscalar u1[α][I] -= h / 2
     r1 = f(u1)
     u2 = copy.(u)
-    CUDA.@allowscalar u2[1][I] += h / 2
+    CUDA.@allowscalar u2[α][I] += h / 2
     r2 = f(u2)
     (r2 - r1) / h
 end
@@ -130,33 +114,42 @@ function f(u, setup)
     φ = IncompressibleNavierStokes.momentum(u, T(0), setup)
     # φ = IncompressibleNavierStokes.diffusion(u, setup)
     # φ = IncompressibleNavierStokes.convection(u, setup)
+    # φ = u
     # dot(φ, φ)
     dot(getindex.(φ, Iu), getindex.(φ, Iu))
     # sum(abs2, getindex.(φ, Iu))
+    # u[1][1]
 end
 
-solver = SpectralPressureSolver(setup)
+I = CartesianIndex(1, 2)
+α = 1
+CUDA.@allowscalar gradient(u -> f(u, setup), u)[1][α][I]
+finitediff(u -> f(u, setup), u, α, I)
+
 function f(u, setup)
     (; Ω, Iu) = setup.grid
     φ = u
     φ = IncompressibleNavierStokes.apply_bc_u(u, T(0), setup)
     φ = IncompressibleNavierStokes.momentum(φ, T(0), setup)
     φ = IncompressibleNavierStokes.apply_bc_u(φ, T(0), setup)
-    φ = IncompressibleNavierStokes.project(solver, φ, setup)
+    φ = IncompressibleNavierStokes.project(φ, setup; psolver)
     # dot(φ, φ)
     dot(getindex.(φ, Iu), getindex.(φ, Iu))
     # sum(abs2, getindex.(φ, Iu))
 end
 
-pressure_solver = SpectralPressureSolver(setup)
-# method = 
+I = CartesianIndex(8, 2)
+α = 1
+CUDA.@allowscalar gradient(u -> f(u, setup), u)[1][α][I]
+finitediff(u -> f(u, setup), u, α, I)
+
 function f(u, setup)
     (; Ω, Iu) = setup.grid
     method = RK44(; T)
     stepper = IncompressibleNavierStokes.create_stepper(
         method;
         setup,
-        pressure_solver,
+        psolver,
         u,
         t = T(0),
     )
@@ -166,6 +159,11 @@ function f(u, setup)
     dot(getindex.(φ, Iu), getindex.(φ, Iu))
     # sum(abs2, getindex.(φ, Iu))
 end
+
+I = CartesianIndex(5, 6)
+α = 1
+CUDA.@allowscalar gradient(u -> f(u, setup), u)[1][α][I]
+finitediff(u -> f(u, setup), u, α, I)
 
 function f(u, setup)
     (; Iu) = setup.grid
