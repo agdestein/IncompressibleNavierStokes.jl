@@ -10,6 +10,7 @@ end                                                 #src
 # Here, we consider a periodic box ``[0, 1]^2``. It is discretized with a
 # uniform Cartesian grid with square cells.
 
+using Adapt
 using CairoMakie
 using GLMakie
 using IncompressibleNavierStokes
@@ -33,7 +34,7 @@ output = "../SupervisedClosure/figures/"
 
 # Random number generator
 rng = Random.default_rng()
-Random.seed!(rng, 123)
+Random.seed!(rng, 12345)
 
 # Floating point precision
 T = Float64
@@ -48,10 +49,11 @@ device = identity
 
 using LuxCUDA
 using CUDA;
+# T = Float64;
 T = Float32;
 ArrayType = CuArray;
 CUDA.allowscalar(false);
-device = cu
+device = x -> adapt(CuArray, x)
 
 # Parameters
 get_params(nlesscalar) = (;
@@ -70,26 +72,26 @@ get_params(nlesscalar) = (;
     icfunc = (setup, psolver) -> random_field(
         setup,
         zero(eltype(setup.grid.x[1]));
-        A = 1,
+        # A = 1,
         kp = 20,
         psolver,
     ),
 )
 
-params_train = (; get_params([32, 64, 128, 256])..., savefreq = 10);
-params_valid = (; get_params([32, 64, 128, 256])..., savefreq = 40);
-params_test = (; get_params([32, 64, 128, 256, 512, 1024])..., tsim = T(0.2), savefreq = 20);
+params_train = (; get_params([64, 128, 256])..., savefreq = 10);
+params_valid = (; get_params([64, 128, 256])..., tsim = T(0.1), savefreq = 40);
+params_test = (; get_params([64, 128, 256, 512, 1024])..., tsim = T(0.2), savefreq = 20);
 
 # Create LES data from DNS
 data_train = [create_les_data(; params_train...) for _ = 1:5];
 data_valid = [create_les_data(; params_valid...) for _ = 1:1];
 data_test = create_les_data(; params_test...);
 
-# # Save filtered DNS data
-# jldsave("output/forced/data.jld2"; data_train, data_valid, data_test)
+# Save filtered DNS data
+jldsave("output/divfree/data.jld2"; data_train, data_valid, data_test)
 
 # # Load previous LES data
-# data_train, data_valid, data_test = load("output/forced/data.jld2", "data_train", "data_valid", "data_test")
+# data_train, data_valid, data_test = load("output/divfree/data.jld2", "data_train", "data_valid", "data_test");
 
 # Build LES setup and assemble operators
 getsetups(params) = [
@@ -111,22 +113,29 @@ data_train[1].data[1, 1].u[end][1]
 io_train = create_io_arrays(data_train, setups_train);
 io_valid = create_io_arrays(data_valid, setups_valid);
 
+# jldsave("output/divfree/io_train.jld2"; io_train)
+# jldsave("output/divfree/io_train.jld2"; io_valid)
+
+io_train[1].u |> extrema
+io_train[1].c |> extrema
+io_valid[1].u |> extrema
+io_valid[1].c |> extrema
+
 # Inspect data
-ig = 4
-ifil = 2
+ig = 2
+ifil = 1
 field, setup = data_train[1].data[ig, ifil].u, setups_train[ig];
-# field, setup = data_valid[1].u[ig], setups_valid[ig];
-# field, setup = data_test.u[ig], setups_test[ig];
-u = device(field[1]);
+# field, setup = data_valid[1].data[ig, ifil].u, setups_valid[ig];
+# field, setup = data_test.data[ig, ifil], setups_test[ig];
+u = device.(field[1]);
 o = Observable((; u, t = nothing));
 # energy_spectrum_plot(o; setup)
 fieldplot(
     o;
     setup,
     # fieldname = :velocity,
-    # fieldname = 2,
+    # fieldname = 1,
 )
-# energy_spectrum_plot( o; setup,)
 for i = 1:length(field)
     o[] = (; o[]..., u = device(field[i]))
     sleep(0.001)
@@ -210,37 +219,27 @@ closure, θ₀ = cnn(;
 );
 closure.chain
 
-# Prepare training
-loss = createloss(mean_squared_error, closure);
-dataloaders = createdataloader.(io_train; batchsize = 50, device);
-# dataloaders[1]()
-loss(dataloaders[1](), device(θ₀))
-
-# Prepare training
-θ = T(1.0e-1) * device(θ₀);
-opt = Optimisers.setup(Adam(T(1.0e-3)), θ);
-callbackstate = Point2f[];
-
 # Train grid-specialized closure models
 θ_cnn = map(CartesianIndices(size(io_train))) do I
     # Prepare training
     ig, ifil = I.I
     @show ig ifil
-    d = createdataloader(io_train[ig, ifil]; batchsize = 50, device);
-    θ = T(1.0e-1) * device(θ₀)
+    d = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device)
+    θ = T(1.0e0) * device(θ₀)
+    loss = createloss(mean_squared_error, closure);
     opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
     callbackstate = Point2f[]
-    it = rand(1:size(io_valid[ig, ifil].u, 4), 50);
-    validset = map(v -> v[:, :, :, it], io_valid[ig, ifil]);
+    it = rand(1:size(io_valid[ig, ifil].u, 4), 50)
+    validset = map(v -> v[:, :, :, it], io_valid[ig, ifil])
     (; opt, θ, callbackstate) = train(
         [d],
         loss,
         opt,
         θ;
-        niter = 5000,
+        niter = 10000,
         ncallback = 20,
         callbackstate,
-        callback = create_callback(closure, device(validset)...; state = callbackstate),
+        callback = create_relerr_prior(closure, validset),
     )
     θ
 end
@@ -248,11 +247,57 @@ GC.gc()
 CUDA.reclaim()
 
 # # Save trained parameters
-# jldsave("output/divfree/theta_cnn.jld2"; theta = Array.(θ_cnn))
+# jldsave("output/divfree/theta_prior.jld2"; theta = Array.(θ_cnn))
 
 # # Load trained parameters
-# θθ = load("output/divfree/theta_cnn.jld2")
-# copyto!.(θ_cnn, θθ["theta"])
+# θ_cnn = [device(θ₀) for _ in CartesianIndices(size(data_train[1].data))];
+# θθ = load("output/divfree/theta_prior.jld2");
+# copyto!.(θ_cnn, θθ["theta"]);
+
+# θ_post = map(CartesianIndices(size(io_train))) do I
+#     ig, ifil = I.I
+θ_post = let ig = 2, ifil = 1
+    iorder = 1
+    setup = setups_train[ig]
+    psolver = SpectralPressureSolver(setup)
+    loss = IncompressibleNavierStokes.create_loss_post(;
+        setup,
+        psolver,
+        closure,
+        nupdate = 4,
+        unproject_closure = iorder == 2,
+    )
+    data = [(; u = d.data[ig, ifil].u, d.t) for d in data_train]
+    d = create_dataloader_post(data; device, nunroll = 10)
+    # θ = copy(θ_cnn[ig, ifil])
+    θ = device(θ₀)
+    opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
+    callbackstate = Point2f[]
+    it = rand(1:size(io_valid[ig, ifil].u, 4), 50)
+    data = data_valid[1]
+    data = (; u = device.(data.data[ig, ifil].u), data.t)
+    (; opt, θ, callbackstate) = train(
+        [d],
+        loss,
+        opt,
+        θ;
+        niter = 100,
+        ncallback = 1,
+        callbackstate,
+        callback = create_callback(
+            create_relerr_post(;
+                data,
+                setup,
+                psolver,
+                closure,
+                unproject_closure = iorder == 2,
+            );
+            state = callbackstate,
+            displayref = false,
+        ),
+    )
+    θ
+end
 
 # Train Smagorinsky closure model
 ig = 2;
@@ -285,38 +330,78 @@ e_smag, e_cnn = let
         setup = setups_test[ig]
         params = params_test[ig]
         psolver = SpectralPressureSolver(setup)
-        u = device.(data_test.data[ig,ifil].u)
-        u₀ = device(data_test.data[ig,ifil].u[1])
+        u = device.(data_test.data[ig, ifil].u)
+        u₀ = device(data_test.data[ig, ifil].u[1])
         Δt = params_test.Δt * params_test.savefreq
         tlims = extrema(data_test.t)
-        nupdate = 4
+        nupdate = 20
         Δt /= nupdate
         processors = (; relerr = relerr_trajectory(u, setup; nupdate))
         # Smagorinsky
-        closedsetup = (; setup...,
+        closedsetup = (;
+            setup...,
             closure_model = smagorinsky_closure(setup),
             unproject_closure = iorder == 2,
         )
-        _, outputs = solve_unsteady(
-            closedsetup, u₀, tlims; Δt, psolver, processors,
-            θ = T(0.1), 
-        )
+        _, outputs =
+            solve_unsteady(closedsetup, u₀, tlims; Δt, psolver, processors, θ = T(0.1))
         e_smag[ig, ifil, iorder] = outputs.relerr[]
         # CNN
-        closedsetup = (; setup...,
-            closure_model = wrappedclosure(closure, setup),
-            unproject_closure = iorder == 2,
-        )
-        _, outputs = solve_unsteady(
-            closedsetup, u₀, tlims; Δt, psolver, processors,
-            θ = θ_cnn[ig, ifil], 
-        )
-        e_cnn[ig, ifil, iorder] = outputs.relerr[]
+        # The first grids are trained for
+        if ig ≤ size(data_train[1].data, 1)
+            closedsetup = (;
+                setup...,
+                closure_model = wrappedclosure(closure, setup),
+                unproject_closure = iorder == 2,
+            )
+            _, outputs = solve_unsteady(
+                closedsetup,
+                u₀,
+                tlims;
+                Δt,
+                psolver,
+                processors,
+                θ = θ_cnn[ig, ifil],
+            )
+            e_cnn[ig, ifil, iorder] = outputs.relerr[]
+        end
     end
     e_smag, e_cnn
 end
 e_smag
 e_cnn
+
+# julia> e_smag                julia> e_smag
+# 5×2×2 Array{Float32, 3}:     5×2×2 Array{Float32, 3}:
+# [:, :, 1] =                  [:, :, 1] =
+#  0.781462   0.778116          0.781462   0.778104
+#  0.505524   0.505589          0.505524   0.505565
+#  0.30132    0.301625          0.30132    0.301601
+#  0.143863   0.144141          0.143863   0.144118
+#  0.0457445  0.0459661         0.0457429  0.0459541
+#                                                       
+# [:, :, 2] =                  [:, :, 2] =
+#  0.813456   0.826474          0.813457   0.826474
+#  0.527202   0.534727          0.527203   0.534726
+#  0.318339   0.32539           0.318339   0.325389
+#  0.152291   0.157393          0.152292   0.157392
+#  0.0482445  0.051005          0.0482446  0.0510034
+#                                                       
+# julia> e_cnn                 julia> e_cnn
+# 5×2×2 Array{Float32, 3}:     5×2×2 Array{Float32, 3}:
+# [:, :, 1] =                  [:, :, 1] =
+#  0.585886   0.5875            0.585887   0.5875
+#  0.311889   0.277596          0.311892   0.277624
+#  0.0725899  0.114744          0.0725901  0.114847
+#  0.0        0.0               0.0        0.0
+#  0.0        0.0               0.0        0.0
+#                                                       
+# [:, :, 2] =                  [:, :, 2] =
+#    0.783691    0.859665         0.783688    0.859664
+#    1.81263   NaN                1.78943     6.52473
+#  NaN         NaN              NaN         NaN
+#    0.0         0.0              0.0         0.0
+#    0.0         0.0              0.0         0.0
 
 # No model
 e_nm = let
@@ -326,15 +411,20 @@ e_nm = let
         setup = setups_test[ig]
         params = params_test[ig]
         psolver = SpectralPressureSolver(setup)
-        u = device.(data_test.data[ig,ifil].u)
-        u₀ = device(data_test.data[ig,ifil].u[1])
+        u = device.(data_test.data[ig, ifil].u)
+        u₀ = device(data_test.data[ig, ifil].u[1])
         Δt = params_test.Δt * params_test.savefreq
         tlims = extrema(data_test.t)
-        nupdate = 4
+        nupdate = 20
         Δt /= nupdate
         processors = (; relerr = relerr_trajectory(u, setup; nupdate))
         _, outputs = solve_unsteady(
-            (; setup..., unproject_closure = false), u₀, tlims; Δt, psolver, processors,
+            (; setup..., unproject_closure = false),
+            u₀,
+            tlims;
+            Δt,
+            psolver,
+            processors,
         )
         e_nm[ig, ifil] = outputs.relerr[]
     end
@@ -360,7 +450,8 @@ with_theme(;
     # fontsize = 20,
     palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
 ) do
-    iorder = 1
+    iorder = 2
+    lesmodel = iorder == 1 ? "closure-then-project" : "project-then-closure"
     nles = [n[1] for n in params_test.nles]
     fig = Figure(; size = (500, 400))
     ax = Axis(
@@ -368,38 +459,72 @@ with_theme(;
         xscale = log10,
         yscale = log10,
         xticks = nles,
-        xlabel = "n",
-        title = "Relative error (DNS: n = $(params_test.ndns[1]))",
+        xlabel = "Resolution",
+        # xlabel = "n",
+        # xlabel = L"\bar{n}",
+        # title = "Relative error (DNS: n = $(params_test.ndns[1]))",
+        title = "Relative error ($lesmodel)",
     )
     for ifil = 1:2
         linestyle = ifil == 1 ? :solid : :dash
-            label =  "No closure"
+        label = "No closure"
         label = label * (ifil == 1 ? " (FA)" : " (VA)")
-            scatterlines!(nles, e_nm[:, ifil]; color = Cycled(1), linestyle, marker = :circle, label)
+        scatterlines!(
+            nles,
+            e_nm[:, ifil];
+            color = Cycled(1),
+            linestyle,
+            marker = :circle,
+            label,
+        )
     end
     for ifil = 1:2
         linestyle = ifil == 1 ? :solid : :dash
         label = "Smagorinsky"
         label = label * (ifil == 1 ? " (FA)" : " (VA)")
-            scatterlines!(nles, e_smag[:, ifil, iorder]; color = Cycled(2), linestyle, marker = :utriangle, label)
+        scatterlines!(
+            nles,
+            e_smag[:, ifil, iorder];
+            color = Cycled(2),
+            linestyle,
+            marker = :utriangle,
+            label,
+        )
     end
     for ifil = 1:2
+        ntrain = size(data_train[1].data, 1)
         linestyle = ifil == 1 ? :solid : :dash
-            label = "CNN"
+        label = "CNN"
         label = label * (ifil == 1 ? " (FA)" : " (VA)")
-        scatterlines!(nles, e_cnn[:, ifil, iorder]; color = Cycled(3), linestyle, marker = :rect, label)
+        # ifil == 2 && (label = nothing)
+        scatterlines!(
+            nles[1:ntrain],
+            e_cnn[1:ntrain, ifil, iorder];
+            color = Cycled(3),
+            linestyle,
+            marker = :rect,
+            label,
+        )
     end
     # lines!(
-    #     collect(extrema(nles[3:end])),
+    #     collect(extrema(nles[4:end])),
     #     n -> 2e4 * n^-2.0;
     #     linestyle = :dash,
     #     label = "n⁻²",
+    #     color = Cycled(1),
     # )
-    axislegend(; position = :lb)
+    axislegend(; position = :rt)
+    # iorder == 2 && limits!(ax, (T(60), T(1050)), (T(2e-2), T(1e1)))
     fig
 end
 
-save("$output/convergence.pdf", current_figure())
+e_cnn
+e_cnn_2 = copy(e_cnn);
+e_cnn_2[isnan.(e_cnn_2)] .= 1e10;
+e_cnn_2;
+
+save("$output/convergence_Lprior_prosecond.pdf", current_figure())
+save("$output/convergence_Lprior_profirst.pdf", current_figure())
 
 markers_labels = [
     (:circle, ":circle"),

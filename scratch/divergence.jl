@@ -118,6 +118,7 @@ Re = T(10_000)
 ndns = 512
 D = 3
 kp = 5
+Δt = T(1e-4)
 filterdefs = [
     (FaceAverage(), 32),
     (FaceAverage(), 64),
@@ -132,7 +133,8 @@ T = Float64;
 Re = T(10_000)
 ndns = 4096
 D = 2
-kp = 30
+kp = 20
+Δt = T(5e-5)
 filterdefs = [
     (FaceAverage(), 64),
     (FaceAverage(), 128),
@@ -174,8 +176,9 @@ fieldplot(
     dns,
     u₀,
     (T(0), T(1e-1));
+    Δt,
     # Δt = T(1e-4),
-    Δt = T(5e-5),
+    # Δt = T(1e-5),
     docopy = true,
     psolver = psolver_dns,
     processors = (
@@ -188,7 +191,7 @@ fieldplot(
         #     # levels = 5,
         #     docolorbar = false,
         # ),
-        obs = observe_u(dns, psolver_dns, filters; nupdate = 20),
+        # obs = observe_u(dns, psolver_dns, filters; nupdate = 20),
         # ehist = realtimeplotter(;
         #     setup,
         #     plot = energy_history_plot,
@@ -393,7 +396,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         (; dimension, xp, Ip) = setup.grid
         T = eltype(xp[1])
         D = dimension()
-        (; K, kmax, k, A) = spectral_stuff(setup)
+        K = size(Ip) .÷ 2
         # up = interpolate_u_p(u, setup)
         up = u
         e = sum(up) do u
@@ -403,27 +406,29 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
             abs2.(uhat) ./ (2 * prod(size(u))^2)
             # abs2.(uhat) ./ size(u, 1)
         end
+        (; A, κ, K) = spectral_stuff(setup)
         e = A * reshape(e, :)
-        e = max.(e, eps(T)) # Avoid log(0)
-        # ehat = (1:kmax) .* Array(e)
+        # e = max.(e, eps(T)) # Avoid log(0)
         ehat = Array(e)
-        (; kmax, ehat)
+        (; κ, ehat)
     end
-    (; kmax) = specs[1]
+    kmax = maximum(specs[1].κ)
     # Build inertial slope above energy
     if D == 2
         # krange = [T(kmax)^(T(1) / 2), T(kmax)]
         # krange = [T(50), T(400)]
-        krange = [T(30), T(400)]
+        krange = [T(16), T(128)]
     elseif D == 3
-        krange = [T(kmax)^(T(1.1) / 3), T(kmax)]
+        # krange = [T(kmax)^(T(1.5) / 3), T(kmax)]
+        krange = [T(64), T(256)]
     end
     slope, slopelabel =
         D == 2 ? (-T(3), L"$\kappa^{-3}") : (-T(5 / 3), L"$\kappa^{-5/3}")
     # slope, slopelabel = D == 2 ? (-T(3), "|k|⁻³") : (-T(5 / 3), "|k|⁻⁵³")
     # slope, slopelabel = D == 2 ? (-T(3), "κ⁻³") : (-T(5 / 3), "κ⁻⁵³")
-    slopeconst = maximum(specs[1].ehat ./ (1:kmax) .^ slope)
-    inertia = 2 .* slopeconst .* krange .^ slope
+    slopeconst = maximum(specs[1].ehat ./ specs[1].κ .^ slope)
+    offset = D == 2 ? 3 : 2
+    inertia = offset .* slopeconst .* krange .^ slope
     # Nice ticks
     logmax = round(Int, log2(kmax + 1))
     xticks = T(2) .^ (0:logmax)
@@ -434,14 +439,15 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         xticks,
         # xlabel = "k",
         xlabel = "κ",
-        ylabel = "e(κ)",
+        # ylabel = "e(κ)",
         xscale = log10,
         yscale = log10,
         limits = (1, kmax, T(1e-8), T(1)),
-        title = "Kinetic energy",
+        title = "Kinetic energy ($(D)D)",
     )
     # plotparts(i) = 1:specs[i].kmax, specs[i].ehat
-    plotparts(i) = 1:specs[i].kmax+1, [specs[i].ehat; eps(T)]
+    # plotparts(i) = 1:specs[i].kmax+1, [specs[i].ehat; eps(T)]
+    plotparts(i) = specs[i].κ, specs[i].ehat
     # lines!(ax, 1:specs[1].kmax, specs[1].ehat; color = Cycled(1), label = "DNS")
     # lines!(ax, 1:specs[2].kmax, specs[2].ehat; color = Cycled(4), label = "DNS, t = 0")
     lines!(ax, plotparts(1)...; color = Cycled(1), label = "DNS")
@@ -453,18 +459,23 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     lines!(ax, plotparts(7)...; color = Cycled(3))
     lines!(ax, plotparts(8)...; color = Cycled(3))
     lines!(ax, krange, inertia; color = Cycled(1), label = slopelabel, linestyle = :dash)
-    axislegend(ax; position = :lb)
+    D == 2 && axislegend(ax; position = :lb)
+    D == 3 && axislegend(ax; position = :rt)
     autolimits!(ax)
     if D == 2
         # limits!(ax, (T(0.68), T(520)), (T(1e-3), T(3e1)))
-        limits!(ax, (ax.xaxis.attributes.limits[][1], T(1000)), (T(1e-15), ax.yaxis.attributes.limits[][2]))
+        # limits!(ax, (ax.xaxis.attributes.limits[][1], T(1000)), (T(1e-15), ax.yaxis.attributes.limits[][2]))
+        limits!(ax, (T(0.8), T(800)), (T(1e-10), T(1)))
     elseif D == 3
         # limits!(ax, ax.xaxis.attributes.limits[], (T(1e-1), T(3e1)))
-        limits!(ax, ax.xaxis.attributes.limits[], (T(5e-6), ax.yaxis.attributes.limits[][2]))
+        # limits!(ax, ax.xaxis.attributes.limits[], (T(1e-3), ax.yaxis.attributes.limits[][2]))
+        # limits!(ax, ax.xaxis.attributes.limits[], (T(3e-3), T(2e0)))
+        limits!(ax, (T(8e-1), T(400)), (T(2e-3), T(1.5e0)))
     end
     fig
 end
 GC.gc()
 CUDA.reclaim()
 
-save("$output/priorspectra_$(D)D.pdf", fig)
+# save("$output/priorspectra_$(D)D_linear.pdf", fig)
+save("$output/priorspectra_$(D)D_dyadic.pdf", fig)
