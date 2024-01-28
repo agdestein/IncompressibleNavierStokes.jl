@@ -108,12 +108,12 @@ function apply_bc_p! end
 apply_bc_u(u, t, setup; kwargs...) = apply_bc_u!(copy.(u), t, setup; kwargs...)
 apply_bc_p(p, t, setup; kwargs...) = apply_bc_p!(copy(p), t, setup; kwargs...)
 
-ChainRulesCore.rrule(::typeof(apply_bc_u), u, t, setup) = (
-    apply_bc_u(u, t, setup),
+ChainRulesCore.rrule(::typeof(apply_bc_u), u, t, setup; kwargs...) = (
+    apply_bc_u(u, t, setup; kwargs...),
     # With respect to (apply_bc_u, u, t, setup)
     φbar -> (
         NoTangent(),
-        apply_bc_u_pullback!(copy.((φbar...,)), (φbar...,), t, setup),
+        apply_bc_u_pullback!(copy.((φbar...,)), (φbar...,), t, setup; kwargs...),
         NoTangent(),
         NoTangent(),
     ),
