@@ -1,12 +1,13 @@
-function spectral_stuff(setup; dyadic = true, a = 2)
+function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) / 2)
     (; dimension, xp, Ip) = setup.grid
     T = eltype(xp[1])
     D = dimension()
+
     K = size(Ip) .÷ 2
-    kx = ntuple(α -> 0:K[α]-1, D)
-    k = fill!(similar(xp[1], length.(kx)), 0)
+    k = zeros(T, K)
     for α = 1:D
-        kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
+        kα =
+            reshape(0:K[α]-1, ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
         k .+= kα .^ 2
     end
     k .= sqrt.(k)
@@ -14,42 +15,34 @@ function spectral_stuff(setup; dyadic = true, a = 2)
 
     # Sum or average wavenumbers between k and k+1
     kmax = minimum(K) - 1
-    nk = ceil(Int, maximum(k))
-    # ia = similar(xp[1], Int, 0)
-    ia = similar(xp[1], Int, length(k))
-    ib = sortperm(k)
-    # vals = similar(xp[1], 0)
-    vals = similar(xp[1], length(k))
-    ksort = k[ib]
-    jprev = 2 # Do not include constant mode
-    
-    if dyadic
-        a = T(a)
-        nκ = round(Int, log(T(kmax)) / log(a)) + 1
-        κ = a .^ (0:nκ-1)
-        nextκ = κ -> κ * sqrt(a)
-    else
-        nκ = kmax
-        κ = 1:nκ
-        nextκ = κ -> κ + T(1) / 2
-    end
+    isort = sortperm(k)
+    ksort = k[isort]
+    ia = zeros(Int, 0)
+    ib = zeros(Int, 0)
+    vals = zeros(T, 0)
 
-    for i = 1:nκ
-        j = findfirst(≥(nextκ(κ[i])), ksort)
-        isnothing(j) && (j = length(k) + 1)
-        # ia = [ia; fill!(similar(ia, j - jprev), ki)]
-        ia[jprev:j-1] .= i
-        # val = doaverage ? T(1) / (j - jprev) : T(π) * ((ki + 1)^2 - ki^2) / (j - jprev)
-        # val = doaverage ? T(1) / (j - jprev) : T(1)
-        val = T(1)
-        # vals = [vals; fill!(similar(vals, j - jprev), val)]
-        vals[jprev:j-1] .= val
-        jprev = j
-    end
-    ia = ia[2:jprev-1]
-    ib = ib[2:jprev-1]
-    vals = vals[2:jprev-1]
-    A = sparse(ia, ib, vals, nκ, length(k))
+    # Output query points (evenly log-spaced, but only integer wavenumbers)
+    logκ = LinRange(T(0), log(T(kmax)), npoint)
+    κ = exp.(logκ)
+    κ = sort(unique(round.(Int, κ)))
+    npoint = length(κ)
 
-    (; K, kmax, κ, A)
+    for i = 1:npoint
+        jstart = findfirst(≥(κ[i] / a), ksort)
+        jstop = findfirst(≥(κ[i] * a), ksort)
+        isnothing(jstop) && (jstop = length(ksort) + 1)
+        jstop -= 1
+        nk = jstop - jstart + 1
+        append!(ia, fill(i, nk))
+        append!(ib, isort[jstart:jstop])
+        append!(vals, fill(T(1), nk))
+    end
+    IntArray = typeof(similar(xp[1], Int, 0))
+    TArray = typeof(similar(xp[1], 0))
+    ia = adapt(IntArray, ia)
+    ib = adapt(IntArray, ib)
+    vals = adapt(TArray, vals)
+    A = sparse(ia, ib, vals, npoint, length(k))
+
+    (; A, κ, K)
 end

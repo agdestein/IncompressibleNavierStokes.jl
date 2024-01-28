@@ -329,14 +329,20 @@ The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is defined 
 
 as in San and Staples [San2012](@cite).
 """
-function energy_spectrum_plot(state; setup, dyadic = true, a = 2)
+function energy_spectrum_plot(
+    state;
+    setup,
+    npoint = 100,
+    a = typeof(setup.Re)(1 + sqrt(5)) / 2,
+)
     state isa Observable || (state = Observable(state))
 
     (; dimension, xp, Ip) = setup.grid
     T = eltype(xp[1])
     D = dimension()
 
-    (; K, kmax, κ, A) = spectral_stuff(setup; dyadic, a)
+    (; A, κ, K) = spectral_stuff(setup; npoint, a)
+    kmax = maximum(κ)
 
     # Energy
     # up = interpolate_u_p(state[].u, setup)
@@ -350,7 +356,6 @@ function energy_spectrum_plot(state; setup, dyadic = true, a = 2)
         end
         e = A * reshape(e, :)
         # e = max.(e, eps(T)) # Avoid log(0)
-        # (1:kmax) .* Array(e)
         Array(e)
     end
 
@@ -358,7 +363,7 @@ function energy_spectrum_plot(state; setup, dyadic = true, a = 2)
     # krange = LinRange(1, kmax, 100)
     # krange = collect(1, kmax)
     # krange = [cbrt(T(kmax)), T(kmax)]
-    krange = [kmax^T(0.3), kmax ^ (T(0.8))]
+    krange = [kmax^T(0.3), kmax^(T(0.8))]
     # krange = [T(kmax)^(T(2) / 3), T(kmax)]
     slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
     inertia = lift(ehat) do ehat
@@ -375,7 +380,7 @@ function energy_spectrum_plot(state; setup, dyadic = true, a = 2)
         fig[1, 1];
         xticks,
         xlabel = "k",
-        ylabel = "e(k)",
+        # ylabel = "E(k)",
         xscale = log10,
         yscale = log10,
         limits = (1, kmax, T(1e-8), T(1)),

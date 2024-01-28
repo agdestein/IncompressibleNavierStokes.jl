@@ -200,7 +200,7 @@ function create_les_data(;
                 nupdate = savefreq,
             ),
             # plot = realtimeplotter(; setup = dns, nupdate = 10),
-            log = timelogger(; nupdate = 100),
+            log = timelogger(; nupdate = 10),
         ),
         psolver,
     )
