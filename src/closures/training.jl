@@ -92,10 +92,10 @@ function create_loss_post(;
     psolver,
     closure,
     nupdate = 1,
-    unproject_closure = false,
+    projectorder = :last,
 )
     closure_model = wrappedclosure(closure, setup)
-    setup = (; setup..., closure_model, unproject_closure)
+    setup = (; setup..., closure_model, projectorder)
     (; dimension, Iu) = setup.grid
     D = dimension()
     function loss_post(data, θ)
@@ -125,29 +125,32 @@ function create_relerr_post(;
     setup,
     method = RK44(; T = eltype(setup.grid.x[1])),
     psolver,
-    closure,
+    closure_model,
     nupdate = 1,
-    unproject_closure = false,
+    projectorder = :last,
 )
-    closure_model = wrappedclosure(closure, setup)
-    setup = (; setup..., closure_model, unproject_closure)
+    setup = (; setup..., closure_model, projectorder)
     (; dimension, Iu) = setup.grid
     D = dimension()
+    (; u, t) = data
+    v = copy.(u[1])
+    cache = ode_method_cache(method, setup, v)
     function relerr_post(θ)
-        T = eltype(θ)
-        (; u, t) = data
-        v = u[1]
+        T = eltype(u[1][1])
+        copyto!.(v, u[1])
         stepper = create_stepper(method; setup, psolver, u = v, t = t[1])
-        e = zero(eltype(v[1]))
+        e = zero(T)
         for it = 2:length(t)
             Δt = (t[it] - t[it-1]) / nupdate
             for isub = 1:nupdate
-                stepper = timestep(method, stepper, Δt; θ)
+                stepper = timestep!(method, stepper, Δt; θ, cache)
             end
             a, b = T(0), T(0)
             for α = 1:D
-                a += sum(abs2, (stepper.u[α]-u[it][α])[Iu[α]])
-                b += sum(abs2, u[it][α][Iu[α]])
+                # a += sum(abs2, (stepper.u[α]-u[it][α])[Iu[α]])
+                # b += sum(abs2, u[it][α][Iu[α]])
+                a += sum(abs2, view(stepper.u[α]-u[it][α], Iu[α]))
+                b += sum(abs2, view(u[it][α], Iu[α]))
             end
             e += sqrt(a) / sqrt(b)
         end

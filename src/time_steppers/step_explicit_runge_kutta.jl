@@ -3,13 +3,14 @@ create_stepper(::ExplicitRungeKuttaMethod; setup, psolver, u, t, n = 0) =
 
 function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing, cache)
     (; setup, psolver, u, t, n) = stepper
-    (; grid, closure_model, unproject_closure) = setup
+    (; grid, closure_model, projectorder) = setup
     (; dimension, Iu) = grid
     (; A, b, c) = method
     (; u₀, ku, div, p) = cache
     D = dimension()
     nstage = length(b)
     m = closure_model
+    projectorder ∈ (:first, :second, :last) || error("Unknown projectorder: $projectorder")
 
     # Update current solution
     t₀ = t
@@ -18,16 +19,21 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
     for i = 1:nstage
         # Compute force at current stage i
         apply_bc_u!(u, t, setup)
-        momentum!(ku[i], u, t, setup; θ)
+        momentum!(ku[i], u, t, setup)
 
-        if unproject_closure
-            # Project F first, add closure second
+        # Project F first
+        if projectorder == :first
             apply_bc_u!(ku[i], t, setup; dudt = true)
             project!(ku[i], setup; psolver, div, p)
-            mu = m(u, θ)
-            for α = 1:D
-                ku[i][α] .+= mu[α]
-            end
+        end
+
+        # Add closure term
+        isnothing(m) || map((k, m) -> k .+= m, ku[i], m(u, θ))
+
+        # Project F second
+        if projectorder == :second
+            apply_bc_u!(ku[i], t, setup; dudt = true)
+            project!(ku[i], setup; psolver, div, p)
         end
 
         # Intermediate time step
@@ -42,10 +48,10 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
             end
         end
 
+        # Project stage u directly
         # Make velocity divergence free at time t
-        apply_bc_u!(u, t, setup)
-        if !unproject_closure
-            # Project stage u directly, closure is already included in momentum
+        if projectorder == :last
+            apply_bc_u!(u, t, setup)
             project!(u, setup; psolver, div, p)
         end
     end
@@ -60,12 +66,13 @@ end
 
 function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     (; setup, psolver, u, t, n) = stepper
-    (; grid, closure_model, unproject_closure) = setup
+    (; grid, closure_model, projectorder) = setup
     (; dimension) = grid
     (; A, b, c) = method
     D = dimension()
     nstage = length(b)
     m = closure_model
+    projectorder ∈ (:first, :second, :last) || error("Unknown projectorder: $projectorder")
 
     # Update current solution (does not depend on previous step size)
     t₀ = t
@@ -75,13 +82,21 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     for i = 1:nstage
         # Compute force at current stage i
         u = apply_bc_u(u, t, setup)
-        F = momentum(u, t, setup; θ)
+        F = momentum(u, t, setup)
 
-        if unproject_closure
-            # Project F first, add closure second
+        # Project F first
+        if projectorder == :first
             F = apply_bc_u(F, t, setup; dudt = true)
             F = project(F, setup; psolver)
-            F = F .+ m(u, θ)
+        end
+
+        # Add closure term
+        isnothing(m) || (F = F .+ m(u, θ))
+
+        # Project F second
+        if projectorder == :second
+            F = apply_bc_u(F, t, setup; dudt = true)
+            F = project(F, setup; psolver)
         end
 
         # Store right-hand side of stage i
@@ -97,10 +112,10 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
             # u = tupleadd(u, @.(Δt * A[i, j] * ku[j]))
         end
 
+        # Project stage u directly
         # Make velocity divergence free at time t
-        u = apply_bc_u(u, t, setup)
-        if !unproject_closure
-            # Project stage u directly, closure is already included in momentum
+        if projectorder == :last
+            u = apply_bc_u(u, t, setup)
             u = project(u, setup; psolver)
         end
     end

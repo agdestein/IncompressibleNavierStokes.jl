@@ -307,9 +307,13 @@ Create energy history plot.
 """
 function energy_history_plot(state; setup)
     @assert state isa Observable "Energy history requires observable state."
+    (; Ω, Ip) = setup.grid
+    e = zero(state[].u[1])
     _points = Point2f[]
     points = lift(state) do (; u, t)
-        E = total_kinetic_energy(u, setup)
+        kinetic_energy!(e, u, setup)
+        e .*= Ω
+        E = sum(e[Ip])
         push!(_points, Point2f(t, E))
     end
     fig = lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))

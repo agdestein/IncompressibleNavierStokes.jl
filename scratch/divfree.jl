@@ -26,6 +26,17 @@ using SparseArrays
 using KernelAbstractions
 using FFTW
 
+getorder(i) =
+    if i == 1
+        :first
+    elseif i == 2
+        :second
+    elseif i == 3
+        :last
+    else
+        error("Unknown order: $i")
+    end
+
 GLMakie.activate!()
 
 set_theme!(; GLMakie = (; scalefactor = 1.5))
@@ -42,6 +53,7 @@ T = Float64
 # Array type
 ArrayType = Array
 device = identity
+clean() = nothing
 ## using CUDA; ArrayType = CuArray
 ## using AMDGPU; ArrayType = ROCArray
 ## using oneAPI; ArrayType = oneArray
@@ -54,6 +66,7 @@ T = Float32;
 ArrayType = CuArray;
 CUDA.allowscalar(false);
 device = x -> adapt(CuArray, x)
+clean() = (GC.gc(); CUDA.reclaim())
 
 # Parameters
 get_params(nlesscalar) = (;
@@ -88,10 +101,14 @@ data_valid = [create_les_data(; params_valid...) for _ = 1:1];
 data_test = create_les_data(; params_test...);
 
 # Save filtered DNS data
-jldsave("output/divfree/data.jld2"; data_train, data_valid, data_test)
+jldsave("output/divfree/data_train.jld2"; data_train)
+jldsave("output/divfree/data_valid.jld2"; data_valid)
+jldsave("output/divfree/data_test.jld2"; data_test)
 
-# # Load previous LES data
-# data_train, data_valid, data_test = load("output/divfree/data.jld2", "data_train", "data_valid", "data_test");
+# Load filtered DNS data
+data_train = load("output/divfree/data.jld2", "data_train");
+data_valid = load("output/divfree/data.jld2", "data_valid");
+data_test = load("output/divfree/data.jld2", "data_test");
 
 # Build LES setup and assemble operators
 getsetups(params) = [
@@ -122,23 +139,25 @@ io_valid[1].u |> extrema
 io_valid[1].c |> extrema
 
 # Inspect data
-ig = 2
-ifil = 1
-field, setup = data_train[1].data[ig, ifil].u, setups_train[ig];
-# field, setup = data_valid[1].data[ig, ifil].u, setups_valid[ig];
-# field, setup = data_test.data[ig, ifil], setups_test[ig];
-u = device.(field[1]);
-o = Observable((; u, t = nothing));
-# energy_spectrum_plot(o; setup)
-fieldplot(
-    o;
-    setup,
-    # fieldname = :velocity,
-    # fieldname = 1,
-)
-for i = 1:length(field)
-    o[] = (; o[]..., u = device(field[i]))
-    sleep(0.001)
+let
+    ig = 2
+    ifil = 1
+    field, setup = data_train[1].data[ig, ifil].u, setups_train[ig]
+    # field, setup = data_valid[1].data[ig, ifil].u, setups_valid[ig];
+    # field, setup = data_test.data[ig, ifil], setups_test[ig];
+    u = device.(field[1])
+    o = Observable((; u, t = nothing))
+    # energy_spectrum_plot(o; setup) |> display
+    fieldplot(
+        o;
+        setup,
+        # fieldname = :velocity,
+        # fieldname = 1,
+    ) |> display
+    for i = 1:length(field)
+        o[] = (; o[]..., u = device(field[i]))
+        sleep(0.001)
+    end
 end
 
 GLMakie.activate!()
@@ -226,7 +245,7 @@ closure.chain
     @show ig ifil
     d = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device)
     θ = T(1.0e0) * device(θ₀)
-    loss = createloss(mean_squared_error, closure);
+    loss = createloss(mean_squared_error, closure)
     opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
     callbackstate = Point2f[]
     it = rand(1:size(io_valid[ig, ifil].u, 4), 50)
@@ -243,21 +262,20 @@ closure.chain
     )
     θ
 end
-GC.gc()
-CUDA.reclaim()
+clean()
 
-# # Save trained parameters
-# jldsave("output/divfree/theta_prior.jld2"; theta = Array.(θ_cnn))
+# Save trained parameters
+jldsave("output/divfree/theta_prior.jld2"; theta = Array.(θ_cnn))
 
-# # Load trained parameters
-# θ_cnn = [device(θ₀) for _ in CartesianIndices(size(data_train[1].data))];
-# θθ = load("output/divfree/theta_prior.jld2");
-# copyto!.(θ_cnn, θθ["theta"]);
+# Load trained parameters
+θ_cnn = [device(θ₀) for _ in CartesianIndices(size(data_train[1].data))];
+θθ = load("output/divfree/theta_prior.jld2");
+copyto!.(θ_cnn, θθ["theta"]);
 
-# θ_post = map(CartesianIndices(size(io_train))) do I
-#     ig, ifil = I.I
-θ_post = let ig = 2, ifil = 1
-    iorder = 1
+# θ_cnn_post = let ig = 3, ifil = 2, iorder = 2
+θ_cnn_post = map(CartesianIndices((size(io_train)..., 2))) do I
+    ig, ifil, iorder = I.I
+    println("iorder = $iorder, ifil = $ifil, ig = $ig")
     setup = setups_train[ig]
     psolver = SpectralPressureSolver(setup)
     loss = IncompressibleNavierStokes.create_loss_post(;
@@ -265,179 +283,152 @@ CUDA.reclaim()
         psolver,
         closure,
         nupdate = 4,
-        unproject_closure = iorder == 2,
+        projectorder = getorder(iorder),
     )
     data = [(; u = d.data[ig, ifil].u, d.t) for d in data_train]
-    d = create_dataloader_post(data; device, nunroll = 10)
-    # θ = copy(θ_cnn[ig, ifil])
-    θ = device(θ₀)
+    d = create_dataloader_post(data; device, nunroll = 20)
+    # θ = T(1e-1) * copy(θ_cnn[ig, ifil])
+    θ = copy(θ_cnn[ig, ifil])
+    # θ = copy(θ_cnn_post)
+    # θ = device(θ₀)
     opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
     callbackstate = Point2f[]
-    it = rand(1:size(io_valid[ig, ifil].u, 4), 50)
+    it = 1:20
     data = data_valid[1]
-    data = (; u = device.(data.data[ig, ifil].u), data.t)
+    data = (; u = device.(data.data[ig, ifil].u[it]), t = data.t[it])
     (; opt, θ, callbackstate) = train(
         [d],
         loss,
         opt,
         θ;
-        niter = 100,
-        ncallback = 1,
+        niter = 200,
+        ncallback = 10,
         callbackstate,
         callback = create_callback(
             create_relerr_post(;
                 data,
                 setup,
                 psolver,
-                closure,
-                unproject_closure = iorder == 2,
+                closure_model = wrappedclosure(closure, setup),
+                projectorder = getorder(iorder),
+                nupdate = 8,
             );
             state = callbackstate,
             displayref = false,
         ),
     )
+    jldsave(
+        "output/divfree/theta_post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2";
+        theta = Array(θ),
+    )
+    clean()
     θ
-end
+end;
+clean()
 
-# Train Smagorinsky closure model
-ig = 2;
-setup = setups_train[ig];
-sample = data_train[1];
-m = smagorinsky_closure(setup);
-θ = T(0.05)
-e_smag = sum(2:length(sample.t)) do it
-    It = setup.grid.Ip
-    u = sample.u[ig][it] |> device
-    c = sample.c[ig][it] |> device
-    mu = m(u, θ)
-    e = zero(eltype(u[1]))
-    for α = 1:D
-        # e += sum(abs2, mu[α][Ip] .- c[α][Ip]) / sum(abs2, c[α][Ip])
-        e += norm(mu[α][Ip] .- c[α][Ip]) / norm(c[α][Ip])
+θ_cnn[2, 2] |> extrema
+
+Array(θ_post)
+
+# Train Smagorinsky model with Lpost (grid search)
+θ_smag = map(CartesianIndices((size(io_train, 2), 2))) do I
+    ifil, iorder = I.I
+    ngrid = size(io_train, 1)
+    θmin = T(0)
+    emin = T(Inf)
+    isample = 1
+    it = 1:50
+    for θ in LinRange(T(0), T(0.5), 51)
+        e = T(0)
+        for igrid = 1:ngrid
+            println("iorder = $iorder, ifil = $ifil, θ = $θ, igrid = $igrid")
+            projectorder = getorder(iorder)
+            setup = setups_train[igrid]
+            psolver = SpectralPressureSolver(setup)
+            d = data_train[isample]
+            data = (; u = device.(d.data[igrid, ifil].u[it]), t = d.t[it])
+            nupdate = 4
+            err = create_relerr_post(;
+                data,
+                setup,
+                psolver,
+                closure_model = smagorinsky_closure(setup),
+                projectorder,
+                nupdate,
+            )
+            e += err(θ)
+        end
+        e /= ngrid
+        if e < emin
+            emin = e
+            θmin = θ
+        end
     end
-    e / D
-end / length(sample.t)
-# for θ in LinRange(T(0), T(1), 100)];
+    θmin
+end
+clean()
+θ_smag()
+
+# Save trained parameters
+jldsave("output/divfree/theta_smag.jld2"; theta = θ_smag);
+
+# Load trained parameters
+θ_smag = load("output/divfree/theta_smag.jld2")["theta"];
+θ_smag
 
 # lines(LinRange(T(0), T(1), 100), e_smag)
 
 # Errors for grid-specialized closure models
-e_smag, e_cnn = let
+e_nm, e_smag, e_cnn, e_cnn_post = let
+    e_nm = zeros(T, size(data_test.data)...)
     e_smag = zeros(T, size(data_test.data)..., 2)
     e_cnn = zeros(T, size(data_test.data)..., 2)
+    e_cnn_post = zeros(T, size(data_test.data)..., 2)
     for iorder = 1:2, ifil = 1:2, ig = 1:size(data_test.data, 1)
-        @show iorder ifil ig
+        println("iorder = $iorder, ifil = $ifil, ig = $ig")
+        projectorder = getorder(iorder)
         setup = setups_test[ig]
-        params = params_test[ig]
         psolver = SpectralPressureSolver(setup)
-        u = device.(data_test.data[ig, ifil].u)
-        u₀ = device(data_test.data[ig, ifil].u[1])
-        Δt = params_test.Δt * params_test.savefreq
-        tlims = extrema(data_test.t)
-        nupdate = 20
-        Δt /= nupdate
-        processors = (; relerr = relerr_trajectory(u, setup; nupdate))
+        data = (; u = device.(data_test.data[ig, ifil].u), t = data_test.t)
+        nupdate = 50
+        # No model
+        # Only for closurefirst, since projectfirst is the same
+        if iorder == 1
+            err = create_relerr_post(; data, setup, psolver, closure_model = nothing, nupdate)
+            e_nm[ig, ifil] = err(nothing)
+        end
         # Smagorinsky
-        closedsetup = (;
-            setup...,
+        err = create_relerr_post(;
+            data,
+            setup,
+            psolver,
             closure_model = smagorinsky_closure(setup),
-            unproject_closure = iorder == 2,
+            projectorder,
+            nupdate,
         )
-        _, outputs =
-            solve_unsteady(closedsetup, u₀, tlims; Δt, psolver, processors, θ = T(0.1))
-        e_smag[ig, ifil, iorder] = outputs.relerr[]
+        e_smag[ig, ifil, iorder] = err(θ_smag[ifil, iorder])
         # CNN
-        # The first grids are trained for
+        # Only the first grids are trained for
         if ig ≤ size(data_train[1].data, 1)
-            closedsetup = (;
-                setup...,
-                closure_model = wrappedclosure(closure, setup),
-                unproject_closure = iorder == 2,
-            )
-            _, outputs = solve_unsteady(
-                closedsetup,
-                u₀,
-                tlims;
-                Δt,
+            err = create_relerr_post(;
+                data,
+                setup,
                 psolver,
-                processors,
-                θ = θ_cnn[ig, ifil],
+                closure_model = wrappedclosure(closure, setup),
+                projectorder,
+                nupdate,
             )
-            e_cnn[ig, ifil, iorder] = outputs.relerr[]
+            e_cnn[ig, ifil, iorder] = err(θ_cnn[ig, ifil])
+            e_cnn_post[ig, ifil, iorder] = err(θ_cnn_post[ig, ifil, iorder])
         end
     end
-    e_smag, e_cnn
+    e_nm, e_smag, e_cnn, e_cnn_post
 end
-e_smag
-e_cnn
-
-# julia> e_smag                julia> e_smag
-# 5×2×2 Array{Float32, 3}:     5×2×2 Array{Float32, 3}:
-# [:, :, 1] =                  [:, :, 1] =
-#  0.781462   0.778116          0.781462   0.778104
-#  0.505524   0.505589          0.505524   0.505565
-#  0.30132    0.301625          0.30132    0.301601
-#  0.143863   0.144141          0.143863   0.144118
-#  0.0457445  0.0459661         0.0457429  0.0459541
-#                                                       
-# [:, :, 2] =                  [:, :, 2] =
-#  0.813456   0.826474          0.813457   0.826474
-#  0.527202   0.534727          0.527203   0.534726
-#  0.318339   0.32539           0.318339   0.325389
-#  0.152291   0.157393          0.152292   0.157392
-#  0.0482445  0.051005          0.0482446  0.0510034
-#                                                       
-# julia> e_cnn                 julia> e_cnn
-# 5×2×2 Array{Float32, 3}:     5×2×2 Array{Float32, 3}:
-# [:, :, 1] =                  [:, :, 1] =
-#  0.585886   0.5875            0.585887   0.5875
-#  0.311889   0.277596          0.311892   0.277624
-#  0.0725899  0.114744          0.0725901  0.114847
-#  0.0        0.0               0.0        0.0
-#  0.0        0.0               0.0        0.0
-#                                                       
-# [:, :, 2] =                  [:, :, 2] =
-#    0.783691    0.859665         0.783688    0.859664
-#    1.81263   NaN                1.78943     6.52473
-#  NaN         NaN              NaN         NaN
-#    0.0         0.0              0.0         0.0
-#    0.0         0.0              0.0         0.0
-
-# No model
-e_nm = let
-    e_nm = zeros(T, size(data_test.data)...)
-    for ifil = 1:2, ig = 1:size(data_test.data, 1)
-        @show ifil ig
-        setup = setups_test[ig]
-        params = params_test[ig]
-        psolver = SpectralPressureSolver(setup)
-        u = device.(data_test.data[ig, ifil].u)
-        u₀ = device(data_test.data[ig, ifil].u[1])
-        Δt = params_test.Δt * params_test.savefreq
-        tlims = extrema(data_test.t)
-        nupdate = 20
-        Δt /= nupdate
-        processors = (; relerr = relerr_trajectory(u, setup; nupdate))
-        _, outputs = solve_unsteady(
-            (; setup..., unproject_closure = false),
-            u₀,
-            tlims;
-            Δt,
-            psolver,
-            processors,
-        )
-        e_nm[ig, ifil] = outputs.relerr[]
-    end
-    e_nm
-end
-e_nm
-
-GC.gc()
-CUDA.reclaim()
-
+clean()
 e_nm
 e_smag
 e_cnn
+e_cnn_post
 
 CairoMakie.activate!()
 GLMakie.activate!()
@@ -450,7 +441,7 @@ with_theme(;
     # fontsize = 20,
     palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
 ) do
-    iorder = 2
+    iorder = 1
     lesmodel = iorder == 1 ? "closure-then-project" : "project-then-closure"
     nles = [n[1] for n in params_test.nles]
     fig = Figure(; size = (500, 400))
@@ -506,6 +497,21 @@ with_theme(;
             label,
         )
     end
+    for ifil = 1:2
+        ntrain = size(data_train[1].data, 1)
+        linestyle = ifil == 1 ? :solid : :dash
+        label = "CNN (post)"
+        label = label * (ifil == 1 ? " (FA)" : " (VA)")
+        # ifil == 2 && (label = nothing)
+        scatterlines!(
+            nles[1:ntrain],
+            e_cnn_post[1:ntrain, ifil, iorder];
+            color = Cycled(4),
+            linestyle,
+            marker = :diamond,
+            label,
+        )
+    end
     # lines!(
     #     collect(extrema(nles[4:end])),
     #     n -> 2e4 * n^-2.0;
@@ -517,11 +523,6 @@ with_theme(;
     # iorder == 2 && limits!(ax, (T(60), T(1050)), (T(2e-2), T(1e1)))
     fig
 end
-
-e_cnn
-e_cnn_2 = copy(e_cnn);
-e_cnn_2[isnan.(e_cnn_2)] .= 1e10;
-e_cnn_2;
 
 save("$output/convergence_Lprior_prosecond.pdf", current_figure())
 save("$output/convergence_Lprior_profirst.pdf", current_figure())
@@ -551,186 +552,6 @@ markers_labels = [
     ('✈', "'\\:airplane:'"),
 ]
 
-# Final spectra
-ig = 4
-setup = setups_test[ig];
-params = params_test
-pressure_solver = SpectralPressureSolver(setup);
-uref = device(data_test.u[ig][end]);
-u₀ = device(data_test.u[ig][1]);
-Δt = params_test.Δt * params_test.savefreq;
-tlims = extrema(data_test.t);
-nupdate = 4;
-Δt /= nupdate;
-state_nm, outputs = solve_unsteady(setup, u₀, tlims; Δt, pressure_solver);
-m = smagorinsky_closure(setup);
-closedsetup = (; setup..., closure_model = u -> m(u, T(0.1)));
-state_smag, outputs = solve_unsteady(closedsetup, u₀, tlims; Δt, pressure_solver);
-# closedsetup = (; setup..., closure_model = wrappedclosure(closure, θ_cnn_shared, setup));
-closedsetup = (; setup..., closure_model = wrappedclosure(closure, θ_cnn[ig-1], setup));
-state_cnn, outputs = solve_unsteady(closedsetup, u₀, tlims; Δt, pressure_solver);
-
-# Plot predicted spectra
-fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
-    (; xp, Ip) = setup.grid
-    D = params.D
-    K = size(Ip) .÷ 2
-    kx = ntuple(α -> 0:K[α]-1, D)
-    k = fill!(similar(xp[1], length.(kx)), 0)
-    for α = 1:D
-        kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
-        k .+= kα .^ 2
-    end
-    k .= sqrt.(k)
-    k = reshape(k, :)
-    # Sum or average wavenumbers between k and k+1
-    nk = ceil(Int, maximum(k))
-    kmax = nk - 1
-    # kmax = minimum(K) - 1
-    kint = 1:kmax
-    ia = similar(xp[1], Int, 0)
-    ib = sortperm(k)
-    vals = similar(xp[1], 0)
-    ksort = k[ib]
-    jprev = 2 # Do not include constant mode
-    for ki = 1:kmax
-        j = findfirst(>(ki + 1), ksort)
-        isnothing(j) && (j = length(k) + 1)
-        ia = [ia; fill!(similar(ia, j - jprev), ki)]
-        # val = doaverage ? T(1) / (j - jprev) : T(1)
-        val = T(π) * ((ki + 1)^2 - ki^2) / (j - jprev)
-        # val = T(1) / (j - jprev)
-        vals = [vals; fill!(similar(vals, j - jprev), val)]
-        jprev = j
-    end
-    ib = ib[2:jprev-1]
-    A = sparse(ia, ib, vals, kmax, length(k))
-    # Build inertial slope above energy
-    # krange = [cbrt(T(kmax)), T(kmax)]
-    krange = [T(kmax)^(T(2) / 3), T(kmax)]
-    # slope, slopelabel = D == 2 ? (-T(3), L"k^{-3}") : (-T(5 / 3), L"k^{-5/3}")
-    slope, slopelabel = D == 2 ? (-T(3), "|k|⁻³") : (-T(5 / 3), "|k|⁻⁵³")
-    slopeconst = T(0)
-    # Nice ticks
-    logmax = round(Int, log2(kmax + 1))
-    xticks = T(2) .^ (0:logmax)
-    # Make plot
-    fig = Figure(; size = (500, 400))
-    ax = Axis(
-        fig[1, 1];
-        xticks,
-        xlabel = "|k|",
-        ylabel = "e(|k|)",
-        # title = "Kinetic energy (n = $(params.nles[ig])) at time t = $(round(data_test.t[end]; digits = 1))",
-        title = "Kinetic energy (n = $(params.nles[ig]))",
-        xscale = log10,
-        yscale = log10,
-        limits = (extrema(kint)..., T(1e-8), T(1)),
-    )
-    for (u, label) in (
-        # (uref, "Reference"),
-        (state_nm.u, "No closure"),
-        (state_smag.u, "Smagorinsky"),
-        (state_cnn.u, "CNN (specialized)"),
-        (uref, "Reference"),
-    )
-        ke = IncompressibleNavierStokes.kinetic_energy(u, setup)
-        e = ke[Ip]
-        e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
-        e = abs.(e) ./ size(e, 1)
-        e = A * reshape(e, :)
-        ehat = max.(e, eps(T)) # Avoid log(0)
-        slopeconst = max(slopeconst, maximum(ehat ./ kint .^ slope))
-        lines!(ax, kint, Array(ehat); label)
-    end
-    inertia = 2 .* slopeconst .* krange .^ slope
-    lines!(ax, krange, inertia; linestyle = :dash, label = slopelabel)
-    axislegend(ax; position = :lb)
-    autolimits!(ax)
-    fig
-end
-
 save("predicted_spectra.pdf", fig)
-
-# Plot spectrum errors
-fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
-    (; xp, Ip) = setup.grid
-    D = params.D
-    K = size(Ip) .÷ 2
-    kx = ntuple(α -> 0:K[α]-1, D)
-    k = fill!(similar(xp[1], length.(kx)), 0)
-    for α = 1:D
-        kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
-        k .+= kα .^ 2
-    end
-    k .= sqrt.(k)
-    k = reshape(k, :)
-    # Sum or average wavenumbers between k and k+1
-    nk = ceil(Int, maximum(k))
-    # kmax = nk - 1
-    kmax = minimum(K) - 1
-    kint = 1:kmax
-    ia = similar(xp[1], Int, 0)
-    ib = sortperm(k)
-    vals = similar(xp[1], 0)
-    ksort = k[ib]
-    jprev = 2 # Do not include constant mode
-    for ki = 1:kmax
-        j = findfirst(>(ki + 1), ksort)
-        isnothing(j) && (j = length(k) + 1)
-        ia = [ia; fill!(similar(ia, j - jprev), ki)]
-        # val = doaverage ? T(1) / (j - jprev) : T(1)
-        val = T(π) * ((ki + 1)^2 - ki^2) / (j - jprev)
-        vals = [vals; fill!(similar(vals, j - jprev), val)]
-        jprev = j
-    end
-    ib = ib[2:jprev-1]
-    A = sparse(ia, ib, vals, kmax, length(k))
-    # Build inertial slope above energy
-    # krange = [cbrt(T(kmax)), T(kmax)]
-    krange = [T(kmax)^(T(2) / 3), T(kmax)]
-    # slope, slopelabel = D == 2 ? (-T(3), L"k^{-3}") : (-T(5 / 3), L"k^{-5/3}")
-    slope, slopelabel = D == 2 ? (-T(3), "|k|⁻³") : (-T(5 / 3), "|k|⁻⁵³")
-    slopeconst = T(0)
-    # Nice ticks
-    logmax = round(Int, log2(kmax + 1))
-    xticks = T(2) .^ (0:logmax)
-    # Make plot
-    fig = Figure(; size = (500, 400))
-    ax = Axis(
-        fig[1, 1];
-        xticks,
-        xlabel = "|k|",
-        ylabel = "e(|k|)",
-        # title = "Kinetic energy (n = $(params.nles[ig])) at time t = $(round(data_test.t[end]; digits = 1))",
-        title = "Relative energy error (n = $(params.nles[ig]))",
-        xscale = log10,
-        yscale = log10,
-        limits = (extrema(kint)..., T(1e-8), T(1)),
-    )
-    ke = IncompressibleNavierStokes.kinetic_energy(uref, setup)
-    e = ke[Ip]
-    e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
-    e = abs.(e) ./ size(e, 1)
-    e = A * reshape(e, :)
-    eref = max.(e, eps(T)) # Avoid log(0)
-    for (u, label) in (
-        (state_nm.u, "No closure"),
-        (state_smag.u, "Smagorinsky"),
-        (state_cnn.u, "CNN (specialized)"),
-    )
-        ke = IncompressibleNavierStokes.kinetic_energy(u, setup)
-        e = ke[Ip]
-        e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
-        e = abs.(e) ./ size(e, 1)
-        e = A * reshape(e, :)
-        ehat = max.(e, eps(T)) # Avoid log(0)
-        ee = @. abs(ehat - eref) / abs(eref)
-        lines!(ax, kint, Array(ee); label)
-    end
-    axislegend(ax; position = :lt)
-    autolimits!(ax)
-    fig
-end
 
 save("spectrum_error.pdf", fig)
