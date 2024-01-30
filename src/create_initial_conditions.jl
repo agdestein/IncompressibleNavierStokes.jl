@@ -210,6 +210,6 @@ function random_field(
     # Make velocity field divergence free on staggered grid
     # (it is already diergence free on the "spectral grid")
     apply_bc_u!(u, t, setup)
-    project(u, setup; psolver)
+    u = project(u, setup; psolver)
     apply_bc_u!(u, t, setup)
 end
