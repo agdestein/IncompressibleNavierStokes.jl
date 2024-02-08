@@ -15,7 +15,7 @@ function wrappedclosure(m, setup)
     #     i = ntuple(Returns(:), D)
     #     mu = ntuple(α -> mu[i..., α, 1], D)
     # end
-    function neuralclosure(u, θ)
+    neuralclosure(u, θ) =
         if D == 2
             u = cat(u[1][Iu[1]], u[2][Iu[2]]; dims = 3)
             u = reshape(u, size(u)..., 1) # One sample
@@ -29,8 +29,6 @@ function wrappedclosure(m, setup)
             mu = pad_circular(mu, 1)
             mu = (mu[:, :, :, 1, 1], mu[:, :, :, 2, 1], mu[:, :, :, 3, 1])
         end
-        mu
-    end
 end
 
 """

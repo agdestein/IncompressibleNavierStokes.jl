@@ -175,7 +175,7 @@ fieldplot(
 @time state, outputs = solve_unsteady(
     dns,
     u₀,
-    (T(0), T(1e-1));
+    (T(0), T(5e-1));
     Δt,
     # Δt = T(1e-4),
     # Δt = T(1e-5),
@@ -191,7 +191,7 @@ fieldplot(
         #     # levels = 5,
         #     docolorbar = false,
         # ),
-        # obs = observe_u(dns, psolver_dns, filters; nupdate = 20),
+        obs = observe_u(dns, psolver_dns, filters; nupdate = 20),
         # ehist = realtimeplotter(;
         #     setup,
         #     plot = energy_history_plot,
@@ -247,8 +247,8 @@ fieldplot(
 save("$output/vorticity_end_$(filters[i].compression).png", current_figure())
 
 fieldplot(
-    # (; u = u₀, t = T(0));
-    state;
+    (; u = u₀, t = T(0));
+    # state;
     setup = dns,
     fieldname = :eig2field,
     levels = LinRange(T(2), T(10), 10),

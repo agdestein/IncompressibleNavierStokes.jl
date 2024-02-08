@@ -22,7 +22,9 @@ function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) /
     vals = zeros(T, 0)
 
     # Output query points (evenly log-spaced, but only integer wavenumbers)
-    logκ = LinRange(T(0), log(T(kmax)), npoint)
+    logκ = LinRange(T(0), log(T(kmax) / a), npoint)
+    # logκ = LinRange(log(a), log(T(kmax) / a), npoint)
+    # logκ = LinRange(T(0), log(T(kmax)), npoint)
     κ = exp.(logκ)
     κ = sort(unique(round.(Int, κ)))
     npoint = length(κ)

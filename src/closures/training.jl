@@ -177,24 +177,32 @@ If not using interactive GLMakie window, set `display_each_iteration` to
 """
 function create_callback(
     err;
-    state = Point2f[],
+    θ,
+    callbackstate = (;
+        θmin = θ,
+        emin = eltype(θ)(Inf),
+        hist = Point2f[],
+    ),
     displayref = true,
     display_each_iteration = false,
 )
-    istart = isempty(state) ? 0 : Int(first(state[end]))
+    istart = isempty(callbackstate.hist) ? 0 : Int(callbackstate.hist[end][1])
     obs = Observable([Point2f(0, 0)])
     fig = lines(obs; axis = (; title = "Relative prediction error", xlabel = "Iteration"))
     displayref && hlines!([1.0f0]; linestyle = :dash)
-    obs[] = state
+    obs[] = callbackstate.hist
     display(fig)
     function callback(state, i, θ)
         e = err(θ)
         @info "Iteration $i \trelative error: $e"
-        state = push!(copy(state), Point2f(istart + i, e))
-        obs[] = state
+        hist = push!(copy(state.hist), Point2f(istart + i, e))
+        obs[] = hist
         # i < 30 || autolimits!(fig.axis)
         autolimits!(fig.axis)
         display_each_iteration && display(fig)
+        state = (; state..., hist)
+        e < state.emin && (state = (; state..., θmin = θ, emin = e))
         state
     end
+    (; callbackstate, callback)
 end

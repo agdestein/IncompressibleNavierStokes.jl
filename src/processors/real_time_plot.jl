@@ -87,6 +87,7 @@ function fieldplot(
     equal_axis = true,
     docolorbar = true,
     size = nothing,
+    title = nothing,
     kwargs...,
 )
     (; boundary_conditions, grid) = setup
@@ -169,9 +170,9 @@ function fieldplot(
     end
 
     axis = (;
-        title = titlecase(string(fieldname)),
         xlabel = "x",
         ylabel = "y",
+        title = isnothing(title) ? titlecase(string(fieldname)) : title,
         limits = (xlims[1]..., xlims[2]...),
     )
     equal_axis && (axis = (axis..., aspect = DataAspect()))

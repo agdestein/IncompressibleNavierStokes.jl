@@ -39,10 +39,7 @@ function lesdatagen(dnsobs, Φ, les, compression, psolver)
     ΦF = zero.(Φu)
     FΦ = zero.(Φu)
     c = zero.(Φu)
-    results = (;
-        u = fill(Array.(dnsobs[].u), 0),
-        c = fill(Array.(dnsobs[].u), 0),
-    )
+    results = (; u = fill(Array.(dnsobs[].u), 0), c = fill(Array.(dnsobs[].u), 0))
     on(dnsobs) do (; u, F, t)
         Φ(Φu, u, les, compression)
         apply_bc_u!(Φu, t, les)
@@ -60,7 +57,10 @@ function lesdatagen(dnsobs, Φ, les, compression, psolver)
 end
 
 filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 1) =
-    processor() do state
+    processor(
+        (results, state) -> (; results..., comptime = time() - results.comptime),
+    ) do state
+        comptime = time()
         (; x) = dns.grid
         T = eltype(x[1])
         F = zero.(state[].u)
@@ -71,10 +71,7 @@ filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 
             lesdatagen(dnsobs, Φ, les[i], compression[i], psolver_les[i]) for
             i = 1:length(les), Φ in filters
         ]
-        results = (;
-            data,
-            t = zeros(T, 0),
-      )
+        results = (; data, t = zeros(T, 0), comptime)
         on(state) do (; u, t, n)
             n % nupdate == 0 || return
             momentum!(F, u, t, dns)
@@ -165,6 +162,8 @@ function create_les_data(;
     # Initial conditions
     u₀ = icfunc(dns, psolver)
 
+    any(u -> any(isnan, u), u₀) && @warn "Initial conditions contain NaNs"
+
     # Random body force
     # force_dns =
     #     gaussian_force(xdns...) +
@@ -227,8 +226,14 @@ function create_io_arrays(data, setups)
         c = zeros(T, (N .- 2)..., D, nt + 1, nsample)
         ifield = ntuple(Returns(:), D)
         for is = 1:nsample, it = 1:nt+1, α = 1:D
-            copyto!(view(u, ifield..., α, it, is), view(data[is].data[ig, ifil].u[it][α], Iu[α]))
-            copyto!(view(c, ifield..., α, it, is), view(data[is].data[ig, ifil].c[it][α], Iu[α]))
+            copyto!(
+                view(u, ifield..., α, it, is),
+                view(data[is].data[ig, ifil].u[it][α], Iu[α]),
+            )
+            copyto!(
+                view(c, ifield..., α, it, is),
+                view(data[is].data[ig, ifil].c[it][α], Iu[α]),
+            )
         end
         (; u = reshape(u, (N .- 2)..., D, :), c = reshape(c, (N .- 2)..., D, :))
     end
