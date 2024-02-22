@@ -22,6 +22,7 @@ function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) /
     vals = zeros(T, 0)
 
     # Output query points (evenly log-spaced, but only integer wavenumbers)
+    # logκ = LinRange(T(0), log(T(kmax) - 1), npoint)
     logκ = LinRange(T(0), log(T(kmax) / a), npoint)
     # logκ = LinRange(log(a), log(T(kmax) / a), npoint)
     # logκ = LinRange(T(0), log(T(kmax)), npoint)
@@ -32,6 +33,8 @@ function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) /
     for i = 1:npoint
         jstart = findfirst(≥(κ[i] / a), ksort)
         jstop = findfirst(≥(κ[i] * a), ksort)
+        # jstart = findfirst(≥(κ[i] - T(1.01)), ksort)
+        # jstop = findfirst(≥(κ[i] + T(1.01)), ksort)
         isnothing(jstop) && (jstop = length(ksort) + 1)
         jstop -= 1
         nk = jstop - jstart + 1
