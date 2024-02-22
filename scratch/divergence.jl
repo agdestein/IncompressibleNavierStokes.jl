@@ -8,7 +8,14 @@ end                                                 #src
 using GLMakie
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes:
-    momentum!, divergence!, project!, apply_bc_u!, spectral_stuff, kinetic_energy,
+    momentum,
+    momentum!,
+    divergence!,
+    project,
+    project!,
+    apply_bc_u!,
+    spectral_stuff,
+    kinetic_energy,
     interpolate_u_p
 using LinearAlgebra
 using Printf
@@ -114,7 +121,7 @@ set_theme!(; GLMakie = (; scalefactor = 1.5))
 
 # 3D
 T = Float32
-Re = T(10_000)
+Re = T(2_000)
 ndns = 512
 D = 3
 kp = 5
@@ -157,6 +164,7 @@ psolver_dns = SpectralPressureSolver(dns);
 
 # Create random initial conditions
 u₀ = random_field(dns, T(0); kp, psolver = psolver_dns);
+
 state = (; u = u₀, t = T(0));
 
 GC.gc()
@@ -175,7 +183,8 @@ fieldplot(
 @time state, outputs = solve_unsteady(
     dns,
     u₀,
-    (T(0), T(5e-1));
+    # state.u,
+    (T(0), T(1e-1));
     Δt,
     # Δt = T(1e-4),
     # Δt = T(1e-5),
@@ -191,7 +200,7 @@ fieldplot(
         #     # levels = 5,
         #     docolorbar = false,
         # ),
-        obs = observe_u(dns, psolver_dns, filters; nupdate = 20),
+        # obs = observe_u(dns, psolver_dns, filters; nupdate = 20),
         # ehist = realtimeplotter(;
         #     setup,
         #     plot = energy_history_plot,
@@ -199,7 +208,18 @@ fieldplot(
         #     displayfig = false,
         # ),
         # espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 10),
-        # anim = animator(; setup, path = "$output/solution.mkv", nupdate = 20),
+        # anim = animator(; path = "$output/solution_Re$(Int(Re)).mkv", nupdate = 10,
+        #     setup = dns,
+        #     fieldname = :eig2field,
+        #     levels = LinRange(T(2), T(10), 10),
+        #     # levels = LinRange(T(4), T(12), 10),
+        #     # levels = LinRange(-1.0f0, 3.0f0, 5),
+        #     # levels = LinRange(-2.0f0, 2.0f0, 5),
+        #     # levels = 5,
+        #     docolorbar = false,
+        #     # size = (800, 800),
+        #     size = (600, 600),
+        # ),
         # vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
         # field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 5),
@@ -210,49 +230,118 @@ CUDA.reclaim()
 
 # 103.5320324
 
-state.u[1]
+state.u
+
+state.u[2]
+
+fil = filters[2];
+apply_bc_u!(state.u, T(0), dns);
+v = fil.Φ(state.u, fil.setup, fil.compression);
+apply_bc_u!(v, T(0), fil.setup);
+Fv = momentum(v, T(0), fil.setup);
+apply_bc_u!(Fv, T(0), fil.setup);
+PFv = project(Fv, fil.setup; psolver = fil.psolver);
+apply_bc_u!(PFv, T(0), fil.setup);
+F = momentum(state.u, T(0), dns);
+apply_bc_u!(F, T(0), dns);
+PF = project(F, dns; psolver = psolver_dns);
+apply_bc_u!(PF, T(0), dns);
+ΦPF = fil.Φ(PF, fil.setup, fil.compression);
+apply_bc_u!(ΦPF, T(0), fil.setup);
+c = ΦPF .- PFv
+apply_bc_u!(c, T(0), fil.setup)
+
+with_theme(; fontsize = 25) do
+    fig = fieldplot(
+        (; u = u₀, t = T(0));
+        setup = dns,
+        # type = image,
+        # colormap = :viridis,
+        docolorbar = false,
+        size = (500, 500),
+        title = "u₀"
+    )
+    save("$output/priorfields/ustart.png", fig)
+    fig = fieldplot(
+        state,
+        setup = dns,
+        # type = image,
+        # colormap = :viridis,
+        docolorbar = false,
+        size = (500, 500),
+        title = "u",
+    )
+    save("$output/priorfields/u.png", fig)
+    fig = fieldplot(
+        (; u = v, t = T(0));
+        fil.setup,
+        # type = image,
+        # colormap = :viridis,
+        # fieldname = 1,
+        docolorbar = false,
+        size = (500, 500),
+        # title = "ubar"
+        title = "ū"
+    )
+    save("$output/priorfields/v.png", fig)
+    fig = fieldplot(
+        (; u = PF, t = T(0));
+        setup = dns,
+        # type = image,
+        # colormap = :viridis,
+        # fieldname = 1,
+        docolorbar = false,
+        size = (500, 500),
+        title = "PF(u)"
+    )
+    save("$output/priorfields/PFu.png", fig)
+    fig = fieldplot(
+        (; u = PFv, t = T(0));
+        fil.setup,
+        # type = image,
+        # colormap = :viridis,
+        # fieldname = 1,
+        docolorbar = false,
+        size = (500, 500),
+        # title = "PF(ubar)"
+        title = "P̄F̄(ū)"
+    )
+    save("$output/priorfields/PFv.png", fig)
+    fig = fieldplot(
+        (; u = ΦPF, t = T(0));
+        fil.setup,
+        # type = image,
+        # colormap = :viridis,
+        # fieldname = 1,
+        docolorbar = false,
+        size = (500, 500),
+        title = "ΦPF(u)"
+    )
+    save("$output/priorfields/PhiPFu.png", fig)
+    fig = fieldplot(
+        (; u = c, t = T(0));
+        fil.setup,
+        # type = image,
+        # colormap = :viridis,
+        # fieldname = 1,
+        # fieldname = :velocity,
+        docolorbar = false,
+        size = (500, 500),
+        # title = "c(u, ubar)"
+        title = "c(u, ū)"
+    )
+    save("$output/priorfields/c.png", fig)
+end
+
+####################################################################
 
 fieldplot(
-    (; u = u₀, t = T(0));
-    setup = dns,
-    # type = image,
-    # colormap = :viridis,
-    docolorbar = false,
-    size = (500, 500),
-)
-
-save("$output/vorticity_start.png", current_figure())
-
-fieldplot(
-    state,
-    setup = dns,
-    # type = image,
-    # colormap = :viridis,
-    docolorbar = false,
-    size = (500, 500),
-)
-
-save("$output/vorticity_end.png", current_figure())
-
-i = 1
-fieldplot(
-    (; u = filters[i].Φ(state.u, filters[i].setup, filters[i].compression), t = T(0));
-    setup = filters[i].setup,
-    # type = image,
-    # colormap = :viridis,
-    docolorbar = false,
-    size = (500, 500),
-)
-
-save("$output/vorticity_end_$(filters[i].compression).png", current_figure())
-
-fieldplot(
-    (; u = u₀, t = T(0));
-    # state;
+    # (; u = u₀, t = T(0));
+    state;
     setup = dns,
     fieldname = :eig2field,
-    levels = LinRange(T(2), T(10), 10),
-    # levels = LinRange(T(4), T(12), 10),
+    # levels = LinRange(T(2), T(10), 10),
+    levels = LinRange(T(4), T(12), 10),
     # levels = LinRange(-1.0f0, 3.0f0, 5),
     # levels = LinRange(-2.0f0, 2.0f0, 5),
     # levels = 5,
@@ -261,18 +350,18 @@ fieldplot(
     size = (600, 600),
 )
 
-fname = "$output/lambda2_start.png"
-fname = "$output/lambda2_end.png"
+fname = "$output/prioranalysis/lambda2/Re$(Int(Re))_start.png"
+fname = "$output/prioranalysis/lambda2/Re$(Int(Re))_end.png"
 save(fname, current_figure())
 run(`convert $fname -trim $fname`) # Requires imagemagick
 
-i = 2
+i = 3
 fieldplot(
     (; u = filters[i].Φ(state.u, filters[i].setup, filters[i].compression), t = T(0));
     setup = filters[i].setup,
     fieldname = :eig2field,
-    levels = LinRange(T(2), T(10), 10),
-    # levels = LinRange(T(4), T(12), 10),
+    # levels = LinRange(T(2), T(10), 10),
+    levels = LinRange(T(4), T(12), 10),
     # levels = LinRange(-1.0f0, 3.0f0, 5),
     # levels = LinRange(-2.0f0, 2.0f0, 5),
     # levels = 5,
@@ -281,7 +370,7 @@ fieldplot(
     size = (600, 600),
 )
 
-fname = "$output/lambda2_end_filtered.png"
+fname = "$output/prioranalysis/lambda2/Re$(Int(Re))_end_filtered.png"
 save(fname, current_figure())
 run(`convert $fname -trim $fname`) # Requires imagemagick
 
@@ -347,8 +436,8 @@ begin
         Pv = sum(o.Pv) / nt
         c = sum(o.c) / nt
         @printf(
-            # "%s\t%d^%d\t%.2g\t%.2g\t%.2g\t%.2g\n",
-            "%s &\t\$%d^%d\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$\n",
+            "%s\t%d^%d\t%.2g\t%.2g\t%.2g\t%.2g\n",
+            # "%s &\t\$%d^%d\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$\n",
             typeof(o.Φ),
             o.Mα,
             D,
@@ -383,8 +472,18 @@ norm(ubar[1][les.grid.Iu[1]])
 
 GLMakie.activate!()
 
+# To free up memory
+psolver_dns = nothing
+fig = lines([1, 2, 3])
+GC.gc()
+CUDA.reclaim()
+
 using CairoMakie
 CairoMakie.activate!()
+
+filters = map(filters) do f
+    (; f.Φ, f.setup, f.compression)
+end
 
 # Plot predicted spectra
 fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
@@ -420,7 +519,9 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         krange = [T(16), T(128)]
     elseif D == 3
         # krange = [T(kmax)^(T(1.5) / 3), T(kmax)]
-        krange = [T(64), T(256)]
+        # krange = [T(64), T(256)]
+        # krange = [T(8), T(64)]
+        krange = [T(16), T(100)]
     end
     slope, slopelabel =
         D == 2 ? (-T(3), L"$\kappa^{-3}") : (-T(5 / 3), L"$\kappa^{-5/3}")
@@ -452,15 +553,16 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     # lines!(ax, 1:specs[2].kmax, specs[2].ehat; color = Cycled(4), label = "DNS, t = 0")
     lines!(ax, plotparts(1)...; color = Cycled(1), label = "DNS")
     lines!(ax, plotparts(2)...; color = Cycled(4), label = "DNS, t = 0")
-    lines!(ax, plotparts(3)...; color = Cycled(2), label = "Face average")
+    lines!(ax, plotparts(3)...; color = Cycled(2), label = "Filtered DNS (FA)")
     lines!(ax, plotparts(4)...; color = Cycled(2))
     lines!(ax, plotparts(5)...; color = Cycled(2))
-    lines!(ax, plotparts(6)...; color = Cycled(3), label = "Volume average")
+    lines!(ax, plotparts(6)...; color = Cycled(3), label = "Filtered DNS (VA)")
     lines!(ax, plotparts(7)...; color = Cycled(3))
     lines!(ax, plotparts(8)...; color = Cycled(3))
     lines!(ax, krange, inertia; color = Cycled(1), label = slopelabel, linestyle = :dash)
     D == 2 && axislegend(ax; position = :lb)
-    D == 3 && axislegend(ax; position = :rt)
+    # D == 3 && axislegend(ax; position = :rt)
+    D == 3 && axislegend(ax; position = :lb)
     autolimits!(ax)
     if D == 2
         # limits!(ax, (T(0.68), T(520)), (T(1e-3), T(3e1)))
@@ -470,12 +572,13 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         # limits!(ax, ax.xaxis.attributes.limits[], (T(1e-1), T(3e1)))
         # limits!(ax, ax.xaxis.attributes.limits[], (T(1e-3), ax.yaxis.attributes.limits[][2]))
         # limits!(ax, ax.xaxis.attributes.limits[], (T(3e-3), T(2e0)))
-        limits!(ax, (T(8e-1), T(400)), (T(2e-3), T(1.5e0)))
+        # limits!(ax, (T(8e-1), T(400)), (T(2e-3), T(1.5e0)))
+        limits!(ax, (T(8e-1), T(200)), (T(4e-5), T(1.5e0)))
     end
     fig
 end
 GC.gc()
 CUDA.reclaim()
 
-# save("$output/priorspectra_$(D)D_linear.pdf", fig)
-save("$output/priorspectra_$(D)D_dyadic.pdf", fig)
+# save("$output/prioranalysis/spectra_$(D)D_linear_Re$(Int(Re)).pdf", fig)
+save("$output/prioranalysis/spectra_$(D)D_dyadic_Re$(Int(Re)).pdf", fig)
