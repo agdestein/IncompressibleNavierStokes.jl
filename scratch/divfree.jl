@@ -31,6 +31,8 @@ getorder(i) =
         :first
     elseif i == 2
         :last
+    elseif i == 3
+        :second
     else
         error("Unknown order: $i")
     end
@@ -98,9 +100,6 @@ data_train = [create_les_data(; params_train...) for _ = 1:5];
 data_valid = [create_les_data(; params_valid...) for _ = 1:1];
 data_test = create_les_data(; params_test...);
 
-data_train[1].data[1].u[1][1]
-data_test.data[6].u[1][1]
-
 # Save filtered DNS data
 jldsave("output/divfree/data_train.jld2"; data_train)
 jldsave("output/divfree/data_valid.jld2"; data_valid)
@@ -110,6 +109,21 @@ jldsave("output/divfree/data_test.jld2"; data_test)
 data_train = load("output/divfree/data_train.jld2", "data_train");
 data_valid = load("output/divfree/data_valid.jld2", "data_valid");
 data_test = load("output/divfree/data_test.jld2", "data_test");
+
+data_train[5].comptime
+data_valid[1].comptime
+data_test.comptime
+
+map(d -> d.comptime, data_train)
+
+sum(d -> d.comptime, data_train) / 60
+
+data_test.comptime / 60
+
+(sum(d -> d.comptime, data_train) + sum(d -> d.comptime, data_valid) + data_test.comptime)
+
+data_train[1].data[1].u[1][1]
+data_test.data[6].u[1][1]
 
 # Build LES setup and assemble operators
 getsetups(params) = [
@@ -229,6 +243,8 @@ end
 
 save("$output/training_data.pdf", fig)
 
+# Architecture 1
+mname="balzac"
 closure, θ₀ = cnn(;
     setup = setups_train[1],
     radii = [2, 2, 2, 2],
@@ -239,9 +255,23 @@ closure, θ₀ = cnn(;
 );
 closure.chain
 
+# Architecture 2
+mname="rimbaud"
+closure, θ₀ = cnn(;
+    setup = setups_train[1],
+    radii = [2, 2, 2, 2, 2],
+    channels = [24, 24, 24, 24, params_train.D],
+    # activations = [leakyrelu, leakyrelu, leakyrelu, leakyrelu, identity],
+    activations = [tanh, tanh, tanh, tanh, identity],
+    use_bias = [true, true, true, true, false],
+    rng,
+);
+closure.chain
+mkpath("output/divfree/$mname")
+
 closure(device(io_train[1, 1].u[:, :, :, 1:50]), device(θ₀));
 
-# Train grid-specialized closure models
+# A-priori training
 prior = map(CartesianIndices(size(io_train))) do I
     # Prepare training
     starttime = time()
@@ -251,7 +281,6 @@ prior = map(CartesianIndices(size(io_train))) do I
     θ = T(1.0e0) * device(θ₀)
     loss = create_loss_prior(mean_squared_error, closure)
     opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
-    callbackstate = Point2f[]
     it = rand(1:size(io_valid[ig, ifil].u, 4), 50)
     validset = device(map(v -> v[:, :, :, it], io_valid[ig, ifil]))
     (; callbackstate, callback) = create_callback(
@@ -260,84 +289,106 @@ prior = map(CartesianIndices(size(io_train))) do I
         displayref = true,
         display_each_iteration = false,
     )
-    (; opt, θ, callbackstate) =
-        train([d], loss, opt, θ; niter = 10000, ncallback = 20, callbackstate, callback)
+    (; opt, θ, callbackstate) = train(
+        [d],
+        loss,
+        opt,
+        θ;
+        niter = 10_000,
+        ncallback = 20,
+        callbackstate,
+        callback,
+    )
     θ = callbackstate.θmin # Use best θ instead of last θ
-    comptime = time() - starttime
-    (; Array(θ), comptime)
+    prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
+    jldsave("output/divfree/$mname/prior_ifilter$(ifil)_igrid$(ig).jld2"; prior)
+    prior
 end
 clean()
 
-prior = [(; θ = Array(θ), comptime = 0.0) for θ ∈ θ_cnn]
-
-# Save trained parameters
-jldsave("output/divfree/prior.jld2"; prior)
-
 # Load trained parameters
-prior = load("output/divfree/prior.jld2")["prior"];
+prior = map(CartesianIndices(size(io_train))) do I
+    ig, ifil = I.I
+    name = "output/divfree/$mname/prior_ifilter$(ifil)_igrid$(ig).jld2"
+    load(name)["prior"]
+end
+θ_cnn_prior = [copyto!(device(θ₀), p.θ) for p in prior];
 
-# Extract component array
-θ_cnn = [copyto!(device(θ₀), p.θ) for p in prior];
+θ_cnn_prior .|> extrema
 
-ngrid, nfilter = size(io_train)
-# post = map(CartesianIndices((ngrid, nfilter, 2))) do I
+map(p -> p.comptime, prior)
+map(p -> p.comptime, prior) |> vec
+map(p -> p.comptime, prior) |> sum
+map(p -> p.comptime, prior) |> sum |> x -> x / 60
+map(p -> p.comptime, prior) |> sum |> x -> x / 3600
 
-let I = CartesianIndex((3, 2, 1))
-    clean()
-    starttime = time()
-    ig, ifil, iorder = I.I
-    println("iorder = $iorder, ifil = $ifil, ig = $ig")
-    setup = setups_train[ig]
-    psolver = SpectralPressureSolver(setup)
-    loss = IncompressibleNavierStokes.create_loss_post(;
-        setup,
-        psolver,
-        closure,
-        nupdate = 4,
-        projectorder = getorder(iorder),
-    )
-    data = [(; u = d.data[ig, ifil].u, d.t) for d in data_train]
-    d = create_dataloader_post(data; device, nunroll = 10)
-    # θ = T(1e-1) * copy(θ_cnn[ig, ifil])
-    # θ = copy(θ_cnn[ig, ifil])
-    # θ = copy(θ_cnn_post)
-    θ = copy(θ_cnn_post[ig, ifil, iorder])
-    # θ = device(θ₀)
-    opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
-    it = 1:20
-    data = data_valid[1]
-    data = (; u = device.(data.data[ig, ifil].u[it]), t = data.t[it])
-    (; callbackstate, callback) = create_callback(
-        create_relerr_post(;
-            data,
+# A-posteriori training ######################################################
+
+let
+    ngrid, nfilter = size(io_train)
+    for iorder = 1:2, ifil = 1:nfilter, ig = 1:ngrid
+        clean()
+        starttime = time()
+        # (ig, ifil, iorder) == (3, 1, 1) || continue
+        # (ifil, iorder) == (1, 1) && continue
+        # (ifil, iorder) == (2, 2) || continue
+        println("iorder = $iorder, ifil = $ifil, ig = $ig")
+        setup = setups_train[ig]
+        psolver = SpectralPressureSolver(setup)
+        loss = IncompressibleNavierStokes.create_loss_post(;
             setup,
             psolver,
-            closure_model = wrappedclosure(closure, setup),
+            closure,
+            nupdate = 2,
             projectorder = getorder(iorder),
-            nupdate = 8,
-        );
-        θ,
-        displayref = false,
-    )
-    (; opt, θ, callbackstate) =
-        train([d], loss, opt, θ; niter = 1000, ncallback = 10, callbackstate, callback)
-    θ = callbackstate.θmin # Use best θ instead of last θ
-    post = (; θ = Array(θ), comptime = time() - starttime)
-    jldsave("output/divfree/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"; post)
-    post
-end;
-clean()
+        )
+        data = [(; u = d.data[ig, ifil].u, d.t) for d in data_train]
+        d = create_dataloader_post(data; device, nunroll = 20)
+        # θ = T(1e-1) * copy(θ_cnn_prior[ig, ifil])
+        θ = copy(θ_cnn_prior[ig, ifil])
+        # θ = copy(θ_cnn_post)
+        # θ = copy(θ_cnn_post[ig, ifil, iorder])
+        # θ = device(θ₀)
+        opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
+        it = 1:30
+        data = data_valid[1]
+        data = (; u = device.(data.data[ig, ifil].u[it]), t = data.t[it])
+        (; callbackstate, callback) = create_callback(
+            create_relerr_post(;
+                data,
+                setup,
+                psolver,
+                closure_model = wrappedclosure(closure, setup),
+                projectorder = getorder(iorder),
+                nupdate = 2,
+            );
+            θ,
+            displayref = false,
+        )
+        (; opt, θ, callbackstate) =
+            train([d], loss, opt, θ; niter = 2000, ncallback = 10, callbackstate, callback)
+        θ = callbackstate.θmin # Use best θ instead of last θ
+        post = (; θ = Array(θ), comptime = time() - starttime)
+        jldsave("output/divfree/$mname/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"; post)
+    end;
+    clean()
+end
 
 post = map(CartesianIndices((size(io_train)..., 2))) do I
     ig, ifil, iorder = I.I
-    name = "output/divfree/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"
+    name = "output/divfree/$mname/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"
     load(name)["post"]
-end
+end;
 θ_cnn_post = [copyto!(device(θ₀), p.θ) for p in post];
 
 θ_cnn_post .|> extrema
 
 map(p -> p.comptime, post)
+map(p -> p.comptime, post) |> x -> reshape(x, 6, 2)
+map(p -> p.comptime, post) ./ 60
+map(p -> p.comptime, post) |> sum
+map(p -> p.comptime, post) |> sum |> x -> x / 60
+map(p -> p.comptime, post) |> sum |> x -> x / 3600
 
 # Train Smagorinsky model with Lpost (grid search)
 smag = map(CartesianIndices((size(io_train, 2), 2))) do I
@@ -348,7 +399,7 @@ smag = map(CartesianIndices((size(io_train, 2), 2))) do I
     emin = T(Inf)
     isample = 1
     it = 1:50
-    for θ in LinRange(T(0), T(0.5), 51)
+    for θ in LinRange(T(0), T(0.5), 501)
         e = T(0)
         for igrid = 1:ngrid
             println("iorder = $iorder, ifil = $ifil, θ = $θ, igrid = $igrid")
@@ -389,6 +440,9 @@ smag = load("output/divfree/smag.jld2")["smag"];
 # Extract coefficients
 θ_smag = map(s -> s.θ, smag)
 
+map(s -> s.comptime, smag)
+map(s -> s.comptime, smag) |> sum
+
 # lines(LinRange(T(0), T(1), 100), e_smag)
 
 # Compute posterior errors
@@ -397,14 +451,15 @@ e_nm, e_smag, e_cnn, e_cnn_post = let
     e_smag = zeros(T, size(data_test.data)..., 2)
     e_cnn = zeros(T, size(data_test.data)..., 2)
     e_cnn_post = zeros(T, size(data_test.data)..., 2)
-    # for iorder = 1:1, ifil = 1:1, ig in 3
     for iorder = 1:2, ifil = 1:2, ig = 1:size(data_test.data, 1)
+        # (ig, ifil, iorder) == (2, 2, 2) || continue
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         projectorder = getorder(iorder)
         setup = setups_test[ig]
         psolver = SpectralPressureSolver(setup)
         data = (; u = device.(data_test.data[ig, ifil].u), t = data_test.t)
-        nupdate = 20
+        # nupdate = ig > 3 ? 4 : 2
+        nupdate = 2
         # No model
         # Only for closurefirst, since projectfirst is the same
         if iorder == 2
@@ -421,8 +476,8 @@ e_nm, e_smag, e_cnn, e_cnn_post = let
             nupdate,
         )
         e_smag[ig, ifil, iorder] = err(θ_smag[ifil, iorder])
-        CNN
-        Only the first grids are trained for
+        # CNN
+        # Only the first grids are trained for
         if ig ≤ size(data_train[1].data, 1)
             err = create_relerr_post(;
                 data,
@@ -433,7 +488,7 @@ e_nm, e_smag, e_cnn, e_cnn_post = let
                 nupdate,
                 # nupdate = 50,
             )
-            e_cnn[ig, ifil, iorder] = err(θ_cnn[ig, ifil])
+            e_cnn[ig, ifil, iorder] = err(θ_cnn_prior[ig, ifil])
             e_cnn_post[ig, ifil, iorder] = err(θ_cnn_post[ig, ifil, iorder])
         end
     end
@@ -444,6 +499,9 @@ e_nm
 e_smag
 e_cnn
 e_cnn_post
+
+data_train[1].t[2] - data_train[1].t[1]
+data_test.t[2] - data_test.t[1]
 
 CairoMakie.activate!()
 GLMakie.activate!()
@@ -456,9 +514,10 @@ with_theme(;
     # fontsize = 20,
     palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
 ) do
-    iorder = 1
+    iorder = 2
     # lesmodel = iorder == 1 ? "project-then-closure" : "closure-then-project"
-    lesmodel = iorder == 1 ? "project-then-closure" : "closure-then-project"
+    # lesmodel = iorder == 1 ? "project-then-closure" : "closure-then-project"
+    lesmodel = iorder == 1 ? "Gen" : "DFC"
     nles = [n[1] for n in params_test.nles]
     fig = Figure(; size = (500, 400))
     ax = Axis(
@@ -542,8 +601,10 @@ with_theme(;
     fig
 end
 
-save("$output/convergence_Lprior_prosecond.pdf", current_figure())
-save("$output/convergence_Lprior_profirst.pdf", current_figure())
+name = "$output/convergence"
+ispath(name) || mkpath(name)
+save("$name/$(mname)_gen.pdf", current_figure())
+save("$name/$(mname)_dfc.pdf", current_figure())
 
 # Energy evolution ###########################################################
 
@@ -556,14 +617,14 @@ kineticenergy = let
     ke_cnn_prior = fill(zeros(T, 0), ngrid, nfilter, 2)
     ke_cnn_post = fill(zeros(T, 0), ngrid, nfilter, 2)
     for iorder = 1:2, ifil = 1:nfilter, ig = 1:ngrid
-        # for iorder = 1:1, ifil = 1:1, ig = 1:1
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         setup = setups_test[ig]
         psolver = SpectralPressureSolver(setup)
         t = data_test.t
         u₀ = data_test.data[ig, ifil].u[1] |> device
         tlims = (t[1], t[end])
-        nupdate = 50
+        # nupdate = 50
+        nupdate = 2
         Δt = (t[2] - t[1]) / nupdate
         T = eltype(u₀[1])
         ewriter = processor() do state
@@ -585,14 +646,7 @@ kineticenergy = let
                 data_test.data[ig, ifil].u,
             )
             ke_nomodel[ig, ifil] =
-                solve_unsteady(
-                    setup,
-                    u₀,
-                    tlims;
-                    Δt,
-                    processors,
-                    psolver,
-                )[2].ewriter
+                solve_unsteady(setup, u₀, tlims; Δt, processors, psolver)[2].ewriter
         end
         ke_smag[ig, ifil, iorder] =
             solve_unsteady(
@@ -620,7 +674,7 @@ kineticenergy = let
                 Δt,
                 processors,
                 psolver,
-                θ = θ_cnn[ig, ifil],
+                θ = θ_cnn_prior[ig, ifil],
             )[2].ewriter
         ke_cnn_post[ig, ifil, iorder] =
             solve_unsteady(
@@ -650,12 +704,14 @@ kineticenergy.ke_cnn_post[1]
 CairoMakie.activate!()
 
 with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
-    t = data_test.t[2:end]
+    # t = data_test.t[2:end]
+    t = data_test.t
     for iorder = 1:2, ifil = 1:2, igrid = 1:3
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
-        reflevel = kineticenergy.ke_ref[igrid, ifil][2:end]
+        # reflevel = kineticenergy.ke_ref[igrid, ifil][2:end]
+        reflevel = copy(kineticenergy.ke_ref[igrid, ifil])
         reflevel = fill!(reflevel, 1)
-        lesmodel = iorder == 1 ? "P-first" : "P-last"
+        lesmodel = iorder == 1 ? "Gen" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
         nles = params_test.nles[igrid]
         fig = Figure(; size = (500, 400))
@@ -669,7 +725,8 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]))
         lines!(
             ax,
             t,
-            kineticenergy.ke_ref[igrid, ifil][2:end] ./ reflevel;
+            # kineticenergy.ke_ref[igrid, ifil][2:end] ./ reflevel;
+            kineticenergy.ke_ref[igrid, ifil] ./ reflevel;
             color = Cycled(1),
             linestyle = :dash,
             label = "Reference",
@@ -706,8 +763,224 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]))
         iorder == 2 && axislegend(; position = :lb)
         # axislegend(; position = :lb)
         # axislegend()
-        name = "$output/energy_evolution"
-        save("$(name)_iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
+        name = "$output/energy_evolution/$mname/"
+        ispath(name) || mkpath(name)
+        save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
+    end
+end
+
+# Divergence #################################################################
+
+divs = let
+    clean()
+    ngrid, nfilter = size(io_train)
+    d_ref = fill(zeros(T, 0), ngrid, nfilter)
+    d_nomodel = fill(zeros(T, 0), ngrid, nfilter, 3)
+    d_smag = fill(zeros(T, 0), ngrid, nfilter, 3)
+    d_cnn_prior = fill(zeros(T, 0), ngrid, nfilter, 3)
+    d_cnn_post = fill(zeros(T, 0), ngrid, nfilter, 3)
+    for iorder = 1:3, ifil = 1:nfilter, ig = 1:ngrid
+        println("iorder = $iorder, ifil = $ifil, ig = $ig")
+        setup = setups_test[ig]
+        psolver = SpectralPressureSolver(setup)
+        t = data_test.t
+        u₀ = data_test.data[ig, ifil].u[1] |> device
+        tlims = (t[1], t[end])
+        # nupdate = 50
+        nupdate = 2
+        Δt = (t[2] - t[1]) / nupdate
+        T = eltype(u₀[1])
+        dwriter = processor() do state
+            div = fill!(similar(setup.grid.x[1], setup.grid.N), 0)
+            dhist = zeros(T, 0)
+            on(state) do (; u, n)
+                if n % nupdate == 0
+                    IncompressibleNavierStokes.divergence!(div, u, setup)
+                    d = view(div, setup.grid.Ip)
+                    d = sum(abs2, d) / length(d)
+                    d = sqrt(d)
+                    push!(dhist, d)
+                end
+            end
+            state[] = state[] # Compute initial divergence
+            dhist
+        end
+        processors = (; dwriter)
+        if iorder == 1
+            # Does not depend on projection order
+            d_ref[ig, ifil] = map(data_test.data[ig, ifil].u) do u
+                    u = device(u)
+                    div = IncompressibleNavierStokes.divergence(u, setup)
+                    d = view(div, setup.grid.Ip)
+                    d = sum(abs2, d) / length(d)
+                    d = sqrt(d)
+                end
+        end
+        iorder_use = iorder == 3 ? 2 : iorder
+        d_nomodel[ig, ifil, iorder] =
+            solve_unsteady(
+                (
+                    setup...,
+                    projectorder = getorder(iorder),
+                ),
+                u₀, tlims; Δt, processors, psolver)[2].dwriter
+        d_smag[ig, ifil, iorder] =
+            solve_unsteady(
+                (;
+                    setup...,
+                    projectorder = getorder(iorder),
+                    closure_model = smagorinsky_closure(setup),
+                ),
+                u₀,
+                tlims;
+                Δt,
+                processors,
+                psolver,
+                θ = θ_smag[ifil, iorder_use],
+            )[2].dwriter
+        d_cnn_prior[ig, ifil, iorder] =
+            solve_unsteady(
+                (;
+                    setup...,
+                    projectorder = getorder(iorder),
+                    closure_model = wrappedclosure(closure, setup),
+                ),
+                u₀,
+                tlims;
+                Δt,
+                processors,
+                psolver,
+                θ = θ_cnn_prior[ig, ifil],
+            )[2].dwriter
+        d_cnn_post[ig, ifil, iorder] =
+            solve_unsteady(
+                (;
+                    setup...,
+                    projectorder = getorder(iorder),
+                    closure_model = wrappedclosure(closure, setup),
+                ),
+                u₀,
+                tlims;
+                Δt,
+                processors,
+                psolver,
+                θ = θ_cnn_post[ig, ifil, iorder_use],
+            )[2].dwriter
+    end
+    (;
+        d_ref,
+        d_nomodel,
+        d_smag,
+        d_cnn_prior,
+        d_cnn_post)
+end;
+clean();
+
+# Save
+jldsave("output/divfree/$(mname)_divs.jld2"; divs)
+
+# Load
+divs = load("output/divfree/$(mname)_divs.jld2")["divs"]
+
+divs.d_ref .|> extrema
+divs.d_nomodel .|> extrema
+divs.d_smag .|> extrema
+divs.d_cnn_prior .|> extrema
+divs.d_cnn_post .|> extrema
+
+divs.d_ref[1, 1] |> lines
+divs.d_ref[1, 2] |> lines!
+
+divs.d_nomodel[1, 1] |> lines
+divs.d_nomodel[1, 2] |> lines!
+
+divs.d_cnn_post[1, 1, 3] |> lines
+divs.d_cnn_post[1, 2, 3] |> lines!
+
+divs.d_smag[1, 2, 3]
+divs.d_smag[1, 1, 3]
+divs.d_smag[1, 2, 3]
+
+CairoMakie.activate!()
+
+with_theme(; 
+    fontsize = 20,
+    palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
+) do
+    t = data_test.t
+    for islog in (true, false)
+    for iorder = 1:3, ifil = 1:2, igrid = 1:3
+        # println("iorder = $iorder, igrid = $igrid")
+        println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
+        lesmodel = 
+            if iorder == 1 
+                "Gen"
+            elseif iorder == 2 
+                "DCF"
+            else 
+                "DCF-RHS"
+            end
+        fil = ifil == 1 ? "FA" : "VA"
+        nles = params_test.nles[igrid]
+        fig = Figure(; size = (500, 400))
+        yscale = islog ? log10 : identity
+        ax = Axis(
+            fig[1, 1];
+            yscale,
+            xlabel = "t",
+            # ylabel = "Dv",
+            # title = "Divergence: $lesmodel, $nles",
+            title = "Divergence: $lesmodel, $fil,  $nles",
+            # title = "Divergence: $lesmodel, $fil",
+        )
+        linestyle = ifil == 1 ? :solid : :dash
+        lines!(
+            ax,
+            t,
+            divs.d_ref[igrid, ifil];
+            color = Cycled(1),
+            linestyle = :dash,
+            label = "Reference",
+        )
+        lines!(
+            ax,
+            t,
+            divs.d_nomodel[igrid, ifil, iorder];
+            color = Cycled(1),
+            label = "No closure",
+        )
+        lines!(
+            ax,
+            t,
+            divs.d_smag[igrid, ifil, iorder];
+            color = Cycled(2),
+            label = "Smagorinsky",
+        )
+        lines!(
+            ax,
+            t,
+            divs.d_cnn_prior[igrid, ifil, iorder];
+            color = Cycled(3),
+            label = "CNN (prior)",
+        )
+        lines!(
+            ax,
+            t,
+            divs.d_cnn_post[igrid, ifil, iorder];
+            color = Cycled(4),
+            label = "CNN (post)",
+        )
+        # axislegend()
+        # iorder == 1 && axislegend(; position = :lt)
+        # iorder == 2 && axislegend(; position = :lb)
+        iorder == 2 && ifil == 1 && axislegend(; position = :rt)
+        # axislegend()
+        islog && ylims!(ax, (T(1e-6), T(1e3)))
+        name = "$output/divergence/$mname/$(islog ? "log" : "lin")"
+        ispath(name) || mkpath(name)
+        # save("$(name)/iorder$(iorder)_igrid$(igrid).pdf", fig)
+        save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
+    end
     end
 end
 
@@ -721,7 +994,6 @@ ufinal = let
     u_smag = fill(temp, ngrid, nfilter, 2)
     u_cnn_prior = fill(temp, ngrid, nfilter, 2)
     u_cnn_post = fill(temp, ngrid, nfilter, 2)
-    # for iorder = 1:1, ifil = 2:2, igrid = 3:3
     for iorder = 1:2, ifil = 1:nfilter, igrid = 1:ngrid
         clean()
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
@@ -730,20 +1002,14 @@ ufinal = let
         psolver = SpectralPressureSolver(setup)
         u₀ = data_test.data[igrid, ifil].u[1] |> device
         tlims = (t[1], t[end])
-        nupdate = 50
+        nupdate = 2
         Δt = (t[2] - t[1]) / nupdate
         T = eltype(u₀[1])
         if iorder == 1
             # Does not depend on projection order
             u_ref[igrid, ifil] = data_test.data[igrid, ifil].u[end]
             u_nomodel[igrid, ifil] =
-                solve_unsteady(
-                    setup,
-                    u₀,
-                    tlims;
-                    Δt,
-                    psolver,
-            )[1].u .|> Array
+                solve_unsteady(setup, u₀, tlims; Δt, psolver)[1].u .|> Array
         end
         u_smag[igrid, ifil, iorder] =
             solve_unsteady(
@@ -757,7 +1023,7 @@ ufinal = let
                 Δt,
                 psolver,
                 θ = θ_smag[ifil, iorder],
-                )[1].u .|> Array
+            )[1].u .|> Array
         u_cnn_prior[igrid, ifil, iorder] =
             solve_unsteady(
                 (;
@@ -769,8 +1035,8 @@ ufinal = let
                 tlims;
                 Δt,
                 psolver,
-                θ = θ_cnn[igrid, ifil],
-        )[1].u .|> Array
+                θ = θ_cnn_prior[igrid, ifil],
+            )[1].u .|> Array
         u_cnn_post[igrid, ifil, iorder] =
             solve_unsteady(
                 (;
@@ -783,7 +1049,7 @@ ufinal = let
                 Δt,
                 psolver,
                 θ = θ_cnn_post[igrid, ifil, iorder],
-        )[1].u .|> Array
+            )[1].u .|> Array
     end
     (; u_ref, u_nomodel, u_smag, u_cnn_prior, u_cnn_post)
 end;
@@ -793,9 +1059,9 @@ ufinal.u_ref[1][2]
 ufinal.u_cnn_prior[3, 1, 1][1]
 ufinal.u_cnn_post[3, 1, 1][1]
 
-jldsave("output/divfree/ufinal.jld2"; ufinal)
+jldsave("output/divfree/ufinal_$mname.jld2"; ufinal)
 
-ufinal = load("output/divfree/ufinal.jld2")["ufinal"];
+ufinal = load("output/divfree/ufinal_$mname.jld2")["ufinal"];
 
 markers_labels = [
     (:circle, ":circle"),
@@ -827,17 +1093,18 @@ markers_labels = [
 fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
     for iorder = 1:2, ifil = 1:2, igrid = 1:3
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
-        lesmodel = iorder == 1 ? "P-first" : "P-last"
+        lesmodel = iorder == 1 ? "Gen" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
         nles = params_test.nles[igrid]
         setup = setups_test[igrid]
-        fields = [
-            ufinal.u_ref[igrid, ifil],
-            ufinal.u_nomodel[igrid, ifil],
-            ufinal.u_smag[igrid, ifil, iorder],
-            ufinal.u_cnn_prior[igrid, ifil, iorder],
-            ufinal.u_cnn_post[igrid, ifil, iorder],
-        ] .|> device
+        fields =
+            [
+                ufinal.u_ref[igrid, ifil],
+                ufinal.u_nomodel[igrid, ifil],
+                ufinal.u_smag[igrid, ifil, iorder],
+                ufinal.u_cnn_prior[igrid, ifil, iorder],
+                ufinal.u_cnn_post[igrid, ifil, iorder],
+            ] .|> device
         (; Ip) = setup.grid
         (; A, κ, K) = IncompressibleNavierStokes.spectral_stuff(setup)
         specs = map(fields) do u
@@ -887,8 +1154,9 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         axislegend(ax; position = :cb)
         autolimits!(ax)
         # limits!(ax, (T(0.8), T(800)), (T(1e-10), T(1)))
-        name = "$output/energy_spectra"
-        save("$(name)_iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
+        name = "$output/energy_spectra/$mname"
+        ispath(name) || mkpath(name)
+        save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
     end
 end
 clean();
@@ -897,7 +1165,10 @@ clean();
 
 GLMakie.activate!()
 
-with_theme(; fontsize = 25, palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
+with_theme(;
+    fontsize = 25,
+    palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
+) do
     x1 = 0.3
     x2 = 0.5
     y1 = 0.5
@@ -910,12 +1181,12 @@ with_theme(; fontsize = 25, palette = (; color = ["#3366cc", "#cc0000", "#669900
         Point2f(x1, y1),
         # Point2f(x2, y1),
     ]
-    path = "$output/les_fields"
+    path = "$output/les_fields/$mname"
     ispath(path) || mkpath(path)
     for iorder = 1:2, ifil = 1:2, igrid = 1:3
         setup = setups_test[igrid]
-        name = "$(path)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid)"
-        lesmodel = iorder == 1 ? "P-first" : "P-last"
+        name = "$path/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid)"
+        lesmodel = iorder == 1 ? "Gen" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
         nles = params_test.nles[igrid]
         function makeplot(u, title, suffix)
@@ -933,10 +1204,27 @@ with_theme(; fontsize = 25, palette = (; color = ["#3366cc", "#cc0000", "#669900
             save(fname, fig)
             # run(`convert $fname -trim $fname`) # Requires imagemagick
         end
-        iorder == 2 && makeplot(device(ufinal.u_ref[igrid, ifil]), "Reference, $fil, $nles", "ref")
-        iorder == 2 && makeplot(device(ufinal.u_nomodel[igrid, ifil]), "No closure, $fil, $nles", "nomodel")
-        makeplot(device(ufinal.u_smag[igrid, ifil, iorder]), "Smagorinsky, $lesmodel, $fil, $nles", "smag")
-        makeplot(device(ufinal.u_cnn_prior[igrid, ifil, iorder]), "CNN (prior), $lesmodel, $fil, $nles", "prior")
-        makeplot(device(ufinal.u_cnn_post[igrid, ifil, iorder]), "CNN (post), $lesmodel, $fil, $nles", "post")
+        iorder == 2 &&
+            makeplot(device(ufinal.u_ref[igrid, ifil]), "Reference, $fil, $nles", "ref")
+        iorder == 2 && makeplot(
+            device(ufinal.u_nomodel[igrid, ifil]),
+            "No closure, $fil, $nles",
+            "nomodel",
+        )
+        makeplot(
+            device(ufinal.u_smag[igrid, ifil, iorder]),
+            "Smagorinsky, $lesmodel, $fil, $nles",
+            "smag",
+        )
+        makeplot(
+            device(ufinal.u_cnn_prior[igrid, ifil, iorder]),
+            "CNN (prior), $lesmodel, $fil, $nles",
+            "prior",
+        )
+        makeplot(
+            device(ufinal.u_cnn_post[igrid, ifil, iorder]),
+            "CNN (post), $lesmodel, $fil, $nles",
+            "post",
+        )
     end
 end
