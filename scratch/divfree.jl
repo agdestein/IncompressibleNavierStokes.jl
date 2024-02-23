@@ -244,7 +244,7 @@ end
 save("$output/training_data.pdf", fig)
 
 # Architecture 1
-mname="balzac"
+mname = "balzac"
 closure, θ₀ = cnn(;
     setup = setups_train[1],
     radii = [2, 2, 2, 2],
@@ -256,7 +256,7 @@ closure, θ₀ = cnn(;
 closure.chain
 
 # Architecture 2
-mname="rimbaud"
+mname = "rimbaud"
 closure, θ₀ = cnn(;
     setup = setups_train[1],
     radii = [2, 2, 2, 2, 2],
@@ -370,7 +370,7 @@ let
         θ = callbackstate.θmin # Use best θ instead of last θ
         post = (; θ = Array(θ), comptime = time() - starttime)
         jldsave("output/divfree/$mname/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"; post)
-    end;
+    end
     clean()
 end
 
@@ -809,21 +809,23 @@ divs = let
         if iorder == 1
             # Does not depend on projection order
             d_ref[ig, ifil] = map(data_test.data[ig, ifil].u) do u
-                    u = device(u)
-                    div = IncompressibleNavierStokes.divergence(u, setup)
-                    d = view(div, setup.grid.Ip)
-                    d = sum(abs2, d) / length(d)
-                    d = sqrt(d)
-                end
+                u = device(u)
+                div = IncompressibleNavierStokes.divergence(u, setup)
+                d = view(div, setup.grid.Ip)
+                d = sum(abs2, d) / length(d)
+                d = sqrt(d)
+            end
         end
         iorder_use = iorder == 3 ? 2 : iorder
         d_nomodel[ig, ifil, iorder] =
             solve_unsteady(
-                (
-                    setup...,
-                    projectorder = getorder(iorder),
-                ),
-                u₀, tlims; Δt, processors, psolver)[2].dwriter
+                (setup..., projectorder = getorder(iorder)),
+                u₀,
+                tlims;
+                Δt,
+                processors,
+                psolver,
+            )[2].dwriter
         d_smag[ig, ifil, iorder] =
             solve_unsteady(
                 (;
@@ -867,12 +869,7 @@ divs = let
                 θ = θ_cnn_post[ig, ifil, iorder_use],
             )[2].dwriter
     end
-    (;
-        d_ref,
-        d_nomodel,
-        d_smag,
-        d_cnn_prior,
-        d_cnn_post)
+    (; d_ref, d_nomodel, d_smag, d_cnn_prior, d_cnn_post)
 end;
 clean();
 
@@ -903,84 +900,83 @@ divs.d_smag[1, 2, 3]
 
 CairoMakie.activate!()
 
-with_theme(; 
+with_theme(;
     fontsize = 20,
     palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
 ) do
     t = data_test.t
     for islog in (true, false)
-    for iorder = 1:3, ifil = 1:2, igrid = 1:3
-        # println("iorder = $iorder, igrid = $igrid")
-        println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
-        lesmodel = 
-            if iorder == 1 
+        for iorder = 1:3, ifil = 1:2, igrid = 1:3
+            # println("iorder = $iorder, igrid = $igrid")
+            println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
+            lesmodel = if iorder == 1
                 "Gen"
-            elseif iorder == 2 
+            elseif iorder == 2
                 "DCF"
-            else 
+            else
                 "DCF-RHS"
             end
-        fil = ifil == 1 ? "FA" : "VA"
-        nles = params_test.nles[igrid]
-        fig = Figure(; size = (500, 400))
-        yscale = islog ? log10 : identity
-        ax = Axis(
-            fig[1, 1];
-            yscale,
-            xlabel = "t",
-            # ylabel = "Dv",
-            # title = "Divergence: $lesmodel, $nles",
-            title = "Divergence: $lesmodel, $fil,  $nles",
-            # title = "Divergence: $lesmodel, $fil",
-        )
-        linestyle = ifil == 1 ? :solid : :dash
-        lines!(
-            ax,
-            t,
-            divs.d_ref[igrid, ifil];
-            color = Cycled(1),
-            linestyle = :dash,
-            label = "Reference",
-        )
-        lines!(
-            ax,
-            t,
-            divs.d_nomodel[igrid, ifil, iorder];
-            color = Cycled(1),
-            label = "No closure",
-        )
-        lines!(
-            ax,
-            t,
-            divs.d_smag[igrid, ifil, iorder];
-            color = Cycled(2),
-            label = "Smagorinsky",
-        )
-        lines!(
-            ax,
-            t,
-            divs.d_cnn_prior[igrid, ifil, iorder];
-            color = Cycled(3),
-            label = "CNN (prior)",
-        )
-        lines!(
-            ax,
-            t,
-            divs.d_cnn_post[igrid, ifil, iorder];
-            color = Cycled(4),
-            label = "CNN (post)",
-        )
-        # axislegend()
-        # iorder == 1 && axislegend(; position = :lt)
-        # iorder == 2 && axislegend(; position = :lb)
-        iorder == 2 && ifil == 1 && axislegend(; position = :rt)
-        # axislegend()
-        islog && ylims!(ax, (T(1e-6), T(1e3)))
-        name = "$output/divergence/$mname/$(islog ? "log" : "lin")"
-        ispath(name) || mkpath(name)
-        # save("$(name)/iorder$(iorder)_igrid$(igrid).pdf", fig)
-        save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
-    end
+            fil = ifil == 1 ? "FA" : "VA"
+            nles = params_test.nles[igrid]
+            fig = Figure(; size = (500, 400))
+            yscale = islog ? log10 : identity
+            ax = Axis(
+                fig[1, 1];
+                yscale,
+                xlabel = "t",
+                # ylabel = "Dv",
+                # title = "Divergence: $lesmodel, $nles",
+                title = "Divergence: $lesmodel, $fil,  $nles",
+                # title = "Divergence: $lesmodel, $fil",
+            )
+            linestyle = ifil == 1 ? :solid : :dash
+            lines!(
+                ax,
+                t,
+                divs.d_ref[igrid, ifil];
+                color = Cycled(1),
+                linestyle = :dash,
+                label = "Reference",
+            )
+            lines!(
+                ax,
+                t,
+                divs.d_nomodel[igrid, ifil, iorder];
+                color = Cycled(1),
+                label = "No closure",
+            )
+            lines!(
+                ax,
+                t,
+                divs.d_smag[igrid, ifil, iorder];
+                color = Cycled(2),
+                label = "Smagorinsky",
+            )
+            lines!(
+                ax,
+                t,
+                divs.d_cnn_prior[igrid, ifil, iorder];
+                color = Cycled(3),
+                label = "CNN (prior)",
+            )
+            lines!(
+                ax,
+                t,
+                divs.d_cnn_post[igrid, ifil, iorder];
+                color = Cycled(4),
+                label = "CNN (post)",
+            )
+            # axislegend()
+            # iorder == 1 && axislegend(; position = :lt)
+            # iorder == 2 && axislegend(; position = :lb)
+            iorder == 2 && ifil == 1 && axislegend(; position = :rt)
+            # axislegend()
+            islog && ylims!(ax, (T(1e-6), T(1e3)))
+            name = "$output/divergence/$mname/$(islog ? "log" : "lin")"
+            ispath(name) || mkpath(name)
+            # save("$(name)/iorder$(iorder)_igrid$(igrid).pdf", fig)
+            save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
+        end
     end
 end
 

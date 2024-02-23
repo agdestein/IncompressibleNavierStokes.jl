@@ -259,7 +259,7 @@ with_theme(; fontsize = 25) do
         # colormap = :viridis,
         docolorbar = false,
         size = (500, 500),
-        title = "u₀"
+        title = "u₀",
     )
     save("$output/priorfields/ustart.png", fig)
     fig = fieldplot(
@@ -281,7 +281,7 @@ with_theme(; fontsize = 25) do
         docolorbar = false,
         size = (500, 500),
         # title = "ubar"
-        title = "ū"
+        title = "ū",
     )
     save("$output/priorfields/v.png", fig)
     fig = fieldplot(
@@ -292,7 +292,7 @@ with_theme(; fontsize = 25) do
         # fieldname = 1,
         docolorbar = false,
         size = (500, 500),
-        title = "PF(u)"
+        title = "PF(u)",
     )
     save("$output/priorfields/PFu.png", fig)
     fig = fieldplot(
@@ -304,7 +304,7 @@ with_theme(; fontsize = 25) do
         docolorbar = false,
         size = (500, 500),
         # title = "PF(ubar)"
-        title = "P̄F̄(ū)"
+        title = "P̄F̄(ū)",
     )
     save("$output/priorfields/PFv.png", fig)
     fig = fieldplot(
@@ -315,7 +315,7 @@ with_theme(; fontsize = 25) do
         # fieldname = 1,
         docolorbar = false,
         size = (500, 500),
-        title = "ΦPF(u)"
+        title = "ΦPF(u)",
     )
     save("$output/priorfields/PhiPFu.png", fig)
     fig = fieldplot(
@@ -328,7 +328,7 @@ with_theme(; fontsize = 25) do
         docolorbar = false,
         size = (500, 500),
         # title = "c(u, ubar)"
-        title = "c(u, ū)"
+        title = "c(u, ū)",
     )
     save("$output/priorfields/c.png", fig)
 end
