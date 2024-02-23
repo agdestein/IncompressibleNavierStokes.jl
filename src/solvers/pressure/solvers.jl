@@ -196,15 +196,6 @@ struct SpectralPressureSolver{T,A<:AbstractArray{Complex{T}},S,P} <:
     plan::P
 end
 
-# This moves all the inner arrays to the GPU when calling
-# `cu(::SpectralPressureSolver)` from CUDA.jl
-Adapt.adapt_structure(to, s::SpectralPressureSolver) = SpectralPressureSolver(
-    adapt(to, s.Ahat),
-    adapt(to, s.phat),
-    adapt(to, s.fhat),
-    adapt(to, s.plan),
-)
-
 """
     SpectralPressureSolver(setup)
 
@@ -253,6 +244,8 @@ function SpectralPressureSolver(setup)
 
     # Pressure is determined up to constant. By setting the constant
     # scaling factor to 1, we preserve the average.
+    # Note use of singleton range 1:1 instead of scalar index 1
+    # (otherwise CUDA gets annoyed)
     Ahat[1:1] .= 1
 
     # Placeholders for intermediate results
@@ -267,4 +260,57 @@ function SpectralPressureSolver(setup)
         fhat,
         plan,
     )
+end
+
+struct LowMemorySpectralPressureSolver{
+    T,
+    A<:AbstractArray{T},
+    P<:AbstractArray{Complex{T}},
+    S,
+} <: AbstractPressureSolver{T}
+    setup::S
+    ahat::A
+    phat::P
+end
+
+"""
+    LowMemorySpectralPressureSolver(setup)
+
+Build spectral pressure solver from setup.
+This one is slower than `SpectralPressureSolver` but occupies less memory.
+"""
+function LowMemorySpectralPressureSolver(setup)
+    (; grid, boundary_conditions) = setup
+    (; dimension, Δ, Np, x) = grid
+
+    D = dimension()
+    T = eltype(Δ[1])
+
+    Δx = Array(Δ[1])[1]
+
+    @assert(
+        all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions),
+        "SpectralPressureSolver only implemented for periodic boundary conditions",
+    )
+
+    @assert(
+        all(α -> all(≈(Δx), Δ[α]), 1:D),
+        "SpectralPressureSolver requires uniform grid along each dimension",
+    )
+
+    @assert all(n -> n == Np[1], Np)
+
+    # Fourier transform of the discretization
+    # Assuming uniform grid, although Δx[1] and Δx[2] do not need to be the same
+
+    k = 0:Np[1]-1
+
+    Tπ = T(π) # CUDA doesn't like pi
+    ahat = fill!(similar(x[1], Np[1]), 0)
+    @. ahat = 4 * Δx^D * sin(k * Tπ / Np[1])^2 / Δx^2
+
+    # Placeholders for intermediate results
+    phat = fill!(similar(x[1], Complex{T}, Np), 0)
+
+    LowMemorySpectralPressureSolver{T,typeof(ahat),typeof(phat),typeof(setup)}(setup, ahat, phat)
 end

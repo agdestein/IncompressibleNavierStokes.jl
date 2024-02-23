@@ -113,7 +113,8 @@ export Setup
 export stretched_grid, cosine_grid
 
 # Pressure solvers
-export DirectPressureSolver, CGPressureSolver, SpectralPressureSolver
+export DirectPressureSolver,
+    CGPressureSolver, SpectralPressureSolver, LowMemorySpectralPressureSolver
 
 # Solvers
 export solve_unsteady, solve_steady_state

@@ -170,3 +170,41 @@ function poisson!(solver::SpectralPressureSolver, p, f)
 
     p
 end
+
+function poisson!(solver::LowMemorySpectralPressureSolver, p, f)
+    (; setup, ahat, phat) = solver
+    (; dimension, Ip) = setup.grid
+    D = dimension()
+
+    f = view(f, Ip)
+
+    phat .= complex.(f)
+
+    # Fourier transform of right hand side
+    fft!(phat)
+
+    # Solve for coefficients in Fourier space
+    if D == 2
+        ax = ahat 
+        ay = reshape(ahat, 1, :)
+        @. phat = -phat / (ax + ay)
+        
+    else
+        ax = ahat
+        ay = reshape(ahat, 1, :)
+        az = reshape(ahat, 1, 1, :)
+        @. phat = -phat / (ax + ay + az)
+    end
+
+    # Pressure is determined up to constant. We set this to 0 (instead of
+    # phat[1] / 0 = Inf)
+    # Note use of singleton range 1:1 instead of scalar index 1
+    # (otherwise CUDA gets annoyed)
+    phat[1:1] .= 0
+
+    # Transform back
+    ifft!(phat)
+    @. p[Ip] = real(phat)
+
+    p
+end
