@@ -144,6 +144,7 @@ data_train[1].data[1, 1].u[end][1]
 # Create input/output arrays
 io_train = create_io_arrays(data_train, setups_train);
 io_valid = create_io_arrays(data_valid, setups_valid);
+io_test = create_io_arrays([data_test], setups_test);
 
 # jldsave("output/divfree/io_train.jld2"; io_train)
 # jldsave("output/divfree/io_train.jld2"; io_valid)
@@ -445,7 +446,32 @@ map(s -> s.comptime, smag) |> sum
 
 # lines(LinRange(T(0), T(1), 100), e_smag)
 
-# Compute posterior errors
+# Compute a-priori errors ###################################################
+
+eprior = let
+    prior = zeros(T, 3, 2)
+    post = zeros(T, 3, 2, 2)
+    for ig = 1:3, ifil = 1:2
+        println("ig = $ig, ifil = $ifil")
+        testset = device(io_test[ig, ifil])
+        err = create_relerr_prior(closure, testset...)
+        prior[ig, ifil] = err(θ_cnn_prior[ig, ifil])
+        for iorder = 1:2
+            post[ig, ifil, iorder] = err(θ_cnn_post[ig, ifil, iorder])
+        end
+    end
+    (; prior, post)
+end
+clean()
+
+eprior.prior
+eprior.post
+
+eprior.prior |> x -> reshape(x, :) |> x -> round.(x; digits = 2)
+eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
+
+# Compute posterior errors ####################################################
+
 e_nm, e_smag, e_cnn, e_cnn_post = let
     e_nm = zeros(T, size(data_test.data)...)
     e_smag = zeros(T, size(data_test.data)..., 2)
@@ -500,13 +526,120 @@ e_smag
 e_cnn
 e_cnn_post
 
+round.([e_nm[:] reshape(e_smag, :, 2) reshape(e_cnn, :, 2) reshape(e_cnn_post, :, 2)][[1:3; 6:8], :]; sigdigits = 2)
+
 data_train[1].t[2] - data_train[1].t[1]
 data_test.t[2] - data_test.t[1]
 
 CairoMakie.activate!()
 GLMakie.activate!()
 
-# Plot convergence
+# Plot a-priori errors ########################################################
+
+fig = with_theme(;
+    # linewidth = 5,
+    # markersize = 10,
+    # markersize = 20,
+    # fontsize = 20,
+    palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
+) do
+    nles = [n[1] for n in params_test.nles][1:3]
+    fig = Figure(; size = (500, 400))
+    ax = Axis(
+        fig[1, 1];
+        xscale = log10,
+        # yscale = log10,
+        xticks = nles,
+        xlabel = "Resolution",
+        title = "Relative a-priori error",
+    )
+    for ifil = 1:2
+        linestyle = ifil == 1 ? :solid : :dash
+        label = "No closure"
+        # label = label * (ifil == 1 ? " (FA)" : " (VA)")
+        ifil == 2 && (label = nothing)
+        scatterlines!(
+            nles,
+            ones(T, length(nles));
+            color = Cycled(1),
+            linestyle,
+            marker = :circle,
+            label,
+        )
+    end
+    # for ifil = 1:2
+    #     linestyle = ifil == 1 ? :solid : :dash
+    #     label = "Smagorinsky"
+    #     # label = label * (ifil == 1 ? " (FA)" : " (VA)")
+    #     ifil == 2 && (label = nothing)
+    #     scatterlines!(
+    #         nles,
+    #         eprior.smag[:, ifil, iorder];
+    #         color = Cycled(2),
+    #         linestyle,
+    #         marker = :utriangle,
+    #         label,
+    #     )
+    # end
+    for ifil = 1:2
+        linestyle = ifil == 1 ? :solid : :dash
+        label = "CNN (Lprior)"
+        # label = label * (ifil == 1 ? " (FA)" : " (VA)")
+        ifil == 2 && (label = nothing)
+        scatterlines!(
+            nles,
+            eprior.prior[:, ifil];
+            color = Cycled(2),
+            linestyle,
+            marker = :utriangle,
+            label,
+        )
+    end
+    for ifil = 1:2
+        linestyle = ifil == 1 ? :solid : :dash
+        label = "CNN (Lpost, Gen)"
+        # label = label * (ifil == 1 ? " (FA)" : " (VA)")
+        ifil == 2 && (label = nothing)
+        scatterlines!(
+            nles,
+            eprior.post[:, ifil, 1];
+            color = Cycled(3),
+            linestyle,
+            marker = :rect,
+            label,
+        )
+    end
+    for ifil = 1:2
+        linestyle = ifil == 1 ? :solid : :dash
+        label = "CNN (Lpost, DFC)"
+        # label = label * (ifil == 1 ? " (FA)" : " (VA)")
+        ifil == 2 && (label = nothing)
+        scatterlines!(
+            nles,
+            eprior.post[:, ifil, 2];
+            color = Cycled(4),
+            linestyle,
+            marker = :diamond,
+            label,
+        )
+    end
+    # lines!(
+    #     collect(extrema(nles[4:end])),
+    #     n -> 2e4 * n^-2.0;
+    #     linestyle = :dash,
+    #     label = "n⁻²",
+    #     color = Cycled(1),
+    # )
+    axislegend(; position = :lb)
+    ylims!(ax, (T(-0.05), T(1.05)))
+    # iorder == 2 && limits!(ax, (T(60), T(1050)), (T(2e-2), T(1e1)))
+    fig
+end
+
+save("$output/convergence/$(mname)_prior.pdf", fig)
+
+# Plot convergence ############################################################
+
 with_theme(;
     # linewidth = 5,
     # markersize = 10,
@@ -703,6 +836,8 @@ kineticenergy.ke_cnn_post[1]
 
 CairoMakie.activate!()
 
+# Plot energy evolution ########################################################
+
 with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
     # t = data_test.t[2:end]
     t = data_test.t
@@ -769,7 +904,7 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]))
     end
 end
 
-# Divergence #################################################################
+# Compute Divergence ##########################################################
 
 divs = let
     clean()
@@ -899,6 +1034,8 @@ divs.d_smag[1, 1, 3]
 divs.d_smag[1, 2, 3]
 
 CairoMakie.activate!()
+
+# Plot Divergence #############################################################
 
 with_theme(;
     fontsize = 20,
