@@ -262,13 +262,13 @@ closure, θ₀ = cnn(;
     setup = setups_train[1],
     radii = [2, 2, 2, 2, 2],
     channels = [24, 24, 24, 24, params_train.D],
-    # activations = [leakyrelu, leakyrelu, leakyrelu, leakyrelu, identity],
     activations = [tanh, tanh, tanh, tanh, identity],
     use_bias = [true, true, true, true, false],
     rng,
 );
 closure.chain
-mkpath("output/divfree/$mname")
+savepath = "output/divfree/$mname"
+ispath(savepath) || mkpath(savepath)
 
 closure(device(io_train[1, 1].u[:, :, :, 1:50]), device(θ₀));
 
@@ -302,7 +302,7 @@ prior = map(CartesianIndices(size(io_train))) do I
     )
     θ = callbackstate.θmin # Use best θ instead of last θ
     prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
-    jldsave("output/divfree/$mname/prior_ifilter$(ifil)_igrid$(ig).jld2"; prior)
+    jldsave("$savepath/prior_ifilter$(ifil)_igrid$(ig).jld2"; prior)
     prior
 end
 clean()
@@ -310,9 +310,9 @@ clean()
 # Load trained parameters
 prior = map(CartesianIndices(size(io_train))) do I
     ig, ifil = I.I
-    name = "output/divfree/$mname/prior_ifilter$(ifil)_igrid$(ig).jld2"
+    name = "$savepath/prior_ifilter$(ifil)_igrid$(ig).jld2"
     load(name)["prior"]
-end
+end;
 θ_cnn_prior = [copyto!(device(θ₀), p.θ) for p in prior];
 
 θ_cnn_prior .|> extrema
@@ -370,14 +370,14 @@ let
             train([d], loss, opt, θ; niter = 2000, ncallback = 10, callbackstate, callback)
         θ = callbackstate.θmin # Use best θ instead of last θ
         post = (; θ = Array(θ), comptime = time() - starttime)
-        jldsave("output/divfree/$mname/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"; post)
+        jldsave("$savepath/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"; post)
     end
     clean()
 end
 
 post = map(CartesianIndices((size(io_train)..., 2))) do I
     ig, ifil, iorder = I.I
-    name = "output/divfree/$mname/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"
+    name = "$savepath/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"
     load(name)["post"]
 end;
 θ_cnn_post = [copyto!(device(θ₀), p.θ) for p in post];
@@ -544,6 +544,7 @@ fig = with_theme(;
     palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
 ) do
     nles = [n[1] for n in params_test.nles][1:3]
+    ifil = 2
     fig = Figure(; size = (500, 400))
     ax = Axis(
         fig[1, 1];
@@ -551,13 +552,15 @@ fig = with_theme(;
         # yscale = log10,
         xticks = nles,
         xlabel = "Resolution",
-        title = "Relative a-priori error",
+        # title = "Relative a-priori error",
+        title = "Relative a-priori error $(ifil == 1 ? " (FA)" : " (VA)")",
     )
-    for ifil = 1:2
-        linestyle = ifil == 1 ? :solid : :dash
+    linestyle = :solid
+    # for ifil = 1:2
+        # linestyle = ifil == 1 ? :solid : :dash
         label = "No closure"
         # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-        ifil == 2 && (label = nothing)
+        # ifil == 2 && (label = nothing)
         scatterlines!(
             nles,
             ones(T, length(nles));
@@ -566,7 +569,7 @@ fig = with_theme(;
             marker = :circle,
             label,
         )
-    end
+    # end
     # for ifil = 1:2
     #     linestyle = ifil == 1 ? :solid : :dash
     #     label = "Smagorinsky"
@@ -581,11 +584,11 @@ fig = with_theme(;
     #         label,
     #     )
     # end
-    for ifil = 1:2
-        linestyle = ifil == 1 ? :solid : :dash
+    # for ifil = 1:2
+        # linestyle = ifil == 1 ? :solid : :dash
         label = "CNN (Lprior)"
         # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-        ifil == 2 && (label = nothing)
+        # ifil == 2 && (label = nothing)
         scatterlines!(
             nles,
             eprior.prior[:, ifil];
@@ -594,12 +597,12 @@ fig = with_theme(;
             marker = :utriangle,
             label,
         )
-    end
-    for ifil = 1:2
-        linestyle = ifil == 1 ? :solid : :dash
+    # end
+    # for ifil = 1:2
+        # linestyle = ifil == 1 ? :solid : :dash
         label = "CNN (Lpost, Gen)"
         # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-        ifil == 2 && (label = nothing)
+        # ifil == 2 && (label = nothing)
         scatterlines!(
             nles,
             eprior.post[:, ifil, 1];
@@ -608,12 +611,12 @@ fig = with_theme(;
             marker = :rect,
             label,
         )
-    end
-    for ifil = 1:2
-        linestyle = ifil == 1 ? :solid : :dash
-        label = "CNN (Lpost, DFC)"
+    # end
+    # for ifil = 1:2
+        # linestyle = ifil == 1 ? :solid : :dash
+        label = "CNN (Lpost, DCF)"
         # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-        ifil == 2 && (label = nothing)
+        # ifil == 2 && (label = nothing)
         scatterlines!(
             nles,
             eprior.post[:, ifil, 2];
@@ -622,7 +625,7 @@ fig = with_theme(;
             marker = :diamond,
             label,
         )
-    end
+    # end
     # lines!(
     #     collect(extrema(nles[4:end])),
     #     n -> 2e4 * n^-2.0;
@@ -633,10 +636,9 @@ fig = with_theme(;
     axislegend(; position = :lb)
     ylims!(ax, (T(-0.05), T(1.05)))
     # iorder == 2 && limits!(ax, (T(60), T(1050)), (T(2e-2), T(1e1)))
+    save("$output/convergence/$(mname)_prior_ifilter$ifil.pdf", fig)
     fig
 end
-
-save("$output/convergence/$(mname)_prior.pdf", fig)
 
 # Plot convergence ############################################################
 
@@ -647,10 +649,10 @@ with_theme(;
     # fontsize = 20,
     palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
 ) do
-    iorder = 2
+    iorder = 1
     # lesmodel = iorder == 1 ? "project-then-closure" : "closure-then-project"
     # lesmodel = iorder == 1 ? "project-then-closure" : "closure-then-project"
-    lesmodel = iorder == 1 ? "Gen" : "DFC"
+    lesmodel = iorder == 1 ? "Gen" : "DCF"
     nles = [n[1] for n in params_test.nles]
     fig = Figure(; size = (500, 400))
     ax = Axis(
@@ -737,7 +739,7 @@ end
 name = "$output/convergence"
 ispath(name) || mkpath(name)
 save("$name/$(mname)_gen.pdf", current_figure())
-save("$name/$(mname)_dfc.pdf", current_figure())
+save("$name/$(mname)_dcf.pdf", current_figure())
 
 # Energy evolution ###########################################################
 
@@ -1008,12 +1010,6 @@ divs = let
 end;
 clean();
 
-# Save
-jldsave("output/divfree/$(mname)_divs.jld2"; divs)
-
-# Load
-divs = load("output/divfree/$(mname)_divs.jld2")["divs"]
-
 divs.d_ref .|> extrema
 divs.d_nomodel .|> extrema
 divs.d_smag .|> extrema
@@ -1192,9 +1188,9 @@ ufinal.u_ref[1][2]
 ufinal.u_cnn_prior[3, 1, 1][1]
 ufinal.u_cnn_post[3, 1, 1][1]
 
-jldsave("output/divfree/ufinal_$mname.jld2"; ufinal)
+jldsave("$savepath/ufinal.jld2"; ufinal)
 
-ufinal = load("output/divfree/ufinal_$mname.jld2")["ufinal"];
+ufinal = load("$savepath/ufinal.jld2")["ufinal"];
 
 markers_labels = [
     (:circle, ":circle"),
