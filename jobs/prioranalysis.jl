@@ -45,6 +45,7 @@ function observe_v(dnsobs, Φ, les, compression, psolver)
         Pv = zeros(T, 0),
         Pc = zeros(T, 0),
         c = zeros(T, 0),
+        E = zeros(T, 0),
     )
     on(dnsobs) do (; u, PF, t)
         push!(results.t, t)
@@ -78,6 +79,11 @@ function observe_v(dnsobs, Φ, les, compression, psolver)
 
         norm_ΦPF = sqrt(sum(α -> sum(abs2, ΦPF[α][Iu[α]]), 1:D))
         push!(results.c, norm_c / norm_ΦPF)
+
+        Eu = sum(α -> sum(abs2, view(u[α], ntuple(b -> 2:size(u[α], b)-1, 1:D)), 1:D)
+        Ev = norm_v^2
+        E = compression * Ev / Eu
+        push!(results.E, E)
     end
     results
 end
@@ -105,7 +111,7 @@ observe_u(dns, psolver_dns, filters; nupdate = 1) =
     end
 
 # Output directory
-output = "output/prioranalysis"
+output = "output/prioranalysis/dimension$D"
 ispath(output) || mkpath(output)
 
 # Array type
@@ -338,23 +344,25 @@ jldsave("$output/finalsolution.jld", u = Array.(state.u))
 
 @info "Computing statistics"
 begin
-    println("Φ\t\tM\tDu\tPv\tPc\tc")
+    println("Φ\t\tM\tDu\tPv\tPc\tc\tE")
     for o in outputs.obs
         nt = length(o.t)
         Dv = sum(o.Dv) / nt
         Pc = sum(o.Pc) / nt
         Pv = sum(o.Pv) / nt
         c = sum(o.c) / nt
+        E = sum(o.E) / nt
         @printf(
-            "%s\t%d^%d\t%.2g\t%.2g\t%.2g\t%.2g\n",
-            # "%s &\t\$%d^%d\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$\n",
+            "%s\t%d^%d\t%.2g\t%.2g\t%.2g\t%.2g\t%.2g\n",
+            # "%s &\t\$%d^%d\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$\n",
             typeof(o.Φ),
             o.Mα,
             D,
             Dv,
             Pv,
             Pc,
-            c
+            c,
+            E,
         )
     end
 end;
