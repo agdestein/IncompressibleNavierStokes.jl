@@ -80,9 +80,9 @@ function observe_v(dnsobs, Φ, les, compression, psolver)
         norm_ΦPF = sqrt(sum(α -> sum(abs2, ΦPF[α][Iu[α]]), 1:D))
         push!(results.c, norm_c / norm_ΦPF)
 
-        Eu = sum(α -> sum(abs2, view(u[α], ntuple(b -> 2:size(u[α], b)-1, 1:D)), 1:D)
+        Eu = sum(α -> sum(abs2, view(u[α], ntuple(b -> 2:size(u[α], b)-1, D)...)), 1:D)
         Ev = norm_v^2
-        E = compression * Ev / Eu
+        E = compression^D * Ev / Eu
         push!(results.E, E)
     end
     results
@@ -110,10 +110,6 @@ observe_u(dns, psolver_dns, filters; nupdate = 1) =
         results
     end
 
-# Output directory
-output = "output/prioranalysis/dimension$D"
-ispath(output) || mkpath(output)
-
 # Array type
 ArrayType = Array
 # using CUDA; ArrayType = CuArray;
@@ -129,8 +125,8 @@ CUDA.allowscalar(false);
 T = Float32
 # T = Float64
 Re = T(2_000)
-# ndns = 512
-ndns = 1024
+ndns = 512
+# ndns = 1024
 D = 3
 kp = 5
 Δt = T(1e-4)
@@ -143,7 +139,7 @@ filterdefs = [
     (VolumeAverage(), 128),
 ]
 
-# # 2D 
+# # 2D
 # T = Float64;
 # Re = T(10_000)
 # ndns = 4096
@@ -158,6 +154,10 @@ filterdefs = [
 #     (VolumeAverage(), 128),
 #     (VolumeAverage(), 256),
 # ]
+
+# Output directory
+output = "output/prioranalysis/dimension$D"
+ispath(output) || mkpath(output)
 
 # Setup
 @info "Building setup"
@@ -176,7 +176,6 @@ psolver_dns = SpectralPressureSolver(dns);
 u₀ = random_field(dns, T(0); kp, psolver = psolver_dns);
 GC.gc()
 CUDA.reclaim()
-
 
 # Solve unsteady problem
 @info "Launching time stepping"
