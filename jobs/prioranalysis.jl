@@ -5,6 +5,8 @@ if isdefined(@__MODULE__, :LanguageServer)          #src
     using .IncompressibleNavierStokes               #src
 end                                                 #src
 
+@info "Loading packages"
+
 using CairoMakie
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes:
@@ -17,6 +19,7 @@ using IncompressibleNavierStokes:
     spectral_stuff,
     kinetic_energy,
     interpolate_u_p
+using JLD2
 using LinearAlgebra
 using Printf
 using FFTW
@@ -117,10 +120,11 @@ ArrayType = CuArray;
 CUDA.allowscalar(false);
 
 # 3D
-# T = Float32
-T = Float64
+T = Float32
+# T = Float64
 Re = T(2_000)
-ndns = 512
+# ndns = 512
+ndns = 1024
 D = 3
 kp = 5
 Δt = T(1e-4)
@@ -150,6 +154,7 @@ filterdefs = [
 # ]
 
 # Setup
+@info "Building setup"
 lims = T(0), T(1)
 dns = Setup(ntuple(α -> LinRange(lims..., ndns + 1), D)...; Re, ArrayType);
 filters = map(filterdefs) do (Φ, nles)
@@ -161,14 +166,14 @@ end;
 psolver_dns = SpectralPressureSolver(dns);
 
 # Create random initial conditions
+@info "Generating initial conditions"
 u₀ = random_field(dns, T(0); kp, psolver = psolver_dns);
-
-state = (; u = u₀, t = T(0));
-
 GC.gc()
 CUDA.reclaim()
 
+
 # Solve unsteady problem
+@info "Launching time stepping"
 @time state, outputs = solve_unsteady(
     dns,
     u₀,
@@ -185,7 +190,11 @@ GC.gc()
 CUDA.reclaim()
 
 # Save final solution
+@info "Saving final solution"
 jldsave("$output/finalsolution.jld", u = Array.(state.u))
+
+# u = load("$output/finalsolution.jld")["u"]
+# state = (; u = ArrayType.(u), t = T(1e-1))
 
 # fil = filters[2];
 # apply_bc_u!(state.u, T(0), dns);
@@ -327,6 +336,7 @@ jldsave("$output/finalsolution.jld", u = Array.(state.u))
 # save(fname, current_figure())
 # run(`convert $fname -trim $fname`) # Requires imagemagick
 
+@info "Computing statistics"
 begin
     println("Φ\t\tM\tDu\tPv\tPc\tc")
     for o in outputs.obs
@@ -349,13 +359,14 @@ begin
     end
 end;
 
-# # To free up memory
-# psolver_dns = nothing
+# To free up memory
+psolver_dns = nothing
 # fig = lines([1, 2, 3])
-# GC.gc()
-# CUDA.reclaim()
+GC.gc()
+CUDA.reclaim()
 
 # Plot predicted spectra
+@info "Computing and plotting spectra"
 fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
     fields = [state.u, u₀, (f.Φ(state.u, f.setup, f.compression) for f in filters)...]
     setups = [dns, dns, (f.setup for f in filters)...]
