@@ -41,7 +41,9 @@ GLMakie.activate!()
 
 set_theme!(; GLMakie = (; scalefactor = 1.5))
 
-output = "../SupervisedClosure/figures/"
+plotdir = "../SupervisedClosure/figures/"
+outdir = "output/postanalysis"
+ispath(outdir) || mkpath(outdir)
 
 # Random number generator
 rng = Random.default_rng()
@@ -101,14 +103,14 @@ data_valid = [create_les_data(; params_valid...) for _ = 1:1];
 data_test = create_les_data(; params_test...);
 
 # Save filtered DNS data
-jldsave("output/divfree/data_train.jld2"; data_train)
-jldsave("output/divfree/data_valid.jld2"; data_valid)
-jldsave("output/divfree/data_test.jld2"; data_test)
+jldsave("$outdir/data_train.jld2"; data_train)
+jldsave("$outdir/data_valid.jld2"; data_valid)
+jldsave("$outdir/data_test.jld2"; data_test)
 
 # Load filtered DNS data
-data_train = load("output/divfree/data_train.jld2", "data_train");
-data_valid = load("output/divfree/data_valid.jld2", "data_valid");
-data_test = load("output/divfree/data_test.jld2", "data_test");
+data_train = load("$outdir/data_train.jld2", "data_train");
+data_valid = load("$outdir/data_valid.jld2", "data_valid");
+data_test =  load("$outdir/data_test.jld2", "data_test");
 
 data_train[5].comptime
 data_valid[1].comptime
@@ -146,8 +148,8 @@ io_train = create_io_arrays(data_train, setups_train);
 io_valid = create_io_arrays(data_valid, setups_valid);
 io_test = create_io_arrays([data_test], setups_test);
 
-# jldsave("output/divfree/io_train.jld2"; io_train)
-# jldsave("output/divfree/io_train.jld2"; io_valid)
+# jldsave("$outdir/io_train.jld2"; io_train)
+# jldsave("$outdir/io_train.jld2"; io_valid)
 
 io_train[1].u |> extrema
 io_train[1].c |> extrema
@@ -242,7 +244,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     fig
 end
 
-save("$output/training_data.pdf", fig)
+save("$plotdir/training_data.pdf", fig)
 
 # Architecture 1
 mname = "balzac"
@@ -267,7 +269,7 @@ closure, θ₀ = cnn(;
     rng,
 );
 closure.chain
-savepath = "output/divfree/$mname"
+savepath = "$outdir/$mname"
 ispath(savepath) || mkpath(savepath)
 
 closure(device(io_train[1, 1].u[:, :, :, 1:50]), device(θ₀));
@@ -433,10 +435,10 @@ clean()
 smag
 
 # Save trained parameters
-jldsave("output/divfree/smag.jld2"; smag);
+jldsave("$outdir/smag.jld2"; smag);
 
 # Load trained parameters
-smag = load("output/divfree/smag.jld2")["smag"];
+smag = load("$outdir/smag.jld2")["smag"];
 
 # Extract coefficients
 θ_smag = map(s -> s.θ, smag)
@@ -636,7 +638,7 @@ fig = with_theme(;
     axislegend(; position = :lb)
     ylims!(ax, (T(-0.05), T(1.05)))
     # iorder == 2 && limits!(ax, (T(60), T(1050)), (T(2e-2), T(1e1)))
-    save("$output/convergence/$(mname)_prior_ifilter$ifil.pdf", fig)
+    save("$plotdir/convergence/$(mname)_prior_ifilter$ifil.pdf", fig)
     fig
 end
 
@@ -736,7 +738,7 @@ with_theme(;
     fig
 end
 
-name = "$output/convergence"
+name = "$plotdir/convergence"
 ispath(name) || mkpath(name)
 save("$name/$(mname)_gen.pdf", current_figure())
 save("$name/$(mname)_dcf.pdf", current_figure())
@@ -900,7 +902,7 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]))
         iorder == 2 && axislegend(; position = :lb)
         # axislegend(; position = :lb)
         # axislegend()
-        name = "$output/energy_evolution/$mname/"
+        name = "$plotdir/energy_evolution/$mname/"
         ispath(name) || mkpath(name)
         save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
     end
@@ -1105,7 +1107,7 @@ with_theme(;
             iorder == 2 && ifil == 1 && axislegend(; position = :rt)
             # axislegend()
             islog && ylims!(ax, (T(1e-6), T(1e3)))
-            name = "$output/divergence/$mname/$(islog ? "log" : "lin")"
+            name = "$plotdir/divergence/$mname/$(islog ? "log" : "lin")"
             ispath(name) || mkpath(name)
             # save("$(name)/iorder$(iorder)_igrid$(igrid).pdf", fig)
             save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
@@ -1283,7 +1285,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         axislegend(ax; position = :cb)
         autolimits!(ax)
         # limits!(ax, (T(0.8), T(800)), (T(1e-10), T(1)))
-        name = "$output/energy_spectra/$mname"
+        name = "$plotdir/energy_spectra/$mname"
         ispath(name) || mkpath(name)
         save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
     end
@@ -1310,7 +1312,7 @@ with_theme(;
         Point2f(x1, y1),
         # Point2f(x2, y1),
     ]
-    path = "$output/les_fields/$mname"
+    path = "$plotdir/les_fields/$mname"
     ispath(path) || mkpath(path)
     for iorder = 1:2, ifil = 1:2, igrid = 1:3
         setup = setups_test[igrid]
