@@ -93,9 +93,9 @@ get_params(nlesscalar) = (;
     ),
 )
 
-params_train = (; get_params([64, 128, 256])..., savefreq = 10);
-params_valid = (; get_params([64, 128, 256])..., tsim = T(0.1), savefreq = 40);
-params_test = (; get_params([64, 128, 256, 512, 1024])..., tsim = T(0.1), savefreq = 10);
+params_train = (; get_params([64, 128, 256, 512])..., tsim = T(0.5), savefreq = 10);
+params_valid = (; get_params([64, 128, 256, 512])..., tsim = T(0.1), savefreq = 40);
+params_test = (; get_params([64, 128, 256, 512])..., tsim = T(0.1), savefreq = 10);
 
 # Create LES data from DNS
 data_train = [create_les_data(; params_train...) for _ = 1:5];
@@ -149,12 +149,15 @@ io_valid = create_io_arrays(data_valid, setups_valid);
 io_test = create_io_arrays([data_test], setups_test);
 
 # jldsave("$outdir/io_train.jld2"; io_train)
-# jldsave("$outdir/io_train.jld2"; io_valid)
+# jldsave("$outdir/io_valid.jld2"; io_valid)
+# jldsave("$outdir/io_test.jld2"; io_test)
 
 io_train[1].u |> extrema
 io_train[1].c |> extrema
 io_valid[1].u |> extrema
 io_valid[1].c |> extrema
+io_test[1].u |> extrema
+io_test[1].c |> extrema
 
 # Inspect data
 let
@@ -274,11 +277,11 @@ ispath(savepath) || mkpath(savepath)
 
 closure(device(io_train[1, 1].u[:, :, :, 1:50]), device(θ₀));
 
-# A-priori training
-prior = map(CartesianIndices(size(io_train))) do I
-    # Prepare training
+# A-priori training ###########################################################
+
+ispath("$savepath/priortraining") || mkpath("$savepath/priortraining")
+for ifil = 1:1, ig = 4:4
     starttime = time()
-    ig, ifil = I.I
     println("ig = $ig, ifil = $ifil")
     d = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device)
     θ = T(1.0e0) * device(θ₀)
@@ -304,15 +307,14 @@ prior = map(CartesianIndices(size(io_train))) do I
     )
     θ = callbackstate.θmin # Use best θ instead of last θ
     prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
-    jldsave("$savepath/prior_ifilter$(ifil)_igrid$(ig).jld2"; prior)
-    prior
+    jldsave("$savepath/priortraining/ifilter$(ifil)_igrid$(ig).jld2"; prior)
 end
 clean()
 
 # Load trained parameters
 prior = map(CartesianIndices(size(io_train))) do I
     ig, ifil = I.I
-    name = "$savepath/prior_ifilter$(ifil)_igrid$(ig).jld2"
+    name = "$savepath/priortraining/ifilter$(ifil)_igrid$(ig).jld2"
     load(name)["prior"]
 end;
 θ_cnn_prior = [copyto!(device(θ₀), p.θ) for p in prior];

@@ -157,7 +157,7 @@ function create_les_data(;
         D *
         2 *
         length(bitstring(zero(T))) / 8 / 1e6
-    @info "Generating $datasize Mb of LES data"
+    @info "Generating $datasize Mb of filtered DNS data"
 
     # Initial conditions
     u₀ = icfunc(dns, psolver)
