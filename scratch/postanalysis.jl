@@ -26,6 +26,9 @@ using SparseArrays
 using KernelAbstractions
 using FFTW
 
+# palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])
+palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])
+
 getorder(i) =
     if i == 1
         :first
@@ -93,9 +96,13 @@ get_params(nlesscalar) = (;
     ),
 )
 
-params_train = (; get_params([64, 128, 256, 512])..., tsim = T(0.5), savefreq = 10);
-params_valid = (; get_params([64, 128, 256, 512])..., tsim = T(0.1), savefreq = 40);
-params_test = (; get_params([64, 128, 256, 512])..., tsim = T(0.1), savefreq = 10);
+params_train = (; get_params([64, 128, 256])..., tsim = T(0.5), savefreq = 10);
+params_valid = (; get_params([64, 128, 256])..., tsim = T(0.1), savefreq = 40);
+params_test = (; get_params([64, 128, 256, 512, 1024])..., tsim = T(0.1), savefreq = 10);
+
+# params_train = (; get_params([64, 128, 256, 512])..., tsim = T(0.5), savefreq = 10);
+# params_valid = (; get_params([64, 128, 256, 512])..., tsim = T(0.1), savefreq = 40);
+# params_test = (; get_params([64, 128, 256, 512])..., tsim = T(0.1), savefreq = 10);
 
 # Create LES data from DNS
 data_train = [create_les_data(; params_train...) for _ = 1:5];
@@ -545,10 +552,10 @@ fig = with_theme(;
     # markersize = 10,
     # markersize = 20,
     # fontsize = 20,
-    palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
+    palette,
 ) do
     nles = [n[1] for n in params_test.nles][1:3]
-    ifil = 2
+    ifil = 1
     fig = Figure(; size = (500, 400))
     ax = Axis(
         fig[1, 1];
@@ -604,7 +611,7 @@ fig = with_theme(;
     # end
     # for ifil = 1:2
         # linestyle = ifil == 1 ? :solid : :dash
-        label = "CNN (Lpost, Gen)"
+        label = "CNN (Lpost, DIF)"
         # label = label * (ifil == 1 ? " (FA)" : " (VA)")
         # ifil == 2 && (label = nothing)
         scatterlines!(
@@ -640,24 +647,28 @@ fig = with_theme(;
     axislegend(; position = :lb)
     ylims!(ax, (T(-0.05), T(1.05)))
     # iorder == 2 && limits!(ax, (T(60), T(1050)), (T(2e-2), T(1e1)))
-    save("$plotdir/convergence/$(mname)_prior_ifilter$ifil.pdf", fig)
+    name = "$plotdir/convergence"
+    ispath(name) || mkpath(name)
+    save("$name/$(mname)_prior_ifilter$ifil.pdf", fig)
     fig
 end
 
-# Plot convergence ############################################################
+# Plot a-posteriori errors ###################################################
 
 with_theme(;
     # linewidth = 5,
     # markersize = 10,
     # markersize = 20,
     # fontsize = 20,
-    palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
+    palette,
 ) do
-    iorder = 1
+    iorder = 2
     # lesmodel = iorder == 1 ? "project-then-closure" : "closure-then-project"
     # lesmodel = iorder == 1 ? "project-then-closure" : "closure-then-project"
-    lesmodel = iorder == 1 ? "Gen" : "DCF"
-    nles = [n[1] for n in params_test.nles]
+    lesmodel = iorder == 1 ? "DIF" : "DCF"
+    ntrain = size(data_train[1].data, 1)
+    # nles = [n[1] for n in params_test.nles]
+    nles = [n[1] for n in params_test.nles][1:ntrain]
     fig = Figure(; size = (500, 400))
     ax = Axis(
         fig[1, 1];
@@ -677,7 +688,8 @@ with_theme(;
         ifil == 2 && (label = nothing)
         scatterlines!(
             nles,
-            e_nm[:, ifil];
+            # e_nm[:, ifil];
+            e_nm[1:ntrain, ifil];
             color = Cycled(1),
             linestyle,
             marker = :circle,
@@ -691,7 +703,8 @@ with_theme(;
         ifil == 2 && (label = nothing)
         scatterlines!(
             nles,
-            e_smag[:, ifil, iorder];
+            # e_smag[:, ifil, iorder];
+            e_smag[1:ntrain, ifil, iorder];
             color = Cycled(2),
             linestyle,
             marker = :utriangle,
@@ -699,7 +712,6 @@ with_theme(;
         )
     end
     for ifil = 1:2
-        ntrain = size(data_train[1].data, 1)
         linestyle = ifil == 1 ? :solid : :dash
         label = "CNN (prior)"
         # label = label * (ifil == 1 ? " (FA)" : " (VA)")
@@ -714,7 +726,6 @@ with_theme(;
         )
     end
     for ifil = 1:2
-        ntrain = size(data_train[1].data, 1)
         linestyle = ifil == 1 ? :solid : :dash
         label = "CNN (post)"
         # label = label * (ifil == 1 ? " (FA)" : " (VA)")
@@ -735,15 +746,15 @@ with_theme(;
     #     label = "n⁻²",
     #     color = Cycled(1),
     # )
-    axislegend(; position = :rt)
+    # axislegend(; position = :rt)
+    axislegend(; position = :lb)
+    ylims!(ax, (T(0.025), T(1.00)))
     # iorder == 2 && limits!(ax, (T(60), T(1050)), (T(2e-2), T(1e1)))
+    name = "$plotdir/convergence"
+    ispath(name) || mkpath(name)
+    save("$name/$(mname)_iorder$iorder.pdf", fig)
     fig
 end
-
-name = "$plotdir/convergence"
-ispath(name) || mkpath(name)
-save("$name/$(mname)_gen.pdf", current_figure())
-save("$name/$(mname)_dcf.pdf", current_figure())
 
 # Energy evolution ###########################################################
 
@@ -844,7 +855,7 @@ CairoMakie.activate!()
 
 # Plot energy evolution ########################################################
 
-with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
+with_theme(; palette) do
     # t = data_test.t[2:end]
     t = data_test.t
     for iorder = 1:2, ifil = 1:2, igrid = 1:3
@@ -852,7 +863,7 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]))
         # reflevel = kineticenergy.ke_ref[igrid, ifil][2:end]
         reflevel = copy(kineticenergy.ke_ref[igrid, ifil])
         reflevel = fill!(reflevel, 1)
-        lesmodel = iorder == 1 ? "Gen" : "DCF"
+        lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
         nles = params_test.nles[igrid]
         fig = Figure(; size = (500, 400))
@@ -1038,8 +1049,8 @@ CairoMakie.activate!()
 # Plot Divergence #############################################################
 
 with_theme(;
-    fontsize = 20,
-    palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
+    # fontsize = 20,
+    palette,
 ) do
     t = data_test.t
     for islog in (true, false)
@@ -1047,7 +1058,7 @@ with_theme(;
             # println("iorder = $iorder, igrid = $igrid")
             println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
             lesmodel = if iorder == 1
-                "Gen"
+                "DIF"
             elseif iorder == 2
                 "DCF"
             else
@@ -1223,10 +1234,10 @@ markers_labels = [
 
 # Plot spectra ###############################################################
 
-fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
+fig = with_theme(; palette) do
     for iorder = 1:2, ifil = 1:2, igrid = 1:3
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
-        lesmodel = iorder == 1 ? "Gen" : "DCF"
+        lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
         nles = params_test.nles[igrid]
         setup = setups_test[igrid]
@@ -1287,6 +1298,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         axislegend(ax; position = :cb)
         autolimits!(ax)
         # limits!(ax, (T(0.8), T(800)), (T(1e-10), T(1)))
+        ylims!(ax, (T(1e-3), T(0.35)))
         name = "$plotdir/energy_spectra/$mname"
         ispath(name) || mkpath(name)
         save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
@@ -1300,7 +1312,7 @@ GLMakie.activate!()
 
 with_theme(;
     fontsize = 25,
-    palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]),
+    palette,
 ) do
     x1 = 0.3
     x2 = 0.5
@@ -1319,7 +1331,7 @@ with_theme(;
     for iorder = 1:2, ifil = 1:2, igrid = 1:3
         setup = setups_test[igrid]
         name = "$path/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid)"
-        lesmodel = iorder == 1 ? "Gen" : "DCF"
+        lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
         nles = params_test.nles[igrid]
         function makeplot(u, title, suffix)
