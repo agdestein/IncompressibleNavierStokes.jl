@@ -1,19 +1,11 @@
-create_stepper(
-    ::ImplicitRungeKuttaMethod;
-    setup,
-    pressure_solver,
-    bc_vectors,
-    V,
-    p,
-    t,
-    n = 0,
-) = (; setup, pressure_solver, bc_vectors, V, p, t, n)
+create_stepper(::ImplicitRungeKuttaMethod; setup, psolver, bc_vectors, V, p, t, n = 0) =
+    (; setup, psolver, bc_vectors, V, p, t, n)
 
-function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
+function timestep(method::ImplicitRungeKuttaMethod, stepper, Δt)
     # TODO: Implement out-of-place IRK
     error()
 
-    (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
+    (; setup, psolver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; NV, Np, Ω) = grid
@@ -142,20 +134,13 @@ function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
         (; yM) = bc_vectors
 
         f = 1 / Δtₙ .* (M * V .+ yM)
-        p = pressure_poisson!(pressure_solver, f)
+        p = poisson!(psolver, f)
 
         mul!(Gp, G, p)
         V = @. V - Δtₙ / Ω * Gp
 
         if p_add_solve
-            p = pressure_additional_solve(
-                pressure_solver,
-                V,
-                p,
-                tₙ + Δtₙ,
-                setup;
-                bc_vectors,
-            )
+            p = pressure(psolver, V, p, tₙ + Δtₙ, setup; bc_vectors)
         else
             # Standard method; take last pressure
             p = pⱼ[(end-Np+1):end]
@@ -163,7 +148,7 @@ function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
     else
         # For steady BC we do an additional pressure solve
         # That saves a pressure solve for iter = 1 in the next time step
-        # pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+        # pressure!(psolver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
 
         # Standard method; take pressure of last stage
         p = pⱼ[(end-Np+1):end]
@@ -171,11 +156,11 @@ function step(method::ImplicitRungeKuttaMethod, stepper, Δt)
 
     t = tₙ + Δtₙ
 
-    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
+    create_stepper(method; setup, psolver, bc_vectors, V, p, t, n)
 end
 
-function step!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, momentum_cache)
-    (; setup, pressure_solver, bc_vectors, V, p, t, n) = stepper
+function timestep!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, momentum_cache)
+    (; setup, psolver, bc_vectors, V, p, t, n) = stepper
     (; grid, operators, boundary_conditions) = setup
     (; bc_unsteady) = boundary_conditions
     (; NV, Np, Ω) = grid
@@ -372,24 +357,13 @@ function step!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, momentum_c
         f .= yM
         mul!(f, M, V, 1 / Δtₙ, 1 / Δtₙ)
         # f .= 1 / Δtₙ .* (M * V .+ yM)
-        pressure_poisson!(pressure_solver, p, f)
+        poisson!(psolver, p, f)
 
         mul!(Gp, G, p)
         @. V -= Δtₙ / Ω * Gp
 
         if p_add_solve
-            pressure_additional_solve!(
-                pressure_solver,
-                V,
-                p,
-                tₙ + Δtₙ,
-                setup,
-                momentum_cache,
-                F,
-                f,
-                Δp;
-                bc_vectors,
-            )
+            pressure!(psolver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp; bc_vectors)
         else
             # Standard method; take last pressure
             p .= pⱼ[(end-Np+1):end]
@@ -397,7 +371,7 @@ function step!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, momentum_c
     else
         # For steady BC we do an additional pressure solve
         # That saves a pressure solve for iter = 1 in the next time step
-        # pressure_additional_solve!(pressure_solver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
+        # pressure!(psolver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp)
 
         # Standard method; take pressure of last stage
         p .= pⱼ[(end-Np+1):end]
@@ -405,18 +379,14 @@ function step!(method::ImplicitRungeKuttaMethod, stepper, Δt; cache, momentum_c
 
     t = tₙ + Δtₙ
 
-    create_stepper(method; setup, pressure_solver, bc_vectors, V, p, t, n)
+    create_stepper(method; setup, psolver, bc_vectors, V, p, t, n)
 end
 
-"""
-    momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, get_jacobian = false)
-
-Call momentum for multiple `(Vⱼ, pⱼ)` pairs, as required in implicit RK methods.
-
-Non-mutating/allocating/out-of-place version.
-
-See also [`momentum_allstage!`](@ref).
-"""
+# Call momentum for multiple `(Vⱼ, pⱼ)` pairs, as required in implicit RK methods.
+# 
+# Non-mutating/allocating/out-of-place version.
+# 
+# See also [`momentum_allstage!`](@ref).
 function momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, get_jacobian = false)
     (; NV, Np) = setup.grid
     T = eltype(Vⱼ)
@@ -446,28 +416,11 @@ function momentum_allstage(Vⱼ, ϕⱼ, pⱼ, tⱼ, setup; bc_vectors, nstage, g
     Fⱼ, ∇Fⱼ
 end
 
-"""
-    momentum_allstage!(
-        Fⱼ,
-        ∇Fⱼ,
-        Vⱼ,
-        ϕⱼ,
-        pⱼ,
-        tⱼ,
-        setup,
-        cache,
-        momentum_cache;
-        bc_vectors,
-        nstage,
-        get_jacobian = false,
-    )
-
-Call momentum for multiple `(V, p)` pairs, as required in implicit RK methods.
-
-Mutating/non-allocating/in-place version.
-
-See also [`momentum_allstage`](@ref).
-"""
+# Call momentum for multiple `(V, p)` pairs, as required in implicit RK methods.
+# 
+# Mutating/non-allocating/in-place version.
+# 
+# See also [`momentum_allstage`](@ref).
 function momentum_allstage!(
     Fⱼ,
     ∇Fⱼ,

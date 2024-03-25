@@ -1,8 +1,21 @@
+```@meta
+CurrentModule = IncompressibleNavierStokes
+```
+
 # Boundary conditions
 
-Various boundary conditions are supported. They are indicated by the symbols
+Each boundary has exactly one type of boundary conditions. For periodic
+boundary conditions, the opposite boundary must also be periodic.
+The available boundary conditions are given below.
 
-- `:periodic`
-- `:dirichlet`
-- `:symmetric`
-- `:pressure`
+```@docs
+PeriodicBC
+DirichletBC
+SymmetricBC
+PressureBC
+```
+
+```@docs
+offset_p
+offset_u
+```

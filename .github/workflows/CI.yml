@@ -6,6 +6,7 @@ on:
       - main
     tags: ['*']
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   # Skip intermediate builds: always.
@@ -54,7 +55,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: |
-          julia --project=docs -e '
+          julia --project=docs -t auto -e '
             using Documenter: DocMeta, doctest
             using IncompressibleNavierStokes
             DocMeta.setdocmeta!(

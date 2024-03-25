@@ -1,16 +1,54 @@
 """
-    field_plotter(
-        setup;
-        fieldname = :vorticity,
-        type = nothing,
-        sleeptime = 0.001,
-        alpha = 0.05,
+    realtimeplotter(;
+        setup,
+        plot = fieldplot,
+        nupdate = 1,
+        displayfig = true,
+        displayupdates = false,
+        sleeptime = nothing,
+        kwargs...,
     )
 
-Plot the solution every time the state `o` is updated.
+Processor for plotting the solution every `nupdate` time step.
 
 The `sleeptime` is slept at every update, to give Makie time to update the
 plot. Set this to `nothing` to skip sleeping.
+
+Additional `kwargs` are passed to the `plot` function.
+"""
+realtimeplotter(;
+    setup,
+    plot = fieldplot,
+    nupdate = 1,
+    displayfig = true,
+    displayupdates = false,
+    sleeptime = nothing,
+    kwargs...,
+) =
+    processor() do outerstate
+        state = Observable(outerstate[])
+        fig = plot(state; setup, kwargs...)
+        displayfig && display(fig)
+        on(outerstate) do outerstate
+            outerstate.n % nupdate == 0 || return
+            state[] = outerstate
+            displayupdates && display(fig)
+            isnothing(sleeptime) || sleep(sleeptime)
+        end
+        fig
+    end
+
+"""
+    fieldplot(
+        state;
+        setup,
+        fieldname = :vorticity,
+        type = nothing,
+        kwargs...,
+    )
+
+Plot `state` field in pressure points.
+If `state` is `Observable`, then the plot is interactive.
 
 Available fieldnames are:
 
@@ -22,6 +60,7 @@ Available fieldnames are:
 Available plot `type`s for 2D are:
 
 - `heatmap` (default),
+- `image`,
 - `contour`,
 - `contourf`.
 
@@ -31,70 +70,77 @@ Available plot `type`s for 3D are:
 
 The `alpha` value gets passed to `contour` in 3D.
 """
-field_plotter(setup; nupdate = 1, kwargs...) =
-    processor(state -> field_plot(setup.grid.dimension, setup, state; kwargs...); nupdate)
-
-function field_plot(
-    ::Dimension{2},
+fieldplot(state; setup, kwargs...) = fieldplot(
+    setup.grid.dimension,
+    state isa Observable ? state : Observable(state);
     setup,
+    kwargs...,
+)
+
+function fieldplot(
+    ::Dimension{2},
     state;
+    setup,
     fieldname = :vorticity,
+    psolver = nothing,
     type = heatmap,
-    sleeptime = 0.001,
     equal_axis = true,
-    displayfig = true,
+    docolorbar = true,
+    size = nothing,
+    title = nothing,
+    kwargs...,
 )
     (; boundary_conditions, grid) = setup
-    (; xlims, ylims, x, y, xp, yp) = grid
+    (; dimension, xlims, x, xp, Ip, Δ) = grid
+    D = dimension()
 
-    if fieldname == :velocity
-        xf, yf = xp, yp
+    xf = Array.(getindex.(setup.grid.xp, Ip.indices))
+
+    (; u, t) = state[]
+    _f = if fieldname in (1, 2)
+        up = interpolate_u_p(u, setup)
+        up[fieldname]
+    elseif fieldname == :velocity
+        up = interpolate_u_p(u, setup)
+        upnorm = zero(up[1])
     elseif fieldname == :vorticity
-        if all(==(:periodic), (boundary_conditions.u.x[1], boundary_conditions.v.y[1]))
-            xf = x
-            yf = y
-        else
-            xf = x[2:(end-1)]
-            yf = y[2:(end-1)]
-        end
+        ω = vorticity(u, setup)
+        ωp = interpolate_ω_p(ω, setup)
     elseif fieldname == :streamfunction
-        if boundary_conditions.u.x[1] == :periodic
-            xf = x
-        else
-            xf = x[2:(end-1)]
-        end
-        if boundary_conditions.v.y[1] == :periodic
-            yf = y
-        else
-            yf = y[2:(end-1)]
-        end
+        ψ = get_streamfunction(setup, u, t)
     elseif fieldname == :pressure
-        error("Not implemented")
-        xf, yf = xp, yp
-    else
-        error("Unknown fieldname")
-    end
-
-    field = @lift begin
-        isnothing(sleeptime) || sleep(sleeptime)
-        (; V, p, t) = $state
-        f = if fieldname == :velocity
-            up, vp = get_velocity(setup, V, t)
-            map((u, v) -> √sum(u^2 + v^2), up, vp)
-        elseif fieldname == :vorticity
-            get_vorticity(setup, V, t)
-        elseif fieldname == :streamfunction
-            get_streamfunction(setup, V, t)
-        elseif fieldname == :pressure
-            error("Not implemented")
-            reshape(p, length(xp), length(yp))
+        if isnothing(psolver)
+            @info "Creating new pressure solver for fieldplot"
+            psolver = DirectPressureSolver(setup)
         end
-        Array(f)
+        F = zero.(u)
+        div = zero(u[1])
+        p = zero(u[1])
+    end
+    _f = Array(_f)[Ip]
+    field = lift(state) do (; u, t)
+        f = if fieldname in (1, 2)
+            interpolate_u_p!(up, u, setup)
+            up[fieldname]
+        elseif fieldname == :velocity
+            interpolate_u_p!(up, u, setup)
+            map((u, v) -> √sum(u^2 + v^2), up...)
+            @. upnorm = sqrt(up[1]^2 + up[2]^2)
+        elseif fieldname == :vorticity
+            apply_bc_u!(u, t, setup)
+            vorticity!(ω, u, setup)
+            interpolate_ω_p!(ωp, ω, setup)
+        elseif fieldname == :streamfunction
+            get_streamfunction!(setup, ψ, u, t)
+        elseif fieldname == :pressure
+            pressure!(p, u, t, setup; psolver, F, div)
+        end
+        # Array(f)[Ip]
+        copyto!(_f, view(f, Ip))
     end
 
-    lims = @lift begin
-        f = $field
-        if type == heatmap
+    lims = lift(field) do f
+        if type ∈ (heatmap, image)
             lims = get_lims(f)
         elseif type ∈ (contour, contourf)
             if ≈(extrema(f)...; rtol = 1e-10)
@@ -111,201 +157,261 @@ function field_plot(
         lims
     end
 
-    fig = Figure()
-
-    if type == heatmap
-        ax, hm = heatmap(fig[1, 1], xf, yf, field; colorrange = lims)
+    if type ∈ (heatmap, image)
+        kwargs = (; colorrange = lims, kwargs...)
     elseif type ∈ (contour, contourf)
-        ax, hm = type(
-            fig[1, 1],
-            xf,
-            yf,
-            field;
+        kwargs = (;
             extendlow = :auto,
             extendhigh = :auto,
             levels = @lift(LinRange($(lims)..., 10)),
             colorrange = lims,
+            kwargs...,
         )
-    else
-        error("Unknown plot type")
     end
 
-    ax.title = titlecase(string(fieldname))
-    equal_axis && (ax.aspect = DataAspect())
-    ax.xlabel = "x"
-    ax.ylabel = "y"
-    limits!(ax, xlims[1], xlims[2], ylims[1], ylims[2])
-    Colorbar(fig[1, 2], hm)
+    axis = (;
+        xlabel = "x",
+        ylabel = "y",
+        title = isnothing(title) ? titlecase(string(fieldname)) : title,
+        limits = (xlims[1]..., xlims[2]...),
+    )
+    equal_axis && (axis = (axis..., aspect = DataAspect()))
 
-    displayfig && display(fig)
+    # Image requires boundary coordinates only
+    if type == image
+        Δx = first.(Array.(Δ))
+        @assert all(≈(Δx[1]), Δx) "Image requires rectangular pixels"
+        @assert(all(α -> all(≈(Δx[α]), Δ[α]), 1:D), "Image requires uniform grid",)
+        xf = map(extrema, xf)
+    end
+
+    size = isnothing(size) ? (;) : (; size)
+    fig = Figure(; size...)
+    ax, hm = type(fig[1, 1], xf..., field; axis, kwargs...)
+    docolorbar && Colorbar(fig[1, 2], hm)
 
     fig
 end
 
-function field_plot(
+function fieldplot(
     ::Dimension{3},
-    setup,
     state;
-    fieldname = :vorticity,
-    sleeptime = 0.001,
-    alpha = 0.05,
+    setup,
+    psolver = nothing,
+    fieldname = :eig2field,
+    alpha = convert(eltype(setup.grid.x[1]), 0.1),
+    isorange = convert(eltype(setup.grid.x[1]), 0.5),
     equal_axis = true,
-    levels = 3,
-    displayfig = true,
+    levels = LinRange{eltype(setup.grid.x[1])}(-10, 5, 10),
+    docolorbar = false,
+    size = nothing,
+    logtol = eps(setup.T),
+    kwargs...,
 )
     (; boundary_conditions, grid) = setup
-    (; xlims, ylims, x, y, z, xp, yp, zp) = grid
+    (; xlims, x, xp, Ip) = grid
 
+    xf = Array.(getindex.(setup.grid.xp, Ip.indices))
+    (; u) = state[]
     if fieldname == :velocity
-        xf, yf, zf = xp, yp, zp
     elseif fieldname == :vorticity
-        if all(==(:periodic), (boundary_conditions.u.x[1], boundary_conditions.v.y[1]))
-            xf = x
-            yf = y
-            zf = y
-        else
-            xf = x[2:(end-1)]
-            yf = y[2:(end-1)]
-            zf = z[2:(end-1)]
-        end
     elseif fieldname == :streamfunction
-        if boundary_conditions.u.x[1] == :periodic
-            xf = x
-        else
-            xf = x[2:(end-1)]
-        end
-        if boundary_conditions.v.y[1] == :periodic
-            yf = y
-        else
-            yf = y[2:(end-1)]
-        end
     elseif fieldname == :pressure
-        xf, yf, zf = xp, yp, zp
+        if isnothing(psolver)
+            @info "Creating new pressure solver for fieldplot"
+            psolver = DirectPressureSolver(setup)
+        end
+        F = zero.(u)
+        div = zero(u[1])
+        p = zero(u[1])
+    elseif fieldname == :Dfield
+        if isnothing(psolver)
+            @info "Creating new pressure solver for fieldplot"
+            psolver = DirectPressureSolver(setup)
+        end
+        F = zero.(u)
+        div = zero(u[1])
+        p = zero(u[1])
+        G = similar.(u)
+        d = similar(u[1])
+    elseif fieldname == :Qfield
+        Q = similar(u[1])
+    elseif fieldname == :eig2field
+        λ = similar(u[1])
     else
         error("Unknown fieldname")
     end
 
-    field = @lift begin
-        isnothing(sleeptime) || sleep(sleeptime)
-        (; V, p, t) = $state
+    field = lift(state) do (; u, t)
         f = if fieldname == :velocity
-            up, vp, wp = get_velocity(setup, V, t)
-            map((u, v, w) -> √sum(u^2 + v^2 + w^2), up, vp, wp)
+            up = interpolate_u_p(u, setup)
+            map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
         elseif fieldname == :vorticity
-            get_vorticity(setup, V, t)
+            ωp = interpolate_ω_p(vorticity(u, setup), setup)
+            map((u, v, w) -> √sum(u^2 + v^2 + w^2), ωp...)
         elseif fieldname == :streamfunction
-            get_streamfunction(setup, V, t)
+            get_streamfunction(setup, u, t)
         elseif fieldname == :pressure
-            reshape(copy(p), length(xp), length(yp), length(zp))
+            pressure!(p, u, t, setup; psolver, F, div)
+        elseif fieldname == :Dfield
+            pressure!(p, u, t, setup; psolver, F, div)
+            Dfield!(d, G, p, setup)
+            din = view(d, Ip)
+            @. din = log(max(logtol, din))
+            d
+        elseif fieldname == :Qfield
+            Qfield!(Q, u, setup)
+            Qin = view(Q, Ip)
+            @. Qin = log(max(logtol, Qin))
+            Q
+        elseif fieldname == :eig2field
+            eig2field!(λ, u, setup)
+            λin = view(λ, Ip)
+            @. λin .= log(max(logtol, -λin))
+            λ
         end
-        Array(f)
+        Array(f)[Ip]
     end
 
-    lims = @lift get_lims($field)
+    # lims = @lift get_lims($field)
+    lims = isnothing(levels) ? lift(get_lims, field) : extrema(levels)
 
     isnothing(levels) && (levels = @lift(LinRange($(lims)..., 10)))
 
-    aspect = equal_axis ? (; aspect = :data) : (;)
-    fig = Figure()
-    ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
-    hm = contour!(
-        ax,
-        xf,
-        yf,
-        zf,
+    # aspect = equal_axis ? (; aspect = :data) : (;)
+    size = isnothing(size) ? (;) : (; size)
+    fig = Figure(; size...)
+    # ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
+    hm = contour(
+        fig[1, 1],
+        # ax,
+        xf...,
         field;
         levels,
         colorrange = lims,
-        shading = false,
+        # colorrange = extrema(levels),
         alpha,
-        highclip = :red,
-        lowclip = :red,
+        isorange,
+        # highclip = :red,
+        # lowclip = :red,
+        kwargs...,
     )
 
-    Colorbar(fig[1, 2], hm)
-
-    displayfig && display(fig)
-
+    docolorbar && Colorbar(fig[1, 2], hm)
     fig
 end
 
 """
-    energy_history_plotter(setup)
+    energy_history_plot(state; setup)
 
-Create energy history plot, with a history point added every time `step_observer` is updated.
+Create energy history plot.
 """
-energy_history_plotter(setup; nupdate = 1, kwargs...) =
-    processor(state -> energy_history_plot(setup, state; kwargs...); nupdate)
-
-function energy_history_plot(setup, state; displayfig = true)
-    (; Ωp) = setup.grid
+function energy_history_plot(state; setup)
+    @assert state isa Observable "Energy history requires observable state."
+    (; Ω, Ip) = setup.grid
+    e = zero(state[].u[1])
     _points = Point2f[]
-    points = @lift begin
-        (; V, p, t) = $state
-        vels = get_velocity(setup, V, t)
-        vels = reshape.(vels, :)
-        E = sum(vel -> sum(@. Ωp * vel^2), vels)
+    points = lift(state) do (; u, t)
+        kinetic_energy!(e, u, setup)
+        e .*= Ω
+        E = sum(e[Ip])
         push!(_points, Point2f(t, E))
     end
     fig = lines(points; axis = (; xlabel = "t", ylabel = "Kinetic energy"))
-    displayfig && display(fig)
+    on(_ -> autolimits!(fig.axis), points)
     fig
 end
 
 """
-    energy_spectrum_plotter(setup; nupdate = 1)
+    energy_spectrum_plot(state; setup)
 
-Create energy spectrum plot, redrawn every time `step_observer` is updated.
+Create energy spectrum plot.
+The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is defined by
+
+```math
+\\hat{e}(\\kappa) = \\int_{\\kappa \\leq \\| k \\|_2 < \\kappa + 1} | \\hat{e}(k) | \\mathrm{d} k,
+```
+
+as in San and Staples [San2012](@cite).
 """
-energy_spectrum_plotter(setup; nupdate = 1, kwargs...) = processor(
-    state -> energy_spectrum_plot(setup.grid.dimension, setup, state; kwargs...);
-    nupdate,
+function energy_spectrum_plot(
+    state;
+    setup,
+    npoint = 100,
+    a = typeof(setup.Re)(1 + sqrt(5)) / 2,
 )
+    state isa Observable || (state = Observable(state))
 
-function energy_spectrum_plot(::Dimension{2}, setup, state; displayfig = true)
-    (; xpp) = setup.grid
-    Kx, Ky = size(xpp) .÷ 2
-    kx = 1:(Kx-1)
-    ky = 1:(Ky-1)
-    kk = reshape([sqrt(kx^2 + ky^2) for kx ∈ kx, ky ∈ ky], :)
-    ehat = @lift begin
-        (; V, p, t) = $state
-        up, vp = get_velocity(setup, V, t)
-        e = up .^ 2 .+ vp .^ 2
-        reshape(abs.(fft(e)[kx.+1, ky.+1]), :)
+    (; dimension, xp, Ip) = setup.grid
+    T = eltype(xp[1])
+    D = dimension()
+
+    (; A, κ, K) = spectral_stuff(setup; npoint, a)
+    kmax = maximum(κ)
+
+    # Energy
+    # up = interpolate_u_p(state[].u, setup)
+    ehat = lift(state) do (; u, t)
+        # interpolate_u_p!(up, u, setup)
+        up = u
+        e = sum(up) do u
+            u = u[Ip]
+            uhat = fft(u)[ntuple(α -> 1:K[α], D)...]
+            abs2.(uhat) ./ (2 * prod(size(uhat))^2)
+        end
+        e = A * reshape(e, :)
+        # e = max.(e, eps(T)) # Avoid log(0)
+        Array(e)
     end
-    espec = Figure()
-    ax = Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
-    ## ylims!(ax, (1e-20, 1))
-    scatter!(ax, kk, ehat; label = "Kinetic energy")
-    krange = LinRange(extrema(kk)..., 100)
-    lines!(ax, krange, 1e7 * krange .^ (-3); label = "k⁻³", color = :red)
+
+    # Build inertial slope above energy
+    # krange = LinRange(1, kmax, 100)
+    # krange = collect(1, kmax)
+    # krange = [cbrt(T(kmax)), T(kmax)]
+    krange = [kmax^T(0.3), kmax^(T(0.8))]
+    # krange = [T(kmax)^(T(2) / 3), T(kmax)]
+    slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
+    inertia = lift(ehat) do ehat
+        slopeconst = maximum(ehat ./ κ .^ slope)
+        2 .* slopeconst .* krange .^ slope
+    end
+
+    # Nice ticks
+    logmax = round(Int, log2(kmax + 1))
+    xticks = T(2) .^ (0:logmax)
+
+    fig = Figure()
+    ax = Axis(
+        fig[1, 1];
+        xticks,
+        xlabel = "k",
+        # ylabel = "E(k)",
+        xscale = log10,
+        yscale = log10,
+        limits = (1, kmax, T(1e-8), T(1)),
+    )
+    lines!(ax, κ, ehat; label = "Kinetic energy")
+    lines!(ax, krange, inertia; label = slopelabel, linestyle = :dash)
     axislegend(ax)
-    displayfig && display(espec)
-    espec
+    # autolimits!(ax)
+    on(e -> autolimits!(ax), ehat)
+    autolimits!(ax)
+    fig
 end
 
-function energy_spectrum_plot(::Dimension{3}, setup, state, displayfig = true)
-    (; xpp) = setup.grid
-    Kx, Ky, Kz = size(xpp) .÷ 2
-    kx = 1:(Kx-1)
-    ky = 1:(Ky-1)
-    kz = 1:(Ky-1)
-    kk = reshape([sqrt(kx^2 + ky^2 + kz^2) for kx ∈ kx, ky ∈ ky, kz ∈ kz], :)
-    ehat = @lift begin
-        (; V, p, t) = $state
-        V = Array(V)
-        up, vp, wp = get_velocity(setup, V, t)
-        e = @. up^2 + vp^2 + wp^2
-        reshape(abs.(fft(e)[kx.+1, ky.+1, kz.+1]), :)
-    end
-    espec = Figure()
-    ax = Axis(espec[1, 1]; xlabel = "k", ylabel = "e(k)", xscale = log10, yscale = log10)
-    ## ylims!(ax, (1e-20, 1))
-    scatter!(ax, kk, ehat; label = "Kinetic energy")
-    krange = LinRange(extrema(kk)..., 100)
-    lines!(ax, krange, 1e6 * krange .^ (-5 / 3); label = "\$k^{-5/3}\$", color = :red)
-    axislegend(ax)
-    displayfig && display(espec)
-    espec
-end
+# # Make sure the figure is fully rendered before allowing code to continue
+# if displayfig
+#     render = display(espec)
+#     done_rendering = Ref(false)
+#     on(render.render_tic) do _
+#         done_rendering[] = true
+#     end
+#     on(state) do s
+#         # State is updated, block code execution until GLMakie has rendered
+#         # figure update
+#         done_rendering[] = false
+#         while !done_rendering[]
+#             sleep(checktime)
+#         end
+#     end
+# end

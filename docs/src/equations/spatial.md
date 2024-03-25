@@ -29,7 +29,7 @@ shape of a box with side lengths ``L^\alpha > 0``. This allows for partitioning
 x^\alpha_{I(\alpha) + \frac{1}{2}} \right], \quad I \in \mathcal{I}.
 ```
 
-Just like ``\Omega`` itself, they represent rectangles in 2D and prisms in 3D.
+Just like ``\Omega`` itself, they represent rectangles in 2D and prisms n 3D.
 They are fully defined by the vectors of volume face coordinates ``x^\alpha =
 \left( x^\alpha_{i} \right)_{i = 0}^{N(\alpha)} \in \mathbb{R}^{N(\alpha) +
 1}``, where ``N = (N(1), \dots, N(d)) \in \mathbb{N}^d`` are the numbers of
@@ -54,20 +54,10 @@ We also define the volume widths/depths/heights ``\Delta x^\alpha_i =
 x^\alpha_{i + \frac{1}{2}} - x^\alpha_{i - \frac{1}{2}}``, where ``i`` can take
 half values. The volume sizes are thus ``| \Omega_{I} | = \prod_{\alpha = 1}^d
 \Delta x^\alpha_{I(\alpha)}``.
-
 In addition to the finite volumes and their shifted variants, we
-define the surface
-
-```math
-\Gamma^\alpha_I = \prod_{\beta = 1}^d \begin{cases}
-    \left\{ x^\beta_{I(\beta)} \right\}, & \quad \alpha = \beta \\
-    \left[ x^\beta_{I(\beta) - 1 / 2}, x^\beta_{I(\beta) + 1 / 2} \right], & \quad
-    \text{otherwise},
-\end{cases}
-```
-where ``I`` can take integer or half-values. It is the interface between
-``\Omega_{I - \delta(\alpha) / 2}`` and ``\Omega_{I + \delta(\alpha) / 2}``,
-and has surface normal ``\delta(\alpha)``.
+define the interface
+``\Gamma^\alpha_I = \Omega_{I - \delta(\alpha) / 2} \cup \Omega_{I +
+\delta(\alpha) / 2}``.
 
 In each reference finite volume ``\Omega_{I}`` (``I \in \mathcal{I}``), there
 are three different types of positions in which quantities of interest can be
@@ -90,7 +80,6 @@ between neighboring volumes.
 In 2D, this finite volume configuration is illustrated as follows:
 
 ![Grid](../assets/grid.png)
-
 
 ## Interpolation
 
@@ -133,8 +122,19 @@ When a quantity is required *outside* of its native point, we will use interpola
 ## Finite volume discretization of the Navier-Stokes equations
 
 We will consider the integral form of the Navier-Stokes equations. This has the
-advantage that some of the spatial derivatives dissapear, reducing the amount
+advantage that some of the spatial derivatives disappear, reducing the amount
 of finite difference approximations we need to perform.
+
+We define the finite difference operator ``\partial_\alpha`` equivalent to
+the continuous operator ``\frac{\partial}{\partial x^\alpha}``. For all fields
+discrete fields ``\varphi``, it is given by
+
+```math
+(\partial_\alpha \varphi)_I = \frac{\varphi_{I + \delta(\alpha) / 2} - \varphi_{I -
+\delta(\alpha) / 2}}{\Delta^\alpha_{I(\alpha)}},
+```
+
+where ``\varphi`` is interpolated first if necessary.
 
 
 ### Mass equation
@@ -142,14 +142,17 @@ of finite difference approximations we need to perform.
 The mass equation takes the form
 
 ```math
-\int_{\partial \mathcal{O}} u \cdot n \, \mathrm{d} \Gamma = 0, \quad \forall
-\mathcal{O} \subset \Omega.
+\frac{1}{| \mathcal{O} |}
+\int_{\partial \mathcal{O}} u \cdot n \, \mathrm{d} \Gamma = 0,
+\quad \forall \mathcal{O} \subset \Omega.
 ```
 
 Using the pressure volume ``\mathcal{O} = \Omega_{I}``, we get
 
 ```math
-\sum_{\alpha = 1}^d \left( \int_{\Gamma^\alpha_{I + \delta(\alpha) / 2}}
+\sum_{\alpha = 1}^d
+\frac{1}{| \Omega_I |}
+\left( \int_{\Gamma^\alpha_{I + \delta(\alpha) / 2}}
 u^\alpha \, \mathrm{d} \Gamma - \int_{\Gamma_{I - \delta(\alpha) / 2}^\alpha}
 u^\alpha \, \mathrm{d} \Gamma
 \right) = 0.
@@ -167,9 +170,7 @@ local approximation (quadrature)
 This yields the discrete mass equation
 
 ```math
-\sum_{\alpha = 1}^d
-\left| \Gamma^\alpha_I \right| \left( u^\alpha_{I + \delta(\alpha) / 2} -
-u^\alpha_{I - \delta(\alpha) / 2} \right) = 0.
+\sum_{\alpha = 1}^d (\partial_\alpha u^\alpha)_{I} = 0.
 ```
 
 !!! note "Approximation error"
@@ -183,14 +184,26 @@ Grouping the convection, pressure gradient, diffusion, and body force terms in
 each of their own integrals, we get, for all ``\mathcal{O} \subset \Omega``:
 
 ```math
-\frac{\partial }{\partial t} \int_\mathcal{O} u^\alpha \, \mathrm{d} \Omega
+\begin{split}
+\frac{\mathrm{d}}{\mathrm{d} t}
+\frac{1}{| \mathcal{O} |}
+\int_\mathcal{O} u^\alpha \, \mathrm{d} \Omega
 =
-- \sum_{\beta = 1}^d \int_{\partial \mathcal{O}} u^\alpha u^\beta n^\beta \,
-\mathrm{d} \Gamma
-- \int_{\partial \mathcal{O}} p n^\alpha \, \mathrm{d} \Gamma
-+ \nu \sum_{\beta = 1}^d \int_{\partial \mathcal{O}} \frac{\partial
-u^\alpha}{\partial x^\beta} n^\beta \, \mathrm{d} \Gamma
-+ \int_\mathcal{O} f^\alpha \mathrm{d} \Omega,
+& - \sum_{\beta = 1}^d
+\frac{1}{| \mathcal{O} |}
+\int_{\partial \mathcal{O}}
+u^\alpha u^\beta n^\beta
+\, \mathrm{d} \Gamma \\
+& + \nu \sum_{\beta = 1}^d
+\frac{1}{| \mathcal{O} |}
+\int_{\partial \mathcal{O}}
+\frac{\partial u^\alpha}{\partial x^\beta} n^\beta
+\, \mathrm{d} \Gamma \\
+& + \frac{1}{| \mathcal{O} |}
+\int_\mathcal{O} f^\alpha \mathrm{d} \Omega \\
+& - \frac{1}{| \mathcal{O} |}
+\int_{\partial \mathcal{O}} p n^\alpha \, \mathrm{d} \Gamma,
+\end{split}
 ```
 
 where ``n = (n^1, \dots, n^d)`` is the surface normal vector to ``\partial
@@ -204,7 +217,8 @@ gives
 
 ```math
 \begin{split}
-    \frac{\partial }{\partial t}
+    \frac{\mathrm{d}}{\mathrm{d} t}
+    \frac{1}{| \Omega_{I + \delta(\alpha) / 2} |}
     \int_{\Omega_{I + \delta(\alpha) / 2}}
     \! \! \! 
     \! \! \! 
@@ -213,7 +227,9 @@ gives
     u^\alpha \, \mathrm{d} \Omega
     =
     & -
-    \sum_{\beta = 1}^d \left(
+    \sum_{\beta = 1}^d
+    \frac{1}{| \Omega_{I + \delta(\alpha) / 2} |}
+    \left(
         \int_{\Gamma^{\beta}_{I + \delta(\alpha) / 2 + \delta(\beta) / 2}}
             \! \! \! 
             \! \! \! 
@@ -229,12 +245,8 @@ gives
             \! \! \! 
         u^\alpha u^\beta \, \mathrm{d} \Gamma 
     \right) \\
-    & -
-    \left(
-        \int_{\Gamma^{\alpha}_{I + \delta(\alpha)}} p \, \mathrm{d} \Gamma
-    - \int_{\Gamma^{\alpha}_{I}} p \, \mathrm{d} \Gamma
-    \right) \\
     & + \nu \sum_{\beta = 1}^d 
+    \frac{1}{| \Omega_{I + \delta(\alpha) / 2} |}
     \left(
         \int_{\Gamma^{\beta}_{I + \delta(\alpha) / 2 + \delta(\beta) / 2}}
         \frac{\partial u^\alpha}{\partial x^\beta} \, \mathrm{d} \Gamma 
@@ -242,8 +254,15 @@ gives
         \frac{\partial u^\alpha}{\partial x^\beta} \, \mathrm{d} \Gamma 
     \right) \\
     & +
+    \frac{1}{| \Omega_{I + \delta(\alpha) / 2} |}
     \int_{\Omega_{I + \delta(\alpha) / 2}}
-    f^\alpha \, \mathrm{d} \Omega
+    f^\alpha \, \mathrm{d} \Omega \\
+    & -
+    \frac{1}{| \Omega_{I + \delta(\alpha) / 2} |}
+    \left(
+        \int_{\Gamma^{\alpha}_{I + \delta(\alpha)}} p \, \mathrm{d} \Gamma -
+        \int_{\Gamma^{\alpha}_{I}} p \, \mathrm{d} \Gamma
+    \right).
 \end{split}
 ```
 
@@ -255,10 +274,7 @@ continuous quantities.
 1. The mid-point values of derivatives are approximated using a central-like
    finite difference:
    ```math
-   \frac{\partial u^\alpha}{\partial x^\beta}(x_I) \approx
-   \frac{u^\alpha_{I + \delta(\beta) / 2}
-   - u^\alpha_{I - \delta(\beta) / 2}}{x^\beta_{I(\beta) + 1 / 2} -
-   x^\beta_{I(\beta) - 1 / 2}}.
+   \frac{\partial u^\alpha}{\partial x^\beta}(x_I) \approx (\partial_\beta u^\alpha)_I
    ```
 1. Quantities outside their canonical positions are obtained through
    interpolation.
@@ -267,32 +283,15 @@ Finally, the discrete ``\alpha``-momentum equations are given by
 
 ```math
 \begin{split}
-    \left| \Omega_{I + \delta(\alpha) / 2} \right|
-    & \frac{\mathrm{d} }{\mathrm{d} t} u^\alpha_{I + \delta(\alpha) / 2} = \\
-    - & \sum_{\beta = 1}^d \left| \Gamma^\beta_{I + \delta(\alpha) / 2} \right|
-    \left(
-        (u^\alpha
-        u^\beta)_{I + \delta(\alpha) / 2 + \delta(\beta) / 2}
-        -
-        (u^\alpha
-        u^\beta )_{I + \delta(\alpha) / 2 - \delta(\beta) / 2}
-    \right) \\
-    - & \left| \Gamma^\alpha_{I + \delta(\alpha) / 2} \right|
-    \left( p_{I + \delta(\alpha)} - p_{I} \right) \\
-    + & \nu \sum_{\beta = 1}^d \left| \Gamma^\beta_{I + \delta(\alpha) / 2}
-    \right|
-    \left( 
-        \frac{u^\alpha_{I + \delta(\alpha) / 2 + \delta(\beta)} - u^\alpha_{I +
-        \delta(\alpha) / 2}}{x^\beta_{I(\beta) + 1} - x^\beta_{I(\beta)}}
-        - \frac{u^\alpha_{I + \delta(\alpha) / 2} - u^\alpha_{I +
-        \delta(\alpha) / 2 - \delta(\beta)}}{x^\beta_{I(\beta)}
-        - x^\beta_{I(\beta) - 1}}
-    \right) \\
-    + & \left| \Omega_{I + \delta(\alpha) / 2} \right| f^\alpha(x_{I +
-    \delta(\alpha) / 2}).
+    \frac{\mathrm{d} }{\mathrm{d} t} u^\alpha_{I + \delta(\alpha) / 2} =
+    - & \sum_{\beta = 1}^d
+    (\partial_\beta (u^\alpha u^\beta))_{I + \delta(\alpha) / 2} \\
+    + & \nu \sum_{\beta = 1}^d
+    (\partial_\beta \partial_\beta u^\alpha)_{I + \delta(\alpha) / 2} \\
+    + & f^\alpha(x_{I + \delta(\alpha) / 2}, t)
+    - (\partial_\alpha p)_{I + \delta(\alpha) / 2}.
 \end{split}
 ```
-
 
 ## Boundary conditions
 
@@ -379,13 +378,68 @@ column-major convention. Note that the ``d`` discrete velocity fields ``u^1_h,
     u^1_{(2, 1, 1)}, \dots u^3_{(N_{u^3}(1), N_{u^3}(2), N_{u^3}(3))})`` in 3D.
 
 
+## Fourth order accurate discretization
+
+The above discretization is second order accurate.
+A fourth order accurate discretization can be obtained by judiciously combining
+the second order discretization with itself on a grid with three times larger
+cells in each dimension [Verstappen2003](@cite) [Sanderse2014](@cite). The
+coarse discretization is identical, but the mass equation is derived for the
+three times coarser control volume
+
+```math
+\Omega^3_I =
+\bigcup_{\alpha = 1}^d \Omega_{I - \delta(\alpha)} \cup
+\Omega_I \cup \Omega_{I + \delta(\alpha)},
+```
+while the momentum equation is
+derived for its shifted variant ``\Omega^3_{I + \delta(\alpha) / 2}``.
+The resulting fourth order accurate equations are given by
+
+```math
+\sum_{\alpha = 1}^d
+(\partial_\alpha u^\alpha)_I
+-
+\frac{| \Omega^3_I |}{3^{2 + d} | \Omega_I |}
+\sum_{\alpha = 1}^d
+(\partial^3_\alpha u^\alpha)_I
+= 0
+```
+
+and
+
+```math
+\begin{split}
+    \frac{\mathrm{d} }{\mathrm{d} t} u^\alpha_{I + \delta(\alpha) / 2} =
+    - & \sum_{\beta = 1}^d
+    (\partial_\beta (u^\alpha u^\beta))_{I + \delta(\alpha) / 2} \\
+    + & \nu \sum_{\beta = 1}^d
+    (\partial_\beta \partial_\beta u^\alpha)_{I + \delta(\alpha) / 2} \\
+    + & f^\alpha(x_{I + \delta(\alpha) / 2}, t)
+    - (\partial_\alpha p)_{I + \delta(\alpha) / 2}, \\
+    + & \text{fourth order}
+\end{split}
+```
+
+where
+
+```math
+(\partial^3_\alpha \varphi)_I =
+\frac{\varphi_{I + 3 \delta(\alpha) / 2} -
+\varphi_{I - 3 \delta(\alpha) / 2}}{\Delta^\alpha_{I(\alpha) - 1} +
+\Delta^\alpha_{I(\alpha)} + \Delta^\alpha_{I(\alpha) + 1}}.
+```
+
 ## Matrix representation
 
-We can write the mass and momentum equations in matrix form. The discrete mass
-equation then becomes
+We can write the mass and momentum equations in matrix form. We will use the
+same matrix notation for the second- and fourth order accurate discretizations.
+The discrete mass equation becomes
+
 ```math
 M u_h + y_M = 0,
 ```
+
 where ``M`` is the discrete divergence operator and ``y_M`` contains the
 boundary value contributions of the velocity to the divergence field.
 
@@ -399,19 +453,23 @@ The discrete momentum equations become
 \end{split}
 ```
 
-where ``C`` is the convection operator (including boundary contributions),
+where ``C`` is she convection operator (including boundary contributions),
 ``D`` is the diffusion operator, ``y_D`` is boundary contribution to the
-diffusion term, ``G = \Omega_h^{-1} M^\mathsf{T}`` is the pressure gradient
-operator, ``y_G`` contains the boundary contribution of the pressure to the
-pressure gradient (only non-zero for pressure boundary conditions), and
-``\Omega_h`` is a diagonal matrix containing the velocity volumes. The term
-``F`` refers to all the forces except for the pressure gradient.
+diffusion term,
+``G = W_u^{-1} M^\mathsf{T} W`` is the pressure gradient
+operator,
+``y_G`` contains the boundary contribution of the pressure to the
+pressure gradient (only non-zero for pressure boundary conditions),
+``W_u`` is a diagonal matrix containing the velocity volume sizes
+``| \Omega_{I + \delta(\alpha) / 2} |``, and ``W`` is a diagonal matrix
+containing the reference volume sizes ``| \Omega_I |``.
+The term ``F`` refers to all the forces except for the pressure gradient.
 
 !!! note "Volume normalization"
     
-    All the operators (except for ``M``) have been divided by the velocity
-    volume sizes ``\Omega_h``. As a result, the operators have the same units
-    as their continuous counterparts.
+    All the operators have been divided by the velocity volume sizes.
+    As a result, the operators have the same units as their
+    continuous counterparts.
 
 
 ## Discrete pressure Poisson equation
@@ -423,11 +481,11 @@ discrete divergence operator ``M`` to the discrete momentum equations yields
 the discrete pressure Poisson equation
 
 ```math
-L p_h = M (F(u_h) - y_G) + \frac{\mathrm{d} y_M}{\mathrm{d} t},
+L p_h = W M (F(u_h) - y_G) + W \frac{\mathrm{d} y_M}{\mathrm{d} t},
 ```
 
-where ``L = M G`` is a discrete Laplace operator. It is positive
-symmetric since ``G = \Omega_h^{-1} M^\mathsf{T}``.
+where ``L = W M G = W M W_u^{-1} M^\mathsf{T} W`` is a discrete Laplace
+operator. It is positive symmetric.
 
 !!! note "Unsteady Dirichlet boundary conditions"
 
@@ -455,17 +513,17 @@ symmetric since ``G = \Omega_h^{-1} M^\mathsf{T}``.
     discrete Poisson equation:
 
     ```math
-    p_h = L^{-1} M (F(u_h) - y_G) + L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.
+    p_h = L^{-1} W M (F(u_h) - y_G) + L^{-1} W \frac{\mathrm{d} y_M}{\mathrm{d} t}.
     ```
 
     The momentum equations then become
 
     ```math
-    \frac{\mathrm{d} u_h}{\mathrm{d} t} = (I - G L^{-1} M)
-    (F(u_h) - y_G) - G L^{-1} \frac{\mathrm{d} y_M}{\mathrm{d} t}.
+    \frac{\mathrm{d} u_h}{\mathrm{d} t} = (I - G L^{-1} W M)
+    (F(u_h) - y_G) - G L^{-1} W \frac{\mathrm{d} y_M}{\mathrm{d} t}.
     ```
 
-    The matrix ``(I - G L^{-1} M)`` is a projector onto the space
+    The matrix ``(I - G L^{-1} W M)`` is a projector onto the space
     of discretely divergence free velocities. However, using this formulation
     would require an efficient way to perform the projection without assembling
     the operator matrix ``L^{-1}``, which would be very costly.
@@ -500,19 +558,16 @@ the vorticity volume ``\Omega_{I + \delta(1) / 2 + \delta(2) / 2}`` gives
 \end{split}.
 ```
 
-Using quadrature, the discrete vorticity in the corner is given by
+Using quadrature, and dividing by the vorticity volume
+``| \Omega_{I + \delta(1) / 2 + \delta(2) / 2} |``,
+the discrete vorticity in the corner is given by
 
 ```math
-\begin{split}
-\left| \Omega_{I + \delta(1) / 2 + \delta(2) / 2} \right|
 \omega_{I + \delta(1) / 2 + \delta(2) / 2} =
-& - \left| \Gamma^2_{I + \delta(1) / 2 + \delta(2) / 2} \right|
-(u^1_{I + \delta(1) / 2 + \delta(2)}
-- u^1_{I + \delta(1) / 2}) \\
-& + \left| \Gamma^1_{I + \delta(1) / 2 + \delta(2) / 2} \right|
-(u^2_{I + \delta(1) + \delta(2) / 2}
-- u^2_{I + \delta(2) / 2})
-\end{split}.
+- \frac{u^1_{I + \delta(1) / 2 + \delta(2)} -
+u^1_{I + \delta(1) / 2}}{\Delta^2_{I(2) + 1 / 2}}
++ \frac{u^2_{I + \delta(1) + \delta(2) / 2} -
+u^2_{I + \delta(2) / 2}}{\Delta^1_{I(1) + 1 / 2}}.
 ```
 
 The 3D vorticity is a vector field ``(\omega^1, \omega^2, \omega^3)``.
@@ -534,17 +589,17 @@ through
 \end{split}.
 ```
 
+Using quadrature, and dividing by the vorticity volume
+``| \Omega_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} |``,
+the discrete vorticity around the ``\alpha``-edge is given by
+
 ```math
-\begin{split}
-\left| \Omega_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} \right|
 \omega_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} =
-& - \left| \Gamma^{\alpha^-}_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} \right|
-(u^{\alpha^+}_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-)}
-- u^{\alpha^+}_{I + \delta(\alpha^+) / 2}) \\
-& + \left| \Gamma^{\alpha^+}_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-) / 2} \right|
-(u^{\alpha^-}_{I + \delta(\alpha^+) + \delta(\alpha^-) / 2}
-- u^{\alpha^-}_{I + \delta(\alpha^-) / 2})
-\end{split}.
+- \frac{u^{\alpha^+}_{I + \delta(\alpha^+) / 2 + \delta(\alpha^-)} -
+u^{\alpha^+}_{I + \delta(\alpha^+) / 2}}{\Delta^{\alpha^-}_{I(\alpha^-) + 1 / 2}}
++ \frac{u^{\alpha^-}_{I + \delta(\alpha^+) + \delta(\alpha^-) / 2} -
+u^{\alpha^-}_{I + \delta(\alpha^-) / 2}}{\Delta^{\alpha^+}_{I(\alpha^+) + 1 /
+2}}.
 ```
 
 ## Stream function

@@ -5,6 +5,8 @@ if isdefined(@__MODULE__, :LanguageServer)
     using .IncompressibleNavierStokes
 end
 
+@info "" Threads.nthreads()
+
 using IncompressibleNavierStokes
 using Literate
 using Documenter
@@ -22,16 +24,16 @@ bib = CitationBibliography(joinpath(@__DIR__, "references.bib"))
 # Generate examples
 examples = [
     "Tutorial: Lid-Driven Cavity (2D)" => "LidDrivenCavity2D",
-    "Actuator (2D)" => "Actuator2D",
+    "Convergence: Taylor-Green Vortex (2D)" => "TaylorGreenVortex2D",
+    "Unsteady inflow: Actuator (2D)" => "Actuator2D",
     # "Actuator (3D)" => "Actuator3D",
-    "Backward Facing Step (2D)" => "BackwardFacingStep2D",
+    "Walls: Backward Facing Step (2D)" => "BackwardFacingStep2D",
     # "Backward Facing Step (3D)" => "BackwardFacingStep3D",
     "Decaying Turbulunce (2D)" => "DecayingTurbulence2D",
     # "Decaying Turbulunce (3D)" => "DecayingTurbulence3D",
     # "Lid-Driven Cavity (3D)" => "LidDrivenCavity3D",
     "Planar Mixing (2D)" => "PlanarMixing2D",
-    "Shear Layer (2D)" => "ShearLayer2D",
-    # "Taylor-Green Vortex (2D)" => "TaylorGreenVortex2D",
+    # "Shear Layer (2D)" => "ShearLayer2D",
     # "Taylor-Green Vortex (3D)" => "TaylorGreenVortex3D",
 ]
 
@@ -66,12 +68,13 @@ makedocs(;
             "Time discretization" => "equations/time.md",
         ],
         "Features" => [
+            "Boundary conditions" => "features/bc.md",
+            "Pressure solvers" => "features/pressure.md",
             "Floating point precision" => "features/precision.md",
             "GPU Support" => "features/gpu.md",
+            "Operators" => "features/operators.md",
             "Large eddy simulation" => "features/les.md",
-            "Pressure solvers" => "features/pressure.md",
-            "Boundary conditions" => "features/bc.md",
-            "Time steppers" => "features/steppers.md",
+            "Neural closure models" => "features/closure.md",
         ],
         "API Reference" =>
             ["API" => "api/api.md", "Runge-Kutta methods" => "api/tableaux.md"],

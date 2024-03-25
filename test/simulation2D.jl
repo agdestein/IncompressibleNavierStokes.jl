@@ -20,7 +20,7 @@
     initial_velocity_u(x, y) = 0.0
     initial_velocity_v(x, y) = 0.0
     initial_pressure(x, y) = 0.0
-    V₀, p₀ = create_initial_conditions(
+    V = create_initial_conditions(
         setup,
         initial_velocity_u,
         initial_velocity_v,
@@ -40,16 +40,15 @@
     end
 
     # Iteration processors
-    processors = (step_logger(),)
+    processors = (timelogger(),)
 
     @testset "Unsteady problem" begin
-        V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors)
+        (; u, t), outputs = solve_unsteady(setup, V₀, tlims; Δt = 0.01, processors)
 
         # Check that solution did not explode
-        @test all(!isnan, V)
-        @test all(!isnan, p)
+        @test all(!isnan, u)
 
         # Check that the average velocity is smaller than the lid velocity
-        @test sum(abs, V) / length(V) < lid_vel
+        @test sum(abs, u) / length(u) < lid_vel
     end
 end

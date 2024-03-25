@@ -1,5 +1,5 @@
 """
-    animator(setup, path; nupdate = 1, plotter = field_plotter(setup); kwargs...)
+    animator(; setup, path, plot = fieldplot, nupdate = 1, kwargs...)
 
 Animate a plot of the solution every `update` iteration.
 The animation is saved to `path`, which should have one
@@ -10,20 +10,28 @@ of the following extensions:
 - ".webm"
 - ".gif"
 
-The plot is determined by a `plotter` processsor.
-Addtional `kwargs` are passed to Makie's `VideoStream`.
+The plot is determined by a `plotter` processor.
+Additional `kwargs` are passed to `plot`.
 """
-animator(setup, path; nupdate = 1, plotter = field_plotter(setup), kwargs...) = processor(
-    function (state)
-        _state = Observable(state[])
-        fig = plotter.initialize(_state)
-        stream = VideoStream(fig, kwargs...)
-        @lift begin
-            _state[] = $state
+animator(;
+    setup,
+    path,
+    plot = fieldplot,
+    nupdate = 1,
+    framerate = 24,
+    visible = true,
+    kwargs...,
+) =
+    processor((stream, state) -> save(path, stream)) do outerstate
+        ispath(dirname(path)) || mkpath(dirname(path))
+        state = Observable(outerstate[])
+        fig = plot(state; setup, kwargs...)
+        visible && display(fig)
+        stream = VideoStream(fig; framerate, visible)
+        on(outerstate) do outerstate
+            outerstate.n % nupdate == 0 || return
+            state[] = outerstate
             recordframe!(stream)
         end
         stream
-    end;
-    finalize = (stream, step_observer) -> save(path, stream),
-    nupdate,
-)
+    end

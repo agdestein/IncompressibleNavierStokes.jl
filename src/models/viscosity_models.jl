@@ -3,42 +3,38 @@
 
 Abstract viscosity model.
 """
-abstract type AbstractViscosityModel{T} end
+abstract type AbstractViscosityModel end
 
 """
-    LaminarModel(Re)
+    LaminarModel()
 
-Laminar model with Reynolds number `Re`.
+Laminar model. This model assumes that there are no
+sub-grid stresses. It can be used if the grid is sufficiently refined for the
+given flow. It has the advantage of having a constant diffusion operator.
 """
-Base.@kwdef struct LaminarModel{T} <: AbstractViscosityModel{T}
-    Re::T # Reynolds number
-end
+struct LaminarModel <: AbstractViscosityModel end
 
 """
-    MixingLengthModel(Re)
+    MixingLengthModel()
 
-Mixing-length model with Reynolds number `Re` and mixing length `lm`.
+Mixing-length model with mixing length `lm`.
 """
-Base.@kwdef struct MixingLengthModel{T} <: AbstractViscosityModel{T}
-    Re::T # Reynolds number
+@kwdef struct MixingLengthModel{T} <: AbstractViscosityModel
     lm::T = 1 # Mixing length
 end
 
 """
-    SmagorinskyModel(Re, C_s = 0.17)
+    SmagorinskyModel(C_s = 0.17)
 
-Smagorinsky-Lilly model with Reynolds number `Re` and constant `C_s`.
+Smagorinsky-Lilly model with constant `C_s`.
 """
-Base.@kwdef struct SmagorinskyModel{T} <: AbstractViscosityModel{T}
-    Re::T # Reynolds number
+@kwdef struct SmagorinskyModel{T} <: AbstractViscosityModel
     C_s::T = 0.17 # Smagorinsky constant
 end
 
 """
     QR(Re)
 
-QR-model with Reynolds number `Re`.
+QR-model.
 """
-Base.@kwdef struct QRModel{T} <: AbstractViscosityModel{T}
-    Re::T # Reynolds number
-end
+struct QRModel{T} <: AbstractViscosityModel end

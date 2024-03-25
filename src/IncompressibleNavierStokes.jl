@@ -6,17 +6,35 @@ Energy-conserving solvers for the incompressible Navier-Stokes equations.
 module IncompressibleNavierStokes
 
 using Adapt
+using ChainRulesCore
+using ComponentArrays: ComponentArray
 using FFTW
 using IterativeSolvers
+using KernelAbstractions
 using LinearAlgebra
-using Printf
-using SparseArrays
-using Statistics
-using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
+using Lux
 using Makie
+using NNlib
+using Optimisers
+using Printf
+using Random
+using SparseArrays
+using StaticArrays
+using Statistics
+using Tullio
+using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
+using Zygote
 
-# Convenience notation
-const ⊗ = kron
+# Must be loaded inside for Tullio to work correctly
+using CUDA
+using CUDA.CUSPARSE
+# using CUSOLVERRF
+
+# # Easily retrieve value from Val
+# (::Val{x})() where {x} = x
+
+# Boundary conditions
+include("boundary_conditions.jl")
 
 # Grid
 include("grid/dimension.jl")
@@ -27,50 +45,17 @@ include("grid/max_size.jl")
 
 # Models
 include("models/viscosity_models.jl")
-include("models/convection_models.jl")
 
-# Types
-include("force/force.jl")
-include("boundary_conditions/boundary_conditions.jl")
-include("operators/operators.jl")
+# Setup
 include("setup.jl")
 
-# Boundary condtions
-include("boundary_conditions/bc_av3.jl")
-include("boundary_conditions/bc_av_stag3.jl")
-include("boundary_conditions/bc_diff3.jl")
-include("boundary_conditions/bc_diff_stag.jl")
-include("boundary_conditions/bc_diff_stag3.jl")
-include("boundary_conditions/bc_div2.jl")
-include("boundary_conditions/bc_general.jl")
-include("boundary_conditions/bc_general_stag.jl")
-include("boundary_conditions/bc_general_stag_diff.jl")
-include("boundary_conditions/bc_int2.jl")
-include("boundary_conditions/bc_int3.jl")
-include("boundary_conditions/bc_int_mixed2.jl")
-include("boundary_conditions/bc_int_mixed_stag2.jl")
-include("boundary_conditions/bc_int_mixed_stag3.jl")
-include("boundary_conditions/bc_vort3.jl")
-include("boundary_conditions/get_bc_vectors.jl")
-
-# Operators
-include("operators/operator_averaging.jl")
-include("operators/operator_convection_diffusion.jl")
-include("operators/operator_divergence.jl")
-include("operators/operator_interpolation.jl")
-include("operators/operator_postprocessing.jl")
-include("operators/operator_regularization.jl")
-include("operators/operator_turbulent_diffusion.jl")
-include("operators/operator_viscosity.jl")
-include("operators/operator_filter.jl")
-
 # Pressure solvers
-include("solvers/pressure/pressure_solvers.jl")
-include("solvers/pressure/pressure_poisson.jl")
-include("solvers/pressure/pressure_additional_solve.jl")
+include("solvers/pressure/solvers.jl")
+include("solvers/pressure/poisson.jl")
+include("solvers/pressure/pressure.jl")
+include("solvers/pressure/project.jl")
 
 # Time steppers
-include("momentum/momentumcache.jl")
 include("time_steppers/methods.jl")
 include("time_steppers/tableaux.jl")
 include("time_steppers/nstage.jl")
@@ -80,23 +65,16 @@ include("time_steppers/isexplicit.jl")
 include("time_steppers/lambda_max.jl")
 
 # Preprocess
-include("preprocess/create_initial_conditions.jl")
+include("create_initial_conditions.jl")
 
 # Processors
 include("processors/processors.jl")
 include("processors/real_time_plot.jl")
 include("processors/animator.jl")
 
-# Momentum equation
-include("momentum/compute_conservation.jl")
-include("momentum/check_symmetry.jl")
-include("momentum/convection_components.jl")
-include("momentum/convection.jl")
-include("momentum/diffusion.jl")
-include("momentum/momentum.jl")
-include("momentum/strain_tensor.jl")
-include("momentum/turbulent_K.jl")
-include("momentum/turbulent_viscosity.jl")
+# Discrete operators
+include("operators.jl")
+include("filter.jl")
 
 # Solvers
 include("solvers/get_timestep.jl")
@@ -104,62 +82,63 @@ include("solvers/solve_steady_state.jl")
 include("solvers/solve_unsteady.jl")
 
 # Utils
-include("utils/filter_convection.jl")
+include("utils/plotgrid.jl")
+include("utils/save_vtk.jl")
 include("utils/get_lims.jl")
 include("utils/plotmat.jl")
+include("utils/spectral_stuff.jl")
 
-# Postprocess
-include("postprocess/get_velocity.jl")
-include("postprocess/get_vorticity.jl")
-include("postprocess/get_streamfunction.jl")
-include("postprocess/plot_force.jl")
-include("postprocess/plot_grid.jl")
-include("postprocess/plot_pressure.jl")
-include("postprocess/plot_velocity.jl")
-include("postprocess/plot_vorticity.jl")
-include("postprocess/plot_streamfunction.jl")
-include("postprocess/save_vtk.jl")
+# Closure models
+include("closures/closure.jl")
+include("closures/cnn.jl")
+include("closures/fno.jl")
+include("closures/training.jl")
+include("closures/create_les_data.jl")
 
-# Force
-export SteadyBodyForce
+# Boundary conditions
+export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
 
 # Models
 export LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
-export NoRegConvectionModel, C2ConvectionModel, C4ConvectionModel, LerayConvectionModel
 
 # Processors
-export processor, step_logger, vtk_writer, field_saver
-export field_plotter, energy_history_plotter, energy_spectrum_plotter
+export processor, timelogger, vtk_writer, fieldsaver, realtimeplotter
+export fieldplot, energy_history_plot, energy_spectrum_plot
 export animator
 
 # Setup
 export Setup
-export operator_filter
 
 # 1D grids
 export stretched_grid, cosine_grid
 
 # Pressure solvers
-export DirectPressureSolver, CGPressureSolver, SpectralPressureSolver
-export pressure_poisson,
-    pressure_poisson!, pressure_additional_solve, pressure_additional_solve!
+export DirectPressureSolver,
+    CGPressureSolver, SpectralPressureSolver, LowMemorySpectralPressureSolver
 
-# Problems
+# Solvers
 export solve_unsteady, solve_steady_state
-export momentum, momentum!
 
-export create_initial_conditions, random_field, get_bc_vectors, get_velocity
+export create_initial_conditions, random_field
 
-export plot_force,
-    plot_grid, plot_pressure, plot_streamfunction, plot_velocity, plot_vorticity, save_vtk
+export plotgrid, save_vtk
 export plotmat
+
+# Closure models
+export smagorinsky_closure
+export cnn, fno, FourierLayer
+export train
+export mean_squared_error, create_relerr_prior, create_relerr_post
+export create_loss_prior, create_loss_post
+export create_dataloader_prior, create_dataloader_post
+export create_callback, create_les_data, create_io_arrays
+export wrappedclosure
+
+export FaceAverage, VolumeAverage
 
 # ODE methods
 
 export AdamsBashforthCrankNicolsonMethod, OneLegMethod
-
-# Runge Kutta methods
-export ExplicitRungeKuttaMethod, ImplicitRungeKuttaMethod, runge_kutta_method
 
 # Explicit Methods
 export FE11, SSP22, SSP42, SSP33, SSP43, SSP104, rSSPs2, rSSPs3, Wray3, RK56, DOPRI6

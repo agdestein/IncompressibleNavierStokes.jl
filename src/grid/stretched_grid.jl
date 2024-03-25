@@ -16,7 +16,7 @@ Note that `stretched_grid(a, b, N, s)[n]` corresponds to ``x_{n - 1}``.
 See also [`cosine_grid`](@ref).
 """
 function stretched_grid(a, b, N, s = 1)
-    s > 0 || error("The strecth factor must be positive")
+    s > 0 || error("The stretch factor must be positive")
     if s ≈ 1
         LinRange(a, b, N + 1)
     else
