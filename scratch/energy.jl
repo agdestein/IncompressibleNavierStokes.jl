@@ -11,6 +11,7 @@ using IncompressibleNavierStokes: apply_bc_u!, total_kinetic_energy, diffusion!
 
 # Output directory
 output = "output/energy"
+mkdir(output)
 
 # Array type
 ArrayType = Array
@@ -131,7 +132,9 @@ outputs.obs.Kuref
 outputs.obs.Kv
 outputs.obs.Kvref
 
-with_theme() do
+using CairoMakie
+
+fig = with_theme() do
     fig = Figure()
     ax = Axis(fig[1, 1])
     lines!(ax, outputs.obs.t, outputs.obs.Ku; label = "Ku")
@@ -141,3 +144,5 @@ with_theme() do
     axislegend()
     fig
 end
+
+save("$output/energy.pdf", fig)
