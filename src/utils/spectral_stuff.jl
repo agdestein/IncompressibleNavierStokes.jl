@@ -51,3 +51,38 @@ function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) /
 
     (; A, κ, K)
 end
+
+function get_spectrum(setup; npoint = 100, a = typeof(e.setup.Re)(1 + sqrt(5)) / 2)
+    (; dimension, xp, Ip) = setup.grid
+    T = eltype(xp[1])
+    D = dimension()
+
+    @assert all(==(size(Ip, 1)), size(Ip))
+
+    K = size(Ip, 1) .÷ 2
+    kmax = K - 1
+    k = ntuple(
+        i -> reshape(0:kmax, ntuple(Returns(1), i - 1)..., :, ntuple(Returns(1), D - i)...),
+        D,
+    )
+
+    # Output query points (evenly log-spaced, but only integer wavenumbers)
+    logκ = LinRange(T(0), log(T(kmax) / a), npoint)
+    κ = exp.(logκ)
+    κ = sort(unique(round.(Int, κ)))
+    npoint = length(κ)
+
+    masks = map(κ) do κ
+        if D == 2
+            @. (κ / a)^2 ≤ k[1]^2 + k[2]^2 < (κ * a)^2
+        elseif D == 3
+            @. (κ / a)^2 ≤ k[1]^2 + k[2]^2 + k[3]^2 < (κ * a)^2
+        else
+            error("Not implemented")
+        end
+    end
+
+    BoolArray = typeof(similar(xp[1], Bool, ntuple(Returns(0), D)...))
+    masks = adapt.(BoolArray, masks)
+    (; κ, masks, K)
+end
