@@ -76,6 +76,38 @@ Adapt.adapt_structure(to, s::DirectPressureSolver) = error(
     "`DirectPressureSolver` is not yet implemented for CUDA. Consider using `CGPressureSolver`.",
 )
 
+"""
+    CUDSSPressureSolver()
+
+Direct pressure solver using a CUDSS LDLt decomposition.
+"""
+struct CUDSSPressureSolver{T,S,F,A} <: AbstractPressureSolver{T}
+    setup::S
+    solver::F
+    f::A
+    p::A
+    function CUDSSPressureSolver(setup)
+        (; grid, ArrayType) = setup
+        (; x, Np) = grid
+        T = eltype(x[1])
+        @assert x[1] isa CuArray "CUDSSPressureSolver only works for CuArray."
+        f = fill!(similar(x[1], prod(Np) + 1), 0)
+        p = fill!(similar(x[1], prod(Np) + 1), 0)
+        L = laplacian_mat(setup)
+        e = ones(T, size(L, 2))
+        L = [L e; e' 0]
+        L = CuSparseMatrixCSR(L)
+        solver = CudssSolver(
+            L,
+            "S", # Symmetric (not positive definite)
+            'L', # Lower triangular representation
+        ) 
+        cudss("analysis", solver, p, f)
+        cudss("factorization", solver, p, f) # Compute factorization
+        new{T,typeof(setup),typeof(solver),typeof(f)}(setup, solver, f, p)
+    end
+end
+
 # """
 #     CGPressureSolver(setup; [abstol], [reltol], [maxiter])
 #

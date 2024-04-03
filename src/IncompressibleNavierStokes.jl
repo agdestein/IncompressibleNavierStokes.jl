@@ -29,6 +29,7 @@ using Zygote
 using CUDA
 using CUDA.CUSPARSE
 # using CUSOLVERRF
+using CUDSS
 
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
@@ -114,7 +115,10 @@ export stretched_grid, cosine_grid
 
 # Pressure solvers
 export DirectPressureSolver,
-    CGPressureSolver, SpectralPressureSolver, LowMemorySpectralPressureSolver
+    CUDSSPressureSolver,
+    CGPressureSolver,
+    SpectralPressureSolver,
+    LowMemorySpectralPressureSolver
 
 # Solvers
 export solve_unsteady, solve_steady_state

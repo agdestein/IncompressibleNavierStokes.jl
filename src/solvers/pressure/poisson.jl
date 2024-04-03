@@ -59,6 +59,17 @@ function poisson!(solver::DirectPressureSolver, p, f)
     p
 end
 
+function poisson!(solver::CUDSSPressureSolver, p, f)
+    (; setup) = solver
+    (; Ip) = setup.grid
+    T = eltype(p)
+    pp = view(view(p, Ip), :)
+    copyto!(view(solver.f, 1:length(solver.f)-1), view(view(f, Ip), :))
+    cudss("solve", solver.solver, solver.p, solver.f)
+    copyto!(pp, view(solver.p, 1:length(solver.p)-1))
+    p
+end
+
 function poisson!(solver::CGMatrixPressureSolver, p, f)
     (; L, qin, qout, abstol, reltol, maxiter) = solver
     copyto!(qin, view(view(f, Ip), :))
@@ -188,7 +199,6 @@ function poisson!(solver::LowMemorySpectralPressureSolver, p, f)
         ax = ahat 
         ay = reshape(ahat, 1, :)
         @. phat = -phat / (ax + ay)
-        
     else
         ax = ahat
         ay = reshape(ahat, 1, :)
