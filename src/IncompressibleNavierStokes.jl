@@ -138,7 +138,7 @@ export create_dataloader_prior, create_dataloader_post
 export create_callback, create_les_data, create_io_arrays
 export wrappedclosure
 
-export FaceAverage, VolumeAverage
+export FaceAverage, VolumeAverage, reconstruct, reconstruct!
 
 # ODE methods
 

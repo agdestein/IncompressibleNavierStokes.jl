@@ -40,6 +40,46 @@ function (::FaceAverage)(v, u, setup_les, comp)
 end
 
 """
+    reconstruct!(u, v, setup_dns, setup_les)
+
+Average fine grid `u` over coarse volume face. Put result in `v`.
+"""
+function reconstruct!(u, v, setup_dns, setup_les, comp)
+    (; grid, boundary_conditions, workgroupsize) = setup_les
+    (; N, Iu) = grid
+    D = length(u)
+    δ = Offset{D}()
+    @assert all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions)
+    @kernel function R!(u, v, ::Val{α}, volume) where {α}
+        J = @index(Global, Cartesian)
+        I = oneunit(J) + comp * J
+        J = oneunit(J) + J
+        Jleft = J - δ(α)
+        Jleft.I[α] == 1 && (Jleft += (N[α] - 2) * δ(α))
+        for i in volume
+            s = zero(eltype(v[α]))
+            s += (comp - i.I[α]) * v[α][J]
+            s += i.I[α] * v[α][Jleft]
+            u[α][I-i] = s / comp
+        end
+    end
+    for α = 1:D
+        ndrange = N .- 2
+        volume = CartesianIndices(ntuple(β -> 0:comp-1, D))
+        R!(get_backend(v[1]), workgroupsize)(u, v, Val(α), volume; ndrange)
+    end
+    u
+end
+
+reconstruct(v, setup_dns, setup_les, comp) = reconstruct!(
+    ntuple(α -> fill!(similar(v[1], setup_dns.grid.N), 0), length(v)),
+    v,
+    setup_dns,
+    setup_les,
+    comp,
+)
+
+"""
     (::VolumeAverage)(v, u, setup_les, comp)
 
 Average fine grid `u` over coarse volume. Put result in `v`.
