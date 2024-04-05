@@ -97,7 +97,7 @@ end
 
 Compute divergence of velocity field.
 """
-divergence(u, setup) = divergence!(similar(u[1], setup.grid.N), u, setup)
+divergence(u, setup) = divergence!(fill!(similar(u[1], setup.grid.N), 0), u, setup)
 
 ChainRulesCore.rrule(::typeof(divergence), u, setup) = (
     divergence(u, setup),
@@ -1192,14 +1192,14 @@ kinetic_energy(u, setup; kwargs...) =
     kinetic_energy!(similar(u[1], setup.grid.N), u, setup; kwargs...)
 
 """
-    total_kinetic_energy(setup, u)
+    total_kinetic_energy(setup, u; kwargs...)
 
 Compute total kinetic energy. The velocity components are interpolated to the
 volume centers and squared.
 """
-function total_kinetic_energy(u, setup)
+function total_kinetic_energy(u, setup; kwargs...)
     (; Ω, Ip) = setup.grid
-    e = kinetic_energy(u, setup)
+    e = kinetic_energy(u, setup; kwargs...)
     e .*= Ω
     sum(e[Ip])
 end
