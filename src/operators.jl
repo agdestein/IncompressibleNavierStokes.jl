@@ -814,8 +814,12 @@ end
     ) / 4
 @inline ∇(u, I::CartesianIndex{2}, Δ, Δu) =
     @SMatrix [∂x(u[α], I, α, β, Δ[β], Δu[β]) for α = 1:2, β = 1:2]
-∇(u, I::CartesianIndex{3}, Δ, Δu) =
+@inline ∇(u, I::CartesianIndex{3}, Δ, Δu) =
     @SMatrix [∂x(u[α], I, α, β, Δ[β], Δu[β]) for α = 1:3, β = 1:3]
+@inline idtensor(u, I::CartesianIndex{2}) =
+    @SMatrix [(α == β) * oneunit(eltype(u[1])) for α = 1:2, β = 1:2]
+@inline idtensor(u, I::CartesianIndex{3}) =
+    @SMatrix [(α == β) * oneunit(eltype(u[1])) for α = 1:3, β = 1:3]
 @inline function strain(u, I, Δ, Δu)
     ∇u = ∇(u, I, Δ, Δu)
     (∇u + ∇u') / 2
@@ -916,6 +920,45 @@ function smagorinsky_closure(setup)
         apply_bc_p!(σ, zero(T), setup)
         smagorinsky!(s, σ, setup)
     end
+end
+
+"""
+    tensorbasis!(T, V, u, setup)
+
+Compute symmetry tensor basis `T[1]`-`T[11]` and invariants `V[1]`-`V[5]`,
+as specified in [Silvis2017](@cite) in equations (9) and (11).
+Note that `T[1]` corresponds to ``T_0`` in the paper.
+"""
+function tensorbasis!(T, V, u, setup)
+    (; grid, workgroupsize) = setup
+    (; Np, Ip, Δ, Δu) = grid
+    @kernel function basis!(T, V, u, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        ∇u = ∇(u, I, Δ, Δu)
+        S = (∇u + ∇u') / 2
+        R = (∇u - ∇u') / 2
+        T[1][I] = idtensor(u, I)
+        T[2][I] = S
+        T[3][I] = S * S
+        T[4][I] = R * R
+        T[5][I] = S * R - R * S
+        T[6][I] = S * S * R - R * S * S
+        T[7][I] = S * R * R + R * R * S
+        T[8][I] = R * S * R * R - R * R * S * R
+        T[9][I] = S * R * S * S - S * S * R * S
+        T[10][I] = S * S * R * R + R * R * S * S
+        T[11][I] = R * S * S * R * R - R * R * S * S * R
+        V[1][I] = tr(S * S)
+        V[2][I] = tr(R * R)
+        V[3][I] = tr(S * S * S)
+        V[4][I] = tr(S * R * R)
+        V[5][I] = tr(S * S * R * R)
+    end
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    basis!(get_backend(u[1]), workgroupsize)(T, V, u, I0; ndrange = Np)
+    T, V
 end
 
 """
