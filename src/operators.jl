@@ -852,12 +852,12 @@ function smagtensor!(σ, u, θ, setup)
 end
 
 """
-    smagorinsky!(s, σ, setup)
+    divoftensor!(s, σ, setup)
 
-Compute the Smagorinsky closure term `s` (additional diffusive force).
-The Smagorinsky stress tensors should be precomputed and stored in `σ`.
+Compute divergence of a tensor with all components in the pressure points.
+The stress tensors should be precomputed and stored in `σ`.
 """
-function smagorinsky!(s, σ, setup)
+function divoftensor!(s, σ, setup)
     (; grid, workgroupsize) = setup
     (; dimension, Nu, Iu, Δ, Δu, A) = grid
     D = dimension()
@@ -918,37 +918,37 @@ function smagorinsky_closure(setup)
     function closure(u, θ)
         smagtensor!(σ, u, θ, setup)
         apply_bc_p!(σ, zero(T), setup)
-        smagorinsky!(s, σ, setup)
+        divoftensor!(s, σ, setup)
     end
 end
 
 """
-    tensorbasis!(T, V, u, setup)
+    tensorbasis!(B, V, u, setup)
 
-Compute symmetry tensor basis `T[1]`-`T[11]` and invariants `V[1]`-`V[5]`,
+Compute symmetry tensor basis `B[1]`-`B[11]` and invariants `V[1]`-`V[5]`,
 as specified in [Silvis2017](@cite) in equations (9) and (11).
-Note that `T[1]` corresponds to ``T_0`` in the paper.
+Note that `B[1]` corresponds to ``T_0`` in the paper, and `V` to ``I``.
 """
-function tensorbasis!(T, V, u, setup)
+function tensorbasis!(B, V, u, setup)
     (; grid, workgroupsize) = setup
     (; Np, Ip, Δ, Δu) = grid
-    @kernel function basis!(T, V, u, I0)
+    @kernel function basis!(B, V, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
         ∇u = ∇(u, I, Δ, Δu)
         S = (∇u + ∇u') / 2
         R = (∇u - ∇u') / 2
-        T[1][I] = idtensor(u, I)
-        T[2][I] = S
-        T[3][I] = S * S
-        T[4][I] = R * R
-        T[5][I] = S * R - R * S
-        T[6][I] = S * S * R - R * S * S
-        T[7][I] = S * R * R + R * R * S
-        T[8][I] = R * S * R * R - R * R * S * R
-        T[9][I] = S * R * S * S - S * S * R * S
-        T[10][I] = S * S * R * R + R * R * S * S
-        T[11][I] = R * S * S * R * R - R * R * S * S * R
+        B[1][I] = idtensor(u, I)
+        B[2][I] = S
+        B[3][I] = S * S
+        B[4][I] = R * R
+        B[5][I] = S * R - R * S
+        B[6][I] = S * S * R - R * S * S
+        B[7][I] = S * R * R + R * R * S
+        B[8][I] = R * S * R * R - R * R * S * R
+        B[9][I] = S * R * S * S - S * S * R * S
+        B[10][I] = S * S * R * R + R * R * S * S
+        B[11][I] = R * S * S * R * R - R * R * S * S * R
         V[1][I] = tr(S * S)
         V[2][I] = tr(R * R)
         V[3][I] = tr(S * S * S)
@@ -957,8 +957,24 @@ function tensorbasis!(T, V, u, setup)
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    basis!(get_backend(u[1]), workgroupsize)(T, V, u, I0; ndrange = Np)
-    T, V
+    basis!(get_backend(u[1]), workgroupsize)(B, V, u, I0; ndrange = Np)
+    B, V
+end
+
+"""
+    tensorbasis(u, setup)
+
+Compute symmetry tensor basis `T[1]`-`T[11]` and invariants `V[1]`-`V[5]`.
+"""
+function tensorbasis(u, setup)
+    T = eltype(u[1])
+    D = setup.grid.dimension()
+    tensorbasis!(
+        ntuple(k -> similar(u[1], SMatrix{D,D,T,D * D}, setup.grid.N), 11),
+        ntuple(k -> similar(u[1], setup.grid.N), 5),
+        u,
+        setup,
+    )
 end
 
 """

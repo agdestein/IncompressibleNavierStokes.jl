@@ -32,7 +32,7 @@ function wrappedclosure(m, setup)
 end
 
 """
-    create_closure(layers...)
+    create_closure(layers...; rng)
 
 Create neural closure model from layers.
 """
@@ -47,6 +47,17 @@ function create_closure(layers...; rng)
     closure(u, θ) = first(chain(u, θ, state))
 
     closure, θ
+end
+
+function create_tensorclosure(layers...; setup, rng)
+    D = setup.grid.dimension()
+    cnn, θ = create_closure(layers...; rng)
+    function closure(u, θ)
+        B, V = tensorbasis(u, setup)
+        V = stack(V)
+        α = cnn(V, θ)
+        τ = sum(k -> α[ntuple(Returns(:), D)..., k] .* B[k], 1:length(B))
+    end
 end
 
 """
