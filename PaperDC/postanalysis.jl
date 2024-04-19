@@ -1,9 +1,9 @@
-# Little LSP hack to get function signatures, go    #src
-# to definition etc.                                #src
-if isdefined(@__MODULE__, :LanguageServer)          #src
-    include("../src/IncompressibleNavierStokes.jl") #src
-    using .IncompressibleNavierStokes               #src
-end                                                 #src
+# # Little LSP hack to get function signatures, go    #src
+# # to definition etc.                                #src
+# if isdefined(@__MODULE__, :LanguageServer)          #src
+#     include("../src/IncompressibleNavierStokes.jl") #src
+#     using .IncompressibleNavierStokes               #src
+# end                                                 #src
 
 # # Train closure model
 #
@@ -11,8 +11,8 @@ end                                                 #src
 # uniform Cartesian grid with square cells.
 
 using Adapt
-using CairoMakie
 using GLMakie
+using CairoMakie
 using IncompressibleNavierStokes
 using JLD2
 using LaTeXStrings
@@ -21,9 +21,7 @@ using Lux
 using NNlib
 using Optimisers
 using Random
-using Zygote
 using SparseArrays
-using KernelAbstractions
 using FFTW
 
 # palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])
@@ -44,8 +42,9 @@ GLMakie.activate!()
 
 set_theme!(; GLMakie = (; scalefactor = 1.5))
 
-plotdir = "../SupervisedClosure/figures/"
-outdir = "output/postanalysis"
+plotdir = "../SupervisedClosure/figures"
+# outdir = "output/postanalysis"
+outdir = "output/divfree"
 ispath(outdir) || mkpath(outdir)
 
 # Random number generator
@@ -308,6 +307,7 @@ for ifil = 1:1, ig = 4:4
         opt,
         θ;
         niter = 10_000,
+        # niter = 100,
         ncallback = 20,
         callbackstate,
         callback,

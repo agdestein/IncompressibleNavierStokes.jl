@@ -7,6 +7,7 @@ using CUDA
 using ComponentArrays: ComponentArray
 using Lux
 using NNlib
+using Random
 using Tullio
 using Zygote
 
