@@ -47,7 +47,7 @@ function create_initial_conditions(
     u
 end
 
-# function create_spectrum(; setup, A, σ, s)
+# function create_spectrum(; setup, A, σ, s, rng = Random.default_rng())
 #     (; dimension, x, N) = setup.grid
 #     T = eltype(x[1])
 #     D = dimension()
@@ -63,14 +63,14 @@ end
 #         kα = k[α]
 #         @. a *= exp(-max(abs(kα) - s, 0)^2 / 2σ^2)
 #     end
-#     @. a *= randn(T) * exp(im * τ * rand(T))
+#     @. a *= randn(rng, T) * exp(im * τ * rand(rng, T))
 #     for α = 1:D
 #         a = cat(a, reverse(a; dims = α); dims = α)
 #     end
 #     a
 # end
 
-function create_spectrum(; setup, kp)
+function create_spectrum(; setup, kp, rng = Random.default_rng())
     (; dimension, x, N) = setup.grid
     T = eltype(x[1])
     D = dimension()
@@ -106,7 +106,7 @@ function create_spectrum(; setup, kp)
     a .*= prod(N)
 
     # Apply random phase shift
-    ξ = ntuple(α -> rand!(similar(x[1], K)), D)
+    ξ = ntuple(α -> rand!(rng, similar(x[1], K)), D)
     for α = 1:D
         a = cat(a, reverse(a; dims = α); dims = α)
         ξ = ntuple(D) do β
@@ -136,11 +136,11 @@ function create_spectrum(; setup, kp)
 
     # Create random unit vector for each wavenumber
     if D == 2
-        θ = rand!(similar(x[1], KK))
+        θ = rand!(rng, similar(x[1], KK))
         e = (cospi.(2 .* θ), sinpi.(2 .* θ))
     elseif D == 3
-        θ = rand!(similar(x[1], KK))
-        ϕ = rand!(similar(x[1], KK))
+        θ = rand!(rng, similar(x[1], KK))
+        ϕ = rand!(rng, similar(x[1], KK))
         e = (sinpi.(θ) .* cospi.(2 .* ϕ), sinpi.(θ) .* sinpi.(2 .* ϕ), cospi.(θ))
     end
 
@@ -176,6 +176,7 @@ end
         A = 1,
         kp = 10,
         psolver = SpectralPressureSolver(setup),
+        rng = Random.default_rng(),
     )
 
 Create random field, as in [Orlandi2000](@cite).
@@ -190,14 +191,14 @@ function random_field(
     A = 1,
     kp = 10,
     psolver = SpectralPressureSolver(setup),
+    rng = Random.default_rng(),
 )
     (; dimension, x, Ip, Ω) = setup.grid
     D = dimension()
     T = eltype(x[1])
-    backend = get_backend(x[1])
 
     # Create random velocity field
-    uhat = create_spectrum(; setup, kp)
+    uhat = create_spectrum(; setup, kp, rng)
     u = ifft.(uhat)
     u = map(u -> A .* real.(u), u)
 
