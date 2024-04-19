@@ -1,9 +1,5 @@
 [deps]
-CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
-FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
-GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 IncompressibleNavierStokes = "5e318141-6589-402b-868d-77d7df8c442e"
-LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"

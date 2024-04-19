@@ -1,4 +1,8 @@
+# Check number of threads aviailable on GitHub Actions
 @info "" Threads.nthreads()
+
+# Load examples environment
+push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 
 using IncompressibleNavierStokes
 using Literate
