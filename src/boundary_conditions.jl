@@ -183,22 +183,8 @@ function apply_bc_p_pullback!(φbar, t, setup; kwargs...)
     (; dimension) = grid
     D = dimension()
     for β = 1:D
-        apply_bc_p_pullback!(
-            boundary_conditions[β][1],
-            φbar,
-            β,
-            t,
-            setup;
-            atend = false,
-        )
-        apply_bc_p_pullback!(
-            boundary_conditions[β][2],
-            φbar,
-            β,
-            t,
-            setup;
-            atend = true,
-        )
+        apply_bc_p_pullback!(boundary_conditions[β][1], φbar, β, t, setup; atend = false)
+        apply_bc_p_pullback!(boundary_conditions[β][2], φbar, β, t, setup; atend = true)
     end
     φbar
 end

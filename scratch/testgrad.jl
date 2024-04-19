@@ -146,13 +146,7 @@ finitediff(u -> f(u, setup), u, α, I)
 function f(u, setup)
     (; Ω, Iu) = setup.grid
     method = RK44(; T)
-    stepper = IncompressibleNavierStokes.create_stepper(
-        method;
-        setup,
-        psolver,
-        u,
-        t = T(0),
-    )
+    stepper = IncompressibleNavierStokes.create_stepper(method; setup, psolver, u, t = T(0))
     stepper = IncompressibleNavierStokes.timestep(method, stepper, T(1e-4))
     φ = stepper.u
     # dot(φ, φ)

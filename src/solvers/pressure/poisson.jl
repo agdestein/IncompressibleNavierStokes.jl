@@ -196,7 +196,7 @@ function poisson!(solver::LowMemorySpectralPressureSolver, p, f)
 
     # Solve for coefficients in Fourier space
     if D == 2
-        ax = ahat 
+        ax = ahat
         ay = reshape(ahat, 1, :)
         @. phat = -phat / (ax + ay)
     else

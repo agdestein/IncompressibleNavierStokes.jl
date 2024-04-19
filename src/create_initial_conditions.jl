@@ -148,7 +148,7 @@ function create_spectrum(; setup, kp)
     ke = sum(α -> e[α] .* kkkk[α], 1:D)
     CUDA.@allowscalar e0 = getindex.(e, 1)
     for α = 1:D
-        @. e[α] -= kkkk[α] * ke / knorm ^ 2
+        @. e[α] -= kkkk[α] * ke / knorm^2
     end
 
     # Restore k=0 component, which is divergence free anyways

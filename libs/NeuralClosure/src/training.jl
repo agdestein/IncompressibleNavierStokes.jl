@@ -149,7 +149,7 @@ function create_relerr_post(;
             for α = 1:D
                 # a += sum(abs2, (stepper.u[α]-u[it][α])[Iu[α]])
                 # b += sum(abs2, u[it][α][Iu[α]])
-                a += sum(abs2, view(stepper.u[α]-u[it][α], Iu[α]))
+                a += sum(abs2, view(stepper.u[α] - u[it][α], Iu[α]))
                 b += sum(abs2, view(u[it][α], Iu[α]))
             end
             e += sqrt(a) / sqrt(b)
@@ -178,11 +178,7 @@ If not using interactive GLMakie window, set `display_each_iteration` to
 function create_callback(
     err;
     θ,
-    callbackstate = (;
-        θmin = θ,
-        emin = eltype(θ)(Inf),
-        hist = Point2f[],
-    ),
+    callbackstate = (; θmin = θ, emin = eltype(θ)(Inf), hist = Point2f[]),
     displayref = true,
     display_each_iteration = false,
 )

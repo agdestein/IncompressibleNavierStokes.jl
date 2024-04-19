@@ -138,7 +138,7 @@ state, outputs = solve_unsteady(
         ),
         boxplotter = processor() do state
             for box in boxes
-                lines!(current_axis(), box; color = :red);
+                lines!(current_axis(), box; color = :red)
             end
         end,
         ## ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 1),

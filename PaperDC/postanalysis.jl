@@ -109,7 +109,7 @@ jldsave("$outdir/data_test.jld2"; data_test)
 # Load filtered DNS data
 data_train = load("$outdir/data_train.jld2", "data_train");
 data_valid = load("$outdir/data_valid.jld2", "data_valid");
-data_test =  load("$outdir/data_test.jld2", "data_test");
+data_test = load("$outdir/data_test.jld2", "data_test");
 
 data_train[5].comptime
 data_valid[1].comptime
@@ -530,7 +530,13 @@ e_smag
 e_cnn
 e_cnn_post
 
-round.([e_nm[:] reshape(e_smag, :, 2) reshape(e_cnn, :, 2) reshape(e_cnn_post, :, 2)][[1:3; 6:8], :]; sigdigits = 2)
+round.(
+    [e_nm[:] reshape(e_smag, :, 2) reshape(e_cnn, :, 2) reshape(e_cnn_post, :, 2)][
+        [1:3; 6:8],
+        :,
+    ];
+    sigdigits = 2,
+)
 
 data_train[1].t[2] - data_train[1].t[1]
 data_test.t[2] - data_test.t[1]
@@ -561,18 +567,18 @@ fig = with_theme(;
     )
     linestyle = :solid
     # for ifil = 1:2
-        # linestyle = ifil == 1 ? :solid : :dash
-        label = "No closure"
-        # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-        # ifil == 2 && (label = nothing)
-        scatterlines!(
-            nles,
-            ones(T, length(nles));
-            color = Cycled(1),
-            linestyle,
-            marker = :circle,
-            label,
-        )
+    # linestyle = ifil == 1 ? :solid : :dash
+    label = "No closure"
+    # label = label * (ifil == 1 ? " (FA)" : " (VA)")
+    # ifil == 2 && (label = nothing)
+    scatterlines!(
+        nles,
+        ones(T, length(nles));
+        color = Cycled(1),
+        linestyle,
+        marker = :circle,
+        label,
+    )
     # end
     # for ifil = 1:2
     #     linestyle = ifil == 1 ? :solid : :dash
@@ -589,46 +595,46 @@ fig = with_theme(;
     #     )
     # end
     # for ifil = 1:2
-        # linestyle = ifil == 1 ? :solid : :dash
-        label = "CNN (Lprior)"
-        # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-        # ifil == 2 && (label = nothing)
-        scatterlines!(
-            nles,
-            eprior.prior[:, ifil];
-            color = Cycled(2),
-            linestyle,
-            marker = :utriangle,
-            label,
-        )
+    # linestyle = ifil == 1 ? :solid : :dash
+    label = "CNN (Lprior)"
+    # label = label * (ifil == 1 ? " (FA)" : " (VA)")
+    # ifil == 2 && (label = nothing)
+    scatterlines!(
+        nles,
+        eprior.prior[:, ifil];
+        color = Cycled(2),
+        linestyle,
+        marker = :utriangle,
+        label,
+    )
     # end
     # for ifil = 1:2
-        # linestyle = ifil == 1 ? :solid : :dash
-        label = "CNN (Lpost, DIF)"
-        # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-        # ifil == 2 && (label = nothing)
-        scatterlines!(
-            nles,
-            eprior.post[:, ifil, 1];
-            color = Cycled(3),
-            linestyle,
-            marker = :rect,
-            label,
-        )
+    # linestyle = ifil == 1 ? :solid : :dash
+    label = "CNN (Lpost, DIF)"
+    # label = label * (ifil == 1 ? " (FA)" : " (VA)")
+    # ifil == 2 && (label = nothing)
+    scatterlines!(
+        nles,
+        eprior.post[:, ifil, 1];
+        color = Cycled(3),
+        linestyle,
+        marker = :rect,
+        label,
+    )
     # end
     # for ifil = 1:2
-        # linestyle = ifil == 1 ? :solid : :dash
-        label = "CNN (Lpost, DCF)"
-        # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-        # ifil == 2 && (label = nothing)
-        scatterlines!(
-            nles,
-            eprior.post[:, ifil, 2];
-            color = Cycled(4),
-            linestyle,
-            marker = :diamond,
-            label,
-        )
+    # linestyle = ifil == 1 ? :solid : :dash
+    label = "CNN (Lpost, DCF)"
+    # label = label * (ifil == 1 ? " (FA)" : " (VA)")
+    # ifil == 2 && (label = nothing)
+    scatterlines!(
+        nles,
+        eprior.post[:, ifil, 2];
+        color = Cycled(4),
+        linestyle,
+        marker = :diamond,
+        label,
+    )
     # end
     # lines!(
     #     collect(extrema(nles[4:end])),
@@ -1303,10 +1309,7 @@ clean();
 
 GLMakie.activate!()
 
-with_theme(;
-    fontsize = 25,
-    palette,
-) do
+with_theme(; fontsize = 25, palette) do
     x1 = 0.3
     x2 = 0.5
     y1 = 0.5

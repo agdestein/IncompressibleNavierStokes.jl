@@ -101,7 +101,7 @@ struct CUDSSPressureSolver{T,S,F,A} <: AbstractPressureSolver{T}
             L,
             "S", # Symmetric (not positive definite)
             'L', # Lower triangular representation
-        ) 
+        )
         cudss("analysis", solver, p, f)
         cudss("factorization", solver, p, f) # Compute factorization
         new{T,typeof(setup),typeof(solver),typeof(f)}(setup, solver, f, p)
@@ -344,5 +344,9 @@ function LowMemorySpectralPressureSolver(setup)
     # Placeholders for intermediate results
     phat = fill!(similar(x[1], Complex{T}, Np), 0)
 
-    LowMemorySpectralPressureSolver{T,typeof(ahat),typeof(phat),typeof(setup)}(setup, ahat, phat)
+    LowMemorySpectralPressureSolver{T,typeof(ahat),typeof(phat),typeof(setup)}(
+        setup,
+        ahat,
+        phat,
+    )
 end
