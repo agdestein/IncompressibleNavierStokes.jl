@@ -5,6 +5,8 @@ module NeuralClosure
 
 using CUDA
 using ComponentArrays: ComponentArray
+using IncompressibleNavierStokes
+using IncompressibleNavierStokes: Dimension
 using Lux
 using NNlib
 using Random

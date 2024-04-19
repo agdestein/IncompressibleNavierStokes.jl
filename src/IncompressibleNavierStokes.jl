@@ -12,6 +12,7 @@ using IterativeSolvers
 using KernelAbstractions
 using LinearAlgebra
 using Makie
+using NNlib
 using Printf
 using Random
 using SparseArrays
