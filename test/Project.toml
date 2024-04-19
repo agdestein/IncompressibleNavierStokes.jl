@@ -1,0 +1,4 @@
+[deps]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+IncompressibleNavierStokes = "5e318141-6589-402b-868d-77d7df8c442e"
