@@ -7,11 +7,10 @@
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
-using Adapt
 using Random
 
 # Output directory
-output = "output/Actuator2D"
+output = "output/MultiActuator"
 
 # Floating point precision
 T = Float64
@@ -28,7 +27,6 @@ T = Float32;
 # T = Float64;
 ArrayType = CuArray;
 CUDA.allowscalar(false);
-device = x -> adapt(ArrayType, x);
 
 set_theme!(; GLMakie = (; scalefactor = 1.5))
 
@@ -66,14 +64,6 @@ create_manyforce(forces...) = function (dim, x, y, t)
     out
 end
 
-bodyforce = create_bodyforce(;
-    xc = T(2),   # Disk center
-    yc = T(0),   # Disk center
-    D = T(1),    # Disk diameter
-    δ = T(0.11), # Disk thickness
-    C = T(0.2),  # Thrust coefficient
-)
-
 disk = (; D = T(1), δ = T(0.11), C = T(0.2))
 bodyforce = create_manyforce(
     create_bodyforce(; xc = T(2), yc = T(0), disk...),
@@ -82,41 +72,40 @@ bodyforce = create_manyforce(
 )
 
 # A 2D grid is a Cartesian product of two vectors
-n = 160
+n = 80
 x = LinRange(T(0), T(10), 5n + 1)
 y = LinRange(-T(2), T(2), 2n + 1)
 
 # Build setup and assemble operators
 setup = Setup(x, y; Re = T(2000), boundary_conditions, bodyforce, ArrayType);
 
-using CUDA.CUSPARSE
-using CUDSS
-using LinearAlgebra
-
 psolver = CUDSSPressureSolver(setup);
-psolver2 = DirectPressureSolver(setup);
-
-p = fill!(similar(setup.grid.x[1], setup.grid.N), 0)
-f = similar(setup.grid.x[1], setup.grid.N)
-f .= randn.(T)
-IncompressibleNavierStokes.apply_bc_p!(f, T(0), setup)
-
-IncompressibleNavierStokes.poisson!(psolver, p, f)
-IncompressibleNavierStokes.poisson!(psolver2, p, f)
-
-using KernelAbstractions
-using BenchmarkTools
-
-@benchmark begin
-    # IncompressibleNavierStokes.poisson!(psolver, p, f)
-    IncompressibleNavierStokes.poisson!(psolver2, p, f)
-    KernelAbstractions.synchronize(get_backend(p))
-end
 
 # Initial conditions (extend inflow)
 u₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? one(x) : zero(x); psolver);
 u = u₀
 t = T(0)
+
+# # We create a box to visualize the actuator.
+# (; xc, yc, D, δ) = setup.bodyforce
+# box = [
+#     Point2f(xc - δ / 2, yc + D / 2),
+#     Point2f(xc - δ / 2, yc - D / 2),
+#     Point2f(xc + δ / 2, yc - D / 2),
+#     Point2f(xc + δ / 2, yc + D / 2),
+#     Point2f(xc - δ / 2, yc + D / 2),
+# ]
+
+boxes = map(bodyforce.forces) do (; xc, yc, D, δ)
+    [
+        Point2f(xc - δ / 2, yc + D / 2),
+        Point2f(xc - δ / 2, yc - D / 2),
+        Point2f(xc + δ / 2, yc - D / 2),
+        Point2f(xc + δ / 2, yc + D / 2),
+        Point2f(xc - δ / 2, yc + D / 2),
+    ]
+end
+box = boxes[1]
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(
@@ -157,45 +146,18 @@ state, outputs = solve_unsteady(
 # Export to VTK
 save_vtk(setup, state.u, state.p, "$output/solution")
 
-# We create a box to visualize the actuator.
-(; xc, yc, D, δ) = setup.bodyforce
-box = [
-    Point2f(xc - δ / 2, yc + D / 2),
-    Point2f(xc - δ / 2, yc - D / 2),
-    Point2f(xc + δ / 2, yc - D / 2),
-    Point2f(xc + δ / 2, yc + D / 2),
-    Point2f(xc - δ / 2, yc + D / 2),
-]
-
-box = boxes[1]
-boxes = map(bodyforce.forces) do (; xc, yc, D, δ)
-    [
-        Point2f(xc - δ / 2, yc + D / 2),
-        Point2f(xc - δ / 2, yc - D / 2),
-        Point2f(xc + δ / 2, yc - D / 2),
-        Point2f(xc + δ / 2, yc + D / 2),
-        Point2f(xc - δ / 2, yc + D / 2),
-    ]
-end
-
-state = (; u = F, t)
-
 # Plot pressure
 fig = fieldplot(state; setup, fieldname = :pressure, psolver)
 # lines!(box...; color = :red)
 lines!.(boxes; color = :red);
 fig
 
-sum(IncompressibleNavierStokes.pressure(u, t, setup; psolver))
-
 # Plot velocity
 fig = fieldplot(state; setup, fieldname = :velocity)
-# lines!(box...; color = :red)
 lines!.(boxes; color = :red);
 fig
 
 # Plot vorticity
 fig = fieldplot(state; setup, fieldname = :vorticity)
-# lines!(box...; color = :red)
 lines!.(boxes; color = :red);
 fig
