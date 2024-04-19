@@ -1,10 +1,3 @@
-# Little LSP hack to get function signatures, go    #src
-# to definition etc.                                #src
-if isdefined(@__MODULE__, :LanguageServer)          #src
-    include("../src/IncompressibleNavierStokes.jl") #src
-    using .IncompressibleNavierStokes               #src
-end                                                 #src
-
 # # Unsteady actuator case - 3D
 #
 # In this example, an unsteady inlet velocity profile at encounters a wind

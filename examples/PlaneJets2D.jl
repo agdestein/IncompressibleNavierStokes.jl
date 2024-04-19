@@ -1,10 +1,3 @@
-# Little LSP hack to get function signatures, go    #src
-# to definition etc.                                #src
-if isdefined(@__MODULE__, :LanguageServer)          #src
-    include("../src/IncompressibleNavierStokes.jl") #src
-    using .IncompressibleNavierStokes               #src
-end                                                 #src
-
 # # Plane jets - 2D
 #
 # Plane jets example, as presented in [MacArt2021](@cite). Note that the

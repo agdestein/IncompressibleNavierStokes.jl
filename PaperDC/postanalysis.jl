@@ -1,10 +1,3 @@
-# # Little LSP hack to get function signatures, go    #src
-# # to definition etc.                                #src
-# if isdefined(@__MODULE__, :LanguageServer)          #src
-#     include("../src/IncompressibleNavierStokes.jl") #src
-#     using .IncompressibleNavierStokes               #src
-# end                                                 #src
-
 # # Train closure model
 #
 # Here, we consider a periodic box ``[0, 1]^2``. It is discretized with a

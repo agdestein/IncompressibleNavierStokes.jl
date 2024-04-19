@@ -1,10 +1,3 @@
-# Little LSP hack to get function signatures, go    #src
-# to definition etc.                                #src
-if isdefined(@__MODULE__, :LanguageServer)          #src
-    include("../src/IncompressibleNavierStokes.jl") #src
-    using .IncompressibleNavierStokes               #src
-end                                                 #src
-
 # # Tutorial: Lid-Driven Cavity - 2D
 #
 # In this example we consider a box with a moving lid. The velocity is
