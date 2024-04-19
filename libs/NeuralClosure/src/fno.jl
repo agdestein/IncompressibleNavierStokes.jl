@@ -203,6 +203,8 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
     # Fourier layer.
     v = σ.(y .+ z)
 
+    # @infiltrate
+
     # Fourier layer does not modify state
     v, state
 end

@@ -7,23 +7,18 @@ module IncompressibleNavierStokes
 
 using Adapt
 using ChainRulesCore
-using ComponentArrays: ComponentArray
 using FFTW
 using IterativeSolvers
 using KernelAbstractions
 using LinearAlgebra
-using Lux
 using Makie
-using NNlib
 using Optimisers
 using Printf
 using Random
 using SparseArrays
 using StaticArrays
 using Statistics
-using Tullio
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
-using Zygote
 
 # Must be loaded inside for Tullio to work correctly
 using CUDA
@@ -89,13 +84,6 @@ include("utils/get_lims.jl")
 include("utils/plotmat.jl")
 include("utils/spectral_stuff.jl")
 
-# Closure models
-include("closures/closure.jl")
-include("closures/cnn.jl")
-include("closures/fno.jl")
-include("closures/training.jl")
-include("closures/create_les_data.jl")
-
 # Boundary conditions
 export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
 
@@ -127,16 +115,6 @@ export create_initial_conditions, random_field
 
 export plotgrid, save_vtk
 export plotmat
-
-# Closure models
-export smagorinsky_closure
-export cnn, fno, FourierLayer
-export train
-export mean_squared_error, create_relerr_prior, create_relerr_post
-export create_loss_prior, create_loss_post
-export create_dataloader_prior, create_dataloader_post
-export create_callback, create_les_data, create_io_arrays
-export wrappedclosure
 
 export FaceAverage, VolumeAverage, reconstruct, reconstruct!
 
