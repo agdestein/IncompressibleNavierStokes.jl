@@ -1,8 +1,9 @@
 # Check number of threads aviailable on GitHub Actions
 @info "" Threads.nthreads()
 
-# Load examples environment
+# Load environments
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
+push!(LOAD_PATH, joinpath(@__DIR__, "..", "libs", "NeuralClosure"))
 
 using IncompressibleNavierStokes
 using NeuralClosure
