@@ -14,10 +14,16 @@ system.
 ```@docs
 AbstractPressureSolver
 DirectPressureSolver
+CUDSSPressureSolver
 CGPressureSolver
+CGMatrixPressureSolver
 SpectralPressureSolver
+LowMemorySpectralPressureSolver
 pressure
 pressure!
 poisson
 poisson!
+applypressure!
+project
+project!
 ```

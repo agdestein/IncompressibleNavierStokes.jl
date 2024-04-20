@@ -47,15 +47,17 @@ plotgrid(x, y)
 
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions);
+psolver = DirectPressureSolver(setup);
 
 # Initial conditions (extend inflow)
-u₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, 0.0));
+u₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, 0.0); psolver);
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(
     setup,
     u₀,
     (0.0, 100.0);
+    psolver,
     method = RK44P2(),
     Δt = 0.1,
     processors = (
@@ -80,4 +82,4 @@ state, outputs = solve_unsteady(
 outputs.rtp
 
 # Export to VTK
-save_vtk(setup, state.u, state.p, "$output/solution")
+save_vtk(setup, state.u, state.t, "$output/solution"; psolver)

@@ -41,4 +41,12 @@ Qfield
 eig2field!
 eig2field
 kinetic_energy
+kinetic_energy!
+total_kinetic_energy
+tensorbasis
+smagtensor!
+smagorinsky_closure
+divoftensor!
+tensorbasis!
+reconstruct!
 ```

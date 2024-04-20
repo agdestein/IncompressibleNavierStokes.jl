@@ -1,3 +1,8 @@
+"""
+    project(u, setup; psolver)
+
+Project velocity field onto divergence-free space.
+"""
 function project(u, setup; psolver)
     (; Ω) = setup.grid
     T = eltype(u[1])
@@ -15,6 +20,11 @@ function project(u, setup; psolver)
     u .- G
 end
 
+"""
+    project!(u, setup; psolver, div, p)
+
+Project velocity field onto divergence-free space.
+"""
 function project!(u, setup; psolver, div, p)
     (; Ω) = setup.grid
     T = eltype(u[1])

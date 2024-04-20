@@ -1,7 +1,3 @@
-```@meta
-CurrentModule = IncompressibleNavierStokes
-```
-
 # Neural closure models
 
 For [large eddy simulation (LES)](../features/les.md), a closure model is
@@ -39,10 +35,15 @@ M \bar{v} & = 0, \\
 ```
 
 ```@docs
-face_average!
-volume_average!
-create_les_data
-create_io_arrays
+IncompressibleNavierStokes.FaceAverage
+IncompressibleNavierStokes.VolumeAverage
+```
+
+```@docs
+NeuralClosure.NeuralClosure
+NeuralClosure.filtersaver
+NeuralClosure.create_les_data
+NeuralClosure.create_io_arrays
 ```
 
 ## Training
@@ -69,11 +70,15 @@ error on the LES solution error. The posterior loss does, but has a longer
 computational chain involving solving the LES ODE.
 
 ```@docs
-train
-create_randloss
-mean_squared_error
-relative_error
-create_callback
+NeuralClosure.create_dataloader_prior
+NeuralClosure.create_dataloader_post
+NeuralClosure.train
+NeuralClosure.create_loss_prior
+NeuralClosure.create_relerr_prior
+NeuralClosure.mean_squared_error
+NeuralClosure.create_loss_post
+NeuralClosure.create_relerr_post
+NeuralClosure.create_callback
 ```
 
 ## Neural architectures
@@ -81,11 +86,12 @@ create_callback
 We provide two neural architectures: A convolutional neural network (CNN) and a Fourier neural operator (FNO).
 
 ```@docs
-wrappedclosure
-create_closure
-collocate
-decollocate
-cnn
-fno
-FourierLayer
+NeuralClosure.wrappedclosure
+NeuralClosure.create_closure
+NeuralClosure.create_tensorclosure
+NeuralClosure.collocate
+NeuralClosure.decollocate
+NeuralClosure.cnn
+NeuralClosure.fno
+NeuralClosure.FourierLayer
 ```

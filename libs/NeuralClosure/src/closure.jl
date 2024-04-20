@@ -49,6 +49,11 @@ function create_closure(layers...; rng)
     closure, θ
 end
 
+"""
+    create_tensorclosure(layers...; setup, rng)
+
+Create tensor basis closure.
+"""
 function create_tensorclosure(layers...; setup, rng)
     D = setup.grid.dimension()
     cnn, θ = create_closure(layers...; rng)

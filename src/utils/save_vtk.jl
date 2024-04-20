@@ -1,12 +1,19 @@
 """
-    save_vtk(setup, u, p, filename = "output/solution")
+    save_vtk(setup, u, filename = "output/solution"; fieldnames = [:velocity], psolver)
 
 Save velocity and pressure field to a VTK file.
 
 In the case of a 2D setup, the velocity field is saved as a 3D vector with a
 z-component of zero, as this seems to be preferred by ParaView.
 """
-function save_vtk(setup, u, p, filename = "output/solution")
+function save_vtk(
+    setup,
+    u,
+    t,
+    filename = "output/solution";
+    fieldnames = [:velocity],
+    psolver,
+)
     parts = split(filename, "/")
     path = join(parts[1:end-1], "/")
     isdir(path) || mkpath(path)
@@ -26,7 +33,7 @@ function save_vtk(setup, u, p, filename = "output/solution")
             ωp = Array.(ωp)
         end
         vtk["velocity"] = Array.(up)
-        vtk["pressure"] = Array(p)
+        :pressure in fieldnames && (vtk["pressure"] = Array(pressure(u, t, setup; psolver)))
         vtk["vorticity"] = ωp
     end
 end

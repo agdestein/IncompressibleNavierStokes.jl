@@ -15,6 +15,11 @@ create_dataloader_prior(data; batchsize = 50, device = identity) = function data
     xuse, yuse
 end
 
+"""
+    create_dataloader_post(trajectories; nunroll = 10, device = identity)
+
+Create trajectory dataloader.
+"""
 create_dataloader_post(trajectories; nunroll = 10, device = identity) =
     function dataloader()
         (; u, t) = rand(trajectories)
@@ -74,6 +79,11 @@ The function `loss` should take inputs like `loss(f, x, y, θ)`.
 """
 create_loss_prior(loss, f) = ((x, y), θ) -> loss(f, x, y, θ)
 
+"""
+    create_relerr_prior(f, x, y)
+
+Create a-priori error.
+"""
 create_relerr_prior(f, x, y) = θ -> norm(f(x, θ) - y) / norm(y)
 
 """
@@ -86,6 +96,18 @@ The MSE is further divided by `normalize(y)`.
 mean_squared_error(f, x, y, θ; normalize = y -> sum(abs2, y), λ = sqrt(eltype(x)(1e-8))) =
     sum(abs2, f(x, θ) - y) / normalize(y) + λ * sum(abs2, θ)
 
+"""
+    create_loss_post(;
+        setup,
+        method = RK44(; T = eltype(setup.grid.x[1])),
+        psolver,
+        closure,
+        nupdate = 1,
+        projectorder = :last,
+    )
+
+Create a-posteriori loss function.
+"""
 function create_loss_post(;
     setup,
     method = RK44(; T = eltype(setup.grid.x[1])),
@@ -120,6 +142,19 @@ function create_loss_post(;
     end
 end
 
+"""
+    create_relerr_post(;
+        data,
+        setup,
+        method = RK44(; T = eltype(setup.grid.x[1])),
+        psolver,
+        closure_model,
+        nupdate = 1,
+        projectorder = :last,
+    )
+
+Create a-posteriori relative error.
+"""
 function create_relerr_post(;
     data,
     setup,

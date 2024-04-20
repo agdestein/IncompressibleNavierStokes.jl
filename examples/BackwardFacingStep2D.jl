@@ -59,6 +59,7 @@ u₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)); ps
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);
+nothing
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(
@@ -87,7 +88,7 @@ state, outputs = solve_unsteady(
 # We may visualize or export the computed fields
 
 # Export to VTK
-save_vtk(setup, state.u, state.p, "$output/solution")
+save_vtk(setup, state.u, state.t, "$output/solution"; psolver)
 
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)

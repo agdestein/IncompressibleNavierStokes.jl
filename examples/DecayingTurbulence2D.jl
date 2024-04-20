@@ -75,7 +75,7 @@ outputs.ehist
 outputs.espec
 
 # Export to VTK
-save_vtk(setup, state.u, state.p, "$output/solution")
+save_vtk(setup, state.u, state.t, "$output/solution"; psolver)
 
 # Plot field
 fieldplot(state; setup)

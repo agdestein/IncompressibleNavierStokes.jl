@@ -130,7 +130,7 @@ state, outputs = solve_unsteady(setup, u₀, tlims; Δt = T(1e-3), psolver, proc
 # Export fields to VTK. The file `output/solution.vti` may be opened for
 # visualization in [ParaView](https://www.paraview.org/). This is particularly
 # useful for inspecting results from 3D simulations.
-save_vtk(setup, state.u, state.p, "$output/solution")
+save_vtk(setup, state.u, state.t, "$output/solution"; psolver)
 
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)

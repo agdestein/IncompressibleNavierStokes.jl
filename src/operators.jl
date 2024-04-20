@@ -493,7 +493,6 @@ end
 
 Right hand side of momentum equations, excluding pressure gradient.
 """
-# momentum(u, t, setup) = momentum!(zero.(u), u, t, setup)
 function momentum(u, t, setup)
     (; grid, closure_model) = setup
     (; dimension) = grid

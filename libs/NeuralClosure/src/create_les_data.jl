@@ -56,6 +56,11 @@ function lesdatagen(dnsobs, Φ, les, compression, psolver)
     results
 end
 
+"""
+    filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 1)
+
+Save filtered DNS data.
+"""
 filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 1) =
     processor(
         (results, state) -> (; results..., comptime = time() - results.comptime),

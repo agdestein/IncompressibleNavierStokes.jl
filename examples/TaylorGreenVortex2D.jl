@@ -28,7 +28,7 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
         x = ntuple(α -> LinRange(lims..., n + 1), D)
         setup = Setup(x...; Re, ArrayType)
         psolver = SpectralPressureSolver(setup)
-        u = create_initial_conditions(
+        u₀ = create_initial_conditions(
             setup,
             (dim, x...) -> uref(dim, x..., tlims[1]),
             tlims[1];

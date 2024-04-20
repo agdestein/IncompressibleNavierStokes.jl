@@ -5,6 +5,7 @@
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 
 using IncompressibleNavierStokes
+using NeuralClosure
 using Literate
 using Documenter
 using DocumenterCitations
@@ -44,7 +45,7 @@ for e ∈ examples
 end
 
 makedocs(;
-    modules = [IncompressibleNavierStokes],
+    modules = [IncompressibleNavierStokes,  NeuralClosure],
     plugins = [bib],
     authors = "Syver Døving Agdestein, Benjamin Sanderse, and contributors",
     repo = "https://github.com/agdestein/IncompressibleNavierStokes.jl/blob/{commit}{path}#{line}",
