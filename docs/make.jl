@@ -1,17 +1,16 @@
 # Load environments
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 
-if haskey(ENV, "GithubActions")
-    @info "" Threads.nthreads()
-    using Pkg
-    cd(@__DIR__)
-    Pkg.activate(".")
-    Pkg.develop([
-        PackageSpec(; path = ".."),
-        PackageSpec(; path = "../libs/NeuralClosure"),
-    ])
-    Pkg.instantiate()
-end
+@info "" Threads.nthreads()
+
+using Pkg
+cd(@__DIR__)
+Pkg.activate(".")
+Pkg.develop([
+    PackageSpec(; path = ".."),
+    PackageSpec(; path = "../libs/NeuralClosure"),
+])
+Pkg.instantiate()
 
 using IncompressibleNavierStokes
 using NeuralClosure
