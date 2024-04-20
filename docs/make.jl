@@ -6,7 +6,10 @@ if haskey(ENV, "GithubActions")
     using Pkg
     cd(@__DIR__)
     Pkg.activate(".")
-    pkg"dev .. ../libs/NeuralClosure"
+    Pkg.develop([
+        PackageSpec(; path = ".."),
+        PackageSpec(; path = "../libs/NeuralClosure"),
+    ])
     Pkg.instantiate()
 end
 
