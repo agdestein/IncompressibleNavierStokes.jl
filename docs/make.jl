@@ -1,9 +1,14 @@
-# Check number of threads aviailable on GitHub Actions
-@info "" Threads.nthreads()
-
 # Load environments
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
-push!(LOAD_PATH, joinpath(@__DIR__, "..", "libs", "NeuralClosure"))
+
+if haskey(ENV, "GithubActions")
+    @info "" Threads.nthreads()
+    using Pkg
+    cd(@__DIR__)
+    Pkg.activate(".")
+    pkg"dev .. ../libs/NeuralClosure"
+    Pkg.instantiate()
+end
 
 using IncompressibleNavierStokes
 using NeuralClosure
