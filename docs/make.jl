@@ -1,8 +1,6 @@
-# Load environments
-push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
-
 @info "" Threads.nthreads()
 
+# Load environments
 using Pkg
 cd(@__DIR__)
 Pkg.activate(".")
@@ -10,6 +8,7 @@ Pkg.develop([
     PackageSpec(; path = ".."),
     PackageSpec(; path = "../libs/NeuralClosure"),
 ])
+push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 Pkg.instantiate()
 
 using IncompressibleNavierStokes
