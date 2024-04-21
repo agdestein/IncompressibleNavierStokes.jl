@@ -4,11 +4,7 @@ Utility functions for scripts.
 module PaperDC
 
 using IncompressibleNavierStokes
-using IncompressibleNavierStokes:
-    momentum!,
-    divergence!,
-    project!,
-    apply_bc_u!
+using IncompressibleNavierStokes: momentum!, divergence!, project!, apply_bc_u!
 using Observables
 using LinearAlgebra
 

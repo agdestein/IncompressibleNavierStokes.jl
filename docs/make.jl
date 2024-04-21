@@ -58,7 +58,7 @@ for e ∈ examples
 end
 
 makedocs(;
-    modules = [IncompressibleNavierStokes,  NeuralClosure],
+    modules = [IncompressibleNavierStokes, NeuralClosure],
     plugins = [bib],
     authors = "Syver Døving Agdestein, Benjamin Sanderse, and contributors",
     repo = "https://github.com/agdestein/IncompressibleNavierStokes.jl/blob/{commit}{path}#{line}",
