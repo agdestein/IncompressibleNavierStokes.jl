@@ -16,21 +16,21 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
         @info &quot;Computing error for n = $n&quot;
         x = ntuple(α -&gt; LinRange(lims..., n + 1), D)
         setup = Setup(x...; Re, ArrayType)
-        pressure_solver = SpectralPressureSolver(setup)
-        u₀, p₀ = create_initial_conditions(
+        psolver = SpectralPressureSolver(setup)
+        u₀ = create_initial_conditions(
             setup,
             (dim, x...) -&gt; uref(dim, x..., tlims[1]),
             tlims[1];
-            pressure_solver,
+            psolver,
         )
-        ut, pt = create_initial_conditions(
+        ut = create_initial_conditions(
             setup,
             (dim, x...) -&gt; uref(dim, x..., tlims[2]),
             tlims[2];
-            pressure_solver,
-            project = false,
+            psolver,
+            doproject = false,
         )
-        (; u, p, t), outputs = solve_unsteady(setup, u₀, p₀, tlims; Δt, pressure_solver)
+        (; u, t), outputs = solve_unsteady(setup, u₀, tlims; Δt, psolver)
         (; Ip) = setup.grid
         a, b = T(0), T(0)
         for α = 1:D
@@ -54,12 +54,12 @@ e = compute_convergence(;
 )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">8-element Vector{Float64}:
  0.4242656052086717
  0.000378932838635171
- 0.00010072266508330096
- 2.5570665390645768e-5
- 6.417292500662509e-6
- 1.6058662108836368e-6
- 4.015630574206238e-7
- 1.0039679671648709e-7</code></pre><p>Plot convergence</p><pre><code class="language-julia hljs">fig = Figure()
+ 0.00010072266508315149
+ 2.5570665390702414e-5
+ 6.41729250068004e-6
+ 1.605866210885914e-6
+ 4.015630574033826e-7
+ 1.0039679672413785e-7</code></pre><p>Plot convergence</p><pre><code class="language-julia hljs">fig = Figure()
 ax = Axis(
     fig[1, 1];
     xscale = log10,
@@ -71,4 +71,4 @@ ax = Axis(
 scatterlines!(ax, nlist, e; label = &quot;Data&quot;)
 lines!(ax, collect(extrema(nlist)), n -&gt; n^-2.0; linestyle = :dash, label = &quot;n^-2&quot;)
 axislegend(ax)
-fig</code></pre><img src="af9d29a7.png" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../LidDrivenCavity2D/">« Tutorial: Lid-Driven Cavity (2D)</a><a class="docs-footer-nextpage" href="../Actuator2D/">Unsteady inflow: Actuator (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.0 on <span class="colophon-date" title="Friday 1 December 2023 19:25">Friday 1 December 2023</span>. Using Julia version 1.9.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+fig</code></pre><img src="38594f96.png" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../LidDrivenCavity2D/">« Tutorial: Lid-Driven Cavity (2D)</a><a class="docs-footer-nextpage" href="../Actuator2D/">Unsteady inflow: Actuator (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.0 on <span class="colophon-date" title="Sunday 21 April 2024 08:59">Sunday 21 April 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
