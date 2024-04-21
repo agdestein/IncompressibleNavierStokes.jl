@@ -73,7 +73,7 @@ u₀ = create_initial_conditions(setup, (dim, x, y, z) -> zero(x))
 # We may visualize or export the computed fields `(V, p)`
 
 # Export to VTK
-save_vtk(setup, u, p, "$output/solution")
+save_vtk(setup, u, t, "$output/solution")
 
 # Energy history
 outputs.ehist

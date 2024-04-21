@@ -77,4 +77,4 @@ outputs.ehist
 outputs.espec
 
 # Export to VTK
-save_vtk(setup, u, p, "$output/solution")
+save_vtk(setup, u, t, "$output/solution")

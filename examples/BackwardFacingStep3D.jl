@@ -87,7 +87,7 @@ state, outputs = solve_unsteady(
 # We may visualize or export the computed fields
 
 # Export to VTK
-save_vtk(setup, state.u, state.p, "$output/solution")
+save_vtk(setup, state.u, state.t, "$output/solution")
 
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)

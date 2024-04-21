@@ -104,4 +104,4 @@ u₀ = create_initial_conditions(setup, (dim, x, y, z) -> dim() == 1 ? one(x) : 
 outputs.rtp
 
 # Export to VTK
-save_vtk(setup, u, p, "$output/solution")
+save_vtk(setup, u, t, "$output/solution")
