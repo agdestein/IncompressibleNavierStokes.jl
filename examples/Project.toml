@@ -1,3 +1,8 @@
+name = "Examples"
+uuid = "318dbb63-4243-420f-99f2-d56058123f9d"
+authors = ["Syver Døving Agdestein <syverda@gmail.com>"]
+version = "0.1.0"
+
 [deps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"

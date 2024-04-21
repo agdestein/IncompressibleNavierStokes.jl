@@ -1,15 +1,21 @@
+# Show number of threads on GitHub Actions
 @info "" Threads.nthreads()
 
-# Load environments
-using Pkg
+# Make paths relative to this file
 cd(@__DIR__)
+
+# Build docs environment
+using Pkg
 Pkg.activate(".")
 Pkg.develop([
     PackageSpec(; path = ".."),
     PackageSpec(; path = "../libs/NeuralClosure"),
+    PackageSpec(; path = "../examples"),
 ])
-push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 Pkg.instantiate()
+
+# Get access to example dependencies
+push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 
 using IncompressibleNavierStokes
 using NeuralClosure
