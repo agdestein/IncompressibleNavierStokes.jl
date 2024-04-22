@@ -951,9 +951,9 @@ function tensorbasis!(B, V, u, setup)
         R = (∇u - ∇u') / 2
         B[1][I] = idtensor(u, I)
         B[2][I] = S
-        B[3][I] = S * S
-        B[4][I] = R * R
-        B[5][I] = S * R - R * S
+        B[3][I] = S * R - R * S
+        B[4][I] = S * S
+        B[5][I] = R * R
         B[6][I] = S * S * R - R * S * S
         B[7][I] = S * R * R + R * R * S
         B[8][I] = R * S * R * R - R * R * S * R
@@ -981,8 +981,8 @@ function tensorbasis(u, setup)
     T = eltype(u[1])
     D = setup.grid.dimension()
     tensorbasis!(
-        ntuple(k -> similar(u[1], SMatrix{D,D,T,D * D}, setup.grid.N), 11),
-        ntuple(k -> similar(u[1], setup.grid.N), 5),
+        ntuple(k -> similar(u[1], SMatrix{D,D,T,D * D}, setup.grid.N), D == 2 ? 3 : 11),
+        ntuple(k -> similar(u[1], setup.grid.N), D == 2 ? 2 : 5),
         u,
         setup,
     )

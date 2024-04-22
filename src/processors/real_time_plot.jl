@@ -116,6 +116,12 @@ function fieldplot(
         F = zero.(u)
         div = zero(u[1])
         p = zero(u[1])
+    elseif fieldname == :V1
+        B, V = tensorbasis(u, setup)
+        V[1]
+    elseif fieldname == :V2
+        B, V = tensorbasis(u, setup)
+        V[2]
     end
     _f = Array(_f)[Ip]
     field = lift(state) do (; u, t)
@@ -134,6 +140,12 @@ function fieldplot(
             get_streamfunction!(setup, ψ, u, t)
         elseif fieldname == :pressure
             pressure!(p, u, t, setup; psolver, F, div)
+        elseif fieldname == :V1
+            tensorbasis!(B, V, u, setup)
+            V[1]
+        elseif fieldname == :V2
+            tensorbasis!(B, V, u, setup)
+            -V[2]
         end
         # Array(f)[Ip]
         copyto!(_f, view(f, Ip))
@@ -238,6 +250,12 @@ function fieldplot(
         Q = similar(u[1])
     elseif fieldname == :eig2field
         λ = similar(u[1])
+    elseif fieldname in union(Symbol.(["B$i" for i in 1:11]), Symbol.(["V$i" for i in 1:5]))
+        sym = string(fieldname)[1]
+        sym = sym == 'B' ? 1 : 2
+        idx = parse(Int, string(fieldname)[2:end])
+        tb = tensorbasis(u, setup)
+        tb[sym][idx]
     else
         error("Unknown fieldname")
     end
@@ -269,6 +287,9 @@ function fieldplot(
             λin = view(λ, Ip)
             @. λin .= log(max(logtol, -λin))
             λ
+        elseif fieldname in union(Symbol.(["B$i" for i in 1:11]), Symbol.(["V$i" for i in 1:5]))
+            tensorbasis!(tb..., u, setup)
+            tb[sym][idx]
         end
         Array(f)[Ip]
     end
