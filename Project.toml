@@ -25,7 +25,7 @@ WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 [compat]
 Adapt = "3, 4"
 CUDA = "5"
-CUDSS = "0.1"
+CUDSS = "0.2"
 FFTW = "1"
 IterativeSolvers = "0.9"
 KernelAbstractions = "0.9"
