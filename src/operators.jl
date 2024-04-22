@@ -930,8 +930,20 @@ Note that `B[1]` corresponds to ``T_0`` in the paper, and `V` to ``I``.
 """
 function tensorbasis!(B, V, u, setup)
     (; grid, workgroupsize) = setup
-    (; Np, Ip, Δ, Δu) = grid
-    @kernel function basis!(B, V, u, I0)
+    (; Np, Ip, Δ, Δu, dimension) = grid
+    @kernel function basis!(::Dimension{2}, B, V, u, I0)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        ∇u = ∇(u, I, Δ, Δu)
+        S = (∇u + ∇u') / 2
+        R = (∇u - ∇u') / 2
+        B[1][I] = idtensor(u, I)
+        B[2][I] = S
+        B[3][I] = S * R - R * S
+        V[1][I] = tr(S * S)
+        V[2][I] = tr(R * R)
+    end
+    @kernel function basis!(::Dimension{3}, B, V, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
         ∇u = ∇(u, I, Δ, Δu)
@@ -956,7 +968,7 @@ function tensorbasis!(B, V, u, setup)
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    basis!(get_backend(u[1]), workgroupsize)(B, V, u, I0; ndrange = Np)
+    basis!(get_backend(u[1]), workgroupsize)(dimension, B, V, u, I0; ndrange = Np)
     B, V
 end
 
