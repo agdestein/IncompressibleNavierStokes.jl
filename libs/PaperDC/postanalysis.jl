@@ -1,7 +1,10 @@
-# # Train closure model
+# # A-posteriori analysis: Large Eddy Simulation (2D)
 #
-# Here, we consider a periodic box ``[0, 1]^2``. It is discretized with a
-# uniform Cartesian grid with square cells.
+# Generate filtered DNS data, train closure model, compare filters, closure
+# models and projection orders.
+# 
+# The data is saved and can be loaded in a subesequent sesssion.
+# The CNN parameters are also saved.
 
 using Adapt
 using GLMakie
@@ -11,15 +14,17 @@ using JLD2
 using LaTeXStrings
 using LinearAlgebra
 using Lux
+using NeuralClosure
 using NNlib
 using Optimisers
 using Random
 using SparseArrays
 using FFTW
 
-# palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])
+# Color palette for consistent theme throughout paper
 palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])
 
+# Encode projection order ("close first, then project" etc)
 getorder(i) =
     if i == 1
         :first
@@ -31,34 +36,27 @@ getorder(i) =
         error("Unknown order: $i")
     end
 
-GLMakie.activate!()
-
-set_theme!(; GLMakie = (; scalefactor = 1.5))
-
-plotdir = "../SupervisedClosure/figures"
-# outdir = "output/postanalysis"
-outdir = "output/divfree"
+# Choose where to put output
+plotdir = "output/postanalysis/plots"
+outdir = "output/postanalysis"
+ispath(plotdir) || mkpath(plotdir)
 ispath(outdir) || mkpath(outdir)
 
 # Random number generator
 rng = Random.default_rng()
 Random.seed!(rng, 12345)
 
-# Floating point precision
-T = Float64
-
-# Array type
+# For running on CPU.
+# Consider reducing the sizes of DNS, LES, and CNN layers if
+# you want to test run on a laptop.
+T = Float32
 ArrayType = Array
 device = identity
 clean() = nothing
-## using CUDA; ArrayType = CuArray
-## using AMDGPU; ArrayType = ROCArray
-## using oneAPI; ArrayType = oneArray
-## using Metal; ArrayType = MtlArray
 
+# For running on a CUDA compatible GPU
 using LuxCUDA
 using CUDA;
-# T = Float64;
 T = Float32;
 ArrayType = CuArray;
 CUDA.allowscalar(false);
@@ -73,8 +71,6 @@ get_params(nlesscalar) = (;
     tsim = T(0.5),
     Δt = T(5e-5),
     nles = map(n -> (n, n), nlesscalar),
-    # ndns = (n -> (n, n))(1024),
-    # ndns = (n -> (n, n))(2048),
     ndns = (n -> (n, n))(4096),
     filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
@@ -88,15 +84,12 @@ get_params(nlesscalar) = (;
     ),
 )
 
+# Get parameters for multiple LES resolutions
 params_train = (; get_params([64, 128, 256])..., tsim = T(0.5), savefreq = 10);
 params_valid = (; get_params([64, 128, 256])..., tsim = T(0.1), savefreq = 40);
 params_test = (; get_params([64, 128, 256, 512, 1024])..., tsim = T(0.1), savefreq = 10);
 
-# params_train = (; get_params([64, 128, 256, 512])..., tsim = T(0.5), savefreq = 10);
-# params_valid = (; get_params([64, 128, 256, 512])..., tsim = T(0.1), savefreq = 40);
-# params_test = (; get_params([64, 128, 256, 512])..., tsim = T(0.1), savefreq = 10);
-
-# Create LES data from DNS
+# Create filtered DNS data
 data_train = [create_les_data(; params_train...) for _ = 1:5];
 data_valid = [create_les_data(; params_valid...) for _ = 1:1];
 data_test = create_les_data(; params_test...);
@@ -111,20 +104,14 @@ data_train = load("$outdir/data_train.jld2", "data_train");
 data_valid = load("$outdir/data_valid.jld2", "data_valid");
 data_test = load("$outdir/data_test.jld2", "data_test");
 
+# Computational time
 data_train[5].comptime
 data_valid[1].comptime
 data_test.comptime
-
 map(d -> d.comptime, data_train)
-
 sum(d -> d.comptime, data_train) / 60
-
 data_test.comptime / 60
-
 (sum(d -> d.comptime, data_train) + sum(d -> d.comptime, data_valid) + data_test.comptime)
-
-data_train[1].data[1].u[1][1]
-data_test.data[6].u[1][1]
 
 # Build LES setup and assemble operators
 getsetups(params) = [

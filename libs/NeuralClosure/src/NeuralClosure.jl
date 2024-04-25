@@ -6,9 +6,10 @@ module NeuralClosure
 using CUDA
 using ComponentArrays: ComponentArray
 using IncompressibleNavierStokes
-using IncompressibleNavierStokes: Dimension
+using IncompressibleNavierStokes: Dimension, momentum!, apply_bc_u!, project!
 using Lux
 using NNlib
+using Observables
 using Random
 using Tullio
 using Zygote
