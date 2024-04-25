@@ -55,11 +55,13 @@ struct DirectPressureSolver{T,S,F,A} <: AbstractPressureSolver{T}
             # T = eltype(x[1])
             T = Float64
             backend = get_backend(x[1])
-            f = zeros(T, prod(Np) + 1)
-            p = zeros(T, prod(Np) + 1)
             L = laplacian_mat(setup)
             if any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
+                f = zeros(T, prod(Np))
+                p = zeros(T, prod(Np))
             else
+                f = zeros(T, prod(Np) + 1)
+                p = zeros(T, prod(Np) + 1)
                 e = ones(T, size(L, 2))
                 L = [L e; e' 0]
             end

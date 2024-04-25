@@ -28,7 +28,8 @@ function poisson! end
 
 function poisson!(solver::DirectPressureSolver, p, f)
     (; setup, fact) = solver
-    (; Ip) = setup.grid
+    (; grid, boundary_conditions) = setup
+    (; Ip) = grid
     T = eltype(p)
     # solver.f .= view(view(f, Ip), :)
     # copyto!(solver.f, view(view(f, Ip), :))
@@ -48,9 +49,16 @@ function poisson!(solver::DirectPressureSolver, p, f)
         mul!(a, F.Q, b)
         copyto!(pp, view(a, 1:length(a)-1))
     else
-        copyto!(view(solver.f, 1:length(solver.f)-1), Array(view(view(f, Ip), :)))
+        if any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
+            # No extra DOF
+            viewrange = (:)
+        else
+            # With extra DOF
+            viewrange = 1:length(solver.p)-1
+        end
+        copyto!(view(solver.f, viewrange), Array(view(view(f, Ip), :)))
         solver.p .= fact \ solver.f
-        copyto!(pp, T.(view(solver.p, 1:length(solver.p)-1)))
+        copyto!(pp, T.(view(solver.p, viewrange)))
     end
     # @infiltrate
     # ldiv!(solver.p, fact, solver.f)
@@ -63,10 +71,17 @@ function poisson!(solver::CUDSSPressureSolver, p, f)
     (; setup) = solver
     (; Ip) = setup.grid
     T = eltype(p)
+    if any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
+        # No extra DOF
+        viewrange = (:)
+    else
+        # With extra DOF
+        viewrange = 1:length(solver.p)-1
+    end
     pp = view(view(p, Ip), :)
-    copyto!(view(solver.f, 1:length(solver.f)-1), view(view(f, Ip), :))
+    copyto!(view(solver.f, viewrange), view(view(f, Ip), :))
     cudss("solve", solver.solver, solver.p, solver.f)
-    copyto!(pp, view(solver.p, 1:length(solver.p)-1))
+    copyto!(pp, view(solver.p, viewrange))
     p
 end
 
