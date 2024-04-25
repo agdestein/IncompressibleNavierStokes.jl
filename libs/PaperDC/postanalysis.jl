@@ -106,12 +106,8 @@ get_params(nlesscalar) = (;
     filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
     PSolver = SpectralPressureSolver,
-    icfunc = (setup, psolver) -> random_field(
-        setup,
-        zero(eltype(setup.grid.x[1]));
-        kp = 20,
-        psolver,
-    ),
+    icfunc = (setup, psolver) ->
+        random_field(setup, zero(eltype(setup.grid.x[1])); kp = 20, psolver),
     rng,
 )
 
@@ -274,16 +270,8 @@ for ifil = 1:2, ig = 4:4
         displayref = true,
         display_each_iteration = false, # Set to `true` if using CairoMakie
     )
-    (; opt, θ, callbackstate) = train(
-        [d],
-        loss,
-        opt,
-        θ;
-        niter = 10_000,
-        ncallback = 20,
-        callbackstate,
-        callback,
-    )
+    (; opt, θ, callbackstate) =
+        train([d], loss, opt, θ; niter = 10_000, ncallback = 20, callbackstate, callback)
     θ = callbackstate.θmin # Use best θ instead of last θ
     prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
     jldsave("$savepath/prior_ifilter$(ifil)_igrid$(ig).jld2"; prior)
