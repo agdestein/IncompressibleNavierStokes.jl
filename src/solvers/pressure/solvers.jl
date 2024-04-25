@@ -16,7 +16,7 @@ struct DirectPressureSolver{T,S,F,A} <: AbstractPressureSolver{T}
     f::A
     p::A
     function DirectPressureSolver(setup)
-        (; grid, ArrayType) = setup
+        (; grid, boundary_conditions, ArrayType) = setup
         (; x, Np) = grid
         if false #ArrayType == CuArray
             # T = eltype(x[1])
