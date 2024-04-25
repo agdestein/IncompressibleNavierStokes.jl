@@ -91,17 +91,21 @@ filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 
 
 """
     create_les_data(
-        T;
         D = 2,
-        Re = T(2_000),
-        lims = (T(0), T(1)),
-        nles = [64],
-        ndns = 256,
+        Re = 2e3,
+        lims = ntuple(α -> (typeof(Re)(0), typeof(Re)(1)), D),
+        nles = [ntuple(α -> 64, D)],
+        ndns = ntuple(α -> 256, D),
         filters = (FaceAverage(),),
-        tburn = T(0.1),
-        tsim = T(0.1),
-        Δt = T(1e-4),
+        tburn = typeof(Re)(0.1),
+        tsim = typeof(Re)(0.1),
+        Δt = typeof(Re)(1e-4),
+        PSolver = SpectralPressureSolver,
+        savefreq = 1,
         ArrayType = Array,
+        icfunc = (setup, psolver) -> random_field(setup, typeof(Re)(0); psolver),
+        rng,
+        kwargs...,
     )
 
 Create filtered DNS data.
@@ -119,7 +123,8 @@ function create_les_data(;
     PSolver = SpectralPressureSolver,
     savefreq = 1,
     ArrayType = Array,
-    icfunc = (setup, psolver) -> random_field(setup, typeof(Re)(0); psolver),
+    icfunc = (setup, psolver, rng) -> random_field(setup, typeof(Re)(0); psolver, rng),
+    rng,
     kwargs...,
 )
     T = typeof(Re)
@@ -165,7 +170,7 @@ function create_les_data(;
     @info "Generating $datasize Mb of filtered DNS data"
 
     # Initial conditions
-    u₀ = icfunc(dns, psolver)
+    u₀ = icfunc(dns, psolver, rng)
 
     any(u -> any(isnan, u), u₀) && @warn "Initial conditions contain NaNs"
 

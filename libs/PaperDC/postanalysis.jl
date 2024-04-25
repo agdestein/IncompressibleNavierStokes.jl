@@ -42,9 +42,29 @@ outdir = "output/postanalysis"
 ispath(plotdir) || mkpath(plotdir)
 ispath(outdir) || mkpath(outdir)
 
-# Random number generator
-rng = Random.default_rng()
-Random.seed!(rng, 12345)
+# Random number generator seeds ################################################
+#
+# Use a new RNG with deterministic seed for each code "section"
+# so that e.g. training batch selection does not depend on whether we
+# generated fresh filtered DNS data or loaded existing one (the
+# generation of which would change the state of a global RNG).
+#
+# Note: Using `rng = Random.default_rng()` twice seems to point to the
+# same RNG, and mutating one also mutates the other.
+# `rng = Random.Xoshiro()` creates an independent copy each time
+# (we could also do `rng = deepcopy(Random.default_rng())`).
+#
+# We define all the seeds here so that we don't accidentally type the same seed
+# twice.
+
+seeds = (;
+    dns = 123, # Initial conditions
+    θ₀ = 234, # Initial CNN parameters
+    prior = 345, # A-priori training batch selection
+    post = 456, # A-posteriori training batch selection
+)
+
+# Hardware selection ########################################################
 
 # For running on CPU.
 # Consider reducing the sizes of DNS, LES, and CNN layers if
@@ -62,6 +82,17 @@ ArrayType = CuArray;
 CUDA.allowscalar(false);
 device = x -> adapt(CuArray, x)
 clean() = (GC.gc(); CUDA.reclaim())
+
+# Data generation ###########################################################
+#
+# Create filtered DNS data for training, validation, and testing.
+
+# Random number generator for initial conditions.
+# Important: Created and seeded first, then shared for all initial conditions.
+# After each initial condition generation, it is mutated and creates different
+# IC for the next iteration.
+rng = Random.Xoshiro()
+Random.seed!(rng, seeds.dns)
 
 # Parameters
 get_params(nlesscalar) = (;
@@ -81,6 +112,7 @@ get_params(nlesscalar) = (;
         kp = 20,
         psolver,
     ),
+    rng,
 )
 
 # Get parameters for multiple LES resolutions
@@ -175,17 +207,25 @@ let
     end
 end
 
-# CNN architecture 1
-mname = "balzac"
-closure, θ₀ = cnn(;
-    setup = setups_train[1],
-    radii = [2, 2, 2, 2],
-    channels = [20, 20, 20, params_train.D],
-    activations = [leakyrelu, leakyrelu, leakyrelu, identity],
-    use_bias = [true, true, true, false],
-    rng,
-);
-closure.chain
+# CNN closure model ##########################################################
+
+# Random number generator for initial CNN parameters.
+# All training sessions will start from the same θ₀
+# for a fair comparison.
+rng = Random.Xoshiro()
+Random.seed!(rng, seeds.θ₀)
+
+# # CNN architecture 1
+# mname = "balzac"
+# closure, θ₀ = cnn(;
+#     setup = setups_train[1],
+#     radii = [2, 2, 2, 2],
+#     channels = [20, 20, 20, params_train.D],
+#     activations = [leakyrelu, leakyrelu, leakyrelu, identity],
+#     use_bias = [true, true, true, false],
+#     rng,
+# );
+# closure.chain
 
 # CNN architecture 2
 mname = "rimbaud"
@@ -214,15 +254,19 @@ closure(device(io_train[1, 1].u[:, :, :, 1:50]), device(θ₀));
 # Save parameters to disk after each run.
 # Plot training progress (for a validation data batch).
 
+# Random number generator for batch selection
+rng = Random.Xoshiro()
+Random.seed!(rng, seeds.prior)
+
 for ifil = 1:2, ig = 4:4
     clean()
     starttime = time()
     println("ig = $ig, ifil = $ifil")
-    d = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device)
+    d = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device, rng)
     θ = T(1.0e0) * device(θ₀)
     loss = create_loss_prior(mean_squared_error, closure)
     opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
-    it = rand(1:size(io_valid[ig, ifil].u, 4), 50)
+    it = rand(rng, 1:size(io_valid[ig, ifil].u, 4), 50)
     validset = device(map(v -> v[:, :, :, it], io_valid[ig, ifil]))
     (; callbackstate, callback) = create_callback(
         create_relerr_prior(closure, validset...);
@@ -274,6 +318,10 @@ map(p -> p.comptime, prior) |> sum |> x -> x / 3600 # Hours
 # The time stepper `RKProject` allows for choosing when to project.
 
 let
+    # Random number generator for batch selection
+    rng = Random.Xoshiro()
+    Random.seed!(rng, seeds.post)
+
     ngrid, nfilter = size(io_train)
     for iorder = 1:2, ifil = 1:nfilter, ig = 1:ngrid
         clean()
@@ -289,7 +337,7 @@ let
             nupdate = 2, # Time steps per loss evaluation
         )
         data = [(; u = d.data[ig, ifil].u, d.t) for d in data_train]
-        d = create_dataloader_post(data; device, nunroll = 20)
+        d = create_dataloader_post(data; device, nunroll = 20, rng)
         θ = copy(θ_cnn_prior[ig, ifil])
         opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
         it = 1:30

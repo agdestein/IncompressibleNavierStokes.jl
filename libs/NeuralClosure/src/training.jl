@@ -1,31 +1,31 @@
 """
-    createdataloader(data; nuse = 50, device = identity)
+    createdataloader(data; nuse = 50, device = identity, rng)
 
 Create dataloader that uses a batch of `batchsize` random samples from
 `data` at each evaluation.
 The batch is moved to `device`.
 """
-create_dataloader_prior(data; batchsize = 50, device = identity) = function dataloader()
+create_dataloader_prior(data; batchsize = 50, device = identity, rng) = function dataloader()
     x, y = data
     nsample = size(x)[end]
     d = ndims(x)
-    i = sort(shuffle(1:nsample)[1:batchsize])
+    i = sort(shuffle(rng, 1:nsample)[1:batchsize])
     xuse = device(Array(selectdim(x, d, i)))
     yuse = device(Array(selectdim(y, d, i)))
     xuse, yuse
 end
 
 """
-    create_dataloader_post(trajectories; nunroll = 10, device = identity)
+    create_dataloader_post(trajectories; nunroll = 10, device = identity, rng)
 
 Create trajectory dataloader.
 """
-create_dataloader_post(trajectories; nunroll = 10, device = identity) =
+create_dataloader_post(trajectories; nunroll = 10, device = identity, rng) =
     function dataloader()
         (; u, t) = rand(trajectories)
         nt = length(t)
         @assert nt ≥ nunroll
-        istart = rand(1:nt-nunroll)
+        istart = rand(rng, 1:nt-nunroll)
         it = istart:istart+nunroll
         (; u = device.(u[it]), t = t[it])
     end
