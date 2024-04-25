@@ -278,8 +278,7 @@ closure(device(io_train[1, 1].u[:, :, :, 1:50]), device(θ₀));
 
 # A-priori training ###########################################################
 
-ispath("$savepath/priortraining") || mkpath("$savepath/priortraining")
-for ifil = 1:1, ig = 4:4
+for ifil = 1:2, ig = 4:4
     starttime = time()
     println("ig = $ig, ifil = $ifil")
     d = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device)
@@ -307,14 +306,14 @@ for ifil = 1:1, ig = 4:4
     )
     θ = callbackstate.θmin # Use best θ instead of last θ
     prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
-    jldsave("$savepath/priortraining/ifilter$(ifil)_igrid$(ig).jld2"; prior)
+    jldsave("$savepath/prior_ifilter$(ifil)_igrid$(ig).jld2"; prior)
 end
 clean()
 
 # Load trained parameters
 prior = map(CartesianIndices(size(io_train))) do I
     ig, ifil = I.I
-    name = "$savepath/priortraining/ifilter$(ifil)_igrid$(ig).jld2"
+    name = "$path/prior_ifilter$(ifil)_igrid$(ig).jld2"
     load(name)["prior"]
 end;
 θ_cnn_prior = [copyto!(device(θ₀), p.θ) for p in prior];
@@ -343,17 +342,13 @@ let
         loss = IncompressibleNavierStokes.create_loss_post(;
             setup,
             psolver,
+            method = RKProject(RK44(; T), getorder(iorder)),
             closure,
             nupdate = 2,
-            projectorder = getorder(iorder),
         )
         data = [(; u = d.data[ig, ifil].u, d.t) for d in data_train]
         d = create_dataloader_post(data; device, nunroll = 20)
-        # θ = T(1e-1) * copy(θ_cnn_prior[ig, ifil])
         θ = copy(θ_cnn_prior[ig, ifil])
-        # θ = copy(θ_cnn_post)
-        # θ = copy(θ_cnn_post[ig, ifil, iorder])
-        # θ = device(θ₀)
         opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
         it = 1:30
         data = data_valid[1]
@@ -363,8 +358,8 @@ let
                 data,
                 setup,
                 psolver,
+                method = RKProject(RK44(; T), getorder(iorder)),
                 closure_model = wrappedclosure(closure, setup),
-                projectorder = getorder(iorder),
                 nupdate = 2,
             );
             θ,
@@ -395,7 +390,7 @@ map(p -> p.comptime, post) |> sum
 map(p -> p.comptime, post) |> sum |> x -> x / 60
 map(p -> p.comptime, post) |> sum |> x -> x / 3600
 
-# Train Smagorinsky model with Lpost (grid search)
+# Train Smagorinsky model with a-posteriori error grid search
 smag = map(CartesianIndices((size(io_train, 2), 2))) do I
     starttime = time()
     ifil, iorder = I.I
@@ -418,8 +413,8 @@ smag = map(CartesianIndices((size(io_train, 2), 2))) do I
                 data,
                 setup,
                 psolver,
+                method = RKProject(RK44(; T), getorder(iorder)),
                 closure_model = smagorinsky_closure(setup),
-                projectorder,
                 nupdate,
             )
             e += err(θ)
@@ -448,8 +443,6 @@ smag = load("$outdir/smag.jld2")["smag"];
 map(s -> s.comptime, smag)
 map(s -> s.comptime, smag) |> sum
 
-# lines(LinRange(T(0), T(1), 100), e_smag)
-
 # Compute a-priori errors ###################################################
 
 eprior = let
@@ -476,19 +469,17 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
 
 # Compute posterior errors ####################################################
 
-e_nm, e_smag, e_cnn, e_cnn_post = let
+(; e_nm, e_smag, e_cnn, e_cnn_post) = let
     e_nm = zeros(T, size(data_test.data)...)
     e_smag = zeros(T, size(data_test.data)..., 2)
     e_cnn = zeros(T, size(data_test.data)..., 2)
     e_cnn_post = zeros(T, size(data_test.data)..., 2)
     for iorder = 1:2, ifil = 1:2, ig = 1:size(data_test.data, 1)
-        # (ig, ifil, iorder) == (2, 2, 2) || continue
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         projectorder = getorder(iorder)
         setup = setups_test[ig]
         psolver = SpectralPressureSolver(setup)
         data = (; u = device.(data_test.data[ig, ifil].u), t = data_test.t)
-        # nupdate = ig > 3 ? 4 : 2
         nupdate = 2
         # No model
         # Only for closurefirst, since projectfirst is the same
@@ -501,8 +492,8 @@ e_nm, e_smag, e_cnn, e_cnn_post = let
             data,
             setup,
             psolver,
+            method = RKProject(RK44(; T), getorder(iorder)),
             closure_model = smagorinsky_closure(setup),
-            projectorder,
             nupdate,
         )
         e_smag[ig, ifil, iorder] = err(θ_smag[ifil, iorder])
@@ -513,22 +504,17 @@ e_nm, e_smag, e_cnn, e_cnn_post = let
                 data,
                 setup,
                 psolver,
+                method = RKProject(RK44(; T), getorder(iorder)),
                 closure_model = wrappedclosure(closure, setup),
-                projectorder,
                 nupdate,
-                # nupdate = 50,
             )
             e_cnn[ig, ifil, iorder] = err(θ_cnn_prior[ig, ifil])
             e_cnn_post[ig, ifil, iorder] = err(θ_cnn_post[ig, ifil, iorder])
         end
     end
-    e_nm, e_smag, e_cnn, e_cnn_post
+    (; e_nm, e_smag, e_cnn, e_cnn_post)
 end
 clean()
-e_nm
-e_smag
-e_cnn
-e_cnn_post
 
 round.(
     [e_nm[:] reshape(e_smag, :, 2) reshape(e_cnn, :, 2) reshape(e_cnn_post, :, 2)][
@@ -546,31 +532,19 @@ GLMakie.activate!()
 
 # Plot a-priori errors ########################################################
 
-fig = with_theme(;
-    # linewidth = 5,
-    # markersize = 10,
-    # markersize = 20,
-    # fontsize = 20,
-    palette,
-) do
+fig = with_theme(; palette) do
     nles = [n[1] for n in params_test.nles][1:3]
     ifil = 1
     fig = Figure(; size = (500, 400))
     ax = Axis(
         fig[1, 1];
         xscale = log10,
-        # yscale = log10,
         xticks = nles,
         xlabel = "Resolution",
-        # title = "Relative a-priori error",
         title = "Relative a-priori error $(ifil == 1 ? " (FA)" : " (VA)")",
     )
     linestyle = :solid
-    # for ifil = 1:2
-    # linestyle = ifil == 1 ? :solid : :dash
     label = "No closure"
-    # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-    # ifil == 2 && (label = nothing)
     scatterlines!(
         nles,
         ones(T, length(nles));
@@ -579,26 +553,7 @@ fig = with_theme(;
         marker = :circle,
         label,
     )
-    # end
-    # for ifil = 1:2
-    #     linestyle = ifil == 1 ? :solid : :dash
-    #     label = "Smagorinsky"
-    #     # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-    #     ifil == 2 && (label = nothing)
-    #     scatterlines!(
-    #         nles,
-    #         eprior.smag[:, ifil, iorder];
-    #         color = Cycled(2),
-    #         linestyle,
-    #         marker = :utriangle,
-    #         label,
-    #     )
-    # end
-    # for ifil = 1:2
-    # linestyle = ifil == 1 ? :solid : :dash
     label = "CNN (Lprior)"
-    # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-    # ifil == 2 && (label = nothing)
     scatterlines!(
         nles,
         eprior.prior[:, ifil];
@@ -607,12 +562,7 @@ fig = with_theme(;
         marker = :utriangle,
         label,
     )
-    # end
-    # for ifil = 1:2
-    # linestyle = ifil == 1 ? :solid : :dash
     label = "CNN (Lpost, DIF)"
-    # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-    # ifil == 2 && (label = nothing)
     scatterlines!(
         nles,
         eprior.post[:, ifil, 1];
@@ -621,12 +571,7 @@ fig = with_theme(;
         marker = :rect,
         label,
     )
-    # end
-    # for ifil = 1:2
-    # linestyle = ifil == 1 ? :solid : :dash
     label = "CNN (Lpost, DCF)"
-    # label = label * (ifil == 1 ? " (FA)" : " (VA)")
-    # ifil == 2 && (label = nothing)
     scatterlines!(
         nles,
         eprior.post[:, ifil, 2];
@@ -635,17 +580,8 @@ fig = with_theme(;
         marker = :diamond,
         label,
     )
-    # end
-    # lines!(
-    #     collect(extrema(nles[4:end])),
-    #     n -> 2e4 * n^-2.0;
-    #     linestyle = :dash,
-    #     label = "n⁻²",
-    #     color = Cycled(1),
-    # )
     axislegend(; position = :lb)
     ylims!(ax, (T(-0.05), T(1.05)))
-    # iorder == 2 && limits!(ax, (T(60), T(1050)), (T(2e-2), T(1e1)))
     name = "$plotdir/convergence"
     ispath(name) || mkpath(name)
     save("$name/$(mname)_prior_ifilter$ifil.pdf", fig)
@@ -654,19 +590,10 @@ end
 
 # Plot a-posteriori errors ###################################################
 
-with_theme(;
-    # linewidth = 5,
-    # markersize = 10,
-    # markersize = 20,
-    # fontsize = 20,
-    palette,
-) do
+with_theme(; palette) do
     iorder = 2
-    # lesmodel = iorder == 1 ? "project-then-closure" : "closure-then-project"
-    # lesmodel = iorder == 1 ? "project-then-closure" : "closure-then-project"
     lesmodel = iorder == 1 ? "DIF" : "DCF"
     ntrain = size(data_train[1].data, 1)
-    # nles = [n[1] for n in params_test.nles]
     nles = [n[1] for n in params_test.nles][1:ntrain]
     fig = Figure(; size = (500, 400))
     ax = Axis(
@@ -675,19 +602,14 @@ with_theme(;
         yscale = log10,
         xticks = nles,
         xlabel = "Resolution",
-        # xlabel = "n",
-        # xlabel = L"\bar{n}",
-        # title = "Relative error (DNS: n = $(params_test.ndns[1]))",
         title = "Relative error ($lesmodel)",
     )
     for ifil = 1:2
         linestyle = ifil == 1 ? :solid : :dash
         label = "No closure"
-        # label = label * (ifil == 1 ? " (FA)" : " (VA)")
         ifil == 2 && (label = nothing)
         scatterlines!(
             nles,
-            # e_nm[:, ifil];
             e_nm[1:ntrain, ifil];
             color = Cycled(1),
             linestyle,
@@ -698,11 +620,9 @@ with_theme(;
     for ifil = 1:2
         linestyle = ifil == 1 ? :solid : :dash
         label = "Smagorinsky"
-        # label = label * (ifil == 1 ? " (FA)" : " (VA)")
         ifil == 2 && (label = nothing)
         scatterlines!(
             nles,
-            # e_smag[:, ifil, iorder];
             e_smag[1:ntrain, ifil, iorder];
             color = Cycled(2),
             linestyle,
@@ -713,7 +633,6 @@ with_theme(;
     for ifil = 1:2
         linestyle = ifil == 1 ? :solid : :dash
         label = "CNN (prior)"
-        # label = label * (ifil == 1 ? " (FA)" : " (VA)")
         ifil == 2 && (label = nothing)
         scatterlines!(
             nles[1:ntrain],
@@ -727,7 +646,6 @@ with_theme(;
     for ifil = 1:2
         linestyle = ifil == 1 ? :solid : :dash
         label = "CNN (post)"
-        # label = label * (ifil == 1 ? " (FA)" : " (VA)")
         ifil == 2 && (label = nothing)
         scatterlines!(
             nles[1:ntrain],
@@ -738,17 +656,8 @@ with_theme(;
             label,
         )
     end
-    # lines!(
-    #     collect(extrema(nles[4:end])),
-    #     n -> 2e4 * n^-2.0;
-    #     linestyle = :dash,
-    #     label = "n⁻²",
-    #     color = Cycled(1),
-    # )
-    # axislegend(; position = :rt)
     axislegend(; position = :lb)
     ylims!(ax, (T(0.025), T(1.00)))
-    # iorder == 2 && limits!(ax, (T(60), T(1050)), (T(2e-2), T(1e1)))
     name = "$plotdir/convergence"
     ispath(name) || mkpath(name)
     save("$name/$(mname)_iorder$iorder.pdf", fig)
@@ -772,7 +681,6 @@ kineticenergy = let
         t = data_test.t
         u₀ = data_test.data[ig, ifil].u[1] |> device
         tlims = (t[1], t[end])
-        # nupdate = 50
         nupdate = 2
         Δt = (t[2] - t[1]) / nupdate
         T = eltype(u₀[1])
@@ -844,24 +752,14 @@ kineticenergy = let
 end;
 clean();
 
-kineticenergy.ke_ref[1]
-kineticenergy.ke_nomodel[1]
-kineticenergy.ke_smag[1]
-kineticenergy.ke_cnn_prior[1]
-kineticenergy.ke_cnn_post[1]
+# Plot energy evolution ########################################################
 
 CairoMakie.activate!()
 
-# Plot energy evolution ########################################################
-
 with_theme(; palette) do
-    # t = data_test.t[2:end]
     t = data_test.t
     for iorder = 1:2, ifil = 1:2, igrid = 1:3
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
-        # reflevel = kineticenergy.ke_ref[igrid, ifil][2:end]
-        reflevel = copy(kineticenergy.ke_ref[igrid, ifil])
-        reflevel = fill!(reflevel, 1)
         lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
         nles = params_test.nles[igrid]
@@ -870,14 +768,12 @@ with_theme(; palette) do
             fig[1, 1];
             xlabel = "t",
             ylabel = "E(t)",
-            # title = "Kinetic energy: $lesmodel, $fil,  $nles",
             title = "Kinetic energy: $lesmodel, $fil",
         )
         lines!(
             ax,
             t,
-            # kineticenergy.ke_ref[igrid, ifil][2:end] ./ reflevel;
-            kineticenergy.ke_ref[igrid, ifil] ./ reflevel;
+            kineticenergy.ke_ref[igrid, ifil];
             color = Cycled(1),
             linestyle = :dash,
             label = "Reference",
@@ -885,35 +781,33 @@ with_theme(; palette) do
         lines!(
             ax,
             t,
-            kineticenergy.ke_nomodel[igrid, ifil] ./ reflevel;
+            kineticenergy.ke_nomodel[igrid, ifil];
             color = Cycled(1),
             label = "No closure",
         )
         lines!(
             ax,
             t,
-            kineticenergy.ke_smag[igrid, ifil, iorder] ./ reflevel;
+            kineticenergy.ke_smag[igrid, ifil, iorder];
             color = Cycled(2),
             label = "Smagorinsky",
         )
         lines!(
             ax,
             t,
-            kineticenergy.ke_cnn_prior[igrid, ifil, iorder] ./ reflevel;
+            kineticenergy.ke_cnn_prior[igrid, ifil, iorder];
             color = Cycled(3),
             label = "CNN (prior)",
         )
         lines!(
             ax,
             t,
-            kineticenergy.ke_cnn_post[igrid, ifil, iorder] ./ reflevel;
+            kineticenergy.ke_cnn_post[igrid, ifil, iorder];
             color = Cycled(4),
             label = "CNN (post)",
         )
         iorder == 1 && axislegend(; position = :lt)
         iorder == 2 && axislegend(; position = :lb)
-        # axislegend(; position = :lb)
-        # axislegend()
         name = "$plotdir/energy_evolution/$mname/"
         ispath(name) || mkpath(name)
         save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
@@ -937,7 +831,6 @@ divs = let
         t = data_test.t
         u₀ = data_test.data[ig, ifil].u[1] |> device
         tlims = (t[1], t[end])
-        # nupdate = 50
         nupdate = 2
         Δt = (t[2] - t[1]) / nupdate
         T = eltype(u₀[1])
@@ -970,9 +863,10 @@ divs = let
         iorder_use = iorder == 3 ? 2 : iorder
         d_nomodel[ig, ifil, iorder] =
             solve_unsteady(
-                (setup..., projectorder = getorder(iorder)),
+                setup,
                 u₀,
                 tlims;
+                method = RKProject(RK44(; T), getorder(iorder)),
                 Δt,
                 processors,
                 psolver,
@@ -981,11 +875,11 @@ divs = let
             solve_unsteady(
                 (;
                     setup...,
-                    projectorder = getorder(iorder),
                     closure_model = smagorinsky_closure(setup),
                 ),
                 u₀,
                 tlims;
+                method = RKProject(RK44(; T), getorder(iorder)),
                 Δt,
                 processors,
                 psolver,
@@ -995,11 +889,11 @@ divs = let
             solve_unsteady(
                 (;
                     setup...,
-                    projectorder = getorder(iorder),
                     closure_model = wrappedclosure(closure, setup),
                 ),
                 u₀,
                 tlims;
+                method = RKProject(RK44(; T), getorder(iorder)),
                 Δt,
                 processors,
                 psolver,
@@ -1009,11 +903,11 @@ divs = let
             solve_unsteady(
                 (;
                     setup...,
-                    projectorder = getorder(iorder),
                     closure_model = wrappedclosure(closure, setup),
                 ),
                 u₀,
                 tlims;
+                method = RKProject(RK44(; T), getorder(iorder)),
                 Δt,
                 processors,
                 psolver,
@@ -1054,7 +948,6 @@ with_theme(;
     t = data_test.t
     for islog in (true, false)
         for iorder = 1:3, ifil = 1:2, igrid = 1:3
-            # println("iorder = $iorder, igrid = $igrid")
             println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
             lesmodel = if iorder == 1
                 "DIF"
@@ -1071,10 +964,7 @@ with_theme(;
                 fig[1, 1];
                 yscale,
                 xlabel = "t",
-                # ylabel = "Dv",
-                # title = "Divergence: $lesmodel, $nles",
                 title = "Divergence: $lesmodel, $fil,  $nles",
-                # title = "Divergence: $lesmodel, $fil",
             )
             linestyle = ifil == 1 ? :solid : :dash
             lines!(
@@ -1113,15 +1003,10 @@ with_theme(;
                 color = Cycled(4),
                 label = "CNN (post)",
             )
-            # axislegend()
-            # iorder == 1 && axislegend(; position = :lt)
-            # iorder == 2 && axislegend(; position = :lb)
             iorder == 2 && ifil == 1 && axislegend(; position = :rt)
-            # axislegend()
             islog && ylims!(ax, (T(1e-6), T(1e3)))
             name = "$plotdir/divergence/$mname/$(islog ? "log" : "lin")"
             ispath(name) || mkpath(name)
-            # save("$(name)/iorder$(iorder)_igrid$(igrid).pdf", fig)
             save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
         end
     end
@@ -1158,11 +1043,11 @@ ufinal = let
             solve_unsteady(
                 (;
                     setup...,
-                    projectorder = getorder(iorder),
                     closure_model = smagorinsky_closure(setup),
                 ),
                 u₀,
                 tlims;
+                method = RKProject(RK44(; T), getorder(iorder)),
                 Δt,
                 psolver,
                 θ = θ_smag[ifil, iorder],
@@ -1171,11 +1056,11 @@ ufinal = let
             solve_unsteady(
                 (;
                     setup...,
-                    projectorder = getorder(iorder),
                     closure_model = wrappedclosure(closure, setup),
                 ),
                 u₀,
                 tlims;
+                method = RKProject(RK44(; T), getorder(iorder)),
                 Δt,
                 psolver,
                 θ = θ_cnn_prior[igrid, ifil],
@@ -1184,11 +1069,11 @@ ufinal = let
             solve_unsteady(
                 (;
                     setup...,
-                    projectorder = getorder(iorder),
                     closure_model = wrappedclosure(closure, setup),
                 ),
                 u₀,
                 tlims;
+                method = RKProject(RK44(; T), getorder(iorder)),
                 Δt,
                 psolver,
                 θ = θ_cnn_post[igrid, ifil, iorder],
@@ -1198,38 +1083,9 @@ ufinal = let
 end;
 clean();
 
-ufinal.u_ref[1][2]
-ufinal.u_cnn_prior[3, 1, 1][1]
-ufinal.u_cnn_post[3, 1, 1][1]
-
 jldsave("$savepath/ufinal.jld2"; ufinal)
 
 ufinal = load("$savepath/ufinal.jld2")["ufinal"];
-
-markers_labels = [
-    (:circle, ":circle"),
-    (:rect, ":rect"),
-    (:diamond, ":diamond"),
-    (:hexagon, ":hexagon"),
-    (:cross, ":cross"),
-    (:xcross, ":xcross"),
-    (:utriangle, ":utriangle"),
-    (:dtriangle, ":dtriangle"),
-    (:ltriangle, ":ltriangle"),
-    (:rtriangle, ":rtriangle"),
-    (:pentagon, ":pentagon"),
-    (:star4, ":star4"),
-    (:star5, ":star5"),
-    (:star6, ":star6"),
-    (:star8, ":star8"),
-    (:vline, ":vline"),
-    (:hline, ":hline"),
-    ('a', "'a'"),
-    ('B', "'B'"),
-    ('↑', "'\\uparrow'"),
-    ('😄', "'\\:smile:'"),
-    ('✈', "'\\:airplane:'"),
-]
 
 # Plot spectra ###############################################################
 
@@ -1251,14 +1107,11 @@ fig = with_theme(; palette) do
         (; Ip) = setup.grid
         (; A, κ, K) = IncompressibleNavierStokes.spectral_stuff(setup)
         specs = map(fields) do u
-            # up = interpolate_u_p(u, setup)
             up = u
             e = sum(up) do u
                 u = u[Ip]
                 uhat = fft(u)[ntuple(α -> 1:K[α], 2)...]
-                # abs2.(uhat)
                 abs2.(uhat) ./ (2 * prod(size(u))^2)
-                # abs2.(uhat) ./ size(u, 1)
             end
             e = A * reshape(e, :)
             # e = max.(e, eps(T)) # Avoid log(0)
@@ -1279,9 +1132,7 @@ fig = with_theme(; palette) do
         ax = Axis(
             fig[1, 1];
             xticks,
-            # xlabel = "k",
             xlabel = "κ",
-            # ylabel = "e(κ)",
             xscale = log10,
             yscale = log10,
             limits = (1, kmax, T(1e-8), T(1)),
@@ -1293,10 +1144,8 @@ fig = with_theme(; palette) do
         lines!(ax, κ, specs[5]; color = Cycled(4), label = "CNN (post)")
         lines!(ax, κ, specs[1]; color = Cycled(1), linestyle = :dash, label = "Reference")
         lines!(ax, krange, inertia; color = Cycled(1), label = slopelabel, linestyle = :dot)
-        # axislegend(ax; position = :lb)
         axislegend(ax; position = :cb)
         autolimits!(ax)
-        # limits!(ax, (T(0.8), T(800)), (T(1e-10), T(1)))
         ylims!(ax, (T(1e-3), T(0.35)))
         name = "$plotdir/energy_spectra/$mname"
         ispath(name) || mkpath(name)
@@ -1320,7 +1169,6 @@ with_theme(; fontsize = 25, palette) do
         Point2f(x2, y2),
         Point2f(x1, y2),
         Point2f(x1, y1),
-        # Point2f(x2, y1),
     ]
     path = "$plotdir/les_fields/$mname"
     ispath(path) || mkpath(path)
@@ -1335,8 +1183,6 @@ with_theme(; fontsize = 25, palette) do
                 (; u, t = T(0));
                 setup,
                 title,
-                # type = image,
-                # colormap = :viridis,
                 docolorbar = false,
                 size = (500, 500),
             )

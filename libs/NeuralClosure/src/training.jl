@@ -150,7 +150,6 @@ end
         psolver,
         closure_model,
         nupdate = 1,
-        projectorder = :last,
     )
 
 Create a-posteriori relative error.

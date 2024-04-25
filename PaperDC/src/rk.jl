@@ -1,15 +1,35 @@
-create_stepper(::ExplicitRungeKuttaMethod; setup, psolver, u, t, n = 0) =
-    (; setup, psolver, u, t, n)
+"""
+    RKProject(rk, projectorder)
 
-function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing, cache)
+Runge-Kutta method with different projection order.
+The Runge-Kutta method `rk` can be for example `RK44()`.
+
+- `projetorder = :first`: Project RHS before applying closure term.
+- `projetorder = :second`: Project RHS after applying closure term.
+- `projetorder = :last`: Project solution instead of RHS (same as `rk`).
+"""
+struct RKProject{T,R} <: IncompressibleNavierStokes.AbstractODEMethod{T}
+    rk::R
+    projectorder::Symbol
+    RKProject(rk, projectorder) = new{eltype(rk.A),typeof(rk)}(rk, projectorder)
+end
+
+ode_method_cache(method::RKProject, setup, u) = ode_method_cache(method.rk, setup, u)
+
+create_stepper(method::RKProject; setup, psolver, u, t, n = 0) =
+    create_stepper(method.rk; setup, psolver, u, t, n)
+
+function timestep!(method::RKProject, stepper, Δt; θ = nothing, cache)
     (; setup, psolver, u, t, n) = stepper
     (; grid, closure_model) = setup
     (; dimension, Iu) = grid
-    (; A, b, c) = method
+    (; rk, projectorder) = method
+    (; A, b, c) = rk
     (; u₀, ku, div, p) = cache
     D = dimension()
     nstage = length(b)
     m = closure_model
+    projectorder ∈ (:first, :second, :last) || error("Unknown projectorder: $projectorder")
 
     # Update current solution
     t₀ = t
@@ -20,8 +40,20 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
         apply_bc_u!(u, t, setup)
         momentum!(ku[i], u, t, setup)
 
+        # Project F first
+        if projectorder == :first
+            apply_bc_u!(ku[i], t, setup; dudt = true)
+            project!(ku[i], setup; psolver, div, p)
+        end
+
         # Add closure term
         isnothing(m) || map((k, m) -> k .+= m, ku[i], m(u, θ))
+
+        # Project F second
+        if projectorder == :second
+            apply_bc_u!(ku[i], t, setup; dudt = true)
+            project!(ku[i], setup; psolver, div, p)
+        end
 
         # Intermediate time step
         t = t₀ + c[i] * Δt
@@ -37,8 +69,10 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
 
         # Project stage u directly
         # Make velocity divergence free at time t
-        apply_bc_u!(u, t, setup)
-        project!(u, setup; psolver, div, p)
+        if projectorder == :last
+            apply_bc_u!(u, t, setup)
+            project!(u, setup; psolver, div, p)
+        end
     end
 
     # This is redundant, but Neumann BC need to have _exact_ copies
@@ -49,14 +83,16 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
     create_stepper(method; setup, psolver, u, t, n = n + 1)
 end
 
-function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
+function timestep(method::RKProject, stepper, Δt; θ = nothing)
     (; setup, psolver, u, t, n) = stepper
     (; grid, closure_model) = setup
     (; dimension) = grid
-    (; A, b, c) = method
+    (; rk, projectorder) = method
+    (; A, b, c) = rk
     D = dimension()
     nstage = length(b)
     m = closure_model
+    projectorder ∈ (:first, :second, :last) || error("Unknown projectorder: $projectorder")
 
     # Update current solution (does not depend on previous step size)
     t₀ = t
@@ -68,8 +104,20 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
         u = apply_bc_u(u, t, setup)
         F = momentum(u, t, setup)
 
+        # Project F first
+        if projectorder == :first
+            F = apply_bc_u(F, t, setup; dudt = true)
+            F = project(F, setup; psolver)
+        end
+
         # Add closure term
         isnothing(m) || (F = F .+ m(u, θ))
+
+        # Project F second
+        if projectorder == :second
+            F = apply_bc_u(F, t, setup; dudt = true)
+            F = project(F, setup; psolver)
+        end
 
         # Store right-hand side of stage i
         ku = (ku..., F)
@@ -86,8 +134,10 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
 
         # Project stage u directly
         # Make velocity divergence free at time t
-        u = apply_bc_u(u, t, setup)
-        u = project(u, setup; psolver)
+        if projectorder == :last
+            u = apply_bc_u(u, t, setup)
+            u = project(u, setup; psolver)
+        end
     end
 
     # This is redundant, but Neumann BC need to have _exact_ copies
