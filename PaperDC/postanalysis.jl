@@ -873,10 +873,7 @@ divs = let
             )[2].dwriter
         d_smag[ig, ifil, iorder] =
             solve_unsteady(
-                (;
-                    setup...,
-                    closure_model = smagorinsky_closure(setup),
-                ),
+                (; setup..., closure_model = smagorinsky_closure(setup)),
                 u₀,
                 tlims;
                 method = RKProject(RK44(; T), getorder(iorder)),
@@ -887,10 +884,7 @@ divs = let
             )[2].dwriter
         d_cnn_prior[ig, ifil, iorder] =
             solve_unsteady(
-                (;
-                    setup...,
-                    closure_model = wrappedclosure(closure, setup),
-                ),
+                (; setup..., closure_model = wrappedclosure(closure, setup)),
                 u₀,
                 tlims;
                 method = RKProject(RK44(; T), getorder(iorder)),
@@ -901,10 +895,7 @@ divs = let
             )[2].dwriter
         d_cnn_post[ig, ifil, iorder] =
             solve_unsteady(
-                (;
-                    setup...,
-                    closure_model = wrappedclosure(closure, setup),
-                ),
+                (; setup..., closure_model = wrappedclosure(closure, setup)),
                 u₀,
                 tlims;
                 method = RKProject(RK44(; T), getorder(iorder)),
@@ -1041,10 +1032,7 @@ ufinal = let
         end
         u_smag[igrid, ifil, iorder] =
             solve_unsteady(
-                (;
-                    setup...,
-                    closure_model = smagorinsky_closure(setup),
-                ),
+                (; setup..., closure_model = smagorinsky_closure(setup)),
                 u₀,
                 tlims;
                 method = RKProject(RK44(; T), getorder(iorder)),
@@ -1054,10 +1042,7 @@ ufinal = let
             )[1].u .|> Array
         u_cnn_prior[igrid, ifil, iorder] =
             solve_unsteady(
-                (;
-                    setup...,
-                    closure_model = wrappedclosure(closure, setup),
-                ),
+                (; setup..., closure_model = wrappedclosure(closure, setup)),
                 u₀,
                 tlims;
                 method = RKProject(RK44(; T), getorder(iorder)),
@@ -1067,10 +1052,7 @@ ufinal = let
             )[1].u .|> Array
         u_cnn_post[igrid, ifil, iorder] =
             solve_unsteady(
-                (;
-                    setup...,
-                    closure_model = wrappedclosure(closure, setup),
-                ),
+                (; setup..., closure_model = wrappedclosure(closure, setup)),
                 u₀,
                 tlims;
                 method = RKProject(RK44(; T), getorder(iorder)),
