@@ -11,8 +11,8 @@ From this directory, run:
 julia --project -e '
 using Pkg
 Pkg.develop([
-    PackageSpec(; path = ".."),
-    PackageSpec(; path = "../libs/NeuralClosure"),
+    PackageSpec(; path = "../.."),
+    PackageSpec(; path = "../NeuralClosure"),
 ])
 Pkg.instantiate()'
 '
@@ -23,7 +23,7 @@ or interactively from a Julia REPL:
 ```julia-repl
 julia> ]
 (v1.10) pkg> activate .
-(PaperDC) pkg> dev .. ../libs/NeuralClosure
+(PaperDC) pkg> dev ../.. ../NeuralClosure
 (PaperDC) pkg> instantiate
 ```
 

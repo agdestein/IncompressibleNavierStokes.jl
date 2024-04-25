@@ -20,6 +20,6 @@ or interactively from a Julia REPL:
 ```julia-repl
 julia> ]
 (v1.10) pkg> activate .
-(examples) pkg> dev ..
-(examples) pkg> instantiate
+(Examples) pkg> dev ..
+(Examples) pkg> instantiate
 ```
