@@ -11,7 +11,7 @@ From this directory, run:
 julia --project -e '
 using Pkg
 Pkg.develop(PackageSpec(; path = ".."))
-Pkg.instantiate()'
+Pkg.instantiate()
 '
 ```
 

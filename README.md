@@ -19,8 +19,8 @@ large eddy simulation.
 To install IncompressibleNavierStokes, open up a Julia-REPL, type `]` to get
 into Pkg-mode, and type:
 
-```
-add IncompressibleNavierStokes
+```julia-repl
+(v1.10) pkg> add IncompressibleNavierStokes
 ```
 
 which will install the package and all dependencies to your local environment.
@@ -53,6 +53,7 @@ with an unsteady inflow. It simulates a wind turbine (actuator) under varying
 wind conditions.
 
 ```julia
+# using Pkg; Pkg.add(["GLMakie", "IncompressibleNavierStokes"]))
 using GLMakie
 using IncompressibleNavierStokes
 

@@ -14,7 +14,7 @@ Pkg.develop([
     PackageSpec(; path = "../.."),
     PackageSpec(; path = "../NeuralClosure"),
 ])
-Pkg.instantiate()'
+Pkg.instantiate()
 '
 ```
 
