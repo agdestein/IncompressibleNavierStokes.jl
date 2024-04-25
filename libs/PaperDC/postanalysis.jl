@@ -1,10 +1,10 @@
 # # A-posteriori analysis: Large Eddy Simulation (2D)
 #
-# Generate filtered DNS data, train closure model, compare filters, closure
-# models and projection orders.
+# Generate filtered DNS data, train closure model, compare filters,
+# closure models, and projection orders.
 # 
-# The data is saved and can be loaded in a subesequent sesssion.
-# The CNN parameters are also saved.
+# The filtered DNS data is saved and can be loaded in a subesequent sesssion.
+# The learned CNN parameters are also saved.
 
 using Adapt
 using GLMakie
@@ -70,15 +70,14 @@ get_params(nlesscalar) = (;
     tburn = T(0.05),
     tsim = T(0.5),
     Δt = T(5e-5),
-    nles = map(n -> (n, n), nlesscalar),
-    ndns = (n -> (n, n))(4096),
+    nles = map(n -> (n, n), nlesscalar), # LES resolutions
+    ndns = (n -> (n, n))(4096), # DNS resolution
     filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
     PSolver = SpectralPressureSolver,
     icfunc = (setup, psolver) -> random_field(
         setup,
         zero(eltype(setup.grid.x[1]));
-        # A = 1,
         kp = 20,
         psolver,
     ),
@@ -125,19 +124,27 @@ setups_train = getsetups(params_train);
 setups_valid = getsetups(params_valid);
 setups_test = getsetups(params_test);
 
+# Example data inspection
 data_train[1].t
 data_train[1].data |> size
 data_train[1].data[1, 1].u[end][1]
 
-# Create input/output arrays
+# Create input/output arrays for a-priori training (ubar vs c)
 io_train = create_io_arrays(data_train, setups_train);
 io_valid = create_io_arrays(data_valid, setups_valid);
 io_test = create_io_arrays([data_test], setups_test);
 
+# # Save IO arrays
 # jldsave("$outdir/io_train.jld2"; io_train)
 # jldsave("$outdir/io_valid.jld2"; io_valid)
 # jldsave("$outdir/io_test.jld2"; io_test)
+#
+# # Load IO arrays
+# io_train = load("$outdir/io_train.jld2"; "io_train")
+# io_valid = load("$outdir/io_valid.jld2"; "io_valid")
+# io_test = load("$outdir/io_test.jld2"; "io_test")
 
+# Check that data is reasonably bounded
 io_train[1].u |> extrema
 io_train[1].c |> extrema
 io_valid[1].u |> extrema
@@ -145,7 +152,8 @@ io_valid[1].c |> extrema
 io_test[1].u |> extrema
 io_test[1].c |> extrema
 
-# Inspect data
+# Inspect data (live animation with GLMakie)
+GLMakie.activate!()
 let
     ig = 2
     ifil = 1
@@ -167,75 +175,7 @@ let
     end
 end
 
-GLMakie.activate!()
-CairoMakie.activate!()
-
-# Training data plot
-ifil = 1
-boxx = T(0.3), T(0.5)
-boxy = T(0.5), T(0.7)
-box = [
-    Point2f(boxx[1], boxy[1]),
-    Point2f(boxx[2], boxy[1]),
-    Point2f(boxx[2], boxy[2]),
-    Point2f(boxx[1], boxy[2]),
-    Point2f(boxx[1], boxy[1]),
-]
-# fig = with_theme() do
-fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
-    sample = data_train[1]
-    fig = Figure()
-    for (i, it) in enumerate((1, length(sample.t)))
-        # for (j, ig) in enumerate((1, 2, 3))
-        for (j, ig) in enumerate((1, 2))
-            setup = setups_train[ig]
-            xf = Array.(getindex.(setup.grid.xp, setup.grid.Ip.indices))
-            u = sample.data[ig, ifil].u[it] |> device
-            ωp =
-                IncompressibleNavierStokes.interpolate_ω_p(
-                    IncompressibleNavierStokes.vorticity(u, setup),
-                    setup,
-                )[setup.grid.Ip] |> Array
-            colorrange = IncompressibleNavierStokes.get_lims(ωp)
-            opts = (;
-                xticksvisible = false,
-                xticklabelsvisible = false,
-                yticklabelsvisible = false,
-                yticksvisible = false,
-            )
-            i == 2 && (
-                opts = (;
-                    opts...,
-                    xlabel = "x",
-                    xticksvisible = true,
-                    xticklabelsvisible = true,
-                )
-            )
-            j == 1 && (
-                opts = (;
-                    opts...,
-                    ylabel = "y",
-                    yticklabelsvisible = true,
-                    yticksvisible = true,
-                )
-            )
-            ax = Axis(
-                fig[i, j];
-                opts...,
-                title = "n = $(params_train.nles[ig]), t = $(round(sample.t[it]; digits = 1))",
-                aspect = DataAspect(),
-                limits = (T(0), T(1), T(0), T(1)),
-            )
-            heatmap!(ax, xf..., ωp; colorrange)
-            # lines!(ax, box; color = Cycled(2))
-        end
-    end
-    fig
-end
-
-save("$plotdir/training_data.pdf", fig)
-
-# Architecture 1
+# CNN architecture 1
 mname = "balzac"
 closure, θ₀ = cnn(;
     setup = setups_train[1],
@@ -247,7 +187,7 @@ closure, θ₀ = cnn(;
 );
 closure.chain
 
-# Architecture 2
+# CNN architecture 2
 mname = "rimbaud"
 closure, θ₀ = cnn(;
     setup = setups_train[1],
@@ -258,14 +198,24 @@ closure, θ₀ = cnn(;
     rng,
 );
 closure.chain
+
+# Save-path for CNN
 savepath = "$outdir/$mname"
 ispath(savepath) || mkpath(savepath)
 
+# Give the CNN a test run
+# Note: Data and parameters are stored on the CPU, and
+# must be moved to the GPU before running (`device`)
 closure(device(io_train[1, 1].u[:, :, :, 1:50]), device(θ₀));
 
 # A-priori training ###########################################################
+#
+# Train one set of CNN parameters for each of the filter types and grid sizes.
+# Save parameters to disk after each run.
+# Plot training progress (for a validation data batch).
 
 for ifil = 1:2, ig = 4:4
+    clean()
     starttime = time()
     println("ig = $ig, ifil = $ifil")
     d = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device)
@@ -278,7 +228,7 @@ for ifil = 1:2, ig = 4:4
         create_relerr_prior(closure, validset...);
         θ,
         displayref = true,
-        display_each_iteration = false,
+        display_each_iteration = false, # Set to `true` if using CairoMakie
     )
     (; opt, θ, callbackstate) = train(
         [d],
@@ -286,7 +236,6 @@ for ifil = 1:2, ig = 4:4
         opt,
         θ;
         niter = 10_000,
-        # niter = 100,
         ncallback = 20,
         callbackstate,
         callback,
@@ -297,7 +246,7 @@ for ifil = 1:2, ig = 4:4
 end
 clean()
 
-# Load trained parameters
+# Load learned parameters and training times
 prior = map(CartesianIndices(size(io_train))) do I
     ig, ifil = I.I
     name = "$path/prior_ifilter$(ifil)_igrid$(ig).jld2"
@@ -305,24 +254,30 @@ prior = map(CartesianIndices(size(io_train))) do I
 end;
 θ_cnn_prior = [copyto!(device(θ₀), p.θ) for p in prior];
 
+# Check that parameters are within reasonable bounds
 θ_cnn_prior .|> extrema
 
+# Training times
 map(p -> p.comptime, prior)
 map(p -> p.comptime, prior) |> vec
-map(p -> p.comptime, prior) |> sum
-map(p -> p.comptime, prior) |> sum |> x -> x / 60
-map(p -> p.comptime, prior) |> sum |> x -> x / 3600
+map(p -> p.comptime, prior) |> sum # Seconds
+map(p -> p.comptime, prior) |> sum |> x -> x / 60 # Minutes
+map(p -> p.comptime, prior) |> sum |> x -> x / 3600 # Hours
 
 # A-posteriori training ######################################################
+#
+# Train one set of CNN parameters for each
+# projection order, filter type and grid size.
+# Save parameters to disk after each combination.
+# Plot training progress (for a validation data batch).
+#
+# The time stepper `RKProject` allows for choosing when to project.
 
 let
     ngrid, nfilter = size(io_train)
     for iorder = 1:2, ifil = 1:nfilter, ig = 1:ngrid
         clean()
         starttime = time()
-        # (ig, ifil, iorder) == (3, 1, 1) || continue
-        # (ifil, iorder) == (1, 1) && continue
-        # (ifil, iorder) == (2, 2) || continue
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         setup = setups_train[ig]
         psolver = SpectralPressureSolver(setup)
@@ -331,7 +286,7 @@ let
             psolver,
             method = RKProject(RK44(; T), getorder(iorder)),
             closure,
-            nupdate = 2,
+            nupdate = 2, # Time steps per loss evaluation
         )
         data = [(; u = d.data[ig, ifil].u, d.t) for d in data_train]
         d = create_dataloader_post(data; device, nunroll = 20)
@@ -361,6 +316,7 @@ let
     clean()
 end
 
+# Load learned parameters and training times
 post = map(CartesianIndices((size(io_train)..., 2))) do I
     ig, ifil, iorder = I.I
     name = "$savepath/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"
@@ -368,8 +324,10 @@ post = map(CartesianIndices((size(io_train)..., 2))) do I
 end;
 θ_cnn_post = [copyto!(device(θ₀), p.θ) for p in post];
 
+# Check that parameters are within reasonable bounds
 θ_cnn_post .|> extrema
 
+# Training times
 map(p -> p.comptime, post)
 map(p -> p.comptime, post) |> x -> reshape(x, 6, 2)
 map(p -> p.comptime, post) ./ 60
@@ -377,7 +335,14 @@ map(p -> p.comptime, post) |> sum
 map(p -> p.comptime, post) |> sum |> x -> x / 60
 map(p -> p.comptime, post) |> sum |> x -> x / 3600
 
-# Train Smagorinsky model with a-posteriori error grid search
+# Train Smagorinsky model ####################################################
+#
+# Use a-posteriori error grid search to determine
+# the optimal Smagorinsky constant.
+# Find one constant for each projection order and filter type. but
+# The constant is shared for all grid sizes, since the filter
+# width (=grid size) is part of the model definition separately.
+
 smag = map(CartesianIndices((size(io_train, 2), 2))) do I
     starttime = time()
     ifil, iorder = I.I
@@ -427,10 +392,14 @@ smag = load("$outdir/smag.jld2")["smag"];
 # Extract coefficients
 θ_smag = map(s -> s.θ, smag)
 
+# Computational time
 map(s -> s.comptime, smag)
 map(s -> s.comptime, smag) |> sum
 
 # Compute a-priori errors ###################################################
+#
+# Note that it is still interesting to compute the a-priori errors for the
+# a-posteriori trained CNN.
 
 eprior = let
     prior = zeros(T, 3, 2)
@@ -454,7 +423,7 @@ eprior.post
 eprior.prior |> x -> reshape(x, :) |> x -> round.(x; digits = 2)
 eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
 
-# Compute posterior errors ####################################################
+# Compute a-posteriori errors #################################################
 
 (; e_nm, e_smag, e_cnn, e_cnn_post) = let
     e_nm = zeros(T, size(data_test.data)...)
@@ -511,13 +480,10 @@ round.(
     sigdigits = 2,
 )
 
-data_train[1].t[2] - data_train[1].t[1]
-data_test.t[2] - data_test.t[1]
-
-CairoMakie.activate!()
-GLMakie.activate!()
-
 # Plot a-priori errors ########################################################
+
+# Better for PDF export
+CairoMakie.activate!()
 
 fig = with_theme(; palette) do
     nles = [n[1] for n in params_test.nles][1:3]
@@ -576,6 +542,9 @@ fig = with_theme(; palette) do
 end
 
 # Plot a-posteriori errors ###################################################
+
+# Better for PDF export
+CairoMakie.activate!()
 
 with_theme(; palette) do
     iorder = 2
@@ -652,6 +621,8 @@ with_theme(; palette) do
 end
 
 # Energy evolution ###########################################################
+#
+# Compute total kinetic energy as a function of time.
 
 kineticenergy = let
     clean()
@@ -741,6 +712,7 @@ clean();
 
 # Plot energy evolution ########################################################
 
+# Better for PDF export
 CairoMakie.activate!()
 
 with_theme(; palette) do
@@ -802,6 +774,8 @@ with_theme(; palette) do
 end
 
 # Compute Divergence ##########################################################
+# 
+# Compute divergence as a function of time.
 
 divs = let
     clean()
@@ -896,28 +870,17 @@ divs = let
 end;
 clean();
 
+# Check that divergence is within reasonable bounds
 divs.d_ref .|> extrema
 divs.d_nomodel .|> extrema
 divs.d_smag .|> extrema
 divs.d_cnn_prior .|> extrema
 divs.d_cnn_post .|> extrema
 
-divs.d_ref[1, 1] |> lines
-divs.d_ref[1, 2] |> lines!
-
-divs.d_nomodel[1, 1] |> lines
-divs.d_nomodel[1, 2] |> lines!
-
-divs.d_cnn_post[1, 1, 3] |> lines
-divs.d_cnn_post[1, 2, 3] |> lines!
-
-divs.d_smag[1, 2, 3]
-divs.d_smag[1, 1, 3]
-divs.d_smag[1, 2, 3]
-
-CairoMakie.activate!()
-
 # Plot Divergence #############################################################
+
+# Better for PDF export
+CairoMakie.activate!()
 
 with_theme(;
     # fontsize = 20,
@@ -931,7 +894,7 @@ with_theme(;
                 "DIF"
             elseif iorder == 2
                 "DCF"
-            else
+            elseif iorder == 3
                 "DCF-RHS"
             end
             fil = ifil == 1 ? "FA" : "VA"
@@ -1052,11 +1015,18 @@ ufinal = let
 end;
 clean();
 
-jldsave("$savepath/ufinal.jld2"; ufinal)
-
-ufinal = load("$savepath/ufinal.jld2")["ufinal"];
+# # Save solution
+# jldsave("$savepath/ufinal.jld2"; ufinal)
+#
+# # Load solution
+# ufinal = load("$savepath/ufinal.jld2")["ufinal"];
 
 # Plot spectra ###############################################################
+# 
+# Plot kinetic energy spectra at final time.
+
+# Better for PDF export
+CairoMakie.activate!()
 
 fig = with_theme(; palette) do
     for iorder = 1:2, ifil = 1:2, igrid = 1:3
@@ -1125,9 +1095,13 @@ clean();
 
 # Plot fields ################################################################
 
+# Export to PNG, otherwise each volume gets represented
+# as a separate rectangle in the PDF
+# (takes time to load in the article PDF)
 GLMakie.activate!()
 
 with_theme(; fontsize = 25, palette) do
+    # Reference box for eddy comparison
     x1 = 0.3
     x2 = 0.5
     y1 = 0.5
@@ -1155,7 +1129,7 @@ with_theme(; fontsize = 25, palette) do
                 docolorbar = false,
                 size = (500, 500),
             )
-            lines!(box; linewidth = 5, color = Cycled(2))
+            lines!(box; linewidth = 5, color = Cycled(2)) # Red in palette
             fname = "$(name)_$(suffix).png"
             save(fname, fig)
             # run(`convert $fname -trim $fname`) # Requires imagemagick
