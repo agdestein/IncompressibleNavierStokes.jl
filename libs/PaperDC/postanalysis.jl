@@ -3,7 +3,7 @@
 # Generate filtered DNS data, train closure model, compare filters,
 # closure models, and projection orders.
 # 
-# The filtered DNS data is saved and can be loaded in a subesequent sesssion.
+# The filtered DNS data is saved and can be loaded in a subesequent session.
 # The learned CNN parameters are also saved.
 
 using Adapt
