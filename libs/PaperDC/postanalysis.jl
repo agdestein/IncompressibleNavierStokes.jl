@@ -51,8 +51,7 @@ ispath(outdir) || mkpath(outdir)
 #
 # Note: Using `rng = Random.default_rng()` twice seems to point to the
 # same RNG, and mutating one also mutates the other.
-# `rng = Random.Xoshiro()` creates an independent copy each time
-# (we could also do `rng = deepcopy(Random.default_rng())`).
+# `rng = Random.Xoshiro()` creates an independent copy each time.
 #
 # We define all the seeds here so that we don't accidentally type the same seed
 # twice.
