@@ -249,40 +249,52 @@ closure(device(io_train[1, 1].u[:, :, :, 1:50]), device(θ₀));
 # Save parameters to disk after each run.
 # Plot training progress (for a validation data batch).
 
-# Random number generator for batch selection
-rng = Random.Xoshiro()
-Random.seed!(rng, seeds.prior)
-
-for ifil = 1:2, ig = 4:4
-    clean()
-    starttime = time()
-    println("ig = $ig, ifil = $ifil")
-    d = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device, rng)
-    θ = T(1.0e0) * device(θ₀)
-    loss = create_loss_prior(mean_squared_error, closure)
-    opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
-    it = rand(rng, 1:size(io_valid[ig, ifil].u, 4), 50)
-    validset = device(map(v -> v[:, :, :, it], io_valid[ig, ifil]))
-    (; callbackstate, callback) = create_callback(
-        create_relerr_prior(closure, validset...);
-        θ,
-        displayref = true,
-        display_each_iteration = false, # Set to `true` if using CairoMakie
-    )
-    (; opt, θ, callbackstate) =
-        train([d], loss, opt, θ; niter = 10_000, ncallback = 20, callbackstate, callback)
-    θ = callbackstate.θmin # Use best θ instead of last θ
-    prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
-    jldsave("$savepath/prior_ifilter$(ifil)_igrid$(ig).jld2"; prior)
+priornames = map(CartesianIndices(io_train)) do I
+    ig, ifil = I.I
+    "$savepath/prior_ifilter$(ifil)_igrid$(ig).jld2"
 end
-clean()
+
+# Train
+let
+    # Random number generator for batch selection
+    rng = Random.Xoshiro()
+    Random.seed!(rng, seeds.prior)
+    ngrid, nfilter = size(io_train)
+    for ifil = 1:nfilter, ig = 1:ngrid
+        clean()
+        starttime = time()
+        println("ig = $ig, ifil = $ifil")
+        d = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device, rng)
+        θ = T(1.0e0) * device(θ₀)
+        loss = create_loss_prior(mean_squared_error, closure)
+        opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
+        it = rand(rng, 1:size(io_valid[ig, ifil].u, 4), 50)
+        validset = device(map(v -> v[:, :, :, it], io_valid[ig, ifil]))
+        (; callbackstate, callback) = create_callback(
+            create_relerr_prior(closure, validset...);
+            θ,
+            displayref = true,
+            display_each_iteration = false, # Set to `true` if using CairoMakie
+        )
+        (; opt, θ, callbackstate) = train(
+            [d],
+            loss,
+            opt,
+            θ;
+            niter = 10_000,
+            ncallback = 20,
+            callbackstate,
+            callback,
+        )
+        θ = callbackstate.θmin # Use best θ instead of last θ
+        prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
+        jldsave(priorfiles[ig, ifil]; prior)
+    end
+    clean()
+end
 
 # Load learned parameters and training times
-prior = map(CartesianIndices(size(io_train))) do I
-    ig, ifil = I.I
-    name = "$path/prior_ifilter$(ifil)_igrid$(ig).jld2"
-    load(name)["prior"]
-end;
+prior = map(f -> load(f)["prior"], priorfiles)
 θ_cnn_prior = [copyto!(device(θ₀), p.θ) for p in prior];
 
 # Check that parameters are within reasonable bounds
@@ -304,11 +316,16 @@ map(p -> p.comptime, prior) |> sum |> x -> x / 3600 # Hours
 #
 # The time stepper `RKProject` allows for choosing when to project.
 
+postfiles = map(CartesianIndices((size(io_train)..., 2))) do I
+    ig, ifil, iorder = I.I
+    "$savepath/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"
+end
+
+# Train
 let
     # Random number generator for batch selection
     rng = Random.Xoshiro()
     Random.seed!(rng, seeds.post)
-
     ngrid, nfilter = size(io_train)
     for iorder = 1:2, ifil = 1:nfilter, ig = 1:ngrid
         clean()
@@ -346,17 +363,13 @@ let
             train([d], loss, opt, θ; niter = 2000, ncallback = 10, callbackstate, callback)
         θ = callbackstate.θmin # Use best θ instead of last θ
         post = (; θ = Array(θ), comptime = time() - starttime)
-        jldsave("$savepath/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"; post)
+        jldsave(postfiles[iorder, ifil, ig]; post)
     end
     clean()
 end
 
 # Load learned parameters and training times
-post = map(CartesianIndices((size(io_train)..., 2))) do I
-    ig, ifil, iorder = I.I
-    name = "$savepath/post_iorder$(iorder)_ifil$(ifil)_ig$(ig).jld2"
-    load(name)["post"]
-end;
+post = map(f -> load(f)["post"], postfiles);
 θ_cnn_post = [copyto!(device(θ₀), p.θ) for p in post];
 
 # Check that parameters are within reasonable bounds
@@ -845,7 +858,6 @@ divs = let
             state[] = state[] # Compute initial divergence
             dhist
         end
-        processors = (; dwriter)
         if iorder == 1
             # Does not depend on projection order
             d_ref[ig, ifil] = map(data_test.data[ig, ifil].u) do u
@@ -856,50 +868,25 @@ divs = let
                 d = sqrt(d)
             end
         end
+        s(closure_model, θ) =
+            solve_unsteady(
+                (; setup..., closure_model),
+                u₀,
+                tlims;
+                method = RKProject(RK44(; T), getorder(iorder)),
+                Δt,
+                processors = (; dwriter),
+                psolver,
+                θ,
+            )[2].dwriter
         iorder_use = iorder == 3 ? 2 : iorder
-        d_nomodel[ig, ifil, iorder] =
-            solve_unsteady(
-                setup,
-                u₀,
-                tlims;
-                method = RKProject(RK44(; T), getorder(iorder)),
-                Δt,
-                processors,
-                psolver,
-            )[2].dwriter
+        d_nomodel[ig, ifil, iorder] = s(nothing, nothing)
         d_smag[ig, ifil, iorder] =
-            solve_unsteady(
-                (; setup..., closure_model = smagorinsky_closure(setup)),
-                u₀,
-                tlims;
-                method = RKProject(RK44(; T), getorder(iorder)),
-                Δt,
-                processors,
-                psolver,
-                θ = θ_smag[ifil, iorder_use],
-            )[2].dwriter
+            s(smagorinsky_closure(setup), θ_smag[ifil, iorder_use])
         d_cnn_prior[ig, ifil, iorder] =
-            solve_unsteady(
-                (; setup..., closure_model = wrappedclosure(closure, setup)),
-                u₀,
-                tlims;
-                method = RKProject(RK44(; T), getorder(iorder)),
-                Δt,
-                processors,
-                psolver,
-                θ = θ_cnn_prior[ig, ifil],
-            )[2].dwriter
+            s(wrappedclosure(closure, setup), θ_cnn_prior[ig, ifil])
         d_cnn_post[ig, ifil, iorder] =
-            solve_unsteady(
-                (; setup..., closure_model = wrappedclosure(closure, setup)),
-                u₀,
-                tlims;
-                method = RKProject(RK44(; T), getorder(iorder)),
-                Δt,
-                processors,
-                psolver,
-                θ = θ_cnn_post[ig, ifil, iorder_use],
-            )[2].dwriter
+            s(wrappedclosure(closure, setup), θ_cnn_post[ig, ifil, iorder_use])
     end
     (; d_ref, d_nomodel, d_smag, d_cnn_prior, d_cnn_post)
 end;
@@ -922,8 +909,9 @@ with_theme(;
     palette,
 ) do
     t = data_test.t
-    for islog in (true, false)
-        for iorder = 1:3, ifil = 1:2, igrid = 1:3
+    # for islog in (true, false)
+    for islog in (false,)
+        for iorder = 1:2, ifil = 1:2, igrid = 1:3
             println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
             lesmodel = if iorder == 1
                 "DIF"
@@ -935,14 +923,16 @@ with_theme(;
             fil = ifil == 1 ? "FA" : "VA"
             nles = params_test.nles[igrid]
             fig = Figure(; size = (500, 400))
-            yscale = islog ? log10 : identity
             ax = Axis(
                 fig[1, 1];
-                yscale,
+                yscale = islog ? log10 : identity,
                 xlabel = "t",
                 title = "Divergence: $lesmodel, $fil,  $nles",
             )
-            linestyle = ifil == 1 ? :solid : :dash
+            lines!(ax, t, divs.d_nomodel[igrid, ifil, iorder]; label = "No closure")
+            lines!(ax, t, divs.d_smag[igrid, ifil, iorder]; label = "Smagorinsky")
+            lines!(ax, t, divs.d_cnn_prior[igrid, ifil, iorder]; label = "CNN (prior)")
+            lines!(ax, t, divs.d_cnn_post[igrid, ifil, iorder]; label = "CNN (post)")
             lines!(
                 ax,
                 t,
@@ -950,34 +940,6 @@ with_theme(;
                 color = Cycled(1),
                 linestyle = :dash,
                 label = "Reference",
-            )
-            lines!(
-                ax,
-                t,
-                divs.d_nomodel[igrid, ifil, iorder];
-                color = Cycled(1),
-                label = "No closure",
-            )
-            lines!(
-                ax,
-                t,
-                divs.d_smag[igrid, ifil, iorder];
-                color = Cycled(2),
-                label = "Smagorinsky",
-            )
-            lines!(
-                ax,
-                t,
-                divs.d_cnn_prior[igrid, ifil, iorder];
-                color = Cycled(3),
-                label = "CNN (prior)",
-            )
-            lines!(
-                ax,
-                t,
-                divs.d_cnn_post[igrid, ifil, iorder];
-                color = Cycled(4),
-                label = "CNN (post)",
             )
             iorder == 2 && ifil == 1 && axislegend(; position = :rt)
             islog && ylims!(ax, (T(1e-6), T(1e3)))
@@ -1009,42 +971,27 @@ ufinal = let
         nupdate = 2
         Δt = (t[2] - t[1]) / nupdate
         T = eltype(u₀[1])
+        s(closure_model, θ) =
+            solve_unsteady(
+                (; setup..., closure_model),
+                u₀,
+                tlims;
+                method = RKProject(RK44(; T), getorder(iorder)),
+                Δt,
+                psolver,
+                θ,
+            )[1].u .|> Array
         if iorder == 1
             # Does not depend on projection order
             u_ref[igrid, ifil] = data_test.data[igrid, ifil].u[end]
-            u_nomodel[igrid, ifil] =
-                solve_unsteady(setup, u₀, tlims; Δt, psolver)[1].u .|> Array
+            u_nomodel[igrid, ifil] = s(nothing, nothing)
         end
         u_smag[igrid, ifil, iorder] =
-            solve_unsteady(
-                (; setup..., closure_model = smagorinsky_closure(setup)),
-                u₀,
-                tlims;
-                method = RKProject(RK44(; T), getorder(iorder)),
-                Δt,
-                psolver,
-                θ = θ_smag[ifil, iorder],
-            )[1].u .|> Array
+            s(smagorinsky_closure(setup), θ_smag[ifil, iorder])
         u_cnn_prior[igrid, ifil, iorder] =
-            solve_unsteady(
-                (; setup..., closure_model = wrappedclosure(closure, setup)),
-                u₀,
-                tlims;
-                method = RKProject(RK44(; T), getorder(iorder)),
-                Δt,
-                psolver,
-                θ = θ_cnn_prior[igrid, ifil],
-            )[1].u .|> Array
+            s(wrappedclosure(closure, setup), θ_cnn_prior[igrid, ifil])
         u_cnn_post[igrid, ifil, iorder] =
-            solve_unsteady(
-                (; setup..., closure_model = wrappedclosure(closure, setup)),
-                u₀,
-                tlims;
-                method = RKProject(RK44(; T), getorder(iorder)),
-                Δt,
-                psolver,
-                θ = θ_cnn_post[igrid, ifil, iorder],
-            )[1].u .|> Array
+            s(wrappedclosure(closure, setup), θ_cnn_post[igrid, ifil, iorder])
     end
     (; u_ref, u_nomodel, u_smag, u_cnn_prior, u_cnn_post)
 end;
