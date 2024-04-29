@@ -46,13 +46,14 @@ processor(initialize, finalize = (initialized, state) -> initialized) =
 
 Create processor that logs time step information.
 """
-timelogger(; nupdate = 1) = processor(function (state)
-    on(state) do (; t, n)
-        n % nupdate == 0 || return
-        @printf "Iteration %d\tt = %g\n" n t
+timelogger(; nupdate = 1) =
+    processor() do state
+        on(state) do (; t, n)
+            n % nupdate == 0 || return
+            @printf "Iteration %d\tt = %g\n" n t
+        end
+        nothing
     end
-    nothing
-end)
 
 """
     vtk_writer(;
