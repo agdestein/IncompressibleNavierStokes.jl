@@ -369,6 +369,7 @@ function energy_spectrum_plot(
     D = dimension()
 
     (; A, κ, K) = spectral_stuff(setup; npoint, a)
+    # (; masks, κ, K) = get_spectrum(setup; npoint, a) # Mask
     kmax = maximum(κ)
 
     # Energy
@@ -379,10 +380,12 @@ function energy_spectrum_plot(
         e = sum(up) do u
             u = u[Ip]
             uhat = fft(u)[ntuple(α -> 1:K[α], D)...]
+            # uhat = fft(u)[ntuple(α -> 1:K, D)...] # Mask
             abs2.(uhat) ./ (2 * prod(size(uhat))^2)
         end
         e = A * reshape(e, :)
-        # e = max.(e, eps(T)) # Avoid log(0)
+        # e = [sum(e[m]) for m in masks] # Mask
+        e = max.(e, eps(T)) # Avoid log(0)
         Array(e)
     end
 

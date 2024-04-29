@@ -5,7 +5,8 @@ if isdefined(@__MODULE__, :LanguageServer)          #src
     using .IncompressibleNavierStokes               #src
 end                                                 #src
 
-using GLMakie
+# using GLMakie
+using CairoMakie
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: apply_bc_u!, total_kinetic_energy, diffusion!
 
@@ -30,13 +31,15 @@ clean() = (GC.gc(); CUDA.reclaim())
 set_theme!()
 set_theme!(; GLMakie = (; scalefactor = 1.5))
 
-# 2D 
+# 2D
 T = Float64;
-Re = T(4_000)
-# ndns = 1024
+Re = T(10_000)
+# ndns = 4096
+ndns = 1024
 # nles = 128
-ndns = 256
-nles = 32
+# ndns = 256
+# nles = 128
+nles = 64
 compression = ndns ÷ nles
 D = 2
 kp = 20
@@ -75,6 +78,9 @@ observe_u(dns, les, compression; Δt, nupdate = 1) =
             apply_bc_u!(v, t, les.setup)
             Ku = total_kinetic_energy(u, dns.setup)
             Kv = total_kinetic_energy(v, les.setup)
+            push!(results.t, t)
+            push!(results.Ku, Ku)
+            push!(results.Kv, Kv)
             if n == 0
                 push!(results.Kuref, Ku)
                 push!(results.Kvref, Kv)
@@ -99,14 +105,12 @@ observe_u(dns, les, compression; Δt, nupdate = 1) =
                     results.Kvref[end] + nupdate * Δt * sum(sum.(diffv)) / nles^D,
                 )
             end
-            push!(results.t, t)
-            push!(results.Ku, Ku)
-            push!(results.Kv, Kv)
         end
         state[] = state[] # Save initial conditions
         results
     end
 
+# Δt = 5e-5
 Δt = 1e-4
 
 # Solve unsteady problem
@@ -114,12 +118,12 @@ observe_u(dns, les, compression; Δt, nupdate = 1) =
     dns.setup,
     u₀,
     # state.u,
-    (T(0), T(1e-1));
+    (T(0), T(5e-1));
     Δt,
     docopy = true,
     dns.psolver,
     processors = (
-        # rtp = realtimeplotter(; dns.setup, nupdate = 5),
+        rtp = realtimeplotter(; dns.setup, displayupdates = true, nupdate = 50),
         obs = observe_u(dns, les, compression; Δt, nupdate = 1),
         log = timelogger(; nupdate = 1),
     ),
@@ -136,13 +140,64 @@ using CairoMakie
 
 fig = with_theme() do
     fig = Figure()
-    ax = Axis(fig[1, 1])
-    lines!(ax, outputs.obs.t, outputs.obs.Ku; label = "Ku")
-    lines!(ax, outputs.obs.t, outputs.obs.Kuref; label = "Kuref")
-    lines!(ax, outputs.obs.t, outputs.obs.Kv; label = "Kv")
-    lines!(ax, outputs.obs.t, outputs.obs.Kvref; label = "Kvref")
-    axislegend()
+    ax = Axis(fig[1, 1]; xlabel = "t", title = "Kinetic energy")
+    lines!(
+        ax,
+        outputs.obs.t,
+        outputs.obs.Ku;
+        color = Cycled(1),
+        linestyle = :solid,
+        label = "DNS",
+    )
+    lines!(
+        ax,
+        outputs.obs.t,
+        outputs.obs.Kuref;
+        color = Cycled(1),
+        linestyle = :dash,
+        label = "DNS (reference)",
+    )
+    lines!(
+        ax,
+        outputs.obs.t,
+        outputs.obs.Kv;
+        color = Cycled(2),
+        linestyle = :solid,
+        label = "Filtered DNS",
+    )
+    lines!(
+        ax,
+        outputs.obs.t,
+        outputs.obs.Kvref;
+        color = Cycled(2),
+        linestyle = :dash,
+        label = "Filtered DNS (reference)",
+    )
+    axislegend(ax)
     fig
 end
 
 save("$output/energy.pdf", fig)
+
+fig = with_theme() do
+    fig = Figure()
+    ax = Axis(fig[1, 1])
+    lines!(
+        ax,
+        outputs.obs.t,
+        outputs.obs.Kv ./ outputs.obs.Ku;
+        color = Cycled(2),
+        linestyle = :solid,
+        label = "Filtered DNS",
+    )
+    lines!(
+        ax,
+        outputs.obs.t,
+        outputs.obs.Kvref ./ outputs.obs.Ku;
+        color = Cycled(2),
+        linestyle = :dash,
+        label = "Filtered DNS (theoretical)",
+    )
+    # axislegend(ax)
+    fig
+end

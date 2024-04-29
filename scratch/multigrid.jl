@@ -97,10 +97,10 @@ io_train = create_io_arrays(data_train, setups_train);
 io_valid = create_io_arrays(data_valid, setups_valid);
 
 # Inspect data
-ig = 5
-# field, setup = data_train[1].u[ig], setups_train[ig];
+ig = 3
+field, setup = data_train[1].u[ig], setups_train[ig];
 # field, setup = data_valid[1].u[ig], setups_valid[ig];
-field, setup = data_test.u[ig], setups_test[ig];
+# field, setup = data_test.u[ig], setups_test[ig];
 u = device(field[1]);
 o = Observable((; u, t = nothing));
 energy_spectrum_plot(o; setup)
@@ -189,8 +189,8 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     k = reshape(k, :)
     # Sum or average wavenumbers between k and k+1
     nk = ceil(Int, maximum(k))
-    # kmax = minimum(K) - 1
-    kmax = nk - 1
+    kmax = minimum(K) - 1
+    # kmax = nk - 1
     kint = 1:kmax
     ia = similar(xp[1], Int, 0)
     ib = sortperm(k)
