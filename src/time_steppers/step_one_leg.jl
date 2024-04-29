@@ -2,177 +2,169 @@ create_stepper(
     method::OneLegMethod;
     setup,
     psolver,
-    bc_vectors,
-    V,
-    p,
+    u,
     t,
     n = 0,
+    p = pressure(u, t, setup; psolver),
 
     # For the first step, these are not used
-    Vₙ = copy(V),
-    pₙ = copy(p),
-    tₙ = t,
-) = (; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
+    uold = copy.(u),
+    pold = copy(p),
+    told = t,
+) = (; setup, psolver, u, p, t, n, uold, pold, told)
 
-function timestep(method::OneLegMethod, stepper, Δt)
-    (; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ) = stepper
+function timestep(method::OneLegMethod, stepper, Δt; θ = nothing)
+    (; setup, psolver, u, p, t, n, uold, pold, told) = stepper
     (; p_add_solve, β, method_startup) = method
-    (; grid, operators, boundary_conditions) = setup
-    (; bc_unsteady) = boundary_conditions
-    (; G, M) = operators
+    (; grid, boundary_conditions) = setup
     (; Ω) = grid
+    T = typeof(Δt)
 
     # One-leg requires state at previous time step, which is not available at
     # the first iteration. Do one startup step instead
     if n == 0
-        stepper_startup =
-            create_stepper(method_startup; setup, psolver, bc_vectors, V, p, t)
-        n += 1
-        Vₙ = V
-        pₙ = p
-        tₙ = t
-        (; V, p, t) = timestep(method_startup, stepper_startup, Δt)
-        return create_stepper(method; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
+        stepper_startup = create_stepper(method_startup; setup, psolver, u, t)
+        (; u, t, n) = timestep(method_startup, stepper_startup, Δt)
+        p = pressure(u, t, setup; psolver)
+        return create_stepper(method; setup, psolver, u, p, t, n, uold, pold, told)
     end
 
-    # Update current solution
-    Δtₙ₋₁ = t - tₙ
-    n += 1
-    Vₙ₋₁ = Vₙ
-    pₙ₋₁ = pₙ
-    Vₙ = V
-    pₙ = p
-    tₙ = t
-    Δtₙ = Δt
-
     # One-leg requires fixed time step
-    @assert Δtₙ ≈ Δtₙ₋₁
+    @assert Δt ≈ t - told
 
     # Intermediate ("offstep") velocities
-    t = tₙ + β * Δtₙ
-    V = @. (1 + β) * Vₙ - β * Vₙ₋₁
-    p = @. (1 + β) * pₙ - β * pₙ₋₁
+    tβ = t + β * Δt
+    uβ = ntuple(α -> @.((1 + β) * u[α] - β * uold[α]), length(u))
+    pβ = @. (1 + β) * p - β * pold
 
     # Right-hand side of the momentum equation
-    F, = momentum(V, V, p, t, setup; bc_vectors)
+    F = momentum(uβ, tβ, setup)
+    G = pressuregradient(pβ, setup)
 
     # Take a time step with this right-hand side, this gives an intermediate velocity field
     # (not divergence free)
-    V = @. (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δtₙ / Ω * F) / (β + 1 // 2)
+    unew = ntuple(
+        α -> @.(
+            (2β * u[α] - (β - T(1) / 2) * uold[α] + Δt * (F[α] - G[α])) / (β + T(1) / 2)
+        ),
+        length(u),
+    )
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
-    if bc_unsteady
-        bc_vectors = get_bc_vectors(setup, tₙ + Δtₙ)
-    end
-    (; yM) = bc_vectors
+    unew = apply_bc_u(unew, t + Δt, setup)
 
     # Adapt time step for pressure calculation
-    Δtᵦ = Δtₙ / (β + 1 // 2)
+    Δtᵦ = Δt / (β + T(1) / 2)
 
     # Divergence of intermediate velocity field
-    f = (M * V + yM) / Δtᵦ
+    div = divergence(unew, setup) / Δtᵦ
+    div = @. div * Ω
 
     # Solve the Poisson equation for the pressure
-    Δp = poisson(psolver, f)
-    GΔp = G * Δp
+    Δp = poisson(psolver, div)
+    Δp = apply_bc_p(Δp, t + Δtᵦ, setup)
+    GΔp = pressuregradient(Δp, setup)
 
     # Update velocity field
-    V = @. V - Δtᵦ / Ω * GΔp
+    unew = ntuple(α -> @.(unew[α] - Δtᵦ * GΔp[α]), length(u))
+    unew = apply_bc_u(unew, t + Δt, setup)
 
     # Update pressure (second order)
-    p = @. 2pₙ - pₙ₋₁ + 4 // 3 * Δp
+    pnew = @. 2 * p - pold + T(4) / 3 * Δp
+    pnew = apply_bc_p(pnew, t + Δt, setup)
 
     # Alternatively, do an additional Poisson solve
     if p_add_solve
-        p = pressure(psolver, V, p, tₙ + Δtₙ, setup; bc_vectors)
+        pnew = pressure(unew, t + Δt, setup; psolver)
     end
 
-    t = tₙ + Δtₙ
+    told = t
+    pold = p
+    uold = u
+    t = t + Δt
+    p = pnew
+    u = unew
 
-    create_stepper(method; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, psolver, u, p, t, n, uold, pold, told)
 end
 
-function timestep!(method::OneLegMethod, stepper, Δt; cache, momentum_cache)
-    (; setup, psolver, bc_vectors, n, V, p, t, Vₙ, pₙ, tₙ) = stepper
+function timestep!(method::OneLegMethod, stepper, Δt; θ = nothing, cache)
+    (; setup, psolver, u, p, t, n, uold, pold, told) = stepper
     (; p_add_solve, β, method_startup) = method
-    (; grid, operators, boundary_conditions) = setup
-    (; bc_unsteady) = boundary_conditions
-    (; G, M) = operators
+    (; grid, boundary_conditions) = setup
     (; Ω) = grid
-    (; Vₙ₋₁, pₙ₋₁, F, f, Δp, GΔp) = cache
+    (; unew, pnew, div, F, Δp) = cache
+    T = typeof(Δt)
 
     # One-leg requires state at previous time step, which is not available at
     # the first iteration. Do one startup step instead
     if n == 0
-        stepper_startup =
-            create_stepper(method_startup; setup, psolver, bc_vectors, V, p, t)
-        n += 1
-        Vₙ = V
-        pₙ = p
-        tₙ = t
-
-        # Note: We do one out-of-place step here, with a few allocations
-        (; V, p, t) = timestep(method_startup, stepper_startup, Δt)
-        return create_stepper(method; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
+        stepper_startup = create_stepper(method_startup; setup, psolver, u, t)
+        (; u, t, n) = timestep(method_startup, stepper_startup, Δt)
+        pressure!(p, u, t, setup; psolver, F, div)
+        return create_stepper(method; setup, psolver, u, p, t, n, uold, pold, told)
     end
 
-    # Update current solution
-    Δtₙ₋₁ = t - tₙ
-    n += 1
-    Vₙ₋₁ .= Vₙ
-    pₙ₋₁ .= pₙ
-    Vₙ .= V
-    pₙ .= p
-    tₙ = t
-    Δtₙ = Δt
-
     # One-leg requires fixed time step
-    @assert Δtₙ ≈ Δtₙ₋₁
+    @assert Δt ≈ t - told
 
     # Intermediate ("offstep") velocities
-    t = tₙ + β * Δtₙ
-    @. V = (1 + β) * Vₙ - β * Vₙ₋₁
-    @. p = (1 + β) * pₙ - β * pₙ₋₁
+    tnew = t + β * Δt
+    for α = 1:length(u)
+        @. unew[α] = (1 + β) * u[α] - β * uold[α]
+    end
+    @. pnew = (1 + β) * p - β * pold
 
     # Right-hand side of the momentum equation
-    momentum!(F, nothing, V, V, p, t, setup, momentum_cache)
+    momentum!(F, unew, tnew, setup)
+    applypressure!(F, pnew, setup)
 
     # Take a time step with this right-hand side, this gives an intermediate velocity field
     # (not divergence free)
-    @. V = (2β * Vₙ - (β - 1 // 2) * Vₙ₋₁ + Δtₙ / Ω * F) / (β + 1 // 2)
+    for α = 1:length(u)
+        @. unew[α] = 2β * u[α] - (β - T(1) / 2) * uold[α] + Δt * F[α] / (β + T(1) / 2)
+    end
 
     # To make the velocity field uₙ₊₁ at tₙ₊₁ divergence-free we need the boundary
     # conditions at tₙ₊₁
-    if bc_unsteady
-        bc_vectors = get_bc_vectors(setup, tₙ + Δtₙ)
-    end
-    (; yM) = bc_vectors
+    apply_bc_u!(unew, t + Δt, setup)
 
     # Adapt time step for pressure calculation
-    Δtᵦ = Δtₙ / (β + 1 // 2)
+    Δtᵦ = Δt / (β + T(1) / 2)
 
     # Divergence of intermediate velocity field
-    f .= yM
-    mul!(f, M, V, 1 / Δtᵦ, 1 / Δtᵦ)
-    # f .= (M * V + yM) / Δtᵦ
+    divergence!(div, unew, setup)
+    @. div *= Ω
 
     # Solve the Poisson equation for the pressure
-    poisson!(psolver, Δp, f)
-    mul!(GΔp, G, Δp)
+    poisson!(psolver, Δp, div)
+    apply_bc_p!(Δp, t + Δtᵦ, setup)
 
     # Update velocity field
-    @. V -= Δtᵦ / Ω * GΔp
+    applypressure!(unew, Δp, setup)
+    apply_bc_u!(unew, t + Δt, setup)
 
     # Update pressure (second order)
-    @. p = 2pₙ - pₙ₋₁ + 4 // 3 * Δp
+    @. pnew = 2 * p - pold + T(4) / 3 * Δp / Δtᵦ
+    apply_bc_p!(pnew, t + Δt, setup)
 
     # Alternatively, do an additional Poisson solve
     if p_add_solve
-        pressure!(psolver, V, p, tₙ + Δtₙ, setup, momentum_cache, F, f, Δp; bc_vectors)
+        pressure!(pnew, unew, t + Δt, setup; psolver, F, div)
     end
 
-    t = tₙ + Δtₙ
+    n += 1
+    told = t
+    pold .= p
+    for α = 1:length(u)
+        uold[α] .= u[α]
+    end
+    t = t + Δt
+    p .= pnew
+    for α = 1:length(u)
+        u[α] .= unew[α]
+    end
 
-    create_stepper(method; setup, psolver, bc_vectors, V, p, t, n, Vₙ, pₙ, tₙ)
+    create_stepper(method; setup, psolver, u, p, t, n, uold, pold, told)
 end

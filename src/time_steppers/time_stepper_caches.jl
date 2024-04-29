@@ -23,15 +23,13 @@ function ode_method_cache(::AdamsBashforthCrankNicolsonMethod, setup, V, p)
     (; c₀, c₋₁, F, f, Δp, Rr, b, b₀, b₁, yDiff₀, yDiff₁, Gp₀)
 end
 
-function ode_method_cache(::OneLegMethod{T}, setup, V, p) where {T}
-    (; NV, Np) = setup.grid
-    u₋₁ = zero(V)
-    p₋₁ = zero(p)
-    F = zero(V)
-    f = zero(p)
-    Δp = zero(p)
-    GΔp = zero(V)
-    (; u₋₁, p₋₁, F, f, Δp, GΔp)
+function ode_method_cache(::OneLegMethod{T}, setup, u) where {T}
+    unew = zero.(u)
+    pnew = zero(u[1])
+    div = zero(u[1])
+    F = zero.(u)
+    Δp = zero(u[1])
+    (; unew, pnew, F, div, Δp)
 end
 
 function ode_method_cache(method::ExplicitRungeKuttaMethod{T}, setup, u) where {T}
