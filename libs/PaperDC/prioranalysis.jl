@@ -1,3 +1,7 @@
+# # A-priori analysis: Filtered DNS (2D or 3D)
+#
+# Generate filtered DNS data and inspect its properties.
+
 using CairoMakie
 using FFTW
 using GLMakie
