@@ -190,6 +190,12 @@ function poisson!(solver::SpectralPressureSolver, p, f)
     # Solve for coefficients in Fourier space
     @. fhat = -phat / Ahat
 
+    # Pressure is determined up to constant. We set this to 0 (instead of
+    # phat[1] / 0 = Inf)
+    # Note use of singleton range 1:1 instead of scalar index 1
+    # (otherwise CUDA gets annoyed)
+    fhat[1:1] .= 0
+
     # Transform back
     ldiv!(phat, plan, fhat)
     @. p[Ip] = real(phat)
