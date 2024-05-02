@@ -54,12 +54,12 @@ e = compute_convergence(;
 )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">8-element Vector{Float64}:
  0.4242656052086717
  0.000378932838635171
- 0.000100722665083149
- 2.5570665390753012e-5
- 6.4172925006610625e-6
- 1.6058662108731298e-6
- 4.0156305742248275e-7
- 1.0039679672332333e-7</code></pre><p>Plot convergence</p><pre><code class="language-julia hljs">fig = Figure()
+ 0.00010072266508321756
+ 2.557066539066516e-5
+ 6.417292500660421e-6
+ 1.6058662108541681e-6
+ 4.015630574104089e-7
+ 1.0039679673157669e-7</code></pre><p>Plot convergence</p><pre><code class="language-julia hljs">fig = Figure()
 ax = Axis(
     fig[1, 1];
     xscale = log10,
@@ -71,4 +71,4 @@ ax = Axis(
 scatterlines!(ax, nlist, e; label = &quot;Data&quot;)
 lines!(ax, collect(extrema(nlist)), n -&gt; n^-2.0; linestyle = :dash, label = &quot;n^-2&quot;)
 axislegend(ax)
-fig</code></pre><img src="38594f96.png" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../LidDrivenCavity2D/">« Tutorial: Lid-Driven Cavity (2D)</a><a class="docs-footer-nextpage" href="../Actuator2D/">Unsteady inflow: Actuator (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.0 on <span class="colophon-date" title="Monday 29 April 2024 14:54">Monday 29 April 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+fig</code></pre><img src="38594f96.png" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../LidDrivenCavity2D/">« Tutorial: Lid-Driven Cavity (2D)</a><a class="docs-footer-nextpage" href="../Actuator2D/">Unsteady inflow: Actuator (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.1 on <span class="colophon-date" title="Thursday 2 May 2024 20:22">Thursday 2 May 2024</span>. Using Julia version 1.10.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
