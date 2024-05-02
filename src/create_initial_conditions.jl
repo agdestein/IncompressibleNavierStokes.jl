@@ -25,7 +25,7 @@ function create_initial_conditions(
     D = dimension()
 
     # Allocate velocity
-    u = ntuple(d -> similar(x[1], N), D)
+    u = ntuple(d -> fill!(similar(x[1], N), 0), D)
 
     # Initial velocities
     for α = 1:D
