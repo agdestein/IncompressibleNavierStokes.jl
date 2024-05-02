@@ -179,12 +179,33 @@ function convection!(F, u, setup)
         # for β = 1:D
         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
             Δuαβ = α == β ? Δu[β] : Δ[β]
-            uαβ1 = A[α][β][2][I[β]-1] * u[α][I-δ(β)] + A[α][β][1][I[β]] * u[α][I]
+
+            # Half for u[α], (reverse!) interpolation for u[β]
+            # Note:
+            #     In matrix version, uses
+            #     1*u[α][I-δ(β)] + 0*u[α][I]
+            #     instead of 1/2 when u[α][I-δ(β)] is at Dirichlet boundary.
+            uαβ1 = (u[α][I-δ(β)] + u[α][I]) / 2
+            uαβ2 = (u[α][I] + u[α][I+δ(β)]) / 2
             uβα1 =
                 A[β][α][2][I[α]-(α==β)] * u[β][I-δ(β)] +
                 A[β][α][1][I[α]+(α!=β)] * u[β][I-δ(β)+δ(α)]
-            uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
             uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+δ(α)]
+
+            # # Half
+            # uαβ1 = (u[α][I-δ(β)] + u[α][I]) / 2
+            # uβα1 = u[β][I-δ(β)] / 2 + u[β][I-δ(β)+δ(α)] / 2
+            # uαβ2 = (u[α][I] + u[α][I+δ(β)]) / 2
+            # uβα2 = u[β][I] / 2 + u[β][I+δ(α)] / 2
+            
+            # # Interpolation
+            # uαβ1 = A[α][β][2][I[β]-1] * u[α][I-δ(β)] + A[α][β][1][I[β]] * u[α][I]
+            # uβα1 =
+            #     A[β][α][2][I[α]-(α==β)] * u[β][I-δ(β)] +
+            #     A[β][α][1][I[α]+(α!=β)] * u[β][I-δ(β)+δ(α)]
+            # uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
+            # uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+δ(α)]
+
             F[α][I] -= (uαβ2 * uβα2 - uαβ1 * uβα1) / Δuαβ[I[β]]
         end
     end
@@ -201,20 +222,20 @@ function convection_adjoint!(ubar, φbar, u, setup)
     (; dimension, Δ, Δu, N, Iu, A) = grid
     D = dimension()
     δ = Offset{D}()
+    T = eltype(u[1])
+    h = T(1) / 2
     @kernel function adj!(ubar, φbar, u, ::Val{γ}, ::Val{looprange}) where {γ,looprange}
         J = @index(Global, Cartesian)
         KernelAbstractions.Extras.LoopInfo.@unroll for α in looprange
             KernelAbstractions.Extras.LoopInfo.@unroll for β in looprange
                 Δuαβ = α == β ? Δu[β] : Δ[β]
-                Aαβ1 = A[α][β][1]
-                Aαβ2 = A[α][β][2]
                 Aβα1 = A[β][α][1]
                 Aβα2 = A[β][α][2]
 
                 # 1
                 I = J
                 if α == γ && I in Iu[α]
-                    uαβ2 = Aαβ2[I[β]]
+                    uαβ2 = h
                     uβα2 = Aβα2[I[α]] * u[β][I] + Aβα1[I[α]+1] * u[β][I+δ(α)]
                     dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
                     ubar[γ][J] += φbar[α][I] * dφdu
@@ -223,7 +244,7 @@ function convection_adjoint!(ubar, φbar, u, setup)
                 # 2
                 I = J - δ(β)
                 if α == γ && I in Iu[α]
-                    uαβ2 = Aαβ1[I[β]+1]
+                    uαβ2 = h
                     uβα2 = Aβα2[I[α]] * u[β][I] + Aβα1[I[α]+1] * u[β][I+δ(α)]
                     dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
                     ubar[γ][J] += φbar[α][I] * dφdu
@@ -232,7 +253,7 @@ function convection_adjoint!(ubar, φbar, u, setup)
                 # 3
                 I = J
                 if β == γ && I in Iu[α]
-                    uαβ2 = Aαβ2[I[β]] * u[α][I] + Aαβ1[I[β]+1] * u[α][I+δ(β)]
+                    uαβ2 = h * u[α][I] + h * u[α][I+δ(β)]
                     uβα2 = Aβα2[I[α]]
                     dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
                     ubar[γ][J] += φbar[α][I] * dφdu
@@ -241,7 +262,7 @@ function convection_adjoint!(ubar, φbar, u, setup)
                 # 4
                 I = J - δ(α)
                 if β == γ && I in Iu[α]
-                    uαβ2 = Aαβ2[I[β]] * u[α][I] + Aαβ1[I[β]+1] * u[α][I+δ(β)]
+                    uαβ2 = h * u[α][I] + h * u[α][I+δ(β)]
                     uβα2 = Aβα1[I[α]+1]
                     dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
                     ubar[γ][J] += φbar[α][I] * dφdu
@@ -250,7 +271,7 @@ function convection_adjoint!(ubar, φbar, u, setup)
                 # 5
                 I = J + δ(β)
                 if α == γ && I in Iu[α]
-                    uαβ1 = Aαβ2[I[β]-1]
+                    uαβ1 = h
                     uβα1 =
                         Aβα2[I[α]-(α==β)] * u[β][I-δ(β)] +
                         Aβα1[I[α]+(α!=β)] * u[β][I-δ(β)+δ(α)]
@@ -261,7 +282,7 @@ function convection_adjoint!(ubar, φbar, u, setup)
                 # 6
                 I = J
                 if α == γ && I in Iu[α]
-                    uαβ1 = Aαβ1[I[β]]
+                    uαβ1 = h
                     uβα1 =
                         Aβα2[I[α]-(α==β)] * u[β][I-δ(β)] +
                         Aβα1[I[α]+(α!=β)] * u[β][I-δ(β)+δ(α)]
@@ -272,7 +293,7 @@ function convection_adjoint!(ubar, φbar, u, setup)
                 # 7
                 I = J + δ(β)
                 if β == γ && I in Iu[α]
-                    uαβ1 = Aαβ2[I[β]-1] * u[α][I-δ(β)] + Aαβ1[I[β]] * u[α][I]
+                    uαβ1 = h * u[α][I-δ(β)] + h * u[α][I]
                     uβα1 = Aβα2[I[α]-(α==β)]
                     dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
                     ubar[γ][J] += φbar[α][I] * dφdu
@@ -281,7 +302,7 @@ function convection_adjoint!(ubar, φbar, u, setup)
                 # 8
                 I = J + δ(β) - δ(α)
                 if β == γ && I in Iu[α]
-                    uαβ1 = Aαβ2[I[β]-1] * u[α][I-δ(β)] + Aαβ1[I[β]] * u[α][I]
+                    uαβ1 = h * u[α][I-δ(β)] + h * u[α][I]
                     uβα1 = Aβα1[I[α]+(α!=β)]
                     dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
                     ubar[γ][J] += φbar[α][I] * dφdu
@@ -392,11 +413,11 @@ function convectiondiffusion!(F, u, setup)
         # for β = 1:D
         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
             Δuαβ = α == β ? Δu[β] : Δ[β]
-            uαβ1 = A[α][β][2][I[β]-1] * u[α][I-δ(β)] + A[α][β][1][I[β]] * u[α][I]
+            uαβ1 = (u[α][I-δ(β)] + u[α][I]) / 2
+            uαβ2 = (u[α][I] + u[α][I+δ(β)]) / 2
             uβα1 =
                 A[β][α][2][I[α]-(α==β)] * u[β][I-δ(β)] +
                 A[β][α][1][I[α]+(α!=β)] * u[β][I-δ(β)+δ(α)]
-            uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+δ(β)]
             uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+δ(α)]
             uαuβ1 = uαβ1 * uβα1
             uαuβ2 = uαβ2 * uβα2
