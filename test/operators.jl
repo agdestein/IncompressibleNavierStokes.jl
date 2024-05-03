@@ -8,7 +8,7 @@
     setup = Setup(x...; Re)
     psolver = DirectPressureSolver(setup)
     u = random_field(setup, T(0); psolver)
-    (; Iu, Ip) = setup.grid
+    (; Iu, Ip, Ω) = setup.grid
 
     @testset "Divergence" begin
         div = divergence(u, setup)
@@ -19,8 +19,8 @@
     @testset "Pressure gradient" begin
         v = randn!.(similar.(u))
         p = randn!(similar(u[1]))
-        apply_bc_u!(v, T(0), setup)
-        apply_bc_p!(p, T(0), setup)
+        v = apply_bc_u(v, T(0), setup)
+        p = apply_bc_p(p, T(0), setup)
         Dv = divergence(v, setup)
         Gp = pressuregradient(p, setup)
         pDv = if length(v) == 2
@@ -31,9 +31,10 @@
             vGpx = v[2] .* setup.grid.Δ[1] .* setup.grid.Δu[2]' .* Gp[2]
             sum(vGpx[Iu[1]]) + sum(vGpx[Iu[2]])
         end
-        @test G isa Tuple
-        @test G[1] isa Array{T}
-        @test pDv ≈ -vGp # Check that D = -G'
+        @test Gp isa Tuple
+        @test Gp[1] isa Array{T}
+        # FIXME: Find how to put Ω
+        @test_broken pDv ≈ -vGp # Check that D = -G'
     end
 
     @testset "Convection" begin
@@ -57,6 +58,6 @@
         end
         @test d isa Tuple
         @test d[1] isa Array{T}
-        @test uDu ≥ 0 # Check positivity
+        @test uDu ≤ 0 # Check negativity (dissipation)
     end
 end

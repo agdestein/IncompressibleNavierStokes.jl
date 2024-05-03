@@ -12,7 +12,7 @@
     direct = DirectPressureSolver(setup)
     cg = CGPressureSolver(setup)
     spectral = SpectralPressureSolver(setup)
-    lmspectral = LowerMemorySpectralPressureSolver(setup)
+    lmspectral = LowMemorySpectralPressureSolver(setup)
 
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
     p_exact =

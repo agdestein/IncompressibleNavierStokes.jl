@@ -2,7 +2,9 @@ using Aqua
 using CairoMakie
 using ChainRulesTestUtils
 using IncompressibleNavierStokes
+using IncompressibleNavierStokes: divergence, pressuregradient, convection, diffusion, apply_bc_u, apply_bc_p
 using LinearAlgebra
+using Random
 using Statistics
 using Test
 
