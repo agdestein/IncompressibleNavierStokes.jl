@@ -1,5 +1,6 @@
 using Aqua
 using CairoMakie
+using ChainRulesTestUtils
 using IncompressibleNavierStokes
 using LinearAlgebra
 using Statistics
@@ -9,6 +10,7 @@ using Test
     include("grid.jl")
     include("pressure_solvers.jl")
     include("operators.jl")
+    include("chainrules.jl")
     # include("models.jl")
     # include("solvers.jl")
     # include("simulation2D.jl")
