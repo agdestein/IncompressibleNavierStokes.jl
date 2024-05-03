@@ -3,7 +3,6 @@
         x...;
         boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
         Re = convert(eltype(x[1]), 1_000),
-        viscosity_model = LaminarModel(),
         bodyforce = nothing,
         issteadybodyforce = true,
         closure_model = nothing,
@@ -17,7 +16,6 @@ function Setup(
     x...;
     boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
     Re = convert(eltype(x[1]), 1_000),
-    viscosity_model = LaminarModel(),
     bodyforce = nothing,
     issteadybodyforce = true,
     closure_model = nothing,
@@ -29,7 +27,6 @@ function Setup(
         grid = Grid(x, boundary_conditions; ArrayType),
         boundary_conditions,
         Re,
-        viscosity_model,
         bodyforce,
         issteadybodyforce = false,
         closure_model,
