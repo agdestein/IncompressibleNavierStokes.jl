@@ -633,10 +633,11 @@ diffusion(u, setup) = diffusion!(zero.(u), u, setup)
 
 ChainRulesCore.rrule(::typeof(diffusion), u, setup) = (
     diffusion(u, setup),
-    φ -> (NoTangent(), diffusion_adjoint!(
-        # zero.(u),
-        Tangent{typeof(u)}(zero.(u)...),
-        (φ...,), setup), NoTangent()),
+    φ -> (
+        NoTangent(),
+        diffusion_adjoint!(Tangent{typeof(u)}(zero.(u)...), (φ...,), setup),
+        NoTangent(),
+    ),
 )
 
 function convectiondiffusion!(F, u, setup)

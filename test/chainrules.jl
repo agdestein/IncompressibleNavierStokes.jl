@@ -3,7 +3,7 @@ testchainrules(dim) = @testset "Chain rules $(dim())D" begin
     D = dim()
     T = Float64
     Re = T(1_000)
-    n = if D == 2 
+    n = if D == 2
         8
     elseif D == 3
         # 4^3 = 64 grid points
