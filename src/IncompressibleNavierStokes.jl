@@ -39,9 +39,6 @@ include("grid/stretched_grid.jl")
 include("grid/cosine_grid.jl")
 include("grid/max_size.jl")
 
-# Models
-include("models/viscosity_models.jl")
-
 # Setup
 include("setup.jl")
 
@@ -86,9 +83,6 @@ include("utils/spectral_stuff.jl")
 
 # Boundary conditions
 export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
-
-# Models
-export LaminarModel, MixingLengthModel, SmagorinskyModel, QRModel
 
 # Processors
 export processor, timelogger, vtk_writer, fieldsaver, realtimeplotter
