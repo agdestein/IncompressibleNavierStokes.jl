@@ -8,6 +8,8 @@ Original (MATLAB) by David Ketcheson, extended by Benjamin Sanderse.
 """
 module RKMethods
 
+using IncompressibleNavierStokes: runge_kutta_method
+
 # Explicit Methods
 export FE11, SSP22, SSP42, SSP33, SSP43, SSP104, rSSPs2, rSSPs3, Wray3, RK56, DOPRI6
 

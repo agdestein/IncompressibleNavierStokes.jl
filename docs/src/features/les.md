@@ -32,12 +32,7 @@ atomic scales. The new turbulent viscosity on the other hand, models energy
 transfer from resolved to unresolved scales. This non-constant field is
 computed from the local velocity field.
 
-The following eddy viscosity models are available:
-
 ```@docs
-AbstractViscosityModel
-LaminarModel
-SmagorinskyModel
-QRModel
-MixingLengthModel
+smagtensor!
+smagorinsky_closure
 ```

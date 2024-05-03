@@ -50,12 +50,12 @@ include("solvers/pressure/project.jl")
 
 # Time steppers
 include("time_steppers/methods.jl")
-include("time_steppers/tableaux.jl")
 include("time_steppers/nstage.jl")
 include("time_steppers/time_stepper_caches.jl")
 include("time_steppers/step.jl")
 include("time_steppers/isexplicit.jl")
 include("time_steppers/lambda_max.jl")
+include("time_steppers/tableaux.jl")
 
 # Preprocess
 include("create_initial_conditions.jl")
