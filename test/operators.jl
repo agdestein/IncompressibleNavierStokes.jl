@@ -1,10 +1,15 @@
-@testset "Operators" begin
+testops(dim) = @testset "Operators $(dim())D" begin
     # Setup
+    D = dim()
     T = Float64
     Re = T(1_000)
     n = 16
     lims = T(0), T(1)
-    x = stretched_grid(lims..., n, 1.2), cosine_grid(lims..., n)
+    x = if D == 2
+        stretched_grid(lims..., n, 1.2), cosine_grid(lims..., n)
+    elseif D == 3
+        stretched_grid(lims..., n, 1.2), cosine_grid(lims..., n), cosine_grid(lims..., n)
+    end
     setup = Setup(x...; Re)
     psolver = DirectPressureSolver(setup)
     u = random_field(setup, T(0); psolver)
@@ -23,26 +28,45 @@
         p = apply_bc_p(p, T(0), setup)
         Dv = divergence(v, setup)
         Gp = pressuregradient(p, setup)
-        pDv = if length(v) == 2
-            sum((p.*Ω.*Dv)[Ip])
-        end
-        vGp = if length(v) == 2
+        pDv = sum((p.*Ω.*Dv)[Ip])
+        vGp = if D == 2
             vGpx = v[1] .* setup.grid.Δu[1] .* setup.grid.Δ[2]' .* Gp[1]
-            vGpx = v[2] .* setup.grid.Δ[1] .* setup.grid.Δu[2]' .* Gp[2]
-            sum(vGpx[Iu[1]]) + sum(vGpx[Iu[2]])
+            vGpy = v[2] .* setup.grid.Δ[1] .* setup.grid.Δu[2]' .* Gp[2]
+            sum(vGpx[Iu[1]]) + sum(vGpy[Iu[2]])
+        elseif D == 3
+            vGpx =
+                v[1] .* setup.grid.Δu[1] .* reshape(setup.grid.Δ[2], 1, :) .*
+                reshape(setup.grid.Δ[3], 1, 1, :) .* Gp[1]
+            vGpy =
+                v[2] .* setup.grid.Δ[1] .* reshape(setup.grid.Δu[2], 1, :) .*
+                reshape(setup.grid.Δ[3], 1, 1, :) .* Gp[2]
+            vGpz =
+                v[3] .* setup.grid.Δ[1] .* reshape(setup.grid.Δ[2], 1, :) .*
+                reshape(setup.grid.Δu[3], 1, 1, :) .* Gp[3]
+            sum(vGpx[Iu[1]]) + sum(vGpy[Iu[2]]) + sum(vGpz[Iu[3]])
         end
         @test Gp isa Tuple
         @test Gp[1] isa Array{T}
-        # FIXME: Find how to put Ω
-        @test_broken pDv ≈ -vGp # Check that D = -G'
+        @test pDv ≈ -vGp # Check that D = -G'
     end
 
     @testset "Convection" begin
         c = convection(u, setup)
-        uCu = if length(u) == 2
+        uCu = if D == 2
             uCux = u[1] .* setup.grid.Δu[1] .* setup.grid.Δ[2]' .* c[1]
             uCuy = u[2] .* setup.grid.Δ[1] .* setup.grid.Δu[2]' .* c[2]
             sum(uCux[Iu[1]]) + sum(uCuy[Iu[2]])
+        elseif D == 3
+            uCux =
+                u[1] .* setup.grid.Δu[1] .* reshape(setup.grid.Δ[2], 1, :) .*
+                reshape(setup.grid.Δ[3], 1, 1, :) .* c[1]
+            uCuy =
+                u[2] .* setup.grid.Δ[1] .* reshape(setup.grid.Δu[2], 1, :) .*
+                reshape(setup.grid.Δ[3], 1, 1, :) .* c[2]
+            uCuz =
+                u[3] .* setup.grid.Δ[1] .* reshape(setup.grid.Δ[2], 1, :) .*
+                reshape(setup.grid.Δu[3], 1, 1, :) .* c[3]
+            sum(uCux[Iu[1]]) + sum(uCuy[Iu[2]]) + sum(uCuz[Iu[3]])
         end
         @test c isa Tuple
         @test c[1] isa Array{T}
@@ -51,13 +75,27 @@
 
     @testset "Diffusion" begin
         d = diffusion(u, setup)
-        uDu = if length(u) == 2
+        uDu = if D == 2
             uDux = u[1] .* setup.grid.Δu[1] .* setup.grid.Δ[2]' .* d[1]
             uDuy = u[2] .* setup.grid.Δ[1] .* setup.grid.Δu[2]' .* d[2]
             sum(uDux[Iu[1]]) + sum(uDuy[Iu[2]])
+        elseif D == 3
+            uDux =
+                u[1] .* setup.grid.Δu[1] .* reshape(setup.grid.Δ[2], 1, :) .*
+                reshape(setup.grid.Δ[3], 1, 1, :) .* d[1]
+            uDuy =
+                u[2] .* setup.grid.Δ[1] .* reshape(setup.grid.Δu[2], 1, :) .*
+                reshape(setup.grid.Δ[3], 1, 1, :) .* d[2]
+            uDuz =
+                u[3] .* setup.grid.Δ[1] .* reshape(setup.grid.Δ[2], 1, :) .*
+                reshape(setup.grid.Δu[3], 1, 1, :) .* d[3]
+            sum(uDux[Iu[1]]) + sum(uDuy[Iu[2]]) + sum(uDuz[Iu[3]])
         end
         @test d isa Tuple
         @test d[1] isa Array{T}
         @test uDu ≤ 0 # Check negativity (dissipation)
     end
 end
+
+testops(IncompressibleNavierStokes.Dimension(2))
+testops(IncompressibleNavierStokes.Dimension(3))
