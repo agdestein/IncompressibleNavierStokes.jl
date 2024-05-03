@@ -105,62 +105,288 @@ ChainRulesCore.rrule(::typeof(divergence), u, setup) = (
 )
 
 """
-    vorticity(u, setup)
+    pressuregradient!(G, p, setup)
 
-Compute vorticity field.
+Compute pressure gradient (in-place).
 """
-vorticity(u, setup) = vorticity!(
-    length(u) == 2 ? similar(u[1], setup.grid.N) :
-    ntuple(α -> similar(u[1], setup.grid.N), length(u)),
-    u,
-    setup,
+function pressuregradient!(G, p, setup)
+    (; grid, workgroupsize) = setup
+    (; dimension, Δu, Nu, Iu) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function G!(G, p, ::Val{α}, I0) where {α}
+        I = @index(Global, Cartesian)
+        I = I0 + I
+        G[α][I] = (p[I+δ(α)] - p[I]) / Δu[α][I[α]]
+    end
+    D = dimension()
+    for α = 1:D
+        I0 = first(Iu[α])
+        I0 -= oneunit(I0)
+        G!(get_backend(G[1]), workgroupsize)(G, p, Val(α), I0; ndrange = Nu[α])
+    end
+    G
+end
+
+function pressuregradient_adjoint!(pbar, φ, setup)
+    (; grid, workgroupsize) = setup
+    (; dimension, Δu, N, Iu) = grid
+    D = dimension()
+    δ = Offset{D}()
+    @kernel function adj!(p, φ)
+        I = @index(Global, Cartesian)
+        p[I] = zero(eltype(p))
+        for α = 1:D
+            I - δ(α) ∈ Iu[α] && (p[I] += φ[α][I-δ(α)] / Δu[α][I[α]-1])
+            I ∈ Iu[α] && (p[I] -= φ[α][I] / Δu[α][I[α]])
+        end
+    end
+    adj!(get_backend(pbar), workgroupsize)(pbar, φ; ndrange = N)
+    pbar
+end
+
+"""
+    pressuregradient(p, setup)
+
+Compute pressure gradient.
+"""
+pressuregradient(p, setup) =
+    pressuregradient!(ntuple(α -> zero(p), setup.grid.dimension()), p, setup)
+
+ChainRulesCore.rrule(::typeof(pressuregradient), p, setup) = (
+    pressuregradient(p, setup),
+    φ -> (NoTangent(), pressuregradient_adjoint!(similar(p), (φ...,), setup), NoTangent()),
 )
 
 """
-    vorticity!(ω, u, setup)
+    applypressure!(u, p, setup)
 
-Compute vorticity field.
+Subtract pressure gradient (in-place).
 """
-vorticity!(ω, u, setup) = vorticity!(setup.grid.dimension, ω, u, setup)
-
-function vorticity!(::Dimension{2}, ω, u, setup)
+function applypressure!(u, p, setup)
     (; grid, workgroupsize) = setup
-    (; dimension, Δu, N) = grid
+    (; dimension, Δu, Nu, Iu) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function ω!(ω, u, I0)
+    @kernel function apply!(u, p, ::Val{α}, I0) where {α}
         I = @index(Global, Cartesian)
-        I = I + I0
-        ω[I] =
-            (u[2][I+δ(1)] - u[2][I]) / Δu[1][I[1]] - (u[1][I+δ(2)] - u[1][I]) / Δu[2][I[2]]
+        I = I0 + I
+        u[α][I] -= (p[I+δ(α)] - p[I]) / Δu[α][I[α]]
     end
-    I0 = CartesianIndex(ntuple(Returns(1), D))
-    I0 -= oneunit(I0)
-    ω!(get_backend(ω), workgroupsize)(ω, u, I0; ndrange = N .- 1)
-    ω
+    D = dimension()
+    for α = 1:D
+        I0 = first(Iu[α])
+        I0 -= oneunit(I0)
+        apply!(get_backend(u[1]), workgroupsize)(u, p, Val(α), I0; ndrange = Nu[α])
+    end
+    u
 end
 
-function vorticity!(::Dimension{3}, ω, u, setup)
-    (; grid, workgroupsize) = setup
-    (; dimension, Δu, N) = grid
+# function applypressure_adjoint!(pbar, φ, u, setup)
+#     (; grid, workgroupsize) = setup
+#     (; dimension, Δu, N, Iu) = grid
+#     D = dimension()
+#     δ = Offset{D}()
+#     @kernel function adj!(p, φ)
+#         I = @index(Global, Cartesian)
+#         p[I] = zero(eltype(p))
+#         for α = 1:D
+#             I - δ(α) ∈ Iu[α] && (p[I] += φ[α][I-δ(α)] / Δu[α][I[α]-1])
+#             I ∈ Iu[α] && (p[I] -= φ[α][I] / Δu[α][I[α]])
+#         end
+#     end
+#     adj!(get_backend(pbar), workgroupsize)(pbar, φ; ndrange = N)
+#     pbar
+# end
+#
+# """
+#     applypressure(p, setup)
+#
+# Compute pressure gradient.
+# """
+# applypressure(u, p, setup) =
+#     applypressure!(copy.(u), p, setup)
+#
+# ChainRulesCore.rrule(::typeof(applypressure), p, setup) = (
+#     applypressure(u, p, setup),
+#     φ -> (NoTangent(), applypressure_adjoint!(similar(p), (φ...,), setup), NoTangent()),
+# )
+
+"""
+    laplacian!(L, p, setup)
+
+Compute Laplacian of pressure field (in-place version).
+"""
+function laplacian!(L, p, setup)
+    (; grid, workgroupsize, boundary_conditions) = setup
+    (; dimension, Δ, Δu, N, Np, Ip, Ω) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function ω!(ω, u, I0)
-        T = eltype(ω)
+    # @kernel function lap!(L, p, I0)
+    #     I = @index(Global, Cartesian)
+    #     I = I + I0
+    #     lap = zero(eltype(p))
+    #     for α = 1:D
+    #         # bc = boundary_conditions[α]
+    #         if bc[1] isa PressureBC && I[α] == I0[α] + 1
+    #             lap +=
+    #                 Ω[I] / Δ[α][I[α]] *
+    #                 ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I]) / Δu[α][I[α]-1])
+    #         elseif bc[2] isa PressureBC && I[α] == I0[α] + Np[α]
+    #             lap +=
+    #                 Ω[I] / Δ[α][I[α]] *
+    #                 ((-p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+    #         elseif bc[1] isa DirichletBC && I[α] == I0[α] + 1
+    #             lap += Ω[I] / Δ[α][I[α]] * ((p[I+δ(α)] - p[I]) / Δu[α][I[α]])
+    #         elseif bc[2] isa DirichletBC && I[α] == I0[α] + Np[α]
+    #             lap += Ω[I] / Δ[α][I[α]] * (-(p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+    #         else
+    #             lap +=
+    #                 Ω[I] / Δ[α][I[α]] *
+    #                 ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+    #         end
+    #     end
+    #     L[I] = lap
+    # end
+    @kernel function lapα!(L, p, I0, ::Val{α}, bc) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
-        for (α, α₊, α₋) in ((1, 2, 3), (2, 3, 1), (3, 1, 2))
-            # α₊ = mod1(α + 1, D)
-            # α₋ = mod1(α - 1, D)
-            ω[α][I] =
-                (u[α₋][I+δ(α₊)] - u[α₋][I]) / Δu[α₊][I[α₊]] -
-                (u[α₊][I+δ(α₋)] - u[α₊][I]) / Δu[α₋][I[α₋]]
+        # bc = boundary_conditions[α]
+        if bc[1] isa PressureBC && I[α] == I0[α] + 1
+            L[I] +=
+                Ω[I] / Δ[α][I[α]] *
+                ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I]) / Δu[α][I[α]-1])
+        elseif bc[2] isa PressureBC && I[α] == I0[α] + Np[α]
+            L[I] +=
+                Ω[I] / Δ[α][I[α]] *
+                ((-p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+        elseif bc[1] isa DirichletBC && I[α] == I0[α] + 1
+            L[I] += Ω[I] / Δ[α][I[α]] * ((p[I+δ(α)] - p[I]) / Δu[α][I[α]])
+        elseif bc[2] isa DirichletBC && I[α] == I0[α] + Np[α]
+            L[I] += Ω[I] / Δ[α][I[α]] * (-(p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+        else
+            L[I] +=
+                Ω[I] / Δ[α][I[α]] *
+                ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
+        end
+        # L[I] = lap
+    end
+    # All volumes have a right velocity
+    # All volumes have a left velocity except the first one
+    # Start at second volume
+    ndrange = Np
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    # lap!(get_backend(L), workgroupsize)(L, p, I0; ndrange)
+    L .= 0
+    for α = 1:D
+        lapα!(get_backend(L), workgroupsize)(
+            L,
+            p,
+            I0,
+            Val(α),
+            boundary_conditions[α];
+            ndrange,
+        )
+    end
+    L
+end
+
+"""
+    laplacian(p, setup)
+
+Compute Laplacian of pressure field.
+"""
+laplacian(p, setup) = laplacian!(similar(p), p, setup)
+
+function laplacian_mat(setup)
+    (; grid, boundary_conditions) = setup
+    (; dimension, x, N, Np, Ip, Δ, Δu, Ω) = grid
+    backend = get_backend(x[1])
+    T = eltype(x[1])
+    D = dimension()
+    δ = Offset{D}()
+    Ia = first(Ip)
+    Ib = last(Ip)
+    I = similar(x[1], CartesianIndex{D}, 0)
+    J = similar(x[1], CartesianIndex{D}, 0)
+    val = similar(x[1], 0)
+    I0 = Ia - oneunit(Ia)
+    for α = 1:D
+        a, b = boundary_conditions[α]
+        i = Ip[ntuple(β -> α == β ? (2:Np[α]-1) : (:), D)...][:]
+        ia = Ip[ntuple(β -> α == β ? (1:1) : (:), D)...][:]
+        ib = Ip[ntuple(β -> α == β ? (Np[α]:Np[α]) : (:), D)...][:]
+        for (aa, bb, j) in [(a, nothing, ia), (nothing, nothing, i), (nothing, b, ib)]
+            vala = @.(Ω[j] / Δ[α][getindex.(j, α)] / Δu[α][getindex.(j, α)-1])
+            if isnothing(aa)
+                J = [J; j .- [δ(α)]; j]
+                I = [I; j; j]
+                val = [val; vala; -vala]
+            elseif aa isa PressureBC
+                J = [J; j]
+                I = [I; j]
+                val = [val; -vala]
+            elseif aa isa PeriodicBC
+                J = [J; ib; j]
+                I = [I; j; j]
+                val = [val; vala; -vala]
+            elseif aa isa SymmetricBC
+                J = [J; ia; j]
+                I = [I; j; j]
+                val = [val; vala; -vala]
+            elseif aa isa DirichletBC
+            end
+
+            valb = @.(Ω[j] / Δ[α][getindex.(j, α)] / Δu[α][getindex.(j, α)])
+            if isnothing(bb)
+                J = [J; j; j .+ [δ(α)]]
+                I = [I; j; j]
+                val = [val; -valb; valb]
+            elseif bb isa PressureBC
+                # The weight of the "right" BC is zero, but still needs a J inside Ip, so
+                # just set it to ib
+                J = [J; j]
+                I = [I; j]
+                val = [val; -valb]
+            elseif bb isa PeriodicBC
+                J = [J; j; ia]
+                I = [I; j; j]
+                val = [val; -valb; valb]
+            elseif bb isa SymmetricBC
+                J = [J; j; ib]
+                I = [I; j; j]
+                val = [val; -valb; valb]
+            elseif bb isa DirichletBC
+            end
+            # val = vcat(
+            #     val,
+            #     map(I -> Ω[I] / Δ[α][I[α]] / Δu[α][I[α]-1], j),
+            #     map(I -> -Ω[I] / Δ[α][I[α]] * (1 / Δu[α][I[α]] + 1 / Δu[α][I[α]-1]), j),
+            #     map(I -> Ω[I] / Δ[α][I[α]] / Δu[α][I[α]], j),
         end
     end
-    I0 = CartesianIndex(ntuple(Returns(1), D))
-    I0 -= oneunit(I0)
-    ω!(get_backend(ω[1]), workgroupsize)(ω, u, I0; ndrange = N .- 1)
-    ω
+    # Go back to CPU, otherwise get following error:
+    # ERROR: CUDA error: an illegal memory access was encountered (code 700, ERROR_ILLEGAL_ADDRESS)
+    I = Array(I)
+    J = Array(J)
+    # I = I .- I0
+    # J = J .- I0
+    I = I .- [I0]
+    J = J .- [I0]
+    # linear = copyto!(similar(x[1], Int, Np), collect(LinearIndices(Ip)))
+    linear = LinearIndices(Ip)
+    I = linear[I]
+    J = linear[J]
+
+    # Assemble on CPU, since CUDA overwrites instead of adding
+    L = sparse(I, J, Array(val))
+    # II = copyto!(similar(x[1], Int, length(I)), I)
+    # JJ = copyto!(similar(x[1], Int, length(J)), J)
+    # sparse(II, JJ, val)
+
+    L
+    # Ω isa CuArray ? cu(L) : L
 end
 
 """
@@ -540,289 +766,64 @@ end
 # )
 
 """
-    pressuregradient!(G, p, setup)
+    vorticity(u, setup)
 
-Compute pressure gradient (in-place).
+Compute vorticity field.
 """
-function pressuregradient!(G, p, setup)
-    (; grid, workgroupsize) = setup
-    (; dimension, Δu, Nu, Iu) = grid
-    D = dimension()
-    δ = Offset{D}()
-    @kernel function G!(G, p, ::Val{α}, I0) where {α}
-        I = @index(Global, Cartesian)
-        I = I0 + I
-        G[α][I] = (p[I+δ(α)] - p[I]) / Δu[α][I[α]]
-    end
-    D = dimension()
-    for α = 1:D
-        I0 = first(Iu[α])
-        I0 -= oneunit(I0)
-        G!(get_backend(G[1]), workgroupsize)(G, p, Val(α), I0; ndrange = Nu[α])
-    end
-    G
-end
-
-function pressuregradient_adjoint!(pbar, φ, setup)
-    (; grid, workgroupsize) = setup
-    (; dimension, Δu, N, Iu) = grid
-    D = dimension()
-    δ = Offset{D}()
-    @kernel function adj!(p, φ)
-        I = @index(Global, Cartesian)
-        p[I] = zero(eltype(p))
-        for α = 1:D
-            I - δ(α) ∈ Iu[α] && (p[I] += φ[α][I-δ(α)] / Δu[α][I[α]-1])
-            I ∈ Iu[α] && (p[I] -= φ[α][I] / Δu[α][I[α]])
-        end
-    end
-    adj!(get_backend(pbar), workgroupsize)(pbar, φ; ndrange = N)
-    pbar
-end
-
-"""
-    pressuregradient(p, setup)
-
-Compute pressure gradient.
-"""
-pressuregradient(p, setup) =
-    pressuregradient!(ntuple(α -> zero(p), setup.grid.dimension()), p, setup)
-
-ChainRulesCore.rrule(::typeof(pressuregradient), p, setup) = (
-    pressuregradient(p, setup),
-    φ -> (NoTangent(), pressuregradient_adjoint!(similar(p), (φ...,), setup), NoTangent()),
+vorticity(u, setup) = vorticity!(
+    length(u) == 2 ? similar(u[1], setup.grid.N) :
+    ntuple(α -> similar(u[1], setup.grid.N), length(u)),
+    u,
+    setup,
 )
 
 """
-    applypressure!(u, p, setup)
+    vorticity!(ω, u, setup)
 
-Subtract pressure gradient (in-place).
+Compute vorticity field.
 """
-function applypressure!(u, p, setup)
+vorticity!(ω, u, setup) = vorticity!(setup.grid.dimension, ω, u, setup)
+
+function vorticity!(::Dimension{2}, ω, u, setup)
     (; grid, workgroupsize) = setup
-    (; dimension, Δu, Nu, Iu) = grid
+    (; dimension, Δu, N) = grid
     D = dimension()
     δ = Offset{D}()
-    @kernel function apply!(u, p, ::Val{α}, I0) where {α}
-        I = @index(Global, Cartesian)
-        I = I0 + I
-        u[α][I] -= (p[I+δ(α)] - p[I]) / Δu[α][I[α]]
-    end
-    D = dimension()
-    for α = 1:D
-        I0 = first(Iu[α])
-        I0 -= oneunit(I0)
-        apply!(get_backend(u[1]), workgroupsize)(u, p, Val(α), I0; ndrange = Nu[α])
-    end
-    u
-end
-
-# function applypressure_adjoint!(pbar, φ, u, setup)
-#     (; grid, workgroupsize) = setup
-#     (; dimension, Δu, N, Iu) = grid
-#     D = dimension()
-#     δ = Offset{D}()
-#     @kernel function adj!(p, φ)
-#         I = @index(Global, Cartesian)
-#         p[I] = zero(eltype(p))
-#         for α = 1:D
-#             I - δ(α) ∈ Iu[α] && (p[I] += φ[α][I-δ(α)] / Δu[α][I[α]-1])
-#             I ∈ Iu[α] && (p[I] -= φ[α][I] / Δu[α][I[α]])
-#         end
-#     end
-#     adj!(get_backend(pbar), workgroupsize)(pbar, φ; ndrange = N)
-#     pbar
-# end
-#
-# """
-#     applypressure(p, setup)
-#
-# Compute pressure gradient.
-# """
-# applypressure(u, p, setup) =
-#     applypressure!(copy.(u), p, setup)
-#
-# ChainRulesCore.rrule(::typeof(applypressure), p, setup) = (
-#     applypressure(u, p, setup),
-#     φ -> (NoTangent(), applypressure_adjoint!(similar(p), (φ...,), setup), NoTangent()),
-# )
-
-"""
-    laplacian!(L, p, setup)
-
-Compute Laplacian of pressure field (in-place version).
-"""
-function laplacian!(L, p, setup)
-    (; grid, workgroupsize, boundary_conditions) = setup
-    (; dimension, Δ, Δu, N, Np, Ip, Ω) = grid
-    D = dimension()
-    δ = Offset{D}()
-    # @kernel function lap!(L, p, I0)
-    #     I = @index(Global, Cartesian)
-    #     I = I + I0
-    #     lap = zero(eltype(p))
-    #     for α = 1:D
-    #         # bc = boundary_conditions[α]
-    #         if bc[1] isa PressureBC && I[α] == I0[α] + 1
-    #             lap +=
-    #                 Ω[I] / Δ[α][I[α]] *
-    #                 ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I]) / Δu[α][I[α]-1])
-    #         elseif bc[2] isa PressureBC && I[α] == I0[α] + Np[α]
-    #             lap +=
-    #                 Ω[I] / Δ[α][I[α]] *
-    #                 ((-p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
-    #         elseif bc[1] isa DirichletBC && I[α] == I0[α] + 1
-    #             lap += Ω[I] / Δ[α][I[α]] * ((p[I+δ(α)] - p[I]) / Δu[α][I[α]])
-    #         elseif bc[2] isa DirichletBC && I[α] == I0[α] + Np[α]
-    #             lap += Ω[I] / Δ[α][I[α]] * (-(p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
-    #         else
-    #             lap +=
-    #                 Ω[I] / Δ[α][I[α]] *
-    #                 ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
-    #         end
-    #     end
-    #     L[I] = lap
-    # end
-    @kernel function lapα!(L, p, I0, ::Val{α}, bc) where {α}
+    @kernel function ω!(ω, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
-        # bc = boundary_conditions[α]
-        if bc[1] isa PressureBC && I[α] == I0[α] + 1
-            L[I] +=
-                Ω[I] / Δ[α][I[α]] *
-                ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I]) / Δu[α][I[α]-1])
-        elseif bc[2] isa PressureBC && I[α] == I0[α] + Np[α]
-            L[I] +=
-                Ω[I] / Δ[α][I[α]] *
-                ((-p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
-        elseif bc[1] isa DirichletBC && I[α] == I0[α] + 1
-            L[I] += Ω[I] / Δ[α][I[α]] * ((p[I+δ(α)] - p[I]) / Δu[α][I[α]])
-        elseif bc[2] isa DirichletBC && I[α] == I0[α] + Np[α]
-            L[I] += Ω[I] / Δ[α][I[α]] * (-(p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
-        else
-            L[I] +=
-                Ω[I] / Δ[α][I[α]] *
-                ((p[I+δ(α)] - p[I]) / Δu[α][I[α]] - (p[I] - p[I-δ(α)]) / Δu[α][I[α]-1])
-        end
-        # L[I] = lap
+        ω[I] =
+            (u[2][I+δ(1)] - u[2][I]) / Δu[1][I[1]] - (u[1][I+δ(2)] - u[1][I]) / Δu[2][I[2]]
     end
-    # All volumes have a right velocity
-    # All volumes have a left velocity except the first one
-    # Start at second volume
-    ndrange = Np
-    I0 = first(Ip)
+    I0 = CartesianIndex(ntuple(Returns(1), D))
     I0 -= oneunit(I0)
-    # lap!(get_backend(L), workgroupsize)(L, p, I0; ndrange)
-    L .= 0
-    for α = 1:D
-        lapα!(get_backend(L), workgroupsize)(
-            L,
-            p,
-            I0,
-            Val(α),
-            boundary_conditions[α];
-            ndrange,
-        )
-    end
-    L
+    ω!(get_backend(ω), workgroupsize)(ω, u, I0; ndrange = N .- 1)
+    ω
 end
 
-"""
-    laplacian(p, setup)
-
-Compute Laplacian of pressure field.
-"""
-laplacian(p, setup) = laplacian!(similar(p), p, setup)
-
-function laplacian_mat(setup)
-    (; grid, boundary_conditions) = setup
-    (; dimension, x, N, Np, Ip, Δ, Δu, Ω) = grid
-    backend = get_backend(x[1])
-    T = eltype(x[1])
+function vorticity!(::Dimension{3}, ω, u, setup)
+    (; grid, workgroupsize) = setup
+    (; dimension, Δu, N) = grid
     D = dimension()
     δ = Offset{D}()
-    Ia = first(Ip)
-    Ib = last(Ip)
-    I = similar(x[1], CartesianIndex{D}, 0)
-    J = similar(x[1], CartesianIndex{D}, 0)
-    val = similar(x[1], 0)
-    I0 = Ia - oneunit(Ia)
-    for α = 1:D
-        a, b = boundary_conditions[α]
-        i = Ip[ntuple(β -> α == β ? (2:Np[α]-1) : (:), D)...][:]
-        ia = Ip[ntuple(β -> α == β ? (1:1) : (:), D)...][:]
-        ib = Ip[ntuple(β -> α == β ? (Np[α]:Np[α]) : (:), D)...][:]
-        for (aa, bb, j) in [(a, nothing, ia), (nothing, nothing, i), (nothing, b, ib)]
-            vala = @.(Ω[j] / Δ[α][getindex.(j, α)] / Δu[α][getindex.(j, α)-1])
-            if isnothing(aa)
-                J = [J; j .- [δ(α)]; j]
-                I = [I; j; j]
-                val = [val; vala; -vala]
-            elseif aa isa PressureBC
-                J = [J; j]
-                I = [I; j]
-                val = [val; -vala]
-            elseif aa isa PeriodicBC
-                J = [J; ib; j]
-                I = [I; j; j]
-                val = [val; vala; -vala]
-            elseif aa isa SymmetricBC
-                J = [J; ia; j]
-                I = [I; j; j]
-                val = [val; vala; -vala]
-            elseif aa isa DirichletBC
-            end
-
-            valb = @.(Ω[j] / Δ[α][getindex.(j, α)] / Δu[α][getindex.(j, α)])
-            if isnothing(bb)
-                J = [J; j; j .+ [δ(α)]]
-                I = [I; j; j]
-                val = [val; -valb; valb]
-            elseif bb isa PressureBC
-                # The weight of the "right" BC is zero, but still needs a J inside Ip, so
-                # just set it to ib
-                J = [J; j]
-                I = [I; j]
-                val = [val; -valb]
-            elseif bb isa PeriodicBC
-                J = [J; j; ia]
-                I = [I; j; j]
-                val = [val; -valb; valb]
-            elseif bb isa SymmetricBC
-                J = [J; j; ib]
-                I = [I; j; j]
-                val = [val; -valb; valb]
-            elseif bb isa DirichletBC
-            end
-            # val = vcat(
-            #     val,
-            #     map(I -> Ω[I] / Δ[α][I[α]] / Δu[α][I[α]-1], j),
-            #     map(I -> -Ω[I] / Δ[α][I[α]] * (1 / Δu[α][I[α]] + 1 / Δu[α][I[α]-1]), j),
-            #     map(I -> Ω[I] / Δ[α][I[α]] / Δu[α][I[α]], j),
+    @kernel function ω!(ω, u, I0)
+        T = eltype(ω)
+        I = @index(Global, Cartesian)
+        I = I + I0
+        for (α, α₊, α₋) in ((1, 2, 3), (2, 3, 1), (3, 1, 2))
+            # α₊ = mod1(α + 1, D)
+            # α₋ = mod1(α - 1, D)
+            ω[α][I] =
+                (u[α₋][I+δ(α₊)] - u[α₋][I]) / Δu[α₊][I[α₊]] -
+                (u[α₊][I+δ(α₋)] - u[α₊][I]) / Δu[α₋][I[α₋]]
         end
     end
-    # Go back to CPU, otherwise get following error:
-    # ERROR: CUDA error: an illegal memory access was encountered (code 700, ERROR_ILLEGAL_ADDRESS)
-    I = Array(I)
-    J = Array(J)
-    # I = I .- I0
-    # J = J .- I0
-    I = I .- [I0]
-    J = J .- [I0]
-    # linear = copyto!(similar(x[1], Int, Np), collect(LinearIndices(Ip)))
-    linear = LinearIndices(Ip)
-    I = linear[I]
-    J = linear[J]
-
-    # Assemble on CPU, since CUDA overwrites instead of adding
-    L = sparse(I, J, Array(val))
-    # II = copyto!(similar(x[1], Int, length(I)), I)
-    # JJ = copyto!(similar(x[1], Int, length(J)), J)
-    # sparse(II, JJ, val)
-
-    L
-    # Ω isa CuArray ? cu(L) : L
+    I0 = CartesianIndex(ntuple(Returns(1), D))
+    I0 -= oneunit(I0)
+    ω!(get_backend(ω[1]), workgroupsize)(ω, u, I0; ndrange = N .- 1)
+    ω
 end
+
 
 @inline ∂x(uα, I::CartesianIndex{D}, α, β, Δβ, Δuβ; δ = Offset{D}()) where {D} =
     α == β ? (uα[I] - uα[I-δ(β)]) / Δβ[I[β]] :
