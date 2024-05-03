@@ -672,13 +672,13 @@ function convectiondiffusion!(F, u, setup)
     F
 end
 
-convectiondiffusion(u, setup) = convectiondiffusion!(zero.(u), u, setup)
-
-ChainRulesCore.rrule(::typeof(convectiondiffusion), u, setup) = (
-    convection(u, setup),
-    φ ->
-        (NoTangent(), convectiondiffusion_adjoint!(similar.(u), φ, setup), NoTangent()),
-)
+# convectiondiffusion(u, setup) = convectiondiffusion!(zero.(u), u, setup)
+#
+# ChainRulesCore.rrule(::typeof(convectiondiffusion), u, setup) = (
+#     convection(u, setup),
+#     φ ->
+#         (NoTangent(), convectiondiffusion_adjoint!(similar.(u), φ, setup), NoTangent()),
+# )
 
 """
     bodyforce!(F, u, t, setup)
