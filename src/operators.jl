@@ -423,7 +423,7 @@ function convection!(F, u, setup)
             # uβα1 = u[β][I-δ(β)] / 2 + u[β][I-δ(β)+δ(α)] / 2
             # uαβ2 = (u[α][I] + u[α][I+δ(β)]) / 2
             # uβα2 = u[β][I] / 2 + u[β][I+δ(α)] / 2
-            
+
             # # Interpolation
             # uαβ1 = A[α][β][2][I[β]-1] * u[α][I-δ(β)] + A[α][β][1][I[β]] * u[α][I]
             # uβα1 =
@@ -823,7 +823,6 @@ function vorticity!(::Dimension{3}, ω, u, setup)
     ω!(get_backend(ω[1]), workgroupsize)(ω, u, I0; ndrange = N .- 1)
     ω
 end
-
 
 @inline ∂x(uα, I::CartesianIndex{D}, α, β, Δβ, Δuβ; δ = Offset{D}()) where {D} =
     α == β ? (uα[I] - uα[I-δ(β)]) / Δβ[I[β]] :

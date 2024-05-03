@@ -57,12 +57,8 @@ struct OneLegMethod{T,M} <: AbstractODEMethod{T}
     β::T
     p_add_solve::Bool
     method_startup::M
-    OneLegMethod(
-        T = Float64;
-        β = T(1 // 2),
-        p_add_solve = true,
-        method_startup,
-    ) = new{T,typeof(method_startup)}(β, p_add_solve, method_startup)
+    OneLegMethod(T = Float64; β = T(1 // 2), p_add_solve = true, method_startup) =
+        new{T,typeof(method_startup)}(β, p_add_solve, method_startup)
 end
 
 """

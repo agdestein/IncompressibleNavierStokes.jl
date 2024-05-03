@@ -15,7 +15,7 @@
         @test div isa Array{T}
         @test all(!isnan, div)
     end
-    
+
     @testset "Pressure gradient" begin
         v = randn!.(similar.(u))
         p = randn!(similar(u[1]))
@@ -24,7 +24,7 @@
         Dv = divergence(v, setup)
         Gp = pressuregradient(p, setup)
         pDv = if length(v) == 2
-            sum((p .* Ω .* Dv)[Ip])
+            sum((p.*Ω.*Dv)[Ip])
         end
         vGp = if length(v) == 2
             vGpx = v[1] .* setup.grid.Δu[1] .* setup.grid.Δ[2]' .* Gp[1]
