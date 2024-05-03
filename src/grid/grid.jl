@@ -81,24 +81,24 @@ function Grid(x, boundary_conditions; ArrayType = Array)
         Ω .*= reshape(Δ[d], ntuple(Returns(1), d - 1)..., :)
     end
 
-    # Velocity volume sizes
-    Ωu = ntuple(α -> ones(T, N), D)
-    for α = 1:D, β = 1:D
-        Ωu[α] .*= reshape((α == β ? Δu : Δ)[β], ntuple(Returns(1), β - 1)..., :)
-    end
+    # # Velocity volume sizes
+    # Ωu = ntuple(α -> ones(T, N), D)
+    # for α = 1:D, β = 1:D
+    #     Ωu[α] .*= reshape((α == β ? Δu : Δ)[β], ntuple(Returns(1), β - 1)..., :)
+    # end
 
-    # Vorticity volume sizes
-    Ωω = ones(T, N)
-    for α = 1:D
-        Ωω .*= reshape(Δu[α], ntuple(Returns(1), α - 1)..., :)
-    end
+    # # Vorticity volume sizes
+    # Ωω = ones(T, N)
+    # for α = 1:D
+    #     Ωω .*= reshape(Δu[α], ntuple(Returns(1), α - 1)..., :)
+    # end
 
-    # Velocity volume mid-sections
-    Γu = ntuple(α -> ntuple(β -> ones(T, N), D), D)
-    for α = 1:D, β = 1:D, γ in ((1:β-1)..., (β+1:D)...)
-        Γu[α][β] .*=
-            reshape(γ == β ? 1 : γ == α ? Δu[γ] : Δ[γ], ntuple(Returns(1), γ - 1)..., :)
-    end
+    # # Velocity volume mid-sections
+    # Γu = ntuple(α -> ntuple(β -> ones(T, N), D), D)
+    # for α = 1:D, β = 1:D, γ in ((1:β-1)..., (β+1:D)...)
+    #     Γu[α][β] .*=
+    #         reshape(γ == β ? 1 : γ == α ? Δu[γ] : Δ[γ], ntuple(Returns(1), γ - 1)..., :)
+    # end
 
     # # Velocity points
     # Xu = ntuple(α -> ones(T, N))
