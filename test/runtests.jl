@@ -8,6 +8,7 @@ using Test
 @testset "IncompressibleNavierStokes" begin
     include("grid.jl")
     include("pressure_solvers.jl")
+    include("operators.jl")
     # include("models.jl")
     # include("solvers.jl")
     # include("simulation2D.jl")
