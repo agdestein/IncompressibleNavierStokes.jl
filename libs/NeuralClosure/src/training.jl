@@ -100,7 +100,7 @@ mean_squared_error(f, x, y, θ; normalize = y -> sum(abs2, y), λ = sqrt(eltype(
 """
     create_loss_post(;
         setup,
-        method = RK44(; T = eltype(setup.grid.x[1])),
+        method = RKMethods.RK44(; T = eltype(setup.grid.x[1])),
         psolver,
         closure,
         nupdate = 1,
@@ -111,7 +111,7 @@ Create a-posteriori loss function.
 """
 function create_loss_post(;
     setup,
-    method = RK44(; T = eltype(setup.grid.x[1])),
+    method = RKMethods.RK44(; T = eltype(setup.grid.x[1])),
     psolver,
     closure,
     nupdate = 1,
@@ -147,7 +147,7 @@ end
     create_relerr_post(;
         data,
         setup,
-        method = RK44(; T = eltype(setup.grid.x[1])),
+        method = RKMethods.RK44(; T = eltype(setup.grid.x[1])),
         psolver,
         closure_model,
         nupdate = 1,
@@ -158,7 +158,7 @@ Create a-posteriori relative error.
 function create_relerr_post(;
     data,
     setup,
-    method = RK44(; T = eltype(setup.grid.x[1])),
+    method = RKMethods.RK44(; T = eltype(setup.grid.x[1])),
     psolver,
     closure_model,
     nupdate = 1,

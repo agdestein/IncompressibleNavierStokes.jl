@@ -3,7 +3,7 @@
         setup,
         u₀,
         tlims;
-        method = RK44(; T = eltype(u₀[1])),
+        method = RKMethods.RK44(; T = eltype(u₀[1])),
         psolver = DirectPressureSolver(setup),
         Δt = zero(eltype(u₀[1])),
         cfl = 1,
@@ -32,7 +32,7 @@ function solve_unsteady(
     setup,
     u₀,
     tlims;
-    method = RK44(; T = eltype(u₀[1])),
+    method = RKMethods.RK44(; T = eltype(u₀[1])),
     psolver = DirectPressureSolver(setup),
     Δt = zero(eltype(u₀[1])),
     cfl = 1,

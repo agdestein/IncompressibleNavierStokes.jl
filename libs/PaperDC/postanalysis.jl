@@ -10,6 +10,7 @@ using Adapt
 using GLMakie
 using CairoMakie
 using IncompressibleNavierStokes
+using IncompressibleNavierStokes.RKMethods
 using JLD2
 using LaTeXStrings
 using LinearAlgebra

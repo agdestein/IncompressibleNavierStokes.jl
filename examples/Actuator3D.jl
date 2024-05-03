@@ -79,7 +79,7 @@ u₀ = create_initial_conditions(setup, (dim, x, y, z) -> dim() == 1 ? one(x) : 
     setup,
     u₀,
     (T(0), T(3));
-    method = RK44P2(),
+    method = RKMethods.RK44P2(),
     Δt = T(0.05),
     processors = (
         rtp = realtimeplotter(;

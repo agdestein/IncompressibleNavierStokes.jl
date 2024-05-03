@@ -65,7 +65,7 @@ state, outputs = solve_unsteady(
     u₀,
     (0.0, 12.0);
     psolver,
-    method = RK44P2(),
+    method = RKMethods.RK44P2(),
     Δt = 0.05,
     processors = (
         rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 1),

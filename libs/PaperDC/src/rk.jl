@@ -2,7 +2,7 @@
     RKProject(rk, projectorder)
 
 Runge-Kutta method with different projection order.
-The Runge-Kutta method `rk` can be for example `RK44()`.
+The Runge-Kutta method `rk` can be for example `RKMethods.RK44()`.
 
 - `projetorder = :first`: Project RHS before applying closure term.
 - `projetorder = :second`: Project RHS after applying closure term.

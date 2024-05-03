@@ -113,7 +113,7 @@ state, outputs = solve_unsteady(
     u₀,
     (T(0), 4 * T(12));
     # (T(0), T(1));
-    method = RK44P2(),
+    method = RKMethods.RK44P2(),
     Δt = T(0.01),
     psolver,
     processors = (

@@ -12,7 +12,7 @@ abstract type AbstractODEMethod{T} end
         α₂ = T(-1 // 2),
         θ = T(1 // 2),
         p_add_solve = true,
-        method_startup = RK44(; T),
+        method_startup,
     )
 
 IMEX AB-CN: Adams-Bashforth for explicit convection (parameters `α₁` and `α₂`)
@@ -37,7 +37,7 @@ struct AdamsBashforthCrankNicolsonMethod{T,M} <: AbstractODEMethod{T}
         α₂ = T(-1 // 2),
         θ = T(1 // 2),
         p_add_solve = true,
-        method_startup = RK44(; T),
+        method_startup,
     ) = new{T,typeof(method_startup)}(α₁, α₂, θ, p_add_solve, method_startup)
 end
 
@@ -46,7 +46,7 @@ end
         T = Float64;
         β = T(1 // 2),
         p_add_solve = true,
-        method_startup = RK44(; T),
+        method_startup,
     )
 
 Explicit one-leg β-method following symmetry-preserving discretization of
@@ -61,7 +61,7 @@ struct OneLegMethod{T,M} <: AbstractODEMethod{T}
         T = Float64;
         β = T(1 // 2),
         p_add_solve = true,
-        method_startup = RK44(; T),
+        method_startup,
     ) = new{T,typeof(method_startup)}(β, p_add_solve, method_startup)
 end
 

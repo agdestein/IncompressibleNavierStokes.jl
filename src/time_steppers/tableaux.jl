@@ -1,9 +1,36 @@
 """
+    RKMethods
+
 Set up Butcher arrays `A`, `b`, and `c`, as well as and SSP coefficient `r`.
 For families of methods, optional input `s` is the number of stages.
 
 Original (MATLAB) by David Ketcheson, extended by Benjamin Sanderse.
 """
+module RKMethods
+
+# Explicit Methods
+export FE11, SSP22, SSP42, SSP33, SSP43, SSP104, rSSPs2, rSSPs3, Wray3, RK56, DOPRI6
+
+# Implicit Methods
+export BE11, SDIRK34, ISSPm2, ISSPs3
+
+# Half explicit methods
+export HEM3, HEM3BS, HEM5
+
+# Classical Methods
+export GL1, GL2, GL3, RIA1, RIA2, RIA3, RIIA1, RIIA2, RIIA3, LIIIA2, LIIIA3
+
+# Chebyshev methods
+export CHDIRK3, CHCONS3, CHC3, CHC5
+
+# Miscellaneous Methods
+export Mid22, MTE22, CN22, Heun33, RK33C2, RK33P2, RK44, RK44C2, RK44C23, RK44P2
+
+# DSRK Methods
+export DSso2, DSRK2, DSRK3
+
+# "Non-SSP" Methods of Wong & Spiteri
+export NSSP21, NSSP32, NSSP33, NSSP53
 
 # Default SSP coefficient
 # r = 0
@@ -806,4 +833,6 @@ function NSSP53(; kwargs...)
     b = [1 // 4, 0, 0, 0, 3 // 4]
     c = [0, 1 // 7, 3 // 16, 1 // 3, 2 // 3]
     runge_kutta_method(A, b, c, r; kwargs...)
+end
+
 end
