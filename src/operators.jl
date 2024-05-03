@@ -101,7 +101,11 @@ divergence(u, setup) = divergence!(fill!(similar(u[1], setup.grid.N), 0), u, set
 
 ChainRulesCore.rrule(::typeof(divergence), u, setup) = (
     divergence(u, setup),
-    φ -> (NoTangent(), divergence_adjoint!(similar.(u), φ, setup), NoTangent()),
+    φ -> (
+        NoTangent(),
+        divergence_adjoint!(Tangent{typeof(u)}(similar.(u)...), φ, setup),
+        NoTangent(),
+    ),
 )
 
 """
@@ -546,7 +550,12 @@ convection(u, setup) = convection!(zero.(u), u, setup)
 
 ChainRulesCore.rrule(::typeof(convection), u, setup) = (
     convection(u, setup),
-    φ -> (NoTangent(), convection_adjoint!(zero.(u), (φ...,), u, setup), NoTangent()),
+    φ -> (
+        NoTangent(),
+        # convection_adjoint!(Tangent{typeof(u)}(zero.(u)...), (φ...,), u, setup),
+        convection_adjoint!(Tangent{typeof(u)}(zero.(u)...), (φ...,), u, setup),
+        NoTangent(),
+    ),
 )
 
 """
@@ -624,7 +633,10 @@ diffusion(u, setup) = diffusion!(zero.(u), u, setup)
 
 ChainRulesCore.rrule(::typeof(diffusion), u, setup) = (
     diffusion(u, setup),
-    φ -> (NoTangent(), diffusion_adjoint!(zero.(u), (φ...,), setup), NoTangent()),
+    φ -> (NoTangent(), diffusion_adjoint!(
+        # zero.(u),
+        Tangent{typeof(u)}(zero.(u)...),
+        (φ...,), setup), NoTangent()),
 )
 
 function convectiondiffusion!(F, u, setup)
