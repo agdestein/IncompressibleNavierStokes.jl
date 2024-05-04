@@ -113,7 +113,7 @@ ChainRulesCore.rrule(::typeof(apply_bc_u), u, t, setup; kwargs...) = (
     # With respect to (apply_bc_u, u, t, setup)
     φbar -> (
         NoTangent(),
-        apply_bc_u_pullback!(copy.((φbar...,)), t, setup; kwargs...),
+        apply_bc_u_pullback!(Tangent{typeof(u)}(copy.((φbar...,))...), t, setup; kwargs...),
         NoTangent(),
         NoTangent(),
     ),
@@ -124,7 +124,13 @@ ChainRulesCore.rrule(::typeof(apply_bc_p), p, t, setup) = (
     # With respect to (apply_bc_p, p, t, setup)
     φbar -> (
         NoTangent(),
-        apply_bc_p_pullback!(copy(φbar), t, setup),
+        apply_bc_p_pullback!(
+            # copy(φbar),
+            copy(unthunk(φbar)),
+            # Tangent{typeof{p}}(copy((φbar...,))),
+            t,
+            setup,
+        ),
         NoTangent(),
         NoTangent(),
     ),
@@ -183,8 +189,24 @@ function apply_bc_p_pullback!(φbar, t, setup; kwargs...)
     (; dimension) = grid
     D = dimension()
     for β = 1:D
-        apply_bc_p_pullback!(boundary_conditions[β][1], φbar, β, t, setup; isright = false)
-        apply_bc_p_pullback!(boundary_conditions[β][2], φbar, β, t, setup; isright = true)
+        apply_bc_p_pullback!(
+            boundary_conditions[β][1],
+            φbar,
+            β,
+            t,
+            setup;
+            isright = false,
+            kwargs...,
+        )
+        apply_bc_p_pullback!(
+            boundary_conditions[β][2],
+            φbar,
+            β,
+            t,
+            setup;
+            isright = true,
+            kwargs...,
+        )
     end
     φbar
 end
@@ -317,6 +339,9 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kw
     u
 end
 
+# apply_bc_u_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...) =
+#     @not_implemented("DirichletBC pullback not yet implemented.")
+
 function apply_bc_p!(::DirichletBC, p, β, t, setup; isright, kwargs...)
     (; dimension, N) = setup.grid
     D = dimension()
@@ -330,6 +355,9 @@ function apply_bc_p!(::DirichletBC, p, β, t, setup; isright, kwargs...)
     end
     p
 end
+
+# apply_bc_p_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...) =
+#     @not_implemented("DirichletBC pullback not yet implemented.")
 
 function apply_bc_u!(::SymmetricBC, u, β, t, setup; isright, kwargs...)
     (; dimension, N) = setup.grid
@@ -349,6 +377,9 @@ function apply_bc_u!(::SymmetricBC, u, β, t, setup; isright, kwargs...)
     u
 end
 
+# apply_bc_u_pullback!(::SymmetricBC, φbar, β, t, setup; isright, kwargs...) =
+#     @not_implemented("SymmetricBC pullback not yet implemented.")
+
 function apply_bc_p!(::SymmetricBC, p, β, t, setup; isright, kwargs...)
     (; dimension, N) = setup.grid
     D = dimension()
@@ -362,6 +393,9 @@ function apply_bc_p!(::SymmetricBC, p, β, t, setup; isright, kwargs...)
     end
     p
 end
+
+# apply_bc_p_pullback!(::SymmetricBC, φbar, β, t, setup; isright, kwargs...) =
+#     @not_implemented("SymmetricBC pullback not yet implemented.")
 
 function apply_bc_u!(bc::PressureBC, u, β, t, setup; isright, kwargs...)
     (; grid, workgroupsize) = setup
@@ -393,6 +427,9 @@ function apply_bc_u!(bc::PressureBC, u, β, t, setup; isright, kwargs...)
     u
 end
 
+# apply_bc_u_pullback!(::PressureBC, φbar, β, t, setup; isright, kwargs...) =
+#     @not_implemented("PressureBC pullback not yet implemented.")
+
 function apply_bc_p!(bc::PressureBC, p, β, t, setup; isright, kwargs...)
     (; dimension, N) = setup.grid
     D = dimension()
@@ -404,3 +441,6 @@ function apply_bc_p!(bc::PressureBC, p, β, t, setup; isright, kwargs...)
     p[I] .= 0
     p
 end
+
+apply_bc_p_pullback!(::PressureBC, φbar, β, t, setup; isright, kwargs...) =
+    @not_implemented("PressureBC pullback not yet implemented.")

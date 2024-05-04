@@ -1,3 +1,21 @@
+# @testset "Chain rules boundary conditions" begin
+#     T = Float64
+#     Re = T(1_000)
+#     n = 8
+#     boundary_conditions = ((DirichletBC(), PressureBC()), (PeriodicBC(), PeriodicBC()))
+#     lims = T(0), T(1)
+#     x = stretched_grid(lims..., n, 1.2), cosine_grid(lims..., n)
+#     setup = Setup(x...; Re,
+#         boundary_conditions,
+#     )
+#     psolver = DirectPressureSolver(setup)
+#     u = random_field(setup, T(0); psolver)
+#     randn!.(u)
+#     p = randn!(similar(u[1]))
+#     test_rrule(apply_bc_u, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+#     test_rrule(apply_bc_p, p, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+# end;
+
 testchainrules(dim) = @testset "Chain rules $(dim())D" begin
     # Setup
     D = dim()
@@ -21,9 +39,12 @@ testchainrules(dim) = @testset "Chain rules $(dim())D" begin
     setup = Setup(x...; Re)
     psolver = DirectPressureSolver(setup)
     u = random_field(setup, T(0); psolver)
-    (; Iu, Ip, Ω) = setup.grid
     randn!.(u)
     p = randn!(similar(u[1]))
+    @testset "Boundary conditions" begin
+        test_rrule(apply_bc_u, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+        test_rrule(apply_bc_p, p, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+    end
     @testset "Divergence" begin
         test_rrule(divergence, u, setup ⊢ NoTangent())
     end
