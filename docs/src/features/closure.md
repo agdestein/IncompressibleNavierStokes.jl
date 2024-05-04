@@ -35,8 +35,8 @@ M \bar{v} & = 0, \\
 ```
 
 ```@docs
-IncompressibleNavierStokes.FaceAverage
-IncompressibleNavierStokes.VolumeAverage
+NeuralClosure.FaceAverage
+NeuralClosure.VolumeAverage
 ```
 
 ```@docs

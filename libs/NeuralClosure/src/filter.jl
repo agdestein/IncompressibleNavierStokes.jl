@@ -19,7 +19,6 @@ function (::FaceAverage)(v, u, setup_les, comp)
     (; grid, workgroupsize) = setup_les
     (; Nu, Iu) = grid
     D = length(u)
-    δ = Offset{D}()
     @kernel function Φ!(v, u, ::Val{α}, face, I0) where {α}
         I = @index(Global, Cartesian)
         J = I0 + comp * (I - oneunit(I))
@@ -48,14 +47,14 @@ function reconstruct!(u, v, setup_dns, setup_les, comp)
     (; grid, boundary_conditions, workgroupsize) = setup_les
     (; N, Iu) = grid
     D = length(u)
-    δ = Offset{D}()
+    e = Offset{D}()
     @assert all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions)
     @kernel function R!(u, v, ::Val{α}, volume) where {α}
         J = @index(Global, Cartesian)
         I = oneunit(J) + comp * J
         J = oneunit(J) + J
-        Jleft = J - δ(α)
-        Jleft.I[α] == 1 && (Jleft += (N[α] - 2) * δ(α))
+        Jleft = J - e(α)
+        Jleft.I[α] == 1 && (Jleft += (N[α] - 2) * e(α))
         for i in volume
             s = zero(eltype(v[α]))
             s += (comp - i.I[α]) * v[α][J]
@@ -88,7 +87,6 @@ function (::VolumeAverage)(v, u, setup_les, comp)
     (; grid, boundary_conditions, workgroupsize) = setup_les
     (; N, Nu, Iu) = grid
     D = length(u)
-    δ = Offset{D}()
     @assert all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions)
     @kernel function Φ!(v, u, ::Val{α}, volume, I0) where {α}
         I = @index(Global, Cartesian)

@@ -67,7 +67,6 @@ include("processors/animator.jl")
 
 # Discrete operators
 include("operators.jl")
-include("filter.jl")
 
 # Solvers
 include("solvers/get_timestep.jl")
@@ -111,9 +110,6 @@ export create_initial_conditions, random_field
 # Utils
 export plotgrid, save_vtk
 export plotmat
-
-# Filter
-export FaceAverage, VolumeAverage, reconstruct, reconstruct!
 
 # ODE methods
 export AdamsBashforthCrankNicolsonMethod, OneLegMethod, RKMethods
