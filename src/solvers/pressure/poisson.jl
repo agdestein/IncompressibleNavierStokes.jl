@@ -12,7 +12,7 @@ poisson(solver, f) = poisson!(solver, zero(f), f)
 
 # Laplacian is auto-adjoint
 ChainRulesCore.rrule(::typeof(poisson), solver, f) =
-    (poisson(solver, f), φ -> (NoTangent(), NoTangent(), poisson(solver, φ)))
+    (poisson(solver, f), φ -> (NoTangent(), NoTangent(), poisson(solver, unthunk(φ))))
 
 """
     poisson!(solver, p, f)

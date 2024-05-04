@@ -6,7 +6,14 @@ using ChainRulesCore
 using ChainRulesTestUtils
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes:
-    divergence, pressuregradient, convection, diffusion, bodyforce, apply_bc_u, apply_bc_p
+    divergence,
+    pressuregradient,
+    convection,
+    diffusion,
+    bodyforce,
+    poisson,
+    apply_bc_u,
+    apply_bc_p
 using LinearAlgebra
 using Random
 using Statistics

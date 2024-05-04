@@ -113,6 +113,8 @@ ChainRulesCore.rrule(::typeof(apply_bc_u), u, t, setup; kwargs...) = (
     # With respect to (apply_bc_u, u, t, setup)
     φbar -> (
         NoTangent(),
+        # Important: identity operator should be part of `apply_bc_u_pullback`,
+        # but is actually implemented via the `copy` below instead.
         apply_bc_u_pullback!(Tangent{typeof(u)}(copy.((φbar...,))...), t, setup; kwargs...),
         NoTangent(),
         NoTangent(),
@@ -125,9 +127,9 @@ ChainRulesCore.rrule(::typeof(apply_bc_p), p, t, setup) = (
     φbar -> (
         NoTangent(),
         apply_bc_p_pullback!(
-            # copy(φbar),
+            # Important: identity operator should be part of `apply_bc_p_pullback`,
+            # but is actually implemented via the `copy` below instead.
             copy(unthunk(φbar)),
-            # Tangent{typeof{p}}(copy((φbar...,))),
             t,
             setup,
         ),

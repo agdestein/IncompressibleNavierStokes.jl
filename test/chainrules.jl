@@ -51,8 +51,8 @@ testchainrules(dim) = @testset "Chain rules $(dim())D" begin
     @testset "Pressure gradient" begin
         test_rrule(pressuregradient, p, setup ⊢ NoTangent())
     end
-    @testset "Pressure gradient" begin
-        test_rrule(pressuregradient, p, setup ⊢ NoTangent())
+    @testset "Poisson" begin
+        test_rrule(poisson, psolver ⊢ NoTangent(), p)
     end
     @testset "Convection" begin
         test_rrule(convection, u, setup ⊢ NoTangent())
