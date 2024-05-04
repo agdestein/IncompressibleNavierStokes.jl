@@ -31,6 +31,11 @@ See the
 for examples of some typical workflows. More examples can be found in the
 [`examples`](examples) directory.
 
+## Source code for paper
+
+See [here](./libs/PaperDC) for the source code used in the paper
+[Discretize first, filter next: learning divergence-consistent closure models for large-eddy simulation](https://arxiv.org/abs/2403.18088).
+
 ## Gallery
 
 The velocity and pressure fields may be visualized in a live session using
@@ -52,8 +57,16 @@ The following example code  using a negative body force on a small rectangle
 with an unsteady inflow. It simulates a wind turbine (actuator) under varying
 wind conditions.
 
+Make sure to have the `GLMakie` and `IncompressibleNavierStokes` installed:
+
 ```julia
-# using Pkg; Pkg.add(["GLMakie", "IncompressibleNavierStokes"]))
+using Pkg
+Pkg.add(["GLMakie", "IncompressibleNavierStokes"])
+```
+
+Then run run the following code to make a short animation:
+
+```julia
 using GLMakie
 using IncompressibleNavierStokes
 
@@ -62,7 +75,7 @@ n = 40
 x = LinRange(0.0, 10.0, 5n + 1)
 y = LinRange(-2.0, 2.0, 2n + 1)
 
-# Boundary conditions: Unsteady BC requires time derivatives
+# Boundary conditions
 boundary_conditions = (
     # Inlet, outlet
     (
@@ -81,14 +94,9 @@ boundary_conditions = (
     (PressureBC(), PressureBC()),
 )
 
-# Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
-xc, yc = 2.0, 0.0 # Disk center
-D = 1.0           # Disk diameter
-δ = 0.11          # Disk thickness
-Cₜ = 0.2          # Thrust coefficient
-cₜ = Cₜ / (D * δ)
-inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
-bodyforce(dim, x, y, t) = dim() == 1 ? -cₜ * inside(x, y) : 0.0
+# Actuator body force: A thrust coefficient distributed over a thin rectangle
+inside(x, y) = abs(x - 2.0) ≤ 0.055 && abs(y) ≤ 0.5
+bodyforce(dim, x, y, t) = dim() == 1 && inside(x, y) ? -1.82 : 0.0
 
 # Build setup and assemble operators
 setup = Setup(x, y; Re = 100.0, boundary_conditions, bodyforce);
