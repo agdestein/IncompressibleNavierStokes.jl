@@ -16,6 +16,7 @@
 #     test_rrule(apply_bc_p, p, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
 # end;
 
+# Test chain rule correctness by comparing with finite differences
 testchainrules(dim) = @testset "Chain rules $(dim())D" begin
     # Setup
     D = dim()
