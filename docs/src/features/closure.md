@@ -37,6 +37,7 @@ M \bar{v} & = 0, \\
 ```@docs
 NeuralClosure.FaceAverage
 NeuralClosure.VolumeAverage
+NeuralClosure.reconstruct!
 ```
 
 ```@docs
