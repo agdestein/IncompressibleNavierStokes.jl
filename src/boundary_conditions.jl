@@ -193,14 +193,14 @@ function apply_bc_u!(::PeriodicBC, u, β, t, setup; isright, kwargs...)
     (; grid, workgroupsize) = setup
     (; dimension, N) = grid
     D = dimension()
-    δ = Offset{D}()
+    e = Offset{D}()
     @kernel function _bc_a!(u, ::Val{α}, ::Val{β}) where {α,β}
         I = @index(Global, Cartesian)
-        u[α][I] = u[α][I+(N[β]-2)*δ(β)]
+        u[α][I] = u[α][I+(N[β]-2)*e(β)]
     end
     @kernel function _bc_b!(u, ::Val{α}, ::Val{β}) where {α,β}
         I = @index(Global, Cartesian)
-        u[α][I+(N[β]-1)*δ(β)] = u[α][I+δ(β)]
+        u[α][I+(N[β]-1)*e(β)] = u[α][I+e(β)]
     end
     ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     for α = 1:D
@@ -217,16 +217,16 @@ function apply_bc_u_pullback!(::PeriodicBC, φbar, β, t, setup; isright, kwargs
     (; grid, workgroupsize) = setup
     (; dimension, N) = grid
     D = dimension()
-    δ = Offset{D}()
+    e = Offset{D}()
     @kernel function adj_a!(φ, ::Val{α}, ::Val{β}) where {α,β}
         I = @index(Global, Cartesian)
-        φ[α][I+(N[β]-2)*δ(β)] += φ[α][I]
+        φ[α][I+(N[β]-2)*e(β)] += φ[α][I]
         φ[α][I] = 0
     end
     @kernel function adj_b!(φ, ::Val{α}, ::Val{β}) where {α,β}
         I = @index(Global, Cartesian)
-        φ[α][I+δ(β)] += φ[α][I+(N[β]-1)*δ(β)]
-        φ[α][I+(N[β]-1)*δ(β)] = 0
+        φ[α][I+e(β)] += φ[α][I+(N[β]-1)*e(β)]
+        φ[α][I+(N[β]-1)*e(β)] = 0
     end
     ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     for α = 1:D
@@ -243,14 +243,14 @@ function apply_bc_p!(::PeriodicBC, p, β, t, setup; isright, kwargs...)
     (; grid, workgroupsize) = setup
     (; dimension, N) = grid
     D = dimension()
-    δ = Offset{D}()
+    e = Offset{D}()
     @kernel function _bc_a(p, ::Val{β}) where {β}
         I = @index(Global, Cartesian)
-        p[I] = p[I+(N[β]-2)*δ(β)]
+        p[I] = p[I+(N[β]-2)*e(β)]
     end
     @kernel function _bc_b(p, ::Val{β}) where {β}
         I = @index(Global, Cartesian)
-        p[I+(N[β]-1)*δ(β)] = p[I+δ(β)]
+        p[I+(N[β]-1)*e(β)] = p[I+e(β)]
     end
     ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     if isright
@@ -265,16 +265,16 @@ function apply_bc_p_pullback!(::PeriodicBC, φbar, β, t, setup; isright, kwargs
     (; grid, workgroupsize) = setup
     (; dimension, N) = grid
     D = dimension()
-    δ = Offset{D}()
+    e = Offset{D}()
     @kernel function adj_a!(φ, ::Val{β}) where {β}
         I = @index(Global, Cartesian)
-        φ[I+(N[β]-2)*δ(β)] += φ[I]
+        φ[I+(N[β]-2)*e(β)] += φ[I]
         φ[I] = 0
     end
     @kernel function adj_b!(φ, ::Val{β}) where {β}
         I = @index(Global, Cartesian)
-        φ[I+δ(β)] += φ[I+(N[β]-1)*δ(β)]
-        φ[I+(N[β]-1)*δ(β)] = 0
+        φ[I+e(β)] += φ[I+(N[β]-1)*e(β)]
+        φ[I+(N[β]-1)*e(β)] = 0
     end
     ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     if isright
@@ -288,7 +288,7 @@ end
 function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kwargs...)
     (; dimension, x, xp, N) = setup.grid
     D = dimension()
-    δ = Offset{D}()
+    e = Offset{D}()
     # isnothing(bc.u) && return
     bcfunc = dudt ? bc.dudt : bc.u
     for α = 1:D
@@ -320,13 +320,13 @@ end
 function apply_bc_p!(::DirichletBC, p, β, t, setup; isright, kwargs...)
     (; dimension, N) = setup.grid
     D = dimension()
-    δ = Offset{D}()
+    e = Offset{D}()
     if isright
         I = CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
-        p[I] .= p[I.-δ(β)]
+        p[I] .= p[I.-e(β)]
     else
         I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
-        p[I] .= p[I.+δ(β)]
+        p[I] .= p[I.+e(β)]
     end
     p
 end
@@ -334,15 +334,15 @@ end
 function apply_bc_u!(::SymmetricBC, u, β, t, setup; isright, kwargs...)
     (; dimension, N) = setup.grid
     D = dimension()
-    δ = Offset{D}()
+    e = Offset{D}()
     for α = 1:D
         if α != β
             if isright
                 I = CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
-                u[α][I] .= u[α][I.-δ(β)]
+                u[α][I] .= u[α][I.-e(β)]
             else
                 I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
-                u[α][I] .= u[α][I.+δ(β)]
+                u[α][I] .= u[α][I.+e(β)]
             end
         end
     end
@@ -352,13 +352,13 @@ end
 function apply_bc_p!(::SymmetricBC, p, β, t, setup; isright, kwargs...)
     (; dimension, N) = setup.grid
     D = dimension()
-    δ = Offset{D}()
+    e = Offset{D}()
     if isright
         I = CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
-        p[I] .= p[I.-δ(β)]
+        p[I] .= p[I.-e(β)]
     else
         I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
-        p[I] .= p[I.+δ(β)]
+        p[I] .= p[I.+e(β)]
     end
     p
 end
@@ -367,16 +367,16 @@ function apply_bc_u!(bc::PressureBC, u, β, t, setup; isright, kwargs...)
     (; grid, workgroupsize) = setup
     (; dimension, N, Nu, Iu) = grid
     D = dimension()
-    δ = Offset{D}()
+    e = Offset{D}()
     @kernel function _bc_a!(u, ::Val{α}, ::Val{β}, I0) where {α,β}
         I = @index(Global, Cartesian)
         I = I + I0
-        u[α][I] = u[α][I+δ(β)]
+        u[α][I] = u[α][I+e(β)]
     end
     @kernel function _bc_b!(u, ::Val{α}, ::Val{β}, I0) where {α,β}
         I = @index(Global, Cartesian)
         I = I + I0
-        u[α][I] = u[α][I-δ(β)]
+        u[α][I] = u[α][I-e(β)]
     end
     ndrange = (N[1:β-1]..., 1, N[β+1:end]...)
     for α = 1:D
