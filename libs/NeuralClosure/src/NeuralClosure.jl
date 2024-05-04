@@ -7,6 +7,7 @@ using CUDA
 using ComponentArrays: ComponentArray
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: Dimension, momentum!, apply_bc_u!, project!
+using KernelAbstractions
 using Lux
 using NNlib
 using Observables
