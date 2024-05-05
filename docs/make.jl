@@ -1,16 +1,13 @@
 # Show number of threads on GitHub Actions
 @info "" Threads.nthreads()
 
-# Make paths relative to this file
-cd(@__DIR__)
-
 # Build docs environment
 using Pkg
-Pkg.activate(".")
+Pkg.activate(@__DIR__)
 Pkg.develop([
-    PackageSpec(; path = ".."),
-    PackageSpec(; path = "../libs/NeuralClosure"),
-    PackageSpec(; path = "../examples"),
+    PackageSpec(; path = joinpath(@__DIR__, "..")),
+    PackageSpec(; path = joinpath(@__DIR__, "..", "libs", "NeuralClosure")),
+    PackageSpec(; path = joinpath(@__DIR__, "..", "examples")),
 ])
 Pkg.instantiate()
 
