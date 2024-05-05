@@ -39,7 +39,7 @@ using Test
 
 @testset "IncompressibleNavierStokes" begin
     include("grid.jl")
-    include("pressure_solvers.jl")
+    include("psolvers.jl")
     include("operators.jl")
     include("chainrules.jl")
     # include("models.jl")
