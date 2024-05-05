@@ -161,7 +161,7 @@ function psolver_direct(::Array, setup)
         ptemp = zeros(T, prod(Np) + 1)
         e = ones(T, size(L, 2))
         L = [L e; e' 0]
-        viewrange = 1:length(solver.p)-1
+        viewrange = 1:prod(Np)
     end
     fact = factorize(L)
     function psolve!(p, f)
@@ -195,7 +195,7 @@ function psolver_cg_matrix(setup; kwargs...)
         ptemp = fill!(similar(x[1], prod(Np) + 1), 0)
         e = fill!(similar(x[1], prod(Np)), 1)
         L = [L e; e' 0]
-        viewrange = 1:length(solver.p)-1
+        viewrange = 1:prod(Np)
     end
     function psolve!(p, f)
         copyto!(view(ftemp, viewrange), view(view(f, Ip), :))

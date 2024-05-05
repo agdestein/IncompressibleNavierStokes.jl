@@ -20,7 +20,7 @@
     direct = psolver_direct(setup)
     cg = psolver_cg(setup)
     spectral = psolver_spectral(setup)
-    spectral_lowmemory = solver_spectral_lowmemory(setup)
+    spectral_lowmemory = psolver_spectral_lowmemory(setup)
 
     get_p(psolver) = IncompressibleNavierStokes.apply_bc_p(
         IncompressibleNavierStokes.poisson(psolver, lap),
@@ -29,8 +29,8 @@
     )
 
     # Test that solvers compute the exact pressure
-    @test get_p(p_direct) ≈ p_exact
-    @test get_p(p_cg) ≈ p_exact
-    @test get_p(p_spectral) ≈ p_exact
-    @test get_p(p_spectral_lowmemory) ≈ p_exact
+    @test get_p(direct) ≈ p_exact
+    @test get_p(cg) ≈ p_exact
+    @test get_p(spectral) ≈ p_exact
+    @test get_p(spectral_lowmemory) ≈ p_exact
 end

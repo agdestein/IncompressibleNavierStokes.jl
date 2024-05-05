@@ -32,7 +32,7 @@ function poisson_direct(::CuArray, setup)
         ptemp = fill!(similar(x[1], prod(Np) + 1), 0)
         e = fill!(similar(x[1], prod(Np)), 1)
         L = [L e; e' 0]
-        viewrange = 1:length(solver.p)-1
+        viewrange = 1:prod(Np)
         structure = "S" # Symmetric (not positive definite)
         _view = 'L' # Lower triangular representation
     end
