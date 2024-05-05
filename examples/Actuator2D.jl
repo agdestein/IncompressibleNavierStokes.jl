@@ -53,7 +53,7 @@ bodyforce(dim, x, y, t) = dim() == 1 ? -cₜ * inside(x, y) : 0.0
 
 # Build setup and assemble operators
 setup = Setup(x, y; Re = 100.0, boundary_conditions, bodyforce);
-psolver = DirectPressureSolver(setup);
+psolver = psolver_direct(setup);
 
 # Initial conditions (extend inflow)
 u₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0; psolver);

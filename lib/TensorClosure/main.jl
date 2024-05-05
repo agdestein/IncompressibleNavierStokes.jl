@@ -13,7 +13,7 @@ n = 1024
 lims = T(0), T(1)
 x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
 setup = Setup(x...; Re, ArrayType);
-psolver = SpectralPressureSolver(setup);
+psolver = psolver_spectral(setup);
 u₀ = random_field(setup, T(0); psolver);
 
 u = u₀

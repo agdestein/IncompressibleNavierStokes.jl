@@ -3,7 +3,7 @@
         setup,
         initial_velocity,
         t = 0;
-        psolver = DirectPressureSolver(setup),
+        psolver = psolver_direct(setup),
         doproject = true,
     )
 
@@ -15,7 +15,7 @@ function create_initial_conditions(
     setup,
     initial_velocity,
     t = convert(eltype(setup.grid.x[1]), 0);
-    psolver = DirectPressureSolver(setup),
+    psolver = psolver_direct(setup),
     doproject = true,
 )
     (; grid) = setup
@@ -174,7 +174,7 @@ end
         setup, t = 0;
         A = 1,
         kp = 10,
-        psolver = SpectralPressureSolver(setup),
+        psolver = psolver_spectral(setup),
         rng = Random.default_rng(),
     )
 
@@ -189,7 +189,7 @@ function random_field(
     t = zero(eltype(setup.grid.x[1]));
     A = 1,
     kp = 10,
-    psolver = SpectralPressureSolver(setup),
+    psolver = psolver_spectral(setup),
     rng = Random.default_rng(),
 )
     (; dimension, x, Ip, Ω) = setup.grid

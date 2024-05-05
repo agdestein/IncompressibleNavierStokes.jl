@@ -8,12 +8,6 @@
     (; xp) = setup.grid
     D = 2
 
-    # Pressure solvers
-    direct = DirectPressureSolver(setup)
-    cg = CGPressureSolver(setup)
-    spectral = SpectralPressureSolver(setup)
-    lmspectral = LowMemorySpectralPressureSolver(setup)
-
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
     p_exact =
         initial_pressure.(
@@ -22,30 +16,21 @@
     IncompressibleNavierStokes.apply_bc_p!(p_exact, 0.0, setup)
     lap = IncompressibleNavierStokes.laplacian(p_exact, setup)
 
+    # Pressure solvers
+    direct = psolver_direct(setup)
+    cg = psolver_cg(setup)
+    spectral = psolver_spectral(setup)
+    spectral_lowmemory = solver_spectral_lowmemory(setup)
+
     get_p(psolver) = IncompressibleNavierStokes.apply_bc_p(
         IncompressibleNavierStokes.poisson(psolver, lap),
         0.0,
         setup,
     )
-    p_direct = get_p(direct)
-    p_cg = get_p(cg)
-    p_spectral = get_p(spectral)
-    p_lmspectral = get_p(lmspectral)
-
-    # Test that in-place and out-of-place versions give same result
-    get_p_inplace(psolver) = IncompressibleNavierStokes.apply_bc_p!(
-        IncompressibleNavierStokes.poisson!(psolver, zero(p_exact), lap),
-        0.0,
-        setup,
-    )
-    @test p_direct ≈ get_p_inplace(direct)
-    @test p_cg ≈ get_p_inplace(cg)
-    @test p_spectral ≈ get_p_inplace(spectral)
-    @test p_lmspectral ≈ get_p_inplace(lmspectral)
 
     # Test that solvers compute the exact pressure
-    @test p_direct ≈ p_exact
-    @test p_cg ≈ p_exact
-    @test p_spectral ≈ p_exact
-    @test p_lmspectral ≈ p_exact
+    @test get_p(p_direct) ≈ p_exact
+    @test get_p(p_cg) ≈ p_exact
+    @test get_p(p_spectral) ≈ p_exact
+    @test get_p(p_spectral_lowmemory) ≈ p_exact
 end

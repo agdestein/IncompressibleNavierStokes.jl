@@ -111,7 +111,7 @@ function fieldplot(
     elseif fieldname == :pressure
         if isnothing(psolver)
             @info "Creating new pressure solver for fieldplot"
-            psolver = DirectPressureSolver(setup)
+            psolver = psolver_direct(setup)
         end
         F = zero.(u)
         div = zero(u[1])
@@ -231,7 +231,7 @@ function fieldplot(
     elseif fieldname == :pressure
         if isnothing(psolver)
             @info "Creating new pressure solver for fieldplot"
-            psolver = DirectPressureSolver(setup)
+            psolver = psolver_direct(setup)
         end
         F = zero.(u)
         div = zero(u[1])
@@ -239,7 +239,7 @@ function fieldplot(
     elseif fieldname == :Dfield
         if isnothing(psolver)
             @info "Creating new pressure solver for fieldplot"
-            psolver = DirectPressureSolver(setup)
+            psolver = psolver_direct(setup)
         end
         F = zero.(u)
         div = zero(u[1])

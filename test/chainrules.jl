@@ -8,7 +8,7 @@
 #     setup = Setup(x...; Re,
 #         boundary_conditions,
 #     )
-#     psolver = DirectPressureSolver(setup)
+#     psolver = psolver_direct(setup)
 #     u = random_field(setup, T(0); psolver)
 #     randn!.(u)
 #     p = randn!(similar(u[1]))
@@ -38,7 +38,7 @@ testchainrules(dim) = @testset "Chain rules $(dim())D" begin
         stretched_grid(lims..., n, 1.2), cosine_grid(lims..., n), cosine_grid(lims..., n)
     end
     setup = Setup(x...; Re)
-    psolver = DirectPressureSolver(setup)
+    psolver = psolver_direct(setup)
     u = random_field(setup, T(0); psolver)
     randn!.(u)
     p = randn!(similar(u[1]))

@@ -81,12 +81,12 @@ setup = Setup(x, y; boundary_conditions, Re, ArrayType);
 # The pressure solver is used to solve the pressure Poisson equation.
 # Available solvers are
 #
-# - [`DirectPressureSolver`](@ref) (only for CPU with `Float64`)
-# - [`CGPressureSolver`](@ref)
-# - [`SpectralPressureSolver`](@ref) (only for periodic boundary conditions and
+# - [`psolver_direct`](@ref) (only for CPU with `Float64`)
+# - [`psolver_cg`](@ref)
+# - [`psolver_spectral`](@ref) (only for periodic boundary conditions and
 #   uniform grids)
 
-psolver = DirectPressureSolver(setup);
+psolver = psolver_direct(setup);
 
 # The initial conditions are provided in function. The value `dim()` determines
 # the velocity component.

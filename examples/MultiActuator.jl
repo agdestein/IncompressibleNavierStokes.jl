@@ -79,7 +79,7 @@ y = LinRange(-T(2), T(2), 2n + 1)
 # Build setup and assemble operators
 setup = Setup(x, y; Re = T(2000), boundary_conditions, bodyforce, ArrayType);
 
-psolver = CUDSSPressureSolver(setup);
+psolver = psolver_direct(setup);
 
 # Initial conditions (extend inflow)
 u₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? one(x) : zero(x); psolver);

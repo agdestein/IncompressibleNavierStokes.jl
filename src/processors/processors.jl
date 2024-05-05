@@ -93,7 +93,7 @@ vtk_writer(;
         if :pressure ∈ fields
             if isnothing(psolver)
                 @info "Creating new pressure solver for vtk_writer"
-                psolver = DirectPressureSolver(setup)
+                psolver = psolver_direct(setup)
             end
             F = zero.(u)
             div = zero(u[1])

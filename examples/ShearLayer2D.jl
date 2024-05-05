@@ -38,7 +38,7 @@ plotgrid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; Re, ArrayType);
 
-psolver = SpectralPressureSolver(setup)
+psolver = psolver_spectral(setup)
 
 # Initial conditions: We add 1 to u in order to make global momentum
 # conservation less trivial

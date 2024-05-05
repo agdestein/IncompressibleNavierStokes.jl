@@ -11,7 +11,7 @@ testops(dim) = @testset "Operators $(dim())D" begin
         stretched_grid(lims..., n, 1.2), cosine_grid(lims..., n), cosine_grid(lims..., n)
     end
     setup = Setup(x...; Re)
-    psolver = DirectPressureSolver(setup)
+    psolver = psolver_direct(setup)
     u = random_field(setup, T(0); psolver)
     (; Iu, Ip, Ω) = setup.grid
 

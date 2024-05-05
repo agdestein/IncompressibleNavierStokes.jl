@@ -52,7 +52,7 @@ plotgrid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 
-psolver = DirectPressureSolver(setup);
+psolver = psolver_direct(setup);
 
 # Initial conditions (extend inflow)
 u₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)); psolver);

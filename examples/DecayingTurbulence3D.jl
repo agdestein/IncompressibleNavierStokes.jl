@@ -38,7 +38,7 @@ setup = Setup(x, y, z; Re, ArrayType);
 
 # Since the grid is uniform and identical for x, y, and z, we may use a
 # specialized spectral pressure solver
-psolver = SpectralPressureSolver(setup);
+psolver = psolver_spectral(setup);
 
 # Initial conditions
 u₀ = random_field(setup; psolver);

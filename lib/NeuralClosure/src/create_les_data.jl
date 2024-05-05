@@ -100,7 +100,7 @@ filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 
         tburn = typeof(Re)(0.1),
         tsim = typeof(Re)(0.1),
         Δt = typeof(Re)(1e-4),
-        PSolver = SpectralPressureSolver,
+        create_psolver = psolver_spectral,
         savefreq = 1,
         ArrayType = Array,
         icfunc = (setup, psolver) -> random_field(setup, typeof(Re)(0); psolver),
@@ -120,7 +120,7 @@ function create_les_data(;
     tburn = typeof(Re)(0.1),
     tsim = typeof(Re)(0.1),
     Δt = typeof(Re)(1e-4),
-    PSolver = SpectralPressureSolver,
+    create_psolver = psolver_spectral,
     savefreq = 1,
     ArrayType = Array,
     icfunc = (setup, psolver, rng) -> random_field(setup, typeof(Re)(0); psolver, rng),
@@ -152,8 +152,8 @@ function create_les_data(;
 
     # Since the grid is uniform and identical for x and y, we may use a specialized
     # spectral pressure solver
-    psolver = PSolver(dns)
-    psolver_les = PSolver.(les)
+    psolver = create_psolver(dns)
+    psolver_les = create_psolver.(les)
 
     # Number of time steps to save
     nt = round(Int, tsim / Δt)

@@ -61,13 +61,13 @@ filterdefs = [
 lims = T(0), T(1)
 dns = let
     setup = Setup(ntuple(α -> LinRange(lims..., ndns + 1), D)...; Re, ArrayType)
-    psolver = SpectralPressureSolver(setup)
+    psolver = psolver_spectral(setup)
     (; setup, psolver)
 end;
 filters = map(filterdefs) do (Φ, nles)
     compression = ndns ÷ nles
     setup = Setup(ntuple(α -> LinRange(lims..., nles + 1), D)...; Re, ArrayType)
-    psolver = SpectralPressureSolver(setup)
+    psolver = psolver_spectral(setup)
     (; setup, Φ, compression, psolver)
 end;
 
@@ -210,7 +210,7 @@ end
 
 # Plot spectra #######################################################
 
-# To free up memory in 3D (remove SpectralPressureSolver FFT arrays)
+# To free up memory in 3D (remove psolver_spectral FFT arrays)
 dns = (; dns.setup)
 filters = map(filters) do f
     (; f.Φ, f.setup, f.compression)

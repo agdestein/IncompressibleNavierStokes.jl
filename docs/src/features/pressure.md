@@ -12,13 +12,11 @@ enforces divergence freeness. There are multiple options for solving this
 system.
 
 ```@docs
-AbstractPressureSolver
-DirectPressureSolver
-CUDSSPressureSolver
-CGPressureSolver
-CGMatrixPressureSolver
-SpectralPressureSolver
-LowMemorySpectralPressureSolver
+psolver_direct
+psolver_cg
+psolver_cg_matrix
+psolver_spectral
+psolver_spectral_lowmemory
 pressure
 pressure!
 poisson

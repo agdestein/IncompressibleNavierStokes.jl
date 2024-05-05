@@ -37,11 +37,8 @@ include("grid/max_size.jl")
 # Setup
 include("setup.jl")
 
-# Pressure solvers
-include("solvers/pressure/solvers.jl")
-include("solvers/pressure/poisson.jl")
-include("solvers/pressure/pressure.jl")
-include("solvers/pressure/project.jl")
+# Poisson solvers
+include("pressure.jl")
 
 # Time steppers
 include("time_steppers/methods.jl")
@@ -90,11 +87,8 @@ export Setup
 export stretched_grid, cosine_grid
 
 # Pressure solvers
-export DirectPressureSolver,
-    CUDSSPressureSolver,
-    CGPressureSolver,
-    SpectralPressureSolver,
-    LowMemorySpectralPressureSolver
+export psolver_direct, psolver_cg, psolver_cg_matrix,
+    psolver_spectral, psolver_spectral_lowmemory
 
 # Solvers
 export solve_unsteady, solve_steady_state

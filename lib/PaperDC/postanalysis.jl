@@ -105,7 +105,7 @@ get_params(nlesscalar) = (;
     ndns = (n -> (n, n))(4096), # DNS resolution
     filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
-    PSolver = SpectralPressureSolver,
+    create_psolver = psolver_spectral,
     icfunc = (setup, psolver) ->
         random_field(setup, zero(eltype(setup.grid.x[1])); kp = 20, psolver),
     rng,
@@ -333,7 +333,7 @@ let
         starttime = time()
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         setup = setups_train[ig]
-        psolver = SpectralPressureSolver(setup)
+        psolver = psolver_spectral(setup)
         loss = IncompressibleNavierStokes.create_loss_post(;
             setup,
             psolver,
@@ -406,7 +406,7 @@ smag = map(CartesianIndices((size(io_train, 2), 2))) do I
             println("iorder = $iorder, ifil = $ifil, θ = $θ, igrid = $igrid")
             projectorder = getorder(iorder)
             setup = setups_train[igrid]
-            psolver = SpectralPressureSolver(setup)
+            psolver = psolver_spectral(setup)
             d = data_train[isample]
             data = (; u = device.(d.data[igrid, ifil].u[it]), t = d.t[it])
             nupdate = 4
@@ -483,7 +483,7 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         projectorder = getorder(iorder)
         setup = setups_test[ig]
-        psolver = SpectralPressureSolver(setup)
+        psolver = psolver_spectral(setup)
         data = (; u = device.(data_test.data[ig, ifil].u), t = data_test.t)
         nupdate = 2
         # No model
@@ -684,7 +684,7 @@ kineticenergy = let
     for iorder = 1:2, ifil = 1:nfilter, ig = 1:ngrid
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         setup = setups_test[ig]
-        psolver = SpectralPressureSolver(setup)
+        psolver = psolver_spectral(setup)
         t = data_test.t
         u₀ = data_test.data[ig, ifil].u[1] |> device
         tlims = (t[1], t[end])
@@ -837,7 +837,7 @@ divs = let
     for iorder = 1:3, ifil = 1:nfilter, ig = 1:ngrid
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         setup = setups_test[ig]
-        psolver = SpectralPressureSolver(setup)
+        psolver = psolver_spectral(setup)
         t = data_test.t
         u₀ = data_test.data[ig, ifil].u[1] |> device
         tlims = (t[1], t[end])
@@ -966,7 +966,7 @@ ufinal = let
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
         t = data_test.t
         setup = setups_test[igrid]
-        psolver = SpectralPressureSolver(setup)
+        psolver = psolver_spectral(setup)
         u₀ = data_test.data[igrid, ifil].u[1] |> device
         tlims = (t[1], t[end])
         nupdate = 2

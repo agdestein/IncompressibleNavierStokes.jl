@@ -9,7 +9,7 @@
 
     @test plotgrid(x, y) isa Makie.FigureAxisPlot
 
-    psolver = SpectralPressureSolver(setup)
+    psolver = psolver_spectral(setup)
 
     t_start, t_end = tlims = (0.0, 1.0)
 
