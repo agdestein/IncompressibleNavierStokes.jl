@@ -8,7 +8,6 @@ Even if a GPU is not available, the operators are multithreaded if  Julia is sta
 
 Limitations:
 
-- [`psolver_direct`](@ref) is currently used on the CPU with double precision. [`psolver_cg`](@ref) works on the GPU.
 - This has not been tested with other GPU interfaces, such as
     - [AMDGPU.jl](https://github.com/JuliaGPU/AMDGPU.jl)
     - [Metal.jl](https://github.com/JuliaGPU/Metal.jl)
