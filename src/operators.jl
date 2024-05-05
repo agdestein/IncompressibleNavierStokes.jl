@@ -965,6 +965,7 @@ Note that `B[1]` corresponds to ``T_0`` in the paper, and `V` to ``I``.
 function tensorbasis!(B, V, u, setup)
     (; grid, workgroupsize) = setup
     (; Np, Ip, Δ, Δu, dimension) = grid
+    D = dimension()
     @kernel function basis2!(B, V, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
@@ -1003,7 +1004,7 @@ function tensorbasis!(B, V, u, setup)
     I0 = first(Ip)
     I0 -= oneunit(I0)
     basis! = D == 2 ? basis2! : basis3!
-    basis!(get_backend(u[1]), workgroupsize)(dimension, B, V, u, I0; ndrange = Np)
+    basis!(get_backend(u[1]), workgroupsize)(B, V, u, I0; ndrange = Np)
     B, V
 end
 
@@ -1118,7 +1119,7 @@ Compute the ``D``-field [LiJiajia2019](@cite) given by
 D = \\frac{2 | \\nabla p |}{\\nabla^2 p}.
 ```
 """
-function Dfield!(d, G, p, setup)
+function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
     (; grid, workgroupsize) = setup
     (; dimension, Np, Ip, Δ) = grid
     T = eltype(p)
@@ -1155,15 +1156,16 @@ function Dfield!(d, G, p, setup)
 end
 
 """
-    Dfield(p, setup)
+    Dfield(p, setup; kwargs...)
 
 Compute the ``D``-field.
 """
-Dfield(p, setup) = Dfield!(
+Dfield(p, setup; kwargs...) = Dfield!(
     zero(p),
     ntuple(α -> similar(p, setup.grid.N), setup.grid.dimension()),
     p,
-    setup,
+    setup;
+    kwargs...,
 )
 
 """
@@ -1222,6 +1224,7 @@ function eig2field!(λ, u, setup)
         ∇u = ∇(u, I, Δ, Δu)
         S = @. (∇u + ∇u') / 2
         Ω = @. (∇u - ∇u') / 2
+        # FIXME: Is not recognized as hermitian with Float64 on CPU
         λ[I] = eigvals(S^2 + Ω^2)[2]
     end
     I0 = first(Ip)
@@ -1256,7 +1259,7 @@ e_I = \\frac{1}{4} \\sum_\\alpha (u^\\alpha_{I + \\delta(\\alpha) / 2}^2 + u^\\a
 
 as in [Sanderse2023](@cite).
 """
-function kinetic_energy!(k, u, setup; interpolate_first = false)
+function kinetic_energy!(ke, u, setup; interpolate_first = false)
     (; grid, workgroupsize) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
@@ -1284,8 +1287,8 @@ function kinetic_energy!(k, u, setup; interpolate_first = false)
     ke! = interpolate_first ? efirst! : elast!
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    ke!(get_backend(u[1]), workgroupsize)(k, u, I0; ndrange = Np)
-    k
+    ke!(get_backend(u[1]), workgroupsize)(ke, u, I0; ndrange = Np)
+    ke
 end
 
 """
@@ -1293,8 +1296,7 @@ end
 
 Compute kinetic energy field ``e`` (out-of-place version).
 """
-kinetic_energy(u, setup; kwargs...) =
-    kinetic_energy!(similar(u[1], setup.grid.N), u, setup; kwargs...)
+kinetic_energy(u, setup; kwargs...) = kinetic_energy!(similar(u[1]), u, setup; kwargs...)
 
 """
     total_kinetic_energy(setup, u; kwargs...)

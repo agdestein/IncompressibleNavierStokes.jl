@@ -6,16 +6,34 @@ using ChainRulesCore
 using ChainRulesTestUtils
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes:
-    divergence,
-    pressuregradient,
-    convection,
-    diffusion,
-    bodyforce,
-    poisson,
+    apply_bc_p,
     apply_bc_u,
-    apply_bc_p
+    bodyforce,
+    convection,
+    convection!,
+    convectiondiffusion!,
+    diffusion,
+    diffusion!,
+    divergence,
+    eig2field,
+    kinetic_energy,
+    interpolate_u_p,
+    interpolate_ω_p,
+    laplacian,
+    laplacian_mat,
+    momentum,
+    poisson,
+    pressuregradient,
+    smagorinsky_closure,
+    tensorbasis,
+    total_kinetic_energy,
+    vorticity,
+    Dfield,
+    Qfield
+
 using LinearAlgebra
 using Random
+using SparseArrays
 using Statistics
 using Test
 

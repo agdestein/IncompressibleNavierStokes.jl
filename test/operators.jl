@@ -50,6 +50,17 @@ testops(dim) = @testset "Operators $(dim())D" begin
         @test pDv ≈ -vGp # Check that D = -G'
     end
 
+    @testset "Laplacian" begin
+        p = randn!(similar(u[1]))
+        p = apply_bc_p(p, T(0), setup)
+        Lp = laplacian(p, setup)
+        @test Lp isa Array{T}
+        @test sum((p.*Ω.*Lp)[Ip]) ≤ 0 # Check negativity
+        L = laplacian_mat(setup)
+        @test L isa SparseMatrixCSC
+        @test norm((Lp)[Ip][:] - (L * p[Ip][:])) ≈ 0 atol = 1e-12
+    end
+
     @testset "Convection" begin
         c = convection(u, setup)
         uCu = if D == 2
@@ -94,6 +105,39 @@ testops(dim) = @testset "Operators $(dim())D" begin
         @test d isa Tuple
         @test d[1] isa Array{T}
         @test uDu ≤ 0 # Check negativity (dissipation)
+    end
+
+    @testset "Convection-Diffusion" begin
+        cd = convectiondiffusion!(zero.(u), u, setup)
+        c_and_d = zero.(u)
+        convection!(c_and_d, u, setup)
+        diffusion!(c_and_d, u, setup)
+        @test all(cd .≈ c_and_d)
+    end
+
+    @testset "Momentum" begin
+        m = momentum(u, T(1), setup)
+        @test m isa Tuple
+        @test m[1] isa Array{T}
+        @test all(all.(!isnan, m))
+    end
+
+    @testset "Other fields" begin
+        p = randn!(similar(u[1]))
+        ω = vorticity(u, setup)
+        D == 2 && @test ω isa Array{T}
+        D == 3 && @test ω isa Tuple
+        @test smagorinsky_closure(setup)(u, 0.1) isa Tuple
+        @test tensorbasis(u, setup) isa Tuple
+        @test interpolate_u_p(u, setup) isa Tuple
+        D == 2 && @test interpolate_ω_p(ω, setup) isa Array{T}
+        D == 3 && @test interpolate_ω_p(ω, setup) isa Tuple
+        @test Dfield(p, setup) isa Array{T}
+        @test Qfield(u, setup) isa Array{T}
+        D == 2 && @test_throws AssertionError eig2field(u, setup)
+        D == 3 && @test eig2field(u, setup) isa Array{T} broken = D == 3
+        @test kinetic_energy(u, setup) isa Array{T}
+        @test total_kinetic_energy(u, setup) isa T
     end
 end
 
