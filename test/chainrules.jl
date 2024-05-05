@@ -17,6 +17,8 @@
 
 # Test chain rule correctness by comparing with finite differences
 testchainrules(dim) = @testset "Chain rules $(dim())D" begin
+    @info "Testing chain rules in $(dim())D"
+
     # Setup
     D = dim()
     T = Float64

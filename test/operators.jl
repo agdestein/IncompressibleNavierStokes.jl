@@ -1,4 +1,6 @@
 testops(dim) = @testset "Operators $(dim())D" begin
+    @info "Testing operators in $(dim())D"
+
     # Setup
     D = dim()
     T = Float64
