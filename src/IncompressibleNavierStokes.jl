@@ -87,8 +87,12 @@ export Setup
 export stretched_grid, cosine_grid
 
 # Pressure solvers
-export psolver_direct, psolver_cg, psolver_cg_matrix,
-    psolver_spectral, psolver_spectral_lowmemory
+export default_psolver,
+    psolver_direct,
+    psolver_cg,
+    psolver_cg_matrix,
+    psolver_spectral,
+    psolver_spectral_lowmemory
 
 # Solvers
 export solve_unsteady, solve_steady_state

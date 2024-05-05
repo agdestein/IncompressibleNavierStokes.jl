@@ -13,8 +13,7 @@ n = 1024
 lims = T(0), T(1)
 x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
 setup = Setup(x...; Re, ArrayType);
-psolver = psolver_spectral(setup);
-u₀ = random_field(setup, T(0); psolver);
+u₀ = random_field(setup, T(0));
 
 u = u₀
 
@@ -38,7 +37,6 @@ state, outputs = solve_unsteady(
     u₀,
     (T(0), T(1));
     Δt = T(1e-4),
-    psolver,
     processors = (
         # rtp = realtimeplotter(; setup, nupdate = 1),
         log = timelogger(; nupdate = 10),

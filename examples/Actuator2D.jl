@@ -53,10 +53,9 @@ bodyforce(dim, x, y, t) = dim() == 1 ? -cₜ * inside(x, y) : 0.0
 
 # Build setup and assemble operators
 setup = Setup(x, y; Re = 100.0, boundary_conditions, bodyforce);
-psolver = psolver_direct(setup);
 
 # Initial conditions (extend inflow)
-u₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0; psolver);
+u₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0);
 u = u₀
 
 # Solve unsteady problem
@@ -64,7 +63,6 @@ state, outputs = solve_unsteady(
     setup,
     u₀,
     (0.0, 12.0);
-    psolver,
     method = RKMethods.RK44P2(),
     Δt = 0.05,
     processors = (
@@ -83,7 +81,7 @@ state, outputs = solve_unsteady(
 # We may visualize or export the computed fields `(u, p)`.
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$output/solution"; psolver)
+save_vtk(setup, state.u, state.t, "$output/solution")
 
 # We create a box to visualize the actuator.
 box = (

@@ -86,13 +86,8 @@ plotgrid(x, y)
 setup = Setup(x, y; Re, ArrayType);
 ## setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 
-# Since the grid is uniform and identical for x and y, we may use a specialized
-# spectral pressure solver
-psolver = psolver_spectral(setup)
-
 # Initial conditions
-u₀ =
-    create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? U(x, y) : zero(x); psolver);
+u₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? U(x, y) : zero(x));
 
 # Real time plot: Streamwise average and spectrum
 function meanplot(state; setup)
@@ -156,7 +151,6 @@ state, outputs = solve_unsteady(
     (T(0), T(1));
     method = RKMethods.RK44P2(),
     Δt = 0.001,
-    psolver,
     processors = (
         rtp = realtimeplotter(;
             setup,

@@ -30,8 +30,8 @@ output = "output/LidDrivenCavity2D"
 # Note how floating point type hygiene is enforced in the following using `T`
 # to avoid mixing different precisions.
 
-T = Float64
-## T = Float32
+# T = Float64
+T = Float32
 ## T = Float16
 
 # We can also choose to do the computations on a different device. By default,
@@ -78,19 +78,9 @@ plotgrid(x, y)
 # A 3D setup is built if we also provide a vector of z-coordinates.
 setup = Setup(x, y; boundary_conditions, Re, ArrayType);
 
-# The pressure solver is used to solve the pressure Poisson equation.
-# Available solvers are
-#
-# - [`psolver_direct`](@ref) (only for CPU with `Float64`)
-# - [`psolver_cg`](@ref)
-# - [`psolver_spectral`](@ref) (only for periodic boundary conditions and
-#   uniform grids)
-
-psolver = psolver_direct(setup);
-
 # The initial conditions are provided in function. The value `dim()` determines
 # the velocity component.
-u₀ = create_initial_conditions(setup, (dim, x, y) -> zero(x); psolver);
+u₀ = create_initial_conditions(setup, (dim, x, y) -> zero(x));
 
 # ## Solve problems
 #
@@ -121,7 +111,7 @@ processors = (
 # By default, a standard fourth order Runge-Kutta method is used. If we don't
 # provide the time step explicitly, an adaptive time step is used.
 tlims = (T(0), T(10))
-state, outputs = solve_unsteady(setup, u₀, tlims; Δt = T(1e-3), psolver, processors);
+state, outputs = solve_unsteady(setup, u₀, tlims; Δt = T(1e-3), processors);
 
 # ## Post-process
 #
@@ -130,7 +120,7 @@ state, outputs = solve_unsteady(setup, u₀, tlims; Δt = T(1e-3), psolver, proc
 # Export fields to VTK. The file `output/solution.vti` may be opened for
 # visualization in [ParaView](https://www.paraview.org/). This is particularly
 # useful for inspecting results from 3D simulations.
-save_vtk(setup, state.u, state.t, "$output/solution"; psolver)
+save_vtk(setup, state.u, state.t, "$output/solution")
 
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)

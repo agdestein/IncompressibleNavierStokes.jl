@@ -52,10 +52,8 @@ plotgrid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 
-psolver = psolver_direct(setup);
-
 # Initial conditions (extend inflow)
-u₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)); psolver);
+u₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)));
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);
@@ -67,7 +65,6 @@ state, outputs = solve_unsteady(
     u₀,
     (T(0), T(7));
     Δt = T(0.002),
-    psolver,
     processors = (
         rtp = realtimeplotter(;
             setup,
@@ -88,7 +85,7 @@ state, outputs = solve_unsteady(
 # We may visualize or export the computed fields
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$output/solution"; psolver)
+save_vtk(setup, state.u, state.t, "$output/solution")
 
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)

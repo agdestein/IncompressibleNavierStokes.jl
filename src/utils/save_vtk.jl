@@ -12,7 +12,7 @@ function save_vtk(
     t,
     filename = "output/solution";
     fieldnames = [:velocity],
-    psolver = psolver_direct(setup),
+    psolver = default_psolver(setup),
 )
     parts = split(filename, "/")
     path = join(parts[1:end-1], "/")

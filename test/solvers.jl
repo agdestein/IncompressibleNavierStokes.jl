@@ -7,7 +7,7 @@
     y = LinRange(0, 2π, n + 1)
     setup = Setup(x, y; Re)
 
-    psolver = psolver_spectral(setup)
+    psolver = default_psolver(setup)
 
     t_start, t_end = tlims = (0.0, 5.0)
 

@@ -12,6 +12,7 @@ enforces divergence freeness. There are multiple options for solving this
 system.
 
 ```@docs
+default_psolver
 psolver_direct
 psolver_cg
 psolver_cg_matrix

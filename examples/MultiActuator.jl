@@ -79,10 +79,8 @@ y = LinRange(-T(2), T(2), 2n + 1)
 # Build setup and assemble operators
 setup = Setup(x, y; Re = T(2000), boundary_conditions, bodyforce, ArrayType);
 
-psolver = psolver_direct(setup);
-
 # Initial conditions (extend inflow)
-u₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? one(x) : zero(x); psolver);
+u₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? one(x) : zero(x));
 u = u₀
 t = T(0)
 
@@ -115,14 +113,12 @@ state, outputs = solve_unsteady(
     # (T(0), T(1));
     method = RKMethods.RK44P2(),
     Δt = T(0.01),
-    psolver,
     processors = (
         rtp = realtimeplotter(;
             setup,
             # plot = fieldplot,
             # fieldname = :velocity,
             # fieldname = :pressure,
-            psolver,
             nupdate = 1,
         ),
         boxplotter = processor() do state
@@ -147,7 +143,7 @@ state, outputs = solve_unsteady(
 save_vtk(setup, state.u, state.t, "$output/solution")
 
 # Plot pressure
-fig = fieldplot(state; setup, fieldname = :pressure, psolver)
+fig = fieldplot(state; setup, fieldname = :pressure)
 # lines!(box...; color = :red)
 lines!.(boxes; color = :red);
 fig

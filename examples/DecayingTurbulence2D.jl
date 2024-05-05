@@ -34,12 +34,8 @@ x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
 # Build setup and assemble operators
 setup = Setup(x...; Re, ArrayType);
 
-# Since the grid is uniform and identical for x and y, we may use a specialized
-# spectral pressure solver
-psolver = psolver_spectral(setup);
-
 # Create random initial conditions
-u₀ = random_field(setup, T(0); psolver);
+u₀ = random_field(setup, T(0));
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(
@@ -47,7 +43,6 @@ state, outputs = solve_unsteady(
     u₀,
     (T(0), T(1));
     Δt = T(1e-3),
-    psolver,
     processors = (
         ## rtp = realtimeplotter(; setup, nupdate = 1),
         ehist = realtimeplotter(;
@@ -75,7 +70,7 @@ outputs.ehist
 outputs.espec
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$output/solution"; psolver)
+save_vtk(setup, state.u, state.t, "$output/solution")
 
 # Plot field
 fieldplot(state; setup)

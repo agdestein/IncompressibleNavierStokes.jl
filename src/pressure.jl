@@ -116,6 +116,26 @@ function project!(u, setup; psolver, div, p)
 end
 
 """
+    default_psolver(setup)
+
+Get default Poisson solver from setup.
+"""
+function default_psolver(setup)
+    (; grid, boundary_conditions) = setup
+    (; dimension, Δ) = grid
+    D = dimension()
+    Δx = first.(Array.(Δ))
+    isperiodic =
+        all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions)
+    isuniform = all(α -> all(≈(Δx[α]), Δ[α]), 1:D)
+    if isperiodic && isuniform
+        psolver_spectral(setup)
+    else
+        psolver_direct(setup)
+    end
+end
+
+"""
     poisson_direct(setup)
 
 Create direct Poisson solver using an appropriate matrix decomposition.

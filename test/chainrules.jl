@@ -8,8 +8,7 @@
 #     setup = Setup(x...; Re,
 #         boundary_conditions,
 #     )
-#     psolver = psolver_direct(setup)
-#     u = random_field(setup, T(0); psolver)
+#     u = random_field(setup, T(0))
 #     randn!.(u)
 #     p = randn!(similar(u[1]))
 #     test_rrule(apply_bc_u, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
@@ -38,7 +37,7 @@ testchainrules(dim) = @testset "Chain rules $(dim())D" begin
         stretched_grid(lims..., n, 1.2), cosine_grid(lims..., n), cosine_grid(lims..., n)
     end
     setup = Setup(x...; Re)
-    psolver = psolver_direct(setup)
+    psolver = default_psolver(setup)
     u = random_field(setup, T(0); psolver)
     randn!.(u)
     p = randn!(similar(u[1]))

@@ -12,7 +12,7 @@
 
     @test plotgrid(x, y, z) isa Makie.Figure
 
-    psolver = psolver_spectral(setup)
+    psolver = default_psolver(setup)
 
     t_start, t_end = tlims = (T(0), T(1))
 

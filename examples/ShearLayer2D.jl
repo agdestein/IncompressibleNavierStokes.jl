@@ -38,19 +38,13 @@ plotgrid(x, y)
 # Build setup and assemble operators
 setup = Setup(x, y; Re, ArrayType);
 
-psolver = psolver_spectral(setup)
-
 # Initial conditions: We add 1 to u in order to make global momentum
 # conservation less trivial
 d = T(π / 15)
 e = T(0.05)
 U1(y) = y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d)
 ## U1(y) = T(1) + (y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d))
-u₀ = create_initial_conditions(
-    setup,
-    (dim, x, y) -> dim() == 1 ? U1(y) : e * sin(x);
-    psolver,
-);
+u₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? U1(y) : e * sin(x));
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(
@@ -58,7 +52,6 @@ state, outputs = solve_unsteady(
     u₀,
     (T(0), T(8));
     Δt = T(0.01),
-    psolver,
     processors = (
         rtp = realtimeplotter(;
             setup,
@@ -81,7 +74,7 @@ state, outputs = solve_unsteady(
 outputs.rtp
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$output/solution"; psolver)
+save_vtk(setup, state.u, state.t, "$output/solution")
 
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)
