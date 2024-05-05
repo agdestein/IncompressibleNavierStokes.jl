@@ -146,13 +146,12 @@ function create_spectrum(; setup, kp, rng = Random.default_rng())
 
     # Remove non-divergence free part: (I - k k^T / k^2) e
     ke = sum(α -> e[α] .* kkkk[α], 1:D)
-    CUDA.@allowscalar e0 = getindex.(e, 1)
     for α = 1:D
+        e0 = e[1:1] # CUDA doesn't like e[1]
         @. e[α] -= kkkk[α] * ke / knorm^2
+        # Restore k=0 component, which is divergence free anyways
+        e[1:1] .= e0
     end
-
-    # Restore k=0 component, which is divergence free anyways
-    CUDA.@allowscalar setindex!.(e, e0, 1)
 
     # Normalize
     enorm = sqrt.(sum(α -> e[α] .^ 2, 1:D))

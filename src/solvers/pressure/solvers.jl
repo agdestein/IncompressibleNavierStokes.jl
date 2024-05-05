@@ -18,106 +18,20 @@ struct DirectPressureSolver{T,S,F,A} <: AbstractPressureSolver{T}
     function DirectPressureSolver(setup)
         (; grid, boundary_conditions, ArrayType) = setup
         (; x, Np) = grid
-        if false #ArrayType == CuArray
-            # T = eltype(x[1])
-            T = Float64
-            f = similar(x[1], T, prod(Np) + 1)
-            p = similar(x[1], T, prod(Np) + 1)
-            L = laplacian_mat(setup)
-            e = ones(T, size(L, 2))
-            L = [L e; e' 0]
-            L = L |> CuSparseMatrixCSR{Float64}
-            fact = CUSOLVERRF.RFLU(L; symbolic = :RF)
-        elseif false #ArrayType == CuArray
-            T = eltype(x[1])
-            f = similar(x[1], prod(Np) + 1)
-            p = similar(x[1], prod(Np) + 1)
-            L = laplacian_mat(setup)
-            e = ones(Float64, size(L, 2))
-            L = [L e; e' 0]
-            F = lu(L)
-            P = sparse(1:length(F.p), F.p, ones(length(F.p)))
-            Q = sparse(F.q, 1:length(F.q), ones(length(F.q)))
-            L = F.L |> CuSparseMatrixCSR{T}
-            U = F.U |> CuSparseMatrixCSR{T}
-            CUDA.@allowscalar L = L |> LowerTriangular
-            CUDA.@allowscalar U = U |> UpperTriangular
-            # CUDA.@allowscalar L = F.L |> CuSparseMatrixCSR{Float64} |> LowerTriangular
-            # CUDA.@allowscalar U = F.U |> CuSparseMatrixCSR{Float64} |> UpperTriangular
-            fact = (;
-                L,
-                U,
-                Rs = F.Rs |> CuArray{T},
-                P = P |> CuSparseMatrixCSR{T},
-                Q = Q |> CuSparseMatrixCSR{T},
-            )
-        else
-            # T = eltype(x[1])
-            T = Float64
-            backend = get_backend(x[1])
-            L = laplacian_mat(setup)
-            if any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
-                f = zeros(T, prod(Np))
-                p = zeros(T, prod(Np))
-            else
-                f = zeros(T, prod(Np) + 1)
-                p = zeros(T, prod(Np) + 1)
-                e = ones(T, size(L, 2))
-                L = [L e; e' 0]
-            end
-            # fact = lu(L)
-            # fact = ldlt(Symmetric(L))
-            fact = factorize(L)
-        end
-        new{T,typeof(setup),typeof(fact),typeof(f)}(setup, fact, f, p)
-    end
-end
-
-# This moves all the inner arrays to the GPU when calling
-# `cu(::SpectralPressureSolver)` from CUDA.jl
-# TODO: CUDA does not support `factorize`, `lu`, etc, but maybe `L` and `U` can be
-# converted to `CuArray` after factorization on the CPU
-Adapt.adapt_structure(to, s::DirectPressureSolver) = error(
-    "`DirectPressureSolver` is not yet implemented for CUDA. Consider using `CGPressureSolver`.",
-)
-
-"""
-    CUDSSPressureSolver()
-
-Direct pressure solver using a CUDSS LDLt decomposition.
-"""
-struct CUDSSPressureSolver{T,S,F,A} <: AbstractPressureSolver{T}
-    setup::S
-    solver::F
-    f::A
-    p::A
-    function CUDSSPressureSolver(setup)
-        (; grid, boundary_conditions, ArrayType) = setup
-        (; x, Np) = grid
-        T = eltype(x[1])
-        @assert x[1] isa CuArray "CUDSSPressureSolver only works for CuArray."
-        f = fill!(similar(x[1], prod(Np) + 1), 0)
-        p = fill!(similar(x[1], prod(Np) + 1), 0)
+        # T = eltype(x[1])
+        T = Float64
         L = laplacian_mat(setup)
         if any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
-            # structure = "SPD" # Symmetric positive definite
-            structure = "G" # General matrix
-            view = 'F' # Full matrix representation
+            f = zeros(T, prod(Np))
+            p = zeros(T, prod(Np))
         else
+            f = zeros(T, prod(Np) + 1)
+            p = zeros(T, prod(Np) + 1)
             e = ones(T, size(L, 2))
             L = [L e; e' 0]
-            structure = "S" # Symmetric (not positive definite)
-            view = 'L' # Lower triangular representation
         end
-        L = CuSparseMatrixCSR(L)
-        solver = CudssSolver(
-            L,
-            structure,
-            view, # Lower triangular representation
-        )
-        cudss("analysis", solver, p, f)
-        cudss("factorization", solver, p, f) # Compute factorization
-        new{T,typeof(setup),typeof(solver),typeof(f)}(setup, solver, f, p)
+        fact = factorize(L)
+        new{T,typeof(setup),typeof(fact),typeof(f)}(setup, fact, f, p)
     end
 end
 
@@ -171,8 +85,8 @@ function CGMatrixPressureSolver(
     maxiter = prod(setup.grid.Np),
 )
     L = laplacian_mat(setup) |> setup.device
-    L = L |> CuSparseMatrixCSR
-    CGPressureSolver{eltype(L),typeof(L)}(L, abstol, reltol, maxiter)
+    # L = L |> CuSparseMatrixCSR
+    CGMatrixPressureSolver{eltype(L),typeof(L)}(L, abstol, reltol, maxiter)
 end
 
 """

@@ -3,7 +3,6 @@ Neural closure modelling tools.
 """
 module NeuralClosure
 
-using CUDA
 using ComponentArrays: ComponentArray
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: Dimension, momentum!, apply_bc_u!, project!
@@ -14,6 +13,9 @@ using Observables
 using Random
 using Tullio
 using Zygote
+
+# Must be loaded inside for Tullio to work correctly
+using CUDA
 
 include("closure.jl")
 include("cnn.jl")

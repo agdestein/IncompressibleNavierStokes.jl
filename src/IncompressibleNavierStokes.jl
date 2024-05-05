@@ -20,11 +20,6 @@ using StaticArrays
 using Statistics
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 
-# Must be loaded inside for Tullio to work correctly
-using CUDA
-using CUDA.CUSPARSE
-# using CUSOLVERRF
-using CUDSS
 
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
