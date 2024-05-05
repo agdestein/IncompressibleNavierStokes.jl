@@ -28,11 +28,7 @@ using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 include("boundary_conditions.jl")
 
 # Grid
-include("grid/dimension.jl")
 include("grid/grid.jl")
-include("grid/stretched_grid.jl")
-include("grid/cosine_grid.jl")
-include("grid/max_size.jl")
 
 # Setup
 include("setup.jl")

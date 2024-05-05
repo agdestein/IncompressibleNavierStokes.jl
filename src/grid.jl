@@ -1,4 +1,80 @@
 """
+    Dimension(N)
+
+Represent an `N`-dimensional space.
+Returns `N` when called.
+
+```example
+julia> d = Dimension(3)
+Dimension{3}()
+
+julia> d()
+3
+```
+"""
+struct Dimension{N} end
+
+Dimension(N) = Dimension{N}()
+
+(::Dimension{N})() where {N} = N
+
+"""
+    max_size(grid)
+
+Get size of the largest grid element.
+"""
+function max_size(grid)
+    (; Δ) = grid
+    m = maximum.(Δ)
+    sqrt(sum(m .^ 2))
+end
+
+"""
+    cosine_grid(a, b, N)
+
+Create a nonuniform grid of `N + 1` points from `a` to `b` using a cosine
+profile, i.e.
+
+```math
+x_i = a + \\frac{1}{2} \\left( 1 - \\cos \\left( \\pi \\frac{i}{n} \\right) \\right)
+(b - a), \\quad i = 0, \\dots, N
+```
+
+See also [`stretched_grid`](@ref).
+"""
+function cosine_grid(a, b, N)
+    T = typeof(a)
+    i = T.(0:N)
+    @. a + (b - a) * (1 - cospi(i / N)) / 2
+end
+
+"""
+    stretched_grid(a, b, N, s = 1)
+
+Create a nonuniform grid of `N + 1` points from `a` to `b` with a stretch
+factor of `s`. If `s = 1`, return a uniform spacing from `a` to `b`. Otherwise,
+return a vector ``x \\in \\mathbb{R}^{N + 1}`` such that ``x_n = a + \\sum_{i =
+1}^n s^{i - 1} h`` for ``n = 0, \\dots , N``. Setting ``x_N = b`` then gives
+``h = (b - a) \\frac{1 - s}{1 - s^N}``, resulting in
+
+```math
+x_n = a + (b - a) \\frac{1 - s^n}{1 - s^N}, \\quad n = 0, \\dots, N.
+```
+
+Note that `stretched_grid(a, b, N, s)[n]` corresponds to ``x_{n - 1}``.
+
+See also [`cosine_grid`](@ref).
+"""
+function stretched_grid(a, b, N, s = 1)
+    s > 0 || error("The stretch factor must be positive")
+    if s ≈ 1
+        LinRange(a, b, N + 1)
+    else
+        map(i -> a + (b - a) * (1 - s^i) / (1 - s^N), 0:N)
+    end
+end
+
+"""
     Grid(x, boundary_conditions)
 
 Create nonuniform Cartesian box mesh `x[1]` × ... × `x[d]` with boundary
