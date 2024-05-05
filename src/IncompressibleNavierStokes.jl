@@ -24,17 +24,12 @@ using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
 
-# Boundary conditions
+# General stuff
 include("boundary_conditions.jl")
-
-# Grid
-include("grid/grid.jl")
-
-# Setup
+include("grid.jl")
 include("setup.jl")
-
-# Poisson solvers
 include("pressure.jl")
+include("operators.jl")
 
 # Time steppers
 include("time_steppers/methods.jl")
@@ -49,12 +44,7 @@ include("time_steppers/tableaux.jl")
 include("create_initial_conditions.jl")
 
 # Processors
-include("processors/processors.jl")
-include("processors/real_time_plot.jl")
-include("processors/animator.jl")
-
-# Discrete operators
-include("operators.jl")
+include("processors.jl")
 
 # Solvers
 include("solvers/get_timestep.jl")
