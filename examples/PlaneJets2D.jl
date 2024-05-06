@@ -87,7 +87,7 @@ setup = Setup(x, y; Re, ArrayType);
 ## setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 
 # Initial conditions
-u₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? U(x, y) : zero(x));
+ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? U(x, y) : zero(x));
 
 # Real time plot: Streamwise average and spectrum
 function meanplot(state; setup)
@@ -145,10 +145,10 @@ function meanplot(state; setup)
 end
 
 # Solve unsteady problem
-state, outputs = solve_unsteady(
+state, outputs = solve_unsteady(;
     setup,
-    u₀,
-    (T(0), T(1));
+    ustart,
+    tlims = (T(0), T(1)),
     method = RKMethods.RK44P2(),
     Δt = 0.001,
     processors = (

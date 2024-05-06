@@ -80,8 +80,7 @@ y = LinRange(-T(2), T(2), 2n + 1)
 setup = Setup(x, y; Re = T(2000), boundary_conditions, bodyforce, ArrayType);
 
 # Initial conditions (extend inflow)
-u₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? one(x) : zero(x));
-u = u₀
+ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? one(x) : zero(x));
 t = T(0)
 
 # # We create a box to visualize the actuator.
@@ -106,10 +105,10 @@ end
 box = boxes[1]
 
 # Solve unsteady problem
-state, outputs = solve_unsteady(
+state, outputs = solve_unsteady(;
     setup,
-    u₀,
-    (T(0), 4 * T(12));
+    ustart,
+    tlims = (T(0), 4 * T(12)),
     # (T(0), T(1));
     method = RKMethods.RK44P2(),
     Δt = T(0.01),

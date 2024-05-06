@@ -37,7 +37,7 @@ setup = Setup(x, y, z; Re, ArrayType);
 psolver = psolver_spectral(setup);
 
 # Initial conditions
-u₀ = create_initial_conditions(
+ustart = create_initial_conditions(
     setup,
     (dim, x, y, z) ->
         dim() == 1 ? sinpi(2x) * cospi(2y) * sinpi(2z) / 2 :
@@ -46,10 +46,10 @@ u₀ = create_initial_conditions(
 );
 
 # Solve unsteady problem
-(; u, t), outputs = solve_unsteady(
+(; u, t), outputs = solve_unsteady(;
     setup,
-    u₀,
-    (T(0), T(1.0));
+    ustart,
+    tlims = (T(0), T(1.0)),
     Δt = T(1e-3),
     processors = (
         ## rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 10),

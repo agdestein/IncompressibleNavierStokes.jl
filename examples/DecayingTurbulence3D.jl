@@ -41,13 +41,13 @@ setup = Setup(x, y, z; Re, ArrayType);
 psolver = psolver_spectral(setup);
 
 # Initial conditions
-u₀ = random_field(setup; psolver);
+ustart = random_field(setup; psolver);
 
 # Solve unsteady problem
-(; u, t), outputs = solve_unsteady(
+(; u, t), outputs = solve_unsteady(;
     setup,
-    u₀,
-    (T(0), T(1));
+    ustart,
+    tlims = (T(0), T(1)),
     Δt = T(1e-3),
     psolver,
     processors = (

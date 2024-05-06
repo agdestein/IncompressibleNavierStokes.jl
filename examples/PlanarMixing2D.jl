@@ -50,13 +50,13 @@ setup = Setup(x, y; Re, boundary_conditions);
 psolver = psolver_direct(setup);
 
 # Initial conditions (extend inflow)
-u₀ = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, 0.0); psolver);
+ustart = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, 0.0); psolver);
 
 # Solve unsteady problem
-state, outputs = solve_unsteady(
+state, outputs = solve_unsteady(;
     setup,
-    u₀,
-    (0.0, 100.0);
+    ustart,
+    tlims = (0.0, 100.0),
     psolver,
     method = RKMethods.RK44P2(),
     Δt = 0.1,

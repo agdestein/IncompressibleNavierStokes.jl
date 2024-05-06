@@ -49,13 +49,13 @@ boundary_conditions = (
 setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
 
 # Initial conditions
-u₀ = create_initial_conditions(setup, (dim, x, y, z) -> zero(x))
+ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x))
 
 # Solve unsteady problem
-(; u, t), outputs = solve_unsteady(
+(; u, t), outputs = solve_unsteady(;
     setup,
-    u₀,
-    (T(0), T(0.2));
+    ustart,
+    tlims = (T(0), T(0.2)),
     Δt = T(1e-3),
     processors = (
         ## rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 50),

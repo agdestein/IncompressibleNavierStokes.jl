@@ -73,14 +73,14 @@ end;
 
 # Create random initial conditions
 rng = Random.seed!(Random.default_rng(), 12345)
-u₀ = random_field(dns.setup, T(0); kp, dns.psolver, rng);
+ustart = random_field(dns.setup, T(0); kp, dns.psolver, rng);
 clean()
 
 # Solve unsteady problem
-@time state, outputs = solve_unsteady(
+@time state, outputs = solve_unsteady(;
     dns.setup,
-    u₀,
-    (T(0), T(1e-1));
+    ustart,
+    tlims = (T(0), T(1e-1)),
     Δt,
     docopy = true, # leave initial conditions unchanged, false to free up memory
     dns.psolver,

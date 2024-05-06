@@ -55,17 +55,17 @@ boundary_conditions = (
 setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
 
 # Initial conditions (extend inflow)
-u₀ = create_initial_conditions(setup, (dim, x, y, z) -> U(dim, x, y, z, zero(x)));
+ustart = create_initial_conditions(setup, (dim, x, y, z) -> U(dim, x, y, z, zero(x)));
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);
 nothing
 
 # Solve unsteady problem
-state, outputs = solve_unsteady(
+state, outputs = solve_unsteady(;
     setup,
-    u₀,
-    (T(0), T(7));
+    ustart,
+    tlims = (T(0), T(7)),
     Δt = T(0.01),
     processors = (
         rtp = realtimeplotter(;

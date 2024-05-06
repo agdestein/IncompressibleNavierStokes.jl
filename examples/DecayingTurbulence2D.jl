@@ -35,13 +35,13 @@ x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
 setup = Setup(x...; Re, ArrayType);
 
 # Create random initial conditions
-u₀ = random_field(setup, T(0));
+ustart = random_field(setup, T(0));
 
 # Solve unsteady problem
-state, outputs = solve_unsteady(
+state, outputs = solve_unsteady(;
     setup,
-    u₀,
-    (T(0), T(1));
+    ustart,
+    tlims = (T(0), T(1)),
     Δt = T(1e-3),
     processors = (
         ## rtp = realtimeplotter(; setup, nupdate = 1),

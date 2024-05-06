@@ -44,13 +44,13 @@ d = T(π / 15)
 e = T(0.05)
 U1(y) = y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d)
 ## U1(y) = T(1) + (y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d))
-u₀ = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? U1(y) : e * sin(x));
+ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? U1(y) : e * sin(x));
 
 # Solve unsteady problem
-state, outputs = solve_unsteady(
+state, outputs = solve_unsteady(;
     setup,
-    u₀,
-    (T(0), T(8));
+    ustart,
+    tlims = (T(0), T(8)),
     Δt = T(0.01),
     processors = (
         rtp = realtimeplotter(;

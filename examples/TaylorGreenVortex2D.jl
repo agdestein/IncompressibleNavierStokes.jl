@@ -28,7 +28,7 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
         x = ntuple(α -> LinRange(lims..., n + 1), D)
         setup = Setup(x...; Re, ArrayType)
         psolver = psolver_spectral(setup)
-        u₀ = create_initial_conditions(
+        ustart = create_initial_conditions(
             setup,
             (dim, x...) -> uref(dim, x..., tlims[1]),
             tlims[1];
@@ -41,7 +41,7 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
             psolver,
             doproject = false,
         )
-        (; u, t), outputs = solve_unsteady(setup, u₀, tlims; Δt, psolver)
+        (; u, t), outputs = solve_unsteady(; setup, ustart, tlims, Δt, psolver)
         (; Ip) = setup.grid
         a, b = T(0), T(0)
         for α = 1:D

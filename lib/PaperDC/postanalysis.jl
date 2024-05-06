@@ -686,11 +686,11 @@ kineticenergy = let
         setup = setups_test[ig]
         psolver = psolver_spectral(setup)
         t = data_test.t
-        u₀ = data_test.data[ig, ifil].u[1] |> device
+        ustart = data_test.data[ig, ifil].u[1] |> device
         tlims = (t[1], t[end])
         nupdate = 2
         Δt = (t[2] - t[1]) / nupdate
-        T = eltype(u₀[1])
+        T = eltype(ustart[1])
         ewriter = processor() do state
             ehist = zeros(T, 0)
             on(state) do (; u, n)
@@ -710,31 +710,31 @@ kineticenergy = let
                 data_test.data[ig, ifil].u,
             )
             ke_nomodel[ig, ifil] =
-                solve_unsteady(setup, u₀, tlims; Δt, processors, psolver)[2].ewriter
+                solve_unsteady(; setup, ustart, tlims, Δt, processors, psolver)[2].ewriter
         end
         ke_smag[ig, ifil, iorder] =
-            solve_unsteady(
+            solve_unsteady(;
                 (;
                     setup...,
                     projectorder = getorder(iorder),
                     closure_model = smagorinsky_closure(setup),
                 ),
-                u₀,
-                tlims;
+                ustart,
+                tlims,
                 Δt,
                 processors,
                 psolver,
                 θ = θ_smag[ifil, iorder],
             )[2].ewriter
         ke_cnn_prior[ig, ifil, iorder] =
-            solve_unsteady(
+            solve_unsteady(;
                 (;
                     setup...,
                     projectorder = getorder(iorder),
                     closure_model = wrappedclosure(closure, setup),
                 ),
-                u₀,
-                tlims;
+                ustart,
+                tlims,
                 Δt,
                 processors,
                 psolver,
@@ -747,8 +747,8 @@ kineticenergy = let
                     projectorder = getorder(iorder),
                     closure_model = wrappedclosure(closure, setup),
                 ),
-                u₀,
-                tlims;
+                ustart,
+                tlims,
                 Δt,
                 processors,
                 psolver,
@@ -839,11 +839,11 @@ divs = let
         setup = setups_test[ig]
         psolver = psolver_spectral(setup)
         t = data_test.t
-        u₀ = data_test.data[ig, ifil].u[1] |> device
+        ustart = data_test.data[ig, ifil].u[1] |> device
         tlims = (t[1], t[end])
         nupdate = 2
         Δt = (t[2] - t[1]) / nupdate
-        T = eltype(u₀[1])
+        T = eltype(ustart[1])
         dwriter = processor() do state
             div = fill!(similar(setup.grid.x[1], setup.grid.N), 0)
             dhist = zeros(T, 0)
@@ -870,10 +870,10 @@ divs = let
             end
         end
         s(closure_model, θ) =
-            solve_unsteady(
+            solve_unsteady(;
                 (; setup..., closure_model),
-                u₀,
-                tlims;
+                ustart,
+                tlims,
                 method = RKProject(RK44(; T), getorder(iorder)),
                 Δt,
                 processors = (; dwriter),
@@ -967,16 +967,16 @@ ufinal = let
         t = data_test.t
         setup = setups_test[igrid]
         psolver = psolver_spectral(setup)
-        u₀ = data_test.data[igrid, ifil].u[1] |> device
+        ustart = data_test.data[igrid, ifil].u[1] |> device
         tlims = (t[1], t[end])
         nupdate = 2
         Δt = (t[2] - t[1]) / nupdate
-        T = eltype(u₀[1])
+        T = eltype(ustart[1])
         s(closure_model, θ) =
-            solve_unsteady(
+            solve_unsteady(;
                 (; setup..., closure_model),
-                u₀,
-                tlims;
+                ustart,
+                tlims,
                 method = RKProject(RK44(; T), getorder(iorder)),
                 Δt,
                 psolver,
