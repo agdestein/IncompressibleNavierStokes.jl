@@ -1,12 +1,12 @@
-create_stepper(::ExplicitRungeKuttaMethod; setup, psolver, u, t, n = 0) =
-    (; setup, psolver, u, t, n)
+create_stepper(::ExplicitRungeKuttaMethod; setup, psolver, u, temp, t, n = 0) =
+    (; setup, psolver, u, temp, t, n)
 
 function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing, cache)
-    (; setup, psolver, u, t, n) = stepper
-    (; grid, closure_model) = setup
+    (; setup, psolver, u, temp, t, n) = stepper
+    (; grid, closure_model, temperature) = setup
     (; dimension, Iu) = grid
     (; A, b, c) = method
-    (; u₀, ku, div, p) = cache
+    (; u₀, ku, div, p, temp₀, ktemp, diff) = cache
     D = dimension()
     nstage = length(b)
     m = closure_model
@@ -14,11 +14,18 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
     # Update current solution
     t₀ = t
     copyto!.(u₀, u)
+    isnothing(temp) || copyto!(temp₀, temp)
 
     for i = 1:nstage
         # Compute force at current stage i
         apply_bc_u!(u, t, setup)
-        momentum!(ku[i], u, t, setup)
+        isnothing(temp) || apply_bc_temp!(temp, t, setup)
+        momentum!(ku[i], u, temp, t, setup)
+        if !isnothing(temp)
+            ktemp[i] .= 0
+            convection_diffusion_temp!(ktemp[i], u, temp, setup)
+            temperature.dodissipation && dissipation!(ktemp[i], diff, u, setup)
+        end
 
         # Add closure term
         isnothing(m) || map((k, m) -> k .+= m, ku[i], m(u, θ))
@@ -34,6 +41,9 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
                 # @. u[α][Iu[α]] += Δt * A[i, j] * ku[j][α][Iu[α]]
             end
         end
+        for j = 1:i
+            @. temp .= temp₀ + Δt * A[i, j] * ktemp[j]
+        end
 
         # Project stage u directly
         # Make velocity divergence free at time t
@@ -45,13 +55,14 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
     # since we divide by an infinitely thin (eps(T)) volume width in the
     # diffusion term
     apply_bc_u!(u, t, setup)
+    isnothing(temp) || apply_bc_temp!(temp, t, setup)
 
-    create_stepper(method; setup, psolver, u, t, n = n + 1)
+    create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
 end
 
 function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
-    (; setup, psolver, u, t, n) = stepper
-    (; grid, closure_model) = setup
+    (; setup, psolver, u, temp, t, n) = stepper
+    (; grid, closure_model, temperature) = setup
     (; dimension) = grid
     (; A, b, c) = method
     D = dimension()
@@ -66,7 +77,7 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     for i = 1:nstage
         # Compute force at current stage i
         u = apply_bc_u(u, t, setup)
-        F = momentum(u, t, setup)
+        F = momentum(u, temp, t, setup)
 
         # Add closure term
         isnothing(m) || (F = F .+ m(u, θ))
@@ -95,5 +106,5 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     # diffusion term
     u = apply_bc_u(u, t, setup)
 
-    create_stepper(method; setup, psolver, u, t, n = n + 1)
+    create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
 end

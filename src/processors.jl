@@ -284,7 +284,7 @@ function fieldplot(
 
     xf = Array.(getindex.(setup.grid.xp, Ip.indices))
 
-    (; u, t) = state[]
+    (; u, temp, t) = state[]
     _f = if fieldname in (1, 2)
         up = interpolate_u_p(u, setup)
         up[fieldname]
@@ -310,6 +310,8 @@ function fieldplot(
     elseif fieldname == :V2
         B, V = tensorbasis(u, setup)
         V[2]
+    elseif fieldname == :temperature
+        temp
     end
     _f = Array(_f)[Ip]
     field = lift(state) do (; u, t)
@@ -334,6 +336,8 @@ function fieldplot(
         elseif fieldname == :V2
             tensorbasis!(B, V, u, setup)
             -V[2]
+        elseif fieldname == :temperature
+            temp
         end
         # Array(f)[Ip]
         copyto!(_f, view(f, Ip))
@@ -412,7 +416,13 @@ function fieldplot(
     (; xlims, x, xp, Ip) = grid
 
     xf = Array.(getindex.(setup.grid.xp, Ip.indices))
+    dxf = diff.(xf)
+    if all(α -> all(≈(dxf[α][1]), dxf[α]), 1:3)
+        xf = ntuple(α -> LinRange(xf[α][1], xf[α][end], length(xf[α])), 3)
+    end
+
     (; u) = state[]
+    T = eltype(xf[1])
     if fieldname == :velocity
     elseif fieldname == :vorticity
     elseif fieldname == :streamfunction
@@ -444,11 +454,12 @@ function fieldplot(
         idx = parse(Int, string(fieldname)[2:end])
         tb = tensorbasis(u, setup)
         tb[sym][idx]
+    elseif fieldname == :temperature
     else
         error("Unknown fieldname")
     end
 
-    field = lift(state) do (; u, t)
+    field = lift(state) do (; u, temp, t)
         f = if fieldname == :velocity
             up = interpolate_u_p(u, setup)
             map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
@@ -479,9 +490,18 @@ function fieldplot(
                union(Symbol.(["B$i" for i = 1:11]), Symbol.(["V$i" for i = 1:5]))
             tensorbasis!(tb..., u, setup)
             tb[sym][idx]
+        elseif fieldname == :temperature
+            temp
         end
         Array(f)[Ip]
     end
+
+    # color = lift(state) do (; temp)
+    #     Array(view(temp, Ip))
+    # end
+    # colorrange = lift(state) do (; temp)
+    #     extrema(view(temp, Ip))
+    # end
 
     # lims = @lift get_lims($field)
     lims = isnothing(levels) ? lift(get_lims, field) : extrema(levels)
@@ -498,6 +518,8 @@ function fieldplot(
         xf...,
         field;
         levels,
+        # color,
+        # colorrange,
         colorrange = lims,
         # colorrange = extrema(levels),
         alpha,
@@ -506,7 +528,6 @@ function fieldplot(
         # lowclip = :red,
         kwargs...,
     )
-
     docolorbar && Colorbar(fig[1, 2], hm)
     fig
 end

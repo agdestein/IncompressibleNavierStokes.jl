@@ -50,10 +50,15 @@ snapshot files using the `save_vtk` function, or the full time series using the
 | ![](assets/examples/Actuator3D.png) | ![](assets/examples/BackwardFacingStep3D.png) | ![](assets/examples/DecayingTurbulence3D.png) | ![](assets/examples/TaylorGreenVortex3D.png) |
 | [Actuator (3D)](examples/Actuator3D.jl) | [Backward Facing Step (3D)](examples/BackwardFacingStep3D.jl) | [Decaying Turbulence (3D)](examples/DecayingTurbulence3D.jl) | [Taylor-Green Vortex (3D)](examples/TaylorGreenVortex3D.jl) |
 
+IncompressibleNavierStokes also supports adding a temperature equation.
+
+| ![](assets/examples/RB2D.mp4) | ![](assets/examples/RT3D.mp4) |
+|:-:|:-:|
+| [Rayleigh-Bénard (2D)](examples/RayleighBenard2D.jl) | [Rayleigh-Taylor (3D)](examples/RayleighTaylor3D.jl) | 
 
 ## Demo
 
-The following example code  using a negative body force on a small rectangle
+The following example code using a negative body force on a small rectangle
 with an unsteady inflow. It simulates a wind turbine (actuator) under varying
 wind conditions.
 

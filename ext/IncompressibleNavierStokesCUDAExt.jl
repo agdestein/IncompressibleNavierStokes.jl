@@ -8,10 +8,12 @@ module IncompressibleNavierStokesCUDAExt
 using CUDA
 using CUDA.CUSPARSE
 using CUDSS
+using IncompressibleNavierStokes
 using IncompressibleNavierStokes: PressureBC, laplacian_mat
+using SparseArrays
 
 # CUDA version, using CUDSS LDLt decomposition.
-function poisson_direct(::CuArray, setup)
+function IncompressibleNavierStokes.psolver_direct(::CuArray, setup)
     (; grid, boundary_conditions) = setup
     (; x, Np, Ip) = grid
     T = eltype(x[1])
@@ -30,16 +32,18 @@ function poisson_direct(::CuArray, setup)
         # With extra DOF
         ftemp = fill!(similar(x[1], prod(Np) + 1), 0)
         ptemp = fill!(similar(x[1], prod(Np) + 1), 0)
-        e = fill!(similar(x[1], prod(Np)), 1)
+        # e = fill!(similar(x[1], prod(Np)), 1)
+        e = ones(T, prod(Np))
+        L = SparseMatrixCSC(L)
         L = [L e; e' 0]
         viewrange = 1:prod(Np)
         structure = "S" # Symmetric (not positive definite)
         _view = 'L' # Lower triangular representation
     end
     L = CuSparseMatrixCSR(L)
-    solver = CudssSolver(L, structure; view = _view)
-    cudss("analysis", solver, p, f)
-    cudss("factorization", solver, p, f) # Compute factorization
+    solver = CudssSolver(L, structure, _view)
+    cudss("analysis", solver, ptemp, ftemp)
+    cudss("factorization", solver, ptemp, ftemp) # Compute factorization
     function psolve!(p, f)
         T = eltype(p)
         copyto!(view(ftemp, viewrange), view(view(f, Ip), :))

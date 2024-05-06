@@ -681,6 +681,80 @@ end
 #         (NoTangent(), convectiondiffusion_adjoint!(similar.(u), φ, setup), NoTangent()),
 # )
 
+function convection_diffusion_temp!(c, u, temp, setup)
+    (; grid, workgroupsize, temperature) = setup
+    (; dimension, Δ, Δu, Np, Ip) = grid
+    (; α4) = temperature
+    D = dimension()
+    e = Offset{D}()
+    @kernel function conv!(c, u, temp, ::Val{βrange}, I0) where {βrange}
+        I = @index(Global, Cartesian)
+        I = I + I0
+        cI = zero(eltype(c))
+        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+            # TODO: Add interpolation weights
+            ∂T∂x1 = (temp[I] - temp[I-e(β)]) / Δu[β][I[β]-1]
+            ∂T∂x2 = (temp[I+e(β)] - temp[I]) / Δu[β][I[β]]
+            uT1 = u[β][I-e(β)] * (temp[I] + temp[I-e(β)]) / 2
+            uT2 = u[β][I] * (temp[I+e(β)] + temp[I]) / 2
+            cI += (-(uT2 - uT1) + α4 * (∂T∂x2 - ∂T∂x1)) / Δ[β][I[β]]
+        end
+        c[I] = cI
+    end
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    conv!(get_backend(c), workgroupsize)(c, u, temp, Val(1:D), I0; ndrange = Np)
+    c
+end
+
+# function dissipation!(c, u, setup)
+#     (; grid, workgroupsize, temperature) = setup
+#     (; dimension, Δ, Np, Ip) = grid
+#     D = dimension()
+#     e = Offset{D}()
+#     @inline ∂2(u, α, β, I) = ((u[α][I+e(β)] - u[α][I]) / Δ[β][I])^2 / 2
+#     @inline Φ(u, α, β, I) = -∂2(u, α, β, I) - ∂2(u, α, β, I+e(β))
+#     @kernel function diss!(d, u, ::Val{βrange}, I0) where {βrange}
+#         I = @index(Global, Cartesian)
+#         I = I + I0
+#         cI = zero(eltype(c))
+#         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+#             cI += Φ(u, β, β, I) / Δ[β][I[β]]
+#         end
+#         c[I] += cI
+#     end
+# end
+
+function dissipation!(diss, diff, u, setup)
+    (; grid, workgroupsize, Re, temperature) = setup
+    (; dimension, Δ, Np, Ip) = grid
+    (; α1, γ) = temperature
+    D = dimension()
+    e = Offset{D}()
+    fill!.(diff, 0)
+    diffusion!(diff, u, setup)
+    @kernel function interpolate!(diss, diff, u, I0, ::Val{βrange}) where {βrange}
+        I = @index(Global, Cartesian)
+        I += I0
+        d = zero(eltype(diss))
+        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+            d += Re * α1 / γ * (u[β][I] * diff[β][I] + u[β][I-e(β)] * diff[β][I-e(β)]) / 2
+        end
+        diss[I] += d
+    end
+    I0 = first(Ip)
+    I0 -= oneunit(I0)
+    interpolate!(get_backend(diss), workgroupsize)(
+        diss,
+        diff,
+        u,
+        I0,
+        Val(1:D);
+        ndrange = Np,
+    )
+    diss
+end
+
 """
     bodyforce!(F, u, t, setup)
 
@@ -721,13 +795,36 @@ ChainRulesCore.rrule(::typeof(bodyforce), u, t, setup) =
     (bodyforce(u, t, setup), φ -> (NoTangent(), ZeroTangent(), NoTangent(), NoTangent()))
 
 """
-    momentum!(F, u, t, setup)
+    gravity!(F, temp, setup)
+
+Compute gravity term (add to existing `F`).
+"""
+function gravity!(F, temp, setup)
+    (; grid, workgroupsize, temperature) = setup
+    (; dimension, Δ, Δu, Nu, Iu) = grid
+    (; gdir, α2) = temperature
+    D = dimension()
+    e = Offset{D}()
+    @kernel function g!(F, temp, ::Val{gdir}, I0) where {gdir}
+        I = @index(Global, Cartesian)
+        I = I + I0
+        # TODO: Add interpolation weights
+        F[gdir][I] += α2 * (temp[I+e(gdir)] + temp[I]) / 2
+    end
+    I0 = first(Iu[gdir])
+    I0 -= oneunit(I0)
+    g!(get_backend(F[1]), workgroupsize)(F, temp, Val(gdir), I0; ndrange = Nu[gdir])
+    F
+end
+
+"""
+    momentum!(F, u, temp, t, setup)
 
 Right hand side of momentum equations, excluding pressure gradient.
 Put the result in ``F``.
 """
-function momentum!(F, u, t, setup)
-    (; grid, closure_model) = setup
+function momentum!(F, u, temp, t, setup)
+    (; grid, closure_model, temperature) = setup
     (; dimension) = grid
     D = dimension()
     for α = 1:D
@@ -737,6 +834,7 @@ function momentum!(F, u, t, setup)
     # convection!(F, u, setup)
     convectiondiffusion!(F, u, setup)
     bodyforce!(F, u, t, setup)
+    isnothing(temp) || gravity!(F, temp, setup)
     F
 end
 
@@ -749,11 +847,11 @@ end
 #     (tupleadd(u...), φ -> (NoTangent(), map(u -> φ, u)...))
 
 """
-    momentum(u, t, setup)
+    momentum(u, temp, t, setup)
 
 Right hand side of momentum equations, excluding pressure gradient.
 """
-function momentum(u, t, setup)
+function momentum(u, temp, t, setup)
     (; grid, closure_model) = setup
     (; dimension) = grid
     D = dimension()
@@ -765,10 +863,14 @@ function momentum(u, t, setup)
     # end
     F = @. d + c + f
     # F = tupleadd(d, c, f)
+    if !isnothing(temp)
+        g = gravity(temp, setup)
+        F = @. F + g
+    end
     F
 end
 
-# ChainRulesCore.rrule(::typeof(momentum), u, t, setup) = (
+# ChainRulesCore.rrule(::typeof(momentum), u, temp, t, setup) = (
 #     (error(); momentum(u, t, setup)),
 #     φ -> (
 #         NoTangent(),

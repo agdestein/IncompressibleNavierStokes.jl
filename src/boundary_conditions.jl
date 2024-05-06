@@ -25,6 +25,7 @@ struct DirichletBC{F,G} <: AbstractBC
 end
 
 DirichletBC() = DirichletBC(nothing, nothing)
+DirichletBC(u) = DirichletBC(u, nothing)
 
 """
     SymmetricBC()
@@ -104,9 +105,11 @@ offset_p(::PressureBC, isright) = 1 + !isright
 
 function apply_bc_u! end
 function apply_bc_p! end
+function apply_bc_temp! end
 
 apply_bc_u(u, t, setup; kwargs...) = apply_bc_u!(copy.(u), t, setup; kwargs...)
 apply_bc_p(p, t, setup; kwargs...) = apply_bc_p!(copy(p), t, setup; kwargs...)
+apply_bc_temp(temp, t, setup; kwargs...) = apply_bc_temp!(copy(temp), t, setup; kwargs...)
 
 ChainRulesCore.rrule(::typeof(apply_bc_u), u, t, setup; kwargs...) = (
     apply_bc_u(u, t, setup; kwargs...),
@@ -201,6 +204,46 @@ function apply_bc_p_pullback!(φbar, t, setup; kwargs...)
             kwargs...,
         )
         apply_bc_p_pullback!(
+            boundary_conditions[β][2],
+            φbar,
+            β,
+            t,
+            setup;
+            isright = true,
+            kwargs...,
+        )
+    end
+    φbar
+end
+
+function apply_bc_temp!(temp, t, setup; kwargs...)
+    (; temperature, grid) = setup
+    (; boundary_conditions) = temperature
+    (; dimension) = grid
+    D = dimension()
+    for β = 1:D
+        apply_bc_temp!(boundary_conditions[β][1], temp, β, t, setup; isright = false)
+        apply_bc_temp!(boundary_conditions[β][2], temp, β, t, setup; isright = true)
+    end
+    temp
+end
+
+function apply_bc_temp_pullback!(φbar, t, setup; kwargs...)
+    (; temperature, grid) = setup
+    (; boundary_conditions) = temperature
+    (; dimension) = grid
+    D = dimension()
+    for β = 1:D
+        apply_bc_temp_pullback!(
+            boundary_conditions[β][1],
+            φbar,
+            β,
+            t,
+            setup;
+            isright = false,
+            kwargs...,
+        )
+        apply_bc_temp_pullback!(
             boundary_conditions[β][2],
             φbar,
             β,
@@ -309,6 +352,9 @@ function apply_bc_p_pullback!(::PeriodicBC, φbar, β, t, setup; isright, kwargs
     φbar
 end
 
+apply_bc_temp!(bc::PeriodicBC, temp, β, t, setup; isright, kwargs...) =
+    apply_bc_p!(bc, temp, β, t, setup; isright, kwargs...)
+
 function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kwargs...)
     (; dimension, x, xp, N) = setup.grid
     D = dimension()
@@ -361,6 +407,19 @@ end
 # apply_bc_p_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...) =
 #     @not_implemented("DirichletBC pullback not yet implemented.")
 
+function apply_bc_temp!(bc::DirichletBC, temp, β, t, setup; isright, kwargs...)
+    (; dimension, N) = setup.grid
+    D = dimension()
+    e = Offset{D}()
+    I = if isright
+        CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
+    else
+        CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
+    end
+    temp[I] .= bc.u
+    temp
+end
+
 function apply_bc_u!(::SymmetricBC, u, β, t, setup; isright, kwargs...)
     (; dimension, N) = setup.grid
     D = dimension()
@@ -398,6 +457,9 @@ end
 
 # apply_bc_p_pullback!(::SymmetricBC, φbar, β, t, setup; isright, kwargs...) =
 #     @not_implemented("SymmetricBC pullback not yet implemented.")
+
+apply_bc_temp!(bc::SymmetricBC, temp, β, t, setup; isright, kwargs...) =
+    apply_bc_p!(bc, temp, β, t, setup; isright, kwargs...)
 
 function apply_bc_u!(bc::PressureBC, u, β, t, setup; isright, kwargs...)
     (; grid, workgroupsize) = setup

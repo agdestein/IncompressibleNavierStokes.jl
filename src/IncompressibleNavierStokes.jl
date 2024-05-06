@@ -67,7 +67,7 @@ export fieldplot, energy_history_plot, energy_spectrum_plot
 export animator
 
 # Setup
-export Setup
+export Setup, temperature_equation
 
 # 1D grids
 export stretched_grid, cosine_grid
