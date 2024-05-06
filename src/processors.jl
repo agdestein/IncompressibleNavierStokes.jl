@@ -115,7 +115,7 @@ vtk_writer(;
                     vtk["velocity"] = uparr
                 end
                 if :pressure ∈ fields
-                    pressure!(p, u, setup; psolver, F, div)
+                    pressure!(p, u, temp, t, setup; psolver, F, div)
                     vtk["pressure"] = copyto!(parr, p)
                 end
                 if :vorticity ∈ fields
@@ -314,7 +314,7 @@ function fieldplot(
         temp
     end
     _f = Array(_f)[Ip]
-    field = lift(state) do (; u, t)
+    field = lift(state) do (; u, temp, t)
         f = if fieldname in (1, 2)
             interpolate_u_p!(up, u, setup)
             up[fieldname]
@@ -329,7 +329,7 @@ function fieldplot(
         elseif fieldname == :streamfunction
             get_streamfunction!(setup, ψ, u, t)
         elseif fieldname == :pressure
-            pressure!(p, u, t, setup; psolver, F, div)
+            pressure!(p, u, temp, t, setup; psolver, F, div)
         elseif fieldname == :V1
             tensorbasis!(B, V, u, setup)
             V[1]
@@ -469,9 +469,9 @@ function fieldplot(
         elseif fieldname == :streamfunction
             get_streamfunction(setup, u, t)
         elseif fieldname == :pressure
-            pressure!(p, u, t, setup; psolver, F, div)
+            pressure!(p, u, temp, t, setup; psolver, F, div)
         elseif fieldname == :Dfield
-            pressure!(p, u, t, setup; psolver, F, div)
+            pressure!(p, u, temp, t, setup; psolver, F, div)
             Dfield!(d, G, p, setup)
             din = view(d, Ip)
             @. din = log(max(logtol, din))

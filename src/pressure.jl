@@ -35,12 +35,12 @@ See also [`poisson`](@ref).
 poisson!(psolver, p, f) = psolver(p, f)
 
 """
-    pressure!(p, u, t, setup; psolver, F, div)
+    pressure!(p, u, temp, t, setup; psolver, F, div)
 
 Compute pressure from velocity field. This makes the pressure compatible with the velocity
 field, resulting in same order pressure as velocity.
 """
-function pressure!(p, u, t, setup; psolver, F, div)
+function pressure!(p, u, temp, t, setup; psolver, F, div)
     (; grid) = setup
     (; dimension, Iu, Ip, Ω) = grid
     D = dimension()
@@ -54,12 +54,12 @@ function pressure!(p, u, t, setup; psolver, F, div)
 end
 
 """
-    pressure(u, t, setup; psolver)
+    pressure(u, temp, t, setup; psolver)
 
 Compute pressure from velocity field. This makes the pressure compatible with the velocity
 field, resulting in same order pressure as velocity.
 """
-function pressure(u, t, setup; psolver)
+function pressure(u, temp, t, setup; psolver)
     (; grid) = setup
     (; dimension, Iu, Ip, Ω) = grid
     D = dimension()

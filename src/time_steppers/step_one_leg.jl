@@ -102,7 +102,7 @@ function timestep!(method::OneLegMethod, stepper, Δt; θ = nothing, cache)
     if n == 0
         stepper_startup = create_stepper(method_startup; setup, psolver, u, t)
         (; u, t, n) = timestep(method_startup, stepper_startup, Δt)
-        pressure!(p, u, t, setup; psolver, F, div)
+        pressure!(p, u, temp, t, setup; psolver, F, div)
         return create_stepper(method; setup, psolver, u, p, t, n, uold, pold, told)
     end
 
@@ -151,7 +151,7 @@ function timestep!(method::OneLegMethod, stepper, Δt; θ = nothing, cache)
 
     # Alternatively, do an additional Poisson solve
     if p_add_solve
-        pressure!(pnew, unew, t + Δt, setup; psolver, F, div)
+        pressure!(pnew, unew, tempnew, t + Δt, setup; psolver, F, div)
     end
 
     n += 1
