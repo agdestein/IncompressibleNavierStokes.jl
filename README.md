@@ -52,9 +52,7 @@ snapshot files using the `save_vtk` function, or the full time series using the
 
 IncompressibleNavierStokes also supports adding a temperature equation.
 
-| ![](assets/examples/RB2D.mp4) | ![](assets/examples/RT3D.mp4) |
-|:-:|:-:|
-| [Rayleigh-Bénard (2D)](examples/RayleighBenard2D.jl) | [Rayleigh-Taylor (3D)](examples/RayleighTaylor3D.jl) | 
+https://github.com/agdestein/IncompressibleNavierStokes.jl/assets/40632532/e4894d97-d890-4d4a-a43a-8eb2772d5130
 
 ## Demo
 
