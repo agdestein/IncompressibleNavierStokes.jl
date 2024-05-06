@@ -681,6 +681,12 @@ end
 #         (NoTangent(), convectiondiffusion_adjoint!(similar.(u), φ, setup), NoTangent()),
 # )
 
+"""
+    convection_diffusion_temp!(c, u, temp, setup)
+
+Compute convection-diffusion term for the temperature equation.
+Add result to `c`.
+"""
 function convection_diffusion_temp!(c, u, temp, setup)
     (; grid, workgroupsize, temperature) = setup
     (; dimension, Δ, Δu, Np, Ip) = grid
@@ -725,6 +731,12 @@ end
 #     end
 # end
 
+"""
+    dissipation!(diss, diff, u, setup)
+
+Compute dissipation term for the temperature equation.
+Add result to `diss`.
+"""
 function dissipation!(diss, diff, u, setup)
     (; grid, workgroupsize, Re, temperature) = setup
     (; dimension, Δ, Np, Ip) = grid

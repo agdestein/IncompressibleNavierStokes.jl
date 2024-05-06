@@ -81,6 +81,7 @@ makedocs(;
             "Floating point precision" => "features/precision.md",
             "GPU Support" => "features/gpu.md",
             "Operators" => "features/operators.md",
+            "Temperature equation" => "features/temperature.md",
             "Large eddy simulation" => "features/les.md",
             "Neural closure models" => "features/closure.md",
         ],
