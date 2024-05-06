@@ -1,100 +1,61 @@
 # Incompressible Navier-Stokes equations
 
-Let ``d \in \{2, 3\}`` denote the spatial dimension, and ``\Omega \subset
-\mathbb{R}^d`` some spatial domain. The incompressible Navier-Stokes equations
-on ``\Omega`` are comprised of a mass equation and ``d`` momentum equations. In
-conservative form, they are given by
+The incompressible Navier-Stokes equations describe conservation of mass and
+conservation of momentum, which can be written as a divergence-free constraint
+and an evolution equation:
 
 ```math
-\begin{align*}
-\nabla \cdot u & = 0, \\
-\frac{\partial u}{\partial t} + \nabla \cdot (u u^\mathsf{T}) & = -\nabla p +
-\nu \nabla^2 u + f.
-\end{align*}
+\begin{aligned}
+    \nabla \cdot u & = 0, \\
+    \frac{\partial u}{\partial t} + \nabla \cdot (u u^\mathsf{T})
+    & = -\nabla p + \nu \nabla^2 u + f,
+\end{aligned}
 ```
 
-where ``u = (u^1, \dots, u^d)`` is the velocity field, ``p`` is the
+where ``\Omega \subset \mathbb{R}^d`` is the domain, ``d \in \{2, 3\}`` is the
+spatial dimension, ``u = (u^1, \dots, u^d)`` is the velocity field, ``p`` is the
 pressure, ``\nu`` is the kinematic viscosity, and ``f = (f^1, \dots, f^d)`` is
-the body force per unit of volume. In scalar notation, the equations can be
-written as
-
-```math
-\begin{align*}
-\sum_{\beta = 1}^d \frac{\partial u^\beta}{\partial x^\beta} & = 0, \\
-\frac{\partial u^\alpha}{\partial t} + \sum_{\beta = 1}^d
-\frac{\partial}{\partial x^\beta} (u^\alpha u^\beta) & = -\frac{\partial
-p}{\partial x^\alpha} + \nu \sum_{\beta = 1}^d \frac{\partial^2 u^\alpha}{\partial
-x^\beta \partial x^\beta} + f^\alpha.
-\end{align*}
-```
-
+the body force per unit of volume. The velocity, pressure, and body force are
+functions of the spatial coordinate ``x = (x^1, \dots, x^d)`` and time ``t``.
+We assume that ``\Omega`` is a rectangular domain.
 
 ## Integral form
 
-When discretizing the Navier-Stokes equations it can be useful to integrate the
-equations over an arbitrary control volume ``\mathcal{O}``. Its boundary will
-be denoted ``\partial \mathcal{O}``, with normal ``n`` and surface element
-``\mathrm{d} \Gamma``.
-
-The mass equation in integral form is given by
+The integral form of the Navier-Stokes equations is used as starting point to
+develop a spatial discretization:
 
 ```math
-\frac{1}{| \mathcal{O} |}
-\int_{\partial \mathcal{O}} u \cdot n \, \mathrm{d} \Gamma = 0,
+\begin{aligned}
+    \frac{1}{|\mathcal{O}|} \int_{\partial \mathcal{O}}
+    u \cdot n \, \mathrm{d} \Gamma & = 0, \\
+    \frac{\mathrm{d} }{\mathrm{d} t} \frac{1}{|\mathcal{O}|}
+    \int_\mathcal{O} u \, \mathrm{d} \Omega
+    & = \frac{1}{|\mathcal{O}|} \int_{\partial \mathcal{O}}
+    \left( - u u^\mathsf{T} - p I + \nu \nabla u \right) \cdot n \,
+    \mathrm{d} \Gamma +
+    \frac{1}{|\mathcal{O}|}\int_\mathcal{O} f \mathrm{d} \Omega,
+\end{aligned}
 ```
 
-where we have used the divergence theorem to convert the volume integral to a
-surface integral. Similarly, the momentum equations take the form
-
-```math
-\frac{\mathrm{d}}{\mathrm{d} t}
-\frac{1}{| \mathcal{O} |}
-\int_\mathcal{O} u \, \mathrm{d} \Omega
-=
-\frac{1}{| \mathcal{O} |}
-\int_{\partial \mathcal{O}}
-\left( - u u^\mathsf{T} - P + \nu S \right) \cdot n
-\, \mathrm{d} \Gamma +
-\frac{1}{| \mathcal{O} |}
-\int_\mathcal{O} f \mathrm{d} \Omega
-```
-
-where ``P = p \mathrm{I}`` is the hydrostatic stress tensor
-and ``S = \nabla u + (\nabla u)^\mathsf{T}`` is the strain-rate tensor. Here we
-have once again used the divergence theorem.
-
-!!! note "Strain-rate tensor"
-    The second term in the strain rate tensor is optional, as
-
-    ```math
-    \int_{\partial \mathcal{O}} (\nabla u)^\mathsf{T} \cdot n \, \mathrm{d} \Gamma = 0
-    ```
-
-    due to the divergence freeness of ``u`` (mass equation).
-
+where ``\mathcal{O} \subset \Omega`` is an arbitrary control volume with boundary
+``\partial \mathcal{O}``, normal ``n``, surface element ``\mathrm{d} \Gamma``, and
+volume size ``|\mathcal{O}|``. We have divided by the control volume sizes in the
+integral form.
 
 ## Boundary conditions
 
-Consider a part ``\Gamma`` of the total boundary ``\partial \Omega``, with
-normal ``n``. We allow for the following types of boundary conditions on
-``\Gamma``:
+The boundary conditions on a part of the boundary
+``\Gamma \subset \partial \Omega`` are one or more of the following:
 
-- Periodic boundary conditions: ``u(x) = u(x + \tau)`` and ``p(x) = p(x + \tau)`` for ``x \in
-  \Gamma``, where ``\tau`` is a constant translation to another part of the
-  boundary ``\partial \Omega``. This usually requires ``\Gamma`` and its
-  periodic counterpart ``\Gamma + \tau`` to be flat and rectangular (including
-  in this software suite).
-- Dirichlet boundary conditions: ``u = u_\text{BC}`` on ``\Gamma``. A common
-  situation here is that of a sticky wall, with "no slip boundary conditions.
-  Then ``u_\text{BC} = 0``.
-- Symmetric boundary conditions: Same velocity field at each side. This implies
-  zero Dirichlet conditions for the normal component (``n \cdot u = 0``), and
-  zero Neumann conditions for the parallel component: ``n \cdot \nabla (u - (n
-  \cdot u) n) = 0``.
-- Pressure boundary conditions: The pressure is prescribed (``p =
-  p_\text{BC}``), while the velocity has zero Neumann conditions:
-  ``n \cdot \nabla u = 0``.
-
+- Dirichlet: ``u = u_\text{BC}`` on ``\Gamma`` for some ``u_\text{BC}``;
+- Neumann: ``\nabla u \cdot n = 0`` on ``\Gamma``;
+- Periodic: ``u(x) = u(x + \tau)`` and ``p(x) = p(x + \tau)``
+    for ``x \in \Gamma``, where
+    ``\Gamma + \tau \subset \partial \Omega``
+    is another part of the boundary and
+    ``\tau`` is a translation vector;
+- Stress free: ``\sigma \cdot n = 0`` on ``\Gamma``,
+    where ``\sigma = \left(- p \mathrm{I} + 2 \nu S \right)``.
 
 ## Pressure equation
 

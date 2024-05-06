@@ -1,5 +1,13 @@
 # Neural closure models
 
+!!! note "`NeuralClorusure`"
+    These features are experimental, and require cloning
+    IncompressibleNavierStokes from GitHub:
+    ```sh
+    git clone https://github.com/agdestein/IncompressibleNavierStokes.jl
+    cd IncompressibleNavierStokes/lib/NeuralClosure
+    ```
+
 For [large eddy simulation (LES)](../features/les.md), a closure model is
 required. With IncompressibleNavierStokes, a neural closure model can be
 trained on filtered DNS data. The discrete DNS equations are given by
@@ -34,14 +42,25 @@ M \bar{v} & = 0, \\
 \end{split}
 ```
 
+## NeuralClosure module
+
+IncompressibleNavierStokes provides a NeuralClosure module.
+
+```@docs
+NeuralClosure.NeuralClosure
+```
+
+The following filters are available:
+
 ```@docs
 NeuralClosure.FaceAverage
 NeuralClosure.VolumeAverage
 NeuralClosure.reconstruct!
 ```
 
+The following functions create data.
+
 ```@docs
-NeuralClosure.NeuralClosure
 NeuralClosure.filtersaver
 NeuralClosure.create_les_data
 NeuralClosure.create_io_arrays

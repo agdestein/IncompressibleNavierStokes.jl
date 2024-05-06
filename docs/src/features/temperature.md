@@ -19,6 +19,8 @@ setup = Setup(
 )
 ```
 
+where `temperature_equation` can be configured as follows:
+
 ```@docs
 temperature_equation
 ```
