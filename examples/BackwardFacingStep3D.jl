@@ -1,10 +1,3 @@
-# Little LSP hack to get function signatures, go    #src
-# to definition etc.                                #src
-if isdefined(@__MODULE__, :LanguageServer)          #src
-    include("../src/IncompressibleNavierStokes.jl") #src
-    using .IncompressibleNavierStokes               #src
-end                                                 #src
-
 # # Backward Facing Step - 3D
 #
 # In this example we consider a channel with periodic side boundaries, walls at
@@ -22,94 +15,85 @@ end                                                 #src
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-# Case name for saving results
-name = "BackwardFacingStep3D"
+# Output directory
+output = "output/BackwardFacingStep3D"
 
-# Viscosity model
-viscosity_model = LaminarModel(; Re = 3000.0)
+# Floating point type
+T = Float64
+
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
+
+# Reynolds number
+Re = T(3000)
+
+# A 3D grid is a Cartesian product of three vectors
+x = LinRange(T(0), T(10), 129)
+y = LinRange(-T(0.5), T(0.5), 17)
+z = LinRange(-T(0.25), T(0.25), 9)
+plotgrid(x, y, z)
 
 # Boundary conditions: steady inflow on the top half
-u_bc(x, y, z, t) = x ≈ 0 && y ≥ 0 ? 24y * (1 / 2 - y) : 0.0
-v_bc(x, y, z, t) = 0.0
-w_bc(x, y, z, t) = 0.0
-bc_type = (;
-    u = (;
-        x = (:dirichlet, :pressure),
-        y = (:dirichlet, :dirichlet),
-        z = (:periodic, :periodic),
-    ),
-    v = (;
-        x = (:dirichlet, :symmetric),
-        y = (:dirichlet, :dirichlet),
-        z = (:periodic, :periodic),
-    ),
-    w = (;
-        x = (:dirichlet, :symmetric),
-        y = (:dirichlet, :dirichlet),
-        z = (:periodic, :periodic),
+U(dim, x, y, z, t) = dim() == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x)
+dUdt(dim, x, y, z, t) = zero(x)
+boundary_conditions = (
+    ## x left, x right
+    (DirichletBC(U, dUdt), PressureBC()),
+
+    ## y rear, y front
+    (DirichletBC(), DirichletBC()),
+
+    ## z bottom, z top
+    (PeriodicBC(), PeriodicBC()),
+)
+
+# Build setup and assemble operators
+setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
+
+# Initial conditions (extend inflow)
+ustart = create_initial_conditions(setup, (dim, x, y, z) -> U(dim, x, y, z, zero(x)));
+
+# Solve steady state problem
+## u, p = solve_steady_state(setup, u₀, p₀);
+nothing
+
+# Solve unsteady problem
+state, outputs = solve_unsteady(;
+    setup,
+    ustart,
+    tlims = (T(0), T(7)),
+    Δt = T(0.01),
+    processors = (
+        rtp = realtimeplotter(;
+            setup,
+            plot = fieldplot,
+            ## plot = energy_history_plot,
+            ## plot = energy_spectrum_plot,
+            nupdate = 1,
+        ),
+        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
+        ## field = fieldsaver(; setup, nupdate = 10),
+        log = timelogger(; nupdate = 1),
     ),
 )
 
-# A 3D grid is a Cartesian product of three vectors
-x = LinRange(0, 10, 160)
-y = LinRange(-0.5, 0.5, 16)
-z = LinRange(-0.25, 0.25, 8)
-plot_grid(x, y, z)
-
-# Build setup and assemble operators
-setup = Setup(x, y, z; viscosity_model, u_bc, v_bc, w_bc, bc_type);
-
-# Time interval
-t_start, t_end = tlims = (0.0, 7.0)
-
-# Initial conditions (extend inflow)
-initial_velocity_u(x, y, z) = y ≥ 0 ? 24y * (1 / 2 - y) : 0.0
-initial_velocity_v(x, y, z) = 0.0
-initial_velocity_w(x, y, z) = 0.0
-initial_pressure(x, y, z) = 0.0
-V₀, p₀ = create_initial_conditions(
-    setup,
-    initial_velocity_u,
-    initial_velocity_v,
-    initial_velocity_w,
-    t_start;
-    initial_pressure,
-);
-
-# Solve steady state problem
-V, p = solve_steady_state(setup, V₀, p₀);
-
-# Iteration processors
-processors = (
-    field_plotter(setup; nupdate = 50),
-    ## energy_history_plotter(setup; nupdate = 10),
-    ## energy_spectrum_plotter(setup; nupdate = 10),
-    ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 20, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 10),
-);
-
-# Solve unsteady problem
-V, p, outputs = solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors, inplace = true)
-#md current_figure()
-
 # ## Post-process
 #
-# We may visualize or export the computed fields `(V, p)`
+# We may visualize or export the computed fields
 
 # Export to VTK
-save_vtk(setup, V, p, t_end, "output/solution")
+save_vtk(setup, state.u, state.t, "$output/solution")
 
 # Plot pressure
-plot_pressure(setup, p)
+fieldplot(state; setup, fieldname = :pressure)
 
 # Plot velocity
-plot_velocity(setup, V, t_end)
+fieldplot(state; setup, fieldname = :velocity)
 
 # Plot vorticity
-plot_vorticity(setup, V, t_end)
-
-# Plot streamfunction
-## plot_streamfunction(setup, V, t_end)
-nothing
+fieldplot(state; setup, fieldname = :vorticity)

@@ -1,10 +1,3 @@
-# Little LSP hack to get function signatures, go    #src
-# to definition etc.                                #src
-if isdefined(@__MODULE__, :LanguageServer)          #src
-    include("../src/IncompressibleNavierStokes.jl") #src
-    using .IncompressibleNavierStokes               #src
-end                                                 #src
-
 # # Shear layer - 2D
 #
 # Shear layer example.
@@ -19,80 +12,75 @@ end                                                 #src
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-# Case name for saving results
-name = "ShearLayer2D"
+# Output directory
+output = "output/ShearLayer2D"
 
-# Viscosity model
-viscosity_model = LaminarModel(; Re = Inf)
+# Floating point type
+T = Float64
+
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
+
+# Reynolds number
+Re = T(Inf)
 
 # A 2D grid is a Cartesian product of two vectors
-n = 100
-x = LinRange(0, 2π, n + 1)
-y = LinRange(0, 2π, n + 1)
-plot_grid(x, y)
+n = 128
+lims = T(0), T(2π)
+x = LinRange(lims..., n + 1)
+y = LinRange(lims..., n + 1)
+plotgrid(x, y)
 
 # Build setup and assemble operators
-setup = Setup(x, y; viscosity_model);
-
-# Time interval
-t_start, t_end = tlims = (0.0, 8.0)
+setup = Setup(x, y; Re, ArrayType);
 
 # Initial conditions: We add 1 to u in order to make global momentum
 # conservation less trivial
-d = π / 15
-e = 0.05
-initial_velocity_u(x, y) = y ≤ π ? tanh((y - π / 2) / d) : tanh((3π / 2 - y) / d)
-## initial_velocity_u(x, y) = 1.0 + (y ≤ π ? tanh((y - π / 2) / d) : tanh((3π / 2 - y) / d))
-initial_velocity_v(x, y) = e * sin(x)
-initial_pressure(x, y) = 0.0
-V₀, p₀ = create_initial_conditions(
-    setup,
-    initial_velocity_u,
-    initial_velocity_v,
-    t_start;
-    initial_pressure,
-);
-
-# Iteration processors
-processors = (
-    field_plotter(setup; nupdate = 1),
-    ## energy_history_plotter(setup; nupdate = 1),
-    ## energy_spectrum_plotter(setup; nupdate = 100),
-    ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1),
-);
+d = T(π / 15)
+e = T(0.05)
+U1(y) = y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d)
+## U1(y) = T(1) + (y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d))
+ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? U1(y) : e * sin(x));
 
 # Solve unsteady problem
-V, p, outputs = solve_unsteady(
+state, outputs = solve_unsteady(;
     setup,
-    V₀,
-    p₀,
-    tlims;
-    method = RK44(),
-    Δt = 0.01,
-    processors,
-    inplace = true,
+    ustart,
+    tlims = (T(0), T(8)),
+    Δt = T(0.01),
+    processors = (
+        rtp = realtimeplotter(;
+            setup,
+            plot = fieldplot,
+            ## plot = energy_history_plot,
+            ## plot = energy_spectrum_plot,
+            nupdate = 1,
+        ),
+        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
+        ## field = fieldsaver(; setup, nupdate = 10),
+        log = timelogger(; nupdate = 1),
+    ),
 );
-#md current_figure()
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(V, p)`
+# We may visualize or export the computed fields
+
+outputs.rtp
 
 # Export to VTK
-save_vtk(setup, V, p, t_end, "output/solution")
+save_vtk(setup, state.u, state.t, "$output/solution")
 
 # Plot pressure
-plot_pressure(setup, p)
+fieldplot(state; setup, fieldname = :pressure)
 
 # Plot velocity
-plot_velocity(setup, V, t_end)
+fieldplot(state; setup, fieldname = :velocity)
 
 # Plot vorticity
-plot_vorticity(setup, V, t_end)
-
-# Plot streamfunction
-## plot_streamfunction(setup, V, t_end)
-nothing
+fieldplot(state; setup, fieldname = :vorticity)

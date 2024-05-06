@@ -1,3 +1,7 @@
+```@meta
+CurrentModule = IncompressibleNavierStokes
+```
+
 # Large eddy simulation
 
 Depending on the problem specification, a given grid resolution may not be
@@ -28,12 +32,7 @@ atomic scales. The new turbulent viscosity on the other hand, models energy
 transfer from resolved to unresolved scales. This non-constant field is
 computed from the local velocity field.
 
-The following eddy viscosity models are available:
-
-- [`SmagorinskyModel`](@ref)
-- [`QRModel`](@ref)
-- [`MixingLengthModel`](@ref)
-
-In addition, the default [`LaminarModel`](@ref) assumes that there are no
-sub-grid stresses. It can be used if the grid is sufficiently refined for the
-given flow. It has the advantage of having a constant diffusion operator.
+```@docs
+smagtensor!
+smagorinsky_closure
+```

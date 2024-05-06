@@ -7,9 +7,9 @@
 
     setup = Setup(x, y)
 
-    @test plot_grid(x, y) isa Makie.FigureAxisPlot
+    @test plotgrid(x, y) isa Makie.FigureAxisPlot
 
-    pressure_solver = SpectralPressureSolver(setup)
+    psolver = psolver_spectral(setup)
 
     t_start, t_end = tlims = (0.0, 1.0)
 
@@ -17,18 +17,18 @@
     initial_velocity_u(x, y) = -sin(x)cos(y)
     initial_velocity_v(x, y) = cos(x)sin(y)
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
-    V₀, p₀ = create_initial_conditions(
+    V = create_initial_conditions(
         setup,
         initial_velocity_u,
         initial_velocity_v,
         t_start;
         initial_pressure,
-        pressure_solver,
+        psolver,
     )
 
     # Iteration processors
     processors = (
-        field_plotter(setup; nupdate = 1, displayfig = false),
+        realtimeplotter(; setup, nupdate = 1, displayfig = false),
         vtk_writer(setup; nupdate = 5, dir = "output", filename = "solution2D"),
         animator(
             setup,
@@ -36,12 +36,11 @@
             nupdate = 10,
             plotter = field_plotter(setup; displayfig = false),
         ),
-        step_logger(),
+        timelogger(),
     )
 
     # Solve unsteady problem
-    V, p, outputs =
-        solve_unsteady(setup, V₀, p₀, tlims; Δt = 0.01, processors, pressure_solver)
+    state, outputs = solve_unsteady(setup, V₀, tlims; Δt = 0.01, processors, psolver)
 
     @testset "VTK files" begin
         @info "Testing 2D processors: VTK files"

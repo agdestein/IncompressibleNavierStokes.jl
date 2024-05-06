@@ -19,6 +19,6 @@ an example on how to enforce floating point type hygiene.
 !!! note "Pressure solvers"
     [`SparseArrays.jl`](https://github.com/JuliaSparse/SparseArrays.jl)s
     sparse matrix factorizations only support double precision.
-    [`DirectPressureSolver`](@ref) only works for `Float64`. Consider
-    using an iterative solver such as [`CGPressureSolver`](@ref)
+    [`psolver_direct`](@ref) only works for `Float64`. Consider
+    using an iterative solver such as [`psolver_cg`](@ref)
     when using single or half precision.

@@ -1,142 +1,99 @@
 """
     Setup(
-        x, y;
-        viscosity_model = LaminarModel(; Re = 1000),
-        convection_model = NoRegConvectionModel(),
-        u_bc = (x, y, t) -> 0,
-        v_bc = (x, y, t) -> 0,
-        dudt_bc = nothing,
-        dvdt_bc = nothing,
-        bc_type = (;
-            u = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
-            v = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
-        ),
-        order4 = false,
-        bodyforce_u = (x, y) -> 0,
-        bodyforce_v = (x, y) -> 0,
+        x...;
+        boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
+        Re = convert(eltype(x[1]), 1_000),
+        bodyforce = nothing,
+        issteadybodyforce = true,
+        closure_model = nothing,
+        ArrayType = Array,
+        workgroupsize = 64,
+        temperature = nothing,
     )
 
-Create 2D setup.
+Create setup.
 """
 function Setup(
-    x,
-    y;
-    viscosity_model = LaminarModel(; Re = convert(eltype(x), 1000)),
-    convection_model = NoRegConvectionModel(),
-    u_bc = (x, y, t) -> 0,
-    v_bc = (x, y, t) -> 0,
-    dudt_bc = nothing,
-    dvdt_bc = nothing,
-    bc_type = (;
-        u = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
-        v = (; x = (:periodic, :periodic), y = (:periodic, :periodic)),
-        ν = (; x = (:dirichlet, :dirichlet), y = (:dirichlet, :dirichlet)),
-    ),
-    order4 = false,
-    bodyforce_u = (x, y) -> 0,
-    bodyforce_v = (x, y) -> 0,
-    steady_force = true,
+    x...;
+    boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
+    Re = convert(eltype(x[1]), 1_000),
+    bodyforce = nothing,
+    issteadybodyforce = true,
+    closure_model = nothing,
+    projectorder = :last,
+    ArrayType = Array,
+    workgroupsize = 64,
+    temperature = nothing,
 )
-    boundary_conditions =
-        BoundaryConditions(u_bc, v_bc; dudt_bc, dvdt_bc, bc_type, T = eltype(x))
-    grid = Grid(x, y; boundary_conditions, order4)
-    force = SteadyBodyForce(bodyforce_u, bodyforce_v, grid)
-    operators = Operators(grid, boundary_conditions, viscosity_model)
-    (; grid, boundary_conditions, viscosity_model, convection_model, force, operators)
+    setup = (;
+        grid = Grid(x, boundary_conditions; ArrayType),
+        boundary_conditions,
+        Re,
+        bodyforce,
+        issteadybodyforce = false,
+        closure_model,
+        projectorder,
+        ArrayType,
+        T = eltype(x[1]),
+        workgroupsize,
+        temperature,
+    )
+    if !isnothing(bodyforce) && issteadybodyforce
+        (; dimension, x, N) = setup.grid
+        T = eltype(x[1])
+        F = ntuple(α -> zero(similar(x[1], N)), dimension())
+        u = ntuple(α -> zero(similar(x[1], N)), dimension())
+        bodyforce = bodyforce!(F, u, T(0), setup)
+        setup = (; setup..., issteadybodyforce = true, bodyforce)
+    end
+    setup
 end
 
 """
-    Setup(
-        x, y, z;
-        viscosity_model = LaminarModel(; Re = 1000),
-        convection_model = NoRegConvectionModel(),
-        u_bc = (x, y, w, t) -> 0.0,
-        v_bc = (x, y, w, t) -> 0.0,
-        w_bc = (x, y, w, t) -> 0.0,
-        dudt_bc = nothing,
-        dvdt_bc = nothing,
-        dwdt_bc = nothing,
-        bc_type = (;
-            u = (;
-                x = (:periodic, :periodic),
-                y = (:periodic, :periodic),
-                z = (:periodic, :periodic),
-            ),
-            v = (;
-                x = (:periodic, :periodic),
-                y = (:periodic, :periodic),
-                z = (:periodic, :periodic),
-            ),
-            w = (;
-                x = (:periodic, :periodic),
-                y = (:periodic, :periodic),
-                z = (:periodic, :periodic),
-            ),
-            ν = (;
-                x = (:periodic, :periodic),
-                y = (:periodic, :periodic),
-                z = (:periodic, :periodic),
-            ),
-        ),
-        order4 = false,
-        bodyforce_u = (x, y, z) -> 0,
-        bodyforce_v = (x, y, z) -> 0,
-        bodyforce_w = (x, y, z) -> 0,
+    temperature_equation(; 
+        Pr,
+        Ra,
+        Ge,
+        dodissipation = true,
+        boundary_conditions,
+        gdir = 2,
     )
 
-Create 3D setup.
+Temperature equation setup.
+
+The equation is parameterized by three dimensionless numbers (Prandtl number,
+Rayleigh number, and Gebhart number), and requires separate boundary conditions
+for the `temperature` field. The `gdir` keyword specifies the direction gravity,
+while `non_dim_type` specifies the type of non-dimensionalization.
 """
-function Setup(
-    x,
-    y,
-    z;
-    viscosity_model = LaminarModel(; Re = convert(eltype(x), 1000)),
-    convection_model = NoRegConvectionModel(),
-    u_bc = (x, y, w, t) -> 0,
-    v_bc = (x, y, w, t) -> 0,
-    w_bc = (x, y, w, t) -> 0,
-    dudt_bc = nothing,
-    dvdt_bc = nothing,
-    dwdt_bc = nothing,
-    bc_type = (;
-        u = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
-        v = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
-        w = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
-        ν = (;
-            x = (:periodic, :periodic),
-            y = (:periodic, :periodic),
-            z = (:periodic, :periodic),
-        ),
-    ),
-    order4 = false,
-    bodyforce_u = (x, y, z) -> 0,
-    bodyforce_v = (x, y, z) -> 0,
-    bodyforce_w = (x, y, z) -> 0,
+function temperature_equation(;
+    Pr,
+    Ra,
+    Ge,
+    dodissipation = true,
+    boundary_conditions,
+    gdir = 2,
+    nondim_type = 1,
 )
-    boundary_conditions = BoundaryConditions(
-        u_bc,
-        v_bc,
-        w_bc;
-        dudt_bc,
-        dvdt_bc,
-        dwdt_bc,
-        bc_type,
-        T = eltype(x),
-    )
-    grid = Grid(x, y, z; boundary_conditions, order4)
-    force = SteadyBodyForce(bodyforce_u, bodyforce_v, bodyforce_w, grid)
-    operators = Operators(grid, boundary_conditions, viscosity_model)
-    (; grid, boundary_conditions, viscosity_model, convection_model, force, operators)
+    if nondim_type == 1
+        # free fall velocity, uref = sqrt(beta*g*Delta T*H)
+        α1 = sqrt(Pr / Ra)
+        α2 = eltype(Pr)(1)
+        α3 = Ge * sqrt(Pr / Ra)
+        α4 = 1 / sqrt(Pr * Ra)
+    elseif nondim_type == 2
+        # uref = kappa/H (based on heat conduction time scale)
+        α1 = Pr
+        α2 = Pr * Ra
+        α3 = Ge / Ra
+        α4 = 1
+    elseif nondim_type == 3
+        # uref = sqrt(c*Delta T)
+        α1 = sqrt(Pr * Ge / Ra)
+        α2 = Ge
+        α3 = sqrt(Pr * Ge / Ra)
+        α4 = sqrt(Ge / (Pr * Ra))
+    end
+    γ = α1 / α3
+    (; α1, α2, α3, α4, γ, dodissipation, boundary_conditions, gdir)
 end

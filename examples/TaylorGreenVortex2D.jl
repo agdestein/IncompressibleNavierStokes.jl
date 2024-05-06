@@ -1,109 +1,86 @@
-# Little LSP hack to get function signatures, go    #src
-# to definition etc.                                #src
-if isdefined(@__MODULE__, :LanguageServer)          #src
-    include("../src/IncompressibleNavierStokes.jl") #src
-    using .IncompressibleNavierStokes               #src
-end                                                 #src
-
-# # Taylor-Green vortex - 2D
+# # Convergence study: Taylor-Green vortex (2D)
 #
 # In this example we consider the Taylor-Green vortex.
-
-# We start by loading packages.
-# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
-# for plotting. `GLMakie` creates an interactive window (useful for real-time
-# plotting), but does not work when building this example on GitHub.
-# `CairoMakie` makes high-quality static vector-graphics plots.
+# In 2D, it has an analytical solution, given by
+#
+# ```math
+# \begin{split}
+#     u^1(x, y, t) & = - \sin(x) \cos(y) \mathrm{e}^{-2 t / Re} \\
+#     u^2(x, y, t) & = + \cos(x) \sin(y) \mathrm{e}^{-2 t / Re}
+# \end{split}
+# ```
+#
+# This allows us to test the convergence of our solver.
 
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
+using LinearAlgebra
 
-# Case name for saving results
-name = "TaylorGreenVortex2D"
+"""
+Compare numerical solution with analytical solution at final time.
+"""
+function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType = Array)
+    T = typeof(lims[1])
+    e = zeros(T, length(nlist))
+    for (i, n) in enumerate(nlist)
+        @info "Computing error for n = $n"
+        x = ntuple(α -> LinRange(lims..., n + 1), D)
+        setup = Setup(x...; Re, ArrayType)
+        psolver = psolver_spectral(setup)
+        ustart = create_initial_conditions(
+            setup,
+            (dim, x...) -> uref(dim, x..., tlims[1]),
+            tlims[1];
+            psolver,
+        )
+        ut = create_initial_conditions(
+            setup,
+            (dim, x...) -> uref(dim, x..., tlims[2]),
+            tlims[2];
+            psolver,
+            doproject = false,
+        )
+        (; u, t), outputs = solve_unsteady(; setup, ustart, tlims, Δt, psolver)
+        (; Ip) = setup.grid
+        a, b = T(0), T(0)
+        for α = 1:D
+            a += sum(abs2, u[α][Ip] - ut[α][Ip])
+            b += sum(abs2, ut[α][Ip])
+        end
+        e[i] = sqrt(a) / sqrt(b)
+    end
+    e
+end
 
-# Floating point type
-T = Float32
+# Analytical solution for 2D Taylor-Green vortex
+solution(Re) =
+    (dim, x, y, t) -> (dim() == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)) * exp(-2t / Re)
 
-# Viscosity model
-viscosity_model = LaminarModel(; Re = T(2_000))
+# Compute error for different resolutions
+Re = 2.0e3
+nlist = [2, 4, 8, 16, 32, 64, 128, 256]
+e = compute_convergence(;
+    D = 2,
+    nlist,
+    lims = (0.0, 2π),
+    Re,
+    tlims = (0.0, 2.0),
+    Δt = 0.01,
+    uref = solution(Re),
+)
 
-# A 2D grid is a Cartesian product of two vectors
-n = 128
-lims = (T(0), T(2π))
-x = LinRange(lims..., n + 1)
-y = LinRange(lims..., n + 1)
-plot_grid(x, y)
-
-# Build setup and assemble operators
-setup = Setup(x, y; viscosity_model);
-
-# Since the grid is uniform and identical for x and y, we may use a specialized
-# spectral pressure solver
-pressure_solver = SpectralPressureSolver(setup)
-
-# Time interval
-t_start, t_end = tlims = (T(0), T(1))
-
-# Initial conditions
-initial_velocity_u(x, y) = -sin(x)cos(y)
-initial_velocity_v(x, y) = cos(x)sin(y)
-initial_pressure(x, y) = 1 // 4 * (cos(2x) + cos(2y))
-V₀, p₀ = create_initial_conditions(
-    setup,
-    initial_velocity_u,
-    initial_velocity_v,
-    t_start;
-    initial_pressure,
-    pressure_solver,
-);
-
-# Solve steady state problem
-V, p = solve_steady_state(setup, V₀, p₀; npicard = 2);
-
-# Iteration processors
-processors = (
-    ## field_plotter(setup; nupdate = 1),
-    energy_history_plotter(setup; nupdate = 1),
-    ## energy_spectrum_plotter(setup; nupdate = 1),
-    ## animator(setup, "vorticity.mkv"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 1),
-);
-
-# Solve unsteady problem
-V, p, outputs = solve_unsteady(
-    setup,
-    V₀,
-    p₀,
-    tlims;
-    Δt = T(0.01),
-    processors,
-    pressure_solver,
-    inplace = true,
-);
-#md current_figure()
-
-# ## Post-process
-#
-# We may visualize or export the computed fields `(V, p)`
-
-# Export to VTK
-save_vtk(setup, V, p, t_end, "output/solution")
-
-# Plot pressure
-plot_pressure(setup, p)
-
-# Plot velocity
-plot_velocity(setup, V, t_end)
-
-# Plot vorticity
-plot_vorticity(setup, V, t_end)
-
-# Plot streamfunction
-## plot_streamfunction(setup, V, t_end)
-nothing
-
-# Energy history
-outputs[1]
+# Plot convergence
+fig = Figure()
+ax = Axis(
+    fig[1, 1];
+    xscale = log10,
+    yscale = log10,
+    xticks = nlist,
+    xlabel = "n",
+    title = "Relative error",
+)
+scatterlines!(ax, nlist, e; label = "Data")
+lines!(ax, collect(extrema(nlist)), n -> n^-2.0; linestyle = :dash, label = "n^-2")
+axislegend(ax)
+fig

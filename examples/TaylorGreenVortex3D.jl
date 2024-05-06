@@ -1,121 +1,82 @@
-# Little LSP hack to get function signatures, go    #src
-# to definition etc.                                #src
-if isdefined(@__MODULE__, :LanguageServer)          #src
-    include("../src/IncompressibleNavierStokes.jl") #src
-    using .IncompressibleNavierStokes               #src
-end                                                 #src
-
 # # Taylor-Green vortex - 3D
 #
 # In this example we consider the Taylor-Green vortex.
-
-# We start by loading packages.
-# A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
-# for plotting. `GLMakie` creates an interactive window (useful for real-time
-# plotting), but does not work when building this example on GitHub.
-# `CairoMakie` makes high-quality static vector-graphics plots.
 
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-# Case name for saving results
-name = "TaylorGreenVortex3D"
+# Output directory
+output = "output/TaylorGreenVortex3D"
 
 # Floating point precision
-T = Float32
+T = Float64
 
-# For CPU
-device = identity
+# Array type
+ArrayType = Array
+## using CUDA; ArrayType = CuArray
+## using AMDGPU; ArrayType = ROCArray
+## using oneAPI; ArrayType = oneArray
+## using Metal; ArrayType = MtlArray
 
-# For GPU (note that `cu` converts to `Float32`)
-## using CUDA
-## device = cu
-nothing
-
-# Viscosity model
-viscosity_model = LaminarModel(; Re = T(2_000))
+# Reynolds number
+Re = T(6_000)
 
 # A 3D grid is a Cartesian product of three vectors
 n = 32
-lims = (T(0), T(2π))
+lims = T(0), T(1)
 x = LinRange(lims..., n + 1)
 y = LinRange(lims..., n + 1)
 z = LinRange(lims..., n + 1)
-plot_grid(x, y, z)
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; viscosity_model);
+setup = Setup(x, y, z; Re, ArrayType);
 
 # Since the grid is uniform and identical for x, y, and z, we may use a
 # specialized spectral pressure solver
-pressure_solver = SpectralPressureSolver(setup)
+psolver = psolver_spectral(setup);
 
 # Initial conditions
-initial_velocity_u(x, y, z) = sin(x)cos(y)cos(z)
-initial_velocity_v(x, y, z) = -cos(x)sin(y)cos(z)
-initial_velocity_w(x, y, z) = zero(x)
-initial_pressure(x, y, z) = 1 // 4 * (cos(2x) + cos(2y) + cos(2z))
-V₀, p₀ = create_initial_conditions(
+ustart = create_initial_conditions(
     setup,
-    initial_velocity_u,
-    initial_velocity_v,
-    initial_velocity_w,
-    T(0);
-    initial_pressure,
-    pressure_solver,
+    (dim, x, y, z) ->
+        dim() == 1 ? sinpi(2x) * cospi(2y) * sinpi(2z) / 2 :
+        dim() == 2 ? -cospi(2x) * sinpi(2y) * sinpi(2z) / 2 : zero(x);
+    psolver,
 );
-
-# Solve steady state problem
-## V, p = solve_steady_state(setup, V₀, p₀; npicard = 6)
-nothing
-
-# Iteration processors
-processors = (
-    ## field_plotter(device(setup); nupdate = 5),
-    ## energy_history_plotter(device(setup); nupdate = 1),
-    ## energy_spectrum_plotter(device(setup); nupdate = 100),
-    ## animator(device(setup), "vorticity.mp4"; nupdate = 4),
-    ## vtk_writer(setup; nupdate = 10, dir = "output/$name", filename = "solution"),
-    ## field_saver(setup; nupdate = 10),
-    step_logger(; nupdate = 10),
-);
-
-# Time interval
-t_start, t_end = tlims = (T(0), T(5))
 
 # Solve unsteady problem
-V, p, outputs = solve_unsteady(
+(; u, t), outputs = solve_unsteady(;
     setup,
-    V₀,
-    p₀,
-    tlims;
-    Δt = T(0.01),
-    processors,
-    pressure_solver,
-    inplace = true,
-    device,
+    ustart,
+    tlims = (T(0), T(1.0)),
+    Δt = T(1e-3),
+    processors = (
+        ## rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 10),
+        ehist = realtimeplotter(;
+            setup,
+            plot = energy_history_plot,
+            nupdate = 1,
+            displayfig = false,
+        ),
+        espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 10),
+        ## anim = animator(; setup, path = "$output/solution.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
+        ## field = fieldsaver(; setup, nupdate = 10),
+        log = timelogger(; nupdate = 100),
+    ),
+    psolver,
 );
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(V, p)`
+# We may visualize or export the computed fields
+
+# Energy history
+outputs.ehist
+
+# Energy spectrum
+outputs.espec
 
 # Export to VTK
-save_vtk(setup, V, p, t_end, "output/solution")
-
-# Plot pressure
-nothing #md
-plot_pressure(setup, p; levels = 3, alpha = 0.05) #!md
-
-# Plot velocity
-nothing #md
-plot_velocity(setup, V, t_end; levels = 3, alpha = 0.05) #!md
-
-# Plot vorticity
-nothing #md
-plot_vorticity(setup, V, t_end; levels = 5, alpha = 0.05) #!md
-
-# Plot streamfunction
-## plot_streamfunction(setup, V, t_end)
-nothing
+save_vtk(setup, u, t, "$output/solution"; psolver)

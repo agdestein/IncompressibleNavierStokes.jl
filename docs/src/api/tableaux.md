@@ -4,93 +4,96 @@ CurrentModule = IncompressibleNavierStokes
 
 # API Reference -- Runge-Kutta methods
 
+```@docs
+RKMethods
+```
 
 ## Explicit Methods
 
 ```@docs
-FE11
-SSP22
-SSP42
-SSP33
-SSP43
-SSP104
-rSSPs2
-rSSPs3
-Wray3
-RK56
-DOPRI6
+RKMethods.FE11
+RKMethods.SSP22
+RKMethods.SSP42
+RKMethods.SSP33
+RKMethods.SSP43
+RKMethods.SSP104
+RKMethods.rSSPs2
+RKMethods.rSSPs3
+RKMethods.Wray3
+RKMethods.RK56
+RKMethods.DOPRI6
 ```
 
 ## Implicit Methods
 
 ```@docs
-BE11
-SDIRK34
-ISSPm2
-ISSPs3
+RKMethods.BE11
+RKMethods.SDIRK34
+RKMethods.ISSPm2
+RKMethods.ISSPs3
 ```
 
 ## Half explicit methods
 
 ```@docs
-HEM3
-HEM3BS
-HEM5
+RKMethods.HEM3
+RKMethods.HEM3BS
+RKMethods.HEM5
 ```
 
 ## Classical Methods
 
 ```@docs
-GL1
-GL2
-GL3
-RIA1
-RIA2
-RIA3
-RIIA1
-RIIA2
-RIIA3
-LIIIA2
-LIIIA3
+RKMethods.GL1
+RKMethods.GL2
+RKMethods.GL3
+RKMethods.RIA1
+RKMethods.RIA2
+RKMethods.RIA3
+RKMethods.RIIA1
+RKMethods.RIIA2
+RKMethods.RIIA3
+RKMethods.LIIIA2
+RKMethods.LIIIA3
 ```
 
 ## Chebyshev methods
 
 ```@docs
-CHDIRK3
-CHCONS3
-CHC3
-CHC5
+RKMethods.CHDIRK3
+RKMethods.CHCONS3
+RKMethods.CHC3
+RKMethods.CHC5
 ```
 
 ## Miscellaneous Methods
 
 ```@docs
-Mid22
-MTE22
-CN22
-Heun33
-RK33C2
-RK33P2
-RK44
-RK44C2
-RK44C23
-RK44P2
+RKMethods.Mid22
+RKMethods.MTE22
+RKMethods.CN22
+RKMethods.Heun33
+RKMethods.RK33C2
+RKMethods.RK33P2
+RKMethods.RK44
+RKMethods.RK44C2
+RKMethods.RK44C23
+RKMethods.RK44P2
 ```
 
 ## DSRK Methods
 
 ```@docs
-DSso2
-DSRK2
-DSRK3
+RKMethods.DSso2
+RKMethods.DSRK2
+RKMethods.DSRK3
 ```
 
 ## "Non-SSP" Methods of Wong & Spiteri
 
 ```@docs
-NSSP21
-NSSP32
-NSSP33
-NSSP53
+RKMethods.NSSP21
+RKMethods.NSSP32
+RKMethods.NSSP33
+RKMethods.NSSP53
 ```

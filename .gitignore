@@ -1,3 +1,4 @@
+.vscode
 *.jl.*.cov
 *.jl.cov
 *.jl.mem
@@ -5,8 +6,10 @@
 /docs/build/
 /docs/src/generated/
 *output/
-*notebooks/
-examples/test.jl
+scratch/*
+test.jl
+toto.jl
+tata.jl
 
 # Vim swap
 *.swp

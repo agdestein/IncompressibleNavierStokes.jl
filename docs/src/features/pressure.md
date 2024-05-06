@@ -1,15 +1,28 @@
+```@meta
+CurrentModule = IncompressibleNavierStokes
+```
+
 # Pressure solvers
 
 The discrete pressure Poisson equation
 ```math
-A p_h = g
+L p = W M F(u)
 ```
-enforces divergence freeness. There are three options for solving this system:
+enforces divergence freeness. There are multiple options for solving this
+system.
 
-- [`DirectPressureSolver`](@ref) factorizes the Laplace matrix ``A`` such that
-  the system can be solved for different right hand sides. This currently
-  only works for double precision on the CPU.
-- [`CGPressureSolver`](@ref) uses conjugate gradients to solve the system for
-  different ``f``.
-- [`SpectralPressureSolver`](@ref) solves the system in Fourier space, but only
-  in the case of a uniform grid with periodic boundary conditions.
+```@docs
+default_psolver
+psolver_direct
+psolver_cg
+psolver_cg_matrix
+psolver_spectral
+psolver_spectral_lowmemory
+pressure
+pressure!
+poisson
+poisson!
+applypressure!
+project
+project!
+```

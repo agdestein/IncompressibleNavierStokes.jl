@@ -1,14 +1,16 @@
 """
-    function solve_unsteady(
-        setup, V₀, p₀, tlims;
-        method = RK44(; T = eltype(V₀)),
-        pressure_solver = DirectPressureSolver(setup),
-        Δt = nothing,
+    solve_unsteady(;
+        setup,
+        tlims,
+        ustart,
+        tempstart = nothing,
+        method = RKMethods.RK44(; T = eltype(u₀[1])),
+        psolver = default_psolver(setup),
+        Δt = zero(eltype(u₀[1])),
         cfl = 1,
         n_adapt_Δt = 1,
-        inplace = false,
-        processors = (),
-        device = identity,
+        docopy = true,
+        processors = (;),
     )
 
 Solve unsteady problem using `method`.
@@ -18,123 +20,87 @@ an integer.
 If `Δt = nothing`, the time step is chosen every `n_adapt_Δt` iteration with
 CFL-number `cfl` .
 
-Each `processor` is called after every `processor.nupdate` time step.
-
-All arrays and operators are passed through the `device` function.
-This allows for performing computations on a different device than the host (CPU).
-To compute on an Nvidia GPU using CUDA, change
-
-```
-solve_unsteady(setup, V₀, p₀, tlims; kwargs...)
-```
-
-to the following:
-
-```
-using CUDA
-solve_unsteady(
-    setup, V₀, p₀, tlims;
-    device = cu,
-    kwargs...
-)
-```
+The `processors` are called after every time step.
 
 Note that the `state` observable passed to the `processor.initialize` function
 contains vector living on the device, and you may have to move them back to
-the host using `Array(V)` and `Array(p)` in the processor.
+the host using `Array(u)` in the processor.
+
+Return `(; u, t), outputs`, where `outputs` is a  named tuple with the
+outputs of `processors` with the same field names.
 """
-function solve_unsteady(
+function solve_unsteady(;
     setup,
-    V₀,
-    p₀,
-    tlims;
-    method = RK44(; T = eltype(V₀)),
-    pressure_solver = DirectPressureSolver(setup),
-    Δt = zero(eltype(V₀)),
+    tlims,
+    ustart,
+    tempstart = nothing,
+    method = RKMethods.RK44(; T = eltype(ustart[1])),
+    psolver = default_psolver(setup),
+    Δt = zero(eltype(ustart[1])),
     cfl = 1,
     n_adapt_Δt = 1,
-    inplace = false,
-    processors = (),
-    device = identity,
+    docopy = true,
+    processors = (;),
+    θ = nothing,
 )
-    t_start, t_end = tlims
+    docopy && (ustart = copy.(ustart))
+    docopy && !isnothing(tempstart) && (tempstart = copy(tempstart))
+
+    tstart, tend = tlims
     isadaptive = isnothing(Δt)
-    if !isadaptive
-        nstep = round(Int, (t_end - t_start) / Δt)
-        Δt = (t_end - t_start) / nstep
-    end
 
-    # Initialize BC arrays (currently only done on host, due to Kronecker
-    # products)
-    bc_vectors = get_bc_vectors(setup, t_start)
-
-    # Move vectors and operators to device (if any).
-    setup = device(setup)
-    V₀ = device(V₀)
-    p₀ = device(p₀)
-    bc_vectors = device(bc_vectors)
-    pressure_solver = device(pressure_solver)
-
-    if inplace
-        cache = ode_method_cache(method, setup, V₀, p₀)
-        momentum_cache = MomentumCache(setup, V₀, p₀)
-    end
+    # Cache arrays for intermediate computations
+    cache = ode_method_cache(method, setup, ustart, tempstart)
 
     # Time stepper
-    stepper = create_stepper(
-        method;
-        setup,
-        pressure_solver,
-        bc_vectors,
-        V = copy(V₀),
-        p = copy(p₀),
-        t = t_start,
-    )
-
-    # Get initial time step
-    isadaptive && (Δt = get_timestep(stepper, cfl))
+    stepper =
+        create_stepper(method; setup, psolver, u = ustart, temp = tempstart, t = tstart)
 
     # Initialize processors for iteration results  
-    state = get_state(stepper)
-    states = map(ps -> Observable(state), processors)
-    initialized = map((ps, o) -> ps.initialize(o), processors, states)
+    state = Observable(get_state(stepper))
+    initialized = (; (k => v.initialize(state) for (k, v) in pairs(processors))...)
 
-    while stepper.t < t_end
-        if isadaptive
+    if isadaptive
+        while stepper.t < tend
             if stepper.n % n_adapt_Δt == 0
                 # Change timestep based on operators
                 Δt = get_timestep(stepper, cfl)
             end
 
             # Make sure not to step past `t_end`
-            Δt = min(Δt, t_end - stepper.t)
-        end
+            Δt = min(Δt, tend - stepper.t)
 
-        # Perform a single time step with the time integration method
-        if inplace
-            stepper = step!(method, stepper, Δt; cache, momentum_cache)
-        else
-            stepper = step(method, stepper, Δt)
-        end
+            # Perform a single time step with the time integration method
+            stepper = timestep!(method, stepper, Δt; θ, cache)
 
-        # Process iteration results with each processor
-        for (ps, o) ∈ zip(processors, states)
-            # Only update each `nupdate`-th iteration
-            stepper.n % ps.nupdate == 0 && (o[] = get_state(stepper))
+            # Process iteration results with each processor
+            state[] = get_state(stepper)
+        end
+    else
+        nstep = round(Int, (tend - tstart) / Δt)
+        Δt = (tend - tstart) / nstep
+        for it = 1:nstep
+            # Perform a single time step with the time integration method
+            stepper = timestep!(method, stepper, Δt; θ, cache)
+
+            # Process iteration results with each processor
+            state[] = get_state(stepper)
         end
     end
 
-    (; V, p, t, n) = stepper
-    finalized = map((ps, i) -> ps.finalize(i, get_state(stepper)), processors, initialized)
-
     # Final state
-    (; V, p) = stepper
+    (; u, temp, t) = stepper
 
-    # Move output arrays to host
-    Array(V), Array(p), finalized
+    # Processor outputs
+    outputs = (;
+        (k => processors[k].finalize(initialized[k], state) for k in keys(processors))...
+    )
+
+    # Return state and outputs
+    (; u, temp, t), outputs
 end
 
 function get_state(stepper)
-    (; V, p, t, n) = stepper
-    (; V, p, t, n)
+    (; u, temp, t, n) = stepper
+    (; u, temp, t, n)
 end
