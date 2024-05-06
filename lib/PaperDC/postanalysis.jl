@@ -741,7 +741,7 @@ kineticenergy = let
                 θ = θ_cnn_prior[ig, ifil],
             )[2].ewriter
         ke_cnn_post[ig, ifil, iorder] =
-            solve_unsteady(
+            solve_unsteady(;
                 (;
                     setup...,
                     projectorder = getorder(iorder),

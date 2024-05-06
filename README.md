@@ -109,7 +109,7 @@ ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0)
 
 # Solve unsteady Navier-Stokes equations
 solve_unsteady(;
-    setup, ustart, tlims = (0.0, 12.0), Δt = 0.05,
+    setup, ustart, tlims = (0.0, 48.0), Δt = 0.05,
     processors = (
         anim = animator(; setup, path = "vorticity.mp4", nupdate = 4),
         log = timelogger(),

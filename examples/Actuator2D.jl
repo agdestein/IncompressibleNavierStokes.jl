@@ -61,7 +61,7 @@ ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0)
 state, outputs = solve_unsteady(;
     setup,
     ustart,
-    tlims, (0.0, 12.0),
+    tlims = (0.0, 12.0),
     method = RKMethods.RK44P2(),
     Δt = 0.05,
     processors = (
