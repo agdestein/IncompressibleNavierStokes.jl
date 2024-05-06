@@ -1,7 +1,12 @@
+```@meta
+CurrentModule = IncompressibleNavierStokes
+```
+
 # Temperature equation
 
 IncompressibleNavierStokes.jl supports adding a temperature equation, which is
-coupled back to the momentum equation through a gravity term.
+coupled back to the momentum equation through a gravity term
+[Sanderse2023](@cite).
 
 To enable the temperature equation, you need to set the `temperature` keyword
 in setup:

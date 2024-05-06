@@ -62,7 +62,7 @@ end
 Temperature equation setup.
 
 The equation is parameterized by three dimensionless numbers (Prandtl number,
-Rayleigh numbe, and Gebhart number), and requires separate boundary conditions
+Rayleigh number, and Gebhart number), and requires separate boundary conditions
 for the `temperature` field. The `gdir` keyword specifies the direction gravity,
 while `non_dim_type` specifies the type of non-dimensionalization.
 """
