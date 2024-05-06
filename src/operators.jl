@@ -871,10 +871,10 @@ function momentum(u, temp, t, setup)
 end
 
 # ChainRulesCore.rrule(::typeof(momentum), u, temp, t, setup) = (
-#     (error(); momentum(u, t, setup)),
+#     (error(); momentum(u, temp, t, setup)),
 #     φ -> (
 #         NoTangent(),
-#         momentum_pullback!(zero.(φ), φ, u, t, setup),
+#         momentum_pullback!(zero.(φ), φ, u, temp, t, setup),
 #         NoTangent(),
 #         NoTangent(),
 #     ),

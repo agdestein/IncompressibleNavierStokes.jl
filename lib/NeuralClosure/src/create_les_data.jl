@@ -40,11 +40,12 @@ function lesdatagen(dnsobs, Φ, les, compression, psolver)
     FΦ = zero.(Φu)
     c = zero.(Φu)
     results = (; u = fill(Array.(dnsobs[].u), 0), c = fill(Array.(dnsobs[].u), 0))
+    temp = nothing
     on(dnsobs) do (; u, F, t)
         Φ(Φu, u, les, compression)
         apply_bc_u!(Φu, t, les)
         Φ(ΦF, F, les, compression)
-        momentum!(FΦ, Φu, t, les)
+        momentum!(FΦ, Φu, temp, t, les)
         apply_bc_u!(FΦ, t, les; dudt = true)
         project!(FΦ, les; psolver, div, p)
         for α = 1:length(u)
@@ -77,9 +78,10 @@ filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 
             i = 1:length(les), Φ in filters
         ]
         results = (; data, t = zeros(T, 0), comptime)
+        temp = nothing
         on(state) do (; u, t, n)
             n % nupdate == 0 || return
-            momentum!(F, u, t, dns)
+            momentum!(F, u, temp, t, dns)
             apply_bc_u!(F, t, dns; dudt = true)
             project!(F, dns; psolver = psolver_dns, div, p)
             push!(results.t, t)

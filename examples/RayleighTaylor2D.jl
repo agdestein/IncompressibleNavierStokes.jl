@@ -7,6 +7,8 @@ using CUDA, CUDSS
 T = Float32
 ArrayType = CuArray
 
+outdir = joinpath(@__DIR__, "output")
+
 temperature = temperature_equation(;
     Pr = T(0.71),
     Ra = T(1e6),
@@ -46,12 +48,12 @@ state, outputs = solve_unsteady(;
     processors = (;
         rtp = realtimeplotter(;
             # anim = animator(;
-            path = "examples/output/RT2D.mp4",
+            path = "$outdir/RT2D.mp4",
             setup,
             nupdate = 200,
             fieldname = :temperature,
             displayupdates = true,
-            size = (300, 500),
+            size = (400, 600),
         ),
         log = timelogger(; nupdate = 50),
     ),

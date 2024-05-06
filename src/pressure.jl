@@ -44,7 +44,7 @@ function pressure!(p, u, t, setup; psolver, F, div)
     (; grid) = setup
     (; dimension, Iu, Ip, Ω) = grid
     D = dimension()
-    momentum!(F, u, t, setup)
+    momentum!(F, u, temp, t, setup)
     apply_bc_u!(F, t, setup; dudt = true)
     divergence!(div, F, setup)
     @. div *= Ω
@@ -63,7 +63,7 @@ function pressure(u, t, setup; psolver)
     (; grid) = setup
     (; dimension, Iu, Ip, Ω) = grid
     D = dimension()
-    F = momentum(u, t, setup)
+    F = momentum(u, temp, t, setup)
     F = apply_bc_u(F, t, setup; dudt = true)
     div = divergence(F, setup)
     div = @. div * Ω

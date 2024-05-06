@@ -41,8 +41,11 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
                 # @. u[α][Iu[α]] += Δt * A[i, j] * ku[j][α][Iu[α]]
             end
         end
-        for j = 1:i
-            @. temp .= temp₀ + Δt * A[i, j] * ktemp[j]
+        if !isnothing(temp)
+            temp .= temp₀
+            for j = 1:i
+                @. temp += Δt * A[i, j] * ktemp[j]
+            end
         end
 
         # Project stage u directly
@@ -73,17 +76,24 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     t₀ = t
     u₀ = u
     ku = ()
+    ktemp = ()
 
     for i = 1:nstage
         # Compute force at current stage i
         u = apply_bc_u(u, t, setup)
+        isnothing(temp) || (temp = apply_bc_temp(temp, t, setup))
         F = momentum(u, temp, t, setup)
+        if !isnothing(temp)
+            Ftemp = convection_diffusion_temp(u, temp, setup)
+            temperature.dodissipation && (Ftemp += dissipation(u, setup))
+        end
 
         # Add closure term
         isnothing(m) || (F = F .+ m(u, θ))
 
         # Store right-hand side of stage i
         ku = (ku..., F)
+        isnothing(temp) || (ktemp = (ktemp..., Ftemp))
 
         # Intermediate time step
         t = t₀ + c[i] * Δt
@@ -93,6 +103,12 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
         for j = 1:i
             u = @. u + Δt * A[i, j] * ku[j]
             # u = tupleadd(u, @.(Δt * A[i, j] * ku[j]))
+        end
+        if !isnothing(temp)
+            temp = temp₀
+            for j = 1:i
+                temp = @. temp + Δt * A[i, j] * ktemp[j]
+            end
         end
 
         # Project stage u directly
@@ -105,6 +121,7 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     # since we divide by an infinitely thin (eps(T)) volume width in the
     # diffusion term
     u = apply_bc_u(u, t, setup)
+    isnothing(temp) || (temp = apply_bc_temp(temp, t, setup))
 
     create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
 end

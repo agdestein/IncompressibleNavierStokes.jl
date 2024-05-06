@@ -1,17 +1,21 @@
 #md using CairoMakie
 using GLMakie #!md
-using CairoMakie
 using IncompressibleNavierStokes
 
 using CUDA, CUDSS
 ArrayType = CuArray
+
+outdir = joinpath(@__DIR__, "output")
 
 temperature = temperature_equation(;
     Pr = T(0.71),
     Ra = T(1e7),
     Ge = T(0.1),
     dodissipation = true,
-    boundary_conditions = ((SymmetricBC(), SymmetricBC()), (DirichletBC(1.0), DirichletBC(0.0))),
+    boundary_conditions = (
+        (SymmetricBC(), SymmetricBC()),
+        (DirichletBC(1.0), DirichletBC(0.0)),
+    ),
     gdir = 2,
     nondim_type = 1,
 )
@@ -31,8 +35,6 @@ ustart = create_initial_conditions(setup, (dim, x, y) -> zero(x));
 (; xp) = setup.grid;
 tempstart = @. max(-sin($(T(3π)) * xp[1]) / 100, 0) + (1 - xp[2]');
 
-# with_theme(theme_black()) do
-with_theme(;) do
 state, outputs = solve_unsteady(;
     setup,
     ustart,
@@ -42,7 +44,7 @@ state, outputs = solve_unsteady(;
     processors = (;
         # rtp = realtimeplotter(;
         anim = animator(;
-            path = "examples/output/RB2D.mp4",
+            path = "$outdir/RB2D.mp4",
             setup,
             nupdate = 100,
             fieldname = :temperature,
@@ -53,7 +55,3 @@ state, outputs = solve_unsteady(;
         log = timelogger(; nupdate = 20),
     ),
 );
-end
-
-state.temp
-IncompressibleNavierStokes.apply_bc_temp!(state.temp, T(0), setup)

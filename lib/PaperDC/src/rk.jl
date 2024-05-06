@@ -16,11 +16,11 @@ end
 
 ode_method_cache(method::RKProject, setup, u) = ode_method_cache(method.rk, setup, u)
 
-create_stepper(method::RKProject; setup, psolver, u, t, n = 0) =
-    create_stepper(method.rk; setup, psolver, u, t, n)
+create_stepper(method::RKProject; setup, psolver, u, temp, t, n = 0) =
+    create_stepper(method.rk; setup, psolver, u, temp, t, n)
 
 function timestep!(method::RKProject, stepper, Δt; θ = nothing, cache)
-    (; setup, psolver, u, t, n) = stepper
+    (; setup, psolver, u, temp, t, n) = stepper
     (; grid, closure_model) = setup
     (; dimension, Iu) = grid
     (; rk, projectorder) = method
@@ -38,7 +38,7 @@ function timestep!(method::RKProject, stepper, Δt; θ = nothing, cache)
     for i = 1:nstage
         # Compute force at current stage i
         apply_bc_u!(u, t, setup)
-        momentum!(ku[i], u, t, setup)
+        momentum!(ku[i], u, temp, t, setup)
 
         # Project F first
         if projectorder == :first
@@ -80,11 +80,11 @@ function timestep!(method::RKProject, stepper, Δt; θ = nothing, cache)
     # diffusion term
     apply_bc_u!(u, t, setup)
 
-    create_stepper(method; setup, psolver, u, t, n = n + 1)
+    create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
 end
 
 function timestep(method::RKProject, stepper, Δt; θ = nothing)
-    (; setup, psolver, u, t, n) = stepper
+    (; setup, psolver, u, temp, t, n) = stepper
     (; grid, closure_model) = setup
     (; dimension) = grid
     (; rk, projectorder) = method
@@ -102,7 +102,7 @@ function timestep(method::RKProject, stepper, Δt; θ = nothing)
     for i = 1:nstage
         # Compute force at current stage i
         u = apply_bc_u(u, t, setup)
-        F = momentum(u, t, setup)
+        F = momentum(u, temp, t, setup)
 
         # Project F first
         if projectorder == :first
@@ -145,5 +145,5 @@ function timestep(method::RKProject, stepper, Δt; θ = nothing)
     # diffusion term
     u = apply_bc_u(u, t, setup)
 
-    create_stepper(method; setup, psolver, u, t, n = n + 1)
+    create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
 end
