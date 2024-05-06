@@ -20,7 +20,6 @@ using StaticArrays
 using Statistics
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 
-
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
 

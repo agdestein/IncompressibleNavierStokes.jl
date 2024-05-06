@@ -111,7 +111,7 @@ processors = (
 # By default, a standard fourth order Runge-Kutta method is used. If we don't
 # provide the time step explicitly, an adaptive time step is used.
 tlims = (T(0), T(10))
-state, outputs = solve_unsteady(; setup, ustart, tlims; Δt = T(1e-3), processors);
+state, outputs = solve_unsteady(; setup, ustart, tlims, Δt = T(1e-3), processors);
 
 # ## Post-process
 #

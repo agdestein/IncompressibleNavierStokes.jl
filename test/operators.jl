@@ -117,7 +117,7 @@ testops(dim) = @testset "Operators $(dim())D" begin
     end
 
     @testset "Momentum" begin
-        m = momentum(u, temp, T(1), setup)
+        m = momentum(u, nothing, T(1), setup)
         @test m isa Tuple
         @test m[1] isa Array{T}
         @test all(all.(!isnan, m))
