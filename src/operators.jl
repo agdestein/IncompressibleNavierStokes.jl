@@ -51,6 +51,14 @@ struct Offset{D} end
 @inline (::Offset{D})(α) where {D} = CartesianIndex(ntuple(β -> β == α ? 1 : 0, D))
 
 """
+Average scalar field `ϕ` in the `α`-direction.
+"""
+@inline function avg(ϕ, Δ, I, α)
+    e = Offset{length(I.I)}()
+    (Δ[α][I[α]+1] * ϕ[I] + Δ[α][I] * ϕ[I+e(α)]) / (Δ[α][I[α]] + Δ[α][I[α]+1])
+end
+
+"""
     divergence!(div, u, setup)
 
 Compute divergence of velocity field (in-place version).
@@ -698,11 +706,10 @@ function convection_diffusion_temp!(c, u, temp, setup)
         I = I + I0
         cI = zero(eltype(c))
         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
-            # TODO: Add interpolation weights
             ∂T∂x1 = (temp[I] - temp[I-e(β)]) / Δu[β][I[β]-1]
             ∂T∂x2 = (temp[I+e(β)] - temp[I]) / Δu[β][I[β]]
-            uT1 = u[β][I-e(β)] * (temp[I] + temp[I-e(β)]) / 2
-            uT2 = u[β][I] * (temp[I+e(β)] + temp[I]) / 2
+            uT1 = u[β][I-e(β)] * avg(temp, Δ, I-e(β), β)
+            uT2 = u[β][I] * avg(temp, Δ, I, β)
             cI += (-(uT2 - uT1) + α4 * (∂T∂x2 - ∂T∂x1)) / Δ[β][I[β]]
         end
         c[I] = cI
@@ -750,7 +757,7 @@ function dissipation!(diss, diff, u, setup)
         I += I0
         d = zero(eltype(diss))
         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
-            d += Re * α1 / γ * (u[β][I] * diff[β][I] + u[β][I-e(β)] * diff[β][I-e(β)]) / 2
+            d += Re * α1 / γ * (u[β][I-e(β)] * diff[β][I-e(β)] + u[β][I] * diff[β][I]) / 2
         end
         diss[I] += d
     end
@@ -820,8 +827,7 @@ function gravity!(F, temp, setup)
     @kernel function g!(F, temp, ::Val{gdir}, I0) where {gdir}
         I = @index(Global, Cartesian)
         I = I + I0
-        # TODO: Add interpolation weights
-        F[gdir][I] += α2 * (temp[I+e(gdir)] + temp[I]) / 2
+        F[gdir][I] += α2 * avg(temp, Δ, I, gdir)
     end
     I0 = first(Iu[gdir])
     I0 -= oneunit(I0)
