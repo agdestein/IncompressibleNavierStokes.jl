@@ -75,12 +75,12 @@ function stretched_grid(a, b, N, s = 1)
 end
 
 """
-    tanh_grid(a, b, N, γ)
+    tanh_grid(a, b, N, γ = typeof(a)(1))
 
 Create a nonuniform grid of `N + 1` points from `a` to `b`, as proposed
 by Trias et al. [Trias2007](@cite).
 """
-function tanh_grid(a, b, N, γ)
+function tanh_grid(a, b, N, γ = typeof(a)(1))
     T = typeof(a)
     x = LinRange{T}(0, 1, N + 1)
     @. a + (b - a) * (1 + tanh(γ * (2 * x - 1)) / tanh(γ)) / 2
