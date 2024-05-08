@@ -15,9 +15,10 @@ Setup
 ```@docs
 Dimension
 Grid
-cosine_grid
 max_size
+cosine_grid
 stretched_grid
+tanh_grid
 ```
 
 ## Preprocess
