@@ -75,6 +75,18 @@ function stretched_grid(a, b, N, s = 1)
 end
 
 """
+    tanh_grid(a, b, N, γ)
+
+Create a nonuniform grid of `N + 1` points from `a` to `b`, as proposed
+by Trias et al. [Trias2007](@cite).
+"""
+function tanh_grid(a, b, N, γ)
+    T = typeof(a)
+    x = LinRange{T}(0, 1, N + 1)
+    @. a + (b - a) * (1 + tanh(γ * (2 * x - 1)) / tanh(γ)) / 2
+end
+
+"""
     Grid(x, boundary_conditions)
 
 Create nonuniform Cartesian box mesh `x[1]` × ... × `x[d]` with boundary

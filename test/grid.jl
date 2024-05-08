@@ -36,4 +36,12 @@
         @test all(diff(x) .> 0)
         @test all(diff(diff(x)) .> 0)
     end
+
+    @testset "Tanh grid" begin
+        x = tanh_grid(a, b, N, 2)
+        @test length(x) == N + 1
+        @test x[1] ≈ a
+        @test x[end] ≈ b
+        @test all(diff(x) .> 0)
+    end
 end

@@ -69,7 +69,7 @@ export animator
 export Setup, temperature_equation
 
 # 1D grids
-export stretched_grid, cosine_grid
+export stretched_grid, cosine_grid, tanh_grid
 
 # Pressure solvers
 export default_psolver,
