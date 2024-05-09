@@ -56,6 +56,122 @@ timelogger(; nupdate = 1) =
     end
 
 """
+    observefield(
+        state;
+        setup,
+        fieldname,
+        logtol = eps(eltype(setup.grid.x[1])),
+        psolver = nothing,
+    )
+
+Observe field `fieldname` at pressure points.
+"""
+function observefield(
+    state;
+    setup,
+    fieldname,
+    logtol = eps(eltype(setup.grid.x[1])),
+    psolver = nothing,
+)
+    (; u, temp, t) = state[]
+    T = eltype(u[1])
+
+    # Initialize buffers
+    _f = if fieldname in (1, 2, 3)
+        up = interpolate_u_p(u, setup)
+        up[fieldname]
+    elseif fieldname == :velocity
+        up = interpolate_u_p(u, setup)
+        upnorm = zero(up[1])
+    elseif fieldname == :vorticity
+        ω = vorticity(u, setup)
+        ωp = interpolate_ω_p(ω, setup)
+    elseif fieldname == :streamfunction
+        ψ = get_streamfunction(setup, u, t)
+    elseif fieldname == :pressure
+        if isnothing(psolver)
+            @warn "Creating new pressure solver for fieldplot"
+            psolver = default_psolver(setup)
+        end
+        F = zero.(u)
+        div = zero(u[1])
+        p = zero(u[1])
+    elseif fieldname == :Dfield
+        if isnothing(psolver)
+            @warn "Creating new pressure solver for fieldplot"
+            psolver = default_psolver(setup)
+        end
+        F = zero.(u)
+        div = zero(u[1])
+        p = zero(u[1])
+        G = similar.(u)
+        d = similar(u[1])
+    elseif fieldname == :Qfield
+        Q = similar(u[1])
+    elseif fieldname == :eig2field
+        λ = similar(u[1])
+    elseif fieldname in union(Symbol.(["B$i" for i = 1:11]), Symbol.(["V$i" for i = 1:5]))
+        sym = string(fieldname)[1]
+        sym = sym == 'B' ? 1 : 2
+        idx = parse(Int, string(fieldname)[2:end])
+        tb = tensorbasis(u, setup)
+        tb[sym][idx]
+    elseif fieldname == :temperature
+        temp
+    else
+        error("Unknown fieldname")
+    end
+    _f = Array(_f)[Ip]
+
+    # Observe field
+    field = lift(state) do (; u, temp, t)
+        f = if fieldname in (1, 2, 3)
+            interpolate_u_p!(up, u, setup)
+            up[fieldname]
+        elseif fieldname == :velocity
+            up = interpolate_u_p(u, setup)
+            # map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
+            if D == 2
+                @. upnorm = sqrt(up[1]^2 + up[2]^2)
+            elseif D == 3
+                @. upnorm = sqrt(up[1]^2 + up[2]^2 + up[3]^2)
+            end
+        elseif fieldname == :vorticity
+            apply_bc_u!(u, t, setup)
+            vorticity!(ω, u, setup)
+            interpolate_ω_p!(ωp, ω, setup)
+        elseif fieldname == :streamfunction
+            get_streamfunction(setup, u, t)
+        elseif fieldname == :pressure
+            pressure!(p, u, temp, t, setup; psolver, F, div)
+        elseif fieldname == :Dfield
+            pressure!(p, u, temp, t, setup; psolver, F, div)
+            Dfield!(d, G, p, setup)
+            din = view(d, Ip)
+            @. din = log(max(logtol, din))
+            d
+        elseif fieldname == :Qfield
+            Qfield!(Q, u, setup)
+            Qin = view(Q, Ip)
+            @. Qin = log(max(logtol, Qin))
+            Q
+        elseif fieldname == :eig2field
+            eig2field!(λ, u, setup)
+            λin = view(λ, Ip)
+            @. λin .= log(max(logtol, -λin))
+            λ
+        elseif fieldname in
+               union(Symbol.(["B$i" for i = 1:11]), Symbol.(["V$i" for i = 1:5]))
+            tensorbasis!(tb..., u, setup)
+            tb[sym][idx]
+        elseif fieldname == :temperature
+            temp
+        end
+        copyto!(_f, view(f, Ip))
+    end
+end
+
+"""
     vtk_writer(;
         setup,
         nupdate = 1,
@@ -284,64 +400,7 @@ function fieldplot(
 
     xf = Array.(getindex.(setup.grid.xp, Ip.indices))
 
-    (; u, temp, t) = state[]
-    _f = if fieldname in (1, 2)
-        up = interpolate_u_p(u, setup)
-        up[fieldname]
-    elseif fieldname == :velocity
-        up = interpolate_u_p(u, setup)
-        upnorm = zero(up[1])
-    elseif fieldname == :vorticity
-        ω = vorticity(u, setup)
-        ωp = interpolate_ω_p(ω, setup)
-    elseif fieldname == :streamfunction
-        ψ = get_streamfunction(setup, u, t)
-    elseif fieldname == :pressure
-        if isnothing(psolver)
-            @info "Creating new pressure solver for fieldplot"
-            psolver = default_psolver(setup)
-        end
-        F = zero.(u)
-        div = zero(u[1])
-        p = zero(u[1])
-    elseif fieldname == :V1
-        B, V = tensorbasis(u, setup)
-        V[1]
-    elseif fieldname == :V2
-        B, V = tensorbasis(u, setup)
-        V[2]
-    elseif fieldname == :temperature
-        temp
-    end
-    _f = Array(_f)[Ip]
-    field = lift(state) do (; u, temp, t)
-        f = if fieldname in (1, 2)
-            interpolate_u_p!(up, u, setup)
-            up[fieldname]
-        elseif fieldname == :velocity
-            interpolate_u_p!(up, u, setup)
-            map((u, v) -> √sum(u^2 + v^2), up...)
-            @. upnorm = sqrt(up[1]^2 + up[2]^2)
-        elseif fieldname == :vorticity
-            apply_bc_u!(u, t, setup)
-            vorticity!(ω, u, setup)
-            interpolate_ω_p!(ωp, ω, setup)
-        elseif fieldname == :streamfunction
-            get_streamfunction!(setup, ψ, u, t)
-        elseif fieldname == :pressure
-            pressure!(p, u, temp, t, setup; psolver, F, div)
-        elseif fieldname == :V1
-            tensorbasis!(B, V, u, setup)
-            V[1]
-        elseif fieldname == :V2
-            tensorbasis!(B, V, u, setup)
-            -V[2]
-        elseif fieldname == :temperature
-            temp
-        end
-        # Array(f)[Ip]
-        copyto!(_f, view(f, Ip))
-    end
+    field = observefield(state; setup, fieldname, psolver)
 
     lims = lift(field) do f
         if type ∈ (heatmap, image)
@@ -409,7 +468,6 @@ function fieldplot(
     levels = LinRange{eltype(setup.grid.x[1])}(-10, 5, 10),
     docolorbar = false,
     size = nothing,
-    logtol = eps(setup.T),
     kwargs...,
 )
     (; boundary_conditions, grid) = setup
@@ -421,80 +479,7 @@ function fieldplot(
         xf = ntuple(α -> LinRange(xf[α][1], xf[α][end], length(xf[α])), 3)
     end
 
-    (; u) = state[]
-    T = eltype(xf[1])
-    if fieldname == :velocity
-    elseif fieldname == :vorticity
-    elseif fieldname == :streamfunction
-    elseif fieldname == :pressure
-        if isnothing(psolver)
-            @info "Creating new pressure solver for fieldplot"
-            psolver = default_psolver(setup)
-        end
-        F = zero.(u)
-        div = zero(u[1])
-        p = zero(u[1])
-    elseif fieldname == :Dfield
-        if isnothing(psolver)
-            @info "Creating new pressure solver for fieldplot"
-            psolver = default_psolver(setup)
-        end
-        F = zero.(u)
-        div = zero(u[1])
-        p = zero(u[1])
-        G = similar.(u)
-        d = similar(u[1])
-    elseif fieldname == :Qfield
-        Q = similar(u[1])
-    elseif fieldname == :eig2field
-        λ = similar(u[1])
-    elseif fieldname in union(Symbol.(["B$i" for i = 1:11]), Symbol.(["V$i" for i = 1:5]))
-        sym = string(fieldname)[1]
-        sym = sym == 'B' ? 1 : 2
-        idx = parse(Int, string(fieldname)[2:end])
-        tb = tensorbasis(u, setup)
-        tb[sym][idx]
-    elseif fieldname == :temperature
-    else
-        error("Unknown fieldname")
-    end
-
-    field = lift(state) do (; u, temp, t)
-        f = if fieldname == :velocity
-            up = interpolate_u_p(u, setup)
-            map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
-        elseif fieldname == :vorticity
-            ωp = interpolate_ω_p(vorticity(u, setup), setup)
-            map((u, v, w) -> √sum(u^2 + v^2 + w^2), ωp...)
-        elseif fieldname == :streamfunction
-            get_streamfunction(setup, u, t)
-        elseif fieldname == :pressure
-            pressure!(p, u, temp, t, setup; psolver, F, div)
-        elseif fieldname == :Dfield
-            pressure!(p, u, temp, t, setup; psolver, F, div)
-            Dfield!(d, G, p, setup)
-            din = view(d, Ip)
-            @. din = log(max(logtol, din))
-            d
-        elseif fieldname == :Qfield
-            Qfield!(Q, u, setup)
-            Qin = view(Q, Ip)
-            @. Qin = log(max(logtol, Qin))
-            Q
-        elseif fieldname == :eig2field
-            eig2field!(λ, u, setup)
-            λin = view(λ, Ip)
-            @. λin .= log(max(logtol, -λin))
-            λ
-        elseif fieldname in
-               union(Symbol.(["B$i" for i = 1:11]), Symbol.(["V$i" for i = 1:5]))
-            tensorbasis!(tb..., u, setup)
-            tb[sym][idx]
-        elseif fieldname == :temperature
-            temp
-        end
-        Array(f)[Ip]
-    end
+    field = observefield(state; setup, fieldname, psolver)
 
     # color = lift(state) do (; temp)
     #     Array(view(temp, Ip))
@@ -518,7 +503,7 @@ function fieldplot(
         xf...,
         field;
         levels,
-        # color,
+        # color = xf[2]' .+ 0 .* field[],
         # colorrange,
         colorrange = lims,
         # colorrange = extrema(levels),

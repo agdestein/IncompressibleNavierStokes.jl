@@ -708,7 +708,7 @@ function convection_diffusion_temp!(c, u, temp, setup)
         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
             ∂T∂x1 = (temp[I] - temp[I-e(β)]) / Δu[β][I[β]-1]
             ∂T∂x2 = (temp[I+e(β)] - temp[I]) / Δu[β][I[β]]
-            uT1 = u[β][I-e(β)] * avg(temp, Δ, I-e(β), β)
+            uT1 = u[β][I-e(β)] * avg(temp, Δ, I - e(β), β)
             uT2 = u[β][I] * avg(temp, Δ, I, β)
             cI += (-(uT2 - uT1) + α4 * (∂T∂x2 - ∂T∂x1)) / Δ[β][I[β]]
         end
