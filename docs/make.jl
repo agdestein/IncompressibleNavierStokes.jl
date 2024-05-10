@@ -1,16 +1,6 @@
 # Show number of threads on GitHub Actions
 @info "" Threads.nthreads()
 
-# Build docs environment
-using Pkg
-Pkg.activate(@__DIR__)
-Pkg.develop([
-    PackageSpec(; path = joinpath(@__DIR__, "..")),
-    PackageSpec(; path = joinpath(@__DIR__, "..", "lib", "NeuralClosure")),
-    PackageSpec(; path = joinpath(@__DIR__, "..", "examples")),
-])
-Pkg.instantiate()
-
 # Get access to example dependencies
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 
