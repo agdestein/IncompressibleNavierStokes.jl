@@ -1,69 +1,64 @@
 #md using CairoMakie
 using GLMakie #!md
-using CairoMakie
 using IncompressibleNavierStokes
 
-using CUDA, CUDSS
-T = Float32
-ArrayType = CuArray
+# Hardware
+ArrayType = Array
 
-outdir = joinpath(@__DIR__, "output")
+## using CUDA, CUDSS
+## ArrayType = CuArray
 
+# Precision
+T = Float64
+
+# Grid
+n = 50
+x = tanh_grid(T(0), T(1), n, T(1.5))
+y = tanh_grid(T(0), T(2), 2n, T(1.5))
+plotgrid(x, y)
+
+# Setup
 temperature = temperature_equation(;
     Pr = T(0.71),
     Ra = T(1e6),
     Ge = T(1.0),
-    # Ge = T(0.1),
     dodissipation = true,
     boundary_conditions = ((SymmetricBC(), SymmetricBC()), (SymmetricBC(), SymmetricBC())),
     gdir = 2,
     nondim_type = 1,
 )
-
-n = 128
-x = LinRange(T(0), T(1), n + 1)
-y = LinRange(T(0), T(2), 2n + 1)
 setup = Setup(
     x,
     y;
     boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
     Re = 1 / temperature.α1,
     temperature,
-    ArrayType,
 );
+
+# Initial conditions
 ustart = create_initial_conditions(setup, (dim, x, y) -> zero(x));
 (; xp) = setup.grid;
-tempstart = @. $(T(1)) * (1.0 + 0.05 * sin($(T(2π)) * xp[1]) > xp[2]');
-tempstart = @. $(T(1)) * (1.0 + 0.05 * sin($(T(π)) * xp[1]) > xp[2]');
-# @. tempstart += 0.3 * randn()
+## T0(x, y) = one(x) * (1 > y);
+T0(x, y) = one(x) * (1 + sinpi(x) > y); ## Perturbation
+tempstart = T0.(xp[1], xp[2]');
 
+# Solve equation
 state, outputs = solve_unsteady(;
     setup,
-    # ustart,
-    # tempstart,
-    ustart = state.u,
-    tempstart = state.temp,
-    tlims = (0.0, 40.0),
-    Δt = 5e-3,
+    ustart,
+    tempstart,
+    tlims = (T(0), T(20)),
+    Δt = T(5e-3),
     processors = (;
         rtp = realtimeplotter(;
-            # anim = animator(;
-            path = "$outdir/RT2D.mp4",
             setup,
-            nupdate = 200,
+            nupdate = 10,
             fieldname = :temperature,
-            displayupdates = true,
             size = (400, 600),
         ),
-        log = timelogger(; nupdate = 50),
+        log = timelogger(; nupdate = 100),
     ),
 );
 
-state.u .|> extrema
-state.temp |> extrema
-state.u[1]
-state.u[2]
-state.temp
-
-fieldplot(state; setup, fieldname = :temperature)
-save("toto.png", current_figure())
+# Results
+outputs.rtp

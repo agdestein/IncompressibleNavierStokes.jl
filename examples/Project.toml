@@ -4,8 +4,6 @@ authors = ["Syver Døving Agdestein <syverda@gmail.com>"]
 version = "0.1.0"
 
 [deps]
-CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
-CUDSS = "45b445bb-4962-46a0-9369-b4df9d0f772e"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 IncompressibleNavierStokes = "5e318141-6589-402b-868d-77d7df8c442e"
@@ -17,8 +15,6 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
-CUDA = "5"
-CUDSS = "0.2"
 CairoMakie = "0.12"
 GLMakie = "0.10"
 IncompressibleNavierStokes = "0.5"

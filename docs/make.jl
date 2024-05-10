@@ -30,9 +30,10 @@ examples = [
     "Decaying Turbulunce (2D)" => "DecayingTurbulence2D",
     # "Decaying Turbulunce (3D)" => "DecayingTurbulence3D",
     # "Lid-Driven Cavity (3D)" => "LidDrivenCavity3D",
-    "Planar Mixing (2D)" => "PlanarMixing2D",
+    # "Planar Mixing (2D)" => "PlanarMixing2D",
     # "Shear Layer (2D)" => "ShearLayer2D",
     # "Taylor-Green Vortex (3D)" => "TaylorGreenVortex3D",
+    "Temperature: Rayleigh-Bénard (2D)" => "RayleighBenard2D",
 ]
 
 output = "generated"
