@@ -24,8 +24,8 @@ jobs:
                   "",
                   "test",
                   "examples",
-                  "libs/NeuralClosure",
-                  "libs/PaperDC",
-                  "libs/TensorClosure",
+                  "lib/NeuralClosure",
+                  "lib/PaperDC",
+                  "lib/TensorClosure",
               ],
           )
