@@ -61,11 +61,11 @@ tempstart = @. $(T(1)) * (1.0 + 0.05 * sin($(T(1.05 * π)) * xx) * sin($(T(π)) 
 
 fieldplot(
     (; u = ustart, temp = tempstart, t = T(0));
-    # state;
+    ## state;
     setup,
     levels = LinRange{T}(0.8, 1, 5),
-    # levels = LinRange(-T(5), T(1), 10),
-    # fieldname = :eig2field,
+    ## levels = LinRange(-T(5), T(1), 10),
+    ## fieldname = :eig2field,
     fieldname = :temperature,
     size = (400, 600),
 )
@@ -86,8 +86,8 @@ state, outputs = solve_unsteady(;
             nupdate = 20,
             fieldname = :eig2field,
             levels = LinRange(-T(5), T(1), 10),
-            # fieldname = :temperature,
-            # levels = LinRange{T}(0, 1, 10),
+            ## fieldname = :temperature,
+            ## levels = LinRange{T}(0, 1, 10),
             size = (400, 600),
         ),
         log = timelogger(; nupdate = 10),
@@ -95,7 +95,6 @@ state, outputs = solve_unsteady(;
 );
 
 field = IncompressibleNavierStokes.eig2field(state.u, setup)[setup.grid.Ip]
-# hist(vec(Array(log(max(eps(T), field)))
 hist(vec(Array(log.(max.(eps(T), .-field)))))
 
 fieldplot(state; setup, fieldname = :temperature)

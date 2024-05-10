@@ -61,7 +61,8 @@ tempstart = T0.(xp[1], reshape(xp[2], 1, :), reshape(xp[3], 1, 1, :));
 state, outputs = solve_unsteady(;
     setup,
     ustart,
-    tempstart, tlims = (T(0), T(10)),
+    tempstart,
+    tlims = (T(0), T(10)),
     method = RKMethods.RK33C2(; T),
     Δt = T(1e-2),
     psolver,
@@ -73,8 +74,8 @@ state, outputs = solve_unsteady(;
             nupdate = 50,
             levels = LinRange(-T(5), T(1), 10),
             fieldname = :eig2field,
-            # levels = LinRange{T}(0, 1, 10),
-            # fieldname = :temperature,
+            ## levels = LinRange{T}(0, 1, 10),
+            ## fieldname = :temperature,
         ),
         log = timelogger(; nupdate = 1),
     ),
@@ -84,11 +85,11 @@ field = IncompressibleNavierStokes.eig2field(state.u, setup)[setup.grid.Ip]
 hist(vec(Array(log.(max.(eps(T), .-field)))))
 
 fieldplot(
-    # (; u = ustart, temp = tempstart, t = T(0));
+    ## (; u = ustart, temp = tempstart, t = T(0));
     state;
     setup,
     levels = LinRange{T}(0.5, 2, 5),
-    # levels = LinRange(-T(5), T(1), 10),
-    # fieldname = :eig2field,
+    ## levels = LinRange(-T(5), T(1), 10),
+    ## fieldname = :eig2field,
     fieldname = :temperature,
 )

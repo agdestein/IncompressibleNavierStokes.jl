@@ -106,13 +106,13 @@ state, outputs = solve_unsteady(;
     tlims = (T(0), T(40)),
     Δt = T(5e-3),
     processors = (;
-        # rtp = realtimeplotter(;
-        #     setup,
-        #     nupdate = 50,
-        #     fieldname = :temperature,
-        #     colorrange = (T(0), T(1)),
-        #     size = (600, 500),
-        # ),
+        ## rtp = realtimeplotter(;
+        ##     setup,
+        ##     nupdate = 50,
+        ##     fieldname = :temperature,
+        ##     colorrange = (T(0), T(1)),
+        ##     size = (600, 500),
+        ## ),
         nusselt = realtimeplotter(; setup, plot = nusseltplot, nupdate = 100),
         avg = realtimeplotter(; setup, plot = averagetemp, nupdate = 50),
         log = timelogger(; nupdate = 20),
