@@ -73,6 +73,7 @@ function observefield(
     logtol = eps(eltype(setup.grid.x[1])),
     psolver = nothing,
 )
+    (; Ip) = setup.grid
     (; u, temp, t) = state[]
     T = eltype(u[1])
 
@@ -394,11 +395,11 @@ function fieldplot(
     title = nothing,
     kwargs...,
 )
-    (; boundary_conditions, grid) = setup
-    (; dimension, xlims, x, xp, Ip, Δ) = grid
+    (; grid) = setup
+    (; dimension, xlims, xp, Ip, Δ) = grid
     D = dimension()
 
-    xf = Array.(getindex.(setup.grid.xp, Ip.indices))
+    xf = Array.(getindex.(xp, Ip.indices))
 
     field = observefield(state; setup, fieldname, psolver)
 
@@ -470,10 +471,10 @@ function fieldplot(
     size = nothing,
     kwargs...,
 )
-    (; boundary_conditions, grid) = setup
-    (; xlims, x, xp, Ip) = grid
+    (; grid) = setup
+    (; xp, Ip) = grid
 
-    xf = Array.(getindex.(setup.grid.xp, Ip.indices))
+    xf = Array.(getindex.(xp, Ip.indices))
     dxf = diff.(xf)
     if all(α -> all(≈(dxf[α][1]), dxf[α]), 1:3)
         xf = ntuple(α -> LinRange(xf[α][1], xf[α][end], length(xf[α])), 3)
