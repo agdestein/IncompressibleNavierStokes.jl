@@ -33,6 +33,7 @@ random_field
 ```@docs
 processor
 timelogger
+observefield
 vtk_writer
 fieldsaver
 realtimeplotter

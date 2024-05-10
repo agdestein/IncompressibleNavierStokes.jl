@@ -17,6 +17,7 @@ memory is expensive for large 3D problems.
 
 ```@docs
 Offset
+avg
 divergence!
 divergence
 vorticity
