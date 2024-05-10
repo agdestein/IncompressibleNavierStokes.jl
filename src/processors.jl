@@ -73,8 +73,9 @@ function observefield(
     logtol = eps(eltype(setup.grid.x[1])),
     psolver = nothing,
 )
-    (; Ip) = setup.grid
+    (; dimension, Ip) = setup.grid
     (; u, temp, t) = state[]
+    D = dimension()
     T = eltype(u[1])
 
     # Initialize buffers
@@ -590,7 +591,7 @@ function energy_spectrum_plot(
     # krange = [cbrt(T(kmax)), T(kmax)]
     krange = [kmax^T(0.3), kmax^(T(0.8))]
     # krange = [T(kmax)^(T(2) / 3), T(kmax)]
-    slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}") : (-T(5 / 3), L"$k^{-5/3}")
+    slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}$") : (-T(5 / 3), L"$k^{-5/3}$")
     inertia = lift(ehat) do ehat
         slopeconst = maximum(ehat ./ κ .^ slope)
         2 .* slopeconst .* krange .^ slope

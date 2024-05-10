@@ -81,7 +81,7 @@ makedocs(;
     ],
 )
 
-deploydocs(;
+get(ENV, "CI", "false") == "true" && deploydocs(;
     repo = "github.com/agdestein/IncompressibleNavierStokes.jl",
     devbranch = "main",
     push_preview = true,
