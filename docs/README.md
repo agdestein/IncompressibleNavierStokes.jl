@@ -38,5 +38,5 @@ julia --project=@LiveServer -e 'using Pkg; Pkg.add("LiveServer")'
 Then run:
 
 ```sh
-julia --project=docs docs/liveserve.jl
+julia .tools/servedocs.jl
 ```
