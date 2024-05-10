@@ -429,7 +429,7 @@ function fieldplot(
             extendlow = :auto,
             extendhigh = :auto,
             levels = @lift(LinRange($(lims)..., 10)),
-            colorrange = lims,
+            # colorrange = lims,
             kwargs...,
         )
     end
@@ -624,7 +624,7 @@ end
 # if displayfig
 #     render = display(espec)
 #     done_rendering = Ref(false)
-#     on(render.render_tic) do _
+#     on(render.render_tick) do _
 #         done_rendering[] = true
 #     end
 #     on(state) do s

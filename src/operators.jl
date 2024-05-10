@@ -55,7 +55,7 @@ Average scalar field `ϕ` in the `α`-direction.
 """
 @inline function avg(ϕ, Δ, I, α)
     e = Offset{length(I.I)}()
-    (Δ[α][I[α]+1] * ϕ[I] + Δ[α][I] * ϕ[I+e(α)]) / (Δ[α][I[α]] + Δ[α][I[α]+1])
+    (Δ[α][I[α]+1] * ϕ[I] + Δ[α][I[α]] * ϕ[I+e(α)]) / (Δ[α][I[α]] + Δ[α][I[α]+1])
 end
 
 """
