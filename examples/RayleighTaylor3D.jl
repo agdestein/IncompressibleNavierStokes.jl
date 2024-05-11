@@ -57,7 +57,7 @@ ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x); psolver);
 xx = xp[1];
 xy = reshape(xp[2], 1, :);
 xz = reshape(xp[3], 1, 1, :);
-tempstart = @. $(T(1)) * (1.0 + 0.05 * sin($(T(1.05 * π)) * xx) * sin($(T(π)) * xy) > xz);
+tempstart = @. $(T(1)) * (1 + sin($(T(1.05 * π)) / 20 * xx) * sin($(T(π)) * xy) > xz);
 
 fieldplot(
     (; u = ustart, temp = tempstart, t = T(0));
@@ -89,6 +89,13 @@ state, outputs = solve_unsteady(;
             ## fieldname = :temperature,
             ## levels = LinRange{T}(0, 1, 10),
             size = (400, 600),
+        ),
+        vtk = vtk_writer(;
+            setup,
+            nupdate = 10,
+            dir = "output/RayleighTaylor3D",
+            fieldnames = (:velocity, :pressure, :temperature),
+            psolver,
         ),
         log = timelogger(; nupdate = 10),
     ),

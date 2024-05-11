@@ -84,6 +84,8 @@ function observefield(
         up[fieldname]
     elseif fieldname == :velocity
         up = interpolate_u_p(u, setup)
+    elseif fieldname == :velocitynorm
+        up = interpolate_u_p(u, setup)
         upnorm = zero(up[1])
     elseif fieldname == :vorticity
         ω = vorticity(u, setup)
@@ -123,7 +125,7 @@ function observefield(
     else
         error("Unknown fieldname")
     end
-    _f = Array(_f)[Ip]
+    _f = _f isa Tuple ? map(f -> Array(f)[Ip], _f) : Array(_f)[Ip]
 
     # Observe field
     field = lift(state) do (; u, temp, t)
@@ -131,7 +133,9 @@ function observefield(
             interpolate_u_p!(up, u, setup)
             up[fieldname]
         elseif fieldname == :velocity
-            up = interpolate_u_p(u, setup)
+            interpolate_u_p!(up, u, setup)
+        elseif fieldname == :velocitynorm
+            interpolate_u_p!(up, u, setup)
             # map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
             if D == 2
                 @. upnorm = sqrt(up[1]^2 + up[2]^2)
@@ -169,7 +173,14 @@ function observefield(
         elseif fieldname == :temperature
             temp
         end
-        copyto!(_f, view(f, Ip))
+        if _f isa Tuple 
+            for (_f, f) in zip(_f, f)
+                copyto!(_f, view(f, Ip))
+            end
+        else
+            copyto!(_f, view(f, Ip))
+        end
+        _f
     end
 end
 
@@ -191,56 +202,36 @@ vtk_writer(;
     nupdate = 1,
     dir = "output",
     filename = "solution",
-    fields = (:velocity, :pressure, :vorticity),
+    fieldnames = (:velocity, :pressure),
     psolver = nothing,
 ) =
-    processor((pvd, state) -> vtk_save(pvd)) do state
+    processor((pvd, outerstate) -> vtk_save(pvd)) do outerstate
         (; grid) = setup
-        (; dimension, xp) = grid
+        (; dimension, xp, Ip) = grid
         D = dimension()
         ispath(dir) || mkpath(dir)
         pvd = paraview_collection(joinpath(dir, filename))
         xparr = Array.(xp)
-        (; u) = state[]
-        if :velocity ∈ fields
-            up = interpolate_u_p(u, setup)
-            uparr = Array.(up)
-            # ParaView prefers 3D vectors. Add zero z-component.
-            D == 2 && (uparr = (uparr..., zero(up[1])))
-        end
-        if :pressure ∈ fields
-            if isnothing(psolver)
-                @info "Creating new pressure solver for vtk_writer"
-                psolver = default_psolver(setup)
-            end
-            F = zero.(u)
-            div = zero(u[1])
-            p = zero(u[1])
-            parr = adapt(Array, p)
-        end
-        if :vorticity ∈ fields
-            ω = vorticity(u, setup)
-            ωp = interpolate_ω_p(ω, setup)
-            ωparr = adapt(Array, ωp)
-        end
-        on(state) do (; u, t, n)
+        state = Observable(outerstate[])
+        f = map(fieldname -> observefield(state; setup, fieldname, psolver), fieldnames)
+
+        # Only allocate z-component if there is a 2D vector field
+        z = any(f -> f[] isa Tuple && length(f[]) == 2, f) ? zero(state[].u[1][Ip]) : nothing
+
+        # Update VTK file
+        on(outerstate) do outerstate
+            (; t, n) = outerstate
             n % nupdate == 0 || return
+            state[] = outerstate
             tformat = replace(string(t), "." => "p")
             vtk_grid("$(dir)/$(filename)_t=$tformat", xparr...) do vtk
-                if :velocity ∈ fields
-                    interpolate_u_p!(up, u, setup)
-                    copyto!.(uparr, up)
-                    vtk["velocity"] = uparr
-                end
-                if :pressure ∈ fields
-                    pressure!(p, u, temp, t, setup; psolver, F, div)
-                    vtk["pressure"] = copyto!(parr, p)
-                end
-                if :vorticity ∈ fields
-                    vorticity!(ω, u, setup)
-                    interpolate_ω_p!(ωp, ω, setup)
-                    D == 2 ? copyto!(ωparr, ωp) : copyto!.(ωparr, ωp)
-                    vtk["vorticity"] = ωparr
+                for (fieldname, f) in zip(fieldnames, f)
+                    vtk[string(fieldname)] = if f[] isa Tuple && length(f[]) == 2
+                        # ParaView prefers 3D vectors. Add zero z-component.
+                        (f[]..., z)
+                    else
+                        f[]
+                    end
                 end
                 pvd[t] = vtk
             end
@@ -465,7 +456,7 @@ function fieldplot(
     psolver = nothing,
     fieldname = :eig2field,
     alpha = convert(eltype(setup.grid.x[1]), 0.1),
-    isorange = convert(eltype(setup.grid.x[1]), 0.5),
+    # isorange = convert(eltype(setup.grid.x[1]), 0.5),
     equal_axis = true,
     levels = LinRange{eltype(setup.grid.x[1])}(-10, 5, 10),
     docolorbar = false,
@@ -510,7 +501,7 @@ function fieldplot(
         colorrange = lims,
         # colorrange = extrema(levels),
         alpha,
-        isorange,
+        # isorange,
         # highclip = :red,
         # lowclip = :red,
         kwargs...,
