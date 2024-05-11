@@ -80,7 +80,7 @@ save_vtk(setup, state.u, state.t, "$output/solution")
 fieldplot(state; setup, fieldname = :pressure)
 
 # Plot velocity
-fieldplot(state; setup, fieldname = :velocity)
+fieldplot(state; setup, fieldname = :velocitynorm)
 
 # Plot vorticity
 fieldplot(state; setup, fieldname = :vorticity)

@@ -194,7 +194,7 @@ let
     fieldplot(
         o;
         setup,
-        # fieldname = :velocity,
+        # fieldname = :velocitynorm,
         # fieldname = 1,
     ) |> display
     for i = 1:length(field)

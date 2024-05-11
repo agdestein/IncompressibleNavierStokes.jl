@@ -127,7 +127,7 @@ fieldplot(state; setup, fieldname = :pressure)
 
 # Plot velocity. Note the time stamp used for computing boundary conditions, if
 # any.
-fieldplot(state; setup, fieldname = :velocity)
+fieldplot(state; setup, fieldname = :velocitynorm)
 
 # Plot vorticity
 fieldplot(state; setup, fieldname = :vorticity)

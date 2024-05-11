@@ -190,7 +190,7 @@ end
         nupdate = 1,
         dir = "output",
         filename = "solution",
-        fields = (:velocity, :pressure, :vorticity),
+        fields = (:velocity,),
     )
 
 Create processor that writes the solution every `nupdate` time steps to a VTK
@@ -202,7 +202,7 @@ vtk_writer(;
     nupdate = 1,
     dir = "output",
     filename = "solution",
-    fieldnames = (:velocity, :pressure),
+    fieldnames = (:velocity,),
     psolver = nothing,
 ) =
     processor((pvd, outerstate) -> vtk_save(pvd)) do outerstate

@@ -116,7 +116,7 @@ state, outputs = solve_unsteady(;
         rtp = realtimeplotter(;
             setup,
             # plot = fieldplot,
-            # fieldname = :velocity,
+            # fieldname = :velocitynorm,
             # fieldname = :pressure,
             nupdate = 1,
         ),
@@ -148,7 +148,7 @@ lines!.(boxes; color = :red);
 fig
 
 # Plot velocity
-fig = fieldplot(state; setup, fieldname = :velocity)
+fig = fieldplot(state; setup, fieldname = :velocitynorm)
 lines!.(boxes; color = :red);
 fig
 
