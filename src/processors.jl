@@ -173,7 +173,7 @@ function observefield(
         elseif fieldname == :temperature
             temp
         end
-        if _f isa Tuple 
+        if _f isa Tuple
             for (_f, f) in zip(_f, f)
                 copyto!(_f, view(f, Ip))
             end
@@ -216,7 +216,11 @@ vtk_writer(;
         f = map(fieldname -> observefield(state; setup, fieldname, psolver), fieldnames)
 
         # Only allocate z-component if there is a 2D vector field
-        z = any(f -> f[] isa Tuple && length(f[]) == 2, f) ? zero(state[].u[1][Ip]) : nothing
+        z = if any(f -> f[] isa Tuple && length(f[]) == 2, f)
+            zero(state[].u[1][Ip])
+        else
+            nothing
+        end
 
         # Update VTK file
         on(outerstate) do outerstate

@@ -58,7 +58,7 @@ plotgrid(y, z)
 ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x); psolver);
 (; xp) = setup.grid;
 ## T0(x, y, z) = 1 - z;
-T0(x, y, z) = 1 - z + max(sin(8 * x) * sinpi(4 * y) / 100, 0) ; ## Perturbation
+T0(x, y, z) = 1 - z + max(sin(8 * x) * sinpi(4 * y) / 100, 0); ## Perturbation
 tempstart = T0.(xp[1], reshape(xp[2], 1, :), reshape(xp[3], 1, 1, :));
 
 # Solve equation
@@ -86,7 +86,7 @@ state, outputs = solve_unsteady(;
             dir = joinpath(outdir, "RB3D_$n"),
             nupdate = 20,
             ## fieldnames = (:velocity, :temperature, :eig2field)
-            fieldnames = (:temperature,)
+            fieldnames = (:temperature,),
         ),
         log = timelogger(; nupdate = 1),
     ),
