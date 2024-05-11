@@ -211,7 +211,7 @@ vtk_writer(;
         D = dimension()
         ispath(dir) || mkpath(dir)
         pvd = paraview_collection(joinpath(dir, filename))
-        xparr = Array.(xp)
+        xparr = getindex.(Array.(xp), Ip.indices)
         state = Observable(outerstate[])
         f = map(fieldname -> observefield(state; setup, fieldname, psolver), fieldnames)
 
@@ -226,16 +226,19 @@ vtk_writer(;
             tformat = replace(string(t), "." => "p")
             vtk_grid("$(dir)/$(filename)_t=$tformat", xparr...) do vtk
                 for (fieldname, f) in zip(fieldnames, f)
-                    vtk[string(fieldname)] = if f[] isa Tuple && length(f[]) == 2
+                    field = if f[] isa Tuple && length(f[]) == 2
                         # ParaView prefers 3D vectors. Add zero z-component.
                         (f[]..., z)
                     else
                         f[]
                     end
+                    vtk[string(fieldname)] = field
                 end
                 pvd[t] = vtk
             end
         end
+        # Initial step
+        outerstate[] = outerstate[]
         pvd
     end
 

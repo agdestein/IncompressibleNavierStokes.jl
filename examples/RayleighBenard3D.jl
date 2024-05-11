@@ -31,8 +31,9 @@ temperature = temperature_equation(;
 
 # Setup
 n = 40
-x = tanh_grid(T(0), T(1), n, T(1.5))
-y = tanh_grid(T(0), T(1), n, T(1.5))
+x = LinRange(T(0), T(π), 2n)
+y = tanh_grid(T(0), T(1), n, T(1.2))
+z = tanh_grid(T(0), T(1), n, T(1.2))
 setup = Setup(
     x,
     y,
@@ -47,14 +48,17 @@ setup = Setup(
     ArrayType,
 );
 
+plotgrid(x, y)
+plotgrid(y, z)
+
 # This will factorize the Laplace matrix
 @time psolver = psolver_direct(setup)
 
 # Initial conditions
 ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x); psolver);
 (; xp) = setup.grid;
-## T0(x, y) = 1 - z;
-T0(x, y) = 1 - z + max(sinpi(3 * x) * sinpi(3 * y) / 1000, 0); ## Perturbation
+## T0(x, y, z) = 1 - z;
+T0(x, y, z) = 1 - z + max(sin(8 * x) * sinpi(4 * y) / 100, 0) ; ## Perturbation
 tempstart = T0.(xp[1], reshape(xp[2], 1, :), reshape(xp[3], 1, 1, :));
 
 # Solve equation
@@ -62,20 +66,27 @@ state, outputs = solve_unsteady(;
     setup,
     ustart,
     tempstart,
-    tlims = (T(0), T(10)),
+    tlims = (T(0), T(50)),
     method = RKMethods.RK33C2(; T),
     Δt = T(1e-2),
     psolver,
     processors = (;
         ## anim = animator(;
         ##     path = "$outdir/RB3D.mp4",
-        rtp = realtimeplotter(;
+        ## rtp = realtimeplotter(;
+        ##     setup,
+        ##     nupdate = 50,
+        ##     levels = LinRange(-T(5), T(1), 10),
+        ##     fieldname = :eig2field,
+        ##     ## levels = LinRange{T}(0, 1, 10),
+        ##     ## fieldname = :temperature,
+        ## ),
+        vtk = vtk_writer(;
             setup,
-            nupdate = 50,
-            levels = LinRange(-T(5), T(1), 10),
-            fieldname = :eig2field,
-            ## levels = LinRange{T}(0, 1, 10),
-            ## fieldname = :temperature,
+            dir = joinpath(outdir, "RB3D_$n"),
+            nupdate = 20,
+            ## fieldnames = (:velocity, :temperature, :eig2field)
+            fieldnames = (:temperature,)
         ),
         log = timelogger(; nupdate = 1),
     ),
