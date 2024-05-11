@@ -52,7 +52,7 @@ snapshot files using the `save_vtk` function, or the full time series using the
 
 IncompressibleNavierStokes also supports adding a temperature equation.
 
-https://github.com/agdestein/IncompressibleNavierStokes.jl/assets/40632532/e4894d97-d890-4d4a-a43a-8eb2772d5130
+https://github.com/agdestein/IncompressibleNavierStokes.jl/assets/40632532/a264054b-641f-4bd4-b25c-693b9794e41d
 
 ## Demo
 
