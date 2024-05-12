@@ -32,8 +32,9 @@ end</code></pre><pre class="documenter-example-output"><code class="nohighlight 
     state isa Observable || (state = Observable(state))
     (; x, Δ, Ip, Δu) = setup.grid
     T = eltype(Δ[1])
+    ix = Ip.indices[1]
     Ty = lift(state) do (; temp, t)
-        Ty = sum(temp[Ip.indices[1], :] .* Δ[1][Ip.indices[1]]; dims = 1)
+        Ty = sum(temp[ix, :] .* Δ[1][ix]; dims = 1) ./ sum(Δ[1][ix])
         Array(Ty)[:]
     end
     Ty0 = copy(Ty[])
@@ -47,8 +48,8 @@ end</code></pre><pre class="documenter-example-output"><code class="nohighlight 
     fig
 end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">averagetemp (generic function with 1 method)</code></pre><p>Instabilities should depend on the floating point precisision. Try both <code>Float32</code> and <code>Float64</code>.</p><pre><code class="language-julia hljs">T = Float32</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Float32</code></pre><p>Temperature equation setup.</p><pre><code class="language-julia hljs">temperature = temperature_equation(;
     Pr = T(0.71),
-    Ra = T(1e6),
-    Ge = T(0.1),
+    Ra = T(1e7),
+    Ge = T(1.0),
     dodissipation = true,
     boundary_conditions = (
         (SymmetricBC(), SymmetricBC()),
@@ -56,10 +57,10 @@ end</code></pre><pre class="documenter-example-output"><code class="nohighlight 
     ),
     gdir = 2,
     nondim_type = 1,
-)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(α1 = 0.000842615f0, α2 = 1.0f0, α3 = 8.42615f-5, α4 = 0.0011867817f0, γ = 10.0f0, dodissipation = true, boundary_conditions = ((SymmetricBC(), SymmetricBC()), (DirichletBC{Float32, Nothing}(1.0f0, nothing), DirichletBC{Float32, Nothing}(0.0f0, nothing))), gdir = 2)</code></pre><p>Grid</p><pre><code class="language-julia hljs">n = 50
-x = tanh_grid(T(0), T(1), n, T(1.2))
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(α1 = 0.00026645826f0, α2 = 1.0f0, α3 = 0.00026645826f0, α4 = 0.0003752933f0, γ = 1.0f0, dodissipation = true, boundary_conditions = ((SymmetricBC(), SymmetricBC()), (DirichletBC{Float32, Nothing}(1.0f0, nothing), DirichletBC{Float32, Nothing}(0.0f0, nothing))), gdir = 2)</code></pre><p>Grid</p><pre><code class="language-julia hljs">n = 50
+x = tanh_grid(T(0), T(2), 2n, T(1.2))
 y = tanh_grid(T(0), T(1), n, T(1.2))
-plotgrid(x, y)</code></pre><img src="a3007f53.png" alt="Example block output"/><p>Setup</p><pre><code class="language-julia hljs">setup = Setup(
+plotgrid(x, y)</code></pre><img src="9e30c96d.png" alt="Example block output"/><p>Setup</p><pre><code class="language-julia hljs">setup = Setup(
     x,
     y;
     boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
@@ -69,422 +70,633 @@ plotgrid(x, y)</code></pre><img src="a3007f53.png" alt="Example block output"/><
 );</code></pre><p>Initial conditions</p><pre><code class="language-julia hljs">ustart = create_initial_conditions(setup, (dim, x, y) -&gt; zero(x));
 (; xp) = setup.grid;
 # T0(x, y) = 1 - y;
-T0(x, y) = 1 - y + max(sinpi(3 * x) / 1000, 0); ## Perturbation
+# T0(x, y) = one(y) / 2;
+T0(x, y) = one(y) / 2 + max(sinpi(20 * x) / 100, 0); ## Perturbation
+# T0(x, y) = 1 - y + max(sinpi(20 * x) / 1000, 0); ## Perturbation
 tempstart = T0.(xp[1], xp[2]&#39;);</code></pre><p>Solve equation</p><pre><code class="language-julia hljs">state, outputs = solve_unsteady(;
     setup,
     ustart,
     tempstart,
-    tlims = (T(0), T(40)),
-    Δt = T(5e-3),
+    tlims = (T(0), T(12)),
+    Δt = T(1e-3),
     processors = (;
-        # rtp = realtimeplotter(;
-        #     setup,
-        #     nupdate = 50,
-        #     fieldname = :temperature,
-        #     colorrange = (T(0), T(1)),
-        #     size = (600, 500),
-        # ),
-        nusselt = realtimeplotter(; setup, plot = nusseltplot, nupdate = 100),
-        avg = realtimeplotter(; setup, plot = averagetemp, nupdate = 50),
+        rtp = realtimeplotter(;
+            setup,
+            fieldname = :temperature,
+            colorrange = (T(0), T(1)),
+            size = (600, 350),
+            colormap = :seaborn_icefire_gradient,
+            nupdate = 50,
+        ),
+        nusselt = realtimeplotter(;
+            setup,
+            plot = nusseltplot,
+            nupdate = 50,
+        ),
+        avg = realtimeplotter(;
+            setup,
+            plot = averagetemp,
+            nupdate = 50,
+        ),
         log = timelogger(; nupdate = 20),
     ),
-);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Iteration 20	t = 0.1
-Iteration 40	t = 0.2
-Iteration 60	t = 0.3
-Iteration 80	t = 0.4
-Iteration 100	t = 0.5
-Iteration 120	t = 0.6
-Iteration 140	t = 0.7
-Iteration 160	t = 0.799999
-Iteration 180	t = 0.899999
-Iteration 200	t = 0.999999
-Iteration 220	t = 1.1
-Iteration 240	t = 1.2
-Iteration 260	t = 1.3
-Iteration 280	t = 1.4
-Iteration 300	t = 1.5
-Iteration 320	t = 1.6
-Iteration 340	t = 1.7
-Iteration 360	t = 1.8
-Iteration 380	t = 1.9
-Iteration 400	t = 2
-Iteration 420	t = 2.1
-Iteration 440	t = 2.2
-Iteration 460	t = 2.30001
-Iteration 480	t = 2.40001
-Iteration 500	t = 2.50001
-Iteration 520	t = 2.60001
-Iteration 540	t = 2.70001
-Iteration 560	t = 2.80002
-Iteration 580	t = 2.90002
-Iteration 600	t = 3.00002
-Iteration 620	t = 3.10002
-Iteration 640	t = 3.20003
-Iteration 660	t = 3.30003
-Iteration 680	t = 3.40003
-Iteration 700	t = 3.50003
-Iteration 720	t = 3.60003
-Iteration 740	t = 3.70004
-Iteration 760	t = 3.80004
-Iteration 780	t = 3.90004
-Iteration 800	t = 4.00004
-Iteration 820	t = 4.10005
-Iteration 840	t = 4.20005
-Iteration 860	t = 4.30005
-Iteration 880	t = 4.40005
-Iteration 900	t = 4.50006
-Iteration 920	t = 4.60006
-Iteration 940	t = 4.70006
-Iteration 960	t = 4.80006
-Iteration 980	t = 4.90006
-Iteration 1000	t = 5.00007
-Iteration 1020	t = 5.10007
-Iteration 1040	t = 5.20007
-Iteration 1060	t = 5.30007
-Iteration 1080	t = 5.40008
-Iteration 1100	t = 5.50008
-Iteration 1120	t = 5.60008
-Iteration 1140	t = 5.70008
-Iteration 1160	t = 5.80009
-Iteration 1180	t = 5.90009
-Iteration 1200	t = 6.00009
-Iteration 1220	t = 6.10009
-Iteration 1240	t = 6.20009
-Iteration 1260	t = 6.3001
-Iteration 1280	t = 6.4001
-Iteration 1300	t = 6.5001
-Iteration 1320	t = 6.6001
-Iteration 1340	t = 6.70011
-Iteration 1360	t = 6.80011
-Iteration 1380	t = 6.90011
-Iteration 1400	t = 7.00011
-Iteration 1420	t = 7.10011
-Iteration 1440	t = 7.20012
-Iteration 1460	t = 7.30012
-Iteration 1480	t = 7.40012
-Iteration 1500	t = 7.50012
-Iteration 1520	t = 7.60013
-Iteration 1540	t = 7.70013
-Iteration 1560	t = 7.80013
-Iteration 1580	t = 7.90013
-Iteration 1600	t = 8.00014
-Iteration 1620	t = 8.10014
-Iteration 1640	t = 8.20014
-Iteration 1660	t = 8.30014
-Iteration 1680	t = 8.40014
-Iteration 1700	t = 8.50015
-Iteration 1720	t = 8.60015
-Iteration 1740	t = 8.70015
-Iteration 1760	t = 8.80015
-Iteration 1780	t = 8.90016
-Iteration 1800	t = 9.00016
-Iteration 1820	t = 9.10016
-Iteration 1840	t = 9.20016
-Iteration 1860	t = 9.30017
-Iteration 1880	t = 9.40017
-Iteration 1900	t = 9.50017
-Iteration 1920	t = 9.60017
-Iteration 1940	t = 9.70017
-Iteration 1960	t = 9.80018
-Iteration 1980	t = 9.90018
-Iteration 2000	t = 10.0002
-Iteration 2020	t = 10.1002
-Iteration 2040	t = 10.2002
-Iteration 2060	t = 10.3002
-Iteration 2080	t = 10.4002
-Iteration 2100	t = 10.5002
-Iteration 2120	t = 10.6002
-Iteration 2140	t = 10.7002
-Iteration 2160	t = 10.8002
-Iteration 2180	t = 10.9002
-Iteration 2200	t = 11.0002
-Iteration 2220	t = 11.1002
-Iteration 2240	t = 11.2002
-Iteration 2260	t = 11.3002
-Iteration 2280	t = 11.4002
-Iteration 2300	t = 11.5002
-Iteration 2320	t = 11.6002
-Iteration 2340	t = 11.7002
-Iteration 2360	t = 11.8002
-Iteration 2380	t = 11.9002
-Iteration 2400	t = 12.0002
-Iteration 2420	t = 12.1002
-Iteration 2440	t = 12.2002
-Iteration 2460	t = 12.3002
-Iteration 2480	t = 12.4002
-Iteration 2500	t = 12.5002
-Iteration 2520	t = 12.6002
-Iteration 2540	t = 12.7002
-Iteration 2560	t = 12.8002
-Iteration 2580	t = 12.9002
-Iteration 2600	t = 13.0002
-Iteration 2620	t = 13.1003
-Iteration 2640	t = 13.2003
-Iteration 2660	t = 13.3003
-Iteration 2680	t = 13.4003
-Iteration 2700	t = 13.5003
-Iteration 2720	t = 13.6003
-Iteration 2740	t = 13.7003
-Iteration 2760	t = 13.8003
-Iteration 2780	t = 13.9003
-Iteration 2800	t = 14.0003
-Iteration 2820	t = 14.1003
-Iteration 2840	t = 14.2003
-Iteration 2860	t = 14.3003
-Iteration 2880	t = 14.4003
-Iteration 2900	t = 14.5003
-Iteration 2920	t = 14.6003
-Iteration 2940	t = 14.7003
-Iteration 2960	t = 14.8003
-Iteration 2980	t = 14.9003
-Iteration 3000	t = 15.0003
-Iteration 3020	t = 15.1003
-Iteration 3040	t = 15.2003
-Iteration 3060	t = 15.3003
-Iteration 3080	t = 15.4003
-Iteration 3100	t = 15.5003
-Iteration 3120	t = 15.6003
-Iteration 3140	t = 15.7003
-Iteration 3160	t = 15.8003
-Iteration 3180	t = 15.9003
-Iteration 3200	t = 16.0003
-Iteration 3220	t = 16.1003
-Iteration 3240	t = 16.2003
-Iteration 3260	t = 16.3003
-Iteration 3280	t = 16.4003
-Iteration 3300	t = 16.5002
-Iteration 3320	t = 16.6002
-Iteration 3340	t = 16.7002
-Iteration 3360	t = 16.8002
-Iteration 3380	t = 16.9002
-Iteration 3400	t = 17.0002
-Iteration 3420	t = 17.1001
-Iteration 3440	t = 17.2001
-Iteration 3460	t = 17.3001
-Iteration 3480	t = 17.4001
-Iteration 3500	t = 17.5001
-Iteration 3520	t = 17.6
-Iteration 3540	t = 17.7
-Iteration 3560	t = 17.8
-Iteration 3580	t = 17.9
-Iteration 3600	t = 18
-Iteration 3620	t = 18.1
-Iteration 3640	t = 18.1999
-Iteration 3660	t = 18.2999
-Iteration 3680	t = 18.3999
-Iteration 3700	t = 18.4999
-Iteration 3720	t = 18.5999
-Iteration 3740	t = 18.6999
-Iteration 3760	t = 18.7998
-Iteration 3780	t = 18.8998
-Iteration 3800	t = 18.9998
-Iteration 3820	t = 19.0998
-Iteration 3840	t = 19.1998
-Iteration 3860	t = 19.2998
-Iteration 3880	t = 19.3997
-Iteration 3900	t = 19.4997
-Iteration 3920	t = 19.5997
-Iteration 3940	t = 19.6997
-Iteration 3960	t = 19.7997
-Iteration 3980	t = 19.8997
-Iteration 4000	t = 19.9996
-Iteration 4020	t = 20.0996
-Iteration 4040	t = 20.1996
-Iteration 4060	t = 20.2996
-Iteration 4080	t = 20.3996
-Iteration 4100	t = 20.4996
-Iteration 4120	t = 20.5995
-Iteration 4140	t = 20.6995
-Iteration 4160	t = 20.7995
-Iteration 4180	t = 20.8995
-Iteration 4200	t = 20.9995
-Iteration 4220	t = 21.0995
-Iteration 4240	t = 21.1994
-Iteration 4260	t = 21.2994
-Iteration 4280	t = 21.3994
-Iteration 4300	t = 21.4994
-Iteration 4320	t = 21.5994
-Iteration 4340	t = 21.6994
-Iteration 4360	t = 21.7993
-Iteration 4380	t = 21.8993
-Iteration 4400	t = 21.9993
-Iteration 4420	t = 22.0993
-Iteration 4440	t = 22.1993
-Iteration 4460	t = 22.2993
-Iteration 4480	t = 22.3992
-Iteration 4500	t = 22.4992
-Iteration 4520	t = 22.5992
-Iteration 4540	t = 22.6992
-Iteration 4560	t = 22.7992
-Iteration 4580	t = 22.8992
-Iteration 4600	t = 22.9991
-Iteration 4620	t = 23.0991
-Iteration 4640	t = 23.1991
-Iteration 4660	t = 23.2991
-Iteration 4680	t = 23.3991
-Iteration 4700	t = 23.4991
-Iteration 4720	t = 23.599
-Iteration 4740	t = 23.699
-Iteration 4760	t = 23.799
-Iteration 4780	t = 23.899
-Iteration 4800	t = 23.999
-Iteration 4820	t = 24.099
-Iteration 4840	t = 24.1989
-Iteration 4860	t = 24.2989
-Iteration 4880	t = 24.3989
-Iteration 4900	t = 24.4989
-Iteration 4920	t = 24.5989
-Iteration 4940	t = 24.6989
-Iteration 4960	t = 24.7988
-Iteration 4980	t = 24.8988
-Iteration 5000	t = 24.9988
-Iteration 5020	t = 25.0988
-Iteration 5040	t = 25.1988
-Iteration 5060	t = 25.2988
-Iteration 5080	t = 25.3987
-Iteration 5100	t = 25.4987
-Iteration 5120	t = 25.5987
-Iteration 5140	t = 25.6987
-Iteration 5160	t = 25.7987
-Iteration 5180	t = 25.8987
-Iteration 5200	t = 25.9986
-Iteration 5220	t = 26.0986
-Iteration 5240	t = 26.1986
-Iteration 5260	t = 26.2986
-Iteration 5280	t = 26.3986
-Iteration 5300	t = 26.4986
-Iteration 5320	t = 26.5985
-Iteration 5340	t = 26.6985
-Iteration 5360	t = 26.7985
-Iteration 5380	t = 26.8985
-Iteration 5400	t = 26.9985
-Iteration 5420	t = 27.0985
-Iteration 5440	t = 27.1984
-Iteration 5460	t = 27.2984
-Iteration 5480	t = 27.3984
-Iteration 5500	t = 27.4984
-Iteration 5520	t = 27.5984
-Iteration 5540	t = 27.6984
-Iteration 5560	t = 27.7983
-Iteration 5580	t = 27.8983
-Iteration 5600	t = 27.9983
-Iteration 5620	t = 28.0983
-Iteration 5640	t = 28.1983
-Iteration 5660	t = 28.2983
-Iteration 5680	t = 28.3982
-Iteration 5700	t = 28.4982
-Iteration 5720	t = 28.5982
-Iteration 5740	t = 28.6982
-Iteration 5760	t = 28.7982
-Iteration 5780	t = 28.8982
-Iteration 5800	t = 28.9981
-Iteration 5820	t = 29.0981
-Iteration 5840	t = 29.1981
-Iteration 5860	t = 29.2981
-Iteration 5880	t = 29.3981
-Iteration 5900	t = 29.4981
-Iteration 5920	t = 29.598
-Iteration 5940	t = 29.698
-Iteration 5960	t = 29.798
-Iteration 5980	t = 29.898
-Iteration 6000	t = 29.998
-Iteration 6020	t = 30.098
-Iteration 6040	t = 30.1979
-Iteration 6060	t = 30.2979
-Iteration 6080	t = 30.3979
-Iteration 6100	t = 30.4979
-Iteration 6120	t = 30.5979
-Iteration 6140	t = 30.6979
-Iteration 6160	t = 30.7978
-Iteration 6180	t = 30.8978
-Iteration 6200	t = 30.9978
-Iteration 6220	t = 31.0978
-Iteration 6240	t = 31.1978
-Iteration 6260	t = 31.2978
-Iteration 6280	t = 31.3977
-Iteration 6300	t = 31.4977
-Iteration 6320	t = 31.5977
-Iteration 6340	t = 31.6977
-Iteration 6360	t = 31.7977
-Iteration 6380	t = 31.8976
-Iteration 6400	t = 31.9976
-Iteration 6420	t = 32.0977
-Iteration 6440	t = 32.1977
-Iteration 6460	t = 32.2977
-Iteration 6480	t = 32.3977
-Iteration 6500	t = 32.4977
-Iteration 6520	t = 32.5978
-Iteration 6540	t = 32.6978
-Iteration 6560	t = 32.7978
-Iteration 6580	t = 32.8978
-Iteration 6600	t = 32.9978
-Iteration 6620	t = 33.0979
-Iteration 6640	t = 33.1979
-Iteration 6660	t = 33.2979
-Iteration 6680	t = 33.3979
-Iteration 6700	t = 33.498
-Iteration 6720	t = 33.598
-Iteration 6740	t = 33.698
-Iteration 6760	t = 33.798
-Iteration 6780	t = 33.898
-Iteration 6800	t = 33.9981
-Iteration 6820	t = 34.0981
-Iteration 6840	t = 34.1981
-Iteration 6860	t = 34.2981
-Iteration 6880	t = 34.3981
-Iteration 6900	t = 34.4982
-Iteration 6920	t = 34.5982
-Iteration 6940	t = 34.6982
-Iteration 6960	t = 34.7982
-Iteration 6980	t = 34.8983
-Iteration 7000	t = 34.9983
-Iteration 7020	t = 35.0983
-Iteration 7040	t = 35.1983
-Iteration 7060	t = 35.2983
-Iteration 7080	t = 35.3984
-Iteration 7100	t = 35.4984
-Iteration 7120	t = 35.5984
-Iteration 7140	t = 35.6984
-Iteration 7160	t = 35.7984
-Iteration 7180	t = 35.8985
-Iteration 7200	t = 35.9985
-Iteration 7220	t = 36.0985
-Iteration 7240	t = 36.1985
-Iteration 7260	t = 36.2985
-Iteration 7280	t = 36.3986
-Iteration 7300	t = 36.4986
-Iteration 7320	t = 36.5986
-Iteration 7340	t = 36.6986
-Iteration 7360	t = 36.7987
-Iteration 7380	t = 36.8987
-Iteration 7400	t = 36.9987
-Iteration 7420	t = 37.0987
-Iteration 7440	t = 37.1987
-Iteration 7460	t = 37.2988
-Iteration 7480	t = 37.3988
-Iteration 7500	t = 37.4988
-Iteration 7520	t = 37.5988
-Iteration 7540	t = 37.6988
-Iteration 7560	t = 37.7989
-Iteration 7580	t = 37.8989
-Iteration 7600	t = 37.9989
-Iteration 7620	t = 38.0989
-Iteration 7640	t = 38.199
-Iteration 7660	t = 38.299
-Iteration 7680	t = 38.399
-Iteration 7700	t = 38.499
-Iteration 7720	t = 38.599
-Iteration 7740	t = 38.6991
-Iteration 7760	t = 38.7991
-Iteration 7780	t = 38.8991
-Iteration 7800	t = 38.9991
-Iteration 7820	t = 39.0991
-Iteration 7840	t = 39.1992
-Iteration 7860	t = 39.2992
-Iteration 7880	t = 39.3992
-Iteration 7900	t = 39.4992
-Iteration 7920	t = 39.5993
-Iteration 7940	t = 39.6993
-Iteration 7960	t = 39.7993
-Iteration 7980	t = 39.8993
-Iteration 8000	t = 39.9993</code></pre><p>Field</p><pre><code class="language-julia hljs">fieldplot(state; setup, fieldname = :temperature)</code></pre><img src="d0e6faef.png" alt="Example block output"/><p>Nusselt numbers</p><pre><code class="language-julia hljs">outputs.nusselt</code></pre><img src="d5b841eb.png" alt="Example block output"/><p>Average temperature</p><pre><code class="language-julia hljs">outputs.avg</code></pre><img src="b1a350c2.png" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../DecayingTurbulence2D/">« Decaying Turbulunce (2D)</a><a class="docs-footer-nextpage" href="../../equations/ns/">Incompressible Navier-Stokes equations »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.1 on <span class="colophon-date" title="Saturday 11 May 2024 16:17">Saturday 11 May 2024</span>. Using Julia version 1.10.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Iteration 20	t = 0.02	umax = 0.000137594
+Iteration 40	t = 0.04	umax = 0.000266787
+Iteration 60	t = 0.06	umax = 0.000389567
+Iteration 80	t = 0.08	umax = 0.000505677
+Iteration 100	t = 0.1	umax = 0.000615403
+Iteration 120	t = 0.12	umax = 0.000719022
+Iteration 140	t = 0.14	umax = 0.000816794
+Iteration 160	t = 0.16	umax = 0.000908973
+Iteration 180	t = 0.18	umax = 0.000995799
+Iteration 200	t = 0.2	umax = 0.00107751
+Iteration 220	t = 0.22	umax = 0.00115488
+Iteration 240	t = 0.24	umax = 0.00123076
+Iteration 260	t = 0.26	umax = 0.00130367
+Iteration 280	t = 0.28	umax = 0.00137275
+Iteration 300	t = 0.3	umax = 0.00143814
+Iteration 320	t = 0.319999	umax = 0.00149998
+Iteration 340	t = 0.339999	umax = 0.00155841
+Iteration 360	t = 0.359999	umax = 0.00161352
+Iteration 380	t = 0.379999	umax = 0.00166547
+Iteration 400	t = 0.399998	umax = 0.00171436
+Iteration 420	t = 0.419998	umax = 0.0017603
+Iteration 440	t = 0.439998	umax = 0.00180341
+Iteration 460	t = 0.459998	umax = 0.00184377
+Iteration 480	t = 0.479997	umax = 0.00188151
+Iteration 500	t = 0.499997	umax = 0.00191673
+Iteration 520	t = 0.519997	umax = 0.00194949
+Iteration 540	t = 0.539997	umax = 0.00197991
+Iteration 560	t = 0.559996	umax = 0.00200809
+Iteration 580	t = 0.579996	umax = 0.00203409
+Iteration 600	t = 0.599996	umax = 0.002058
+Iteration 620	t = 0.619996	umax = 0.00207993
+Iteration 640	t = 0.639995	umax = 0.00209992
+Iteration 660	t = 0.659995	umax = 0.00211807
+Iteration 680	t = 0.679995	umax = 0.00213445
+Iteration 700	t = 0.699995	umax = 0.00214913
+Iteration 720	t = 0.719994	umax = 0.00216215
+Iteration 740	t = 0.739994	umax = 0.00217361
+Iteration 760	t = 0.759994	umax = 0.00218357
+Iteration 780	t = 0.779994	umax = 0.0021921
+Iteration 800	t = 0.799993	umax = 0.00219922
+Iteration 820	t = 0.819993	umax = 0.00220502
+Iteration 840	t = 0.839993	umax = 0.00220955
+Iteration 860	t = 0.859993	umax = 0.00221345
+Iteration 880	t = 0.879992	umax = 0.00222493
+Iteration 900	t = 0.899992	umax = 0.00223591
+Iteration 920	t = 0.919992	umax = 0.00224644
+Iteration 940	t = 0.939991	umax = 0.00225655
+Iteration 960	t = 0.959991	umax = 0.00226631
+Iteration 980	t = 0.979991	umax = 0.00227576
+Iteration 1000	t = 0.999991	umax = 0.00228809
+Iteration 1020	t = 1.01999	umax = 0.00230285
+Iteration 1040	t = 1.03999	umax = 0.00231756
+Iteration 1060	t = 1.05999	umax = 0.00233225
+Iteration 1080	t = 1.07999	umax = 0.00234697
+Iteration 1100	t = 1.1	umax = 0.00236173
+Iteration 1120	t = 1.12	umax = 0.00237655
+Iteration 1140	t = 1.14	umax = 0.00239146
+Iteration 1160	t = 1.16	umax = 0.00240648
+Iteration 1180	t = 1.18	umax = 0.00242162
+Iteration 1200	t = 1.2	umax = 0.00243691
+Iteration 1220	t = 1.22	umax = 0.00245237
+Iteration 1240	t = 1.24	umax = 0.002468
+Iteration 1260	t = 1.26	umax = 0.00248382
+Iteration 1280	t = 1.28	umax = 0.00249985
+Iteration 1300	t = 1.3	umax = 0.00251611
+Iteration 1320	t = 1.32001	umax = 0.00253259
+Iteration 1340	t = 1.34001	umax = 0.00254931
+Iteration 1360	t = 1.36001	umax = 0.0025663
+Iteration 1380	t = 1.38001	umax = 0.00258355
+Iteration 1400	t = 1.40001	umax = 0.00260107
+Iteration 1420	t = 1.42001	umax = 0.00261888
+Iteration 1440	t = 1.44001	umax = 0.00263698
+Iteration 1460	t = 1.46001	umax = 0.00265537
+Iteration 1480	t = 1.48001	umax = 0.00267407
+Iteration 1500	t = 1.50001	umax = 0.00269309
+Iteration 1520	t = 1.52002	umax = 0.00271242
+Iteration 1540	t = 1.54002	umax = 0.00273208
+Iteration 1560	t = 1.56002	umax = 0.00275207
+Iteration 1580	t = 1.58002	umax = 0.00277239
+Iteration 1600	t = 1.60002	umax = 0.00279306
+Iteration 1620	t = 1.62002	umax = 0.00281407
+Iteration 1640	t = 1.64002	umax = 0.00283543
+Iteration 1660	t = 1.66002	umax = 0.00285714
+Iteration 1680	t = 1.68002	umax = 0.00287921
+Iteration 1700	t = 1.70002	umax = 0.00290164
+Iteration 1720	t = 1.72002	umax = 0.00292444
+Iteration 1740	t = 1.74003	umax = 0.00294761
+Iteration 1760	t = 1.76003	umax = 0.00297115
+Iteration 1780	t = 1.78003	umax = 0.00299506
+Iteration 1800	t = 1.80003	umax = 0.00301935
+Iteration 1820	t = 1.82003	umax = 0.00304402
+Iteration 1840	t = 1.84003	umax = 0.00306908
+Iteration 1860	t = 1.86003	umax = 0.00309452
+Iteration 1880	t = 1.88003	umax = 0.00312332
+Iteration 1900	t = 1.90003	umax = 0.0031534
+Iteration 1920	t = 1.92003	umax = 0.00318396
+Iteration 1940	t = 1.94003	umax = 0.00321501
+Iteration 1960	t = 1.96004	umax = 0.00324654
+Iteration 1980	t = 1.98004	umax = 0.00327857
+Iteration 2000	t = 2.00004	umax = 0.00331109
+Iteration 2020	t = 2.02004	umax = 0.00334413
+Iteration 2040	t = 2.04003	umax = 0.00337767
+Iteration 2060	t = 2.06003	umax = 0.00341172
+Iteration 2080	t = 2.08003	umax = 0.0034463
+Iteration 2100	t = 2.10003	umax = 0.0034814
+Iteration 2120	t = 2.12003	umax = 0.00351703
+Iteration 2140	t = 2.14003	umax = 0.00355319
+Iteration 2160	t = 2.16003	umax = 0.00358989
+Iteration 2180	t = 2.18002	umax = 0.00362713
+Iteration 2200	t = 2.20002	umax = 0.00366493
+Iteration 2220	t = 2.22002	umax = 0.00370328
+Iteration 2240	t = 2.24002	umax = 0.0037422
+Iteration 2260	t = 2.26002	umax = 0.00378168
+Iteration 2280	t = 2.28002	umax = 0.00382173
+Iteration 2300	t = 2.30002	umax = 0.00386236
+Iteration 2320	t = 2.32001	umax = 0.00390357
+Iteration 2340	t = 2.34001	umax = 0.00394537
+Iteration 2360	t = 2.36001	umax = 0.00398777
+Iteration 2380	t = 2.38001	umax = 0.00403077
+Iteration 2400	t = 2.40001	umax = 0.00407437
+Iteration 2420	t = 2.42001	umax = 0.00411858
+Iteration 2440	t = 2.44001	umax = 0.00416341
+Iteration 2460	t = 2.46	umax = 0.00420886
+Iteration 2480	t = 2.48	umax = 0.00425495
+Iteration 2500	t = 2.5	umax = 0.00430166
+Iteration 2520	t = 2.52	umax = 0.00434902
+Iteration 2540	t = 2.54	umax = 0.00439703
+Iteration 2560	t = 2.56	umax = 0.00444569
+Iteration 2580	t = 2.58	umax = 0.00449501
+Iteration 2600	t = 2.59999	umax = 0.004545
+Iteration 2620	t = 2.61999	umax = 0.00459566
+Iteration 2640	t = 2.63999	umax = 0.00465316
+Iteration 2660	t = 2.65999	umax = 0.0047141
+Iteration 2680	t = 2.67999	umax = 0.00477598
+Iteration 2700	t = 2.69999	umax = 0.0048388
+Iteration 2720	t = 2.71999	umax = 0.00490259
+Iteration 2740	t = 2.73998	umax = 0.00496735
+Iteration 2760	t = 2.75998	umax = 0.0050331
+Iteration 2780	t = 2.77998	umax = 0.00509985
+Iteration 2800	t = 2.79998	umax = 0.00516762
+Iteration 2820	t = 2.81998	umax = 0.00523642
+Iteration 2840	t = 2.83998	umax = 0.00530626
+Iteration 2860	t = 2.85998	umax = 0.00537717
+Iteration 2880	t = 2.87997	umax = 0.00544915
+Iteration 2900	t = 2.89997	umax = 0.00552223
+Iteration 2920	t = 2.91997	umax = 0.0055964
+Iteration 2940	t = 2.93997	umax = 0.00567171
+Iteration 2960	t = 2.95997	umax = 0.00574815
+Iteration 2980	t = 2.97997	umax = 0.00582575
+Iteration 3000	t = 2.99996	umax = 0.00590452
+Iteration 3020	t = 3.01996	umax = 0.00598448
+Iteration 3040	t = 3.03996	umax = 0.00606565
+Iteration 3060	t = 3.05996	umax = 0.00614804
+Iteration 3080	t = 3.07996	umax = 0.00623167
+Iteration 3100	t = 3.09996	umax = 0.00631657
+Iteration 3120	t = 3.11996	umax = 0.00640274
+Iteration 3140	t = 3.13995	umax = 0.00649021
+Iteration 3160	t = 3.15995	umax = 0.00657899
+Iteration 3180	t = 3.17995	umax = 0.00666911
+Iteration 3200	t = 3.19995	umax = 0.00676058
+Iteration 3220	t = 3.21995	umax = 0.00685343
+Iteration 3240	t = 3.23995	umax = 0.0069482
+Iteration 3260	t = 3.25995	umax = 0.0070479
+Iteration 3280	t = 3.27994	umax = 0.00714903
+Iteration 3300	t = 3.29994	umax = 0.0072516
+Iteration 3320	t = 3.31994	umax = 0.00735563
+Iteration 3340	t = 3.33994	umax = 0.00746114
+Iteration 3360	t = 3.35994	umax = 0.00756816
+Iteration 3380	t = 3.37994	umax = 0.00767669
+Iteration 3400	t = 3.39994	umax = 0.00778676
+Iteration 3420	t = 3.41993	umax = 0.00789839
+Iteration 3440	t = 3.43993	umax = 0.0080116
+Iteration 3460	t = 3.45993	umax = 0.00812641
+Iteration 3480	t = 3.47993	umax = 0.00824283
+Iteration 3500	t = 3.49993	umax = 0.00836089
+Iteration 3520	t = 3.51993	umax = 0.00848061
+Iteration 3540	t = 3.53993	umax = 0.00860201
+Iteration 3560	t = 3.55992	umax = 0.0087251
+Iteration 3580	t = 3.57992	umax = 0.00884992
+Iteration 3600	t = 3.59992	umax = 0.00897648
+Iteration 3620	t = 3.61992	umax = 0.00910479
+Iteration 3640	t = 3.63992	umax = 0.0092349
+Iteration 3660	t = 3.65992	umax = 0.0093668
+Iteration 3680	t = 3.67992	umax = 0.00950054
+Iteration 3700	t = 3.69991	umax = 0.00963613
+Iteration 3720	t = 3.71991	umax = 0.00977358
+Iteration 3740	t = 3.73991	umax = 0.00991293
+Iteration 3760	t = 3.75991	umax = 0.0100542
+Iteration 3780	t = 3.77991	umax = 0.0101974
+Iteration 3800	t = 3.79991	umax = 0.0103425
+Iteration 3820	t = 3.81991	umax = 0.0104897
+Iteration 3840	t = 3.8399	umax = 0.0106388
+Iteration 3860	t = 3.8599	umax = 0.01079
+Iteration 3880	t = 3.8799	umax = 0.0109432
+Iteration 3900	t = 3.8999	umax = 0.0110985
+Iteration 3920	t = 3.9199	umax = 0.0112559
+Iteration 3940	t = 3.9399	umax = 0.0114154
+Iteration 3960	t = 3.9599	umax = 0.0115771
+Iteration 3980	t = 3.97989	umax = 0.0117409
+Iteration 4000	t = 3.99989	umax = 0.0119069
+Iteration 4020	t = 4.01989	umax = 0.0120751
+Iteration 4040	t = 4.03989	umax = 0.0122456
+Iteration 4060	t = 4.05989	umax = 0.0124183
+Iteration 4080	t = 4.07989	umax = 0.0125933
+Iteration 4100	t = 4.09989	umax = 0.0127706
+Iteration 4120	t = 4.11988	umax = 0.0129502
+Iteration 4140	t = 4.13988	umax = 0.0131322
+Iteration 4160	t = 4.15988	umax = 0.0133165
+Iteration 4180	t = 4.17988	umax = 0.0135033
+Iteration 4200	t = 4.19988	umax = 0.0136925
+Iteration 4220	t = 4.21988	umax = 0.0138841
+Iteration 4240	t = 4.23988	umax = 0.0140782
+Iteration 4260	t = 4.25987	umax = 0.0142747
+Iteration 4280	t = 4.27987	umax = 0.0144738
+Iteration 4300	t = 4.29987	umax = 0.0146754
+Iteration 4320	t = 4.31987	umax = 0.0148795
+Iteration 4340	t = 4.33987	umax = 0.0150862
+Iteration 4360	t = 4.35987	umax = 0.0152956
+Iteration 4380	t = 4.37987	umax = 0.0155075
+Iteration 4400	t = 4.39986	umax = 0.015722
+Iteration 4420	t = 4.41986	umax = 0.0159392
+Iteration 4440	t = 4.43986	umax = 0.0161591
+Iteration 4460	t = 4.45986	umax = 0.0163817
+Iteration 4480	t = 4.47986	umax = 0.016607
+Iteration 4500	t = 4.49986	umax = 0.016835
+Iteration 4520	t = 4.51986	umax = 0.0170657
+Iteration 4540	t = 4.53985	umax = 0.0173011
+Iteration 4560	t = 4.55985	umax = 0.0175596
+Iteration 4580	t = 4.57985	umax = 0.0178217
+Iteration 4600	t = 4.59985	umax = 0.0180874
+Iteration 4620	t = 4.61985	umax = 0.0183567
+Iteration 4640	t = 4.63985	umax = 0.0186298
+Iteration 4660	t = 4.65984	umax = 0.0189065
+Iteration 4680	t = 4.67984	umax = 0.019187
+Iteration 4700	t = 4.69984	umax = 0.0194712
+Iteration 4720	t = 4.71984	umax = 0.0197593
+Iteration 4740	t = 4.73984	umax = 0.0200512
+Iteration 4760	t = 4.75984	umax = 0.020347
+Iteration 4780	t = 4.77984	umax = 0.0206466
+Iteration 4800	t = 4.79983	umax = 0.0209502
+Iteration 4820	t = 4.81983	umax = 0.0212577
+Iteration 4840	t = 4.83983	umax = 0.0215691
+Iteration 4860	t = 4.85983	umax = 0.0218845
+Iteration 4880	t = 4.87983	umax = 0.022204
+Iteration 4900	t = 4.89983	umax = 0.0225274
+Iteration 4920	t = 4.91983	umax = 0.0228549
+Iteration 4940	t = 4.93982	umax = 0.0231864
+Iteration 4960	t = 4.95982	umax = 0.023522
+Iteration 4980	t = 4.97982	umax = 0.0238617
+Iteration 5000	t = 4.99982	umax = 0.0242054
+Iteration 5020	t = 5.01982	umax = 0.0245533
+Iteration 5040	t = 5.03982	umax = 0.0249052
+Iteration 5060	t = 5.05982	umax = 0.0252613
+Iteration 5080	t = 5.07981	umax = 0.0256214
+Iteration 5100	t = 5.09981	umax = 0.0259857
+Iteration 5120	t = 5.11981	umax = 0.026354
+Iteration 5140	t = 5.13981	umax = 0.0267264
+Iteration 5160	t = 5.15981	umax = 0.0271029
+Iteration 5180	t = 5.17981	umax = 0.0274886
+Iteration 5200	t = 5.19981	umax = 0.0279012
+Iteration 5220	t = 5.2198	umax = 0.0283193
+Iteration 5240	t = 5.2398	umax = 0.0287429
+Iteration 5260	t = 5.2598	umax = 0.029172
+Iteration 5280	t = 5.2798	umax = 0.0296066
+Iteration 5300	t = 5.2998	umax = 0.0300467
+Iteration 5320	t = 5.3198	umax = 0.0304924
+Iteration 5340	t = 5.3398	umax = 0.0309437
+Iteration 5360	t = 5.35979	umax = 0.0314006
+Iteration 5380	t = 5.37979	umax = 0.031863
+Iteration 5400	t = 5.39979	umax = 0.0323309
+Iteration 5420	t = 5.41979	umax = 0.0328044
+Iteration 5440	t = 5.43979	umax = 0.0332835
+Iteration 5460	t = 5.45979	umax = 0.0337681
+Iteration 5480	t = 5.47979	umax = 0.0342582
+Iteration 5500	t = 5.49978	umax = 0.0347538
+Iteration 5520	t = 5.51978	umax = 0.0352549
+Iteration 5540	t = 5.53978	umax = 0.0357613
+Iteration 5560	t = 5.55978	umax = 0.0362732
+Iteration 5580	t = 5.57978	umax = 0.0367904
+Iteration 5600	t = 5.59978	umax = 0.0373129
+Iteration 5620	t = 5.61978	umax = 0.0378406
+Iteration 5640	t = 5.63977	umax = 0.0383735
+Iteration 5660	t = 5.65977	umax = 0.0389115
+Iteration 5680	t = 5.67977	umax = 0.0394545
+Iteration 5700	t = 5.69977	umax = 0.0400024
+Iteration 5720	t = 5.71977	umax = 0.0405552
+Iteration 5740	t = 5.73977	umax = 0.0411128
+Iteration 5760	t = 5.75977	umax = 0.0416751
+Iteration 5780	t = 5.77976	umax = 0.0422419
+Iteration 5800	t = 5.79976	umax = 0.0428131
+Iteration 5820	t = 5.81976	umax = 0.0433949
+Iteration 5840	t = 5.83976	umax = 0.0440699
+Iteration 5860	t = 5.85976	umax = 0.0447519
+Iteration 5880	t = 5.87976	umax = 0.0454409
+Iteration 5900	t = 5.89976	umax = 0.0461368
+Iteration 5920	t = 5.91975	umax = 0.0468393
+Iteration 5940	t = 5.93975	umax = 0.0475485
+Iteration 5960	t = 5.95975	umax = 0.0482639
+Iteration 5980	t = 5.97975	umax = 0.0489856
+Iteration 6000	t = 5.99975	umax = 0.0497132
+Iteration 6020	t = 6.01975	umax = 0.0504466
+Iteration 6040	t = 6.03974	umax = 0.0511855
+Iteration 6060	t = 6.05974	umax = 0.0519297
+Iteration 6080	t = 6.07974	umax = 0.052679
+Iteration 6100	t = 6.09974	umax = 0.053433
+Iteration 6120	t = 6.11974	umax = 0.0541915
+Iteration 6140	t = 6.13974	umax = 0.0549543
+Iteration 6160	t = 6.15974	umax = 0.0557209
+Iteration 6180	t = 6.17973	umax = 0.0564911
+Iteration 6200	t = 6.19973	umax = 0.0572645
+Iteration 6220	t = 6.21973	umax = 0.0580409
+Iteration 6240	t = 6.23973	umax = 0.0588198
+Iteration 6260	t = 6.25973	umax = 0.0596009
+Iteration 6280	t = 6.27973	umax = 0.0603838
+Iteration 6300	t = 6.29973	umax = 0.0611681
+Iteration 6320	t = 6.31972	umax = 0.0619534
+Iteration 6340	t = 6.33972	umax = 0.0627394
+Iteration 6360	t = 6.35972	umax = 0.0635256
+Iteration 6380	t = 6.37972	umax = 0.0643117
+Iteration 6400	t = 6.39972	umax = 0.0650971
+Iteration 6420	t = 6.41972	umax = 0.0658815
+Iteration 6440	t = 6.43972	umax = 0.0666644
+Iteration 6460	t = 6.45971	umax = 0.0674454
+Iteration 6480	t = 6.47971	umax = 0.0682242
+Iteration 6500	t = 6.49971	umax = 0.0690151
+Iteration 6520	t = 6.51971	umax = 0.0699995
+Iteration 6540	t = 6.53971	umax = 0.0709837
+Iteration 6560	t = 6.55971	umax = 0.0719669
+Iteration 6580	t = 6.57971	umax = 0.0729484
+Iteration 6600	t = 6.5997	umax = 0.0739275
+Iteration 6620	t = 6.6197	umax = 0.0749035
+Iteration 6640	t = 6.6397	umax = 0.0758756
+Iteration 6660	t = 6.6597	umax = 0.076843
+Iteration 6680	t = 6.6797	umax = 0.077805
+Iteration 6700	t = 6.6997	umax = 0.078761
+Iteration 6720	t = 6.7197	umax = 0.0797101
+Iteration 6740	t = 6.73969	umax = 0.0806517
+Iteration 6760	t = 6.75969	umax = 0.081585
+Iteration 6780	t = 6.77969	umax = 0.0825095
+Iteration 6800	t = 6.79969	umax = 0.0834244
+Iteration 6820	t = 6.81969	umax = 0.0843292
+Iteration 6840	t = 6.83969	umax = 0.0852232
+Iteration 6860	t = 6.85969	umax = 0.086106
+Iteration 6880	t = 6.87968	umax = 0.086977
+Iteration 6900	t = 6.89968	umax = 0.0878357
+Iteration 6920	t = 6.91968	umax = 0.0886817
+Iteration 6940	t = 6.93968	umax = 0.0895147
+Iteration 6960	t = 6.95968	umax = 0.090568
+Iteration 6980	t = 6.97968	umax = 0.0916967
+Iteration 7000	t = 6.99968	umax = 0.0928086
+Iteration 7020	t = 7.01967	umax = 0.0939026
+Iteration 7040	t = 7.03967	umax = 0.0949777
+Iteration 7060	t = 7.05967	umax = 0.0960328
+Iteration 7080	t = 7.07967	umax = 0.0970673
+Iteration 7100	t = 7.09967	umax = 0.0980802
+Iteration 7120	t = 7.11967	umax = 0.099071
+Iteration 7140	t = 7.13967	umax = 0.100039
+Iteration 7160	t = 7.15966	umax = 0.100984
+Iteration 7180	t = 7.17966	umax = 0.101905
+Iteration 7200	t = 7.19966	umax = 0.102802
+Iteration 7220	t = 7.21966	umax = 0.103675
+Iteration 7240	t = 7.23966	umax = 0.104525
+Iteration 7260	t = 7.25966	umax = 0.10535
+Iteration 7280	t = 7.27965	umax = 0.106152
+Iteration 7300	t = 7.29965	umax = 0.106931
+Iteration 7320	t = 7.31965	umax = 0.108093
+Iteration 7340	t = 7.33965	umax = 0.109227
+Iteration 7360	t = 7.35965	umax = 0.110321
+Iteration 7380	t = 7.37965	umax = 0.111375
+Iteration 7400	t = 7.39965	umax = 0.112389
+Iteration 7420	t = 7.41964	umax = 0.113362
+Iteration 7440	t = 7.43964	umax = 0.114296
+Iteration 7460	t = 7.45964	umax = 0.115188
+Iteration 7480	t = 7.47964	umax = 0.116041
+Iteration 7500	t = 7.49964	umax = 0.116855
+Iteration 7520	t = 7.51964	umax = 0.11763
+Iteration 7540	t = 7.53964	umax = 0.118368
+Iteration 7560	t = 7.55963	umax = 0.119071
+Iteration 7580	t = 7.57963	umax = 0.119739
+Iteration 7600	t = 7.59963	umax = 0.120885
+Iteration 7620	t = 7.61963	umax = 0.122319
+Iteration 7640	t = 7.63963	umax = 0.123716
+Iteration 7660	t = 7.65963	umax = 0.125075
+Iteration 7680	t = 7.67963	umax = 0.126397
+Iteration 7700	t = 7.69962	umax = 0.127684
+Iteration 7720	t = 7.71962	umax = 0.128938
+Iteration 7740	t = 7.73962	umax = 0.130159
+Iteration 7760	t = 7.75962	umax = 0.13135
+Iteration 7780	t = 7.77962	umax = 0.132514
+Iteration 7800	t = 7.79962	umax = 0.133652
+Iteration 7820	t = 7.81962	umax = 0.134768
+Iteration 7840	t = 7.83961	umax = 0.135865
+Iteration 7860	t = 7.85961	umax = 0.137521
+Iteration 7880	t = 7.87961	umax = 0.139134
+Iteration 7900	t = 7.89961	umax = 0.14068
+Iteration 7920	t = 7.91961	umax = 0.142159
+Iteration 7940	t = 7.93961	umax = 0.143575
+Iteration 7960	t = 7.95961	umax = 0.144928
+Iteration 7980	t = 7.9796	umax = 0.146224
+Iteration 8000	t = 7.9996	umax = 0.147467
+Iteration 8020	t = 8.01961	umax = 0.148661
+Iteration 8040	t = 8.03962	umax = 0.149812
+Iteration 8060	t = 8.05963	umax = 0.150926
+Iteration 8080	t = 8.07963	umax = 0.152008
+Iteration 8100	t = 8.09964	umax = 0.153064
+Iteration 8120	t = 8.11965	umax = 0.154615
+Iteration 8140	t = 8.13966	umax = 0.156253
+Iteration 8160	t = 8.15967	umax = 0.157775
+Iteration 8180	t = 8.17968	umax = 0.159185
+Iteration 8200	t = 8.19968	umax = 0.160489
+Iteration 8220	t = 8.21969	umax = 0.161692
+Iteration 8240	t = 8.2397	umax = 0.162803
+Iteration 8260	t = 8.25971	umax = 0.163831
+Iteration 8280	t = 8.27972	umax = 0.164787
+Iteration 8300	t = 8.29972	umax = 0.165748
+Iteration 8320	t = 8.31973	umax = 0.167978
+Iteration 8340	t = 8.33974	umax = 0.170093
+Iteration 8360	t = 8.35975	umax = 0.172096
+Iteration 8380	t = 8.37976	umax = 0.17399
+Iteration 8400	t = 8.39976	umax = 0.175778
+Iteration 8420	t = 8.41977	umax = 0.177466
+Iteration 8440	t = 8.43978	umax = 0.17906
+Iteration 8460	t = 8.45979	umax = 0.180563
+Iteration 8480	t = 8.4798	umax = 0.181981
+Iteration 8500	t = 8.4998	umax = 0.183318
+Iteration 8520	t = 8.51981	umax = 0.185319
+Iteration 8540	t = 8.53982	umax = 0.187316
+Iteration 8560	t = 8.55983	umax = 0.189168
+Iteration 8580	t = 8.57984	umax = 0.190885
+Iteration 8600	t = 8.59984	umax = 0.192477
+Iteration 8620	t = 8.61985	umax = 0.193954
+Iteration 8640	t = 8.63986	umax = 0.195326
+Iteration 8660	t = 8.65987	umax = 0.196604
+Iteration 8680	t = 8.67988	umax = 0.197796
+Iteration 8700	t = 8.69989	umax = 0.198908
+Iteration 8720	t = 8.71989	umax = 0.199946
+Iteration 8740	t = 8.7399	umax = 0.200914
+Iteration 8760	t = 8.75991	umax = 0.201814
+Iteration 8780	t = 8.77992	umax = 0.202644
+Iteration 8800	t = 8.79993	umax = 0.203404
+Iteration 8820	t = 8.81993	umax = 0.20409
+Iteration 8840	t = 8.83994	umax = 0.204696
+Iteration 8860	t = 8.85995	umax = 0.205319
+Iteration 8880	t = 8.87996	umax = 0.206186
+Iteration 8900	t = 8.89997	umax = 0.206971
+Iteration 8920	t = 8.91997	umax = 0.207681
+Iteration 8940	t = 8.93998	umax = 0.208638
+Iteration 8960	t = 8.95999	umax = 0.210477
+Iteration 8980	t = 8.98	umax = 0.212195
+Iteration 9000	t = 9.00001	umax = 0.213785
+Iteration 9020	t = 9.02001	umax = 0.215669
+Iteration 9040	t = 9.04002	umax = 0.218251
+Iteration 9060	t = 9.06003	umax = 0.220704
+Iteration 9080	t = 9.08004	umax = 0.223023
+Iteration 9100	t = 9.10005	umax = 0.225204
+Iteration 9120	t = 9.12006	umax = 0.22724
+Iteration 9140	t = 9.14006	umax = 0.229128
+Iteration 9160	t = 9.16007	umax = 0.230862
+Iteration 9180	t = 9.18008	umax = 0.232437
+Iteration 9200	t = 9.20009	umax = 0.233849
+Iteration 9220	t = 9.2201	umax = 0.235092
+Iteration 9240	t = 9.2401	umax = 0.236162
+Iteration 9260	t = 9.26011	umax = 0.237524
+Iteration 9280	t = 9.28012	umax = 0.239758
+Iteration 9300	t = 9.30013	umax = 0.241819
+Iteration 9320	t = 9.32014	umax = 0.243702
+Iteration 9340	t = 9.34014	umax = 0.245403
+Iteration 9360	t = 9.36015	umax = 0.246916
+Iteration 9380	t = 9.38016	umax = 0.248236
+Iteration 9400	t = 9.40017	umax = 0.249359
+Iteration 9420	t = 9.42018	umax = 0.250279
+Iteration 9440	t = 9.44018	umax = 0.250993
+Iteration 9460	t = 9.46019	umax = 0.251499
+Iteration 9480	t = 9.4802	umax = 0.251794
+Iteration 9500	t = 9.50021	umax = 0.253627
+Iteration 9520	t = 9.52022	umax = 0.255278
+Iteration 9540	t = 9.54023	umax = 0.256718
+Iteration 9560	t = 9.56023	umax = 0.257943
+Iteration 9580	t = 9.58024	umax = 0.258947
+Iteration 9600	t = 9.60025	umax = 0.259724
+Iteration 9620	t = 9.62026	umax = 0.260272
+Iteration 9640	t = 9.64027	umax = 0.260586
+Iteration 9660	t = 9.66027	umax = 0.260665
+Iteration 9680	t = 9.68028	umax = 0.260508
+Iteration 9700	t = 9.70029	umax = 0.260294
+Iteration 9720	t = 9.7203	umax = 0.261679
+Iteration 9740	t = 9.74031	umax = 0.262834
+Iteration 9760	t = 9.76031	umax = 0.263755
+Iteration 9780	t = 9.78032	umax = 0.264435
+Iteration 9800	t = 9.80033	umax = 0.264871
+Iteration 9820	t = 9.82034	umax = 0.265057
+Iteration 9840	t = 9.84035	umax = 0.26499
+Iteration 9860	t = 9.86035	umax = 0.265668
+Iteration 9880	t = 9.88036	umax = 0.267573
+Iteration 9900	t = 9.90037	umax = 0.269405
+Iteration 9920	t = 9.92038	umax = 0.271163
+Iteration 9940	t = 9.94039	umax = 0.27285
+Iteration 9960	t = 9.96039	umax = 0.274466
+Iteration 9980	t = 9.9804	umax = 0.276013
+Iteration 10000	t = 10.0004	umax = 0.277492
+Iteration 10020	t = 10.0204	umax = 0.278903
+Iteration 10040	t = 10.0404	umax = 0.280247
+Iteration 10060	t = 10.0604	umax = 0.281523
+Iteration 10080	t = 10.0804	umax = 0.282732
+Iteration 10100	t = 10.1005	umax = 0.283871
+Iteration 10120	t = 10.1205	umax = 0.284938
+Iteration 10140	t = 10.1405	umax = 0.28593
+Iteration 10160	t = 10.1605	umax = 0.287447
+Iteration 10180	t = 10.1805	umax = 0.288903
+Iteration 10200	t = 10.2005	umax = 0.29024
+Iteration 10220	t = 10.2205	umax = 0.291456
+Iteration 10240	t = 10.2405	umax = 0.292554
+Iteration 10260	t = 10.2605	umax = 0.293532
+Iteration 10280	t = 10.2805	umax = 0.294391
+Iteration 10300	t = 10.3005	umax = 0.295132
+Iteration 10320	t = 10.3205	umax = 0.295756
+Iteration 10340	t = 10.3405	umax = 0.296262
+Iteration 10360	t = 10.3606	umax = 0.296651
+Iteration 10380	t = 10.3806	umax = 0.297459
+Iteration 10400	t = 10.4006	umax = 0.298596
+Iteration 10420	t = 10.4206	umax = 0.299564
+Iteration 10440	t = 10.4406	umax = 0.300363
+Iteration 10460	t = 10.4606	umax = 0.300993
+Iteration 10480	t = 10.4806	umax = 0.301457
+Iteration 10500	t = 10.5006	umax = 0.301757
+Iteration 10520	t = 10.5206	umax = 0.301896
+Iteration 10540	t = 10.5406	umax = 0.301879
+Iteration 10560	t = 10.5606	umax = 0.30171
+Iteration 10580	t = 10.5806	umax = 0.302091
+Iteration 10600	t = 10.6007	umax = 0.302746
+Iteration 10620	t = 10.6207	umax = 0.303544
+Iteration 10640	t = 10.6407	umax = 0.304641
+Iteration 10660	t = 10.6607	umax = 0.306178
+Iteration 10680	t = 10.6807	umax = 0.307467
+Iteration 10700	t = 10.7007	umax = 0.308527
+Iteration 10720	t = 10.7207	umax = 0.309382
+Iteration 10740	t = 10.7407	umax = 0.310053
+Iteration 10760	t = 10.7607	umax = 0.310563
+Iteration 10780	t = 10.7807	umax = 0.310935
+Iteration 10800	t = 10.8007	umax = 0.311189
+Iteration 10820	t = 10.8207	umax = 0.311341
+Iteration 10840	t = 10.8408	umax = 0.311845
+Iteration 10860	t = 10.8608	umax = 0.313142
+Iteration 10880	t = 10.8808	umax = 0.314248
+Iteration 10900	t = 10.9008	umax = 0.315736
+Iteration 10920	t = 10.9208	umax = 0.31868
+Iteration 10940	t = 10.9408	umax = 0.321459
+Iteration 10960	t = 10.9608	umax = 0.324053
+Iteration 10980	t = 10.9808	umax = 0.326438
+Iteration 11000	t = 11.0008	umax = 0.328588
+Iteration 11020	t = 11.0208	umax = 0.330478
+Iteration 11040	t = 11.0408	umax = 0.332082
+Iteration 11060	t = 11.0608	umax = 0.334326
+Iteration 11080	t = 11.0808	umax = 0.337345
+Iteration 11100	t = 11.1009	umax = 0.340087
+Iteration 11120	t = 11.1209	umax = 0.342515
+Iteration 11140	t = 11.1409	umax = 0.344593
+Iteration 11160	t = 11.1609	umax = 0.34629
+Iteration 11180	t = 11.1809	umax = 0.347579
+Iteration 11200	t = 11.2009	umax = 0.34844
+Iteration 11220	t = 11.2209	umax = 0.34886
+Iteration 11240	t = 11.2409	umax = 0.349092
+Iteration 11260	t = 11.2609	umax = 0.351512
+Iteration 11280	t = 11.2809	umax = 0.353506
+Iteration 11300	t = 11.3009	umax = 0.355042
+Iteration 11320	t = 11.3209	umax = 0.356097
+Iteration 11340	t = 11.341	umax = 0.356658
+Iteration 11360	t = 11.361	umax = 0.356722
+Iteration 11380	t = 11.381	umax = 0.356294
+Iteration 11400	t = 11.401	umax = 0.355389
+Iteration 11420	t = 11.421	umax = 0.354706
+Iteration 11440	t = 11.441	umax = 0.356188
+Iteration 11460	t = 11.461	umax = 0.357191
+Iteration 11480	t = 11.481	umax = 0.357706
+Iteration 11500	t = 11.501	umax = 0.357732
+Iteration 11520	t = 11.521	umax = 0.357278
+Iteration 11540	t = 11.541	umax = 0.356359
+Iteration 11560	t = 11.561	umax = 0.354999
+Iteration 11580	t = 11.581	umax = 0.353225
+Iteration 11600	t = 11.6011	umax = 0.351067
+Iteration 11620	t = 11.6211	umax = 0.351686
+Iteration 11640	t = 11.6411	umax = 0.351987
+Iteration 11660	t = 11.6611	umax = 0.351873
+Iteration 11680	t = 11.6811	umax = 0.351354
+Iteration 11700	t = 11.7011	umax = 0.350441
+Iteration 11720	t = 11.7211	umax = 0.349152
+Iteration 11740	t = 11.7411	umax = 0.347506
+Iteration 11760	t = 11.7611	umax = 0.345523
+Iteration 11780	t = 11.7811	umax = 0.343228
+Iteration 11800	t = 11.8011	umax = 0.340643
+Iteration 11820	t = 11.8211	umax = 0.33949
+Iteration 11840	t = 11.8412	umax = 0.339311
+Iteration 11860	t = 11.8612	umax = 0.338831
+Iteration 11880	t = 11.8812	umax = 0.339943
+Iteration 11900	t = 11.9012	umax = 0.341119
+Iteration 11920	t = 11.9212	umax = 0.342076
+Iteration 11940	t = 11.9412	umax = 0.342806
+Iteration 11960	t = 11.9612	umax = 0.343305
+Iteration 11980	t = 11.9812	umax = 0.343572
+Iteration 12000	t = 12.0012	umax = 0.343607</code></pre><p>Field</p><pre><code class="language-julia hljs">outputs.rtp</code></pre><img src="8c79d2dd.png" alt="Example block output"/><p>Nusselt numbers</p><pre><code class="language-julia hljs">outputs.nusselt</code></pre><img src="34714104.png" alt="Example block output"/><p>Average temperature</p><pre><code class="language-julia hljs">outputs.avg</code></pre><img src="5bb933fd.png" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../DecayingTurbulence2D/">« Decaying Turbulunce (2D)</a><a class="docs-footer-nextpage" href="../../equations/ns/">Incompressible Navier-Stokes equations »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.1 on <span class="colophon-date" title="Sunday 12 May 2024 09:23">Sunday 12 May 2024</span>. Using Julia version 1.10.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
