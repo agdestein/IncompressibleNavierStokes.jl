@@ -1,13 +1,13 @@
 """
-    IncompressibleNavierStokesCUDAExt
+    IncompressibleNavierStokesCUDSSExt
 
-CUDA extension for IncompressibleNavierStokes.
+CUDSS extension for IncompressibleNavierStokes.
 """
-module IncompressibleNavierStokesCUDAExt
+module IncompressibleNavierStokesCUDSSExt
 
-using CUDA
-using CUDA.CUSPARSE
 using CUDSS
+using CUDSS.CUDA
+using CUDSS.CUDA.CUSPARSE
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: PressureBC, laplacian_mat
 using SparseArrays
