@@ -310,15 +310,25 @@ animator(;
         plot = fieldplot,
         nupdate = 1,
         displayfig = true,
+        screen = nothing,
         displayupdates = false,
         sleeptime = nothing,
         kwargs...,
     )
 
-Processor for plotting the solution every `nupdate` time step.
+Processor for plotting the solution in real time.
 
-The `sleeptime` is slept at every update, to give Makie time to update the
-plot. Set this to `nothing` to skip sleeping.
+Keyword arguments:
+
+- `plot`: Plot function.
+- `nupdate`: Show solution every `nupdate` time step.
+- `displayfig`: Display the figure at the start.
+- `screen`: If `nothing`, use default display.
+    If `GLMakie.screen()` multiple plots can be displayed in separate
+    windows like in MATLAB (see also `GLMakie.closeall()`).
+- `displayupdates`: Display the figure at every update (if using CairoMakie).
+- `sleeptime`: The `sleeptime` is slept at every update, to give Makie
+    time to update the plot. Set this to `nothing` to skip sleeping.
 
 Additional `kwargs` are passed to the `plot` function.
 """
@@ -327,6 +337,7 @@ realtimeplotter(;
     plot = fieldplot,
     nupdate = 1,
     displayfig = true,
+    screen = nothing,
     displayupdates = false,
     sleeptime = nothing,
     kwargs...,
@@ -334,7 +345,8 @@ realtimeplotter(;
     processor() do outerstate
         state = Observable(outerstate[])
         fig = plot(state; setup, kwargs...)
-        displayfig && display(fig)
+        displayfig && isnothing(screen) && display(fig)
+        displayfig && !isnothing(screen) && display(screen, fig)
         on(outerstate) do outerstate
             outerstate.n % nupdate == 0 || return
             state[] = outerstate

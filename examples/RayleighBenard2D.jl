@@ -42,8 +42,9 @@ function averagetemp(state; setup)
     state isa Observable || (state = Observable(state))
     (; x, Δ, Ip, Δu) = setup.grid
     T = eltype(Δ[1])
+    ix = Ip.indices[1]
     Ty = lift(state) do (; temp, t)
-        Ty = sum(temp[Ip.indices[1], :] .* Δ[1][Ip.indices[1]]; dims = 1)
+        Ty = sum(temp[ix, :] .* Δ[1][ix]; dims = 1) ./ sum(Δ[1][ix])
         Array(Ty)[:]
     end
     Ty0 = copy(Ty[])
@@ -64,8 +65,8 @@ T = Float32
 # Temperature equation setup.
 temperature = temperature_equation(;
     Pr = T(0.71),
-    Ra = T(1e6),
-    Ge = T(0.1),
+    Ra = T(1e7),
+    Ge = T(1.0),
     dodissipation = true,
     boundary_conditions = (
         (SymmetricBC(), SymmetricBC()),
@@ -77,7 +78,7 @@ temperature = temperature_equation(;
 
 # Grid
 n = 50
-x = tanh_grid(T(0), T(1), n, T(1.2))
+x = tanh_grid(T(0), T(2), 2n, T(1.2))
 y = tanh_grid(T(0), T(1), n, T(1.2))
 plotgrid(x, y)
 
@@ -95,33 +96,48 @@ setup = Setup(
 ustart = create_initial_conditions(setup, (dim, x, y) -> zero(x));
 (; xp) = setup.grid;
 ## T0(x, y) = 1 - y;
-T0(x, y) = 1 - y + max(sinpi(3 * x) / 1000, 0); ## Perturbation
+## T0(x, y) = one(y) / 2;
+T0(x, y) = one(y) / 2 + max(sinpi(20 * x) / 100, 0); ## Perturbation
+## T0(x, y) = 1 - y + max(sinpi(20 * x) / 1000, 0); ## Perturbation
 tempstart = T0.(xp[1], xp[2]');
 
 # Solve equation
+GLMakie.closeall() #!md
 state, outputs = solve_unsteady(;
     setup,
     ustart,
     tempstart,
-    tlims = (T(0), T(40)),
-    Δt = T(5e-3),
+    tlims = (T(0), T(12)),
+    Δt = T(1e-3),
     processors = (;
-        ## rtp = realtimeplotter(;
-        ##     setup,
-        ##     nupdate = 50,
-        ##     fieldname = :temperature,
-        ##     colorrange = (T(0), T(1)),
-        ##     size = (600, 500),
-        ## ),
-        nusselt = realtimeplotter(; setup, plot = nusseltplot, nupdate = 100),
-        avg = realtimeplotter(; setup, plot = averagetemp, nupdate = 50),
+        rtp = realtimeplotter(;
+            screen = GLMakie.Screen(), #!md
+            setup,
+            fieldname = :temperature,
+            colorrange = (T(0), T(1)),
+            size = (600, 350),
+            colormap = :seaborn_icefire_gradient,
+            nupdate = 50,
+        ),
+        nusselt = realtimeplotter(;
+            screen = GLMakie.Screen(), #!md
+            setup,
+            plot = nusseltplot,
+            nupdate = 50,
+        ),
+        avg = realtimeplotter(;
+            screen = GLMakie.Screen(), #!md
+            setup,
+            plot = averagetemp,
+            nupdate = 50,
+        ),
         log = timelogger(; nupdate = 20),
     ),
 );
 
 # Field
 
-fieldplot(state; setup, fieldname = :temperature)
+outputs.rtp
 
 # Nusselt numbers
 
