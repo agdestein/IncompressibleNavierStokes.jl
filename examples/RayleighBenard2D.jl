@@ -108,7 +108,7 @@ state, outputs = solve_unsteady(;
     ustart,
     tempstart,
     tlims = (T(0), T(12)),
-    Δt = T(1e-3),
+    Δt = T(1e-2),
     processors = (;
         rtp = realtimeplotter(;
             screen = GLMakie.Screen(), #!md
@@ -123,7 +123,7 @@ state, outputs = solve_unsteady(;
             screen = GLMakie.Screen(), #!md
             setup,
             plot = nusseltplot,
-            nupdate = 50,
+            nupdate = 20,
         ),
         avg = realtimeplotter(;
             screen = GLMakie.Screen(), #!md
@@ -131,7 +131,7 @@ state, outputs = solve_unsteady(;
             plot = averagetemp,
             nupdate = 50,
         ),
-        log = timelogger(; nupdate = 20),
+        log = timelogger(; nupdate = 100),
     ),
 );
 
