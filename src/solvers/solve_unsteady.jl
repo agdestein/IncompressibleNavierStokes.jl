@@ -6,8 +6,8 @@
         tempstart = nothing,
         method = RKMethods.RK44(; T = eltype(u₀[1])),
         psolver = default_psolver(setup),
-        Δt = zero(eltype(u₀[1])),
-        cfl = 1,
+        Δt = nothing,
+        cfl = eltype(ustart[1])(0.9),
         n_adapt_Δt = 1,
         docopy = true,
         processors = (;),
@@ -36,8 +36,8 @@ function solve_unsteady(;
     tempstart = nothing,
     method = RKMethods.RK44(; T = eltype(ustart[1])),
     psolver = default_psolver(setup),
-    Δt = zero(eltype(ustart[1])),
-    cfl = 1,
+    Δt = nothing,
+    cfl = eltype(ustart[1])(0.9),
     n_adapt_Δt = 1,
     docopy = true,
     processors = (;),
@@ -48,6 +48,7 @@ function solve_unsteady(;
 
     tstart, tend = tlims
     isadaptive = isnothing(Δt)
+    isadaptive && (cflbuf = similar(ustart[1]))
 
     # Cache arrays for intermediate computations
     cache = ode_method_cache(method, setup, ustart, tempstart)
@@ -64,7 +65,8 @@ function solve_unsteady(;
         while stepper.t < tend
             if stepper.n % n_adapt_Δt == 0
                 # Change timestep based on operators
-                Δt = get_timestep(stepper, cfl)
+                # Δt = get_timestep(stepper, cfl)
+                Δt = cfl * get_cfl_timestep!(cflbuf, stepper.u, setup)
             end
 
             # Make sure not to step past `t_end`

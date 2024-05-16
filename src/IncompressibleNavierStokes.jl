@@ -46,7 +46,8 @@ include("create_initial_conditions.jl")
 include("processors.jl")
 
 # Solvers
-include("solvers/get_timestep.jl")
+# include("solvers/get_timestep.jl")
+include("solvers/cfl.jl")
 include("solvers/solve_steady_state.jl")
 include("solvers/solve_unsteady.jl")
 
