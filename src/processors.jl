@@ -46,11 +46,15 @@ processor(initialize, finalize = (initialized, state) -> initialized) =
 
 Create processor that logs time step information.
 """
-timelogger(; showmax = true, nupdate = 1) =
+timelogger(; showmax = true, showdt = true, nupdate = 1) =
     processor() do state
+        told = Ref(state[].t)
         on(state) do (; u, t, n)
+            Δt = t - told[]
+            told[] = t
             n % nupdate == 0 || return
             @printf "Iteration %d\tt = %g" n t
+            showdt && @printf "\tΔt = %g" Δt
             showmax && @printf "\tumax = %g" maximum(maximum.(abs, u))
             println()
         end
