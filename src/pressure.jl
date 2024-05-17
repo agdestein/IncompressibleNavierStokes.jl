@@ -146,24 +146,29 @@ psolver_direct(setup) = psolver_direct(setup.grid.x[1], setup) # Dispatch on arr
 function psolver_direct(::Array, setup)
     (; grid, boundary_conditions) = setup
     (; x, Np, Ip) = grid
-    T = Float64 # This is currently required for SuiteSparse
+    T = eltype(x[1])
     L = laplacian_mat(setup)
     isdefinite =
         any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
     if isdefinite
         # No extra DOF
+        T = Float64 # This is currently required for SuiteSparse LU
         ftemp = zeros(T, prod(Np))
         ptemp = zeros(T, prod(Np))
         viewrange = (:)
+        fact = factorize(L)
     else
         # With extra DOF
         ftemp = zeros(T, prod(Np) + 1)
         ptemp = zeros(T, prod(Np) + 1)
         e = ones(T, size(L, 2))
         L = [L e; e' 0]
+        maximum(L - L') < sqrt(eps(T)) || error("Matrix not symmetric")
+        L = @. (L + L') / 2
         viewrange = 1:prod(Np)
+        fact = ldlt(L)
     end
-    fact = factorize(L)
+    # fact = factorize(L)
     function psolve!(p, f)
         copyto!(view(ftemp, viewrange), view(view(f, Ip), :))
         ptemp .= fact \ ftemp
