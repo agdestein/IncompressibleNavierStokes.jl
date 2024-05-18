@@ -8,7 +8,11 @@ using IncompressibleNavierStokes
 using IncompressibleNavierStokes:
     apply_bc_p,
     apply_bc_u,
+    apply_bc_temp,
     bodyforce,
+    gravity,
+    dissipation,
+    convection_diffusion_temp,
     convection,
     convection!,
     convectiondiffusion!,

@@ -28,21 +28,20 @@ T = Float32;
 ArrayType = CuArray;
 CUDA.allowscalar(false);
 
-set_theme!(; GLMakie = (; scalefactor = 1.5))
-
-const ππ = T(π)
-
 # Boundary conditions
 boundary_conditions = (
     ## x left, x right
     (
         ## Unsteady BC requires time derivatives
         DirichletBC(
-            (dim, x, y, t) -> sin(ππ / 6 * sin(ππ / 6 * t) + ππ / 2 * (dim() == 1)),
-            (dim, x, y, t) ->
-                (ππ / 6)^2 *
-                cos(ππ / 6 * t) *
-                cos(ππ / 6 * sin(ππ / 6 * t) + ππ / 2 * (dim() == 1)),
+            (dim, x, y, t) -> sinpi(sinpi(t / 6) / 6 + one(x) / 2 * (dim() == 1)),
+            let
+                p = T(π)
+                (dim, x, y, t) ->
+                    (p / 6)^2 *
+                    cospi(t / 6) *
+                    cospi(sinpi(t / 6) / 6 + one(x) / 2 * (dim() == 1))
+            end,
         ),
         PressureBC(),
     ),
@@ -111,7 +110,7 @@ state, outputs = solve_unsteady(;
     tlims = (T(0), 4 * T(12)),
     # (T(0), T(1));
     method = RKMethods.RK44P2(),
-    Δt = T(0.01),
+    # Δt = T(0.01),
     processors = (
         rtp = realtimeplotter(;
             setup,

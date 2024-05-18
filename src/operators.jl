@@ -720,6 +720,43 @@ function convection_diffusion_temp!(c, u, temp, setup)
     c
 end
 
+convection_diffusion_temp(u, temp, setup) = convection_diffusion_temp!(zero.(temp), u, temp, setup)
+
+function ChainRulesCore.rrule(::typeof(convection_diffusion_temp), u, temp, setup)
+    conv = convection_diffusion_temp(u, temp, setup)
+    function convection_diffusion_temp_pullback(φ)
+        (NoTangent(), du, dtemp, NoTangent())
+    end
+    (conv, pullback)
+end
+
+# function convection_diffusion_temp_pullback(u, temp, setup)
+#     (; grid, workgroupsize, temperature) = setup
+#     (; dimension, Δ, Δu, Np, Ip) = grid
+#     (; α4) = temperature
+#     D = dimension()
+#     e = Offset{D}()
+#     @kernel function pullback_u!(du, φ, u, temp, ::Val{βrange}, I0) where {βrange}
+#         I = @index(Global, Cartesian)
+#         I = I + I0
+#         cI = zero(eltype(c))
+#         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+#             ∂T∂x1 = (temp[I] - temp[I-e(β)]) / Δu[β][I[β]-1]
+#             ∂T∂x2 = (temp[I+e(β)] - temp[I]) / Δu[β][I[β]]
+#             uT1 = u[β][I-e(β)] * avg(temp, Δ, I - e(β), β)
+#             uT2 = u[β][I] * avg(temp, Δ, I, β)
+#             cI += (-(uT2 - uT1) + α4 * (∂T∂x2 - ∂T∂x1)) / Δ[β][I[β]]
+#         end
+#         c[I] = cI
+#     end
+#     I0 = first(Ip)
+#     I0 -= oneunit(I0)
+#     conv!(get_backend(c), workgroupsize)(c, u, temp, Val(1:D), I0; ndrange = Np)
+#     function pullback(φ)
+#         (NoTangent(), du, dtemp, NoTangent())
+#     end
+# end
+
 # function dissipation!(c, u, setup)
 #     (; grid, workgroupsize, temperature) = setup
 #     (; dimension, Δ, Np, Ip) = grid
@@ -774,6 +811,17 @@ function dissipation!(diss, diff, u, setup)
     diss
 end
 
+dissipation(u, setup) = dissipation!(zero(u[1]), zero.(u), u, setup)
+
+ChainRulesCore.rrule(::typeof(dissipation), u, setup) = (
+    dissipation(u, setup),
+    φ -> (
+        NoTangent(),
+        dissipation_pullback!(Tangent{typeof(u)}(zero.(u)...), φ, u, setup),
+        NoTangent(),
+    ),
+)
+
 """
     bodyforce!(F, u, t, setup)
 
@@ -820,7 +868,7 @@ Compute gravity term (add to existing `F`).
 """
 function gravity!(F, temp, setup)
     (; grid, workgroupsize, temperature) = setup
-    (; dimension, Δ, Δu, Nu, Iu) = grid
+    (; dimension, Δ, Nu, Iu) = grid
     (; gdir, α2) = temperature
     D = dimension()
     e = Offset{D}()
@@ -833,6 +881,35 @@ function gravity!(F, temp, setup)
     I0 -= oneunit(I0)
     g!(get_backend(F[1]), workgroupsize)(F, temp, Val(gdir), I0; ndrange = Nu[gdir])
     F
+end
+
+gravity(temp, setup) = gravity!(ntuple(α -> zero(temp), setup.grid.dimension()), temp, setup)
+
+function ChainRulesCore.rrule(::typeof(gravity), temp, setup)
+    (; grid, workgroupsize, temperature) = setup
+    (; dimension, Δ, N, Nu, Iu) = grid
+    (; gdir, α2) = temperature
+    backend = get_backend(temp)
+    D = dimension()
+    e = Offset{D}()
+    g = gravity(temp, setup)
+    function gravity_pullback(φ)
+        @kernel function g!(tempbar, φbar, ::Val{α}) where {α}
+            J = @index(Global, Cartesian)
+            t = zero(eltype(tempbar))
+            # 1
+            I = J
+            I ∈ Nu[α] && (t += α2 * Δ[α][I[α]+1] * φbar[α][J] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
+            # 2
+            I = J - e(α)
+            I ∈ Nu[α] && (t += α2 * Δ[α][I[α]] * φbar[α][J] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
+            tempbar[J] = t
+        end
+        tempbar = zero(temp)
+        g!(backend, workgroupsize)(tempbar, φ, Val(gdir); ndrange = N)
+        (NoTangent(), tempbar, NoTangent())
+    end
+    g, gravity_pullback
 end
 
 """

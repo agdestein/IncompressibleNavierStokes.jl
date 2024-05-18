@@ -38,14 +38,25 @@ testchainrules(dim) = @testset "Chain rules $(dim())D" begin
     elseif D == 3
         stretched_grid(lims..., n, 1.2), cosine_grid(lims..., n), cosine_grid(lims..., n)
     end
-    setup = Setup(x...; Re)
+    temperature = temperature_equation(;
+        Pr = T(0.71),
+        Ra = T(1e6),
+        Ge = T(1.0),
+        dodissipation = true,
+        boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
+        gdir = 2,
+        nondim_type = 1,
+    )
+    setup = Setup(x...; Re, temperature)
     psolver = default_psolver(setup)
     u = random_field(setup, T(0); psolver)
     randn!.(u)
     p = randn!(similar(u[1]))
+    temp = randn!(similar(u[1]))
     @testset "Boundary conditions" begin
         test_rrule(apply_bc_u, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
         test_rrule(apply_bc_p, p, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+        test_rrule(apply_bc_temp, temp, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
     end
     @testset "Divergence" begin
         test_rrule(divergence, u, setup ⊢ NoTangent())
@@ -66,7 +77,16 @@ testchainrules(dim) = @testset "Chain rules $(dim())D" begin
         @test_broken 1 == 2 # Just to identify location for broken rrule test
         # test_rrule(bodyforce, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
     end
+    # @testset "Gravity" begin
+    #     test_rrule(gravity, temp, setup ⊢ NoTangent())
+    # end
+    # @testset "Dissipation" begin
+    #     test_rrule(dissipation, u, setup ⊢ NoTangent())
+    # end
+    # @testset "Convection-diffusion temperature" begin
+    #     test_rrule(convection_diffusion_temp, u, temp, setup ⊢ NoTangent())
+    # end
 end
 
-testchainrules(IncompressibleNavierStokes.Dimension(2))
+testchainrules(IncompressibleNavierStokes.Dimension(2));
 testchainrules(IncompressibleNavierStokes.Dimension(3));

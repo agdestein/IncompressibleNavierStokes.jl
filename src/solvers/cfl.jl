@@ -15,13 +15,15 @@ function get_cfl_timestep!(buf, u, setup)
     for α = 1:D
         # Diffusion
         Δαmin = minimum(view(Δu[α], Iu[α].indices[α]))
-        Δt = min(Δt, Re * Δαmin^2 / 2)
+        Δt_diff = Re * Δαmin^2 / 2
 
         # Convection
         Δα = reshape(Δu[α], ntuple(Returns(1), α - 1)..., :)
         @. buf = Δα / abs(u[α])
-        bmin = minimum(view(buf, Iu[α]))
-        Δt = min(Δt, bmin)
+        Δt_conv = minimum(view(buf, Iu[α]))
+
+        # Update time step
+        Δt = min(Δt, Δt_diff, Δt_conv)
     end
 
     Δt

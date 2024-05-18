@@ -141,6 +141,23 @@ ChainRulesCore.rrule(::typeof(apply_bc_p), p, t, setup) = (
     ),
 )
 
+ChainRulesCore.rrule(::typeof(apply_bc_temp), temp, t, setup) = (
+    apply_bc_temp(temp, t, setup),
+    # With respect to (apply_bc_temp, temp, t, setup)
+    φbar -> (
+        NoTangent(),
+        apply_bc_temp_pullback!(
+            # Important: identity operator should be part of `apply_bc_temp_pullback`,
+            # but is actually implemented via the `copy` below instead.
+            copy(unthunk(φbar)),
+            t,
+            setup,
+        ),
+        NoTangent(),
+        NoTangent(),
+    ),
+)
+
 function apply_bc_u!(u, t, setup; kwargs...)
     (; boundary_conditions) = setup
     D = length(u)
@@ -354,6 +371,9 @@ end
 
 apply_bc_temp!(bc::PeriodicBC, temp, β, t, setup; isright, kwargs...) =
     apply_bc_p!(bc, temp, β, t, setup; isright, kwargs...)
+
+apply_bc_temp_pullback!(bc::PeriodicBC, φbar, β, t, setup; isright, kwargs...) =
+    apply_bc_p_pullback!(bc, φbar, β, t, setup; isright, kwargs...)
 
 function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kwargs...)
     (; dimension, x, xp, N) = setup.grid
