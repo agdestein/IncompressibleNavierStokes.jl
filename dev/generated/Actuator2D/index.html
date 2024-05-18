@@ -40,246 +40,246 @@ bodyforce(dim, x, y, t) = dim() == 1 ? -cₜ * inside(x, y) : 0.0</code></pre><p
         # field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 1),
     ),
-);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Iteration 1	t = 0.05	umax = 1.02497
-Iteration 2	t = 0.1	umax = 1.0404
-Iteration 3	t = 0.15	umax = 1.04992
-Iteration 4	t = 0.2	umax = 1.05704
-Iteration 5	t = 0.25	umax = 1.06159
-Iteration 6	t = 0.3	umax = 1.06455
-Iteration 7	t = 0.35	umax = 1.06525
-Iteration 8	t = 0.4	umax = 1.06475
-Iteration 9	t = 0.45	umax = 1.06544
-Iteration 10	t = 0.5	umax = 1.0659
-Iteration 11	t = 0.55	umax = 1.06597
-Iteration 12	t = 0.6	umax = 1.06549
-Iteration 13	t = 0.65	umax = 1.06466
-Iteration 14	t = 0.7	umax = 1.06358
-Iteration 15	t = 0.75	umax = 1.0623
-Iteration 16	t = 0.8	umax = 1.06165
-Iteration 17	t = 0.85	umax = 1.06087
-Iteration 18	t = 0.9	umax = 1.05988
-Iteration 19	t = 0.95	umax = 1.05873
-Iteration 20	t = 1	umax = 1.05744
-Iteration 21	t = 1.05	umax = 1.05605
-Iteration 22	t = 1.1	umax = 1.05458
-Iteration 23	t = 1.15	umax = 1.05311
-Iteration 24	t = 1.2	umax = 1.05199
-Iteration 25	t = 1.25	umax = 1.05078
-Iteration 26	t = 1.3	umax = 1.04949
-Iteration 27	t = 1.35	umax = 1.04814
-Iteration 28	t = 1.4	umax = 1.04673
-Iteration 29	t = 1.45	umax = 1.04528
-Iteration 30	t = 1.5	umax = 1.04381
-Iteration 31	t = 1.55	umax = 1.04231
-Iteration 32	t = 1.6	umax = 1.04107
-Iteration 33	t = 1.65	umax = 1.03981
-Iteration 34	t = 1.7	umax = 1.03852
-Iteration 35	t = 1.75	umax = 1.03722
-Iteration 36	t = 1.8	umax = 1.03591
-Iteration 37	t = 1.85	umax = 1.03463
-Iteration 38	t = 1.9	umax = 1.03336
-Iteration 39	t = 1.95	umax = 1.03213
-Iteration 40	t = 2	umax = 1.03106
-Iteration 41	t = 2.05	umax = 1.03001
-Iteration 42	t = 2.1	umax = 1.02898
-Iteration 43	t = 2.15	umax = 1.02798
-Iteration 44	t = 2.2	umax = 1.02701
-Iteration 45	t = 2.25	umax = 1.02607
-Iteration 46	t = 2.3	umax = 1.02518
-Iteration 47	t = 2.35	umax = 1.02434
-Iteration 48	t = 2.4	umax = 1.02356
-Iteration 49	t = 2.45	umax = 1.02288
-Iteration 50	t = 2.5	umax = 1.02223
-Iteration 51	t = 2.55	umax = 1.02163
-Iteration 52	t = 2.6	umax = 1.02106
-Iteration 53	t = 2.65	umax = 1.02054
-Iteration 54	t = 2.7	umax = 1.02003
-Iteration 55	t = 2.75	umax = 1.01957
-Iteration 56	t = 2.8	umax = 1.01913
-Iteration 57	t = 2.85	umax = 1.01872
-Iteration 58	t = 2.9	umax = 1.01833
-Iteration 59	t = 2.95	umax = 1.01801
-Iteration 60	t = 3	umax = 1.01775
-Iteration 61	t = 3.05	umax = 1.0175
-Iteration 62	t = 3.1	umax = 1.01728
-Iteration 63	t = 3.15	umax = 1.01708
-Iteration 64	t = 3.2	umax = 1.0169
-Iteration 65	t = 3.25	umax = 1.01674
-Iteration 66	t = 3.3	umax = 1.01659
-Iteration 67	t = 3.35	umax = 1.01647
-Iteration 68	t = 3.4	umax = 1.01637
-Iteration 69	t = 3.45	umax = 1.01629
-Iteration 70	t = 3.5	umax = 1.01621
-Iteration 71	t = 3.55	umax = 1.01616
-Iteration 72	t = 3.6	umax = 1.01611
-Iteration 73	t = 3.65	umax = 1.0161
-Iteration 74	t = 3.7	umax = 1.01611
-Iteration 75	t = 3.75	umax = 1.01613
-Iteration 76	t = 3.8	umax = 1.01617
-Iteration 77	t = 3.85	umax = 1.01623
-Iteration 78	t = 3.9	umax = 1.01629
-Iteration 79	t = 3.95	umax = 1.01636
-Iteration 80	t = 4	umax = 1.01644
-Iteration 81	t = 4.05	umax = 1.01652
-Iteration 82	t = 4.1	umax = 1.01661
-Iteration 83	t = 4.15	umax = 1.01671
-Iteration 84	t = 4.2	umax = 1.0168
-Iteration 85	t = 4.25	umax = 1.01691
-Iteration 86	t = 4.3	umax = 1.01702
-Iteration 87	t = 4.35	umax = 1.01713
-Iteration 88	t = 4.4	umax = 1.01725
-Iteration 89	t = 4.45	umax = 1.01736
-Iteration 90	t = 4.5	umax = 1.01749
-Iteration 91	t = 4.55	umax = 1.01762
-Iteration 92	t = 4.6	umax = 1.01776
-Iteration 93	t = 4.65	umax = 1.01789
-Iteration 94	t = 4.7	umax = 1.01803
-Iteration 95	t = 4.75	umax = 1.01817
-Iteration 96	t = 4.8	umax = 1.0183
-Iteration 97	t = 4.85	umax = 1.01844
-Iteration 98	t = 4.9	umax = 1.01858
-Iteration 99	t = 4.95	umax = 1.01872
-Iteration 100	t = 5	umax = 1.01886
-Iteration 101	t = 5.05	umax = 1.01901
-Iteration 102	t = 5.1	umax = 1.01915
-Iteration 103	t = 5.15	umax = 1.01929
-Iteration 104	t = 5.2	umax = 1.01943
-Iteration 105	t = 5.25	umax = 1.01957
-Iteration 106	t = 5.3	umax = 1.01971
-Iteration 107	t = 5.35	umax = 1.01985
-Iteration 108	t = 5.4	umax = 1.01999
-Iteration 109	t = 5.45	umax = 1.02012
-Iteration 110	t = 5.5	umax = 1.02026
-Iteration 111	t = 5.55	umax = 1.0204
-Iteration 112	t = 5.6	umax = 1.02054
-Iteration 113	t = 5.65	umax = 1.02068
-Iteration 114	t = 5.7	umax = 1.02081
-Iteration 115	t = 5.75	umax = 1.02095
-Iteration 116	t = 5.8	umax = 1.02108
-Iteration 117	t = 5.85	umax = 1.02189
-Iteration 118	t = 5.9	umax = 1.02374
-Iteration 119	t = 5.95	umax = 1.02554
-Iteration 120	t = 6	umax = 1.02726
-Iteration 121	t = 6.05	umax = 1.0289
-Iteration 122	t = 6.1	umax = 1.03045
-Iteration 123	t = 6.15	umax = 1.0319
-Iteration 124	t = 6.2	umax = 1.03325
-Iteration 125	t = 6.25	umax = 1.03448
-Iteration 126	t = 6.3	umax = 1.03559
-Iteration 127	t = 6.35	umax = 1.03657
-Iteration 128	t = 6.4	umax = 1.03741
-Iteration 129	t = 6.45	umax = 1.03811
-Iteration 130	t = 6.5	umax = 1.03865
-Iteration 131	t = 6.55	umax = 1.03968
-Iteration 132	t = 6.6	umax = 1.04095
-Iteration 133	t = 6.65	umax = 1.04217
-Iteration 134	t = 6.7	umax = 1.04325
-Iteration 135	t = 6.75	umax = 1.04419
-Iteration 136	t = 6.8	umax = 1.04498
-Iteration 137	t = 6.85	umax = 1.04563
-Iteration 138	t = 6.9	umax = 1.04612
-Iteration 139	t = 6.95	umax = 1.04646
-Iteration 140	t = 7	umax = 1.04664
-Iteration 141	t = 7.05	umax = 1.04665
-Iteration 142	t = 7.1	umax = 1.0465
-Iteration 143	t = 7.15	umax = 1.04619
-Iteration 144	t = 7.2	umax = 1.04571
-Iteration 145	t = 7.25	umax = 1.04505
-Iteration 146	t = 7.3	umax = 1.04423
-Iteration 147	t = 7.35	umax = 1.04323
-Iteration 148	t = 7.4	umax = 1.04205
-Iteration 149	t = 7.45	umax = 1.0407
-Iteration 150	t = 7.5	umax = 1.03964
-Iteration 151	t = 7.55	umax = 1.03908
-Iteration 152	t = 7.6	umax = 1.03837
-Iteration 153	t = 7.65	umax = 1.0375
-Iteration 154	t = 7.7	umax = 1.03648
-Iteration 155	t = 7.75	umax = 1.0353
-Iteration 156	t = 7.8	umax = 1.03396
-Iteration 157	t = 7.85	umax = 1.03246
-Iteration 158	t = 7.9	umax = 1.03079
-Iteration 159	t = 7.95	umax = 1.02906
-Iteration 160	t = 8	umax = 1.02806
-Iteration 161	t = 8.05	umax = 1.02714
-Iteration 162	t = 8.1	umax = 1.02728
-Iteration 163	t = 8.15	umax = 1.02742
-Iteration 164	t = 8.2	umax = 1.02756
-Iteration 165	t = 8.25	umax = 1.0277
-Iteration 166	t = 8.3	umax = 1.02784
-Iteration 167	t = 8.35	umax = 1.02799
-Iteration 168	t = 8.4	umax = 1.02813
-Iteration 169	t = 8.45	umax = 1.02828
-Iteration 170	t = 8.5	umax = 1.02843
-Iteration 171	t = 8.55	umax = 1.02859
-Iteration 172	t = 8.6	umax = 1.02874
-Iteration 173	t = 8.65	umax = 1.0289
-Iteration 174	t = 8.7	umax = 1.02906
-Iteration 175	t = 8.75	umax = 1.02922
-Iteration 176	t = 8.8	umax = 1.02938
-Iteration 177	t = 8.85	umax = 1.02954
-Iteration 178	t = 8.9	umax = 1.02971
-Iteration 179	t = 8.95	umax = 1.02988
-Iteration 180	t = 9	umax = 1.03006
-Iteration 181	t = 9.05	umax = 1.03024
-Iteration 182	t = 9.1	umax = 1.03042
-Iteration 183	t = 9.15	umax = 1.03061
-Iteration 184	t = 9.2	umax = 1.0308
-Iteration 185	t = 9.25	umax = 1.031
-Iteration 186	t = 9.3	umax = 1.03121
-Iteration 187	t = 9.35	umax = 1.03142
-Iteration 188	t = 9.4	umax = 1.03164
-Iteration 189	t = 9.45	umax = 1.03186
-Iteration 190	t = 9.5	umax = 1.0321
-Iteration 191	t = 9.55	umax = 1.03234
-Iteration 192	t = 9.6	umax = 1.03258
-Iteration 193	t = 9.65	umax = 1.03284
-Iteration 194	t = 9.7	umax = 1.0331
-Iteration 195	t = 9.75	umax = 1.03335
-Iteration 196	t = 9.8	umax = 1.03363
-Iteration 197	t = 9.85	umax = 1.03383
-Iteration 198	t = 9.9	umax = 1.03393
-Iteration 199	t = 9.95	umax = 1.03391
-Iteration 200	t = 10	umax = 1.03376
-Iteration 201	t = 10.05	umax = 1.03334
-Iteration 202	t = 10.1	umax = 1.03283
-Iteration 203	t = 10.15	umax = 1.03211
-Iteration 204	t = 10.2	umax = 1.03113
-Iteration 205	t = 10.25	umax = 1.03011
-Iteration 206	t = 10.3	umax = 1.02878
-Iteration 207	t = 10.35	umax = 1.02736
-Iteration 208	t = 10.4	umax = 1.02571
-Iteration 209	t = 10.45	umax = 1.02389
-Iteration 210	t = 10.5	umax = 1.02194
-Iteration 211	t = 10.55	umax = 1.01978
-Iteration 212	t = 10.6	umax = 1.01755
-Iteration 213	t = 10.65	umax = 1.01509
-Iteration 214	t = 10.7	umax = 1.01261
-Iteration 215	t = 10.75	umax = 1.00993
-Iteration 216	t = 10.8	umax = 1.00722
-Iteration 217	t = 10.85	umax = 1.00437
-Iteration 218	t = 10.9	umax = 1.00146
-Iteration 219	t = 10.95	umax = 0.998497
-Iteration 220	t = 11	umax = 0.995456
-Iteration 221	t = 11.05	umax = 0.992388
-Iteration 222	t = 11.1	umax = 0.993041
-Iteration 223	t = 11.15	umax = 0.994971
-Iteration 224	t = 11.2	umax = 0.996932
-Iteration 225	t = 11.25	umax = 0.998921
-Iteration 226	t = 11.3	umax = 1.00093
-Iteration 227	t = 11.35	umax = 1.00297
-Iteration 228	t = 11.4	umax = 1.00502
-Iteration 229	t = 11.45	umax = 1.00708
-Iteration 230	t = 11.5	umax = 1.00914
-Iteration 231	t = 11.55	umax = 1.0112
-Iteration 232	t = 11.6	umax = 1.01326
-Iteration 233	t = 11.65	umax = 1.0153
-Iteration 234	t = 11.7	umax = 1.01731
-Iteration 235	t = 11.75	umax = 1.0193
-Iteration 236	t = 11.8	umax = 1.02125
-Iteration 237	t = 11.85	umax = 1.02315
-Iteration 238	t = 11.9	umax = 1.02499
-Iteration 239	t = 11.95	umax = 1.02677
-Iteration 240	t = 12	umax = 1.02848</code></pre><h2 id="Post-process"><a class="docs-heading-anchor" href="#Post-process">Post-process</a><a id="Post-process-1"></a><a class="docs-heading-anchor-permalink" href="#Post-process" title="Permalink"></a></h2><p>We may visualize or export the computed fields <code>(u, p)</code>.</p><p>Export to VTK</p><pre><code class="language-julia hljs">save_vtk(setup, state.u, state.t, &quot;$output/solution&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1-element Vector{String}:
+);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Iteration 1	t = 0.05	Δt = 0.05	umax = 1.02497
+Iteration 2	t = 0.1	Δt = 0.05	umax = 1.0404
+Iteration 3	t = 0.15	Δt = 0.05	umax = 1.04992
+Iteration 4	t = 0.2	Δt = 0.05	umax = 1.05704
+Iteration 5	t = 0.25	Δt = 0.05	umax = 1.06159
+Iteration 6	t = 0.3	Δt = 0.05	umax = 1.06455
+Iteration 7	t = 0.35	Δt = 0.05	umax = 1.06525
+Iteration 8	t = 0.4	Δt = 0.05	umax = 1.06475
+Iteration 9	t = 0.45	Δt = 0.05	umax = 1.06544
+Iteration 10	t = 0.5	Δt = 0.05	umax = 1.0659
+Iteration 11	t = 0.55	Δt = 0.05	umax = 1.06597
+Iteration 12	t = 0.6	Δt = 0.05	umax = 1.06549
+Iteration 13	t = 0.65	Δt = 0.05	umax = 1.06466
+Iteration 14	t = 0.7	Δt = 0.05	umax = 1.06358
+Iteration 15	t = 0.75	Δt = 0.05	umax = 1.0623
+Iteration 16	t = 0.8	Δt = 0.05	umax = 1.06165
+Iteration 17	t = 0.85	Δt = 0.05	umax = 1.06087
+Iteration 18	t = 0.9	Δt = 0.05	umax = 1.05988
+Iteration 19	t = 0.95	Δt = 0.05	umax = 1.05873
+Iteration 20	t = 1	Δt = 0.05	umax = 1.05744
+Iteration 21	t = 1.05	Δt = 0.05	umax = 1.05605
+Iteration 22	t = 1.1	Δt = 0.05	umax = 1.05458
+Iteration 23	t = 1.15	Δt = 0.05	umax = 1.05311
+Iteration 24	t = 1.2	Δt = 0.05	umax = 1.05199
+Iteration 25	t = 1.25	Δt = 0.05	umax = 1.05078
+Iteration 26	t = 1.3	Δt = 0.05	umax = 1.04949
+Iteration 27	t = 1.35	Δt = 0.05	umax = 1.04814
+Iteration 28	t = 1.4	Δt = 0.05	umax = 1.04673
+Iteration 29	t = 1.45	Δt = 0.05	umax = 1.04528
+Iteration 30	t = 1.5	Δt = 0.05	umax = 1.04381
+Iteration 31	t = 1.55	Δt = 0.05	umax = 1.04231
+Iteration 32	t = 1.6	Δt = 0.05	umax = 1.04107
+Iteration 33	t = 1.65	Δt = 0.05	umax = 1.03981
+Iteration 34	t = 1.7	Δt = 0.05	umax = 1.03852
+Iteration 35	t = 1.75	Δt = 0.05	umax = 1.03722
+Iteration 36	t = 1.8	Δt = 0.05	umax = 1.03591
+Iteration 37	t = 1.85	Δt = 0.05	umax = 1.03463
+Iteration 38	t = 1.9	Δt = 0.05	umax = 1.03336
+Iteration 39	t = 1.95	Δt = 0.05	umax = 1.03213
+Iteration 40	t = 2	Δt = 0.05	umax = 1.03106
+Iteration 41	t = 2.05	Δt = 0.05	umax = 1.03001
+Iteration 42	t = 2.1	Δt = 0.05	umax = 1.02898
+Iteration 43	t = 2.15	Δt = 0.05	umax = 1.02798
+Iteration 44	t = 2.2	Δt = 0.05	umax = 1.02701
+Iteration 45	t = 2.25	Δt = 0.05	umax = 1.02607
+Iteration 46	t = 2.3	Δt = 0.05	umax = 1.02518
+Iteration 47	t = 2.35	Δt = 0.05	umax = 1.02434
+Iteration 48	t = 2.4	Δt = 0.05	umax = 1.02356
+Iteration 49	t = 2.45	Δt = 0.05	umax = 1.02288
+Iteration 50	t = 2.5	Δt = 0.05	umax = 1.02223
+Iteration 51	t = 2.55	Δt = 0.05	umax = 1.02163
+Iteration 52	t = 2.6	Δt = 0.05	umax = 1.02106
+Iteration 53	t = 2.65	Δt = 0.05	umax = 1.02054
+Iteration 54	t = 2.7	Δt = 0.05	umax = 1.02003
+Iteration 55	t = 2.75	Δt = 0.05	umax = 1.01957
+Iteration 56	t = 2.8	Δt = 0.05	umax = 1.01913
+Iteration 57	t = 2.85	Δt = 0.05	umax = 1.01872
+Iteration 58	t = 2.9	Δt = 0.05	umax = 1.01833
+Iteration 59	t = 2.95	Δt = 0.05	umax = 1.01801
+Iteration 60	t = 3	Δt = 0.05	umax = 1.01775
+Iteration 61	t = 3.05	Δt = 0.05	umax = 1.0175
+Iteration 62	t = 3.1	Δt = 0.05	umax = 1.01728
+Iteration 63	t = 3.15	Δt = 0.05	umax = 1.01708
+Iteration 64	t = 3.2	Δt = 0.05	umax = 1.0169
+Iteration 65	t = 3.25	Δt = 0.05	umax = 1.01674
+Iteration 66	t = 3.3	Δt = 0.05	umax = 1.01659
+Iteration 67	t = 3.35	Δt = 0.05	umax = 1.01647
+Iteration 68	t = 3.4	Δt = 0.05	umax = 1.01637
+Iteration 69	t = 3.45	Δt = 0.05	umax = 1.01629
+Iteration 70	t = 3.5	Δt = 0.05	umax = 1.01621
+Iteration 71	t = 3.55	Δt = 0.05	umax = 1.01616
+Iteration 72	t = 3.6	Δt = 0.05	umax = 1.01611
+Iteration 73	t = 3.65	Δt = 0.05	umax = 1.0161
+Iteration 74	t = 3.7	Δt = 0.05	umax = 1.01611
+Iteration 75	t = 3.75	Δt = 0.05	umax = 1.01613
+Iteration 76	t = 3.8	Δt = 0.05	umax = 1.01617
+Iteration 77	t = 3.85	Δt = 0.05	umax = 1.01623
+Iteration 78	t = 3.9	Δt = 0.05	umax = 1.01629
+Iteration 79	t = 3.95	Δt = 0.05	umax = 1.01636
+Iteration 80	t = 4	Δt = 0.05	umax = 1.01644
+Iteration 81	t = 4.05	Δt = 0.05	umax = 1.01652
+Iteration 82	t = 4.1	Δt = 0.05	umax = 1.01661
+Iteration 83	t = 4.15	Δt = 0.05	umax = 1.01671
+Iteration 84	t = 4.2	Δt = 0.05	umax = 1.0168
+Iteration 85	t = 4.25	Δt = 0.05	umax = 1.01691
+Iteration 86	t = 4.3	Δt = 0.05	umax = 1.01702
+Iteration 87	t = 4.35	Δt = 0.05	umax = 1.01713
+Iteration 88	t = 4.4	Δt = 0.05	umax = 1.01725
+Iteration 89	t = 4.45	Δt = 0.05	umax = 1.01736
+Iteration 90	t = 4.5	Δt = 0.05	umax = 1.01749
+Iteration 91	t = 4.55	Δt = 0.05	umax = 1.01762
+Iteration 92	t = 4.6	Δt = 0.05	umax = 1.01776
+Iteration 93	t = 4.65	Δt = 0.05	umax = 1.01789
+Iteration 94	t = 4.7	Δt = 0.05	umax = 1.01803
+Iteration 95	t = 4.75	Δt = 0.05	umax = 1.01817
+Iteration 96	t = 4.8	Δt = 0.05	umax = 1.0183
+Iteration 97	t = 4.85	Δt = 0.05	umax = 1.01844
+Iteration 98	t = 4.9	Δt = 0.05	umax = 1.01858
+Iteration 99	t = 4.95	Δt = 0.05	umax = 1.01872
+Iteration 100	t = 5	Δt = 0.05	umax = 1.01886
+Iteration 101	t = 5.05	Δt = 0.05	umax = 1.01901
+Iteration 102	t = 5.1	Δt = 0.05	umax = 1.01915
+Iteration 103	t = 5.15	Δt = 0.05	umax = 1.01929
+Iteration 104	t = 5.2	Δt = 0.05	umax = 1.01943
+Iteration 105	t = 5.25	Δt = 0.05	umax = 1.01957
+Iteration 106	t = 5.3	Δt = 0.05	umax = 1.01971
+Iteration 107	t = 5.35	Δt = 0.05	umax = 1.01985
+Iteration 108	t = 5.4	Δt = 0.05	umax = 1.01999
+Iteration 109	t = 5.45	Δt = 0.05	umax = 1.02012
+Iteration 110	t = 5.5	Δt = 0.05	umax = 1.02026
+Iteration 111	t = 5.55	Δt = 0.05	umax = 1.0204
+Iteration 112	t = 5.6	Δt = 0.05	umax = 1.02054
+Iteration 113	t = 5.65	Δt = 0.05	umax = 1.02068
+Iteration 114	t = 5.7	Δt = 0.05	umax = 1.02081
+Iteration 115	t = 5.75	Δt = 0.05	umax = 1.02095
+Iteration 116	t = 5.8	Δt = 0.05	umax = 1.02108
+Iteration 117	t = 5.85	Δt = 0.05	umax = 1.02189
+Iteration 118	t = 5.9	Δt = 0.05	umax = 1.02374
+Iteration 119	t = 5.95	Δt = 0.05	umax = 1.02554
+Iteration 120	t = 6	Δt = 0.05	umax = 1.02726
+Iteration 121	t = 6.05	Δt = 0.05	umax = 1.0289
+Iteration 122	t = 6.1	Δt = 0.05	umax = 1.03045
+Iteration 123	t = 6.15	Δt = 0.05	umax = 1.0319
+Iteration 124	t = 6.2	Δt = 0.05	umax = 1.03325
+Iteration 125	t = 6.25	Δt = 0.05	umax = 1.03448
+Iteration 126	t = 6.3	Δt = 0.05	umax = 1.03559
+Iteration 127	t = 6.35	Δt = 0.05	umax = 1.03657
+Iteration 128	t = 6.4	Δt = 0.05	umax = 1.03741
+Iteration 129	t = 6.45	Δt = 0.05	umax = 1.03811
+Iteration 130	t = 6.5	Δt = 0.05	umax = 1.03865
+Iteration 131	t = 6.55	Δt = 0.05	umax = 1.03968
+Iteration 132	t = 6.6	Δt = 0.05	umax = 1.04095
+Iteration 133	t = 6.65	Δt = 0.05	umax = 1.04217
+Iteration 134	t = 6.7	Δt = 0.05	umax = 1.04325
+Iteration 135	t = 6.75	Δt = 0.05	umax = 1.04419
+Iteration 136	t = 6.8	Δt = 0.05	umax = 1.04498
+Iteration 137	t = 6.85	Δt = 0.05	umax = 1.04563
+Iteration 138	t = 6.9	Δt = 0.05	umax = 1.04612
+Iteration 139	t = 6.95	Δt = 0.05	umax = 1.04646
+Iteration 140	t = 7	Δt = 0.05	umax = 1.04664
+Iteration 141	t = 7.05	Δt = 0.05	umax = 1.04665
+Iteration 142	t = 7.1	Δt = 0.05	umax = 1.0465
+Iteration 143	t = 7.15	Δt = 0.05	umax = 1.04619
+Iteration 144	t = 7.2	Δt = 0.05	umax = 1.04571
+Iteration 145	t = 7.25	Δt = 0.05	umax = 1.04505
+Iteration 146	t = 7.3	Δt = 0.05	umax = 1.04423
+Iteration 147	t = 7.35	Δt = 0.05	umax = 1.04323
+Iteration 148	t = 7.4	Δt = 0.05	umax = 1.04205
+Iteration 149	t = 7.45	Δt = 0.05	umax = 1.0407
+Iteration 150	t = 7.5	Δt = 0.05	umax = 1.03964
+Iteration 151	t = 7.55	Δt = 0.05	umax = 1.03908
+Iteration 152	t = 7.6	Δt = 0.05	umax = 1.03837
+Iteration 153	t = 7.65	Δt = 0.05	umax = 1.0375
+Iteration 154	t = 7.7	Δt = 0.05	umax = 1.03648
+Iteration 155	t = 7.75	Δt = 0.05	umax = 1.0353
+Iteration 156	t = 7.8	Δt = 0.05	umax = 1.03396
+Iteration 157	t = 7.85	Δt = 0.05	umax = 1.03246
+Iteration 158	t = 7.9	Δt = 0.05	umax = 1.03079
+Iteration 159	t = 7.95	Δt = 0.05	umax = 1.02906
+Iteration 160	t = 8	Δt = 0.05	umax = 1.02806
+Iteration 161	t = 8.05	Δt = 0.05	umax = 1.02714
+Iteration 162	t = 8.1	Δt = 0.05	umax = 1.02728
+Iteration 163	t = 8.15	Δt = 0.05	umax = 1.02742
+Iteration 164	t = 8.2	Δt = 0.05	umax = 1.02756
+Iteration 165	t = 8.25	Δt = 0.05	umax = 1.0277
+Iteration 166	t = 8.3	Δt = 0.05	umax = 1.02784
+Iteration 167	t = 8.35	Δt = 0.05	umax = 1.02799
+Iteration 168	t = 8.4	Δt = 0.05	umax = 1.02813
+Iteration 169	t = 8.45	Δt = 0.05	umax = 1.02828
+Iteration 170	t = 8.5	Δt = 0.05	umax = 1.02843
+Iteration 171	t = 8.55	Δt = 0.05	umax = 1.02859
+Iteration 172	t = 8.6	Δt = 0.05	umax = 1.02874
+Iteration 173	t = 8.65	Δt = 0.05	umax = 1.0289
+Iteration 174	t = 8.7	Δt = 0.05	umax = 1.02906
+Iteration 175	t = 8.75	Δt = 0.05	umax = 1.02922
+Iteration 176	t = 8.8	Δt = 0.05	umax = 1.02938
+Iteration 177	t = 8.85	Δt = 0.05	umax = 1.02954
+Iteration 178	t = 8.9	Δt = 0.05	umax = 1.02971
+Iteration 179	t = 8.95	Δt = 0.05	umax = 1.02988
+Iteration 180	t = 9	Δt = 0.05	umax = 1.03006
+Iteration 181	t = 9.05	Δt = 0.05	umax = 1.03024
+Iteration 182	t = 9.1	Δt = 0.05	umax = 1.03042
+Iteration 183	t = 9.15	Δt = 0.05	umax = 1.03061
+Iteration 184	t = 9.2	Δt = 0.05	umax = 1.0308
+Iteration 185	t = 9.25	Δt = 0.05	umax = 1.031
+Iteration 186	t = 9.3	Δt = 0.05	umax = 1.03121
+Iteration 187	t = 9.35	Δt = 0.05	umax = 1.03142
+Iteration 188	t = 9.4	Δt = 0.05	umax = 1.03164
+Iteration 189	t = 9.45	Δt = 0.05	umax = 1.03186
+Iteration 190	t = 9.5	Δt = 0.05	umax = 1.0321
+Iteration 191	t = 9.55	Δt = 0.05	umax = 1.03234
+Iteration 192	t = 9.6	Δt = 0.05	umax = 1.03258
+Iteration 193	t = 9.65	Δt = 0.05	umax = 1.03284
+Iteration 194	t = 9.7	Δt = 0.05	umax = 1.0331
+Iteration 195	t = 9.75	Δt = 0.05	umax = 1.03335
+Iteration 196	t = 9.8	Δt = 0.05	umax = 1.03363
+Iteration 197	t = 9.85	Δt = 0.05	umax = 1.03383
+Iteration 198	t = 9.9	Δt = 0.05	umax = 1.03393
+Iteration 199	t = 9.95	Δt = 0.05	umax = 1.03391
+Iteration 200	t = 10	Δt = 0.05	umax = 1.03376
+Iteration 201	t = 10.05	Δt = 0.05	umax = 1.03334
+Iteration 202	t = 10.1	Δt = 0.05	umax = 1.03283
+Iteration 203	t = 10.15	Δt = 0.05	umax = 1.03211
+Iteration 204	t = 10.2	Δt = 0.05	umax = 1.03113
+Iteration 205	t = 10.25	Δt = 0.05	umax = 1.03011
+Iteration 206	t = 10.3	Δt = 0.05	umax = 1.02878
+Iteration 207	t = 10.35	Δt = 0.05	umax = 1.02736
+Iteration 208	t = 10.4	Δt = 0.05	umax = 1.02571
+Iteration 209	t = 10.45	Δt = 0.05	umax = 1.02389
+Iteration 210	t = 10.5	Δt = 0.05	umax = 1.02194
+Iteration 211	t = 10.55	Δt = 0.05	umax = 1.01978
+Iteration 212	t = 10.6	Δt = 0.05	umax = 1.01755
+Iteration 213	t = 10.65	Δt = 0.05	umax = 1.01509
+Iteration 214	t = 10.7	Δt = 0.05	umax = 1.01261
+Iteration 215	t = 10.75	Δt = 0.05	umax = 1.00993
+Iteration 216	t = 10.8	Δt = 0.05	umax = 1.00722
+Iteration 217	t = 10.85	Δt = 0.05	umax = 1.00437
+Iteration 218	t = 10.9	Δt = 0.05	umax = 1.00146
+Iteration 219	t = 10.95	Δt = 0.05	umax = 0.998497
+Iteration 220	t = 11	Δt = 0.05	umax = 0.995456
+Iteration 221	t = 11.05	Δt = 0.05	umax = 0.992388
+Iteration 222	t = 11.1	Δt = 0.05	umax = 0.993041
+Iteration 223	t = 11.15	Δt = 0.05	umax = 0.994971
+Iteration 224	t = 11.2	Δt = 0.05	umax = 0.996932
+Iteration 225	t = 11.25	Δt = 0.05	umax = 0.998921
+Iteration 226	t = 11.3	Δt = 0.05	umax = 1.00093
+Iteration 227	t = 11.35	Δt = 0.05	umax = 1.00297
+Iteration 228	t = 11.4	Δt = 0.05	umax = 1.00502
+Iteration 229	t = 11.45	Δt = 0.05	umax = 1.00708
+Iteration 230	t = 11.5	Δt = 0.05	umax = 1.00914
+Iteration 231	t = 11.55	Δt = 0.05	umax = 1.0112
+Iteration 232	t = 11.6	Δt = 0.05	umax = 1.01326
+Iteration 233	t = 11.65	Δt = 0.05	umax = 1.0153
+Iteration 234	t = 11.7	Δt = 0.05	umax = 1.01731
+Iteration 235	t = 11.75	Δt = 0.05	umax = 1.0193
+Iteration 236	t = 11.8	Δt = 0.05	umax = 1.02125
+Iteration 237	t = 11.85	Δt = 0.05	umax = 1.02315
+Iteration 238	t = 11.9	Δt = 0.05	umax = 1.02499
+Iteration 239	t = 11.95	Δt = 0.05	umax = 1.02677
+Iteration 240	t = 12	Δt = 0.05	umax = 1.02848</code></pre><h2 id="Post-process"><a class="docs-heading-anchor" href="#Post-process">Post-process</a><a id="Post-process-1"></a><a class="docs-heading-anchor-permalink" href="#Post-process" title="Permalink"></a></h2><p>We may visualize or export the computed fields <code>(u, p)</code>.</p><p>Export to VTK</p><pre><code class="language-julia hljs">save_vtk(setup, state.u, state.t, &quot;$output/solution&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1-element Vector{String}:
  &quot;output/Actuator2D/solution.vtr&quot;</code></pre><p>We create a box to visualize the actuator.</p><pre><code class="language-julia hljs">box = (
     [xc - δ / 2, xc - δ / 2, xc + δ / 2, xc + δ / 2, xc - δ / 2],
     [yc + D / 2, yc - D / 2, yc - D / 2, yc + D / 2, yc + D / 2],
@@ -289,4 +289,4 @@ fig</code></pre><img src="37f1eac0.png" alt="Example block output"/><p>Plot velo
 lines!(box...; color = :red)
 fig</code></pre><img src="07468d89.png" alt="Example block output"/><p>Plot vorticity</p><pre><code class="language-julia hljs">fig = fieldplot(state; setup, fieldname = :vorticity)
 lines!(box...; color = :red)
-fig</code></pre><img src="fc1d657c.png" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../TaylorGreenVortex2D/">« Convergence: Taylor-Green Vortex (2D)</a><a class="docs-footer-nextpage" href="../BackwardFacingStep2D/">Walls: Backward Facing Step (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.1 on <span class="colophon-date" title="Sunday 12 May 2024 09:36">Sunday 12 May 2024</span>. Using Julia version 1.10.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+fig</code></pre><img src="fc1d657c.png" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../TaylorGreenVortex2D/">« Convergence: Taylor-Green Vortex (2D)</a><a class="docs-footer-nextpage" href="../BackwardFacingStep2D/">Walls: Backward Facing Step (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.1 on <span class="colophon-date" title="Saturday 18 May 2024 11:35">Saturday 18 May 2024</span>. Using Julia version 1.10.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
