@@ -613,22 +613,20 @@ function diffusion_adjoint!(u, φ, setup)
             # F[α][I] -= ν * u[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
             # F[α][I] -= ν * u[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
             # F[α][I] += ν * u[α][I-e(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
+            val = zero(eltype(u[1]))
             I - e(β) ∈ Iu[α] && (
-                u[α][I] +=
+                val +=
                     ν * φ[α][I-e(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]-1]
             )
-            I ∈ Iu[α] && (
-                u[α][I] -=
-                    ν * φ[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]]
-            )
-            I ∈ Iu[α] && (
-                u[α][I] -=
-                    ν * φ[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]]
-            )
+            I ∈ Iu[α] &&
+                (val -= ν * φ[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]])
+            I ∈ Iu[α] &&
+                (val -= ν * φ[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]])
             I + e(β) ∈ Iu[α] && (
-                u[α][I] +=
+                val +=
                     ν * φ[α][I+e(β)] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]+1]
             )
+            u[α][I] += val
         end
     end
     for α = 1:D
@@ -720,13 +718,12 @@ function convection_diffusion_temp!(c, u, temp, setup)
     c
 end
 
-convection_diffusion_temp(u, temp, setup) = convection_diffusion_temp!(zero.(temp), u, temp, setup)
+convection_diffusion_temp(u, temp, setup) =
+    convection_diffusion_temp!(zero.(temp), u, temp, setup)
 
 function ChainRulesCore.rrule(::typeof(convection_diffusion_temp), u, temp, setup)
     conv = convection_diffusion_temp(u, temp, setup)
-    function convection_diffusion_temp_pullback(φ)
-        (NoTangent(), du, dtemp, NoTangent())
-    end
+    convection_diffusion_temp_pullback(φ) = (NoTangent(), du, dtemp, NoTangent())
     (conv, pullback)
 end
 
@@ -813,14 +810,50 @@ end
 
 dissipation(u, setup) = dissipation!(zero(u[1]), zero.(u), u, setup)
 
-ChainRulesCore.rrule(::typeof(dissipation), u, setup) = (
-    dissipation(u, setup),
-    φ -> (
-        NoTangent(),
-        dissipation_pullback!(Tangent{typeof(u)}(zero.(u)...), φ, u, setup),
-        NoTangent(),
-    ),
-)
+function ChainRulesCore.rrule(::typeof(dissipation), u, setup)
+    (; grid, workgroupsize, Re, temperature) = setup
+    (; dimension, Δ, N, Np, Ip) = grid
+    (; α1, γ) = temperature
+    D = dimension()
+    e = Offset{D}()
+    backend = get_backend(u[1])
+    d, d_pb = ChainRulesCore.rrule(diffusion, u, setup)
+    φ = dissipation!(zero(u[1]), d, u, setup)
+    @kernel function ∂φ!(ubar, dbar, φbar, d, u, ::Val{βrange}) where {βrange}
+        J = @index(Global, Cartesian)
+        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+            # Compute ubar
+            a = zero(eltype(u[1]))
+            # 1
+            I = J + e(β)
+            I ∈ Ip && (a += Re * α1 / γ * d[β][I-e(β)] / 2)
+            # 2
+            I = J
+            I ∈ Ip && (a += Re * α1 / γ * d[β][I] / 2)
+            ubar[β][J] += a
+
+            # Compute dbar
+            b = zero(eltype(u[1]))
+            # 1
+            I = J + e(β)
+            I ∈ Ip && (b += Re * α1 / γ * u[β][I-e(β)] / 2)
+            # 2
+            I = J
+            I ∈ Ip && (b += Re * α1 / γ * u[β][I] / 2)
+            dbar[β][J] += b
+        end
+    end
+    function dissipation_pullback(φbar)
+        # Dφ/Du = ∂φ(u, d)/∂u + ∂φ(u, d)/∂d ⋅ ∂d(u)/∂u
+        dbar = zero.(u)
+        ubar = zero.(u)
+        ∂φ!(backend, workgroupsize)(ubar, dbar, φbar, d, u, Val(1:D); ndrange = N)
+        diffusion_adjoint!(ubar, dbar, setup)
+        ubar = Tangent{typeof(u)}(ubar...)
+        (NoTangent(), ubar, NoTangent())
+    end
+    φ, dissipation_pullback
+end
 
 """
     bodyforce!(F, u, t, setup)
@@ -883,11 +916,12 @@ function gravity!(F, temp, setup)
     F
 end
 
-gravity(temp, setup) = gravity!(ntuple(α -> zero(temp), setup.grid.dimension()), temp, setup)
+gravity(temp, setup) =
+    gravity!(ntuple(α -> zero(temp), setup.grid.dimension()), temp, setup)
 
 function ChainRulesCore.rrule(::typeof(gravity), temp, setup)
     (; grid, workgroupsize, temperature) = setup
-    (; dimension, Δ, N, Nu, Iu) = grid
+    (; dimension, Δ, N, Iu) = grid
     (; gdir, α2) = temperature
     backend = get_backend(temp)
     D = dimension()
@@ -899,10 +933,10 @@ function ChainRulesCore.rrule(::typeof(gravity), temp, setup)
             t = zero(eltype(tempbar))
             # 1
             I = J
-            I ∈ Nu[α] && (t += α2 * Δ[α][I[α]+1] * φbar[α][J] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
+            I ∈ Iu[α] && (t += α2 * Δ[α][I[α]+1] * φbar[α][I] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
             # 2
             I = J - e(α)
-            I ∈ Nu[α] && (t += α2 * Δ[α][I[α]] * φbar[α][J] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
+            I ∈ Iu[α] && (t += α2 * Δ[α][I[α]] * φbar[α][I] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
             tempbar[J] = t
         end
         tempbar = zero(temp)

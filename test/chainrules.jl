@@ -77,15 +77,18 @@ testchainrules(dim) = @testset "Chain rules $(dim())D" begin
         @test_broken 1 == 2 # Just to identify location for broken rrule test
         # test_rrule(bodyforce, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
     end
-    # @testset "Gravity" begin
-    #     test_rrule(gravity, temp, setup ⊢ NoTangent())
-    # end
-    # @testset "Dissipation" begin
-    #     test_rrule(dissipation, u, setup ⊢ NoTangent())
-    # end
-    # @testset "Convection-diffusion temperature" begin
-    #     test_rrule(convection_diffusion_temp, u, temp, setup ⊢ NoTangent())
-    # end
+    @testset "Gravity" begin
+        test_rrule(gravity, temp, setup ⊢ NoTangent())
+    end
+    @testset "Dissipation" begin
+        @test_broken 1 == 2 # Just to identify location for broken rrule test
+        # test_rrule(dissipation, u, setup ⊢ NoTangent())
+        # ChainRulesCore.rrule(dissipation, u, setup)[2](temp)[2][2]
+    end
+    @testset "Convection-diffusion-temperature" begin
+        @test_broken 1 == 2 # Just to identify location for broken rrule test
+        # test_rrule(convection_diffusion_temp, u, temp, setup ⊢ NoTangent())
+    end
 end
 
 testchainrules(IncompressibleNavierStokes.Dimension(2));
