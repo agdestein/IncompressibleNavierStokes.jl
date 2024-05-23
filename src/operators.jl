@@ -855,11 +855,11 @@ function ChainRulesCore.rrule(::typeof(dissipation), u, setup)
     φ, dissipation_pullback
 end
 
-raw"""
-    dissipation_from_strain(ϵ, u, setup)
+"""
+    dissipation_from_strain!(ϵ, u, setup)
 
 Compute dissipation term
-``2 \nu \langle S_{i j} S_{i j} \rangle``
+``2 \\nu \\langle S_{i j} S_{i j} \\rangle``
 from strain-rate tensor.
 """
 function dissipation_from_strain!(ϵ, u, setup)
@@ -1569,18 +1569,18 @@ function total_kinetic_energy(u, setup; kwargs...)
     sum(k[Ip])
 end
 
-raw"""
+"""
     get_scale_numbers(u, setup)
 
 Get the following dimensional scale numbers [Pope2000](@cite):
 
-- Velocity ``u_\text{avg} = \langle u_i u_i \rangle^{1/2}``
-- Dissipation rate ``\epsilon = 2 \nu \langle S_{ij} S_{ij} \rangle``
-- Kolmolgorov length scale ``\eta = (\frac{\nu^3}{\epsilon})^{1/4}``
-- Taylor length scale ``\lambda = (\frac{5 \nu}{\epsilon})^{1/2} u_\text{avg}``
-- Taylor-scale Reynolds number ``Re_\lambda = \frac{\lambda u_\text{avg}}{\sqrt{3} \nu}``
-- Integral length scale ``L = \frac{3 \pi}{2 u_\text{avg}^2} \int_0^\infty \frac{E(k)}{k} \, \mathrm{d} k``
-- Large-eddy turnover time ``\tau = \frac{L}{u_\text{avg}}``
+- Velocity ``u_\\text{avg} = \\langle u_i u_i \\rangle^{1/2}``
+- Dissipation rate ``\\epsilon = 2 \\nu \\langle S_{ij} S_{ij} \\rangle``
+- Kolmolgorov length scale ``\\eta = (\\frac{\\nu^3}{\\epsilon})^{1/4}``
+- Taylor length scale ``\\lambda = (\\frac{5 \\nu}{\\epsilon})^{1/2} u_\\text{avg}``
+- Taylor-scale Reynolds number ``Re_\\lambda = \\frac{\\lambda u_\\text{avg}}{\\sqrt{3} \\nu}``
+- Integral length scale ``L = \\frac{3 \\pi}{2 u_\\text{avg}^2} \\int_0^\\infty \\frac{E(k)}{k} \\, \\mathrm{d} k``
+- Large-eddy turnover time ``\\tau = \\frac{L}{u_\\text{avg}}``
 """
 function get_scale_numbers(u, setup)
     (; grid, Re) = setup
@@ -1588,15 +1588,19 @@ function get_scale_numbers(u, setup)
     D = dimension()
     T = eltype(u[1])
     ν = 1 / Re
-    uavg = sum(1:D) do α
-        Δα = ntuple(β -> reshape(α == β ? Δu[β] : Δ[β], ntuple(Returns(1), β - 1)..., :), D)
-        Ωu = .*(Δα...)
-        field = @. u[α]^2 * Ωu
-        sum(field[Iu[α]]) / sum(Ωu[Iu[α]])
-    end |> sqrt
+    uavg =
+        sum(1:D) do α
+            Δα = ntuple(
+                β -> reshape(α == β ? Δu[β] : Δ[β], ntuple(Returns(1), β - 1)..., :),
+                D,
+            )
+            Ωu = .*(Δα...)
+            field = @. u[α]^2 * Ωu
+            sum(field[Iu[α]]) / sum(Ωu[Iu[α]])
+        end |> sqrt
     ϵ = dissipation_from_strain(u, setup)
-    ϵ = sum((Ω .* ϵ)[Ip]) / sum(Ω[Ip])
-    η = (ν^3 / ϵ)^T(1/4)
+    ϵ = sum((Ω.*ϵ)[Ip]) / sum(Ω[Ip])
+    η = (ν^3 / ϵ)^T(1 / 4)
     λ = sqrt(5ν / ϵ) * uavg
     Reλ = λ * uavg / sqrt(T(3)) / ν
     # TODO: L and τ

@@ -493,8 +493,13 @@ function fieldplot(
 
     xf = Array.(getindex.(xp, Ip.indices))
     dxf = diff.(xf)
-    if all(α -> all(≈(dxf[α][1]), dxf[α]), 1:3)
-        xf = ntuple(α -> LinRange(xf[α][1], xf[α][end], length(xf[α])), 3)
+    xf = map(xf) do xf
+        dxf = diff(xf)
+        if all(≈(dxf[1]), dxf)
+            LinRange(xf[1], xf[end], length(xf))
+        else
+            xf
+        end
     end
 
     field = observefield(state; setup, fieldname, psolver)
