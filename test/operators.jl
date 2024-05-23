@@ -139,6 +139,8 @@ testops(dim) = @testset "Operators $(dim())D" begin
         D == 3 && @test eig2field(u, setup) isa Array{T} broken = D == 3
         @test kinetic_energy(u, setup) isa Array{T}
         @test total_kinetic_energy(u, setup) isa T
+        @test dissipation_from_strain(u, setup) isa Array{T}
+        @test get_scale_numbers(u, setup) isa NamedTuple
     end
 end
 

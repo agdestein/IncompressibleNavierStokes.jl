@@ -47,4 +47,6 @@ total_kinetic_energy
 tensorbasis
 divoftensor!
 tensorbasis!
+get_scale_numbers
+dissipation_from_strain!
 ```
