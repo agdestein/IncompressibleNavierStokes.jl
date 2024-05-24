@@ -79,7 +79,7 @@ export default_psolver,
     psolver_spectral_lowmemory
 
 # Solvers
-export solve_unsteady, solve_steady_state
+export solve_unsteady
 
 # Field generation
 export create_initial_conditions, random_field
