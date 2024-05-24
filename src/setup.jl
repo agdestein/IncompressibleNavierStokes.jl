@@ -2,13 +2,13 @@
     Setup(
         x...;
         boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
-        Re = convert(eltype(x[1]), 1_000),
         bodyforce = nothing,
         issteadybodyforce = true,
         closure_model = nothing,
         ArrayType = Array,
         workgroupsize = 64,
         temperature = nothing,
+        Re = isnothing(temperature) ? convert(eltype(x[1]), 1_000) : 1 / temperature.α1,
     )
 
 Create setup.
@@ -16,7 +16,6 @@ Create setup.
 function Setup(
     x...;
     boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
-    Re = convert(eltype(x[1]), 1_000),
     bodyforce = nothing,
     issteadybodyforce = true,
     closure_model = nothing,
@@ -24,6 +23,7 @@ function Setup(
     ArrayType = Array,
     workgroupsize = 64,
     temperature = nothing,
+    Re = isnothing(temperature) ? convert(eltype(x[1]), 1_000) : 1 / temperature.α1,
 )
     setup = (;
         grid = Grid(x, boundary_conditions; ArrayType),
