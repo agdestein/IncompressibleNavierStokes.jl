@@ -5,11 +5,9 @@
 *Manifest.toml
 /docs/build/
 /docs/src/generated/
+/scratch/
+/Paper/
 *output/
-scratch/*
-test.jl
-toto.jl
-tata.jl
 
 # Vim swap
 *.swp

@@ -51,9 +51,5 @@ using Test
     # include("timesteppers.jl")
     # include("simulation.jl")
     # include("postprocess.jl")
-
-    @testset "Aqua" begin
-        @info "Testing code with Aqua"
-        Aqua.test_all(IncompressibleNavierStokes; ambiguities = false)
-    end
+    include("aqua.jl")
 end
