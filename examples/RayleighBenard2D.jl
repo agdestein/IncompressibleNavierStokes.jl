@@ -16,18 +16,21 @@ function nusseltplot(state; setup)
     T = eltype(Δ[1])
     Δy1 = Δu[2][1:1] |> sum
     Δy2 = Δu[2][end-1:end-1] |> sum
-    _Nu1 = Point2f[]
-    Nu1 = lift(state) do (; temp, t)
+
+    # Observe Nusselt numbers
+    Nu1 = Observable(Point2f[])
+    Nu2 = Observable(Point2f[])
+    on(state) do (; temp, t)
         dTdy = @. (temp[:, 2] - temp[:, 1]) / Δy1
         Nu = sum((.-dTdy.*Δ[1])[2:end-1])
-        push!(_Nu1, Point2f(t, Nu))
-    end
-    _Nu2 = Point2f[]
-    Nu2 = lift(state) do (; temp, t)
+        push!(Nu1[], Point2f(t, Nu))
         dTdy = @. (temp[:, end-1] - temp[:, end-2]) / Δy2
         Nu = sum((.-dTdy.*Δ[1])[2:end-1])
-        push!(_Nu2, Point2f(t, Nu))
+        push!(Nu2[], Point2f(t, Nu))
+        (Nu1, Nu2) .|> notify # Update plot
     end
+
+    # Plot Nu history
     fig = Figure()
     ax = Axis(fig[1, 1]; title = "Nusselt number", xlabel = "t", ylabel = "Nu")
     lines!(ax, Nu1; label = "Lower plate")
@@ -101,38 +104,41 @@ T0(x, y) = one(y) / 2 + max(sinpi(20 * x) / 100, 0); ## Perturbation
 ## T0(x, y) = 1 - y + max(sinpi(20 * x) / 1000, 0); ## Perturbation
 tempstart = T0.(xp[1], xp[2]');
 
-# Solve equation
+# Processors
 GLMakie.closeall() #!md
+processors = (;
+    rtp = realtimeplotter(;
+        screen = GLMakie.Screen(), #!md
+        setup,
+        fieldname = :temperature,
+        colorrange = (T(0), T(1)),
+        size = (600, 350),
+        colormap = :seaborn_icefire_gradient,
+        nupdate = 50,
+    ),
+    nusselt = realtimeplotter(;
+        screen = GLMakie.Screen(), #!md
+        setup,
+        plot = nusseltplot,
+        nupdate = 20,
+    ),
+    avg = realtimeplotter(;
+        screen = GLMakie.Screen(), #!md
+        setup,
+        plot = averagetemp,
+        nupdate = 50,
+    ),
+    log = timelogger(; nupdate = 1000),
+)
+
+# Solve equation
 state, outputs = solve_unsteady(;
     setup,
     ustart,
     tempstart,
     tlims = (T(0), T(12)),
     Δt = T(1e-2),
-    processors = (;
-        rtp = realtimeplotter(;
-            screen = GLMakie.Screen(), #!md
-            setup,
-            fieldname = :temperature,
-            colorrange = (T(0), T(1)),
-            size = (600, 350),
-            colormap = :seaborn_icefire_gradient,
-            nupdate = 50,
-        ),
-        nusselt = realtimeplotter(;
-            screen = GLMakie.Screen(), #!md
-            setup,
-            plot = nusseltplot,
-            nupdate = 20,
-        ),
-        avg = realtimeplotter(;
-            screen = GLMakie.Screen(), #!md
-            setup,
-            plot = averagetemp,
-            nupdate = 50,
-        ),
-        log = timelogger(; nupdate = 100),
-    ),
+    processors,
 );
 
 # Field
