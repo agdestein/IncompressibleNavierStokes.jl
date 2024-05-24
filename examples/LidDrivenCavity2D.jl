@@ -82,18 +82,6 @@ setup = Setup(x, y; boundary_conditions, Re, ArrayType);
 # the velocity component.
 ustart = create_initial_conditions(setup, (dim, x, y) -> zero(x));
 
-# ## Solve problems
-#
-# Problems can be solved.
-
-# The [`solve_steady_state`](@ref) function is for computing a state where the right hand side of the
-# momentum equation is zero.
-## u, p = solve_steady_state(setup, u₀, p₀)
-nothing
-
-# For this test case, the same steady state may be obtained by solving an
-# unsteady problem for a sufficiently long time.
-
 # Iteration processors are called after every `nupdate` time steps. This can be
 # useful for logging, plotting, or saving results. Their respective outputs are
 # later returned by `solve_unsteady`.

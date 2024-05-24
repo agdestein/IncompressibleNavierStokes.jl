@@ -48,7 +48,6 @@ animator
 ```@docs
 get_cfl_timestep!
 solve_unsteady
-solve_steady_state
 ```
 
 ## Utils
