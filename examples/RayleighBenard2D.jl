@@ -13,11 +13,10 @@ ArrayType = Array
 function nusseltplot(state; setup)
     state isa Observable || (state = Observable(state))
     (; Δ, Δu) = setup.grid
-    T = eltype(Δ[1])
     Δy1 = Δu[2][1:1] |> sum
     Δy2 = Δu[2][end-1:end-1] |> sum
 
-    # Observe Nusselt numbers
+    ## Observe Nusselt numbers
     Nu1 = Observable(Point2f[])
     Nu2 = Observable(Point2f[])
     on(state) do (; temp, t)
@@ -27,10 +26,10 @@ function nusseltplot(state; setup)
         dTdy = @. (temp[:, end-1] - temp[:, end-2]) / Δy2
         Nu = sum((.-dTdy.*Δ[1])[2:end-1])
         push!(Nu2[], Point2f(t, Nu))
-        (Nu1, Nu2) .|> notify # Update plot
+        (Nu1, Nu2) .|> notify ## Update plot
     end
 
-    # Plot Nu history
+    ## Plot Nu history
     fig = Figure()
     ax = Axis(fig[1, 1]; title = "Nusselt number", xlabel = "t", ylabel = "Nu")
     lines!(ax, Nu1; label = "Lower plate")
