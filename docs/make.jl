@@ -9,6 +9,7 @@ using NeuralClosure
 using Literate
 using Documenter
 using DocumenterCitations
+using DocumenterVitepress
 
 DocMeta.setdocmeta!(
     IncompressibleNavierStokes,
@@ -51,10 +52,15 @@ makedocs(;
     authors = "Syver Døving Agdestein, Benjamin Sanderse, and contributors",
     repo = "https://github.com/agdestein/IncompressibleNavierStokes.jl/blob/{commit}{path}#{line}",
     sitename = "IncompressibleNavierStokes.jl",
-    format = Documenter.HTML(;
-        prettyurls = get(ENV, "CI", "false") == "true",
-        canonical = "https://agdestein.github.io/IncompressibleNavierStokes.jl",
-        assets = String[],
+    # format = Documenter.HTML(;
+    #     prettyurls = get(ENV, "CI", "false") == "true",
+    #     canonical = "https://agdestein.github.io/IncompressibleNavierStokes.jl",
+    #     assets = String[],
+    # ),
+    format = DocumenterVitepress.MarkdownVitepress(;
+        repo = "https://github.com/agdestein/IncompressibleNavierStokes.jl",
+        devurl = "dev",
+        deploy_url = "https://agdestein.github.io/IncompressibleNavierStokes.jl",
     ),
     pagesonly = true,
     pages = [
