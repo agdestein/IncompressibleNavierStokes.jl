@@ -48,12 +48,9 @@ using Test
     include("psolvers.jl")
     include("operators.jl")
     include("chainrules.jl")
-    # include("models.jl")
-    # include("solvers.jl")
-    # include("simulation2D.jl")
-    # include("simulation3D.jl")
-    # include("postprocess2D.jl")
-    # include("postprocess3D.jl")
+    # include("timesteppers.jl")
+    # include("simulation.jl")
+    # include("postprocess.jl")
 
     @testset "Aqua" begin
         @info "Testing code with Aqua"

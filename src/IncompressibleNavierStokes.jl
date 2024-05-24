@@ -32,7 +32,6 @@ include("operators.jl")
 
 # Time steppers
 include("time_steppers/methods.jl")
-include("time_steppers/nstage.jl")
 include("time_steppers/time_stepper_caches.jl")
 include("time_steppers/step.jl")
 include("time_steppers/isexplicit.jl")
@@ -48,7 +47,6 @@ include("processors.jl")
 # Solvers
 # include("solvers/get_timestep.jl")
 include("solvers/cfl.jl")
-include("solvers/solve_steady_state.jl")
 include("solvers/solve_unsteady.jl")
 
 # Utils

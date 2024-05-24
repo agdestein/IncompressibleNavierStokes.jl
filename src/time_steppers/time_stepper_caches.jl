@@ -34,7 +34,7 @@ end
 
 function ode_method_cache(method::ExplicitRungeKuttaMethod, setup, u, temp)
     u₀ = zero.(u)
-    ns = nstage(method)
+    ns = length(method.b)
     ku = [zero.(u) for i = 1:ns]
     div = zero(u[1])
     p = zero(u[1])
