@@ -9,8 +9,7 @@ point precisions, such as
 
 To use single or half precision, all user input floats should be converted to
 the desired type. Mixing different precisions causes unnecessary conversions
-and may break the code. See the [tutorial](../generated/LidDrivenCavity2D.md) for
-an example on how to enforce floating point type hygiene.
+and may break the code.
 
 !!! note "GPU precision"
     For GPUs, single precision is preferred. `CUDA.jl`s `cu` converts to

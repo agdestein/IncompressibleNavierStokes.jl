@@ -17,7 +17,7 @@ subject to the algebraic constraint formed by the mass equation
 M u + y_M = 0.
 ```
 
-In the end of the [previous section](spatial.md), we differentiated the mass
+In the end of the previous section, we differentiated the mass
 equation in time to obtain a discrete pressure Poisson equation. This equation
 includes the term ``\frac{\mathrm{d} y_M}{\mathrm{d} t}``, which is non-zero if
 an unsteady flow of mass is added to the domain (Dirichlet boundary
@@ -37,10 +37,9 @@ initial conditions. We say that the time integration scheme (definition of
 ``u^n``) is accurate to the order ``r`` if ``u^n = u(t^n) +
 \mathcal{O}(\Delta t^r)`` for all ``n``.
 
-
 IncompressibleNavierStokes provides a collection of explicit and implicit
-[Runge-Kutta methods](../api/tableaux.md), in addition to Adams-Bashforth
-Crank-Nicolson and one-leg beta method time steppers.
+Runge-Kutta methods, in addition to Adams-Bashforth Crank-Nicolson and one-leg
+beta method time steppers.
 
 The code is currently not adapted to time steppers from
 [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/solvers/dae_solve/),

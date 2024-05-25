@@ -8,9 +8,9 @@
     cd IncompressibleNavierStokes/lib/NeuralClosure
     ```
 
-For [large eddy simulation (LES)](les.md), a closure model is
-required. With IncompressibleNavierStokes, a neural closure model can be
-trained on filtered DNS data. The discrete DNS equations are given by
+Large eddy simulation, a closure model is required. With
+IncompressibleNavierStokes, a neural closure model can be trained on filtered
+DNS data. The discrete DNS equations are given by
 
 ```math
 \begin{split}
