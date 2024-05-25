@@ -4,7 +4,7 @@
 Represent an `N`-dimensional space.
 Returns `N` when called.
 
-```example
+```julia-repl
 julia> d = Dimension(3)
 Dimension{3}()
 

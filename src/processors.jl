@@ -10,7 +10,7 @@ final `state`.
 
 See the following example:
 
-```example
+```julia
 function initialize(state)
     s = 0
     println("Let's sum up the time steps")
