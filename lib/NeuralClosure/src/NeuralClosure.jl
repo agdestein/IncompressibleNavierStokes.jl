@@ -11,11 +11,7 @@ using Lux
 using NNlib
 using Observables
 using Random
-using Tullio
 using Zygote
-
-# Must be loaded inside for Tullio to work correctly
-using CUDA
 
 include("closure.jl")
 include("cnn.jl")

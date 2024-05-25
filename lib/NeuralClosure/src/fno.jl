@@ -127,11 +127,12 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
     R = selectdim(R, D + 3, 1) .+ im .* selectdim(R, D + 3, 2)
 
     # Spatial part (applied point-wise)
-    if D == 2
-        @tullio y[i₁, i₂, b, s] := W[b, a] * x[i₁, i₂, a, s]
-    elseif D == 3
-        @tullio y[i₁, i₂, i₃, b, s] := W[b, a] * x[i₁, i₂, i₃, a, s]
-    end
+    error("Replace Tullio")
+    # if D == 2
+    #     @tullio y[i₁, i₂, b, s] := W[b, a] * x[i₁, i₂, a, s]
+    # elseif D == 3
+    #     @tullio y[i₁, i₂, i₃, b, s] := W[b, a] * x[i₁, i₂, i₃, a, s]
+    # end
 
     # Spectral part (applied mode-wise)
     #
@@ -148,7 +149,8 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
     xhat = fft(x, dims)
     xhat = xhat[ikeep..., :, :]
     if D == 2
-        @tullio z[k₁, k₂, b, s] := R[k₁, k₂, b, a] * xhat[k₁, k₂, a, s]
+        error("Replace Tullio")
+        # @tullio z[k₁, k₂, b, s] := R[k₁, k₂, b, a] * xhat[k₁, k₂, a, s]
         z = cat(
             z[1:kmax+1, :, :, :],
             zero(similar(z, K - 2 * (kmax + 1), 2 * (kmax + 1), cout, nsample)),
@@ -162,7 +164,8 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
             dims = 2,
         )
     elseif D == 3
-        @tullio z[k₁, k₂, k₃, b, s] := R[k₁, k₂, k₃, b, a] * xhat[k₁, k₂, k₃, a, s]
+        error("Replace Tullio")
+        # @tullio z[k₁, k₂, k₃, b, s] := R[k₁, k₂, k₃, b, a] * xhat[k₁, k₂, k₃, a, s]
         z = cat(
             z[1:kmax+1, :, :, :, :],
             zero(
