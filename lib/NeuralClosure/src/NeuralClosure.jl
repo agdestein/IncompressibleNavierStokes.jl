@@ -16,6 +16,7 @@ using Zygote
 include("closure.jl")
 include("cnn.jl")
 include("fno.jl")
+include("vectorconv.jl")
 include("training.jl")
 include("filter.jl")
 include("create_les_data.jl")

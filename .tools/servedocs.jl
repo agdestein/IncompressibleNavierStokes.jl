@@ -3,7 +3,7 @@
 using Pkg
 Pkg.activate(joinpath(@__DIR__, "..", "docs"))
 
-push!(LOAD_PATH, "@live-server")
+push!(LOAD_PATH, "@LiveServer")
 using LiveServer
 
 root = joinpath(@__DIR__, "..")
