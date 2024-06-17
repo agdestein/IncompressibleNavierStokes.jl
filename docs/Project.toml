@@ -10,7 +10,7 @@ NeuralClosure = "099dac27-d7f2-4047-93d5-0baee36b9c25"
 [compat]
 Documenter = "1"
 DocumenterCitations = "1"
-DocumenterVitepress = "0.0.21"
+DocumenterVitepress = "0.1"
 Examples = "0.1"
 IncompressibleNavierStokes = "0.5"
 Literate = "2"
