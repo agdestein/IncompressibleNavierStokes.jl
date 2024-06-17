@@ -7,7 +7,8 @@ struct VectorConv2D{C,A}
     end
 end
 
-Lux.initialparameters(rng::AbstractRNG, vc::VectorConv2D) = Lux.initialparameters(rng, vc.conv)
+Lux.initialparameters(rng::AbstractRNG, vc::VectorConv2D) =
+    Lux.initialparameters(rng, vc.conv)
 Lux.initialstates(::AbstractRNG, vc::VectorConv2D) = Lux.initialstates(rng, vc.conv)
 Lux.parameterlength(vc::VectorConv2D) = Lux.parameterlength(vc.conv)
 Lux.statelength(vc::VectorConv2D) = Lux.statelength(vc.conv)
