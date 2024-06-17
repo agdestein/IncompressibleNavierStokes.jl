@@ -22,6 +22,7 @@ jobs:
               entry_type = DropEntry(),
               subdirs = [
                   "",
+                  "docs",
                   "test",
                   "examples",
                   "lib/NeuralClosure",
