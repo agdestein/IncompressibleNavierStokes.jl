@@ -18,13 +18,13 @@ hero:
       text: View on GitHub
       link: https://github.com/agdestein/IncompressibleNavierStokes.jl
     - theme: alt
-      text: API Reference
-      link: /api
+      text: Features
+      link: /features/bc
 
 features:
   - icon: <img width="64" height="64" src="https://raw.githubusercontent.com/JuliaGPU/CUDA.jl/3a2546c1ac1546b05b4c0d3d6ff26c268091a202/docs/src/assets/logo.png" alt="CUDA.jl"/>
     title: GPU acceleration
-    details: Fastand efficient 2D/3D kernels for CPU and GPU with CUDA.jl
+    details: Fast and efficient 2D/3D kernels for CPU and GPU with CUDA.jl
     link: /features/gpu
   - icon: <img width="64" height="64" src="https://raw.githubusercontent.com/JuliaDiff/ChainRulesCore.jl/fa530b9865ec0cb3acff81ddef0967fdcc8c8214/docs/src/assets/logo.svg" alt="ChainRules.jl"/>
     title: Differentiable physics
@@ -37,6 +37,6 @@ features:
   - icon: 🌊
     title: Problems
     details: Solve for decaying turbulence, channel flows, actuator disks, Rayleigh-Bénard convection, and more
-    link: /examples
+    link: /generated/LidDrivenCavity2D
 ---
 ````
