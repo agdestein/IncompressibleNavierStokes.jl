@@ -57,7 +57,7 @@ function solve_unsteady(;
     stepper =
         create_stepper(method; setup, psolver, u = ustart, temp = tempstart, t = tstart)
 
-    # Initialize processors for iteration results  
+    # Initialize processors for iteration results
     state = Observable(get_state(stepper))
     initialized = (; (k => v.initialize(state) for (k, v) in pairs(processors))...)
 

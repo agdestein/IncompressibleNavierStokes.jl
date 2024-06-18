@@ -14,12 +14,26 @@ struct RKProject{T,R} <: IncompressibleNavierStokes.AbstractODEMethod{T}
     RKProject(rk, projectorder) = new{eltype(rk.A),typeof(rk)}(rk, projectorder)
 end
 
-ode_method_cache(method::RKProject, setup, u) = ode_method_cache(method.rk, setup, u)
+IncompressibleNavierStokes.ode_method_cache(method::RKProject, setup, u, temp) =
+    IncompressibleNavierStokes.ode_method_cache(method.rk, setup, u, temp)
 
-create_stepper(method::RKProject; setup, psolver, u, temp, t, n = 0) =
-    create_stepper(method.rk; setup, psolver, u, temp, t, n)
+IncompressibleNavierStokes.create_stepper(
+    method::RKProject;
+    setup,
+    psolver,
+    u,
+    temp,
+    t,
+    n = 0,
+) = IncompressibleNavierStokes.create_stepper(method.rk; setup, psolver, u, temp, t, n)
 
-function timestep!(method::RKProject, stepper, Δt; θ = nothing, cache)
+function IncompressibleNavierStokes.timestep!(
+    method::RKProject,
+    stepper,
+    Δt;
+    θ = nothing,
+    cache,
+)
     (; setup, psolver, u, temp, t, n) = stepper
     (; grid, closure_model) = setup
     (; dimension, Iu) = grid
@@ -83,7 +97,7 @@ function timestep!(method::RKProject, stepper, Δt; θ = nothing, cache)
     create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
 end
 
-function timestep(method::RKProject, stepper, Δt; θ = nothing)
+function IncompressibleNavierStokes.timestep(method::RKProject, stepper, Δt; θ = nothing)
     (; setup, psolver, u, temp, t, n) = stepper
     (; grid, closure_model) = setup
     (; dimension) = grid
@@ -101,13 +115,13 @@ function timestep(method::RKProject, stepper, Δt; θ = nothing)
 
     for i = 1:nstage
         # Compute force at current stage i
-        u = apply_bc_u(u, t, setup)
-        F = momentum(u, temp, t, setup)
+        u = IncompressibleNavierStokes.apply_bc_u(u, t, setup)
+        F = IncompressibleNavierStokes.momentum(u, temp, t, setup)
 
         # Project F first
         if projectorder == :first
-            F = apply_bc_u(F, t, setup; dudt = true)
-            F = project(F, setup; psolver)
+            F = IncompressibleNavierStokes.apply_bc_u(F, t, setup; dudt = true)
+            F = IncompressibleNavierStokes.project(F, setup; psolver)
         end
 
         # Add closure term
@@ -115,8 +129,8 @@ function timestep(method::RKProject, stepper, Δt; θ = nothing)
 
         # Project F second
         if projectorder == :second
-            F = apply_bc_u(F, t, setup; dudt = true)
-            F = project(F, setup; psolver)
+            F = IncompressibleNavierStokes.apply_bc_u(F, t, setup; dudt = true)
+            F = IncompressibleNavierStokes.project(F, setup; psolver)
         end
 
         # Store right-hand side of stage i
@@ -135,15 +149,15 @@ function timestep(method::RKProject, stepper, Δt; θ = nothing)
         # Project stage u directly
         # Make velocity divergence free at time t
         if projectorder == :last
-            u = apply_bc_u(u, t, setup)
-            u = project(u, setup; psolver)
+            u = IncompressibleNavierStokes.apply_bc_u(u, t, setup)
+            u = IncompressibleNavierStokes.project(u, setup; psolver)
         end
     end
 
     # This is redundant, but Neumann BC need to have _exact_ copies
     # since we divide by an infinitely thin (eps(T)) volume width in the
     # diffusion term
-    u = apply_bc_u(u, t, setup)
+    u = IncompressibleNavierStokes.apply_bc_u(u, t, setup)
 
-    create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
+    IncompressibleNavierStokes.create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
 end

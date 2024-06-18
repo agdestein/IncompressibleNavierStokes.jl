@@ -2,7 +2,7 @@
 #
 # Generate filtered DNS data, train closure model, compare filters,
 # closure models, and projection orders.
-# 
+#
 # The filtered DNS data is saved and can be loaded in a subesequent session.
 # The learned CNN parameters are also saved.
 
@@ -18,6 +18,7 @@ using Lux
 using NeuralClosure
 using NNlib
 using Optimisers
+using PaperDC
 using Random
 using SparseArrays
 using FFTW
@@ -106,8 +107,8 @@ get_params(nlesscalar) = (;
     filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
     create_psolver = psolver_spectral,
-    icfunc = (setup, psolver) ->
-        random_field(setup, zero(eltype(setup.grid.x[1])); kp = 20, psolver),
+    icfunc = (setup, psolver, rng) ->
+        random_field(setup, zero(eltype(setup.grid.x[1])); kp = 20, psolver, rng),
     rng,
 )
 
@@ -189,7 +190,7 @@ let
     # field, setup = data_valid[1].data[ig, ifil].u, setups_valid[ig];
     # field, setup = data_test.data[ig, ifil].u, setups_test[ig];
     u = device.(field[1])
-    o = Observable((; u, t = nothing))
+    o = Observable((; u, temp = nothing, t = nothing))
     # energy_spectrum_plot(o; setup) |> display
     fieldplot(
         o;
@@ -250,7 +251,7 @@ closure(device(io_train[1, 1].u[:, :, :, 1:50]), device(θ₀));
 # Save parameters to disk after each run.
 # Plot training progress (for a validation data batch).
 
-priornames = map(CartesianIndices(io_train)) do I
+priorfiles = map(CartesianIndices(io_train)) do I
     ig, ifil = I.I
     "$savepath/prior_ifilter$(ifil)_igrid$(ig).jld2"
 end
@@ -334,7 +335,7 @@ let
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         setup = setups_train[ig]
         psolver = psolver_spectral(setup)
-        loss = IncompressibleNavierStokes.create_loss_post(;
+        loss = create_loss_post(;
             setup,
             psolver,
             method = RKProject(RK44(; T), getorder(iorder)),
@@ -823,7 +824,7 @@ with_theme(; palette) do
 end
 
 # Compute Divergence ##########################################################
-# 
+#
 # Compute divergence as a function of time.
 
 divs = let
@@ -1005,7 +1006,7 @@ clean();
 # ufinal = load("$savepath/ufinal.jld2")["ufinal"];
 
 # Plot spectra ###############################################################
-# 
+#
 # Plot kinetic energy spectra at final time.
 
 # Better for PDF export

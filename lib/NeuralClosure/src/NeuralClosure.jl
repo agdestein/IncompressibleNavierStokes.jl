@@ -7,9 +7,12 @@ using ComponentArrays: ComponentArray
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: Dimension, momentum!, apply_bc_u!, project!
 using KernelAbstractions
+using LinearAlgebra
 using Lux
+using Makie
 using NNlib
 using Observables
+using Optimisers
 using Random
 using Zygote
 

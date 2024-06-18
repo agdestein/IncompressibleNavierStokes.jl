@@ -172,9 +172,9 @@ function create_les_data(;
     @info "Generating $datasize Mb of filtered DNS data"
 
     # Initial conditions
-    u₀ = icfunc(dns, psolver, rng)
+    ustart = icfunc(dns, psolver, rng)
 
-    any(u -> any(isnan, u), u₀) && @warn "Initial conditions contain NaNs"
+    any(u -> any(isnan, u), ustart) && @warn "Initial conditions contain NaNs"
 
     # Random body force
     # force_dns =
@@ -192,13 +192,14 @@ function create_les_data(;
     # _les = (; les..., bodyforce = force_les)
 
     # Solve burn-in DNS
-    (; u, t), outputs = solve_unsteady(_dns, u₀, (T(0), tburn); Δt, psolver)
+    (; u, t), outputs =
+        solve_unsteady(; setup = _dns, ustart, tlims = (T(0), tburn), Δt, psolver)
 
     # Solve DNS and store filtered quantities
-    (; u, t), outputs = solve_unsteady(
-        _dns,
-        u,
-        (T(0), tsim);
+    (; u, t), outputs = solve_unsteady(;
+        setup = _dns,
+        ustart = u,
+        tlims = (T(0), tsim),
         Δt,
         processors = (;
             f = filtersaver(
