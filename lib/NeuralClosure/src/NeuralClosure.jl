@@ -25,7 +25,7 @@ include("filter.jl")
 include("create_les_data.jl")
 
 export smagorinsky_closure
-export cnn, fno, FourierLayer
+export cnn, fno, FourierLayer, GroupConv2D, rot2
 export train
 export mean_squared_error, create_relerr_prior, create_relerr_post
 export create_loss_prior, create_loss_post
