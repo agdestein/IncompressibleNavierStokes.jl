@@ -7,38 +7,40 @@ using Random
 T = Float32
 rng = Xoshiro()
 
-gconvs = (
-    GroupConv2D((3, 3), 1 => 5; init_bias = glorot_normal, activation = tanh),
-    GroupConv2D((3, 3), 5 => 5; init_bias = glorot_normal, activation = tanh),
-    GroupConv2D((3, 3), 5 => 5; init_bias = glorot_normal, activation = tanh),
-    GroupConv2D((3, 3), 5 => 1; use_bias = false),
+init_bias = glorot_normal
+# init_bias = zeros32 
+gcnn = Chain(
+    GroupConv2D((3, 3), 1 => 5, tanh; init_bias, islifting = true),
+    GroupConv2D((3, 3), 5 => 5, tanh; init_bias),
+    GroupConv2D((3, 3), 5 => 5, tanh; init_bias),
+    GroupConv2D((3, 3), 5 => 5, tanh; init_bias),
+    GroupConv2D((3, 3), 5 => 5, tanh; init_bias),
+    GroupConv2D((3, 3), 5 => 1; use_bias = false, isprojecting = true),
 )
 
-params = map(c -> Lux.setup(rng, c)[1], gconvs);
-
-function gcnn(u, params, layers)
-    u = (u[1], u[2], -u[1], -u[2])
-    for i in 1:length(layers)
-        u = layers[i](u, params[i], (;))[1]
-    end
-    u = (u[1] - u[3], u[2] - u[4])
-end
+params, state = Lux.setup(rng, gcnn)
 
 n = 100
-ux = randn(T, n - 2, n - 2, 1, 1)
-uy = randn(T, n - 2, n - 2, 1, 1)
+ux = randn(T, n, n, 1, 1)
+uy = randn(T, n, n, 1, 1)
 u = (ux, uy)
-u = pad_circular.(u, 1)
-ru = rot2(u, 2)
+ru = rot2(u, 1)
+u = cat(u...; dims = 3)
+ru = cat(ru...; dims = 3)
 
-c = gcnn(u, params, gconvs)
-cr = gcnn(ru, params, gconvs)
-rc = rot2(c, 2)
+c, _ = gcnn(u, params, state)
+cr, _ = gcnn(ru, params, state)
+c = (c[:, :, 1, 1], c[:, :, 2, 1])
+cr = (cr[:, :, 1, 1], cr[:, :, 2, 1])
+rc = rot2(c, 1)
+cr[1] - rc[1]
+cr[2] - rc[2]
+
+using LinearAlgebra
+norm(cr[1] - rc[1]) / norm(rc[1])
+norm(cr[2] - rc[2]) / norm(rc[2])
 
 cr[1]
 rc[1]
 cr[2]
 rc[2]
-
-cr[1] - rc[1]
-cr[2] - rc[2]

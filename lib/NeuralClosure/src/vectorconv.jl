@@ -1,3 +1,16 @@
+function rot2mat(n)
+    n = mod(n, 4)
+    if n == 0
+        [1 0; 0 1]
+    elseif n == 1
+        [0 -1; 1 0]
+    elseif n == 2
+        [-1 0; 0 -1]
+    elseif n == 3
+        [0 1; -1 0]
+    end
+end
+
 """
     rot2(u, r)
 
@@ -9,19 +22,19 @@ function rot2 end
 function rot2(u, r)
     nx, ny, s... = size(u)
     @assert nx == ny
-    r = mod1(r, 4)
-    if r == 1
+    r = mod(r, 4)
+    if r == 0
         i = 1:nx
         j = (1:nx)'
-    elseif r == 2
-        i = (1:nx)'
-        j = nx:-1:1
-    elseif r == 3
-        i = nx:-1:1
-        j = (nx:-1:1)'
-    elseif r == 4
+    elseif r == 1
         i = (nx:-1:1)'
         j = 1:nx
+    elseif r == 2
+        i = nx:-1:1
+        j = (nx:-1:1)'
+    elseif r == 3
+        i = (1:nx)'
+        j = nx:-1:1
     end
     I = CartesianIndex.(i, j)
     chans = fill(:, length(s))
@@ -29,17 +42,17 @@ function rot2(u, r)
 end
 
 # For vector fields (u, v)
-function rot2(u::Tuple{T,T}, r) where T
-    r = mod1(r, 4)
+function rot2(u::Tuple{T,T}, r) where {T}
+    r = mod(r, 4)
     ru = rot2(u[1], r)
     rv = rot2(u[2], r)
-    if r == 1
+    if r == 0
         (ru, rv)
-    elseif r == 2
+    elseif r == 1
         (-rv, ru)
-    elseif r == 3
+    elseif r == 2
         (-ru, -rv)
-    elseif r == 4
+    elseif r == 3
         (rv, -ru)
     end
 end
@@ -48,21 +61,21 @@ end
 # function rot2(u::Tuple{T,T,T,T}, r) where T
 #     nchan = ndims(u[1]) - 2
 #     chans = fill(:, nchan)
-#     r = mod1(r, 4)
+#     r = mod(r, 4)
 #     ru = rot2.(u, r)
-#     if r == 1
+#     if r == 0
 #         ru
-#     elseif r == 2
+#     elseif r == 1
 #         (-ru[4], ru[1], -ru[2], ru[3])
-#     elseif r == 3
+#     elseif r == 2
 #         (-ru[3], -ru[4], -ru[1], -ru[2])
-#     elseif r == 4
+#     elseif r == 3
 #         (ru[2], -ru[3], ru[4], -ru[1])
 #     end
 # end
 
 """
-    GroupConv2D(args...; activation = identity, kwargs...)
+    GroupConv2D(args...; kwargs...)
 
 Group-equivariant convolutional layer -- with respect to the p4 group.
 The layer is equivariant to rotations and translations of the input
@@ -84,47 +97,101 @@ where
 - `params` are the `Conv` params,
 - `state = (;)` are the empty `Conv` states.
 """
-struct GroupConv2D{C,A}
+struct GroupConv2D{C} <: Lux.AbstractExplicitLayer
+    islifting::Bool
+    isprojecting::Bool
+    cin::Int
+    cout::Int
     conv::C
-    activation::A
-    function GroupConv2D(args...; activation = identity, kwargs...)
-        conv = Conv(args...; kwargs...)
-        new{typeof(conv),typeof(activation)}(conv, activation)
+    function GroupConv2D(
+        k,
+        chans,
+        activation = identity;
+        islifting = false,
+        isprojecting = false,
+        kwargs...,
+    )
+        @assert !(islifting && isprojecting) "Must either lift or project"
+        # New channel size: Two velocity fields and four rotation states
+        cin, cout = chans
+        inner_cin = islifting ? 2 * cin : 4 * cin
+        inner_cout = isprojecting ? 2 * cout : 4 * cout
+
+        # Inner conv
+        conv = Conv(k, inner_cin => inner_cout, activation; kwargs...)
+        new{typeof(conv)}(islifting, isprojecting, cin, cout, conv)
     end
 end
 
 function Lux.initialparameters(rng::AbstractRNG, gc::GroupConv2D)
-    params = Lux.initialparameters(rng, gc.conv)
+    (; islifting, isprojecting, cin, cout, conv) = gc
+    params = Lux.initialparameters(rng, conv)
+    (; weight) = params
+    dof_cin = islifting || isprojecting ? 2 * cin : 4 * cin
+    weight = weight[:, :, 1:dof_cin, 1:cout]
+    nx = size(weight, 1)
     if haskey(params, :bias)
-        params.bias ./= 4
+        (; bias) = params
+        bias = bias[:, :, 1:cout, :]
+        (; weight, bias)
+    else
+        (; weight)
     end
-    params
 end
 Lux.initialstates(rng::AbstractRNG, gc::GroupConv2D) = Lux.initialstates(rng, gc.conv)
-Lux.parameterlength(gc::GroupConv2D) = Lux.parameterlength(gc.conv)
+# Lux.parameterlength(gc::GroupConv2D) =
+#     Lux.parameterlength(gc.conv) % 4
 Lux.statelength(gc::GroupConv2D) = Lux.statelength(gc.conv)
 
 function (gc::GroupConv2D)(x, params, state)
-    (; conv, activation) = gc
+    (; islifting, isprojecting, cin, cout, conv) = gc
     (; weight) = params
 
-    # Compute four new output fields from the four input fields
-    # with a "field" being `nx * ny * nchan * nsample` array
-    y = ntuple(4) do n
-        # Apply convolutions to the four inputs (without any activations)
-        y1, _ = conv(x[1], (; params..., weight = rot2(weight, n - 1)), state)
-        y2, _ = conv(x[2], (; params..., weight = rot2(weight, n - 2)), state)
-        y3, _ = conv(x[3], (; params..., weight = rot2(weight, n - 3)), state)
-        y4, _ = conv(x[4], (; params..., weight = rot2(weight, n - 4)), state)
-
-        # Manually apply one activation to the sum.
-        # The sum is over the whole p4-group: The four
-        # rotation states and all translations.
-        # Technically, the same bias appears four times below,
-        # but we can pretend btilde = 4b is a new bias.
-        @. activation(y1 + y2 + y3 + y4)
+    # Build correctly rotated weight duplicates
+    if islifting
+        a = weight[:, :, 1:cin, :]
+        b = weight[:, :, cin+1:end, :]
+        # a = a - rot2(a, 2)
+        # b = b - rot2(b, 2)
+        w = map(0:3) do n
+            wx, wy = rot2((a, b), n)
+            cat(wx, wy; dims = 3)
+        end
+        weight = cat(w...; dims = 4)
+    elseif isprojecting
+        a = weight[:, :, 1:cin, :]
+        b = weight[:, :, cin+1:end, :]
+        # a = a - rot2(a, 2)
+        # b = b - rot2(b, 2)
+        w = map(0:3) do m
+            wx, wy = rot2((a, b), m)
+            cat(wx, wy; dims = 4)
+        end
+        weight = cat(w...; dims = 3)
+    else
+        weight = map(m -> weight[:, :, m*cin+1:(m+1)*cin, :], 0:3)
+        w = map(0:3) do n
+            w = map(0:3) do m
+                i = mod(n - m, 4) + 1
+                rot2(weight[i], n)
+            end
+            cat(w...; dims = 3)
+        end
+        weight = cat(w...; dims = 4)
     end
 
-    # Return output and unchanged state
-    y, state
+    # Bias
+    params = if haskey(params, :bias)
+        (; bias) = params
+        if isprojecting
+            bias = cat(bias, bias; dims = 3)
+        else
+            bias = cat(bias, bias, bias, bias; dims = 3)
+        end
+        (; weight, bias)
+    else
+        (; weight)
+    end
+
+    conv(x, params, state)
 end
