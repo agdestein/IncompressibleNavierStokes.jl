@@ -123,6 +123,20 @@ struct GroupConv2D{C} <: Lux.AbstractExplicitLayer
     end
 end
 
+## Pretty printing
+function Base.show(io::IO, gc::GroupConv2D)
+    (; islifting, isprojecting, cin, cout, conv) = gc
+    print(io, "GroupConv2D(")
+    # print(io, cin, " => ", cout, ", ")
+    print(io, conv)
+    if islifting || isprojecting
+        print(io, "; ")
+        islifting && print(io, "islifting = true") 
+        isprojecting && print(io, "isprojecting = true") 
+    end
+    print(io, ")")
+end
+
 function Lux.initialparameters(rng::AbstractRNG, gc::GroupConv2D)
     (; islifting, isprojecting, cin, cout, conv) = gc
     params = Lux.initialparameters(rng, conv)
