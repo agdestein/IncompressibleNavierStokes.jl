@@ -1,6 +1,6 @@
 using IncompressibleNavierStokes
 using GLMakie
-using TensorClosure
+using SymmetryClosure
 using LinearAlgebra
 
 T = Float64
