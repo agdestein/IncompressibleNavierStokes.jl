@@ -75,27 +75,26 @@ end
 # end
 
 """
-    GroupConv2D(args...; kwargs...)
+    GroupConv2D(
+        k,
+        chans,
+        activation = identity;
+        islifting = false,
+        isprojecting = false,
+        kwargs...,
+    )
 
 Group-equivariant convolutional layer -- with respect to the p4 group.
 The layer is equivariant to rotations and translations of the input
 vector field.
 
-The `args` and `kwargs` are passed to the `Conv` layer.
+The `kwargs` are passed to the `Conv` layer.
 
-If `g = GroupConv2D(...)` is a layer then it should be called on four-dimensional vectors of 2D-coordinates:
+The layer has three variants:
 
-```julia
-g(u, params, state)
-```
-
-where
-
-- `u = (u1, u2, u3, u4)` is a tuple representing the four rotation states
-- `u[1]` is a scalar field of size `nx * ny * nchan * nsample` on which
-  a normal `Conv` is applied,
-- `params` are the `Conv` params,
-- `state = (;)` are the empty `Conv` states.
+- If `islifting` then it lifts a vector input `(u1, u2)` into a rotation-state vector `(v1, v2, v3, v4)`.
+- If `isprojecting`, it projects a rotation-state vector `(u1, u2, u3, v4)` into a vector `(v1, v2)`.
+- Otherwise, it cyclically transforms the rotation-state vector `(u1, u2, u3, u4)` into a new rotation-state vector `(v1, v2, v3, v4)`.
 """
 struct GroupConv2D{C} <: Lux.AbstractExplicitLayer
     islifting::Bool
@@ -111,7 +110,8 @@ struct GroupConv2D{C} <: Lux.AbstractExplicitLayer
         isprojecting = false,
         kwargs...,
     )
-        @assert !(islifting && isprojecting) "Must either lift or project"
+        @assert !(islifting && isprojecting) "Cannot lift and project"
+
         # New channel size: Two velocity fields and four rotation states
         cin, cout = chans
         inner_cin = islifting ? 2 * cin : 4 * cin
