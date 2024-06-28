@@ -131,8 +131,8 @@ function Base.show(io::IO, gc::GroupConv2D)
     print(io, conv)
     if islifting || isprojecting
         print(io, "; ")
-        islifting && print(io, "islifting = true") 
-        isprojecting && print(io, "isprojecting = true") 
+        islifting && print(io, "islifting = true")
+        isprojecting && print(io, "isprojecting = true")
     end
     print(io, ")")
 end

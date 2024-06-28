@@ -4,7 +4,7 @@ using NNlib
 using Lux
 using Random
 
-T = Float32
+T = Float64
 rng = Xoshiro()
 
 init_bias = glorot_normal
@@ -18,7 +18,7 @@ gcnn = Chain(
     GroupConv2D((3, 3), 5 => 1; use_bias = false, isprojecting = true),
 )
 
-params, state = Lux.setup(rng, gcnn)
+params, state = Lux.setup(rng, gcnn) |> f64
 
 n = 100
 ux = randn(T, n, n, 1, 1)
@@ -33,14 +33,7 @@ cr, _ = gcnn(ru, params, state)
 c = (c[:, :, 1, 1], c[:, :, 2, 1])
 cr = (cr[:, :, 1, 1], cr[:, :, 2, 1])
 rc = rot2(c, 1)
-cr[1] - rc[1]
-cr[2] - rc[2]
 
 using LinearAlgebra
 norm(cr[1] - rc[1]) / norm(rc[1])
 norm(cr[2] - rc[2]) / norm(rc[2])
-
-cr[1]
-rc[1]
-cr[2]
-rc[2]

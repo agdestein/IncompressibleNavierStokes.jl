@@ -1,4 +1,4 @@
-name = "TensorClosure"
+name = "SymmetryClosure"
 uuid = "1c19b3a0-f99b-4d07-bf81-942cc75cab0f"
 authors = ["Syver Døving Agdestein <syverda@gmail.com>"]
 version = "0.1.0"
