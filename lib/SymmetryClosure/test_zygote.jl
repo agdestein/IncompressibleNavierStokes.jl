@@ -8,9 +8,21 @@ using ComponentArrays
 T = Float32
 rng = Xoshiro()
 
-c = GroupConv2D((3, 3), 1 => 5, tanh; init_bias = glorot_normal, islifting = true)
+init_bias = glorot_normal
+c = Chain(
+    GroupConv2D((3, 3), 1 => 5, tanh; init_bias, islifting = true),
+    GroupConv2D((3, 3), 5 => 5, tanh; init_bias),
+    GroupConv2D((3, 3), 5 => 5, tanh; init_bias),
+    GroupConv2D((3, 3), 5 => 5, tanh; init_bias),
+    GroupConv2D((3, 3), 5 => 5, tanh; init_bias),
+    GroupConv2D((3, 3), 5 => 1; use_bias = false, isprojecting = true),
+)
+
+# c = GroupConv2D((3, 3), 5 => 5, tanh; init_bias)
 
 params, state = Lux.setup(rng, c)
+
+Lux.parameterlength(c)
 
 n = 100
 ux = randn(T, n, n, 1, 1)

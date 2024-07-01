@@ -137,14 +137,26 @@ function Base.show(io::IO, gc::GroupConv2D)
     print(io, ")")
 end
 
+uses_bias(::Conv{N,use_bias}) where {N,use_bias} = use_bias
+
 function Lux.initialparameters(rng::AbstractRNG, gc::GroupConv2D)
     (; islifting, isprojecting, cin, cout, conv) = gc
     params = Lux.initialparameters(rng, conv)
     (; weight) = params
-    dof_cin = islifting || isprojecting ? 2 * cin : 4 * cin
-    weight = weight[:, :, 1:dof_cin, 1:cout]
-    nx = size(weight, 1)
-    if haskey(params, :bias)
+    if islifting || isprojecting
+        weight = (;
+            w1 = weight[:, :, 0*cin+1:1*cin, 1:cout],
+            w2 = weight[:, :, 1*cin+1:2*cin, 1:cout],
+        )
+    else
+        weight = (;
+            w1 = weight[:, :, 0*cin+1:1*cin, 1:cout],
+            w2 = weight[:, :, 1*cin+1:2*cin, 1:cout],
+            w3 = weight[:, :, 2*cin+1:3*cin, 1:cout],
+            w4 = weight[:, :, 3*cin+1:4*cin, 1:cout],
+        )
+    end
+    if uses_bias(conv)
         (; bias) = params
         bias = bias[:, :, 1:cout, :]
         (; weight, bias)
@@ -152,9 +164,17 @@ function Lux.initialparameters(rng::AbstractRNG, gc::GroupConv2D)
         (; weight)
     end
 end
+
 Lux.initialstates(rng::AbstractRNG, gc::GroupConv2D) = Lux.initialstates(rng, gc.conv)
-# Lux.parameterlength(gc::GroupConv2D) =
-#     Lux.parameterlength(gc.conv) % 4
+
+function Lux.parameterlength(gc::GroupConv2D)
+    (; islifting, isprojecting, cin, cout, conv) = gc
+    (; kernel_size) = conv
+    nn = islifting || isprojecting ? 2 : 4
+    n = nn * prod(kernel_size) * cin * cout
+    n += uses_bias(conv) * cout
+end
+
 Lux.statelength(gc::GroupConv2D) = Lux.statelength(gc.conv)
 
 function (gc::GroupConv2D)(x, params, state)
@@ -164,44 +184,38 @@ function (gc::GroupConv2D)(x, params, state)
     group = (0, 1, 2, 3)
 
     # Build correctly rotated weight duplicates
-    if islifting
-        a = weight[:, :, 1:cin, :]
-        b = weight[:, :, cin+1:end, :]
+    weight = if islifting
+        a, b = weight
         # a = a - rot2(a, 2)
         # b = b - rot2(b, 2)
-        w = map(group) do n
+        cat(map(group) do n
             wx, wy = rot2((a, b), n)
             cat(wx, wy; dims = 3)
-        end
-        weight = cat(w...; dims = 4)
+        end...; dims = 4)
     elseif isprojecting
-        a = weight[:, :, 1:cin, :]
-        b = weight[:, :, cin+1:end, :]
+        a, b = weight
         # a = a - rot2(a, 2)
         # b = b - rot2(b, 2)
-        w = map(group) do m
+        cat(map(group) do m
             wx, wy = rot2((a, b), m)
             cat(wx, wy; dims = 4)
-        end
-        weight = cat(w...; dims = 3)
+        end...; dims = 3)
     else
-        w = map(group) do n
-            w = map(group) do m
-                i = mod(n - m, 4)
-                rot2(weight[:, :, i*cin+1:(i+1)*cin, :], n)
-            end
-            cat(w...; dims = 3)
-        end
-        weight = cat(w...; dims = 4)
+        cat(map(group) do n
+            cat(map(group) do m
+                i = mod(n - m, 4) + 1
+                rot2(weight[i], n)
+            end...; dims = 3)
+        end...; dims = 4)
     end
 
     # Bias
     params = if haskey(params, :bias)
         (; bias) = params
-        if isprojecting
-            bias = cat(bias, bias; dims = 3)
+        bias = if isprojecting
+            cat(bias, bias; dims = 3)
         else
-            bias = cat(bias, bias, bias, bias; dims = 3)
+            cat(bias, bias, bias, bias; dims = 3)
         end
         (; weight, bias)
     else
