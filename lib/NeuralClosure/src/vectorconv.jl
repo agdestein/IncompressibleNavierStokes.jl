@@ -159,7 +159,9 @@ Lux.statelength(gc::GroupConv2D) = Lux.statelength(gc.conv)
 
 function (gc::GroupConv2D)(x, params, state)
     (; islifting, isprojecting, cin, cout, conv) = gc
+    (; kernel_size) = conv
     (; weight) = params
+    group = (0, 1, 2, 3)
 
     # Build correctly rotated weight duplicates
     if islifting
@@ -167,7 +169,7 @@ function (gc::GroupConv2D)(x, params, state)
         b = weight[:, :, cin+1:end, :]
         # a = a - rot2(a, 2)
         # b = b - rot2(b, 2)
-        w = map(0:3) do n
+        w = map(group) do n
             wx, wy = rot2((a, b), n)
             cat(wx, wy; dims = 3)
         end
@@ -177,17 +179,16 @@ function (gc::GroupConv2D)(x, params, state)
         b = weight[:, :, cin+1:end, :]
         # a = a - rot2(a, 2)
         # b = b - rot2(b, 2)
-        w = map(0:3) do m
+        w = map(group) do m
             wx, wy = rot2((a, b), m)
             cat(wx, wy; dims = 4)
         end
         weight = cat(w...; dims = 3)
     else
-        weight = map(m -> weight[:, :, m*cin+1:(m+1)*cin, :], 0:3)
-        w = map(0:3) do n
-            w = map(0:3) do m
-                i = mod(n - m, 4) + 1
-                rot2(weight[i], n)
+        w = map(group) do n
+            w = map(group) do m
+                i = mod(n - m, 4)
+                rot2(weight[:, :, i*cin+1:(i+1)*cin, :], n)
             end
             cat(w...; dims = 3)
         end
