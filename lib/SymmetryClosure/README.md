@@ -1,6 +1,6 @@
-# TensorClosure
+# SymmetryClosure
 
-Tensor closure scripts.
+Symmetry closure scripts.
 
 ## Set up environment
 
@@ -22,6 +22,6 @@ or interactively from a Julia REPL:
 ```julia-repl
 julia> ]
 (v1.10) pkg> activate .
-(TensorClosure) pkg> dev ../.. ../NeuralClosure
-(TensorClosure) pkg> instantiate
+(SymmetryClosure) pkg> dev ../.. ../NeuralClosure
+(SymmetryClosure) pkg> instantiate
 ```

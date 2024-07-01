@@ -75,27 +75,26 @@ end
 # end
 
 """
-    GroupConv2D(args...; kwargs...)
+    GroupConv2D(
+        k,
+        chans,
+        activation = identity;
+        islifting = false,
+        isprojecting = false,
+        kwargs...,
+    )
 
 Group-equivariant convolutional layer -- with respect to the p4 group.
 The layer is equivariant to rotations and translations of the input
 vector field.
 
-The `args` and `kwargs` are passed to the `Conv` layer.
+The `kwargs` are passed to the `Conv` layer.
 
-If `g = GroupConv2D(...)` is a layer then it should be called on four-dimensional vectors of 2D-coordinates:
+The layer has three variants:
 
-```julia
-g(u, params, state)
-```
-
-where
-
-- `u = (u1, u2, u3, u4)` is a tuple representing the four rotation states
-- `u[1]` is a scalar field of size `nx * ny * nchan * nsample` on which
-  a normal `Conv` is applied,
-- `params` are the `Conv` params,
-- `state = (;)` are the empty `Conv` states.
+- If `islifting` then it lifts a vector input `(u1, u2)` into a rotation-state vector `(v1, v2, v3, v4)`.
+- If `isprojecting`, it projects a rotation-state vector `(u1, u2, u3, v4)` into a vector `(v1, v2)`.
+- Otherwise, it cyclically transforms the rotation-state vector `(u1, u2, u3, u4)` into a new rotation-state vector `(v1, v2, v3, v4)`.
 """
 struct GroupConv2D{C} <: Lux.AbstractExplicitLayer
     islifting::Bool
@@ -111,7 +110,8 @@ struct GroupConv2D{C} <: Lux.AbstractExplicitLayer
         isprojecting = false,
         kwargs...,
     )
-        @assert !(islifting && isprojecting) "Must either lift or project"
+        @assert !(islifting && isprojecting) "Cannot lift and project"
+
         # New channel size: Two velocity fields and four rotation states
         cin, cout = chans
         inner_cin = islifting ? 2 * cin : 4 * cin
@@ -131,20 +131,32 @@ function Base.show(io::IO, gc::GroupConv2D)
     print(io, conv)
     if islifting || isprojecting
         print(io, "; ")
-        islifting && print(io, "islifting = true") 
-        isprojecting && print(io, "isprojecting = true") 
+        islifting && print(io, "islifting = true")
+        isprojecting && print(io, "isprojecting = true")
     end
     print(io, ")")
 end
+
+uses_bias(::Conv{N,use_bias}) where {N,use_bias} = use_bias
 
 function Lux.initialparameters(rng::AbstractRNG, gc::GroupConv2D)
     (; islifting, isprojecting, cin, cout, conv) = gc
     params = Lux.initialparameters(rng, conv)
     (; weight) = params
-    dof_cin = islifting || isprojecting ? 2 * cin : 4 * cin
-    weight = weight[:, :, 1:dof_cin, 1:cout]
-    nx = size(weight, 1)
-    if haskey(params, :bias)
+    if islifting || isprojecting
+        weight = (;
+            w1 = weight[:, :, 0*cin+1:1*cin, 1:cout],
+            w2 = weight[:, :, 1*cin+1:2*cin, 1:cout],
+        )
+    else
+        weight = (;
+            w1 = weight[:, :, 0*cin+1:1*cin, 1:cout],
+            w2 = weight[:, :, 1*cin+1:2*cin, 1:cout],
+            w3 = weight[:, :, 2*cin+1:3*cin, 1:cout],
+            w4 = weight[:, :, 3*cin+1:4*cin, 1:cout],
+        )
+    end
+    if uses_bias(conv)
         (; bias) = params
         bias = bias[:, :, 1:cout, :]
         (; weight, bias)
@@ -152,55 +164,58 @@ function Lux.initialparameters(rng::AbstractRNG, gc::GroupConv2D)
         (; weight)
     end
 end
+
 Lux.initialstates(rng::AbstractRNG, gc::GroupConv2D) = Lux.initialstates(rng, gc.conv)
-# Lux.parameterlength(gc::GroupConv2D) =
-#     Lux.parameterlength(gc.conv) % 4
+
+function Lux.parameterlength(gc::GroupConv2D)
+    (; islifting, isprojecting, cin, cout, conv) = gc
+    (; kernel_size) = conv
+    nn = islifting || isprojecting ? 2 : 4
+    n = nn * prod(kernel_size) * cin * cout
+    n += uses_bias(conv) * cout
+end
+
 Lux.statelength(gc::GroupConv2D) = Lux.statelength(gc.conv)
 
 function (gc::GroupConv2D)(x, params, state)
     (; islifting, isprojecting, cin, cout, conv) = gc
+    (; kernel_size) = conv
     (; weight) = params
+    group = (0, 1, 2, 3)
 
     # Build correctly rotated weight duplicates
-    if islifting
-        a = weight[:, :, 1:cin, :]
-        b = weight[:, :, cin+1:end, :]
+    weight = if islifting
+        a, b = weight
         # a = a - rot2(a, 2)
         # b = b - rot2(b, 2)
-        w = map(0:3) do n
+        cat(map(group) do n
             wx, wy = rot2((a, b), n)
             cat(wx, wy; dims = 3)
-        end
-        weight = cat(w...; dims = 4)
+        end...; dims = 4)
     elseif isprojecting
-        a = weight[:, :, 1:cin, :]
-        b = weight[:, :, cin+1:end, :]
+        a, b = weight
         # a = a - rot2(a, 2)
         # b = b - rot2(b, 2)
-        w = map(0:3) do m
+        cat(map(group) do m
             wx, wy = rot2((a, b), m)
             cat(wx, wy; dims = 4)
-        end
-        weight = cat(w...; dims = 3)
+        end...; dims = 3)
     else
-        weight = map(m -> weight[:, :, m*cin+1:(m+1)*cin, :], 0:3)
-        w = map(0:3) do n
-            w = map(0:3) do m
+        cat(map(group) do n
+            cat(map(group) do m
                 i = mod(n - m, 4) + 1
                 rot2(weight[i], n)
-            end
-            cat(w...; dims = 3)
-        end
-        weight = cat(w...; dims = 4)
+            end...; dims = 3)
+        end...; dims = 4)
     end
 
     # Bias
     params = if haskey(params, :bias)
         (; bias) = params
-        if isprojecting
-            bias = cat(bias, bias; dims = 3)
+        bias = if isprojecting
+            cat(bias, bias; dims = 3)
         else
-            bias = cat(bias, bias, bias, bias; dims = 3)
+            cat(bias, bias, bias, bias; dims = 3)
         end
         (; weight, bias)
     else

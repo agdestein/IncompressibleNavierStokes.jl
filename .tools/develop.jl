@@ -4,7 +4,7 @@ envs = (
     (".", ()),
     ("lib/NeuralClosure", (".",)),
     ("lib/PaperDC", (".", "lib/NeuralClosure")),
-    ("lib/TensorClosure", (".", "lib/NeuralClosure")),
+    ("lib/SymmetryClosure", (".", "lib/NeuralClosure")),
     ("test", ()),
     ("examples", (".",)),
     ("docs", (".", "lib/NeuralClosure", "examples")),

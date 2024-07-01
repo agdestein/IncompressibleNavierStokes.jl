@@ -1,4 +1,4 @@
-module TensorClosure
+module SymmetryClosure
 
 using IncompressibleNavierStokes
 
