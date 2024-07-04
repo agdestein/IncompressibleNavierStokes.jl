@@ -3,3 +3,6 @@ Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 IncompressibleNavierStokes = "5e318141-6589-402b-868d-77d7df8c442e"
 NeuralClosure = "099dac27-d7f2-4047-93d5-0baee36b9c25"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+IncompressibleNavierStokes = "0.5"
