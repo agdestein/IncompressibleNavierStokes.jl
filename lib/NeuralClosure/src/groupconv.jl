@@ -185,26 +185,28 @@ function (gc::GroupConv2D)(x, params, state)
 
     # Build correctly rotated weight duplicates
     weight = if islifting
-        a, b = weight
+        (; w1, w2) = weight
         # a = a - rot2(a, 2)
         # b = b - rot2(b, 2)
         cat(map(group) do n
-            wx, wy = rot2((a, b), n)
+            wx, wy = rot2((w1, w2), n)
             cat(wx, wy; dims = 3)
         end...; dims = 4)
     elseif isprojecting
-        a, b = weight
+        (; w1, w2) = weight
         # a = a - rot2(a, 2)
         # b = b - rot2(b, 2)
         cat(map(group) do m
-            wx, wy = rot2((a, b), m)
+            wx, wy = rot2((w1, w2), m)
             cat(wx, wy; dims = 4)
         end...; dims = 3)
     else
+        (; w1, w2, w3, w4) = weight
+        w = (w1, w2, w3, w4)
         cat(map(group) do n
             cat(map(group) do m
                 i = mod(n - m, 4) + 1
-                rot2(weight[i], n)
+                rot2(w[i], n)
             end...; dims = 3)
         end...; dims = 4)
     end
@@ -223,4 +225,72 @@ function (gc::GroupConv2D)(x, params, state)
     end
 
     conv(x, params, state)
+end
+
+"""
+    gcnn(;
+        setup,
+        radii,
+        channels,
+        activations,
+        use_bias,
+        channel_augmenter = identity,
+        rng = Random.default_rng(),
+    )
+
+Create CNN closure model. Return a tuple `(closure, θ)` where `θ` are the initial
+parameters and `closure(u, θ)` predicts the commutator error.
+"""
+function gcnn(;
+    setup,
+    radii,
+    channels,
+    activations,
+    use_bias,
+    channel_augmenter = identity,
+    rng = Random.default_rng(),
+)
+    r, c, σ, b = radii, channels, activations, use_bias
+    (; T, grid, boundary_conditions) = setup
+    (; dimension) = grid
+    D = dimension()
+
+    # Weight initializer
+    glorot_uniform_T(rng::AbstractRNG, dims...) = glorot_uniform(rng, T, dims...)
+
+    # Add input channel size
+    c = [1; c]
+
+    # Create convolutional closure model
+    layers = (
+        # Put inputs in pressure points
+        collocate,
+
+        # Add padding so that output has same shape as commutator error
+        ntuple(
+            α ->
+                boundary_conditions[α][1] isa PeriodicBC ?
+                u -> pad_circular(u, sum(r); dims = α) :
+                u -> pad_repeat(u, sum(r); dims = α),
+            D,
+        ),
+
+        # Some convolutional layers
+        (
+            GroupConv2D(
+                ntuple(α -> 2r[i] + 1, D),
+                c[i] => c[i+1],
+                σ[i];
+                use_bias = b[i],
+                init_weight = glorot_uniform_T,
+                islifting = i == 1,
+                isprojecting = i == length(r),
+            ) for i ∈ eachindex(r)
+        )...,
+
+        # Differentiate output to velocity points
+        decollocate,
+    )
+
+    create_closure(layers...; rng)
 end

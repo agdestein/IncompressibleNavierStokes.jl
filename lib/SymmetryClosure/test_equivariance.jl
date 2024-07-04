@@ -8,7 +8,7 @@ T = Float64
 rng = Xoshiro()
 
 init_bias = glorot_normal
-# init_bias = zeros32 
+# init_bias = zeros32
 gcnn = Chain(
     GroupConv2D((3, 3), 1 => 5, tanh; init_bias, islifting = true),
     GroupConv2D((3, 3), 5 => 5, tanh; init_bias),
