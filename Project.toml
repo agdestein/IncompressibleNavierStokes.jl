@@ -30,7 +30,7 @@ IncompressibleNavierStokesCUDSSExt = ["CUDSS"]
 [compat]
 Adapt = "3, 4"
 CUDA = "5"
-CUDSS = "0.2"
+CUDSS = "0.3"
 CairoMakie = "0.11"
 ChainRulesCore = "1"
 FFTW = "1"
