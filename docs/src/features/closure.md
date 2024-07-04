@@ -103,7 +103,8 @@ NeuralClosure.create_callback
 
 ## Neural architectures
 
-We provide two neural architectures: A convolutional neural network (CNN) and a Fourier neural operator (FNO).
+We provide neural architectures: A convolutional neural network (CNN), group
+convolutional neural networks (G-CNN) and a Fourier neural operator (FNO).
 
 ```@docs
 NeuralClosure.wrappedclosure
@@ -112,6 +113,9 @@ NeuralClosure.create_tensorclosure
 NeuralClosure.collocate
 NeuralClosure.decollocate
 NeuralClosure.cnn
+NeuralClosure.gcnn
 NeuralClosure.fno
+NeuralClosure.GroupConv2D
+NeuralClosure.rot2
 NeuralClosure.FourierLayer
 ```
