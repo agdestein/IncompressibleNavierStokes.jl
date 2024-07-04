@@ -7,6 +7,7 @@ push!(LOAD_PATH, joinpath(@__DIR__, ".."))
 using Aqua
 using IncompressibleNavierStokes
 using NeuralClosure
+using Test
 
 @testset "NeuralClosure" begin
     @testset "Aqua" begin
