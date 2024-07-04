@@ -3,6 +3,7 @@
 envs = (
     (".", ()),
     ("lib/NeuralClosure", (".",)),
+    ("lib/NeuralClosure/test", (".",)),
     ("lib/PaperDC", (".", "lib/NeuralClosure")),
     ("lib/SymmetryClosure", (".", "lib/NeuralClosure")),
     ("test", ()),

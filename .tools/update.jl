@@ -3,6 +3,7 @@
 envs = (
     ".",
     "lib/NeuralClosure",
+    "lib/NeuralClosure/test",
     "lib/PaperDC",
     "lib/SymmetryClosure",
     "test",
