@@ -313,7 +313,7 @@ map(p -> p.comptime, prior) |> sum |> x -> x / 3600 # Hours
 
 eprior = let
     e = zeros(T, length(nles), length(models))
-    for (im, m) = enumerate(models), ig = 1:length(nles)
+    for (im, m) in enumerate(models), ig = 1:length(nles)
         println("$(m.name), grid $ig")
         testset = device(io_test[ig])
         err = create_relerr_prior(m.closure, testset...)
@@ -334,7 +334,8 @@ clean()
         psolver = psolver_spectral(setup)
         data = (; u = device.(data_test[1].data[ig].u), t = data_test[1].t)
         nupdate = 2
-        err = create_relerr_post(; data, setup, psolver, closure_model = nothing, nupdate)
+        err =
+            create_relerr_post(; data, setup, psolver, closure_model = nothing, nupdate)
         e_nm[ig] = err(nothing)
         # CNN
         for (im, m) in enumerate(models)
