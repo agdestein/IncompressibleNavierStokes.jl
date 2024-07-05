@@ -81,8 +81,8 @@ get_params(nlesscalar) = (;
     tsim = T(0.5),
     Δt = T(5e-5),
     nles = map(n -> (n, n), nlesscalar), # LES resolutions
-    # ndns = (n -> (n, n))(4096), # DNS resolution
-    ndns = (n -> (n, n))(1024), # DNS resolution
+    ndns = (n -> (n, n))(4096), # DNS resolution
+    # ndns = (n -> (n, n))(1024), # DNS resolution
     filters = (FaceAverage(),),
     ArrayType,
     create_psolver = psolver_spectral,
@@ -153,7 +153,7 @@ io_test[1].c |> extrema
 # Inspect data (live animation with GLMakie)
 GLMakie.activate!()
 let
-    ig = 3
+    ig = 2
     field, setup = data_train[1].data[ig].u, setups_train[ig]
     # field, setup = data_valid[1].data[ig].u, setups_valid[ig];
     # field, setup = data_test[.data[ig].u, setups_test[ig];
@@ -295,9 +295,9 @@ prior = load.(priorfiles, "prior");
 end;
 
 # Check that parameters are within reasonable bounds
-θ_cnn_prior[1] .|> extrema
-θ_cnn_prior[2] .|> extrema
-θ_cnn_prior[3] .|> extrema
+θ_cnn_prior[1] |> extrema
+θ_cnn_prior[2] |> extrema
+θ_cnn_prior[3] |> extrema
 
 # Training times
 map(p -> p.comptime, prior)
@@ -305,3 +305,52 @@ map(p -> p.comptime, prior) |> vec
 map(p -> p.comptime, prior) |> sum # Seconds
 map(p -> p.comptime, prior) |> sum |> x -> x / 60 # Minutes
 map(p -> p.comptime, prior) |> sum |> x -> x / 3600 # Hours
+
+# Compute a-priori errors ###################################################
+#
+# Note that it is still interesting to compute the a-priori errors for the
+# a-posteriori trained CNN.
+
+eprior = let
+    e = zeros(T, length(nles), length(models))
+    for (im, m) = enumerate(models), ig = 1:length(nles)
+        println("$(m.name), grid $ig")
+        testset = device(io_test[ig])
+        err = create_relerr_prior(m.closure, testset...)
+        e[ig, im] = err(θ_cnn_prior[ig, im])
+    end
+    e
+end
+clean()
+
+# Compute a-posteriori errors #################################################
+
+(; e_nm, e_m) = let
+    e_nm = zeros(T, length(nles))
+    e_m = zeros(T, length(nles), length(models))
+    for ig = 1:size(data_test[1].data, 1)
+        println("ig = $ig")
+        setup = setups_test[ig]
+        psolver = psolver_spectral(setup)
+        data = (; u = device.(data_test[1].data[ig].u), t = data_test[1].t)
+        nupdate = 2
+        err = create_relerr_post(; data, setup, psolver, closure_model = nothing, nupdate)
+        e_nm[ig] = err(nothing)
+        # CNN
+        for (im, m) in enumerate(models)
+            err = create_relerr_post(;
+                data,
+                setup,
+                psolver,
+                closure_model = wrappedclosure(m.closure, setup),
+                nupdate,
+            )
+            e_m[ig, im] = err(θ_cnn_prior[ig, im])
+        end
+    end
+    (; e_nm, e_m)
+end
+clean()
+
+e_nm
+e_m

@@ -180,12 +180,12 @@ function create_relerr_post(;
     function relerr_post(θ)
         T = eltype(u[1][1])
         copyto!.(v, u[1])
-        stepper = create_stepper(method; setup, psolver, u = v, t = t[1])
+        stepper = IncompressibleNavierStokes.create_stepper(method; setup, psolver, u = v, temp = nothing, t = t[1])
         e = zero(T)
         for it = 2:length(t)
             Δt = (t[it] - t[it-1]) / nupdate
             for isub = 1:nupdate
-                stepper = timestep!(method, stepper, Δt; θ, cache)
+                stepper = IncompressibleNavierStokes.timestep!(method, stepper, Δt; θ, cache)
             end
             a, b = T(0), T(0)
             for α = 1:D
