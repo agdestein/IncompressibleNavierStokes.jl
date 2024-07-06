@@ -97,15 +97,18 @@ params_train = (; get_params(nles)..., tsim = T(0.5), savefreq = 10);
 params_valid = (; get_params(nles)..., tsim = T(0.1), savefreq = 40);
 params_test = (; get_params(nles)..., tsim = T(0.1), savefreq = 10);
 
-# Create filtered DNS data
-data_train = [create_les_data(; params_train...) for _ = 1:5];
-data_valid = [create_les_data(; params_valid...) for _ = 1:1];
-data_test = [create_les_data(; params_test...) for _ = 1:1];
+create_data = false
+if create_data
+    # Create filtered DNS data
+    data_train = [create_les_data(; params_train...) for _ = 1:5];
+    data_valid = [create_les_data(; params_valid...) for _ = 1:1];
+    data_test = [create_les_data(; params_test...) for _ = 1:1];
 
-# Save filtered DNS data
-jldsave("$datadir/data_train.jld2"; data_train)
-jldsave("$datadir/data_valid.jld2"; data_valid)
-jldsave("$datadir/data_test.jld2"; data_test)
+    # Save filtered DNS data
+    jldsave("$datadir/data_train.jld2"; data_train)
+    jldsave("$datadir/data_valid.jld2"; data_valid)
+    jldsave("$datadir/data_test.jld2"; data_test)
+end
 
 # Load filtered DNS data
 data_train = load("$datadir/data_train.jld2", "data_train");
@@ -170,7 +173,7 @@ let
     for i in eachindex(field)
         i % 50 == 0 || continue
         o[] = (; o[]..., u = device(field[i]))
-        fig |> display
+        # fig |> display
         sleep(0.1)
     end
 end
@@ -250,7 +253,8 @@ priorfiles = broadcast(eachindex(nles), eachindex(models)') do ig, im
 end
 
 # Train
-let
+dotrain = true
+dotrain && let
     # Random number generator for batch selection
     rng = Xoshiro(seeds.training)
     for (im, m) in enumerate(models), ig = 1:length(nles)
@@ -295,6 +299,10 @@ prior = load.(priorfiles, "prior");
 end;
 
 # Check that parameters are within reasonable bounds
+using Statistics
+CUDA.@allowscalar θ_cnn_prior[1] |> std
+CUDA.@allowscalar θ_cnn_prior[2] |> std
+CUDA.@allowscalar θ_cnn_prior[3] |> std
 θ_cnn_prior[1] |> extrema
 θ_cnn_prior[2] |> extrema
 θ_cnn_prior[3] |> extrema
@@ -329,6 +337,7 @@ clean()
     e_nm = zeros(T, length(nles))
     e_m = zeros(T, length(nles), length(models))
     for ig = 1:size(data_test[1].data, 1)
+        clean()
         println("ig = $ig")
         setup = setups_test[ig]
         psolver = psolver_spectral(setup)
@@ -355,3 +364,49 @@ clean()
 
 e_nm
 e_m
+
+# Compute symmetry errors #####################################################
+
+e_symm = let
+    e_symm = zeros(T, length(nles), length(models))
+    for (im, m) in enumerate(models), ig = 1:size(data_test[1].data, 1)
+        println("model $(m.name), grid $ig")
+        setup = setups_test[ig]
+        setup = (;
+            setup...,
+            closure_model = wrappedclosure(m.closure, setup),
+        )
+        err = create_relerr_symmetry(;
+            u = device.(data_test[1].data[ig].u[1]),
+            setup,
+            psolver = psolver_spectral(setup),
+            Δt = (data_test[1].t[2] - data_test[1].t[1]) / 2,
+            nstep = 10, # length(data_test[1].t) - 1,
+            g = 1,
+        )
+        e_symm[ig, im] = err(θ_cnn_prior[ig, im])
+    end
+    e_symm
+end
+clean()
+
+let
+    setup = setups_test[1]
+    u = device.(data_test[1].data[1].u[1])
+    closure_model = wrappedclosure(m_gcnn_a.closure, setup)
+    c = closure_model(u, θ_cnn_prior[1, 2])
+    cr = closure_model(rot2stag(u, 1), θ_cnn_prior[1, 2])
+    rc = rot2stag(c, 1)
+
+    u = device.(data_test[1].data[1].u[1])
+    c = m_gcnn_a.closure(u, θ_cnn_prior[1, 2])
+    cr = m_gcnn_a.closure(rot2(u, 1), θ_cnn_prior[1, 2])
+    rc = rot2(c, 1)
+
+    Iu = setup.grid.Iu
+    i = 1
+    norm(cr[i][Iu[i]] - rc[i][Iu[i]]) / norm(cr[i][Iu[i]])
+end
+
+
+e_symm

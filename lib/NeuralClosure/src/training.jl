@@ -208,6 +208,53 @@ function create_relerr_post(;
     end
 end
 
+function create_relerr_symmetry(;
+    u,
+    setup,
+    method = RKMethods.RK44(; T = eltype(setup.grid.x[1])),
+    psolver,
+    Δt,
+    nstep,
+    g = 1,
+)
+    (; dimension, Iu) = setup.grid
+    D = dimension()
+    T = eltype(u[1])
+    cache = IncompressibleNavierStokes.ode_method_cache(method, setup, copy.(u), nothing)
+    function err(θ)
+        stepper = IncompressibleNavierStokes.create_stepper(
+            method;
+            setup,
+            psolver,
+            u = copy.(u),
+            temp = nothing,
+            t = T(0)
+        )
+        stepper_rot = IncompressibleNavierStokes.create_stepper(
+            method;
+            setup,
+            psolver,
+            u = rot2stag(copy.(u), g),
+            temp = nothing,
+            t = T(0)
+        )
+        e = zero(T)
+        for it = 1:nstep
+            stepper = IncompressibleNavierStokes.timestep!(method, stepper, Δt; θ, cache)
+            stepper_rot =
+                IncompressibleNavierStokes.timestep!(method, stepper_rot, Δt; θ, cache)
+            u_rot = rot2stag(stepper.u, g)
+            a, b = T(0), T(0)
+            for α = 1:D
+                a += sum(abs2, view(stepper_rot.u[α] - u_rot[α], Iu[α]))
+                b += sum(abs2, view(u_rot[α], Iu[α]))
+            end
+            e += sqrt(a) / sqrt(b)
+        end
+        e / nstep
+    end
+end
+
 """
     create_callback(
         f,

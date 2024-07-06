@@ -25,16 +25,16 @@ function rot2(u, r)
     r = mod(r, 4)
     if r == 0
         i = 1:nx
-        j = (1:nx)'
+        j = (1:ny)'
     elseif r == 1
-        i = (nx:-1:1)'
-        j = 1:nx
+        i = (1:nx)'
+        j = ny:-1:1
     elseif r == 2
         i = nx:-1:1
-        j = (nx:-1:1)'
+        j = (ny:-1:1)'
     elseif r == 3
-        i = (1:nx)'
-        j = nx:-1:1
+        i = (nx:-1:1)'
+        j = 1:ny
     end
     I = CartesianIndex.(i, j)
     chans = fill(:, length(s))
@@ -73,6 +73,23 @@ end
 #         (ru[2], -ru[3], ru[4], -ru[1])
 #     end
 # end
+
+
+# For staggered grid
+function rot2stag(u, g)
+    g = mod(g, 4)
+    u = rot2(u, g)
+    ux, uy = u
+    if g in (1, 2)
+        ux = circshift(ux, -1)
+        ux[end, :] .= ux[2, :]
+    end
+    if g in (2, 3)
+        uy = circshift(uy, (0, -1))
+        uy[:, end] .= uy[:, 2]
+    end
+    (ux, uy)
+end
 
 """
     GroupConv2D(
