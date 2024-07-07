@@ -74,7 +74,6 @@ end
 #     end
 # end
 
-
 # For staggered grid
 function rot2stag(u, g)
     g = mod(g, 4)
@@ -251,22 +250,13 @@ end
         channels,
         activations,
         use_bias,
-        channel_augmenter = identity,
         rng = Random.default_rng(),
     )
 
 Create CNN closure model. Return a tuple `(closure, θ)` where `θ` are the initial
 parameters and `closure(u, θ)` predicts the commutator error.
 """
-function gcnn(;
-    setup,
-    radii,
-    channels,
-    activations,
-    use_bias,
-    channel_augmenter = identity,
-    rng = Random.default_rng(),
-)
+function gcnn(; setup, radii, channels, activations, use_bias, rng = Random.default_rng())
     r, c, σ, b = radii, channels, activations, use_bias
     (; T, grid, boundary_conditions) = setup
     (; dimension) = grid

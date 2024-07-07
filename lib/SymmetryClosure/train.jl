@@ -100,9 +100,9 @@ params_test = (; get_params(nles)..., tsim = T(0.1), savefreq = 10);
 create_data = false
 if create_data
     # Create filtered DNS data
-    data_train = [create_les_data(; params_train...) for _ = 1:5];
-    data_valid = [create_les_data(; params_valid...) for _ = 1:1];
-    data_test = [create_les_data(; params_test...) for _ = 1:1];
+    data_train = [create_les_data(; params_train...) for _ = 1:5]
+    data_valid = [create_les_data(; params_valid...) for _ = 1:1]
+    data_test = [create_les_data(; params_test...) for _ = 1:1]
 
     # Save filtered DNS data
     jldsave("$datadir/data_train.jld2"; data_train)
@@ -154,7 +154,7 @@ io_test[1].u |> extrema
 io_test[1].c |> extrema
 
 # Inspect data (live animation with GLMakie)
-GLMakie.activate!()
+# GLMakie.activate!()
 let
     ig = 2
     field, setup = data_train[1].data[ig].u, setups_train[ig]
@@ -173,7 +173,7 @@ let
     for i in eachindex(field)
         i % 50 == 0 || continue
         o[] = (; o[]..., u = device(field[i]))
-        # fig |> display
+        fig |> display
         sleep(0.1)
     end
 end
@@ -253,7 +253,7 @@ priorfiles = broadcast(eachindex(nles), eachindex(models)') do ig, im
 end
 
 # Train
-dotrain = true
+dotrain = false
 dotrain && let
     # Random number generator for batch selection
     rng = Xoshiro(seeds.training)
@@ -272,6 +272,7 @@ dotrain && let
             θ,
             displayref = true,
             display_each_iteration = true, # Set to `true` if using CairoMakie
+            filename = "$plotdir/prior_$(m.name)_igrid$ig.pdf",
         )
         (; opt, θ, callbackstate) = train(
             [d],
@@ -322,7 +323,7 @@ map(p -> p.comptime, prior) |> sum |> x -> x / 3600 # Hours
 eprior = let
     e = zeros(T, length(nles), length(models))
     for (im, m) in enumerate(models), ig = 1:length(nles)
-        println("$(m.name), grid $ig")
+        @info "Computing a-priori error for $(m.name), grid $ig"
         testset = device(io_test[ig])
         err = create_relerr_prior(m.closure, testset...)
         e[ig, im] = err(θ_cnn_prior[ig, im])
@@ -330,6 +331,8 @@ eprior = let
     e
 end
 clean()
+
+eprior
 
 # Compute a-posteriori errors #################################################
 
@@ -372,10 +375,7 @@ e_symm = let
     for (im, m) in enumerate(models), ig = 1:size(data_test[1].data, 1)
         println("model $(m.name), grid $ig")
         setup = setups_test[ig]
-        setup = (;
-            setup...,
-            closure_model = wrappedclosure(m.closure, setup),
-        )
+        setup = (; setup..., closure_model = wrappedclosure(m.closure, setup))
         err = create_relerr_symmetry(;
             u = device.(data_test[1].data[ig].u[1]),
             setup,
@@ -390,23 +390,22 @@ e_symm = let
 end
 clean()
 
-let
-    setup = setups_test[1]
-    u = device.(data_test[1].data[1].u[1])
-    closure_model = wrappedclosure(m_gcnn_a.closure, setup)
-    c = closure_model(u, θ_cnn_prior[1, 2])
-    cr = closure_model(rot2stag(u, 1), θ_cnn_prior[1, 2])
-    rc = rot2stag(c, 1)
-
-    u = device.(data_test[1].data[1].u[1])
-    c = m_gcnn_a.closure(u, θ_cnn_prior[1, 2])
-    cr = m_gcnn_a.closure(rot2(u, 1), θ_cnn_prior[1, 2])
-    rc = rot2(c, 1)
-
-    Iu = setup.grid.Iu
-    i = 1
-    norm(cr[i][Iu[i]] - rc[i][Iu[i]]) / norm(cr[i][Iu[i]])
-end
-
-
 e_symm
+
+# let
+#     setup = setups_test[1]
+#     u = device.(data_test[1].data[1].u[1])
+#     closure_model = wrappedclosure(m_gcnn_a.closure, setup)
+#     c = closure_model(u, θ_cnn_prior[1, 2])
+#     cr = closure_model(rot2stag(u, 1), θ_cnn_prior[1, 2])
+#     rc = rot2stag(c, 1)
+#
+#     u = device.(data_test[1].data[1].u[1])
+#     c = m_gcnn_a.closure(u, θ_cnn_prior[1, 2])
+#     cr = m_gcnn_a.closure(rot2(u, 1), θ_cnn_prior[1, 2])
+#     rc = rot2(c, 1)
+#
+#     Iu = setup.grid.Iu
+#     i = 1
+#     norm(cr[i][Iu[i]] - rc[i][Iu[i]]) / norm(cr[i][Iu[i]])
+# end

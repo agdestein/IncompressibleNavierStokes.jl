@@ -79,8 +79,8 @@ function collocate(u)
     if D == 2
         a = selectdim(u, 3, 1)
         b = selectdim(u, 3, 2)
-        a = (a .+ circshift(a, (-1, 0, 0))) ./ 2
-        b = (b .+ circshift(b, (0, -1, 0))) ./ 2
+        a = (a .+ circshift(a, (1, 0, 0))) ./ 2
+        b = (b .+ circshift(b, (0, 1, 0))) ./ 2
         a = reshape(a, sz..., 1, :)
         b = reshape(b, sz..., 1, :)
         cat(a, b; dims = 3)
@@ -88,9 +88,9 @@ function collocate(u)
         a = selectdim(u, 4, 1)
         b = selectdim(u, 4, 2)
         c = selectdim(u, 4, 3)
-        a = (a .+ circshift(a, (-1, 0, 0, 0))) ./ 2
-        b = (b .+ circshift(b, (0, -1, 0, 0))) ./ 2
-        c = (c .+ circshift(c, (0, 0, -1, 0))) ./ 2
+        a = (a .+ circshift(a, (1, 0, 0, 0))) ./ 2
+        b = (b .+ circshift(b, (0, 1, 0, 0))) ./ 2
+        c = (c .+ circshift(c, (0, 0, 1, 0))) ./ 2
         a = reshape(a, sz..., 1, :)
         b = reshape(b, sz..., 1, :)
         c = reshape(c, sz..., 1, :)
@@ -112,8 +112,8 @@ function decollocate(u)
     if D == 2
         a = selectdim(u, 3, 1)
         b = selectdim(u, 3, 2)
-        a = (a .+ circshift(a, (1, 0, 0))) ./ 2
-        b = (b .+ circshift(b, (0, 1, 0))) ./ 2
+        a = (a .+ circshift(a, (-1, 0, 0))) ./ 2
+        b = (b .+ circshift(b, (0, -1, 0))) ./ 2
         # a = circshift(a, (1, 0, 0)) .- a
         # b = circshift(b, (0, 1, 0)) .- b
         a = reshape(a, sz..., 1, :)
@@ -123,9 +123,9 @@ function decollocate(u)
         a = selectdim(u, 4, 1)
         b = selectdim(u, 4, 2)
         c = selectdim(u, 4, 3)
-        a = (a .+ circshift(a, (1, 0, 0, 0))) ./ 2
-        b = (b .+ circshift(b, (0, 1, 0, 0))) ./ 2
-        c = (c .+ circshift(c, (0, 0, 1, 0))) ./ 2
+        a = (a .+ circshift(a, (-1, 0, 0, 0))) ./ 2
+        b = (b .+ circshift(b, (0, -1, 0, 0))) ./ 2
+        c = (c .+ circshift(c, (0, 0, -1, 0))) ./ 2
         # a = circshift(a, (1, 0, 0, 0)) .- a
         # b = circshift(b, (0, 1, 0, 0)) .- b
         # c = circshift(c, (0, 0, 1, 0)) .- c

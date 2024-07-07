@@ -228,7 +228,7 @@ function create_relerr_symmetry(;
             psolver,
             u = copy.(u),
             temp = nothing,
-            t = T(0)
+            t = T(0),
         )
         stepper_rot = IncompressibleNavierStokes.create_stepper(
             method;
@@ -236,7 +236,7 @@ function create_relerr_symmetry(;
             psolver,
             u = rot2stag(copy.(u), g),
             temp = nothing,
-            t = T(0)
+            t = T(0),
         )
         e = zero(T)
         for it = 1:nstep
@@ -278,6 +278,7 @@ function create_callback(
     callbackstate = (; θmin = θ, emin = eltype(θ)(Inf), hist = Point2f[]),
     displayref = true,
     display_each_iteration = false,
+    filename = nothing,
 )
     istart = isempty(callbackstate.hist) ? 0 : Int(callbackstate.hist[end][1])
     obs = Observable([Point2f(0, 0)])
@@ -293,6 +294,7 @@ function create_callback(
         # i < 30 || autolimits!(fig.axis)
         autolimits!(fig.axis)
         display_each_iteration && display(fig)
+        isnothing(filename) || save(filename, fig)
         state = (; state..., hist)
         e < state.emin && (state = (; state..., θmin = θ, emin = e))
         state

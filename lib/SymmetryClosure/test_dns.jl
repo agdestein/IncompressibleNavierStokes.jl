@@ -44,7 +44,10 @@ let
     uy = state.u[2][setup.grid.Iu[2]]
     n = sqrt.(ux .^ 2 .+ uy .^ 2)
     arrows(
-        x, y, ux, uy;
+        x,
+        y,
+        ux,
+        uy;
         # arrowsize = vec(n),
         arrowsize = 10,
         arrowcolor = vec(n),
@@ -55,27 +58,63 @@ let
 end
 
 let
-    F = IncompressibleNavierStokes.momentum(ustart, nothing, T(0), setup);
-    FR = IncompressibleNavierStokes.momentum(ustart_rot, nothing, T(0), setup);
-    IncompressibleNavierStokes.apply_bc_u!(F, T(0), setup);
-    RF = rot2stag(F, 1);
-    IncompressibleNavierStokes.apply_bc_u!(RF, T(0), setup);
+    F = IncompressibleNavierStokes.momentum(ustart, nothing, T(0), setup)
+    FR = IncompressibleNavierStokes.momentum(ustart_rot, nothing, T(0), setup)
+    IncompressibleNavierStokes.apply_bc_u!(F, T(0), setup)
+    RF = rot2stag(F, 1)
+    IncompressibleNavierStokes.apply_bc_u!(RF, T(0), setup)
     i = 2
     # a = RF[i]
     # b = FR[i]
-    a = RF[i][setup.grid.Iu[i]];
-    b = FR[i][setup.grid.Iu[i]];
+    a = RF[i][setup.grid.Iu[i]]
+    b = FR[i][setup.grid.Iu[i]]
     norm(a - b) / norm(b)
     a - b
 end
+
+using Random
+using NeuralClosure
+
+closure, θ₀ = gcnn(;
+    setup,
+    radii = [2, 2, 2, 2, 2],
+    channels = [6, 6, 6, 6, 1],
+    activations = [tanh, tanh, tanh, tanh, identity],
+    use_bias = [true, true, true, true, false],
+    rng = Xoshiro(),
+);
+
+closure.chain
+
+u = ustart
+v = (u[1][2:end-1, 2:end-1], u[2][2:end-1, 2:end-1])
+rv = rot2stag(v, 1)
+w = cat(stack(v); dims = 4)
+rw = cat(stack(rv); dims = 4)
+c = closure(w, θ₀)
+cr = closure(rw, θ₀)
+rc = rot2stag((c[:, :, 1, 1], c[:, :, 2, 1]), 1)
+
+cr[:, :, 1, 1] |> heatmap
+rc[1] |> heatmap
+
+m = wrappedclosure(closure, setup)
+
+rm = rot2stag(m(state.u, θ₀), 1)
+mr = m(rot2stag(state.u, 1), θ₀)
+
+rm[1]
+mr[1]
+
+ran = 0.4
+heatmap(rm[2]; colorrange = (-ran, ran))
+heatmap(mr[2]; colorrange = (-ran, ran))
 
 a = fill(10, 5) .+ (1:5)'
 b = (1:5) .* (1:5)'
 x = rot2((a, b), 1)
 x[1]
 x[2]
-
-arrows(a, b)
 
 x = LinRange(0, 2pi, 20)
 y = LinRange(0, 3pi, 20)
@@ -99,7 +138,8 @@ arrows(
 
 g = 3
 arrows(
-    y, x,
+    y,
+    x,
     # x, y,
     rot2((u, v), g)...;
     arrowsize = 10,
@@ -108,45 +148,3 @@ arrows(
     linecolor = vec(rot2(strength, g)),
     figure = (; size = (600, 600)),
 )
-
-a = RF[i][setup.grid.Iu[i]]
-b = FR[i][setup.grid.Iu[i]]
-
-heatmap(a)
-heatmap(b)
-
-i = 1
-a = state_rot.u[i][setup.grid.Iu[i]]
-b = rot2stag(state.u, 1)[i][setup.grid.Iu[i]]
-
-hist(a[:])
-hist!((b.-a)[:])
-
-norm(a - b) / norm(b)
-
-st(u) = (; u, t = T(0), temp = nothing)
-
-GLMakie.closeall()
-s1 = GLMakie.Screen()
-s2 = GLMakie.Screen()
-
-display(s1, fieldplot(st(ustart); setup, fieldname = 1))
-display(s2, fieldplot(st(ustart_rot); setup, fieldname = 2))
-
-display(s1, fieldplot(
-    st(rot2(state.u, setup));
-    setup,
-    # fieldname = 2,
-))
-display(s2, fieldplot(
-    state_rot;
-    setup,
-    # fieldname = 2,
-))
-
-display(GLMakie.Screen(), fieldplot(st(rot2(state.u)); setup))
-display(GLMakie.Screen(), fieldplot(state_rot; setup))
-
-x = [1 2 3; 0 0 9; 0 0 1]
-circshift(x, (1, 0))
-rot2(x)
