@@ -208,7 +208,7 @@ function create_relerr_post(;
     end
 end
 
-function create_relerr_symmetry(;
+function create_relerr_symmetry_post(;
     u,
     setup,
     method = RKMethods.RK44(; T = eltype(setup.grid.x[1])),
@@ -252,6 +252,31 @@ function create_relerr_symmetry(;
             e += sqrt(a) / sqrt(b)
         end
         e / nstep
+    end
+end
+
+"""
+    create_relerr_symmetry_prior(f, x, y)
+
+Create a-priori equivariance error.
+"""
+function create_relerr_symmetry_prior(; u, setup, g = 1)
+    (; grid, closure_model) = setup
+    (; dimension, Iu) = grid
+    D = dimension()
+    T = eltype(u[1][1])
+    function err(θ)
+        e = sum(u) do u
+            cr = closure_model(rot2stag(u, g), θ)
+            rc = rot2stag(closure_model(u, θ), g)
+            a, b = T(0), T(0)
+            for α = 1:D
+                a += sum(abs2, view(rc[α] - cr[α], Iu[α]))
+                b += sum(abs2, view(cr[α], Iu[α]))
+            end
+            sqrt(a) / sqrt(b)
+        end
+        e / length(u)
     end
 end
 

@@ -1,3 +1,13 @@
+# LSP hack
+if false
+    include("src/SymmetryClosure.jl")
+    include("../NeuralClosure/src/NeuralClosure.jl")
+    include("../../src/IncompressibleNavierStokes.jl")
+    using .SymmetryClosure
+    using .NeuralClosure
+    using .IncompressibleNavierStokes
+end
+
 # # A-posteriori analysis: Large Eddy Simulation (2D)
 #
 # Generate filtered DNS data, train closure model, compare filters,
@@ -7,7 +17,7 @@
 # The learned CNN parameters are also saved.
 
 using Adapt
-using GLMakie
+# using GLMakie
 using CairoMakie
 using IncompressibleNavierStokes
 using JLD2
@@ -258,10 +268,11 @@ dotrain && let
     # Random number generator for batch selection
     rng = Xoshiro(seeds.training)
     for (im, m) in enumerate(models), ig = 1:length(nles)
+        plotfile = "$plotdir/training_prior_$(m.name)_igrid$ig.pdf"
         clean()
         starttime = time()
         @info "Training for $(m.name), grid $ig"
-        d = create_dataloader_prior(io_train[ig]; batchsize = 50, device, rng)
+        d = create_dataloader_prior(io_train[ig]; batchsize = 100, device, rng)
         θ = device(m.θ₀)
         loss = create_loss_prior(mean_squared_error, m.closure)
         opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
@@ -272,7 +283,6 @@ dotrain && let
             θ,
             displayref = true,
             display_each_iteration = true, # Set to `true` if using CairoMakie
-            filename = "$plotdir/prior_$(m.name)_igrid$ig.pdf",
         )
         (; opt, θ, callbackstate) = train(
             [d],
@@ -287,6 +297,7 @@ dotrain && let
         θ = callbackstate.θmin # Use best θ instead of last θ
         prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
         jldsave(priorfiles[ig, im]; prior)
+        save(plotfile, current_figure())
     end
     clean()
 end
@@ -320,7 +331,7 @@ map(p -> p.comptime, prior) |> sum |> x -> x / 3600 # Hours
 # Note that it is still interesting to compute the a-priori errors for the
 # a-posteriori trained CNN.
 
-eprior = let
+e_prior = let
     e = zeros(T, length(nles), length(models))
     for (im, m) in enumerate(models), ig = 1:length(nles)
         @info "Computing a-priori error for $(m.name), grid $ig"
@@ -332,7 +343,7 @@ eprior = let
 end
 clean()
 
-eprior
+e_prior
 
 # Compute a-posteriori errors #################################################
 
@@ -341,16 +352,17 @@ eprior
     e_m = zeros(T, length(nles), length(models))
     for ig = 1:size(data_test[1].data, 1)
         clean()
-        println("ig = $ig")
         setup = setups_test[ig]
         psolver = psolver_spectral(setup)
         data = (; u = device.(data_test[1].data[ig].u), t = data_test[1].t)
         nupdate = 2
+        @info "Computing a-posteriori error for no-model, grid $ig"
         err =
             create_relerr_post(; data, setup, psolver, closure_model = nothing, nupdate)
         e_nm[ig] = err(nothing)
         # CNN
         for (im, m) in enumerate(models)
+            @info "Computing a-posteriori error for $(m.name), grid $ig"
             err = create_relerr_post(;
                 data,
                 setup,
@@ -370,13 +382,29 @@ e_m
 
 # Compute symmetry errors #####################################################
 
-e_symm = let
-    e_symm = zeros(T, length(nles), length(models))
-    for (im, m) in enumerate(models), ig = 1:size(data_test[1].data, 1)
-        println("model $(m.name), grid $ig")
+e_symm_prior = let
+    e = zeros(T, length(nles), length(models))
+    for (im, m) in enumerate(models), ig = 1:length(nles)
+        @info "Computing a-priori equivariance error for $(m.name), grid $ig"
         setup = setups_test[ig]
         setup = (; setup..., closure_model = wrappedclosure(m.closure, setup))
-        err = create_relerr_symmetry(;
+        err =
+            create_relerr_symmetry_prior(; u = device.(data_test[1].data[ig].u), setup)
+        e[ig, im] = err(θ_cnn_prior[ig, im])
+    end
+    e
+end
+clean()
+
+e_symm_prior
+
+e_symm_post = let
+    e = zeros(T, length(nles), length(models))
+    for (im, m) in enumerate(models), ig = 1:size(data_test[1].data, 1)
+        @info "Computing a-posteriori equivariance error for $(m.name), grid $ig"
+        setup = setups_test[ig]
+        setup = (; setup..., closure_model = wrappedclosure(m.closure, setup))
+        err = create_relerr_symmetry_post(;
             u = device.(data_test[1].data[ig].u[1]),
             setup,
             psolver = psolver_spectral(setup),
@@ -384,28 +412,39 @@ e_symm = let
             nstep = 10, # length(data_test[1].t) - 1,
             g = 1,
         )
-        e_symm[ig, im] = err(θ_cnn_prior[ig, im])
+        e[ig, im] = err(θ_cnn_prior[ig, im])
     end
-    e_symm
+    e
 end
 clean()
 
-e_symm
+e_symm_post
 
-# let
-#     setup = setups_test[1]
-#     u = device.(data_test[1].data[1].u[1])
-#     closure_model = wrappedclosure(m_gcnn_a.closure, setup)
-#     c = closure_model(u, θ_cnn_prior[1, 2])
-#     cr = closure_model(rot2stag(u, 1), θ_cnn_prior[1, 2])
-#     rc = rot2stag(c, 1)
-#
-#     u = device.(data_test[1].data[1].u[1])
-#     c = m_gcnn_a.closure(u, θ_cnn_prior[1, 2])
-#     cr = m_gcnn_a.closure(rot2(u, 1), θ_cnn_prior[1, 2])
-#     rc = rot2(c, 1)
-#
-#     Iu = setup.grid.Iu
-#     i = 1
-#     norm(cr[i][Iu[i]] - rc[i][Iu[i]]) / norm(cr[i][Iu[i]])
-# end
+# Plot errors #################################################################
+
+let
+    for (e, title, filename) in [
+        (e_prior, "A-priori error", "error_prior.pdf"),
+        (e_m, "A-posteriori error", "error_post.pdf"),
+        (e_symm_prior, "A-priori equivariance error", "error_symm_prior.pdf"),
+        (e_symm_post, "A-posteriori equivariance error", "error_symm_post.pdf"),
+    ]
+        fig = Figure()
+        ax = Axis(
+            fig[1, 1];
+            xscale = log10,
+            yscale = log10,
+            xticks = nles,
+            xlabel = "LES grid size",
+            ylabel = "Relative error",
+            title,
+        )
+        markers = [:circle, :utriangle, :rect, :diamond]
+        for (i, m) in enumerate(models)
+            scatterlines!(ax, nles, e[:, i]; marker = markers[i], label = m.name)
+        end
+        axislegend(ax)
+        display(fig)
+        save(joinpath(plotdir, filename), fig)
+    end
+end
