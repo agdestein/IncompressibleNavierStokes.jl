@@ -8,23 +8,7 @@ Scripts for generating results of the paper
 From this directory, run:
 
 ```sh
-julia --project -e '
-using Pkg
-Pkg.develop([
-    PackageSpec(; path = "../.."),
-    PackageSpec(; path = "../NeuralClosure"),
-])
-Pkg.instantiate()
-'
-```
-
-or interactively from a Julia REPL:
-
-```julia-repl
-julia> ]
-(v1.10) pkg> activate .
-(PaperDC) pkg> dev ../.. ../NeuralClosure
-(PaperDC) pkg> instantiate
+julia setup.jl
 ```
 
 Now you can run the scripts in this directory:

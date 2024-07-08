@@ -5,18 +5,10 @@ Documentation for
 
 ## Set up environment
 
-From the root directory (IncompressibleNavierStokes.jl), run:
+From this directory, run:
 
 ```sh
-julia --project=docs -e '
-using Pkg
-Pkg.develop([
-    PackageSpec(; path = "."),
-    PackageSpec(; path = joinpath("lib", "NeuralClosure")),
-    PackageSpec(; path = joinpath("examples")),
-])
-Pkg.instantiate()
-'
+julia setup.jl
 ```
 
 ## Build documentation
