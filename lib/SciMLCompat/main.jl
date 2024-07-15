@@ -18,7 +18,7 @@ f = create_right_hand_side(setup, psolver)
 f(stack(ustart), nothing, 0.0)
 
 # Solve the ODE using SciML
-prob = ODEProblem(f, stack(ustart), (0.0, 1))
+prob = ODEProblem(f, stack(ustart), (0.0, 1.0))
 sol = solve(
     prob,
     Tsit5();
