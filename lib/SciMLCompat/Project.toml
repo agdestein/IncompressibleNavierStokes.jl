@@ -1,0 +1,12 @@
+name = "SciMLCompat"
+uuid = "1bf6d972-577c-4d20-a599-fe90675ca8fc"
+authors = ["Syver Døving Agdestein <syverda@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+IncompressibleNavierStokes = "5e318141-6589-402b-868d-77d7df8c442e"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+
+[compat]
+IncompressibleNavierStokes = "0.5"
+OrdinaryDiffEq = "6"
