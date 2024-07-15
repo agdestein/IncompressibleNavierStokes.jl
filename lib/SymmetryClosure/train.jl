@@ -29,8 +29,9 @@ using Random
 using SymmetryClosure
 
 # Choose where to put output
-plotdir = joinpath(@__DIR__, "output", "plots")
-datadir = joinpath(@__DIR__, "output", "data")
+outdir = joinpath(@__DIR__, "output")
+plotdir = joinpath(outdir, "plots")
+datadir = joinpath(outdir, "data")
 ispath(plotdir) || mkpath(plotdir)
 ispath(datadir) || mkpath(datadir)
 
@@ -210,7 +211,7 @@ m_cnn = let
 end;
 m_cnn.closure.chain
 
-# Group CNN: Same number of channels as regular CNN
+# Group CNN A: Same number of channels as regular CNN
 m_gcnn_a = let
     rng = Xoshiro(seeds.θ₀)
     name = "gcnn_a"
@@ -226,7 +227,7 @@ m_gcnn_a = let
 end;
 m_gcnn_a.closure.chain
 
-# Group CNN: Same number of parameters as regular CNN
+# Group CNN B: Same number of parameters as regular CNN
 m_gcnn_b = let
     rng = Xoshiro(seeds.θ₀)
     name = "gcnn_b"
