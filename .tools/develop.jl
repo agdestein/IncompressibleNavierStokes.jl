@@ -1,25 +1,20 @@
 # Develop all environments in the project
 
 envs = (
-    (".", ()),
-    ("lib/NeuralClosure", (".",)),
-    ("lib/NeuralClosure/test", (".",)),
-    ("lib/PaperDC", (".", "lib/NeuralClosure")),
-    ("lib/SymmetryClosure", (".", "lib/NeuralClosure")),
-    ("test", ()),
-    ("examples", (".",)),
-    ("docs", (".", "lib/NeuralClosure", "examples")),
+    ".",
+    "lib/NeuralClosure",
+    "lib/NeuralClosure/test",
+    "lib/PaperDC",
+    "lib/SymmetryClosure",
+    "lib/SciMLCompat",
+    "test",
+    "examples",
+    "docs",
 )
 
-cd(joinpath(@__DIR__, ".."))
+root = joinpath(@__DIR__, "..")
 
-for (e, d) in envs
-    cd(e) do
-        if !isempty(d)
-            d = relpath.(d, e)
-            d = join(d, " ")
-            run(`julia --project=. -e "using Pkg; pkg\"dev $d\""`)
-        end
-        run(`julia --project=. -e 'using Pkg; Pkg.update()'`)
-    end
+for e in envs
+    e = joinpath(root, e)
+    run(`julia --project=$e setup.jl'`)
 end

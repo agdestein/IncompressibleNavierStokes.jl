@@ -6,6 +6,7 @@ envs = (
     "lib/NeuralClosure/test",
     "lib/PaperDC",
     "lib/SymmetryClosure",
+    "lib/SciMLCompat",
     "test",
     "examples",
     "docs",
