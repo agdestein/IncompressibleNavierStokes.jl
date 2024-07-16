@@ -5,11 +5,12 @@ Plot nonuniform Cartesian grid.
 """
 function plotgrid end
 
-plotgrid(x, y) = wireframe(
+plotgrid(x, y; kwargs...) = wireframe(
     x,
     y,
     zeros(eltype(x), length(x), length(y));
     axis = (; aspect = DataAspect(), xlabel = "x", ylabel = "y"),
+    kwargs...,
 )
 
 function plotgrid(x, y, z)

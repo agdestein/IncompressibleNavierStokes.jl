@@ -17,7 +17,7 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 
 # Case name for saving results
-output = "output/LidDrivenCavity2D"
+outdir = joinpath(@__DIR__, "output", "LidDrivenCavity2D")
 
 # The code allows for using different floating point number types, including single
 # precision (`Float32`) and double precision (`Float64`). On the CPU, the speed
@@ -90,8 +90,8 @@ processors = (
     ## rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 50),
     ## ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 10),
     ## espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 10),
-    ## anim = animator(; setup, path = "$output/solution.mkv", nupdate = 20),
-    ## vtk = vtk_writer(; setup, nupdate = 100, dir = output, filename = "solution"),
+    ## anim = animator(; setup, path = "$outdir/solution.mkv", nupdate = 20),
+    ## vtk = vtk_writer(; setup, nupdate = 100, dir = outdir, filename = "solution"),
     ## field = fieldsaver(; setup, nupdate = 10),
     log = timelogger(; nupdate = 1000),
 );
@@ -105,10 +105,10 @@ state, outputs = solve_unsteady(; setup, ustart, tlims, Δt = T(1e-3), processor
 #
 # We may visualize or export the computed fields
 
-# Export fields to VTK. The file `output/solution.vti` may be opened for
+# Export fields to VTK. The file `outdir/solution.vti` may be opened for
 # visualization in [ParaView](https://www.paraview.org/). This is particularly
 # useful for inspecting results from 3D simulations.
-save_vtk(setup, state.u, state.t, "$output/solution")
+save_vtk(setup, state.u, state.t, "$outdir/solution")
 
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)
@@ -127,7 +127,7 @@ fieldplot(state; setup, fieldname = :vorticity)
 ## outputs.rtp
 ## outputs.ehist
 ## outputs.espec
-## outputs.anim 
+## outputs.anim
 ## outputs.vtk
 ## outputs.field
 outputs.log

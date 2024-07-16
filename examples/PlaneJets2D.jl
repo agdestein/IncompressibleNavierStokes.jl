@@ -16,7 +16,7 @@ using IncompressibleNavierStokes
 using LaTeXStrings
 
 # Output directory
-output = "output/PlaneJets2D"
+outdir = joinpath(@__DIR__, "output", "PlaneJets2D")
 
 # Floating point type
 T = Float64
@@ -160,10 +160,10 @@ state, outputs = solve_unsteady(;
             plot = meanplot,
             nupdate = 1,
         ),
-        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 4),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
+        ## anim = animator(; setup, path = "$outdir/vorticity.mkv", nupdate = 4),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = outdir, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
-        log = timelogger(; nupdate = 1),
+        log = timelogger(; nupdate = 100),
     ),
 );
 
@@ -174,7 +174,7 @@ state, outputs = solve_unsteady(;
 outputs.rtp
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$output/solution")
+save_vtk(setup, state.u, state.t, "$outdir/solution")
 
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)

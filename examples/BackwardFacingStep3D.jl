@@ -16,10 +16,10 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 
 # Output directory
-output = "output/BackwardFacingStep3D"
+outdir = joinpath(@__DIR__, "output", "BackwardFacingStep3D")
 
 # Floating point type
-T = Float64
+T = Float32
 
 # Array type
 ArrayType = Array
@@ -29,7 +29,7 @@ ArrayType = Array
 ## using Metal; ArrayType = MtlArray
 
 # Reynolds number
-Re = T(3000)
+Re = T(1000)
 
 # A 3D grid is a Cartesian product of three vectors
 x = LinRange(T(0), T(10), 129)
@@ -75,10 +75,10 @@ state, outputs = solve_unsteady(;
             ## plot = energy_spectrum_plot,
             nupdate = 1,
         ),
-        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
+        ## anim = animator(; setup, path = "$outdir/vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = outdir, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
-        log = timelogger(; nupdate = 1),
+        log = timelogger(; nupdate = 100),
     ),
 )
 
@@ -87,7 +87,7 @@ state, outputs = solve_unsteady(;
 # We may visualize or export the computed fields
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$output/solution")
+save_vtk(setup, state.u, state.t, "$outdir/solution")
 
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)

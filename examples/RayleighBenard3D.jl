@@ -12,13 +12,13 @@ ArrayType = Array
 T = Float32
 
 # Output directory
-outdir = joinpath(@__DIR__, "output")
+outdir = joinpath(@__DIR__, "output", "RayleighBenard3D")
 
 # Temperature equation
 temperature = temperature_equation(;
     Pr = T(0.71),
-    Ra = T(1e6),
-    Ge = T(0.1),
+    Ra = T(1e7),
+    Ge = T(1.0),
     dodissipation = true,
     boundary_conditions = (
         (PeriodicBC(), PeriodicBC()),
@@ -30,7 +30,7 @@ temperature = temperature_equation(;
 )
 
 # Setup
-n = 40
+n = 60
 x = LinRange(T(0), T(π), 2n)
 y = tanh_grid(T(0), T(1), n, T(1.2))
 z = tanh_grid(T(0), T(1), n, T(1.2))
@@ -58,37 +58,39 @@ plotgrid(y, z)
 ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x); psolver);
 (; xp) = setup.grid;
 ## T0(x, y, z) = 1 - z;
-T0(x, y, z) = 1 - z + max(sin(8 * x) * sinpi(4 * y) / 100, 0); ## Perturbation
+## T0(x, y, z) = one(x) / 2 + max(sin(20 * x) * sinpi(20 * y) / 100, 0); ## Perturbation
+T0(x, y, z) = one(x) / 2 + sin(20 * x) * sinpi(20 * y) / 100; ## Perturbation
 tempstart = T0.(xp[1], reshape(xp[2], 1, :), reshape(xp[3], 1, 1, :));
+IncompressibleNavierStokes.apply_bc_temp!(tempstart, T(0), setup)
 
 # Solve equation
 state, outputs = solve_unsteady(;
     setup,
     ustart,
     tempstart,
-    tlims = (T(0), T(50)),
+    tlims = (T(0), T(10)),
     method = RKMethods.RK33C2(; T),
-    Δt = T(1e-2),
+    ## Δt = T(1e-2),
     psolver,
     processors = (;
         ## anim = animator(;
         ##     path = "$outdir/RB3D.mp4",
-        ## rtp = realtimeplotter(;
-        ##     setup,
-        ##     nupdate = 50,
-        ##     levels = LinRange(-T(5), T(1), 10),
-        ##     fieldname = :eig2field,
-        ##     ## levels = LinRange{T}(0, 1, 10),
-        ##     ## fieldname = :temperature,
-        ## ),
-        vtk = vtk_writer(;
+        rtp = realtimeplotter(;
             setup,
-            dir = joinpath(outdir, "RB3D_$n"),
-            nupdate = 20,
-            ## fieldnames = (:velocity, :temperature, :eig2field)
-            fieldnames = (:temperature,),
+            nupdate = 1,
+            levels = LinRange(-T(5), T(1), 10),
+            fieldname = :eig2field,
+            ## levels = LinRange{T}(0.01, 0.99, 10),
+            ## fieldname = :temperature,
         ),
-        log = timelogger(; nupdate = 1),
+        ## vtk = vtk_writer(;
+        ##     setup,
+        ##     dir = joinpath(outdir, "RB3D_$n"),
+        ##     nupdate = 20,
+        ##     ## fieldnames = (:velocity, :temperature, :eig2field)
+        ##     fieldnames = (:temperature,),
+        ## ),
+        log = timelogger(; nupdate = 100),
     ),
 );
 

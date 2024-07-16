@@ -10,7 +10,7 @@ using IncompressibleNavierStokes
 using Random
 
 # Output directory
-output = "output/MultiActuator"
+outdir = joinpath(@__DIR__, "output", "MultiActuator")
 
 # Floating point precision
 T = Float64
@@ -21,12 +21,6 @@ ArrayType = Array
 ## using AMDGPU; ArrayType = ROCArray
 ## using oneAPI; ArrayType = oneArray
 ## using Metal; ArrayType = MtlArray
-
-using CUDA;
-T = Float32;
-# T = Float64;
-ArrayType = CuArray;
-CUDA.allowscalar(false);
 
 # Boundary conditions
 boundary_conditions = (
@@ -71,26 +65,17 @@ bodyforce = create_manyforce(
 )
 
 # A 2D grid is a Cartesian product of two vectors
-n = 80
+n = 50
 x = LinRange(T(0), T(10), 5n + 1)
 y = LinRange(-T(2), T(2), 2n + 1)
+plotgrid(x, y; figure = (; size = (600, 300)))
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re = T(2000), boundary_conditions, bodyforce, ArrayType);
+setup = Setup(x, y; Re = T(1000), boundary_conditions, bodyforce, ArrayType);
 
 # Initial conditions (extend inflow)
 ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? one(x) : zero(x));
 t = T(0)
-
-# # We create a box to visualize the actuator.
-# (; xc, yc, D, δ) = setup.bodyforce
-# box = [
-#     Point2f(xc - δ / 2, yc + D / 2),
-#     Point2f(xc - δ / 2, yc - D / 2),
-#     Point2f(xc + δ / 2, yc - D / 2),
-#     Point2f(xc + δ / 2, yc + D / 2),
-#     Point2f(xc - δ / 2, yc + D / 2),
-# ]
 
 boxes = map(bodyforce.forces) do (; xc, yc, D, δ)
     [
@@ -107,16 +92,15 @@ box = boxes[1]
 state, outputs = solve_unsteady(;
     setup,
     ustart,
-    tlims = (T(0), 4 * T(12)),
-    # (T(0), T(1));
+    tlims = (T(0), T(12)),
     method = RKMethods.RK44P2(),
-    # Δt = T(0.01),
     processors = (
         rtp = realtimeplotter(;
             setup,
-            # plot = fieldplot,
-            # fieldname = :velocitynorm,
-            # fieldname = :pressure,
+            ## plot = fieldplot,
+            ## fieldname = :velocitynorm,
+            ## fieldname = :pressure,
+            size = (600, 300),
             nupdate = 1,
         ),
         boxplotter = processor() do state
@@ -126,10 +110,10 @@ state, outputs = solve_unsteady(;
         end,
         ## ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 1),
         ## espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 1),
-        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "$output", filename = "solution"),
+        ## anim = animator(; setup, path = "$outdir/vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "$outdir", filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
-        log = timelogger(; nupdate = 1),
+        log = timelogger(; nupdate = 100),
     ),
 );
 
@@ -138,20 +122,19 @@ state, outputs = solve_unsteady(;
 # We may visualize or export the computed fields `(u, p)`.
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$output/solution")
+save_vtk(setup, state.u, state.t, "$outdir/solution")
 
 # Plot pressure
-fig = fieldplot(state; setup, fieldname = :pressure)
-# lines!(box...; color = :red)
+fig = fieldplot(state; setup, size = (600, 300), fieldname = :pressure)
 lines!.(boxes; color = :red);
 fig
 
 # Plot velocity
-fig = fieldplot(state; setup, fieldname = :velocitynorm)
+fig = fieldplot(state; setup, size = (600, 300), fieldname = :velocitynorm)
 lines!.(boxes; color = :red);
 fig
 
 # Plot vorticity
-fig = fieldplot(state; setup, fieldname = :vorticity)
+fig = fieldplot(state; setup, size = (600, 300), fieldname = :vorticity)
 lines!.(boxes; color = :red);
 fig

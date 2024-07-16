@@ -15,13 +15,13 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 
 # Output directory
-output = "output/Actuator2D"
+outdir = joinpath(@__DIR__, "output", "Actuator2D")
 
 # A 2D grid is a Cartesian product of two vectors
 n = 40
 x = LinRange(0.0, 10.0, 5n + 1)
 y = LinRange(-2.0, 2.0, 2n + 1)
-plotgrid(x, y)
+plotgrid(x, y; figure = (; size = (600, 300)))
 
 # Boundary conditions
 boundary_conditions = (
@@ -65,13 +65,13 @@ state, outputs = solve_unsteady(;
     method = RKMethods.RK44P2(),
     Δt = 0.05,
     processors = (
-        rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 1),
+        rtp = realtimeplotter(; setup, size = (600, 300), nupdate = 1),
         ## ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 1),
         ## espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 1),
-        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "$output", filename = "solution"),
+        ## anim = animator(; setup, path = "$outdir/vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "$outdir", filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
-        log = timelogger(; nupdate = 1),
+        log = timelogger(; nupdate = 24),
     ),
 );
 
@@ -80,7 +80,7 @@ state, outputs = solve_unsteady(;
 # We may visualize or export the computed fields `(u, p)`.
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$output/solution")
+save_vtk(setup, state.u, state.t, "$outdir/solution")
 
 # We create a box to visualize the actuator.
 box = (
@@ -89,16 +89,16 @@ box = (
 )
 
 # Plot pressure
-fig = fieldplot(state; setup, fieldname = :pressure)
+fig = fieldplot(state; setup, size = (600, 300), fieldname = :pressure)
 lines!(box...; color = :red)
 fig
 
 # Plot velocity
-fig = fieldplot(state; setup, fieldname = :velocitynorm)
+fig = fieldplot(state; setup, size = (600, 300), fieldname = :velocitynorm)
 lines!(box...; color = :red)
 fig
 
 # Plot vorticity
-fig = fieldplot(state; setup, fieldname = :vorticity)
+fig = fieldplot(state; setup, size = (600, 300), fieldname = :vorticity)
 lines!(box...; color = :red)
 fig

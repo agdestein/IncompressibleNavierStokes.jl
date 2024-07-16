@@ -12,7 +12,7 @@ ArrayType = Array
 T = Float64
 
 # Output directory
-outdir = joinpath(@__DIR__, "output")
+outdir = joinpath(@__DIR__, "output", "RayleighTaylor3D")
 
 # Temperature equation
 temperature = temperature_equation(;
@@ -90,18 +90,21 @@ state, outputs = solve_unsteady(;
             ## levels = LinRange{T}(0, 1, 10),
             size = (400, 600),
         ),
-        vtk = vtk_writer(;
-            setup,
-            nupdate = 10,
-            dir = "output/RayleighTaylor3D",
-            fieldnames = (:velocity, :pressure, :temperature),
-            psolver,
-        ),
-        log = timelogger(; nupdate = 10),
+        ## vtk = vtk_writer(;
+        ##     setup,
+        ##     nupdate = 10,
+        ##     dir = outdir,
+        ##     fieldnames = (:velocity, :pressure, :temperature),
+        ##     psolver,
+        ## ),
+        log = timelogger(; nupdate = 400),
     ),
 );
 
+# Check distribution of vortex structures
+# for choosing plot levels
 field = IncompressibleNavierStokes.eig2field(state.u, setup)[setup.grid.Ip]
 hist(vec(Array(log.(max.(eps(T), .-field)))))
 
+# Plot temperature field
 fieldplot(state; setup, fieldname = :temperature)

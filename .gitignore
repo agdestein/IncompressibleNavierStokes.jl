@@ -3,6 +3,7 @@
 *.jl.cov
 *.jl.mem
 *package-lock.json
+*package.json
 *Manifest.toml
 /docs/build/
 /docs/src/generated/
@@ -16,3 +17,4 @@
 
 # Mac OS
 *.DS_Store
+docs/make.jl

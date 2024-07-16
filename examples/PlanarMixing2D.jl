@@ -13,7 +13,7 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 
 # Output directory
-output = "output/PlanarMixing2D"
+outdir = joinpath(@__DIR__, "output", "PlanarMixing2D")
 
 # Viscosity model
 Re = 500.0
@@ -43,7 +43,7 @@ n = 64
 ## n = 256
 x = LinRange(0.0, 256.0, 4n)
 y = LinRange(-32.0, 32.0, n)
-plotgrid(x, y)
+plotgrid(x, y; figure = (; size = (600, 250)))
 
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions);
@@ -59,19 +59,21 @@ state, outputs = solve_unsteady(;
     tlims = (0.0, 100.0),
     psolver,
     method = RKMethods.RK44P2(),
-    Δt = 0.1,
+    ## Δt = 0.1,
     processors = (
         rtp = realtimeplotter(;
             setup,
             plot = fieldplot,
             ## plot = energy_history_plot,
             ## plot = energy_spectrum_plot,
+            docolorbar = false,
+            size = (600, 250),
             nupdate = 1,
         ),
-        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
+        ## anim = animator(; setup, path = "$outdir/vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = outdir, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
-        log = timelogger(; nupdate = 1),
+        log = timelogger(; nupdate = 100),
     ),
 );
 
@@ -82,4 +84,4 @@ state, outputs = solve_unsteady(;
 outputs.rtp
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$output/solution"; psolver)
+save_vtk(setup, state.u, state.t, "$outdir/solution"; psolver)

@@ -15,7 +15,7 @@ T = Float64
 n = 50
 x = tanh_grid(T(0), T(1), n, T(1.5))
 y = tanh_grid(T(0), T(2), 2n, T(1.5))
-plotgrid(x, y)
+plotgrid(x, y; figure = (; size = (300, 600)))
 
 # Setup
 temperature = temperature_equation(;
@@ -47,7 +47,7 @@ state, outputs = solve_unsteady(;
     setup,
     ustart,
     tempstart,
-    tlims = (T(0), T(20)),
+    tlims = (T(0), T(10)),
     Δt = T(5e-3),
     processors = (;
         rtp = realtimeplotter(;
@@ -56,7 +56,7 @@ state, outputs = solve_unsteady(;
             fieldname = :temperature,
             size = (400, 600),
         ),
-        log = timelogger(; nupdate = 100),
+        log = timelogger(; nupdate = 200),
     ),
 );
 

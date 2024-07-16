@@ -13,7 +13,7 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 
 # Output directory
-output = "output/ShearLayer2D"
+outdir = joinpath(@__DIR__, "output", "ShearLayer2D")
 
 # Floating point type
 T = Float64
@@ -26,7 +26,7 @@ ArrayType = Array
 ## using Metal; ArrayType = MtlArray
 
 # Reynolds number
-Re = T(Inf)
+Re = T(2000)
 
 # A 2D grid is a Cartesian product of two vectors
 n = 128
@@ -60,10 +60,10 @@ state, outputs = solve_unsteady(;
             ## plot = energy_spectrum_plot,
             nupdate = 1,
         ),
-        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
+        ## anim = animator(; setup, path = "$outdir/vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = outdir, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
-        log = timelogger(; nupdate = 1),
+        log = timelogger(; nupdate = 100),
     ),
 );
 
@@ -74,7 +74,7 @@ state, outputs = solve_unsteady(;
 outputs.rtp
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$output/solution")
+save_vtk(setup, state.u, state.t, "$outdir/solution")
 
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)

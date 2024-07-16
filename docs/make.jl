@@ -45,9 +45,10 @@ examples = [
 
 # Convert scripts to executable markdown files
 output = "generated"
+outputdir = joinpath(@__DIR__, "src", output)
+rm(outputdir; recursive = true)
 for e ∈ examples
     inputfile = joinpath(@__DIR__, "..", "examples", e.name * ".jl")
-    outputdir = joinpath(@__DIR__, "src", output)
     if e.run
         # With code execution blocks
         Literate.markdown(inputfile, outputdir)
@@ -60,7 +61,7 @@ for e ∈ examples
             inputfile,
             outputdir;
             preprocess = content ->
-                "# *Note: Output is not generated for this example to save resources on GitHub.*\n\n" *
+                "# *Note: Output is not generated for this example (to save resources on GitHub).*\n\n" *
                 content,
             postprocess = content -> replace(content, r"@example.*" => "julia"),
         )

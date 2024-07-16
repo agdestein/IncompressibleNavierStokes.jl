@@ -16,7 +16,7 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 
 # Output directory
-output = "output/BackwardFacingStep2D"
+outdir = joinpath(@__DIR__, "output", "BackwardFacingStep2D")
 
 # Floating point type
 T = Float64
@@ -47,7 +47,7 @@ boundary_conditions = (
 # the walls.
 x = LinRange(T(0), T(10), 301)
 y = cosine_grid(-T(0.5), T(0.5), 51)
-plotgrid(x, y)
+plotgrid(x, y; figure = (; size = (600, 150)))
 
 # Build setup and assemble operators
 setup = Setup(x, y; Re, boundary_conditions, ArrayType);
@@ -71,12 +71,14 @@ state, outputs = solve_unsteady(;
             plot = fieldplot,
             ## plot = energy_history_plot,
             ## plot = energy_spectrum_plot,
+            docolorbar = false,
+            size = (600, 150),
             nupdate = 1,
         ),
-        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
+        ## anim = animator(; setup, path = "$outdir/vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = outdir, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
-        log = timelogger(; nupdate = 1),
+        log = timelogger(; nupdate = 500),
     ),
 );
 
@@ -85,13 +87,13 @@ state, outputs = solve_unsteady(;
 # We may visualize or export the computed fields
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$output/solution")
+save_vtk(setup, state.u, state.t, "$outdir/solution")
 
 # Plot pressure
-fieldplot(state; setup, fieldname = :pressure)
+fieldplot(state; setup, size = (600, 150), fieldname = :pressure)
 
 # Plot velocity
-fieldplot(state; setup, fieldname = :velocitynorm)
+fieldplot(state; setup, size = (600, 150), fieldname = :velocitynorm)
 
 # Plot vorticity
-fieldplot(state; setup, fieldname = :vorticity)
+fieldplot(state; setup, size = (600, 150), fieldname = :vorticity)

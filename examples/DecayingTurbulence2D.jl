@@ -11,7 +11,7 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 
 # Output directory
-output = "output/DecayingTurbulence2D"
+outdir = joinpath(@__DIR__, "output", "DecayingTurbulence2D")
 
 # Floating point precision
 T = Float64
@@ -52,8 +52,8 @@ state, outputs = solve_unsteady(;
             displayfig = false,
         ),
         espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 10),
-        ## anim = animator(; setup, path = "$output/solution.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = output, filename = "solution"),
+        ## anim = animator(; setup, path = "$outdir/solution.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = outdir, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 100),
     ),
@@ -70,7 +70,7 @@ outputs.ehist
 outputs.espec
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$output/solution")
+save_vtk(setup, state.u, state.t, "$outdir/solution")
 
 # Plot field
 fieldplot(state; setup)

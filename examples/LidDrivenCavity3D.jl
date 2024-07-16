@@ -9,7 +9,7 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 
 # Case name for saving results
-output = "output/LidDrivenCavity3D"
+outdir = joinpath(@__DIR__, "output", "LidDrivenCavity3D")
 
 # Floating point type
 T = Float64
@@ -61,8 +61,8 @@ ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x))
         ## rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 50),
         ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 10),
         ## espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 10),
-        ## anim = animator(; setup, path = "$output/solution.mkv", nupdate = 20),
-        # vtk = vtk_writer(; setup, nupdate = 100, dir = output, filename = "solution"),
+        ## anim = animator(; setup, path = "$outdir/solution.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 100, dir = outdir, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 20),
     ),
@@ -70,10 +70,10 @@ ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x))
 
 # ## Post-process
 #
-# We may visualize or export the computed fields `(V, p)`
+# We may visualize or export the computed fields
 
 # Export to VTK
-save_vtk(setup, u, t, "$output/solution")
+save_vtk(setup, u, t, "$outdir/solution")
 
 # Energy history
 outputs.ehist

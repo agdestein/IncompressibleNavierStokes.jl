@@ -15,7 +15,7 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 
 # Output directory
-output = "output/Actuator3D"
+outdir = joinpath(@__DIR__, "output", "Actuator3D")
 
 # Floating point type
 T = Float64
@@ -89,8 +89,8 @@ ustart = create_initial_conditions(setup, (dim, x, y, z) -> dim() == 1 ? one(x) 
             ## plot = energy_spectrum_plot,
             nupdate = 1,
         ),
-        ## anim = animator(; setup, path = "$output/vorticity.mkv", nupdate = 20),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "$output", filename = "solution"),
+        ## anim = animator(; setup, path = "$outdir/vorticity.mkv", nupdate = 20),
+        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "$outdir", filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 1),
     ),
@@ -104,4 +104,4 @@ ustart = create_initial_conditions(setup, (dim, x, y, z) -> dim() == 1 ? one(x) 
 outputs.rtp
 
 # Export to VTK
-save_vtk(setup, u, t, "$output/solution")
+save_vtk(setup, u, t, "$outdir/solution")
