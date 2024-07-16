@@ -208,6 +208,19 @@ function create_relerr_post(;
     end
 end
 
+"""
+    create_relerr_symmetry_post(;
+        u,
+        setup,
+        method = RKMethods.RK44(; T = eltype(setup.grid.x[1])),
+        psolver,
+        Δt,
+        nstep,
+        g = 1,
+    )
+
+Create a-posteriori symmetry error.
+"""
 function create_relerr_symmetry_post(;
     u,
     setup,

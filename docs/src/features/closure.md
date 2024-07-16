@@ -99,6 +99,8 @@ NeuralClosure.mean_squared_error
 NeuralClosure.create_loss_post
 NeuralClosure.create_relerr_post
 NeuralClosure.create_callback
+NeuralClosure.create_relerr_symmetry_prior
+NeuralClosure.create_relerr_symmetry_post
 ```
 
 ## Neural architectures
