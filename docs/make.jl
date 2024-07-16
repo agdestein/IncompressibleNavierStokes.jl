@@ -46,7 +46,7 @@ examples = [
 # Convert scripts to executable markdown files
 output = "generated"
 outputdir = joinpath(@__DIR__, "src", output)
-rm(outputdir; recursive = true)
+## rm(outputdir; recursive = true)
 for e ∈ examples
     inputfile = joinpath(@__DIR__, "..", "examples", e.name * ".jl")
     if e.run
