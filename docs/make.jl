@@ -20,30 +20,51 @@ DocMeta.setdocmeta!(
 
 bib = CitationBibliography(joinpath(@__DIR__, "references.bib"))
 
-# Generate examples
+# Generate examples (set `dorun = false` for faster build)
+dorun = true
 examples = [
-    "Tutorial: Lid-Driven Cavity (2D)" => "LidDrivenCavity2D",
-    "Convergence: Taylor-Green Vortex (2D)" => "TaylorGreenVortex2D",
-    "Unsteady inflow: Actuator (2D)" => "Actuator2D",
-    # "Actuator (3D)" => "Actuator3D",
-    "Walls: Backward Facing Step (2D)" => "BackwardFacingStep2D",
-    # "Backward Facing Step (3D)" => "BackwardFacingStep3D",
-    "Decaying Turbulunce (2D)" => "DecayingTurbulence2D",
-    # "Decaying Turbulunce (3D)" => "DecayingTurbulence3D",
-    # "Lid-Driven Cavity (3D)" => "LidDrivenCavity3D",
-    # "Planar Mixing (2D)" => "PlanarMixing2D",
-    # "Shear Layer (2D)" => "ShearLayer2D",
-    # "Taylor-Green Vortex (3D)" => "TaylorGreenVortex3D",
-    "Temperature: Rayleigh-Bénard (2D)" => "RayleighBenard2D",
+    (; run = dorun, name = "Actuator2D", title = "Actuator (2D)"),
+    (; run = false, name = "Actuator3D", title = "Actuator (3D)"),
+    (; run = false, name = "BackwardFacingStep2D", title = "Backward Facing Step (2D)"),
+    (; run = false, name = "BackwardFacingStep3D", title = "Backward Facing Step (3D)"),
+    (; run = dorun, name = "DecayingTurbulence2D", title = "Decaying Turbulunce (2D)"),
+    (; run = false, name = "DecayingTurbulence3D", title = "Decaying Turbulunce (3D)"),
+    (; run = false, name = "LidDrivenCavity2D", title = "Lid-Driven Cavity (2D)"),
+    (; run = false, name = "LidDrivenCavity3D", title = "Lid-Driven Cavity (3D)"),
+    (; run = false, name = "MultiActuator", title = "Multiple actuators (2D)"),
+    (; run = false, name = "PlanarMixing2D", title = "Planar Mixing (2D)"),
+    (; run = false, name = "PlaneJets2D", title = "Plane jets (2D)"),
+    (; run = dorun, name = "RayleighBenard2D", title = "Rayleigh-Bénard (2D)"),
+    (; run = false, name = "RayleighBenard3D", title = "Rayleigh-Bénard (3D)"),
+    (; run = dorun, name = "RayleighTaylor2D", title = "Rayleigh-Taylor (2D)"),
+    (; run = false, name = "RayleighTaylor3D", title = "Rayleigh-Taylor (3D)"),
+    (; run = false, name = "ShearLayer2D", title = "Shear Layer (2D)"),
+    (; run = dorun, name = "TaylorGreenVortex2D", title = "Taylor-Green Vortex (2D)"),
+    (; run = false, name = "TaylorGreenVortex3D", title = "Taylor-Green Vortex (3D)"),
 ]
 
+# Convert scripts to executable markdown files
 output = "generated"
 for e ∈ examples
-    e = joinpath(@__DIR__, "..", "examples", "$(e.second).jl")
-    o = joinpath(@__DIR__, "src", output)
-    Literate.markdown(e, o)
-    # Literate.notebook(e, o)
-    # Literate.script(e, o)
+    inputfile = joinpath(@__DIR__, "..", "examples", e.name * ".jl")
+    outputdir = joinpath(@__DIR__, "src", output)
+    if e.run
+        # With code execution blocks
+        Literate.markdown(inputfile, outputdir)
+    else
+        # Turn off code execution.
+        # Note: Literate has a `documenter = false` option, but this would also remove
+        # the "Edit on GitHub" button at the top, therefore we disable the `@example`-blocks
+        # manually
+        Literate.markdown(
+            inputfile,
+            outputdir;
+            preprocess = content ->
+                "# *Note: Output is not generated for this example to save resources on GitHub.*\n\n" *
+                content,
+            postprocess = content -> replace(content, r"@example.*" => "julia"),
+        )
+    end
 end
 
 makedocs(;
@@ -65,7 +86,7 @@ makedocs(;
     pages = [
         "Home" => "index.md",
         "Getting Started" => "getting_started.md",
-        "Examples" => [e.first => joinpath(output, e.second * ".md") for e ∈ examples],
+        "Examples" => [e.title => joinpath(output, e.name * ".md") for e ∈ examples],
         "Equations" => [
             "Incompressible Navier-Stokes equations" => "equations/ns.md",
             "Spatial discretization" => "equations/spatial.md",
@@ -87,6 +108,7 @@ makedocs(;
     ],
 )
 
+# Only deploy docs on CI
 get(ENV, "CI", "false") == "true" && deploydocs(;
     repo = "github.com/agdestein/IncompressibleNavierStokes.jl",
     target = "build",
