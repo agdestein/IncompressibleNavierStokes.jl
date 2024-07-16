@@ -38,7 +38,7 @@ function create_right_hand_side_inplace(setup, psolver)
         INS.momentum!(F, v, nothing, t, setup)
         INS.apply_bc_u!(F, t, setup; dudt = true)
         INS.project!(F, setup; psolver, div, p)
-        for α in 1:D
+        for α = 1:D
             dudt[ntuple(Returns(:), D)..., α] .= F[α]
         end
         dudt
