@@ -112,6 +112,8 @@ ChainRulesCore.rrule(::typeof(divergence), u, setup) = (
     φ -> (
         NoTangent(),
         divergence_adjoint!(Tangent{typeof(u)}(similar.(u)...), φ, setup),
+        # FIXME: ChainRulesTest and Zygote require conflicting definitions here
+        # divergence_adjoint!(similar.(u), φ, setup),
         NoTangent(),
     ),
 )
@@ -561,7 +563,8 @@ ChainRulesCore.rrule(::typeof(convection), u, setup) = (
     φ -> (
         NoTangent(),
         # convection_adjoint!(Tangent{typeof(u)}(zero.(u)...), (φ...,), u, setup),
-        convection_adjoint!(Tangent{typeof(u)}(zero.(u)...), (φ...,), u, setup),
+        # convection_adjoint!(zero.(u), (φ...,), u, setup),
+        convection_adjoint!(zero.(φ), (φ...,), u, setup),
         NoTangent(),
     ),
 )
@@ -642,6 +645,9 @@ ChainRulesCore.rrule(::typeof(diffusion), u, setup) = (
     φ -> (
         NoTangent(),
         diffusion_adjoint!(Tangent{typeof(u)}(zero.(u)...), (φ...,), setup),
+        # FIXME: ChainRulesTest and Zygote require conflicting definitions here
+        # diffusion_adjoint!(zero.(u), (φ...,), setup),
+        # diffusion_adjoint!(zero.(φ), (φ...,), setup),
         NoTangent(),
     ),
 )
