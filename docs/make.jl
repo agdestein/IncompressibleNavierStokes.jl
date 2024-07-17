@@ -20,36 +20,8 @@ DocMeta.setdocmeta!(
 
 bib = CitationBibliography(joinpath(@__DIR__, "references.bib"))
 
-# Generate examples (set `dorun = false` for faster build)
-dorun = true
-examples = [
-    (; run = dorun, name = "Actuator2D", title = "Actuator (2D)"),
-    (; run = false, name = "Actuator3D", title = "Actuator (3D)"),
-    (; run = false, name = "BackwardFacingStep2D", title = "Backward Facing Step (2D)"),
-    (; run = false, name = "BackwardFacingStep3D", title = "Backward Facing Step (3D)"),
-    (; run = dorun, name = "DecayingTurbulence2D", title = "Decaying Turbulunce (2D)"),
-    (; run = false, name = "DecayingTurbulence3D", title = "Decaying Turbulunce (3D)"),
-    (; run = false, name = "LidDrivenCavity2D", title = "Lid-Driven Cavity (2D)"),
-    (; run = false, name = "LidDrivenCavity3D", title = "Lid-Driven Cavity (3D)"),
-    (; run = false, name = "MultiActuator", title = "Multiple actuators (2D)"),
-    (; run = false, name = "PlanarMixing2D", title = "Planar Mixing (2D)"),
-    (; run = false, name = "PlaneJets2D", title = "Plane jets (2D)"),
-    (; run = dorun, name = "RayleighBenard2D", title = "Rayleigh-Bénard (2D)"),
-    (; run = false, name = "RayleighBenard3D", title = "Rayleigh-Bénard (3D)"),
-    (; run = dorun, name = "RayleighTaylor2D", title = "Rayleigh-Taylor (2D)"),
-    (; run = false, name = "RayleighTaylor3D", title = "Rayleigh-Taylor (3D)"),
-    (; run = false, name = "ShearLayer2D", title = "Shear Layer (2D)"),
-    (; run = dorun, name = "TaylorGreenVortex2D", title = "Taylor-Green Vortex (2D)"),
-    (; run = false, name = "TaylorGreenVortex3D", title = "Taylor-Green Vortex (3D)"),
-]
-
-# Convert scripts to executable markdown files
-output = "generated"
-outputdir = joinpath(@__DIR__, "src", output)
-## rm(outputdir; recursive = true)
-for e ∈ examples
-    inputfile = joinpath(@__DIR__, "..", "examples", e.name * ".jl")
-    if e.run
+makemarkdown(inputfile, outputdir; run) =
+    if run
         # With code execution blocks
         Literate.markdown(inputfile, outputdir)
     else
@@ -66,9 +38,52 @@ for e ∈ examples
             postprocess = content -> replace(content, r"@example.*" => "julia"),
         )
     end
+
+# Generate examples
+examples = [
+    "Simple flows" => [
+        (; run = true, name = "DecayingTurbulence2D", title = "Decaying Turbulunce (2D)"),
+        (; run = false, name = "DecayingTurbulence3D", title = "Decaying Turbulunce (3D)"),
+        (; run = true, name = "TaylorGreenVortex2D", title = "Taylor-Green Vortex (2D)"),
+        (; run = false, name = "TaylorGreenVortex3D", title = "Taylor-Green Vortex (3D)"),
+        (; run = false, name = "ShearLayer2D", title = "Shear Layer (2D)"),
+        (; run = false, name = "PlaneJets2D", title = "Plane jets (2D)"),
+    ],
+    "Mixed boundary conditions" => [
+        (; run = true, name = "Actuator2D", title = "Actuator (2D)"),
+        (; run = false, name = "Actuator3D", title = "Actuator (3D)"),
+        (; run = false, name = "BackwardFacingStep2D", title = "Backward Facing Step (2D)"),
+        (; run = false, name = "BackwardFacingStep3D", title = "Backward Facing Step (3D)"),
+        (; run = false, name = "LidDrivenCavity2D", title = "Lid-Driven Cavity (2D)"),
+        (; run = false, name = "LidDrivenCavity3D", title = "Lid-Driven Cavity (3D)"),
+        (; run = false, name = "MultiActuator", title = "Multiple actuators (2D)"),
+        (; run = false, name = "PlanarMixing2D", title = "Planar Mixing (2D)"),
+    ],
+    "With temperature field" => [
+        (; run = true, name = "RayleighBenard2D", title = "Rayleigh-Bénard (2D)"),
+        (; run = false, name = "RayleighBenard3D", title = "Rayleigh-Bénard (3D)"),
+        (; run = true, name = "RayleighTaylor2D", title = "Rayleigh-Taylor (2D)"),
+        (; run = false, name = "RayleighTaylor3D", title = "Rayleigh-Taylor (3D)"),
+    ],
+]
+
+# Convert scripts to executable markdown files
+output = "examples/generated"
+outputdir = joinpath(@__DIR__, "src", output)
+## rm(outputdir; recursive = true)
+for e ∈ examples, e ∈ e[2]
+    inputfile = joinpath(@__DIR__, "..", "examples", e.name * ".jl")
+    makemarkdown(inputfile, outputdir; e.run)
 end
 
+example_pages = map(
+    topic -> topic[1] => [e.title => joinpath(output, e.name * ".md") for e ∈ topic[2]],
+    examples,
+)
+
 makedocs(;
+    # draft = true,
+    # clean = false,
     modules = [IncompressibleNavierStokes, NeuralClosure],
     plugins = [bib],
     authors = "Syver Døving Agdestein, Benjamin Sanderse, and contributors",
@@ -87,7 +102,7 @@ makedocs(;
     pages = [
         "Home" => "index.md",
         "Getting Started" => "getting_started.md",
-        "Examples" => [e.title => joinpath(output, e.name * ".md") for e ∈ examples],
+        "Examples" => vcat("Overview" => "examples/overview.md", example_pages),
         "Equations" => [
             "Incompressible Navier-Stokes equations" => "equations/ns.md",
             "Spatial discretization" => "equations/spatial.md",

@@ -18,8 +18,8 @@ hero:
       text: View on GitHub
       link: https://github.com/agdestein/IncompressibleNavierStokes.jl
     - theme: alt
-      text: Features
-      link: /features/bc
+      text: Gallery
+      link: /examples/overview
 
 features:
   - icon: <img width="64" height="64" src="https://raw.githubusercontent.com/JuliaGPU/CUDA.jl/3a2546c1ac1546b05b4c0d3d6ff26c268091a202/docs/src/assets/logo.png" alt="CUDA.jl"/>
