@@ -472,9 +472,10 @@ ChainRulesCore.rrule(::typeof(convection), u, setup) = (
     convection(u, setup),
     φ -> (
         NoTangent(),
-        # convection_adjoint!(Tangent{typeof(u)}(zero.(u)...), (φ...,), u, setup),
+        convection_adjoint!(Tangent{typeof(u)}(zero.(u)...), (φ...,), u, setup),
+        # FIXME: ChainRulesTest and Zygote require conflicting definitions here
         # convection_adjoint!(zero.(u), (φ...,), u, setup),
-        convection_adjoint!(zero.(φ), (φ...,), u, setup),
+        # convection_adjoint!(zero.(φ), (φ...,), u, setup),
         NoTangent(),
     ),
 )
