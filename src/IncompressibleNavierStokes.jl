@@ -29,6 +29,7 @@ include("grid.jl")
 include("setup.jl")
 include("pressure.jl")
 include("operators.jl")
+include("matrices.jl")
 
 # Time steppers
 include("time_steppers/methods.jl")
