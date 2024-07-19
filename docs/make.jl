@@ -43,15 +43,15 @@ makemarkdown(inputfile, outputdir; run) =
 e = "examples"
 examples = [
     "Simple flows" => [
-        (true,  "examples/DecayingTurbulence2D", "Decaying Turbulunce (2D)"),
+        (true, "examples/DecayingTurbulence2D", "Decaying Turbulunce (2D)"),
         (false, "examples/DecayingTurbulence3D", "Decaying Turbulunce (3D)"),
-        (true,  "examples/TaylorGreenVortex2D", "Taylor-Green Vortex (2D)"),
+        (true, "examples/TaylorGreenVortex2D", "Taylor-Green Vortex (2D)"),
         (false, "examples/TaylorGreenVortex3D", "Taylor-Green Vortex (3D)"),
         (false, "examples/ShearLayer2D", "Shear Layer (2D)"),
         (false, "examples/PlaneJets2D", "Plane jets (2D)"),
     ],
     "Mixed boundary conditions" => [
-        (true,  "examples/Actuator2D", "Actuator (2D)"),
+        (true, "examples/Actuator2D", "Actuator (2D)"),
         (false, "examples/Actuator3D", "Actuator (3D)"),
         (false, "examples/BackwardFacingStep2D", "Backward Facing Step (2D)"),
         (false, "examples/BackwardFacingStep3D", "Backward Facing Step (3D)"),
@@ -61,16 +61,16 @@ examples = [
         (false, "examples/PlanarMixing2D", "Planar Mixing (2D)"),
     ],
     "With temperature field" => [
-        (true,  "examples/RayleighBenard2D", "Rayleigh-Bénard (2D)"),
+        (true, "examples/RayleighBenard2D", "Rayleigh-Bénard (2D)"),
         (false, "examples/RayleighBenard3D", "Rayleigh-Bénard (3D)"),
-        (true,  "examples/RayleighTaylor2D", "Rayleigh-Taylor (2D)"),
+        (true, "examples/RayleighTaylor2D", "Rayleigh-Taylor (2D)"),
         (false, "examples/RayleighTaylor3D", "Rayleigh-Taylor (3D)"),
     ],
     "Neural closure models" => [
         (false, "lib/PaperDC/prioranalysis", "Filter analysis"),
         (false, "lib/PaperDC/postanalysis", "CNN closures"),
-        (false, "lib/SymmetryClosure/train", "Equivariant closures"),
-    ]
+        (false, "lib/SymmetryClosure/symmetryanalysis", "Equivariant closures"),
+    ],
 ]
 
 # Convert scripts to executable markdown files
@@ -89,7 +89,7 @@ example_pages = map(examples) do e
 end
 
 makedocs(;
-    draft = true,
+    # draft = true,
     # clean = false,
     modules = [IncompressibleNavierStokes, NeuralClosure],
     plugins = [bib],

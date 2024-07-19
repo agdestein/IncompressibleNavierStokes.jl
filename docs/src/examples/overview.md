@@ -127,10 +127,10 @@ const neural = [
     desc: "Compare CNN closure models for different filters, grid sizes, and projection orders",
   },
   {
-    href: "generated/train",
-    src: "../train.png",
+    href: "generated/symmetryanalysis",
+    src: "../symmetryanalysis.png",
     caption: "Symmetry-preserving closure models",
-    desc: "Train group equivariant CNNs and compare to normal CNNs.",
+    desc: "Train group equivariant CNNs and compare to normal CNNs",
   },
 ];
 </script>
