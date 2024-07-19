@@ -51,7 +51,7 @@ updated state and parameters.
 function train(
     dataloaders,
     loss,
-    opt,
+    optstate,
     θ;
     niter = 100,
     ncallback = 1,
@@ -63,12 +63,12 @@ function train(
             b = d()
             first(gradient(θ -> loss(b, θ), θ))
         end
-        opt, θ = Optimisers.update(opt, θ, g)
+        optstate, θ = Optimisers.update(optstate, θ, g)
         if i % ncallback == 0
             callbackstate = callback(callbackstate, i, θ)
         end
     end
-    (; opt, θ, callbackstate)
+    (; optstate, θ, callbackstate)
 end
 
 """

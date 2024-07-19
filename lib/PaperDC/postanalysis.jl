@@ -269,7 +269,8 @@ let
         d = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device, rng)
         θ = T(1.0e0) * device(θ₀)
         loss = create_loss_prior(mean_squared_error, closure)
-        opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
+        opt = Adam(T(1.0e-3))
+        optstate = Optimisers.setup(opt, θ)
         it = rand(rng, 1:size(io_valid[ig, ifil].u, 4), 50)
         validset = device(map(v -> v[:, :, :, it], io_valid[ig, ifil]))
         (; callbackstate, callback) = create_callback(
@@ -278,10 +279,10 @@ let
             displayref = true,
             display_each_iteration = false, # Set to `true` if using CairoMakie
         )
-        (; opt, θ, callbackstate) = train(
+        (; optstate, θ, callbackstate) = train(
             [d],
             loss,
-            opt,
+            optstate,
             θ;
             niter = 10_000,
             ncallback = 20,
@@ -345,7 +346,8 @@ let
         data = [(; u = d.data[ig, ifil].u, d.t) for d in data_train]
         d = create_dataloader_post(data; device, nunroll = 20, rng)
         θ = copy(θ_cnn_prior[ig, ifil])
-        opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
+        opt = Adam(T(1.0e-3))
+        optstate = Optimisers.setup(opt, θ)
         it = 1:30
         data = data_valid[1]
         data = (; u = device.(data.data[ig, ifil].u[it]), t = data.t[it])
@@ -361,8 +363,16 @@ let
             θ,
             displayref = false,
         )
-        (; opt, θ, callbackstate) =
-            train([d], loss, opt, θ; niter = 2000, ncallback = 10, callbackstate, callback)
+        (; optstate, θ, callbackstate) = train(
+            [d],
+            loss,
+            optstate,
+            θ;
+            niter = 2000,
+            ncallback = 10,
+            callbackstate,
+            callback,
+        )
         θ = callbackstate.θmin # Use best θ instead of last θ
         post = (; θ = Array(θ), comptime = time() - starttime)
         jldsave(postfiles[iorder, ifil, ig]; post)

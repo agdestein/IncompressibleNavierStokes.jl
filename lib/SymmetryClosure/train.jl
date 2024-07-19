@@ -276,7 +276,8 @@ dotrain && let
         d = create_dataloader_prior(io_train[ig]; batchsize = 100, device, rng)
         θ = device(m.θ₀)
         loss = create_loss_prior(mean_squared_error, m.closure)
-        opt = Optimisers.setup(Adam(T(1.0e-3)), θ)
+        opt = Adam(T(1.0e-3))
+        optstate = Optimisers.setup(opt, θ)
         it = rand(rng, 1:size(io_valid[ig].u, 4), 50)
         validset = device(map(v -> v[:, :, :, it], io_valid[ig]))
         (; callbackstate, callback) = create_callback(
@@ -285,10 +286,10 @@ dotrain && let
             displayref = true,
             display_each_iteration = true, # Set to `true` if using CairoMakie
         )
-        (; opt, θ, callbackstate) = train(
+        (; optstate, θ, callbackstate) = train(
             [d],
             loss,
-            opt,
+            optstate,
             θ;
             niter = 10_000,
             ncallback = 20,
