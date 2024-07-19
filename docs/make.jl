@@ -102,7 +102,7 @@ makedocs(;
     #     assets = String[],
     # ),
     format = DocumenterVitepress.MarkdownVitepress(;
-        repo = "https://github.com/agdestein/IncompressibleNavierStokes.jl",
+        repo = "github.com/agdestein/IncompressibleNavierStokes.jl",
         devurl = "dev",
     ),
     pagesonly = true,
