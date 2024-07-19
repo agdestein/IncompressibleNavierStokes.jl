@@ -1,6 +1,15 @@
 # # A-priori analysis: Filtered DNS (2D or 3D)
 #
-# Generate filtered DNS data and inspect its properties.
+# This script is used to generate results for the the paper [Agdestein2024](@citet).
+#
+# - Generate filtered DNS data
+# - Compute quantities for different filters
+
+# ## Load packages
+#
+# Note: Run `setup.jl` to install and load all required packages.
+# `IncompressibleNavierStokes` and `NeuralClosure` are local packages
+# that need to be `Pkg.develop`ed. This is done in the `setup.jl` script.
 
 using CairoMakie
 using FFTW
@@ -12,9 +21,10 @@ using PaperDC
 using Printf
 using Random
 
-# Put output in PaperDC/output
-cd(@__DIR__)
-output = "output"
+# Output directory
+output = joinpath(@__DIR__, "output")
+
+# ## Hardware selection
 
 # For running on CPU
 ArrayType = Array
@@ -26,7 +36,9 @@ CUDA.allowscalar(false);
 ArrayType = CuArray;
 clean() = (GC.gc(); CUDA.reclaim()) # This seems to be needed to free up memory
 
-# 2D setup
+# ## Setup
+
+# 2D configuration
 D = 2
 T = Float64;
 ndns = 4096
@@ -42,7 +54,7 @@ filterdefs = [
     (VolumeAverage(), 256),
 ]
 
-# 3D setup
+# 3D configuration
 D = 3
 T, ndns = Float64, 512 # Works on a 40GB A100 GPU. Use Float32 and smaller n for less memory.
 Re = T(2_000)
@@ -91,10 +103,10 @@ clean()
 );
 clean()
 
-# Plot 2D fields #####################################################
+# ## Plot 2D fields
 
 D == 2 && with_theme(; fontsize = 25) do
-    # Compute quantities
+    ## Compute quantities
     fil = filters[2]
     apply_bc_u!(state.u, T(0), dns.setup)
     v = fil.Φ(state.u, fil.setup, fil.compression)
@@ -112,7 +124,7 @@ D == 2 && with_theme(; fontsize = 25) do
     c = ΦPF .- PFv
     apply_bc_u!(c, T(0), fil.setup)
 
-    # Make plots
+    ## Make plots
     path = "$output/priorfields"
     ispath(path) || mkpath(path)
     makeplot(field, setup, title, name) = save(
@@ -134,7 +146,7 @@ D == 2 && with_theme(; fontsize = 25) do
     makeplot(c, fil.setup, "c(u, ū)", "c")
 end
 
-# Plot 3D fields #####################################################
+# ## Plot 3D fields
 
 # Contour plots in 3D only work with GLMakie.
 # For using GLMakie on headless servers, see
@@ -159,7 +171,7 @@ D == 3 && with_theme() do
             ),
         )
         try
-            # Trim whitespace with ImageMagick
+            ## Trim whitespace with ImageMagick
             run(`convert $name -trim $name`)
         catch e
             @warn """
@@ -179,7 +191,7 @@ D == 3 && with_theme() do
     )
 end
 
-# Compute average quantities #########################################
+# ## Compute average quantities
 
 let
     path = "$output/prioranalysis"
@@ -195,7 +207,7 @@ let
             @printf(
                 io,
                 "%s\t%d^%d\t%.2g\t%.2g\t%.2g\t%.2g\n",
-                # "%s &\t\$%d^%d\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$\n",
+                ## "%s &\t\$%d^%d\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$\n",
                 typeof(o.Φ),
                 o.Mα,
                 D,
@@ -208,7 +220,7 @@ let
     end
 end
 
-# Plot spectra #######################################################
+# ## Plot spectra
 
 # To free up memory in 3D (remove psolver_spectral FFT arrays)
 dns = (; dns.setup)
@@ -241,7 +253,7 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]))
         (; κ, ehat)
     end
     kmax = maximum(specs[1].κ)
-    # Build inertial slope above energy
+    ## Build inertial slope above energy
     krange, slope, slopelabel = if D == 2
         [T(16), T(128)], -T(3), L"$\kappa^{-3}"
     elseif D == 3
@@ -250,10 +262,10 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"]))
     slopeconst = maximum(specs[1].ehat ./ specs[1].κ .^ slope)
     offset = D == 2 ? 3 : 2
     inertia = offset .* slopeconst .* krange .^ slope
-    # Nice ticks
+    ## Nice ticks
     logmax = round(Int, log2(kmax + 1))
     xticks = T(2) .^ (0:logmax)
-    # Make plot
+    ## Make plot
     fig = Figure(; size = (500, 400))
     ax = Axis(
         fig[1, 1];

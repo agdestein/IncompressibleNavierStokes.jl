@@ -40,49 +40,56 @@ makemarkdown(inputfile, outputdir; run) =
     end
 
 # Generate examples
+e = "examples"
 examples = [
     "Simple flows" => [
-        (; run = true, name = "DecayingTurbulence2D", title = "Decaying Turbulunce (2D)"),
-        (; run = false, name = "DecayingTurbulence3D", title = "Decaying Turbulunce (3D)"),
-        (; run = true, name = "TaylorGreenVortex2D", title = "Taylor-Green Vortex (2D)"),
-        (; run = false, name = "TaylorGreenVortex3D", title = "Taylor-Green Vortex (3D)"),
-        (; run = false, name = "ShearLayer2D", title = "Shear Layer (2D)"),
-        (; run = false, name = "PlaneJets2D", title = "Plane jets (2D)"),
+        (true,  "examples/DecayingTurbulence2D", "Decaying Turbulunce (2D)"),
+        (false, "examples/DecayingTurbulence3D", "Decaying Turbulunce (3D)"),
+        (true,  "examples/TaylorGreenVortex2D", "Taylor-Green Vortex (2D)"),
+        (false, "examples/TaylorGreenVortex3D", "Taylor-Green Vortex (3D)"),
+        (false, "examples/ShearLayer2D", "Shear Layer (2D)"),
+        (false, "examples/PlaneJets2D", "Plane jets (2D)"),
     ],
     "Mixed boundary conditions" => [
-        (; run = true, name = "Actuator2D", title = "Actuator (2D)"),
-        (; run = false, name = "Actuator3D", title = "Actuator (3D)"),
-        (; run = false, name = "BackwardFacingStep2D", title = "Backward Facing Step (2D)"),
-        (; run = false, name = "BackwardFacingStep3D", title = "Backward Facing Step (3D)"),
-        (; run = false, name = "LidDrivenCavity2D", title = "Lid-Driven Cavity (2D)"),
-        (; run = false, name = "LidDrivenCavity3D", title = "Lid-Driven Cavity (3D)"),
-        (; run = false, name = "MultiActuator", title = "Multiple actuators (2D)"),
-        (; run = false, name = "PlanarMixing2D", title = "Planar Mixing (2D)"),
+        (true,  "examples/Actuator2D", "Actuator (2D)"),
+        (false, "examples/Actuator3D", "Actuator (3D)"),
+        (false, "examples/BackwardFacingStep2D", "Backward Facing Step (2D)"),
+        (false, "examples/BackwardFacingStep3D", "Backward Facing Step (3D)"),
+        (false, "examples/LidDrivenCavity2D", "Lid-Driven Cavity (2D)"),
+        (false, "examples/LidDrivenCavity3D", "Lid-Driven Cavity (3D)"),
+        (false, "examples/MultiActuator", "Multiple actuators (2D)"),
+        (false, "examples/PlanarMixing2D", "Planar Mixing (2D)"),
     ],
     "With temperature field" => [
-        (; run = true, name = "RayleighBenard2D", title = "Rayleigh-Bénard (2D)"),
-        (; run = false, name = "RayleighBenard3D", title = "Rayleigh-Bénard (3D)"),
-        (; run = true, name = "RayleighTaylor2D", title = "Rayleigh-Taylor (2D)"),
-        (; run = false, name = "RayleighTaylor3D", title = "Rayleigh-Taylor (3D)"),
+        (true,  "examples/RayleighBenard2D", "Rayleigh-Bénard (2D)"),
+        (false, "examples/RayleighBenard3D", "Rayleigh-Bénard (3D)"),
+        (true,  "examples/RayleighTaylor2D", "Rayleigh-Taylor (2D)"),
+        (false, "examples/RayleighTaylor3D", "Rayleigh-Taylor (3D)"),
     ],
+    "Neural closure models" => [
+        (false, "lib/PaperDC/prioranalysis", "Filter analysis"),
+        (false, "lib/PaperDC/postanalysis", "CNN closures"),
+        (false, "lib/SymmetryClosure/train", "Equivariant closures"),
+    ]
 ]
 
 # Convert scripts to executable markdown files
 output = "examples/generated"
 outputdir = joinpath(@__DIR__, "src", output)
 ## rm(outputdir; recursive = true)
-for e ∈ examples, e ∈ e[2]
-    inputfile = joinpath(@__DIR__, "..", "examples", e.name * ".jl")
-    makemarkdown(inputfile, outputdir; e.run)
+for e ∈ examples, (run, name, title) ∈ e[2]
+    inputfile = joinpath(@__DIR__, "..", name * ".jl")
+    makemarkdown(inputfile, outputdir; run)
 end
 
-example_pages = map(
-    topic -> topic[1] => [e.title => joinpath(output, e.name * ".md") for e ∈ topic[2]],
-    examples,
-)
+example_pages = map(examples) do e
+    e[1] => map(e[2]) do (run, name, title)
+        title => joinpath(output, basename(name) * ".md")
+    end
+end
 
 makedocs(;
-    # draft = true,
+    draft = true,
     # clean = false,
     modules = [IncompressibleNavierStokes, NeuralClosure],
     plugins = [bib],
