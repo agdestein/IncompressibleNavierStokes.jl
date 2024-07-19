@@ -11,5 +11,5 @@ root = joinpath(@__DIR__, "..")
 servedocs(;
     foldername = joinpath(root, "docs"),
     literate = joinpath(root, "examples"),
-    skip_dir = joinpath(root, "docs", "src", "generated"),
+    skip_dir = joinpath(root, "docs", "src", "examples", "generated"),
 )
