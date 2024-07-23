@@ -259,13 +259,10 @@ Create processor that stores the solution and time every `nupdate` time step.
 """
 fieldsaver(; setup, nupdate = 1) =
     processor() do state
-        T = eltype(setup.grid.x[1])
-        (; u) = state[]
-        fields = (; u = fill(Array.(u), 0), t = zeros(T, 0))
-        on(state) do (; u, t, n)
-            n % nupdate == 0 || return
-            push!(fields.u, adapt(Array, u))
-            push!(fields.t, t)
+        fields = fill(adapt(Array, state[]), 0)
+        on(state) do s
+            s.n % nupdate == 0 || return
+            push!(fields, adapt(Array, s))
         end
         fields
     end
