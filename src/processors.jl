@@ -262,9 +262,9 @@ fieldsaver(; setup, nupdate = 1) =
         T = eltype(setup.grid.x[1])
         (; u) = state[]
         fields = (; u = fill(Array.(u), 0), t = zeros(T, 0))
-        on(state) do (; u, p, t, n)
+        on(state) do (; u, t, n)
             n % nupdate == 0 || return
-            push!(fields.u, Array.(u))
+            push!(fields.u, adapt(Array, u))
             push!(fields.t, t)
         end
         fields
