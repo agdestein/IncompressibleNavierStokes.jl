@@ -627,7 +627,7 @@ function convection_diffusion_temp!(c, u, temp, setup)
             uT2 = u[β][I] * avg(temp, Δ, I, β)
             cI += (-(uT2 - uT1) + α4 * (∂T∂x2 - ∂T∂x1)) / Δ[β][I[β]]
         end
-        c[I] = cI
+        c[I] += cI
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
@@ -1385,7 +1385,7 @@ Qfield(u, setup) = Qfield!(similar(u[1], setup.grid.N), u, setup)
 """
     eig2field!(λ, u, setup; ϵ = eps(eltype(λ)))
 
-Compute the second eigenvalue of ``S^2 + \\Omega^2``,
+Compute the second eigenvalue of ``S^2 + R^2``,
 as proposed by Jeong and Hussain [Jeong1995](@cite).
 """
 function eig2field!(λ, u, setup)
@@ -1398,9 +1398,9 @@ function eig2field!(λ, u, setup)
         I = I + I0
         ∇u = ∇(u, I, Δ, Δu)
         S = @. (∇u + ∇u') / 2
-        Ω = @. (∇u - ∇u') / 2
+        R = @. (∇u - ∇u') / 2
         # FIXME: Is not recognized as hermitian with Float64 on CPU
-        λ[I] = eigvals(S^2 + Ω^2)[2]
+        λ[I] = eigvals(S^2 + R^2)[2]
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
@@ -1483,7 +1483,7 @@ function total_kinetic_energy(u, setup; kwargs...)
     (; Ω, Ip) = setup.grid
     k = kinetic_energy(u, setup; kwargs...)
     k .*= Ω
-    sum(k[Ip])
+    sum(view(k, Ip))
 end
 
 """
