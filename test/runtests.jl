@@ -53,7 +53,6 @@ using Test
     include("operators.jl")
     include("chainrules.jl")
     # include("timesteppers.jl")
-    # include("simulation.jl")
-    # include("postprocess.jl")
+    include("postprocess.jl")
     include("aqua.jl")
 end

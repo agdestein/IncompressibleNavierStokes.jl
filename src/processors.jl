@@ -100,7 +100,7 @@ function observefield(
         ψ = get_streamfunction(setup, u, t)
     elseif fieldname == :pressure
         if isnothing(psolver)
-            @warn "Creating new pressure solver for fieldplot"
+            @warn "Creating new pressure solver for observefield"
             psolver = default_psolver(setup)
         end
         F = zero.(u)
@@ -108,7 +108,7 @@ function observefield(
         p = zero(u[1])
     elseif fieldname == :Dfield
         if isnothing(psolver)
-            @warn "Creating new pressure solver for fieldplot"
+            @warn "Creating new pressure solver for observefield"
             psolver = default_psolver(setup)
         end
         F = zero.(u)
@@ -191,42 +191,76 @@ function observefield(
 end
 
 """
+    snapshotsaver(state; setup, fieldnames = (:velocity,), psolver = nothing)
+
+In the case of a 2D setup, the velocity field is saved as a 3D vector with a
+z-component of zero, as this seems to be preferred by ParaView.
+"""
+function snapshotsaver(state; setup, fieldnames = (:velocity,), psolver = nothing)
+    state isa Observable || (state = Observable(state))
+    (; grid) = setup
+    (; dimension, xp, Ip) = grid
+    D = dimension()
+    xparr = getindex.(Array.(xp), Ip.indices)
+    fields = map(fieldname -> observefield(state; setup, fieldname, psolver), fieldnames)
+
+    # Only allocate z-component if there is a 2D vector field
+    z = if any(f -> f[] isa Tuple && length(f[]) == 2, fields)
+        zero(state[].u[1][Ip])
+    else
+        nothing
+    end
+
+    function savesnapshot!(filename, pvd = nothing)
+        vtk_grid(filename, xparr...) do vtk
+            for (fieldname, f) in zip(fieldnames, fields)
+                field = if f[] isa Tuple && length(f[]) == 2
+                    # ParaView prefers 3D vectors. Add zero z-component.
+                    (f[]..., z)
+                else
+                    f[]
+                end
+                vtk[string(fieldname)] = field
+            end
+            isnothing(pvd) || setindex!(pvd, vtk, state[].t)
+        end
+    end
+end
+
+"""
+    save_vtk(state; setup, filename = "output/solution", kwargs...)
+
+Save fields to vtk file.
+
+The `kwargs` are passed to [`snapshotsaver`](@ref).
+"""
+function save_vtk(state; setup, filename = "output/solution", kwargs...)
+    path = dirname(filename)
+    isdir(path) || mkpath(path)
+    savesnapshot! = snapshotsaver(state; setup)
+    savesnapshot!(filename)
+end
+
+"""
     vtk_writer(;
         setup,
         nupdate = 1,
         dir = "output",
         filename = "solution",
-        fields = (:velocity,),
+        kwargs...,
     )
 
 Create processor that writes the solution every `nupdate` time steps to a VTK
 file. The resulting Paraview data collection file is stored in
 `"\$dir/\$filename.pvd"`.
+The `kwargs` are passed to [`snapshotsaver`](@ref).
 """
-vtk_writer(;
-    setup,
-    nupdate = 1,
-    dir = "output",
-    filename = "solution",
-    fieldnames = (:velocity,),
-    psolver = nothing,
-) =
+vtk_writer(; setup, nupdate = 1, dir = "output", filename = "solution", kwargs...) =
     processor((pvd, outerstate) -> vtk_save(pvd)) do outerstate
-        (; grid) = setup
-        (; dimension, xp, Ip) = grid
-        D = dimension()
         ispath(dir) || mkpath(dir)
         pvd = paraview_collection(joinpath(dir, filename))
-        xparr = getindex.(Array.(xp), Ip.indices)
         state = Observable(outerstate[])
-        f = map(fieldname -> observefield(state; setup, fieldname, psolver), fieldnames)
-
-        # Only allocate z-component if there is a 2D vector field
-        z = if any(f -> f[] isa Tuple && length(f[]) == 2, f)
-            zero(state[].u[1][Ip])
-        else
-            nothing
-        end
+        savesnapshot! = snapshotsaver(state; setup, kwargs...)
 
         # Update VTK file
         on(outerstate) do outerstate
@@ -234,19 +268,9 @@ vtk_writer(;
             n % nupdate == 0 || return
             state[] = outerstate
             tformat = replace(string(t), "." => "p")
-            vtk_grid("$(dir)/$(filename)_t=$tformat", xparr...) do vtk
-                for (fieldname, f) in zip(fieldnames, f)
-                    field = if f[] isa Tuple && length(f[]) == 2
-                        # ParaView prefers 3D vectors. Add zero z-component.
-                        (f[]..., z)
-                    else
-                        f[]
-                    end
-                    vtk[string(fieldname)] = field
-                end
-                pvd[t] = vtk
-            end
+            savesnapshot!("$(dir)/$(filename)_t=$tformat", pvd)
         end
+
         # Initial step
         outerstate[] = outerstate[]
         pvd
@@ -259,13 +283,10 @@ Create processor that stores the solution and time every `nupdate` time step.
 """
 fieldsaver(; setup, nupdate = 1) =
     processor() do state
-        T = eltype(setup.grid.x[1])
-        (; u) = state[]
-        fields = (; u = fill(Array.(u), 0), t = zeros(T, 0))
-        on(state) do (; u, p, t, n)
-            n % nupdate == 0 || return
-            push!(fields.u, Array.(u))
-            push!(fields.t, t)
+        fields = fill(adapt(Array, state[]), 0)
+        on(state) do s
+            s.n % nupdate == 0 || return
+            push!(fields, adapt(Array, s))
         end
         fields
     end

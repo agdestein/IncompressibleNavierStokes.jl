@@ -1,66 +1,59 @@
-@testset "Postprocess 2D" begin
-    @info "Testing 2D processors"
+@testset "Processors" begin
+    D = 2
+    @info "Testing processors in $(D)D"
 
-    n = 10
-    x = LinRange(0, 2π, n)
-    y = LinRange(0, 2π, n)
+    # Temporary directory
+    dir = joinpath(tempdir(), "INSTest")
 
-    setup = Setup(x, y)
+    n = 64
+    x = LinRange(0.0, 1.0, n + 1), LinRange(0.0, 1.0, n + 1)
+    setup = Setup(x...; Re = 100.0)
+    ustart = random_field(setup, 0.0)
 
-    @test plotgrid(x, y) isa Makie.FigureAxisPlot
+    nprocess = 20
+    nupdate = 10
+    nstep = nprocess * nupdate
+    Δt = 1e-3
 
-    psolver = psolver_spectral(setup)
-
-    t_start, t_end = tlims = (0.0, 1.0)
-
-    # Initial conditions
-    initial_velocity_u(x, y) = -sin(x)cos(y)
-    initial_velocity_v(x, y) = cos(x)sin(y)
-    initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
-    V = create_initial_conditions(
-        setup,
-        initial_velocity_u,
-        initial_velocity_v,
-        t_start;
-        initial_pressure,
-        psolver,
-    )
-
-    # Iteration processors
-    processors = (
-        realtimeplotter(; setup, nupdate = 1, displayfig = false),
-        vtk_writer(setup; nupdate = 5, dir = "output", filename = "solution2D"),
-        animator(
+    processors = (;
+        rtp = realtimeplotter(; setup, nupdate, displayfig = false),
+        anim = animator(;
             setup,
-            "output/vorticity2D.mp4";
-            nupdate = 10,
-            plotter = field_plotter(setup; displayfig = false),
+            path = joinpath(dir, "solution.mkv"),
+            visible = false,
+            nupdate,
         ),
-        timelogger(),
+        vtk = vtk_writer(; setup, nupdate, dir, filename = "solution"),
+        field = fieldsaver(; setup, nupdate),
+        log = timelogger(; nupdate),
     )
 
-    # Solve unsteady problem
-    state, outputs = solve_unsteady(setup, V₀, tlims; Δt = 0.01, processors, psolver)
+    state, outputs =
+        solve_unsteady(; setup, ustart, tlims = (0.0, nstep * Δt), Δt, processors)
+
+    @testset "Field saver" begin
+        @test length(outputs.field) == nprocess
+        @test outputs.field[1].u isa Tuple
+        @test outputs.field[1].t isa Float64
+    end
 
     @testset "VTK files" begin
-        @info "Testing 2D processors: VTK files"
-        @test isfile("output/solution2D.pvd")
-        @test isfile("output/solution2D_t=0p0.vti")
-        save_vtk(setup, V, p, t_end, "output/field2D")
-        @test isfile("output/field2D.vti")
+        @info "Testing VTK files"
+        @test isfile(joinpath(dir, "solution.pvd"))
+        @test isfile(joinpath(dir, "solution_t=0p0.vtr"))
+        save_vtk(state; setup, filename = joinpath(dir, "snapshot"))
+        @test isfile(joinpath(dir, "snapshot.vtr"))
     end
 
-    @testset "Plot fields" begin
-        @info "Testing 2D processors: Plots"
-        @test plot_pressure(setup, p) isa Figure
-        @test plot_velocity(setup, V, t_end) isa Figure
-        @test plot_vorticity(setup, V, t_end) isa Figure
-        @test_broken plot_streamfunction(setup, V, t_end) isa Figure
-        @test plot_force(setup, t_end) isa Figure
+    @testset "Plots" begin
+        @info "Testing Plots"
+        @test plotgrid(x...) isa Makie.FigureAxisPlot
+        @test fieldplot(state; setup) isa Figure
+        @test energy_spectrum_plot(state; setup) isa Figure
     end
 
-    @testset "Animate" begin
+    @testset "Animation" begin
         @info "Testing 2D processors: Animation"
-        @test isfile("output/vorticity2D.mp4")
+        @test isfile(joinpath(dir, "solution.mkv"))
     end
 end

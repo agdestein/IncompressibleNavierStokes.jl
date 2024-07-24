@@ -73,7 +73,7 @@ ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x))
 # We may visualize or export the computed fields
 
 # Export to VTK
-save_vtk(setup, u, t, "$outdir/solution")
+save_vtk(state; setup, filename = joinpath(outdir, "solution"))
 
 # Energy history
 outputs.ehist

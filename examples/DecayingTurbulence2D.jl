@@ -70,7 +70,7 @@ outputs.ehist
 outputs.espec
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$outdir/solution")
+save_vtk(state; setup, filename = joinpath(outdir, "solution"))
 
 # Plot field
 fieldplot(state; setup)

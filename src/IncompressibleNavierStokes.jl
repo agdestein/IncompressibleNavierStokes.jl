@@ -52,7 +52,6 @@ include("solvers/solve_unsteady.jl")
 
 # Utils
 include("utils/plotgrid.jl")
-include("utils/save_vtk.jl")
 include("utils/get_lims.jl")
 include("utils/plotmat.jl")
 include("utils/spectral_stuff.jl")

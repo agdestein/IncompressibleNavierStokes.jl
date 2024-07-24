@@ -60,7 +60,7 @@ function averagetemp(state; setup)
     fig
 end
 
-# Instabilities should depend on the floating point precisision.
+# Instabilities should depend on the floating point precision.
 # Try both `Float32` and `Float64`.
 T = Float32
 
