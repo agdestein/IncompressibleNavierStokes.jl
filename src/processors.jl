@@ -283,12 +283,14 @@ Create processor that stores the solution and time every `nupdate` time step.
 """
 fieldsaver(; setup, nupdate = 1) =
     processor() do state
-        fields = fill(adapt(Array, state[]), 0)
-        on(state) do s
-            s.n % nupdate == 0 || return
-            push!(fields, adapt(Array, s))
+        states = fill(adapt(Array, state[]), 0)
+        on(state) do state
+            state.n % nupdate == 0 || return
+            state = adapt(Array, state)
+            state.u[1] isa Array && (state = deepcopy(state))
+            push!(states, state)
         end
-        fields
+        states
     end
 
 """
