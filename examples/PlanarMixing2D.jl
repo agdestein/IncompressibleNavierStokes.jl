@@ -84,4 +84,4 @@ state, outputs = solve_unsteady(;
 outputs.rtp
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$outdir/solution"; psolver)
+save_vtk(state; setup, filename = joinpath(outdir, "solution"), psolver)

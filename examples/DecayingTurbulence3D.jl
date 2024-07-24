@@ -77,4 +77,4 @@ outputs.ehist
 outputs.espec
 
 # Export to VTK
-save_vtk(setup, u, t, "$outdir/solution")
+save_vtk(state; setup, filename = joinpath(outdir, "solution"), psolver)

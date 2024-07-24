@@ -41,7 +41,7 @@
         @info "Testing VTK files"
         @test isfile(joinpath(dir, "solution.pvd"))
         @test isfile(joinpath(dir, "solution_t=0p0.vtr"))
-        save_vtk(setup, state.u, 0.0, joinpath(dir, "snapshot"))
+        save_vtk(state; setup, filename = joinpath(dir, "snapshot"))
         @test isfile(joinpath(dir, "snapshot.vtr"))
     end
 

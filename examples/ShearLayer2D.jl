@@ -74,7 +74,7 @@ state, outputs = solve_unsteady(;
 outputs.rtp
 
 # Export to VTK
-save_vtk(setup, state.u, state.t, "$outdir/solution")
+save_vtk(state; setup, filename = joinpath(outdir, "solution"))
 
 # Plot pressure
 fieldplot(state; setup, fieldname = :pressure)
