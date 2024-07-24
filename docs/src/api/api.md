@@ -53,6 +53,7 @@ solve_unsteady
 ## Utils
 
 ```@docs
+snapshotsaver
 save_vtk
 plotgrid
 get_lims
