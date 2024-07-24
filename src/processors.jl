@@ -100,7 +100,7 @@ function observefield(
         ψ = get_streamfunction(setup, u, t)
     elseif fieldname == :pressure
         if isnothing(psolver)
-            @warn "Creating new pressure solver for fieldplot"
+            @warn "Creating new pressure solver for observefield"
             psolver = default_psolver(setup)
         end
         F = zero.(u)
@@ -108,7 +108,7 @@ function observefield(
         p = zero(u[1])
     elseif fieldname == :Dfield
         if isnothing(psolver)
-            @warn "Creating new pressure solver for fieldplot"
+            @warn "Creating new pressure solver for observefield"
             psolver = default_psolver(setup)
         end
         F = zero.(u)
@@ -247,6 +247,7 @@ vtk_writer(;
                 pvd[t] = vtk
             end
         end
+
         # Initial step
         outerstate[] = outerstate[]
         pvd
