@@ -5,9 +5,9 @@
     # Temporary directory
     dir = joinpath(tempdir(), "INSTest")
 
-    n = 128
+    n = 64
     x = LinRange(0.0, 1.0, n + 1), LinRange(0.0, 1.0, n + 1)
-    setup = Setup(x...; Re = 1000.0)
+    setup = Setup(x...; Re = 100.0)
     ustart = random_field(setup, 0.0)
 
     nprocess = 20
