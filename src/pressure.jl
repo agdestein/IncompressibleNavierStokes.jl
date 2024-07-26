@@ -136,7 +136,7 @@ function default_psolver(setup)
 end
 
 """
-    poisson_direct(setup)
+    psolver_direct(setup)
 
 Create direct Poisson solver using an appropriate matrix decomposition.
 """
