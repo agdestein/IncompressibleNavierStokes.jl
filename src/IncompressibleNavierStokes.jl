@@ -2,11 +2,18 @@
     IncompressibleNavierStokes
 
 Energy-conserving solvers for the incompressible Navier-Stokes equations.
+
+## Exports
+
+The following symbols are exported by IncompressibleNavierStokes:
+
+$(EXPORTS)
 """
 module IncompressibleNavierStokes
 
 using Adapt
 using ChainRulesCore
+using DocStringExtensions
 using FFTW
 using IterativeSolvers
 using KernelAbstractions
