@@ -27,6 +27,24 @@ using StaticArrays
 using Statistics
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 
+# Put function signature in docstring by default
+@template (FUNCTIONS, METHODS) =
+    """
+    $TYPEDSIGNATURES
+
+    $DOCSTRING
+    """
+
+# Put type info in docstring by default
+@template TYPES =
+    """
+    $TYPEDEF
+
+    $FIELDS
+
+    $DOCSTRING
+    """
+
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
 
