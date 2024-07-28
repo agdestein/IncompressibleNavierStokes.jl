@@ -1,8 +1,6 @@
 abstract type AbstractBC end
 
-"""
-Periodic boundary conditions. Must be periodic on both sides.
-"""
+"Periodic boundary conditions. Must be periodic on both sides."
 struct PeriodicBC <: AbstractBC end
 
 """

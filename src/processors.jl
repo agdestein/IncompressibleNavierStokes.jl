@@ -1,6 +1,4 @@
 """
-    processor(initialize, finalize = (initialized, state) -> initialized)
-
 Process results from time stepping. Before time stepping, the `initialize`
 function is called on an observable of the time stepper `state`, returning
 `initialized`. The observable is updated every time step.
@@ -42,8 +40,6 @@ processor(initialize, finalize = (initialized, state) -> initialized) =
     (; initialize, finalize)
 
 """
-    timelogger(; showmax = true, nupdate = 1)
-
 Create processor that logs time step information.
 """
 timelogger(; showmax = true, showdt = true, nupdate = 1) =
@@ -62,14 +58,6 @@ timelogger(; showmax = true, showdt = true, nupdate = 1) =
     end
 
 """
-    observefield(
-        state;
-        setup,
-        fieldname,
-        logtol = eps(eltype(setup.grid.x[1])),
-        psolver = nothing,
-    )
-
 Observe field `fieldname` at pressure points.
 """
 function observefield(
@@ -191,8 +179,6 @@ function observefield(
 end
 
 """
-    snapshotsaver(state; setup, fieldnames = (:velocity,), psolver = nothing)
-
 In the case of a 2D setup, the velocity field is saved as a 3D vector with a
 z-component of zero, as this seems to be preferred by ParaView.
 """
@@ -228,8 +214,6 @@ function snapshotsaver(state; setup, fieldnames = (:velocity,), psolver = nothin
 end
 
 """
-    save_vtk(state; setup, filename = "output/solution", kwargs...)
-
 Save fields to vtk file.
 
 The `kwargs` are passed to [`snapshotsaver`](@ref).
@@ -242,14 +226,6 @@ function save_vtk(state; setup, filename = "output/solution", kwargs...)
 end
 
 """
-    vtk_writer(;
-        setup,
-        nupdate = 1,
-        dir = "output",
-        filename = "solution",
-        kwargs...,
-    )
-
 Create processor that writes the solution every `nupdate` time steps to a VTK
 file. The resulting Paraview data collection file is stored in
 `"\$dir/\$filename.pvd"`.
@@ -277,8 +253,6 @@ vtk_writer(; setup, nupdate = 1, dir = "output", filename = "solution", kwargs..
     end
 
 """
-    fieldsaver(; setup, nupdate = 1)
-
 Create processor that stores the solution and time every `nupdate` time step.
 """
 fieldsaver(; setup, nupdate = 1) =
@@ -294,8 +268,6 @@ fieldsaver(; setup, nupdate = 1) =
     end
 
 """
-    animator(; setup, path, plot = fieldplot, nupdate = 1, kwargs...)
-
 Animate a plot of the solution every `update` iteration.
 The animation is saved to `path`, which should have one
 of the following extensions:
@@ -332,17 +304,6 @@ animator(;
     end
 
 """
-    realtimeplotter(;
-        setup,
-        plot = fieldplot,
-        nupdate = 1,
-        displayfig = true,
-        screen = nothing,
-        displayupdates = false,
-        sleeptime = nothing,
-        kwargs...,
-    )
-
 Processor for plotting the solution in real time.
 
 Keyword arguments:
@@ -384,14 +345,6 @@ realtimeplotter(;
     end
 
 """
-    fieldplot(
-        state;
-        setup,
-        fieldname = :vorticity,
-        type = nothing,
-        kwargs...,
-    )
-
 Plot `state` field in pressure points.
 If `state` is `Observable`, then the plot is interactive.
 
@@ -564,8 +517,6 @@ function fieldplot(
 end
 
 """
-    energy_history_plot(state; setup)
-
 Create energy history plot.
 """
 function energy_history_plot(state; setup)
@@ -585,8 +536,6 @@ function energy_history_plot(state; setup)
 end
 
 """
-    energy_spectrum_plot(state; setup)
-
 Create energy spectrum plot.
 The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is defined by
 

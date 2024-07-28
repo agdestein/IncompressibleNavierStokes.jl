@@ -58,8 +58,6 @@ function lesdatagen(dnsobs, Φ, les, compression, psolver)
 end
 
 """
-    filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 1)
-
 Save filtered DNS data.
 """
 filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 1) =
@@ -92,24 +90,6 @@ filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 
     end
 
 """
-    create_les_data(
-        D = 2,
-        Re = 2e3,
-        lims = ntuple(α -> (typeof(Re)(0), typeof(Re)(1)), D),
-        nles = [ntuple(α -> 64, D)],
-        ndns = ntuple(α -> 256, D),
-        filters = (FaceAverage(),),
-        tburn = typeof(Re)(0.1),
-        tsim = typeof(Re)(0.1),
-        Δt = typeof(Re)(1e-4),
-        create_psolver = psolver_spectral,
-        savefreq = 1,
-        ArrayType = Array,
-        icfunc = (setup, psolver) -> random_field(setup, typeof(Re)(0); psolver),
-        rng,
-        kwargs...,
-    )
-
 Create filtered DNS data.
 """
 function create_les_data(;
@@ -222,8 +202,6 @@ function create_les_data(;
 end
 
 """
-    create_io_arrays(data, setups)
-
 Create ``(\\bar{u}, c)`` pairs for training.
 """
 function create_io_arrays(data, setups)

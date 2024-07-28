@@ -1,6 +1,4 @@
 """
-    plotgrid(x...)
-
 Plot nonuniform Cartesian grid.
 """
 function plotgrid end

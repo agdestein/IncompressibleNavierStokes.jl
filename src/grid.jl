@@ -1,6 +1,4 @@
 """
-    Dimension(N)
-
 Represent an `N`-dimensional space.
 Returns `N` when called.
 
@@ -19,8 +17,6 @@ Dimension(N) = Dimension{N}()
 (::Dimension{N})() where {N} = N
 
 """
-    max_size(grid)
-
 Get size of the largest grid element.
 """
 function max_size(grid)
@@ -30,8 +26,6 @@ function max_size(grid)
 end
 
 """
-    cosine_grid(a, b, N)
-
 Create a nonuniform grid of `N + 1` points from `a` to `b` using a cosine
 profile, i.e.
 
@@ -49,8 +43,6 @@ function cosine_grid(a, b, N)
 end
 
 """
-    stretched_grid(a, b, N, s = 1)
-
 Create a nonuniform grid of `N + 1` points from `a` to `b` with a stretch
 factor of `s`. If `s = 1`, return a uniform spacing from `a` to `b`. Otherwise,
 return a vector ``x \\in \\mathbb{R}^{N + 1}`` such that ``x_n = a + \\sum_{i =
@@ -75,8 +67,6 @@ function stretched_grid(a, b, N, s = 1)
 end
 
 """
-    tanh_grid(a, b, N, γ = typeof(a)(1))
-
 Create a nonuniform grid of `N + 1` points from `a` to `b`, as proposed
 by Trias et al. [Trias2007](@cite).
 """
@@ -87,8 +77,6 @@ function tanh_grid(a, b, N, γ = typeof(a)(1))
 end
 
 """
-    Grid(x, boundary_conditions)
-
 Create nonuniform Cartesian box mesh `x[1]` × ... × `x[d]` with boundary
 conditions `boundary_conditions`.
 """

@@ -7,8 +7,6 @@
 #     (::PSolver)(p, f) = # solve Poisson
 
 """
-    poisson(psolver, f)
-
 Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
 For periodic and no-slip BC, the sum of `f` should be zero.
 
@@ -23,8 +21,6 @@ ChainRulesCore.rrule(::typeof(poisson), psolver, f) =
     (poisson(psolver, f), φ -> (NoTangent(), NoTangent(), poisson(psolver, unthunk(φ))))
 
 """
-    poisson!(solver, p, f)
-
 Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
 For periodic and no-slip BC, the sum of `f` should be zero.
 
@@ -35,8 +31,6 @@ See also [`poisson`](@ref).
 poisson!(psolver, p, f) = psolver(p, f)
 
 """
-    pressure!(p, u, temp, t, setup; psolver, F, div)
-
 Compute pressure from velocity field. This makes the pressure compatible with the velocity
 field, resulting in same order pressure as velocity.
 """
@@ -54,8 +48,6 @@ function pressure!(p, u, temp, t, setup; psolver, F, div)
 end
 
 """
-    pressure(u, temp, t, setup; psolver)
-
 Compute pressure from velocity field. This makes the pressure compatible with the velocity
 field, resulting in same order pressure as velocity.
 """
@@ -73,8 +65,6 @@ function pressure(u, temp, t, setup; psolver)
 end
 
 """
-    project(u, setup; psolver)
-
 Project velocity field onto divergence-free space.
 """
 function project(u, setup; psolver)
@@ -94,11 +84,7 @@ function project(u, setup; psolver)
     u .- G
 end
 
-"""
-    project!(u, setup; psolver, div, p)
-
-Project velocity field onto divergence-free space.
-"""
+"Project velocity field onto divergence-free space."
 function project!(u, setup; psolver, div, p)
     (; Ω) = setup.grid
     T = eltype(u[1])
@@ -115,11 +101,7 @@ function project!(u, setup; psolver, div, p)
     applypressure!(u, p, setup)
 end
 
-"""
-    default_psolver(setup)
-
-Get default Poisson solver from setup.
-"""
+"Get default Poisson solver from setup."
 function default_psolver(setup)
     (; grid, boundary_conditions) = setup
     (; dimension, Δ) = grid
@@ -135,11 +117,7 @@ function default_psolver(setup)
     end
 end
 
-"""
-    psolver_direct(setup)
-
-Create direct Poisson solver using an appropriate matrix decomposition.
-"""
+"Create direct Poisson solver using an appropriate matrix decomposition."
 psolver_direct(setup) = psolver_direct(setup.grid.x[1], setup) # Dispatch on array type
 
 # CPU version
@@ -178,8 +156,6 @@ function psolver_direct(::Array, setup)
 end
 
 """
-    psolver_cg_matrix(setup; kwargs...)
-
 Conjugate gradients iterative Poisson solver.
 The `kwargs` are passed to the `cg!` function
 from IterativeSolvers.jl.
@@ -231,17 +207,7 @@ function create_laplace_diag(setup)
     laplace_diag(z, p) = _laplace_diag!(get_backend(z), workgroupsize)(z, p, I0; ndrange)
 end
 
-"""
-    psolver_cg(
-        setup;
-        abstol = zero(eltype(setup.grid.x[1])),
-        reltol = sqrt(eps(eltype(setup.grid.x[1]))),
-        maxiter = prod(setup.grid.Np),
-        preconditioner = create_laplace_diag(setup),
-    )
-
-Conjugate gradients iterative Poisson solver.
-"""
+"Conjugate gradients iterative Poisson solver."
 function psolver_cg(
     setup;
     abstol = zero(eltype(setup.grid.x[1])),
@@ -323,11 +289,7 @@ function psolver_cg(
     end
 end
 
-"""
-    psolver_spectral(setup)
-
-Create spectral Poisson solver from setup.
-"""
+"Create spectral Poisson solver from setup."
 function psolver_spectral(setup)
     (; grid, boundary_conditions) = setup
     (; dimension, Δ, Np, Ip, x) = grid
@@ -406,8 +368,6 @@ function psolver_spectral(setup)
 end
 
 """
-    psolver_spectral_lowmemory(setup)
-
 Create spectral Poisson solver from setup.
 This one is slower than `psolver_spectral` but occupies less memory.
 """

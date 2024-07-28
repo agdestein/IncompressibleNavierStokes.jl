@@ -1,6 +1,4 @@
 """
-    get_cfl_timestep!(buf, u, setup)
-
 Get proposed maximum time step for convection and diffusion terms.
 """
 function get_cfl_timestep!(buf, u, setup)

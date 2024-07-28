@@ -11,8 +11,6 @@ struct VolumeAverage <: AbstractFilter end
 )
 
 """
-    (::FaceAverage)(v, u, setup_les)
-
 Average fine grid `u` over coarse volume face. Put result in `v`.
 """
 function (::FaceAverage)(v, u, setup_les, comp)
@@ -39,8 +37,6 @@ function (::FaceAverage)(v, u, setup_les, comp)
 end
 
 """
-    reconstruct!(u, v, setup_dns, setup_les)
-
 Average fine grid `u` over coarse volume face. Put result in `v`.
 """
 function reconstruct!(u, v, setup_dns, setup_les, comp)
@@ -79,8 +75,6 @@ reconstruct(v, setup_dns, setup_les, comp) = reconstruct!(
 )
 
 """
-    (::VolumeAverage)(v, u, setup_les, comp)
-
 Average fine grid `u` over coarse volume. Put result in `v`.
 """
 function (::VolumeAverage)(v, u, setup_les, comp)

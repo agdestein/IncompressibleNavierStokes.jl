@@ -1,20 +1,9 @@
 """
-    AbstractODEMethod
-
 Abstract ODE method.
 """
 abstract type AbstractODEMethod{T} end
 
 """
-    AdamsBashforthCrankNicolsonMethod(
-        T = Float64;
-        α₁ = T(3 // 2),
-        α₂ = T(-1 // 2),
-        θ = T(1 // 2),
-        p_add_solve = true,
-        method_startup,
-    )
-
 IMEX AB-CN: Adams-Bashforth for explicit convection (parameters `α₁` and `α₂`)
 and Crank-Nicolson for implicit diffusion (implicitness `θ`). The method is
 second order for `θ = 1/2`.
@@ -42,13 +31,6 @@ struct AdamsBashforthCrankNicolsonMethod{T,M} <: AbstractODEMethod{T}
 end
 
 """
-    OneLegMethod(
-        T = Float64;
-        β = T(1 // 2),
-        p_add_solve = true,
-        method_startup,
-    )
-
 Explicit one-leg β-method following symmetry-preserving discretization of
 turbulent flow. See Verstappen and Veldman [Verstappen2003](@cite)
 [Verstappen1997](@cite) for details.
@@ -62,15 +44,11 @@ struct OneLegMethod{T,M} <: AbstractODEMethod{T}
 end
 
 """
-    AbstractRungeKuttaMethod
-
 Abstract Runge Kutta method.
 """
 abstract type AbstractRungeKuttaMethod{T} <: AbstractODEMethod{T} end
 
 """
-    ExplicitRungeKuttaMethod(; A, b, c, r, p_add_solve = true)
-
 Explicit Runge Kutta method.
 """
 Base.@kwdef struct ExplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
@@ -82,18 +60,6 @@ Base.@kwdef struct ExplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
 end
 
 """
-    ImplicitRungeKuttaMethod(;
-        A,
-        b,
-        c,
-        r,
-        newton_type = :full,
-        maxiter = 10,
-        abstol = 1e-14,
-        reltol = 1e-14,
-        p_add_solve = true,
-    )
-
 Implicit Runge Kutta method.
 
 The implicit linear system is solved at each time step using Newton's method. The
@@ -116,8 +82,6 @@ Base.@kwdef struct ImplicitRungeKuttaMethod{T} <: AbstractRungeKuttaMethod{T}
 end
 
 """
-    runge_kutta_method(A, b, c, r; [p_add_solve], [newton_type], [maxiter], [abstol], [reltol])
-
 Get Runge Kutta method. The function checks whether the method is explicit.
 
 `p_add_solve`: whether to add a pressure solve step to the method.

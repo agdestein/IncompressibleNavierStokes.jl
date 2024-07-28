@@ -1,14 +1,4 @@
 """
-    cnn(;
-        setup,
-        radii,
-        channels,
-        activations,
-        use_bias,
-        channel_augmenter = identity,
-        rng = Random.default_rng(),
-    )
-
 Create CNN closure model. Return a tuple `(closure, θ)` where `θ` are the initial
 parameters and `closure(u, θ)` predicts the commutator error.
 """

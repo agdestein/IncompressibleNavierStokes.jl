@@ -1,9 +1,16 @@
 """
+    NeuralClosure
+
 Neural closure modelling tools.
+
+## Exports
+
+$(EXPORTS)
 """
 module NeuralClosure
 
 using ComponentArrays: ComponentArray
+using DocStringExtensions
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: Dimension, momentum!, apply_bc_u!, project!
 using KernelAbstractions
@@ -15,6 +22,24 @@ using Observables
 using Optimisers
 using Random
 using Zygote
+
+# Put function signature in docstring by default
+@template (FUNCTIONS, METHODS) =
+    """
+    $TYPEDSIGNATURES
+
+    $DOCSTRING
+    """
+
+# Put type info in docstring by default
+@template TYPES =
+    """
+    $TYPEDEF
+
+    $FIELDS
+
+    $DOCSTRING
+    """
 
 include("closure.jl")
 include("cnn.jl")
