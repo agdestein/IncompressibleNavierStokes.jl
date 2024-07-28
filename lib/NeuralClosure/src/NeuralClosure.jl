@@ -24,22 +24,20 @@ using Random
 using Zygote
 
 # Put function signature in docstring by default
-@template (FUNCTIONS, METHODS) =
-    """
-    $TYPEDSIGNATURES
+@template (FUNCTIONS, METHODS) = """
+                                 $TYPEDSIGNATURES
 
-    $DOCSTRING
-    """
+                                 $DOCSTRING
+                                 """
 
 # Put type info in docstring by default
-@template TYPES =
-    """
-    $TYPEDEF
+@template TYPES = """
+                  $TYPEDEF
 
-    $FIELDS
+                  $FIELDS
 
-    $DOCSTRING
-    """
+                  $DOCSTRING
+                  """
 
 include("closure.jl")
 include("cnn.jl")

@@ -28,22 +28,20 @@ using Statistics
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 
 # Put function signature in docstring by default
-@template (FUNCTIONS, METHODS) =
-    """
-    $TYPEDSIGNATURES
+@template (FUNCTIONS, METHODS) = """
+                                 $TYPEDSIGNATURES
 
-    $DOCSTRING
-    """
+                                 $DOCSTRING
+                                 """
 
 # Put type info in docstring by default
-@template TYPES =
-    """
-    $TYPEDEF
+@template TYPES = """
+                  $TYPEDEF
 
-    $FIELDS
+                  $FIELDS
 
-    $DOCSTRING
-    """
+                  $DOCSTRING
+                  """
 
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
