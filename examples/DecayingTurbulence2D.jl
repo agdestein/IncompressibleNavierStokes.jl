@@ -6,8 +6,7 @@
 # specific energy spectrum. Due to viscous dissipation, the turbulent features
 # eventually group to form larger visible eddies.
 
-#md using CairoMakie
-using GLMakie #!md
+using GLMakie
 using IncompressibleNavierStokes
 
 # Output directory
