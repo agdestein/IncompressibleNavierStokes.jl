@@ -6,7 +6,11 @@ Original (MATLAB) by David Ketcheson, extended by Benjamin Sanderse.
 """
 module RKMethods
 
-using IncompressibleNavierStokes: runge_kutta_method
+using IncompressibleNavierStokes: IncompressibleNavierStokes, runge_kutta_method
+using DocStringExtensions
+
+# Inherit docstring templates
+@template (MODULES, FUNCTIONS, METHODS, TYPES) = IncompressibleNavierStokes
 
 # Explicit Methods
 export FE11, SSP22, SSP42, SSP33, SSP43, SSP104, rSSPs2, rSSPs3, Wray3, RK56, DOPRI6
@@ -39,7 +43,6 @@ export NSSP21, NSSP32, NSSP33, NSSP53
 
 "FE11 (Forward Euler)."
 function FE11(; kwargs...)
-    # Forward Euler
     A = fill(0, 1, 1)
     b = [1]
     c = [0]

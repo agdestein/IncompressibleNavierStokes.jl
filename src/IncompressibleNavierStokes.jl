@@ -25,14 +25,19 @@ using StaticArrays
 using Statistics
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 
-# Put function signature in docstring by default
+# Docstring templates
+@template MODULES = """
+                   $(DOCSTRING)
+
+                   ## Exports
+
+                   $(EXPORTS)
+                   """
 @template (FUNCTIONS, METHODS) = """
                                  $TYPEDSIGNATURES
 
                                  $DOCSTRING
                                  """
-
-# Put type info in docstring by default
 @template TYPES = """
                   $TYPEDEF
 

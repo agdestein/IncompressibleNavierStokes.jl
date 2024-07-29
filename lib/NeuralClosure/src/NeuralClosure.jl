@@ -1,9 +1,5 @@
 """
 Neural closure modelling tools.
-
-## Exports
-
-$(EXPORTS)
 """
 module NeuralClosure
 
@@ -21,23 +17,8 @@ using Optimisers
 using Random
 using Zygote
 
-# Put function signature in docstring by default
-@template (FUNCTIONS, METHODS) = """
-                                 $TYPEDSIGNATURES
-
-                                 $DOCSTRING
-                                 """
-
-# Put type info in docstring by default
-@template TYPES = """
-                  $TYPEDEF
-
-                  $DOCSTRING
-
-                  ## Fields
-
-                  $FIELDS
-                  """
+# Inherit docstring templates
+@template (MODULES, FUNCTIONS, METHODS, TYPES) = IncompressibleNavierStokes
 
 include("closure.jl")
 include("cnn.jl")
