@@ -1,3 +1,7 @@
+# # Rayleigh-Taylor instability in 2D
+#
+# Two fluids with different temperatures start mixing.
+
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes

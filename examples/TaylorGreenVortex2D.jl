@@ -17,6 +17,12 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 using LinearAlgebra
 
+# Output directory
+outdir = joinpath(@__DIR__, "output", "TaylorGreenVortex2D")
+ispath(outdir) || mkpath(outdir)
+
+# Convergence
+
 """
 Compare numerical solution with analytical solution at final time.
 """
@@ -84,3 +90,6 @@ scatterlines!(ax, nlist, e; label = "Data")
 lines!(ax, collect(extrema(nlist)), n -> n^-2.0; linestyle = :dash, label = "n^-2")
 axislegend(ax)
 fig
+
+# Save figure
+save(joinpath(outdir, "convergence.png"), fig)

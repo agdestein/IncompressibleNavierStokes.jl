@@ -1,3 +1,7 @@
+# # Rayleigh-Bénard convection (3D)
+#
+# A hot and a cold plate generate a convection cell in a box.
+
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes

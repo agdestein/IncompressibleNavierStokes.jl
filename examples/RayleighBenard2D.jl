@@ -1,6 +1,13 @@
+# # Rayleigh-Bénard convection (2D)
+#
+# A hot and a cold plate generate a convection cell in a box.
+
 #md using CairoMakie
 using GLMakie #!md
 using IncompressibleNavierStokes
+
+# Output directory for saving results
+outdir = joinpath(@__DIR__, "output", "RayleighBenard2D")
 
 # Hardware
 ArrayType = Array
@@ -106,14 +113,15 @@ tempstart = T0.(xp[1], xp[2]');
 # Processors
 GLMakie.closeall() #!md
 processors = (;
-    rtp = realtimeplotter(;
+    anim = animator(;
         screen = GLMakie.Screen(), #!md
+        path = joinpath(outdir, "solution.mp4"),
         setup,
         fieldname = :temperature,
         colorrange = (T(0), T(1)),
         size = (600, 350),
         colormap = :seaborn_icefire_gradient,
-        nupdate = 50,
+        nupdate = 20,
     ),
     nusselt = realtimeplotter(;
         screen = GLMakie.Screen(), #!md
@@ -135,14 +143,11 @@ state, outputs = solve_unsteady(;
     setup,
     ustart,
     tempstart,
-    tlims = (T(0), T(12)),
+    tlims = (T(0), T(20)),
     Δt = T(1e-2),
     processors,
 );
 
-# Field
-
-outputs.rtp
 
 # Nusselt numbers
 
@@ -151,3 +156,9 @@ outputs.nusselt
 # Average temperature
 
 outputs.avg
+
+#md # Animation
+#md #
+#md # ```@raw html
+#md # <video src="./output/RayleighBenard2D/solution.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
+#md # ```
