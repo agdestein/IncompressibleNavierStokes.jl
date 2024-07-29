@@ -1,5 +1,5 @@
 """
-    @FUNCTIONNAME(method, setup, u, temp)
+    $FUNCTIONNAME(method, setup, u, temp)
 
 Get time stepper cache for the given ODE method.
 """

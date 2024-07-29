@@ -1,6 +1,4 @@
 """
-    IncompressibleNavierStokes
-
 Energy-conserving solvers for the incompressible Navier-Stokes equations.
 
 ## Exports
@@ -38,9 +36,11 @@ using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 @template TYPES = """
                   $TYPEDEF
 
-                  $FIELDS
-
                   $DOCSTRING
+
+                  ## Fields
+
+                  $FIELDS
                   """
 
 # # Easily retrieve value from Val

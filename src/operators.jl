@@ -1357,7 +1357,7 @@ k_I = \\frac{1}{8} \\sum_\\alpha (u^\\alpha_{I + h_\\alpha} + u^\\alpha_{I - h_\
 Otherwise, it is given by
 
 ```math
-k_I = \\frac{1}{4} \\sum_\\alpha (u^\\alpha_{I + h_\\alpha}^2 + u^\\alpha_{I - h_\\alpha}^2),
+k_I = \\frac{1}{4} \\sum_\\alpha ((u^\\alpha_{I + h_\\alpha})^2 + (u^\\alpha_{I - h_\\alpha})^2),
 ```
 
 as in [Sanderse2023](@cite).

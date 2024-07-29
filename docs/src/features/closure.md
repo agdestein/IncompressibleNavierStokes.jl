@@ -53,8 +53,10 @@ NeuralClosure.NeuralClosure
 The following filters are available:
 
 ```@docs
+NeuralClosure.AbstractFilter
 NeuralClosure.FaceAverage
 NeuralClosure.VolumeAverage
+NeuralClosure.reconstruct
 NeuralClosure.reconstruct!
 ```
 
@@ -119,5 +121,6 @@ NeuralClosure.gcnn
 NeuralClosure.fno
 NeuralClosure.GroupConv2D
 NeuralClosure.rot2
+NeuralClosure.rot2stag
 NeuralClosure.FourierLayer
 ```

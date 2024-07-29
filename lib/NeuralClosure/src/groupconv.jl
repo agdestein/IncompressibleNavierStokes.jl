@@ -74,7 +74,7 @@ end
 #     end
 # end
 
-# For staggered grid
+"Rotate staggered grid velocity field. See also [`rot2`](@ref)."
 function rot2stag(u, g)
     g = mod(g, 4)
     u = rot2(u, g)

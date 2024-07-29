@@ -1,6 +1,4 @@
 """
-    NeuralClosure
-
 Neural closure modelling tools.
 
 ## Exports
@@ -34,9 +32,11 @@ using Zygote
 @template TYPES = """
                   $TYPEDEF
 
-                  $FIELDS
-
                   $DOCSTRING
+
+                  ## Fields
+
+                  $FIELDS
                   """
 
 include("closure.jl")

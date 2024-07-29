@@ -164,7 +164,6 @@ end
 """
 Create random field, as in [Orlandi2000](@cite).
 
-- `K`: Maximum wavenumber
 - `A`: Eddy amplitude scaling
 - `kp`: Peak energy wavenumber
 """
