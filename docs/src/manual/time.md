@@ -47,7 +47,6 @@ but they may be integrated in the future.
 
 ```@docs
 AbstractODEMethod
-AbstractRungeKuttaMethod
 isexplicit
 lambda_conv_max
 lambda_diff_max
@@ -55,63 +54,6 @@ ode_method_cache
 runge_kutta_method
 timestep
 timestep!
-```
-
-## Explicit Runge-Kutta methods
-
-See Sanderse [Sanderse2012](@cite).
-
-Consider the velocity field ``u_0`` at a certain time ``t_0``. We will now
-perform one time step to ``t = t_0 + \Delta t``. For explicit Runge-Kutta
-methods, this time step is divided into ``s`` sub-steps ``t_i = t_0 + \Delta
-t_i`` with increment ``\Delta t_i = c_i \Delta t``. The final substep performs
-the full time step ``\Delta t_s = \Delta t`` such that ``t_s = t``.
-
-For ``i = 1, \dots, s``, the intermediate velocity ``u_i`` and pressure ``p_i``
-are computed as follows:
-
-```math
-\begin{split}
-k_i & = F(u_{i - 1}, t_{i - 1}) - y_G(t_{i - 1}) \\
-v_i & = u_0 + \Delta t \sum_{j = 1}^i a_{i j} k_j \\
-L p_i & = W M \frac{1}{c_i} \sum_{j = 1}^i a_{i j} k_j +
-W \frac{y_M(t_i) - y_M(t_0)}{\Delta t_i} \\
-& = W \frac{(M v_i + y_M(t_i)) - (M u_0 + y_M(t_0))}{\Delta t_i^n} \\
-& = W \frac{M v_i + y_M(t_i)}{\Delta t_i^n} \\
-u_i & = v_i - \Delta t_i G p_i,
-\end{split}
-```
-
-where ``(a_{i j})_{i j}`` are the Butcher tableau coefficients of the
-RK-method, with the convention ``c_i = \sum_{j = 1}^i a_{i j}``.
-
-Finally, we return ``u_s``. If ``u_0 = u(t_0)``, we get the accuracy ``u_s =
-u(t) + \mathcal{O}(\Delta t^{r + 1})``, where ``r`` is the order of the
-RK-method. If we perform ``n`` RK time steps instead of one, starting at exact
-initial conditions ``u^0 = u(0)``, then ``u^n = u(t^n) + \mathcal{O}(\Delta
-t^r)`` for all ``n \in \{1, \dots, N\}``. Note that for a given ``u``, the
-corresponding pressure ``p`` can be calculated to the same accuracy as ``u`` by
-doing an additional pressure projection after each outer time step ``\Delta t``
-(if we know ``\frac{\mathrm{d} y_M}{\mathrm{d} t}(t)``), or to first order
-accuracy by simply returning ``p_s``.
-
-Note that each of the sub-step velocities ``u_i`` is divergence free, after
-projecting the tentative velocities ``v_i``. This is ensured due to the
-judiciously chosen replacement of ``\frac{\mathrm{d} y_M}{\mathrm{d} t}(t_i)``
-with ``(y_M(t_i) - y_M(t_0)) / \Delta t_i``. The space-discrete
-divergence-freeness is thus perfectly preserved, even though the time
-discretization introduces other errors.
-
-```@docs
-ExplicitRungeKuttaMethod
-```
-
-## Implicit Runge-Kutta methods
-
-See Sanderse [Sanderse2013](@cite).
-
-```@docs
-ImplicitRungeKuttaMethod
 ```
 
 ## Adams-Bashforth Crank-Nicolson method
@@ -217,6 +159,69 @@ OneLegMethod
 ```
 
 ## Runge-Kutta methods
+
+```@docs
+AbstractRungeKuttaMethod
+```
+
+### Explicit Runge-Kutta methods
+
+See Sanderse [Sanderse2012](@cite).
+
+Consider the velocity field ``u_0`` at a certain time ``t_0``. We will now
+perform one time step to ``t = t_0 + \Delta t``. For explicit Runge-Kutta
+methods, this time step is divided into ``s`` sub-steps ``t_i = t_0 + \Delta
+t_i`` with increment ``\Delta t_i = c_i \Delta t``. The final substep performs
+the full time step ``\Delta t_s = \Delta t`` such that ``t_s = t``.
+
+For ``i = 1, \dots, s``, the intermediate velocity ``u_i`` and pressure ``p_i``
+are computed as follows:
+
+```math
+\begin{split}
+k_i & = F(u_{i - 1}, t_{i - 1}) - y_G(t_{i - 1}) \\
+v_i & = u_0 + \Delta t \sum_{j = 1}^i a_{i j} k_j \\
+L p_i & = W M \frac{1}{c_i} \sum_{j = 1}^i a_{i j} k_j +
+W \frac{y_M(t_i) - y_M(t_0)}{\Delta t_i} \\
+& = W \frac{(M v_i + y_M(t_i)) - (M u_0 + y_M(t_0))}{\Delta t_i^n} \\
+& = W \frac{M v_i + y_M(t_i)}{\Delta t_i^n} \\
+u_i & = v_i - \Delta t_i G p_i,
+\end{split}
+```
+
+where ``(a_{i j})_{i j}`` are the Butcher tableau coefficients of the
+RK-method, with the convention ``c_i = \sum_{j = 1}^i a_{i j}``.
+
+Finally, we return ``u_s``. If ``u_0 = u(t_0)``, we get the accuracy ``u_s =
+u(t) + \mathcal{O}(\Delta t^{r + 1})``, where ``r`` is the order of the
+RK-method. If we perform ``n`` RK time steps instead of one, starting at exact
+initial conditions ``u^0 = u(0)``, then ``u^n = u(t^n) + \mathcal{O}(\Delta
+t^r)`` for all ``n \in \{1, \dots, N\}``. Note that for a given ``u``, the
+corresponding pressure ``p`` can be calculated to the same accuracy as ``u`` by
+doing an additional pressure projection after each outer time step ``\Delta t``
+(if we know ``\frac{\mathrm{d} y_M}{\mathrm{d} t}(t)``), or to first order
+accuracy by simply returning ``p_s``.
+
+Note that each of the sub-step velocities ``u_i`` is divergence free, after
+projecting the tentative velocities ``v_i``. This is ensured due to the
+judiciously chosen replacement of ``\frac{\mathrm{d} y_M}{\mathrm{d} t}(t_i)``
+with ``(y_M(t_i) - y_M(t_0)) / \Delta t_i``. The space-discrete
+divergence-freeness is thus perfectly preserved, even though the time
+discretization introduces other errors.
+
+```@docs
+ExplicitRungeKuttaMethod
+```
+
+### Implicit Runge-Kutta methods
+
+See Sanderse [Sanderse2013](@cite).
+
+```@docs
+ImplicitRungeKuttaMethod
+```
+
+### Runge-Kutta methods
 
 ```@docs
 RKMethods
