@@ -12,5 +12,5 @@ OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 [compat]
 CairoMakie = "0.12"
 GLMakie = "0.10"
-IncompressibleNavierStokes = "0.5"
+IncompressibleNavierStokes = "0.6"
 OrdinaryDiffEq = "6"

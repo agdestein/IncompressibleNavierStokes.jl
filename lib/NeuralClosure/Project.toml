@@ -20,7 +20,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 [compat]
 ComponentArrays = "0.15"
 DocStringExtensions = "0.9"
-IncompressibleNavierStokes = "0.5"
+IncompressibleNavierStokes = "0.6"
 KernelAbstractions = "0.9"
 LinearAlgebra = "1"
 Lux = "0.5"
