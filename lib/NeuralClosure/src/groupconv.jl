@@ -74,7 +74,7 @@ end
 #     end
 # end
 
-# For staggered grid
+"Rotate staggered grid velocity field. See also [`rot2`](@ref)."
 function rot2stag(u, g)
     g = mod(g, 4)
     u = rot2(u, g)
@@ -91,15 +91,6 @@ function rot2stag(u, g)
 end
 
 """
-    GroupConv2D(
-        k,
-        chans,
-        activation = identity;
-        islifting = false,
-        isprojecting = false,
-        kwargs...,
-    )
-
 Group-equivariant convolutional layer -- with respect to the p4 group.
 The layer is equivariant to rotations and translations of the input
 vector field.
@@ -244,15 +235,6 @@ function (gc::GroupConv2D)(x, params, state)
 end
 
 """
-    gcnn(;
-        setup,
-        radii,
-        channels,
-        activations,
-        use_bias,
-        rng = Random.default_rng(),
-    )
-
 Create CNN closure model. Return a tuple `(closure, θ)` where `θ` are the initial
 parameters and `closure(u, θ)` predicts the commutator error.
 """

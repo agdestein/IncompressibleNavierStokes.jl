@@ -1,12 +1,17 @@
 """
-    IncompressibleNavierStokes
-
 Energy-conserving solvers for the incompressible Navier-Stokes equations.
+
+## Exports
+
+The following symbols are exported by IncompressibleNavierStokes:
+
+$(EXPORTS)
 """
 module IncompressibleNavierStokes
 
 using Adapt
 using ChainRulesCore
+using DocStringExtensions
 using FFTW
 using IterativeSolvers
 using KernelAbstractions
@@ -19,6 +24,29 @@ using SparseArrays
 using StaticArrays
 using Statistics
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
+
+# Docstring templates
+@template MODULES = """
+                   $(DOCSTRING)
+
+                   ## Exports
+
+                   $(EXPORTS)
+                   """
+@template (FUNCTIONS, METHODS) = """
+                                 $TYPEDSIGNATURES
+
+                                 $DOCSTRING
+                                 """
+@template TYPES = """
+                  $TYPEDEF
+
+                  $DOCSTRING
+
+                  ## Fields
+
+                  $FIELDS
+                  """
 
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
@@ -37,7 +65,7 @@ include("time_steppers/time_stepper_caches.jl")
 include("time_steppers/step.jl")
 include("time_steppers/isexplicit.jl")
 include("time_steppers/lambda_max.jl")
-include("time_steppers/tableaux.jl")
+include("time_steppers/RKMethods.jl")
 
 # Preprocess
 include("create_initial_conditions.jl")

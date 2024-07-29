@@ -1,35 +1,29 @@
+"Boundary condition for one side of the domain."
 abstract type AbstractBC end
 
-"""
-    PeriodicBC()
-
-Periodic boundary conditions. Must be periodic on both sides.
-"""
+"Periodic boundary conditions. Must be periodic on both sides."
 struct PeriodicBC <: AbstractBC end
 
 """
-    DirichletBC()
-
-No slip boundary conditions, where all velocity components are zero.
-
-    DirichletBC(u, dudt)
-
 Dirichlet boundary conditions for the velocity, where `u[1] = (x..., t) ->
 u1_BC` up to `u[d] = (x..., t) -> ud_BC`, where `d` is the dimension.
 
+When `u` is `nothing`, then the boundary conditions are
+no slip boundary conditions, where all velocity components are zero.
+
 To make the pressure the same order as velocity, also provide `dudt`.
 """
-struct DirichletBC{F,G} <: AbstractBC
-    u::F
-    dudt::G
+struct DirichletBC{U,DUDT} <: AbstractBC
+    "Boundary condition"
+    u::U
+
+    "Time derivative of boundary condition"
+    dudt::DUDT
+
+    DirichletBC(u = nothing, dudt = nothing) = new{typeof(u),typeof(dudt)}(u, dudt)
 end
 
-DirichletBC() = DirichletBC(nothing, nothing)
-DirichletBC(u) = DirichletBC(u, nothing)
-
 """
-    SymmetricBC()
-
 Symmetric boundary conditions.
 The parallel velocity and pressure is the same at each side of the boundary.
 The normal velocity is zero.
@@ -37,8 +31,6 @@ The normal velocity is zero.
 struct SymmetricBC <: AbstractBC end
 
 """
-    PressureBC()
-
 Pressure boundary conditions.
 The pressure is prescribed on the boundary (usually an "outlet").
 The velocity has zero Neumann conditions.
@@ -76,7 +68,7 @@ ghost_a!(::PressureBC, x) = pushfirst!(x, x[1], x[1])
 ghost_b!(::PressureBC, x) = push!(x, x[end])
 
 """
-    offset_u(bc, isnormal, isright)
+    $FUNCTIONNAME(bc, isnormal, isright)
 
 Number of non-DOF velocity components at boundary.
 If `isnormal`, then the velocity is normal to the boundary, else parallel.
@@ -85,7 +77,7 @@ If `isright`, it is at the end/right/rear/top boundary, otherwise beginning.
 function offset_u end
 
 """
-    offset_p(bc)
+    $FUNCTIONNAME(bc, isnormal, isright)
 
 Number of non-DOF pressure components at boundary.
 """

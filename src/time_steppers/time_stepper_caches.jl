@@ -1,6 +1,5 @@
-
 """
-    ode_method_cache(method, setup)
+    $FUNCTIONNAME(method, setup, u, temp)
 
 Get time stepper cache for the given ODE method.
 """

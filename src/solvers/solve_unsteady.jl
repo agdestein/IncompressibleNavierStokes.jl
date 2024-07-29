@@ -1,18 +1,4 @@
 """
-    solve_unsteady(;
-        setup,
-        tlims,
-        ustart,
-        tempstart = nothing,
-        method = RKMethods.RK44(; T = eltype(u₀[1])),
-        psolver = default_psolver(setup),
-        Δt = nothing,
-        cfl = eltype(ustart[1])(0.9),
-        n_adapt_Δt = 1,
-        docopy = true,
-        processors = (;),
-    )
-
 Solve unsteady problem using `method`.
 
 If `Δt` is a real number, it is rounded such that `(t_end - t_start) / Δt` is

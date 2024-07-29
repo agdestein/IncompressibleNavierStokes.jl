@@ -1,6 +1,4 @@
 """
-    wrappedclosure(m, setup)
-
 Wrap closure model and parameters so that it can be used in the solver.
 """
 function wrappedclosure(m, setup)
@@ -32,8 +30,6 @@ function wrappedclosure(m, setup)
 end
 
 """
-    create_closure(layers...; rng)
-
 Create neural closure model from layers.
 """
 function create_closure(layers...; rng)
@@ -50,8 +46,6 @@ function create_closure(layers...; rng)
 end
 
 """
-    create_tensorclosure(layers...; setup, rng)
-
 Create tensor basis closure.
 """
 function create_tensorclosure(layers...; setup, rng)
@@ -66,8 +60,6 @@ function create_tensorclosure(layers...; setup, rng)
 end
 
 """
-    collocate(u)
-
 Interpolate velocity components to volume centers.
 """
 function collocate(u)
@@ -99,8 +91,6 @@ function collocate(u)
 end
 
 """
-    decollocate(u)
-
 Interpolate closure force from volume centers to volume faces.
 """
 function decollocate(u)

@@ -4,6 +4,7 @@ Neural closure modelling tools.
 module NeuralClosure
 
 using ComponentArrays: ComponentArray
+using DocStringExtensions
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: Dimension, momentum!, apply_bc_u!, project!
 using KernelAbstractions
@@ -15,6 +16,9 @@ using Observables
 using Optimisers
 using Random
 using Zygote
+
+# Inherit docstring templates
+@template (MODULES, FUNCTIONS, METHODS, TYPES) = IncompressibleNavierStokes
 
 include("closure.jl")
 include("cnn.jl")

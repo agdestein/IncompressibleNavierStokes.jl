@@ -1,16 +1,4 @@
 """
-    Setup(
-        x...;
-        boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
-        bodyforce = nothing,
-        issteadybodyforce = true,
-        closure_model = nothing,
-        ArrayType = Array,
-        workgroupsize = 64,
-        temperature = nothing,
-        Re = isnothing(temperature) ? convert(eltype(x[1]), 1_000) : 1 / temperature.α1,
-    )
-
 Create setup.
 """
 function Setup(
@@ -50,15 +38,6 @@ function Setup(
 end
 
 """
-    temperature_equation(; 
-        Pr,
-        Ra,
-        Ge,
-        dodissipation = true,
-        boundary_conditions,
-        gdir = 2,
-    )
-
 Temperature equation setup.
 
 The equation is parameterized by three dimensionless numbers (Prandtl number,

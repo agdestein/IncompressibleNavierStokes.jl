@@ -19,13 +19,13 @@ hero:
       link: https://github.com/agdestein/IncompressibleNavierStokes.jl
     - theme: alt
       text: Gallery
-      link: /examples/overview
+      link: /examples
 
 features:
   - icon: <img width="64" height="64" src="https://raw.githubusercontent.com/JuliaGPU/CUDA.jl/3a2546c1ac1546b05b4c0d3d6ff26c268091a202/docs/src/assets/logo.png" alt="CUDA.jl"/>
     title: GPU acceleration
     details: Fast and efficient 2D/3D kernels for CPU and GPU with CUDA.jl
-    link: /features/gpu
+    link: /manual/gpu
   - icon: <img width="64" height="64" src="https://raw.githubusercontent.com/JuliaDiff/ChainRulesCore.jl/fa530b9865ec0cb3acff81ddef0967fdcc8c8214/docs/src/assets/logo.svg" alt="ChainRules.jl"/>
     title: Differentiable physics
     details: Backpropagate through the solver using Zygote.jl to optimize closure models
@@ -33,10 +33,10 @@ features:
   - icon: <img width="64" height="64" src="https://raw.githubusercontent.com/LuxDL/Lux.jl/ca2c635f9d70a3d994efab9f0116711a8cdb1a48/assets/lux-logo.svg" alt="Lux.jl"/>
     title: Neural network integration
     details: Integrate neural network closure models with Lux.jl
-    link: /features/closure
+    link: /manual/closure
   - icon: 🌊
     title: Problems
     details: Solve for decaying turbulence, channel flows, actuator disks, Rayleigh-Bénard convection, and more
-    link: /generated/LidDrivenCavity2D
+    link: /examples
 ---
 ````

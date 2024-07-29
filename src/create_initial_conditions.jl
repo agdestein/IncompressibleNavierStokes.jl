@@ -1,12 +1,4 @@
 """
-    create_initial_conditions(
-        setup,
-        initial_velocity,
-        t = 0;
-        psolver = default_psolver(setup),
-        doproject = true,
-    )
-
 Create divergence free initial velocity field `u` at starting time `t`.
 The initial conditions of `u[α]` are specified by the function
 `initial_velocity(Dimension(α), x...)`.
@@ -170,17 +162,8 @@ function create_spectrum(; setup, kp, rng = Random.default_rng())
 end
 
 """
-    random_field(
-        setup, t = 0;
-        A = 1,
-        kp = 10,
-        psolver = default_psolver(setup),
-        rng = Random.default_rng(),
-    )
-
 Create random field, as in [Orlandi2000](@cite).
 
-- `K`: Maximum wavenumber
 - `A`: Eddy amplitude scaling
 - `kp`: Peak energy wavenumber
 """

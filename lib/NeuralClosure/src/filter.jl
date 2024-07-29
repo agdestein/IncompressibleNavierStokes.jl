@@ -1,6 +1,23 @@
+"""
+Discrete DNS filter.
+
+Subtypes `ConcreteFilter` should implement the in-place method:
+
+    (::ConcreteFilter)(v, u, setup_les, compression)
+
+which filters the DNS field `u` and put result in LES field `v`.
+Then the out-of place method:
+
+    (::ConcreteFilter)(u, setup_les, compression)
+
+automatically becomes available.
+"""
 abstract type AbstractFilter end
 
+"Average fine grid velocity field over coarse volume face."
 struct FaceAverage <: AbstractFilter end
+
+"Average fine grid velocity field over coarse volume."
 struct VolumeAverage <: AbstractFilter end
 
 (Φ::AbstractFilter)(u, setup_les, compression) = Φ(
@@ -10,11 +27,6 @@ struct VolumeAverage <: AbstractFilter end
     compression,
 )
 
-"""
-    (::FaceAverage)(v, u, setup_les)
-
-Average fine grid `u` over coarse volume face. Put result in `v`.
-"""
 function (::FaceAverage)(v, u, setup_les, comp)
     (; grid, workgroupsize) = setup_les
     (; Nu, Iu) = grid
@@ -38,11 +50,7 @@ function (::FaceAverage)(v, u, setup_les, comp)
     v
 end
 
-"""
-    reconstruct!(u, v, setup_dns, setup_les)
-
-Average fine grid `u` over coarse volume face. Put result in `v`.
-"""
+"Reconstruct DNS velocity `u` from LES velocity `v`."
 function reconstruct!(u, v, setup_dns, setup_les, comp)
     (; grid, boundary_conditions, workgroupsize) = setup_les
     (; N, Iu) = grid
@@ -70,6 +78,7 @@ function reconstruct!(u, v, setup_dns, setup_les, comp)
     u
 end
 
+"Reconstruct DNS velocity field. See also [`reconstruct!`](@ref)."
 reconstruct(v, setup_dns, setup_les, comp) = reconstruct!(
     ntuple(α -> fill!(similar(v[1], setup_dns.grid.N), 0), length(v)),
     v,
@@ -78,11 +87,6 @@ reconstruct(v, setup_dns, setup_les, comp) = reconstruct!(
     comp,
 )
 
-"""
-    (::VolumeAverage)(v, u, setup_les, comp)
-
-Average fine grid `u` over coarse volume. Put result in `v`.
-"""
 function (::VolumeAverage)(v, u, setup_les, comp)
     (; grid, boundary_conditions, workgroupsize) = setup_les
     (; N, Nu, Iu) = grid

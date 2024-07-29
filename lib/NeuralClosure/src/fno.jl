@@ -1,6 +1,4 @@
 """
-    fno(; setup, kmax, c, σ, ψ, rng = Random.default_rng(), kwargs...)
-
 Create FNO closure model. Return a tuple `(closure, θ)` where `θ` are the
 initial parameters and `closure(V, θ)` predicts the commutator error.
 """
@@ -47,8 +45,6 @@ function fno(; setup, kmax, c, σ, ψ, rng = Random.default_rng(), kwargs...)
 end
 
 """
-    FourierLayer(dimension, kmax, cin => cout; σ = identity, init_weight = glorot_uniform)
-
 Fourier layer operating on uniformly discretized functions.
 
 Some important sizes:

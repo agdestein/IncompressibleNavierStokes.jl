@@ -1,5 +1,5 @@
 """
-    step(stepper, Δt; bc_vectors = nothing)
+    $FUNCTIONNAME(method, stepper, Δt; θ = nothing)
 
 Perform one time step.
 
@@ -8,10 +8,9 @@ Non-mutating/allocating/out-of-place version.
 See also [`timestep!`](@ref).
 """
 function timestep end
-# step(stepper, Δt; bc_vectors = nothing) = step(stepper.method, stepper, Δt; bc_vectors = nothing)
 
 """
-    step!(stepper, Δt; cache, momentum_cache, bc_vectors = nothing)
+    $FUNCTIONNAME(method, stepper, Δt; θ = nothing, cache)
 
 Perform one time step>
 
@@ -20,7 +19,6 @@ Mutating/non-allocating/in-place version.
 See also [`timestep`](@ref).
 """
 function timestep! end
-# step!(stepper, Δt; kwargs...) = step!(stepper.method, stepper, Δt; kwargs...)
 
 include("step_ab_cn.jl")
 include("step_one_leg.jl")
