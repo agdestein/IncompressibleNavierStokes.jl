@@ -33,7 +33,7 @@ jobs:
       - uses: julia-actions/julia-docdeploy@v1
         with:
           install-package: false
-          prefix: xvfb-run # for GLMakie
+          # prefix: xvfb-run # for GLMakie
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}

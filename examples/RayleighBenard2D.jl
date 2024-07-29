@@ -148,7 +148,6 @@ state, outputs = solve_unsteady(;
     processors,
 );
 
-
 # Nusselt numbers
 
 outputs.nusselt
