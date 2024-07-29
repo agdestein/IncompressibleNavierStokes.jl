@@ -17,7 +17,7 @@ const simple = [
   },
   {
     href: "generated/TaylorGreenVortex2D",
-    src: "generated/output/TaylorGreenVortex2D/convergence.png",
+    src: "../TaylorGreenVortex2D.png",
     caption: "Taylor-Green vortex (2D)",
     desc: "Decaying vortex structures in a periodic 2D-box",
   },

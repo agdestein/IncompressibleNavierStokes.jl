@@ -8,6 +8,7 @@ using IncompressibleNavierStokes
 
 # Output directory
 outdir = joinpath(@__DIR__, "output", "TaylorGreenVortex3D")
+ispath(outdir) || mkpath(outdir)
 
 # Floating point precision
 T = Float64
