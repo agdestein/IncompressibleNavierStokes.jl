@@ -12,12 +12,14 @@ no slip boundary conditions, where all velocity components are zero.
 
 To make the pressure the same order as velocity, also provide `dudt`.
 """
-@kwdef struct DirichletBC{U,DUDT} <: AbstractBC
+struct DirichletBC{U,DUDT} <: AbstractBC
     "Boundary condition"
-    u::U = nothing
+    u::U
 
     "Time derivative of boundary condition"
-    dudt::DUDT = nothing
+    dudt::DUDT
+
+    DirichletBC(u = nothing, dudt = nothing) = new{typeof(u),typeof(dudt)}(u, dudt)
 end
 
 """
