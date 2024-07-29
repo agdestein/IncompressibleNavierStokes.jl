@@ -123,7 +123,7 @@ makedocs(;
             "Large eddy simulation" => "manual/les.md",
             "Neural closure models" => "manual/closure.md",
             "API" => "manual/api.md",
-                    ],
+        ],
         "References" => "references.md",
     ],
 )
