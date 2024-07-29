@@ -9,6 +9,7 @@ boundary conditions, the opposite boundary must also be periodic.
 The available boundary conditions are given below.
 
 ```@docs
+AbstractBC
 PeriodicBC
 DirichletBC
 SymmetricBC
