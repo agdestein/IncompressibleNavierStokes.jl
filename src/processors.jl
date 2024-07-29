@@ -287,13 +287,15 @@ animator(;
     nupdate = 1,
     framerate = 24,
     visible = true,
+    screen = nothing,
     kwargs...,
 ) =
     processor((stream, state) -> save(path, stream)) do outerstate
         ispath(dirname(path)) || mkpath(dirname(path))
         state = Observable(outerstate[])
         fig = plot(state; setup, kwargs...)
-        visible && display(fig)
+        visible && isnothing(screen) && display(fig)
+        visible && !isnothing(screen) && display(screen, fig)
         stream = VideoStream(fig; framerate, visible)
         on(outerstate) do outerstate
             outerstate.n % nupdate == 0 || return
