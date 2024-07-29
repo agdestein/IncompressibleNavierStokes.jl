@@ -1,3 +1,4 @@
+"Boundary condition for one side of the domain."
 abstract type AbstractBC end
 
 "Periodic boundary conditions. Must be periodic on both sides."
