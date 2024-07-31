@@ -12,22 +12,30 @@ export default defineConfig({
   lastUpdated: true,
   cleanUrls: true,
   outDir: 'REPLACE_ME_DOCUMENTER_VITEPRESS', // This is required for MarkdownVitepress to work correctly...
-  head: [['link', { rel: 'icon', href: 'REPLACE_ME_DOCUMENTER_VITEPRESS_FAVICON' }]],
-  
+  // head: [['link', { rel: 'icon', href: 'REPLACE_ME_DOCUMENTER_VITEPRESS_FAVICON' }]],
+
+  head: [
+    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png' }],
+    ['link', { rel: 'icon', href: '/favicon.ico' }],
+  ],
+
   markdown: {
     math: true,
     config(md) {
       md.use(tabsMarkdownPlugin),
-      md.use(mathjax3),
-      md.use(footnote)
+        md.use(mathjax3),
+        md.use(footnote)
     },
     theme: {
       light: "github-light",
       dark: "github-dark"
     },
-    codeTransformers: [ transformerMetaWordHighlight(), ],
+    codeTransformers: [transformerMetaWordHighlight(),],
 
   },
+
   themeConfig: {
     outline: 'deep',
     // https://vitepress.dev/reference/default-theme-config
@@ -39,6 +47,14 @@ export default defineConfig({
       }
     },
     nav: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
+    // nav: [
+    //   { text: 'Home', link: '/' },
+    //   { text: 'Getting Started', link: '/getting_started' },
+    //   { text: 'Examples', link: '/examples' },
+    //   { text: 'Manual', link: '/manual/ns' },
+    //   { text: 'References', link: '/references' },
+    // ],
+
     sidebar: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
     editLink: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
     socialLinks: [
