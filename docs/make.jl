@@ -1,6 +1,10 @@
 # Show number of threads on GitHub Actions
 @info "" Threads.nthreads()
 
+# Look for environment variable triggering local development modifications
+localdev = haskey(ENV, "LOCALDEV")
+@show localdev
+
 # Get access to example dependencies
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 
@@ -88,9 +92,14 @@ example_pages = map(examples) do e
     end
 end
 
+vitepress_kwargs = localdev ? (;
+    # md_output_path = @__DIR__,
+    build_vitepress = false
+) : (;)
+
 makedocs(;
     # draft = true,
-    # clean = false,
+    # clean = !localdev,
     modules = [IncompressibleNavierStokes, NeuralClosure],
     plugins = [bib],
     authors = "Syver Døving Agdestein, Benjamin Sanderse, and contributors",
@@ -104,6 +113,7 @@ makedocs(;
     format = DocumenterVitepress.MarkdownVitepress(;
         repo = "github.com/agdestein/IncompressibleNavierStokes.jl",
         devurl = "dev",
+        vitepress_kwargs...,
     ),
     pagesonly = true,
     pages = [

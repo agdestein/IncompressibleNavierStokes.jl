@@ -44,7 +44,7 @@ state, outputs = solve_unsteady(;
     tlims = (T(0), T(1)),
     Δt = T(1e-3),
     processors = (
-        ## rtp = realtimeplotter(; setup, nupdate = 1),
+        rtp = realtimeplotter(; setup, nupdate = 10),
         ehist = realtimeplotter(;
             setup,
             plot = energy_history_plot,
@@ -57,12 +57,16 @@ state, outputs = solve_unsteady(;
             nupdate = 10,
             displayfig = false,
         ),
-        anim = animator(; setup, path = joinpath(outdir, "solution.mp4"), nupdate = 10),
+        ## anim = animator(; setup, path = joinpath(outdir, "solution.mp4"), nupdate = 10),
         ## vtk = vtk_writer(; setup, nupdate = 10, dir = outdir, filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 100),
     ),
 );
+
+#md # ```@raw html
+#md # <video src="../../DecayingTurbulence2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
+#md # ```
 
 # ## Post-process
 #
@@ -79,9 +83,3 @@ outputs.espec
 
 # Plot field
 fieldplot(state; setup)
-
-#md # Animation
-#md #
-#md # ```@raw html
-#md # <video src="./output/DecayingTurbulence2D/solution.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
-#md # ```

@@ -57,7 +57,7 @@ state, outputs = solve_unsteady(;
     tlims = (T(0), T(10)),
     Δt = T(5e-3),
     processors = (;
-        anim = animator(;
+        rtp = realtimeplotter(;
             path = joinpath(outdir, "solution.mp4"),
             setup,
             nupdate = 20,
@@ -68,8 +68,6 @@ state, outputs = solve_unsteady(;
     ),
 );
 
-#md # Animation
-#md #
 #md # ```@raw html
-#md # <video src="./output/RayleighTaylor2D/solution.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
+#md # <video src="../../RayleighTaylor2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
 #md # ```

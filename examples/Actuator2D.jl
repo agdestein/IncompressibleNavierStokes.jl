@@ -66,20 +66,24 @@ state, outputs = solve_unsteady(;
     method = RKMethods.RK44P2(),
     Δt = 0.05,
     processors = (
-        ## rtp = realtimeplotter(; setup, size = (600, 300), nupdate = 1),
+        rtp = realtimeplotter(; setup, size = (600, 300), nupdate = 5),
         ## ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 1),
         ## espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 1),
-        anim = animator(;
-            setup,
-            path = joinpath(outdir, "solution.mp4"),
-            size = (600, 300),
-            nupdate = 5,
-        ),
+        ## anim = animator(;
+        ##     setup,
+        ##     path = joinpath(outdir, "solution.mp4"),
+        ##     size = (600, 300),
+        ##     nupdate = 5,
+        ## ),
         ## vtk = vtk_writer(; setup, nupdate = 10, dir = "$outdir", filename = "solution"),
         ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 24),
     ),
 );
+
+#md # ```@raw html
+#md # <video src="../../Actuator2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
+#md # ```
 
 # ## Post-process
 #
@@ -108,9 +112,3 @@ fig
 fig = fieldplot(state; setup, size = (600, 300), fieldname = :vorticity)
 lines!(box...; color = :red)
 fig
-
-#md # Animation
-#md #
-#md # ```@raw html
-#md # <video src="./output/Actuator2D/solution.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
-#md # ```

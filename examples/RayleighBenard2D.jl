@@ -113,9 +113,8 @@ tempstart = T0.(xp[1], xp[2]');
 # Processors
 GLMakie.closeall() #!md
 processors = (;
-    anim = animator(;
+    rtp = realtimeplotter(;
         screen = GLMakie.Screen(), #!md
-        path = joinpath(outdir, "solution.mp4"),
         setup,
         fieldname = :temperature,
         colorrange = (T(0), T(1)),
@@ -148,6 +147,10 @@ state, outputs = solve_unsteady(;
     processors,
 );
 
+#md # ```@raw html
+#md # <video src="../../RayleighBenard2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
+#md # ```
+
 # Nusselt numbers
 
 outputs.nusselt
@@ -155,9 +158,3 @@ outputs.nusselt
 # Average temperature
 
 outputs.avg
-
-#md # Animation
-#md #
-#md # ```@raw html
-#md # <video src="./output/RayleighBenard2D/solution.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
-#md # ```
