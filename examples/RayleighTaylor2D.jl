@@ -58,7 +58,6 @@ state, outputs = solve_unsteady(;
     Δt = T(5e-3),
     processors = (;
         rtp = realtimeplotter(;
-            path = joinpath(outdir, "solution.mp4"),
             setup,
             nupdate = 20,
             fieldname = :temperature,
