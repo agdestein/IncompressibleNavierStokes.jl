@@ -68,5 +68,5 @@ state, outputs = solve_unsteady(;
 );
 
 #md # ```@raw html
-#md # <video src="../../RayleighTaylor2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
+#md # <video src="../../public/RayleighTaylor2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
 #md # ```

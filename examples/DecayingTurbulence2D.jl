@@ -65,7 +65,7 @@ state, outputs = solve_unsteady(;
 );
 
 #md # ```@raw html
-#md # <video src="../../DecayingTurbulence2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
+#md # <video src="../../public/DecayingTurbulence2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
 #md # ```
 
 # ## Post-process
