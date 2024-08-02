@@ -39,7 +39,11 @@ export default defineConfig({
   themeConfig: {
     outline: 'deep',
     // https://vitepress.dev/reference/default-theme-config
-    logo: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
+    // logo: { src: '/logo.svg' },
+    logo: {
+      'light': '/logo.svg',
+      'dark': '/logo.svg'
+    },
     search: {
       provider: 'local',
       options: {

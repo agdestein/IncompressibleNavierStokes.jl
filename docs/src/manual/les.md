@@ -8,7 +8,7 @@ Depending on the problem specification, a given grid resolution may not be
 sufficient to resolve all spatial features of the flow. Consider the following
 example:
 
-![Resolution](../assets/resolution.png)
+![Resolution](../public/resolution.png)
 
 On the left, the grid spacing is too large to capt the smallest eddies in the
 flow. These eddies create sub-grid stresses that also affect the large scale

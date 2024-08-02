@@ -41,7 +41,7 @@ be valid in volume centers ``I \in \mathcal{I}``, volume faces
 or volume corners ``I \in \mathcal{I} + \sum_{\alpha = 1}^d h_\alpha``.
 The discretization is illustrated below:
 
-![Grid](../assets/grid.png)
+![Grid](../public/grid.png)
 
 ## Finite volume discretization of the Navier-Stokes equations
 
@@ -194,7 +194,7 @@ containing the reference volume sizes ``| \Omega_I |``.
 The term ``F`` refers to all the forces except for the pressure gradient.
 
 !!! note "Volume normalization"
-    
+
     All the operators have been divided by the velocity volume sizes.
     As a result, the operators have the same units as their
     continuous counterparts.

@@ -8,7 +8,7 @@ hero:
   text: Experience 21st century turbulence
   tagline: Differentiable fluid solver written in Julia
   image:
-    src: logo.png
+    src: /logo.svg
     alt: IncompressibleNavierStokes
   actions:
     - theme: brand
