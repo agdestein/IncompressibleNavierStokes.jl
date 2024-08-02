@@ -451,7 +451,7 @@ smag = map(CartesianIndices((size(io_train, 2), 2))) do I
                 setup,
                 psolver,
                 method = RKProject(RK44(; T), getorder(iorder)),
-                closure_model = smagorinsky_closure(setup),
+                closure_model = IncompressibleNavierStokes.smagorinsky_closure(setup),
                 nupdate,
             )
             e += err(θ)
