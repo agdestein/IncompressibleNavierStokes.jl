@@ -82,7 +82,7 @@ state, outputs = solve_unsteady(;
 );
 
 #md # ```@raw html
-#md # <video src="../../public/Actuator2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
+#md # <video src="/Actuator2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
 #md # ```
 
 # ## Post-process

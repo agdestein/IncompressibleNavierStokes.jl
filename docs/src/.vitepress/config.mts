@@ -50,16 +50,88 @@ export default defineConfig({
         detailedView: true
       }
     },
-    nav: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
-    // nav: [
-    //   { text: 'Home', link: '/' },
-    //   { text: 'Getting Started', link: '/getting_started' },
-    //   { text: 'Examples', link: '/examples' },
-    //   { text: 'Manual', link: '/manual/ns' },
-    //   { text: 'References', link: '/references' },
-    // ],
-
-    sidebar: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
+    nav: [
+      { text: 'Home', link: '/' },
+      { text: 'Getting Started', link: '/getting_started' },
+      { text: 'Examples', link: '/examples' },
+      { text: 'Manual', link: '/manual/ns' },
+      { text: 'References', link: '/references' },
+    ],
+    sidebar: {
+      "/examples/": {
+        text: 'Examples',
+        items: [
+          { text: 'Examples', link: 'examples' },
+          {
+            text: 'Simple flows',
+            items: [
+              { text: 'Decaying Turbulunce (2D)', link: '/examples/generated/DecayingTurbulence2D' },
+              { text: 'Decaying Turbulunce (3D)', link: '/examples/generated/DecayingTurbulence3D' },
+              { text: 'Taylor-Green Vortex (2D)', link: '/examples/generated/TaylorGreenVortex2D' },
+              { text: 'Taylor-Green Vortex (3D)', link: '/examples/generated/TaylorGreenVortex3D' },
+              { text: 'Shear Layer (2D)', link: '/examples/generated/ShearLayer2D' },
+              { text: 'Plane jets (2D)', link: '/examples/generated/PlaneJets2D' },
+            ],
+          },
+          {
+            text: 'Mixed boundary conditions',
+            items: [
+              { text: 'Actuator (2D)', link: '/examples/generated/Actuator2D' },
+              { text: 'Actuator (3D)', link: '/examples/generated/Actuator3D' },
+              { text: 'Backward Facing Step (2D)', link: '/examples/generated/BackwardFacingStep2D' },
+              { text: 'Backward Facing Step (3D)', link: '/examples/generated/BackwardFacingStep3D' },
+              { text: 'Lid-Driven Cavity (2D)', link: '/examples/generated/LidDrivenCavity2D' },
+              { text: 'Lid-Driven Cavity (3D)', link: '/examples/generated/LidDrivenCavity3D' },
+              { text: 'Multiple actuators (2D)', link: '/examples/generated/MultiActuator' },
+              { text: 'Planar Mixing (2D)', link: '/examples/generated/PlanarMixing2D' },
+            ],
+          },
+          {
+            text: 'With temperature field',
+            items: [
+              { text: 'Rayleigh-Bénard (2D)', link: '/examples/generated/RayleighBenard2D' },
+              { text: 'Rayleigh-Bénard (3D)', link: '/examples/generated/RayleighBenard3D' },
+              { text: 'Rayleigh-Taylor (2D)', link: '/examples/generated/RayleighTaylor2D' },
+              { text: 'Rayleigh-Taylor (3D)', link: '/examples/generated/RayleighTaylor3D' },
+            ],
+          },
+          {
+            text: 'Neural closure models',
+            items: [
+              { text: 'Filter analysis', link: '/examples/generated/prioranalysis' },
+              { text: 'CNN closures', link: '/examples/generated/postanalysis' },
+              { text: 'Equivariant closures', link: '/examples/generated/symmetryanalysis' },
+            ],
+          },
+        ],
+      },
+      "/manual/": {
+        text: 'Manual', items: [
+          {
+            text: 'Equations',
+            items: [
+              { text: 'Incompressible Navier-Stokes equations', link: '/manual/ns' },
+              { text: 'Spatial discretization', link: '/manual/spatial' },
+              { text: 'Time discretization', link: '/manual/time' },
+            ],
+          },
+          {
+            text: 'API',
+            items: [
+              { text: 'Boundary conditions', link: '/manual/bc' },
+              { text: 'Pressure solvers', link: '/manual/pressure' },
+              { text: 'Floating point precision', link: '/manual/precision' },
+              { text: 'GPU Support', link: '/manual/gpu' },
+              { text: 'Operators', link: '/manual/operators' },
+              { text: 'Temperature equation', link: '/manual/temperature' },
+              { text: 'Large eddy simulation', link: '/manual/les' },
+              { text: 'Neural closure models', link: '/manual/closure' },
+              { text: 'API', link: '/manual/api' },
+            ],
+          },
+        ],
+      },
+    },
     editLink: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
     socialLinks: [
       { icon: 'github', link: 'REPLACE_ME_DOCUMENTER_VITEPRESS' }

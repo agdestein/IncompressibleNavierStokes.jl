@@ -1,4 +1,4 @@
-# Spatial Discretization
+# Spatial discretization
 
 the ``d`` spatial dimensions are indexed by ``\alpha \in \{1, \dots, d\}``. The
 ``\alpha``-th unit vector is denoted ``e_\alpha = (e_{\alpha \beta})_{\beta =
