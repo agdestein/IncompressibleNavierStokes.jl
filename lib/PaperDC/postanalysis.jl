@@ -184,9 +184,9 @@ io_test = create_io_arrays([data_test], setups_test);
 ## jldsave("$outdir/io_test.jld2"; io_test)
 ##
 ## # Load IO arrays
-## io_train = load("$outdir/io_train.jld2"; "io_train")
-## io_valid = load("$outdir/io_valid.jld2"; "io_valid")
-## io_test = load("$outdir/io_test.jld2"; "io_test")
+## io_train = load("$outdir/io_train.jld2", "io_train")
+## io_valid = load("$outdir/io_valid.jld2", "io_valid")
+## io_test = load("$outdir/io_test.jld2", "io_test")
 
 # Check that data is reasonably bounded
 io_train[1].u |> extrema
