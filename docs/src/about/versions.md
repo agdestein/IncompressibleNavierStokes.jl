@@ -5,7 +5,8 @@
 The examples were generated with the following Julia version:
 
 ```@example
-Main.versioninfo()
+using InteractiveUtils
+InteractiveUtils.versioninfo()
 ```
 
 ## Package versions
