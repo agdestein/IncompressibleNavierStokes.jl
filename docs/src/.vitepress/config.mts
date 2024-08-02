@@ -33,7 +33,6 @@ export default defineConfig({
       dark: "github-dark"
     },
     codeTransformers: [transformerMetaWordHighlight(),],
-
   },
 
   themeConfig: {
@@ -50,18 +49,27 @@ export default defineConfig({
         detailedView: true
       }
     },
+    editLink: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
+    socialLinks: [
+      { icon: 'github', link: 'REPLACE_ME_DOCUMENTER_VITEPRESS' }
+    ],
+    footer: {
+      message: 'Made with <a href="https://documenter.juliadocs.org/stable/" target="_blank"><strong>Documenter.jl</strong></a>, <a href="https://vitepress.dev" target="_blank"><strong>VitePress</strong></a> and <a href="https://luxdl.github.io/DocumenterVitepress.jl/stable/" target="_blank"><strong>DocumenterVitepress.jl</strong></a> <br>',
+      copyright: `© Copyright ${new Date().getUTCFullYear()}.`
+    },
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Getting Started', link: '/getting_started' },
-      { text: 'Examples', link: '/examples' },
+      { text: 'Examples', link: '/examples/' },
       { text: 'Manual', link: '/manual/ns' },
+      { text: 'About', link: '/about/' },
       { text: 'References', link: '/references' },
     ],
     sidebar: {
       "/examples/": {
         text: 'Examples',
         items: [
-          { text: 'Examples', link: 'examples' },
+          { text: 'Examples', link: '/examples' },
           {
             text: 'Simple flows',
             items: [
@@ -106,7 +114,8 @@ export default defineConfig({
         ],
       },
       "/manual/": {
-        text: 'Manual', items: [
+        text: 'Manual',
+        items: [
           {
             text: 'Equations',
             items: [
@@ -131,14 +140,16 @@ export default defineConfig({
           },
         ],
       },
+      "/about/": {
+        text: 'About',
+        items: [
+          { text: 'About', link: '/about/' },
+          { text: 'License', link: '/about/license' },
+          { text: 'Citing', link: '/about/citing' },
+          { text: 'Contributing', link: '/about/contributing' },
+          { text: 'Package versions', link: '/about/versions' },
+        ],
+      },
     },
-    editLink: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
-    socialLinks: [
-      { icon: 'github', link: 'REPLACE_ME_DOCUMENTER_VITEPRESS' }
-    ],
-    footer: {
-      message: 'Made with <a href="https://documenter.juliadocs.org/stable/" target="_blank"><strong>Documenter.jl</strong></a>, <a href="https://vitepress.dev" target="_blank"><strong>VitePress</strong></a> and <a href="https://luxdl.github.io/DocumenterVitepress.jl/stable/" target="_blank"><strong>DocumenterVitepress.jl</strong></a> <br>',
-      copyright: `© Copyright ${new Date().getUTCFullYear()}.`
-    }
-  }
+  },
 })

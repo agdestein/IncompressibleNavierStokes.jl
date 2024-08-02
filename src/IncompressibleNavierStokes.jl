@@ -48,6 +48,9 @@ using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
                   $FIELDS
                   """
 
+"$LICENSE"
+license = "MIT"
+
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
 
