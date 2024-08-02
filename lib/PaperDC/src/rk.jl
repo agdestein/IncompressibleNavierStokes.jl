@@ -94,7 +94,7 @@ function IncompressibleNavierStokes.timestep!(
     # diffusion term
     apply_bc_u!(u, t, setup)
 
-    create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
+    IncompressibleNavierStokes.create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
 end
 
 function IncompressibleNavierStokes.timestep(method::RKProject, stepper, Δt; θ = nothing)
