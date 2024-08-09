@@ -1,6 +1,7 @@
 module SciMLCompat
 
 import IncompressibleNavierStokes as INS
+include("enzyme.jl")
 
 """
     create_right_hand_side(setup, psolver)
@@ -46,28 +47,21 @@ function create_right_hand_side_inplace(setup, psolver)
 end
 
 """
-    create_right_hand_side_enzyme(setup)
+    create_right_hand_side_enzyme(_backend, setup)
 
 It defines the right hand side function for the Enzyme AD. 
 To do so, it has to precompile and wrap all the intermediate operations 
 as explained more in detail in enzyme.jl.
 """
 
-B = get_backend(div)
-
-function create_right_hand_side_enzyme(setup, _backend)
-    e_bc_u! = get_bc_u!(_backend, setup);
-    e_bc_p! = get_bc_p!(_backend, setup);
-    e_momentum! = get_momentum!(cache_F, ustart, nothing, setup);
-
-
-    e_divergence! = get_divergence!(_backend, setup);
-    e_psolve! = _get_enz_psolver(setup);
-
-    # and the function to apply the pressure
-    e_applypressure! = get_applypressure!(ustart, setup);
-    # and the momentum
-    # and the boundary conditions
+function create_right_hand_side_enzyme(_backend, setup)
+    e_bc_u! = _get_enz_bc_u!(_backend, setup);
+    e_bc_p! = _get_enz_bc_p!(_backend, setup);
+    e_momentum! = _get_enz_momentum!(_backend, nothing, setup);
+    e_divergence! = _get_enz_div!(_backend, setup);
+    e_psolve! = _get_enz_psolver!(setup);
+    e_applypressure! = _get_enz_applypressure!(_backend, setup);
+    Ω = setup.grid.Ω;
 
     function F_ip(du, u, p, t) 
         u_view = eachslice(u; dims = 3)
@@ -87,6 +81,6 @@ function create_right_hand_side_enzyme(setup, _backend)
     end;
 end
 
-export create_right_hand_side, create_right_hand_side_inplace, create_right_hand_side_enzyme
+export create_right_hand_side, create_right_hand_side_inplace, create_right_hand_side_enzyme, _get_enz_bc_u!, _get_enz_bc_p!, _get_enz_momentum!, _get_enz_div!, _get_enz_psolver!, _get_enz_applypressure!
 
 end

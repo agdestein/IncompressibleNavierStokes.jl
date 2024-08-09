@@ -1,36 +1,44 @@
 using IncompressibleNavierStokes 
-using INSEnzyme
+using SciMLCompat
 using KernelAbstractions
 using Enzyme
 Enzyme.API.runtimeActivity!(true)
 
-## The test for psolve is missing
-# [...]
+"""
+Run this to test the Enzyme implementation
+"""
 
+T = Float32
+ArrayType = Array
+Re = T(1_000)
+n = 64
+N = n + 2
+lims = T(0), T(1);
+x , y = LinRange(lims..., n + 1), LinRange(lims..., n + 1);
+setup = Setup(x, y; Re, ArrayType);
+_backend = get_backend(rand(Float32, 10))
 
-
-# here you just have to run the tests for the functions implemented in INSEnzyme.jl
-B = get_backend(rand(Float32, 10))
-myapply_bc_u! = _get_enz_bc_u!(B, setup)
+###### BC_U
+myapply_bc_u! = _get_enz_bc_u!(_backend, setup)
 
 nreps = 10000
 _, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i in 1:nreps
-    A = (rand(Float32,size(cache_p)[1],size(cache_p)[1]),rand(Float32,size(cache_p)[1],size(cache_p)[1]))
+    A = (rand(Float32,N,N),rand(Float32,N,N))
     IncompressibleNavierStokes.apply_bc_u!(A, 0.0f0, setup);
 end
 _, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i in 1:nreps
-    A = (rand(Float32,size(cache_p)[1],size(cache_p)[1]),rand(Float32,size(cache_p)[1],size(cache_p)[1]))
+    A = (rand(Float32,N,N),rand(Float32,N,N))
     myapply_bc_u!(A);
 end
 # Compare the execution times and the memory allocations
 # assert that the time is less than 10% more than the time of the INS implementation
-@assert time_enz < 1.1*time_INS "OK: time_enz = $time_enz, time_INS = $time_INS"
+@assert time_enz < 1.1*time_INS "enzyme bc_u too slow: time_enz = $time_enz, time_INS = $time_INS"
 # assert that the memory allocation is less than 10% more than the memory allocation of the INS implementation
-@assert allocation_enz < 1.1*allocation_INS "OK: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
+@assert allocation_enz < 1.1*allocation_INS "enzyme bc_u too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
 
 # Check if the implementation is correct
 for i in 1:nreps
-    A = (rand(Float32,size(cache_p)[1],size(cache_p)[1]),rand(Float32,size(cache_p)[1],size(cache_p)[1]));
+    A = (rand(Float32,N,N),rand(Float32,N,N));
     A0 = (copy(A[1]), copy(A[2])) ;                  ;
     B = (copy(A[1]), copy(A[2]))                    ;
     IncompressibleNavierStokes.apply_bc_u!(A, T(0), setup)  ;
@@ -42,30 +50,33 @@ for i in 1:nreps
 end
 
 # Check if it is differentiable
-A = (rand(Float32,size(cache_p)[1],size(cache_p)[1]),rand(Float32,size(cache_p)[1],size(cache_p)[1]))
+A = (rand(Float32,N,N),rand(Float32,N,N))
 dA = Enzyme.make_zero(A)
-@timed Enzyme.autodiff(Enzyme.Reverse, myapply_bc_u!, Const, DuplicatedNoNeed(A, dA))
+@timed Enzyme.autodiff(Enzyme.Reverse, Const(myapply_bc_u!), Const, DuplicatedNoNeed(A, dA))
 
 
 
+####### BC_P
+myapply_bc_p! =  _get_enz_bc_p!(_backend, setup);
 
-
-
-myapply_bc_p! = get_bc_p!(cache_p, setup) 
-
-# Speed test
-@timed for i in 1:10000
-    A = rand(Float32,size(cache_p)[1],size(cache_p)[2]);
+nreps = 10000
+_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i in 1:nreps
+    A = rand(Float32,N,N);
     IncompressibleNavierStokes.apply_bc_p!(A, 0.0f0, setup);
 end
-@timed for i in 1:10000
-    A = rand(Float32,size(cache_p)[1],size(cache_p)[2]);
+_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i in 1:nreps
+    A = rand(Float32,N,N);
     myapply_bc_p!(A);
 end
+# Compare the execution times and the memory allocations
+# assert that the time is less than 10% more than the time of the INS implementation
+@assert time_enz < 1.1*time_INS "enzyme bc_p too slow: time_enz = $time_enz, time_INS = $time_INS"
+# assert that the memory allocation is less than 10% more than the memory allocation of the INS implementation
+@assert allocation_enz < 1.1*allocation_INS "enzyme bc_p too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
 
 # Check if the implementation is correct
-for i in 1:10000
-    A = rand(Float32,size(cache_p)[1],size(cache_p)[2]) ;
+for i in 1:nreps
+    A = rand(Float32,N,N) ;
     A0 = copy(A)                   ;
     B = copy(A)                    ;
     IncompressibleNavierStokes.apply_bc_p!(A, T(0), setup)  ;
@@ -75,151 +86,181 @@ for i in 1:10000
 end
 
 # Check if it is differentiable
-A = rand(Float32,size(cache_p)[1],size(cache_p)[2]);
+A = rand(Float32,N,N);
 dA = Enzyme.make_zero(A);
-@timed Enzyme.autodiff(Enzyme.Reverse, myapply_bc_p!, Const, DuplicatedNoNeed(A, dA))
+@timed Enzyme.autodiff(Enzyme.Reverse, Const(myapply_bc_p!), Const, DuplicatedNoNeed(A, dA))
 
 
+####### Momentum
+my_f = _get_enz_momentum!(_backend, nothing, setup)
 
-
-
-
-
-
-
-
-
-F = rand(Float32,size(cache_p)[1],size(cache_p)[2])
-z = Enzyme.make_zero(F)
-u = random_field(setup, T(0))
-my_f = get_divergence!(F, setup)
-(; grid, Re) = setup
-(; Δ, Δu, A) = grid
-my_f(F, u, z)#, stack(Δ))
-
-@timed for i in 1:1000
-    F0 = rand(Float32,size(cache_p)[1],size(cache_p)[2]);
-    F = copy(F0);
-    u = random_field(setup, T(0));
-    IncompressibleNavierStokes.divergence!(F, u, setup);
-    @assert F != F0
-end
-@timed for i in 1:1000
-    F = rand(Float32,size(cache_p)[1],size(cache_p)[2]);
-    u = random_field(setup, T(0));
-    z = Enzyme.make_zero(F)
-    my_f(F, u, z)#, stack(Δ));
-end
-# Check if the implementation is correct
-using Statistics
-for i in 1:1000
-    F = rand(Float32,size(cache_p)[1],size(cache_p)[2]);
-    u = random_field(setup, T(0)) 
-    A0 = copy(F)                   ;
-    B = copy(F)                    ;
-    IncompressibleNavierStokes.divergence!(F, u, setup)  ;
-    z = Enzyme.make_zero(F)
-    my_f(B, u, z)#, stack(Δ));
-    @assert F == B                  
-end
-
-F = rand(Float32,size(cache_p)[1],size(cache_p)[2]);
-dF = Enzyme.make_zero(F);
-u = random_field(setup, T(0));
-du = Enzyme.make_zero(u);
-d = Enzyme.make_zero(F);
-dd = Enzyme.make_zero(d);
-z = Enzyme.make_zero(F);
-dΔ = Enzyme.make_zero(stack(Δ));
-# Test if it is differentiable
-@timed Enzyme.autodiff(Enzyme.Reverse, my_f, Const, DuplicatedNoNeed(F, dF), DuplicatedNoNeed(u, du), DuplicatedNoNeed(d, dd))
-
-
-
-
-
-
-u = random_field(setup, T(0))
-p = rand(T,(n+2,n+2))
-myapplypressure! = get_applypressure!(u, setup)
-myapplypressure!(u, p)#, Δu)
-IncompressibleNavierStokes.applypressure!(u, p, setup)
-
+nreps = 1000
 # Speed test
-@timed for i in 1:1000
+_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i in 1:nreps
     u = random_field(setup, T(0))
-    p = rand(T,(n+2,n+2))
-    IncompressibleNavierStokes.applypressure!(u, p, setup)
+    F = random_field(setup, T(0))
+    IncompressibleNavierStokes.momentum!(F, u, nothing, T(0), setup)
 end
-@timed for i in 1:1000
+_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i in 1:nreps
     u = random_field(setup, T(0))
-    p = rand(T,(n+2,n+2))
-    myapplypressure!(u, p)#, Δu)
+    F = random_field(setup, T(0))
+    my_f(F, u, T(0))
 end
 
-# Compare with INS
-for i in 1:1000
+# Compare the execution times and the memory allocations
+# assert that the time is less than 10% more than the time of the INS implementation
+@assert time_enz < 1.1*time_INS "enzyme momentum too slow: time_enz = $time_enz, time_INS = $time_INS"
+# assert that the memory allocation is less than 10% more than the memory allocation of the INS implementation
+@assert allocation_enz < 1.1*allocation_INS "enzyme momentum too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
+
+# Check if the implementation is correct
+for i in 1:nreps
     u = random_field(setup, T(0))
-    p = rand(T,(n+2,n+2))
+    F = random_field(setup, T(0))
     u0 = copy.(u)
-    IncompressibleNavierStokes.applypressure!(u, p, setup)
-    myapplypressure!(u0, p)#, Δu)
-    @assert u == u0
+    F0 = copy.(F)
+    IncompressibleNavierStokes.momentum!(F, u, nothing, T(0), setup)
+    my_f(F0, u, T(0))
+    @assert F == F0
 end
-
-# Check if it is differentiable
-u = random_field(setup, T(0))
-p = rand(T,(n+2,n+2))
-du = Enzyme.make_zero(u)
-dp = Enzyme.make_zero(p)
-dΔu = Enzyme.make_zero(Δu)
-@timed Enzyme.autodiff(Enzyme.Reverse, myapplypressure!, Const, DuplicatedNoNeed(u, du), DuplicatedNoNeed(p, dp))
-
-
-
-
-(; Δ, Δu, A) = grid
-ν = 1 / Re
-
-u = random_field(setup, T(0))
-F = random_field(setup, T(0))
-my_f = get_momentum!(F, u, nothing, setup)
-sΔ = stack(Δ)
-sΔu = stack(Δu)
-my_f(F, u, T(0))#, sΔ, sΔu)#, ν)#, A, T(0))
 
 # Check if it is differentiable
 u = random_field(setup, T(0))
 F = random_field(setup, T(0))
 du = Enzyme.make_zero(u)
 dF = Enzyme.make_zero(F)
-dΔu = Enzyme.make_zero(Δu)
-dΔ = Enzyme.make_zero(Δ)
-dν = Enzyme.make_zero(ν)
-dA = Enzyme.make_zero(A)
-dsΔ = Enzyme.make_zero(sΔ)
-dsΔu = Enzyme.make_zero(sΔu)
- @timed Enzyme.autodiff(Enzyme.Reverse, my_f, Const, DuplicatedNoNeed(F, dF), DuplicatedNoNeed(u, du), Const(T(0)), DuplicatedNoNeed(sΔ,dsΔ), DuplicatedNoNeed(sΔu, dsΔu))
-@timed Enzyme.autodiff(Enzyme.Reverse, my_f, Const, DuplicatedNoNeed(F, dF), DuplicatedNoNeed(u, du), Const(T(0)))
+@timed Enzyme.autodiff(Enzyme.Reverse, Const(my_f), Const, DuplicatedNoNeed(F, dF), DuplicatedNoNeed(u, du), Const(T(0)))
 
-@timed for i in 1:1000
+
+####### Divergence
+my_f = _get_enz_div!(_backend, setup)
+
+nreps = 1000
+# Speed test
+_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i in 1:nreps
+    d = rand(T,(N,N))
     u = random_field(setup, T(0))
-    F = random_field(setup, T(0))
-    IncompressibleNavierStokes.momentum!(F, u, nothing, T(0), setup)
+    IncompressibleNavierStokes.divergence!(d, u, setup)
 end
-@timed for i in 1:1000
+_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i in 1:nreps
+    d = rand(T,(N,N))
     u = random_field(setup, T(0))
-    F = random_field(setup, T(0))
-    my_f(F, u, T(0))#, sΔ, sΔu)
+    z = Enzyme.make_zero(d)
+    my_f(d, u, z)
 end
+
+# Compare the execution times and the memory allocations
+# assert that the time is less than 10% more than the time of the INS implementation
+@assert time_enz < 1.1*time_INS "enzyme divergence too slow: time_enz = $time_enz, time_INS = $time_INS"
+# assert that the memory allocation is less than 10% more than the memory allocation of the INS implementation
+@assert allocation_enz < 1.1*allocation_INS "enzyme divergence too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
 
 # Check if the implementation is correct
-for i in 1:1000
+for i in 1:nreps
+    d = rand(T,(N,N))
     u = random_field(setup, T(0))
-    F = random_field(setup, T(0))
-    u0 = copy.(u)
-    F0 = copy.(F)
-    IncompressibleNavierStokes.momentum!(F, u, nothing, T(0), setup)
-    my_f(F0, u, T(0))#, sΔ, sΔu)
-    @assert F == F0
+    d0 = copy(d)
+    IncompressibleNavierStokes.divergence!(d, u, setup)
+    z = Enzyme.make_zero(d)
+    my_f(d0, u, z)
+    @assert d == d0
 end
+
+# Check if it is differentiable
+d = rand(T,(N,N))
+dd = Enzyme.make_zero(d)
+u = random_field(setup, T(0))
+du = Enzyme.make_zero(u)
+z = Enzyme.make_zero(d)
+dz = Enzyme.make_zero(z)
+@timed Enzyme.autodiff(Enzyme.Reverse, Const(my_f), Const, DuplicatedNoNeed(d, dd), DuplicatedNoNeed(u, du), DuplicatedNoNeed(z, dz)) 
+
+
+####### Pressure solver
+my_f = _get_enz_psolver!(setup)
+INSpsolver! = IncompressibleNavierStokes.psolver_direct(setup);
+
+nreps = 1000
+# Speed test
+_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i in 1:nreps
+    p = rand(T,(N,N))
+    d = rand(T,(N,N))
+    INSpsolver!(p, d)
+end
+_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i in 1:nreps
+    p = rand(T,(N,N))
+    d = rand(T,(N,N))
+    ft = rand(T,n*n+1)
+    pt = rand(T,n*n+1)
+    my_f(p, d, ft, pt)
+end
+
+# Compare the execution times and the memory allocations
+# assert that the time is less than 10% more than the time of the INS implementation
+@assert time_enz < 1.1*time_INS "enzyme psolver too slow: time_enz = $time_enz, time_INS = $time_INS"
+# assert that the memory allocation is less than 10% more than the memory allocation of the INS implementation
+@assert allocation_enz < 1.5*allocation_INS "enzyme psolver too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
+
+# Check if the implementation is correct
+for i in 1:nreps
+    p = rand(T,(N,N))
+    d = rand(T,(N,N))
+    ft = rand(T,n*n+1)
+    pt = rand(T,n*n+1)
+    p0 = copy(p)
+    INSpsolver!(p, d)
+    my_f(p0, d, ft, pt)
+    @assert p == p0
+end
+
+# Check if it is differentiable
+p = rand(T,(N,N));
+d = rand(T,(N,N));
+ft = rand(T,n*n+1);
+pt = rand(T,n*n+1);
+dp = Enzyme.make_zero(p);
+dd = Enzyme.make_zero(d);
+dft = Enzyme.make_zero(ft);
+dpt = Enzyme.make_zero(pt);
+@timed Enzyme.autodiff(Enzyme.Reverse, my_f, Const, DuplicatedNoNeed(p, dp), DuplicatedNoNeed(d, dd), DuplicatedNoNeed(ft, dft), DuplicatedNoNeed(pt, dpt))
+
+
+
+####### applypressure
+my_f = _get_enz_applypressure!(_backend,setup);
+
+nreps = 1000;
+# Speed test
+_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i in 1:nreps
+    u = random_field(setup, T(0))
+    p = rand(T,(N,N))
+    IncompressibleNavierStokes.applypressure!(u, p, setup)
+end
+_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i in 1:nreps
+    u = random_field(setup, T(0))
+    p = rand(T,(N,N))
+    my_f(u, p)
+end
+
+# Compare the execution times and the memory allocations
+# assert that the time is less than 10% more than the time of the INS implementation
+@assert time_enz < 1.1*time_INS "enzyme applypressure too slow: time_enz = $time_enz, time_INS = $time_INS"
+# assert that the memory allocation is less than 10% more than the memory allocation of the INS implementation
+@assert allocation_enz < 1.1*allocation_INS "enzyme applypressure too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
+
+# Check if the implementation is correct
+for i in 1:nreps
+    u = random_field(setup, T(0))
+    p = rand(T,(N,N))
+    u0 = copy.(u)
+    IncompressibleNavierStokes.applypressure!(u, p, setup)
+    my_f(u0, p)
+    @assert u == u0
+end
+
+# Check if it is differentiable
+u = random_field(setup, T(0))
+p = rand(T,(N,N))
+du = Enzyme.make_zero(u)
+dp = Enzyme.make_zero(p)
+@timed Enzyme.autodiff(Enzyme.Reverse, Const(my_f), Const, DuplicatedNoNeed(u, du), DuplicatedNoNeed(p, dp)) 

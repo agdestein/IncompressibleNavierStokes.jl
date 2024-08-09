@@ -10,6 +10,7 @@ Re = T(1_000)
 n = 128
 n = 64
 n = 32
+n = 16
 N = n+2
 # this is the size of the domain, do not mix it with the time
 lims = T(0), T(1);
@@ -162,47 +163,47 @@ dudt_nn(du, u, P, t) = begin
 end
 
 
-temp = similar(stack(ustart));
-dudt_nn(temp, stack(ustart), P, 0.0f0)
-prob_node = ODEProblem{true}(dudt_nn, stack(ustart), trange, p=P);
-
-u0stacked = stack(ustart);
-sol_node, time_node, allocation_node, gc_node, memory_counters_node = @timed solve(prob_node, RK4(), u0 = u0stacked, p = P, saveat = saveat, dt=dt);
-
-
-println("Done run")
-
-# Compare the times of the different methods via a bar plot
-using Plots
-p1=Plots.bar(["INS", "ODE", "CNODE"], [time_ins, time_ode, time_node], xlabel = "Method", ylabel = "Time (s)", title = "Time comparison")
-# Compare the memory allocation
-p2=Plots.bar(["INS", "ODE", "CNODE"], [memory_counters.allocd, memory_counters_ode.allocd, memory_counters_node.allocd], xlabel = "Method", ylabel = "Memory (bytes)", title = "Memory comparison")
-# Compare the number of garbage collections
-p3=Plots.bar(["INS", "ODE", "CNODE"], [gc, gc_ode, gc_node], xlabel = "Method", ylabel = "Number of GC", title = "GC comparison")
-
-Plots.plot(p1, p2, p3, layout=(3,1), size=(600, 800))
-
-
-# Plot the final state
-using Plots
-p1=Plots.heatmap(title="u in SciML ODE",sol_ode.u[end][:, :, 1])
-p2=Plots.heatmap(title="u in SciML CNODE",sol_node.u[end][:, :, 1])
-p3=Plots.heatmap(title="u in INS",state.u[1])
-# and compare them
-p4=Plots.heatmap(title="u_INS-u_ODE",state.u[1] - sol_ode.u[end][:, :, 1])
-p5=Plots.heatmap(title="u_INS-u_CNODE",state.u[1] - sol_node.u[end][:, :, 1])
-p6=Plots.heatmap(title="u_CNODE-u_ODE",sol_node.u[end][:, :, 1] - sol_ode.u[end][:, :, 1])
-Plots.plot(p1, p2, p3, p4,p5,p6, layout=(2,3), size=(900,600))
-
-
-# Compute the divergence of the final state
-div_INS = INS.divergence(state.u, setup);
-div_ode = INS.divergence((sol_ode.u[end][:,:,1],sol_ode.u[end][:,:,2]), setup);
-div_node = INS.divergence((sol_node.u[end][:,:,1],sol_node.u[end][:,:,2]), setup);
-p1 = Plots.heatmap(title="div_INS",div_INS)
-p2 = Plots.heatmap(title="div_ODE",div_ode)
-p3 = Plots.heatmap(title="div_NODE",div_node)
-Plots.plot(p1, p2, p3, layout=(1,3), size=(900,300))
+#temp = similar(stack(ustart));
+#dudt_nn(temp, stack(ustart), P, 0.0f0)
+#prob_node = ODEProblem{true}(dudt_nn, stack(ustart), trange, p=P);
+#
+#u0stacked = stack(ustart);
+#sol_node, time_node, allocation_node, gc_node, memory_counters_node = @timed solve(prob_node, RK4(), u0 = u0stacked, p = P, saveat = saveat, dt=dt);
+#
+#
+#println("Done run")
+#
+## Compare the times of the different methods via a bar plot
+#using Plots
+#p1=Plots.bar(["INS", "ODE", "CNODE"], [time_ins, time_ode, time_node], xlabel = "Method", ylabel = "Time (s)", title = "Time comparison")
+## Compare the memory allocation
+#p2=Plots.bar(["INS", "ODE", "CNODE"], [memory_counters.allocd, memory_counters_ode.allocd, memory_counters_node.allocd], xlabel = "Method", ylabel = "Memory (bytes)", title = "Memory comparison")
+## Compare the number of garbage collections
+#p3=Plots.bar(["INS", "ODE", "CNODE"], [gc, gc_ode, gc_node], xlabel = "Method", ylabel = "Number of GC", title = "GC comparison")
+#
+#Plots.plot(p1, p2, p3, layout=(3,1), size=(600, 800))
+#
+#
+## Plot the final state
+#using Plots
+#p1=Plots.heatmap(title="u in SciML ODE",sol_ode.u[end][:, :, 1])
+#p2=Plots.heatmap(title="u in SciML CNODE",sol_node.u[end][:, :, 1])
+#p3=Plots.heatmap(title="u in INS",state.u[1])
+## and compare them
+#p4=Plots.heatmap(title="u_INS-u_ODE",state.u[1] - sol_ode.u[end][:, :, 1])
+#p5=Plots.heatmap(title="u_INS-u_CNODE",state.u[1] - sol_node.u[end][:, :, 1])
+#p6=Plots.heatmap(title="u_CNODE-u_ODE",sol_node.u[end][:, :, 1] - sol_ode.u[end][:, :, 1])
+#Plots.plot(p1, p2, p3, p4,p5,p6, layout=(2,3), size=(900,600))
+#
+#
+## Compute the divergence of the final state
+#div_INS = INS.divergence(state.u, setup);
+#div_ode = INS.divergence((sol_ode.u[end][:,:,1],sol_ode.u[end][:,:,2]), setup);
+#div_node = INS.divergence((sol_node.u[end][:,:,1],sol_node.u[end][:,:,2]), setup);
+#p1 = Plots.heatmap(title="div_INS",div_INS)
+#p2 = Plots.heatmap(title="div_ODE",div_ode)
+#p3 = Plots.heatmap(title="div_NODE",div_node)
+#Plots.plot(p1, p2, p3, layout=(1,3), size=(900,300))
 
 
 
@@ -211,6 +212,7 @@ Plots.plot(p1, p2, p3, layout=(1,3), size=(900,300))
 using Enzyme
 using ComponentArrays
 using SciMLSensitivity
+SciMLSensitivity.STACKTRACE_WITH_VJPWARN[] = true
 
 
 # First test Enzyme for something that does not make sense bu it has the structure of a priori loss
