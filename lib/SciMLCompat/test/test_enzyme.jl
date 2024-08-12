@@ -51,7 +51,7 @@ end
 # Check if it is differentiable
 A = (rand(Float32, N, N), rand(Float32, N, N))
 dA = Enzyme.make_zero(A)
-@timed Enzyme.autodiff(Enzyme.Reverse, Const(myapply_bc_u!), Const, DuplicatedNoNeed(A, dA))
+Enzyme.autodiff(Enzyme.Reverse, myapply_bc_u!, Const, DuplicatedNoNeed(A, dA))
 
 ####### BC_P
 myapply_bc_p! = _get_enz_bc_p!(_backend, setup);
@@ -85,10 +85,10 @@ end
 # Check if it is differentiable
 A = rand(Float32, N, N);
 dA = Enzyme.make_zero(A);
-Enzyme.autodiff(Enzyme.Reverse, Const(myapply_bc_p!), Const, DuplicatedNoNeed(A, dA))
+Enzyme.autodiff(Enzyme.Reverse, myapply_bc_p!, Const, DuplicatedNoNeed(A, dA))
 
 ####### Momentum
-my_f = _get_enz_momentum!(_backend, nothing, setup)
+my_momentum! = _get_enz_momentum!(_backend, nothing, setup)
 
 nreps = 1000
 # Speed test
@@ -100,7 +100,7 @@ end
 _, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:nreps
     local u = random_field(setup, T(0))
     local F = random_field(setup, T(0))
-    my_f(F, u, T(0))
+    my_momentum!(F, u, T(0))
 end
 
 # Compare the execution times and the memory allocations
@@ -116,7 +116,7 @@ for i = 1:nreps
     u0 = copy.(u)
     F0 = copy.(F)
     IncompressibleNavierStokes.momentum!(F, u, nothing, T(0), setup)
-    my_f(F0, u, T(0))
+    my_momentum!(F0, u, T(0))
     @assert F == F0
 end
 
@@ -127,7 +127,7 @@ du = Enzyme.make_zero(u)
 dF = Enzyme.make_zero(F)
 Enzyme.autodiff(
     Enzyme.Reverse,
-    Const(my_f),
+    my_momentum!,
     Const,
     DuplicatedNoNeed(F, dF),
     DuplicatedNoNeed(u, du),
@@ -135,7 +135,7 @@ Enzyme.autodiff(
 )
 
 ####### Divergence
-my_f = _get_enz_div!(_backend, setup)
+my_divergence! = _get_enz_div!(_backend, setup)
 
 nreps = 1000
 # Speed test
@@ -148,7 +148,7 @@ _, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:nrep
     local d = rand(T, (N, N))
     local u = random_field(setup, T(0))
     local z = Enzyme.make_zero(d)
-    my_f(d, u, z)
+    my_divergence!(d, u, z)
 end
 
 # Compare the execution times and the memory allocations
@@ -164,7 +164,7 @@ for i = 1:nreps
     d0 = copy(d)
     IncompressibleNavierStokes.divergence!(d, u, setup)
     local z = Enzyme.make_zero(d)
-    my_f(d0, u, z)
+    my_divergence!(d0, u, z)
     @assert d == d0
 end
 
@@ -177,7 +177,7 @@ z = Enzyme.make_zero(d)
 dz = Enzyme.make_zero(z)
 Enzyme.autodiff(
     Enzyme.Reverse,
-    Const(my_f),
+    my_divergence!,
     Const,
     DuplicatedNoNeed(d, dd),
     DuplicatedNoNeed(u, du),
@@ -185,7 +185,7 @@ Enzyme.autodiff(
 )
 
 ####### Pressure solver
-my_f = _get_enz_psolver!(setup)
+my_psolver! = _get_enz_psolver!(setup)
 INSpsolver! = IncompressibleNavierStokes.psolver_direct(setup);
 
 nreps = 1000
@@ -200,7 +200,7 @@ _, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:nrep
     local d = rand(T, (N, N))
     local ft = rand(T, n * n + 1)
     local pt = rand(T, n * n + 1)
-    my_f(p, d, ft, pt)
+    my_psolver!(p, d, ft, pt)
 end
 
 # Compare the execution times and the memory allocations
@@ -217,7 +217,7 @@ for i = 1:nreps
     local pt = rand(T, n * n + 1)
     p0 = copy(p)
     INSpsolver!(p, d)
-    my_f(p0, d, ft, pt)
+    my_psolver!(p0, d, ft, pt)
     @assert p == p0
 end
 
@@ -232,7 +232,7 @@ dft = Enzyme.make_zero(ft);
 dpt = Enzyme.make_zero(pt);
 Enzyme.autodiff(
     Enzyme.Reverse,
-    my_f,
+    my_psolver!,
     Const,
     DuplicatedNoNeed(p, dp),
     DuplicatedNoNeed(d, dd),
@@ -241,7 +241,7 @@ Enzyme.autodiff(
 )
 
 ####### applypressure
-my_f = _get_enz_applypressure!(_backend, setup);
+my_applypressure! = _get_enz_applypressure!(_backend, setup);
 
 nreps = 1000;
 # Speed test
@@ -253,7 +253,7 @@ end
 _, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:nreps
     local u = random_field(setup, T(0))
     local p = rand(T, (N, N))
-    my_f(u, p)
+    my_applypressure!(u, p)
 end
 
 # Compare the execution times and the memory allocations
@@ -268,7 +268,7 @@ for i = 1:nreps
     local p = rand(T, (N, N))
     u0 = copy.(u)
     IncompressibleNavierStokes.applypressure!(u, p, setup)
-    my_f(u0, p)
+    my_applypressure!(u0, p)
     @assert u == u0
 end
 
@@ -279,7 +279,7 @@ du = Enzyme.make_zero(u)
 dp = Enzyme.make_zero(p)
 Enzyme.autodiff(
     Enzyme.Reverse,
-    Const(my_f),
+    my_applypressure!,
     Const,
     DuplicatedNoNeed(u, du),
     DuplicatedNoNeed(p, dp),
