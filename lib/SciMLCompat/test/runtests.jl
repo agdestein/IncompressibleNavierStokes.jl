@@ -17,6 +17,17 @@ using Test
     end
 end
 
+@testset "Force" begin
+    @test try
+        include("test_force.jl")
+        true
+    catch e
+        println("Error: ", e)
+        Base.show_backtrace(stderr, catch_backtrace())
+        false
+    end
+end
+
 @testset "SciMLCompat" begin
     @test try
         include("test_SciMLCompat.jl")

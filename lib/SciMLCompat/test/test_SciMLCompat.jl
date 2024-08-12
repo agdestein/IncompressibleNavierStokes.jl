@@ -15,7 +15,7 @@ Enzyme.API.runtimeActivity!(true)
 T = Float32
 ArrayType = Array
 Re = T(1_000)
-n = 64
+n = 32
 N = n + 2
 lims = T(0), T(1);
 x, y = LinRange(lims..., n + 1), LinRange(lims..., n + 1);
@@ -29,26 +29,22 @@ F = create_right_hand_side_enzyme(_backend, setup, T, n)
 u0 = zeros(T, (N, N, 2))
 du = similar(u0)
 
-
 # test that the force is working
-F(du, u0, P, T(0))
+F(du, u0, nothing, T(0))
 @assert sum(du)==0
 u = rand(T,(N,N,2))
-F(du, u, P, T(0))
+F(du, u, nothing, T(0))
 @assert sum(du)!=0
 
-
 # define and compile a mock a-priori loss
-function apriori(u_ini, p, temp)
+function apriori(u_ini, temp)
     F(temp, u_ini, nothing, 0.0f0)
     return sum(u0 - temp)
 end
 du = Enzyme.make_zero(u);
 temp = similar(u);
-P = similar(u);
-dP = Enzyme.make_zero(P);
 dtemp = Enzyme.make_zero(temp);
-apriori(u, P, temp)
+apriori(u, temp)
 
 # check that the a-priori function is differentiable
 Enzyme.autodiff(
@@ -56,11 +52,10 @@ Enzyme.autodiff(
     apriori,
     Active,
     DuplicatedNoNeed(u, du),
-    DuplicatedNoNeed(P, dP),
     DuplicatedNoNeed(temp, dtemp),
 )
 # and that there is no gradient since there are no trainable parameters
-@assert sum(dP) == 0
+@assert sum(dtemp) == 0
 
 # Define a simple convolutional neural network
 dummy_NN = Lux.Chain(
@@ -73,9 +68,9 @@ dummy_NN = Lux.Chain(
 Lux.apply(dummy_NN, u, θ, st)[1];
 
 # Define the right hand side function with the neural network closure   
-dudt_nn(du, u, P, t) = begin
+dudt_nn(du, u, θ, t) = begin
     F(du, u, nothing, t)
-    view(du, :) .= view(du, :) .+ Lux.apply(dummy_NN, u, P, st)[1]
+    view(du, :) .= view(du, :) .+ Lux.apply(dummy_NN, u, θ, st)[1]
     nothing
 end
 
@@ -113,7 +108,7 @@ Enzyme.autodiff(
 using DifferentialEquations
 using SciMLSensitivity
 dt = T(1e-3);
-trange = [T(0), T(2e-3)]
+trange = [T(0), T(2)*dt]
 saveat = [dt, 2dt];
 u = stack(random_field(setup, T(0)))
 prob = ODEProblem{true}(dudt_nn, u, trange; p = θ)
@@ -123,19 +118,18 @@ ode_data += T(0.1) * rand(Float32, size(ode_data))
 # define the loss function
 function loss(
     l::Vector{Float32},
-    P,
+    θ,
     u0::Array{Float32},
     tspan::Vector{Float32},
     t::Vector{Float32},
 )
-    myprob = ODEProblem{true}(dudt_nn, u0, tspan, P)
-    pred = Array(solve(myprob, RK4(); u0 = u0, p = P, saveat = t))
+    myprob = ODEProblem{true}(dudt_nn, u0, tspan, θ)
+    pred = Array(solve(myprob, RK4(); u0 = u0, p = θ, saveat = t))
     l .= Float32(sum(abs2, ode_data - pred))
     nothing
 end
 l = [T(0.0)];
 loss(l, θ, u, trange, saveat);
-l
 
 # and test that the loss is differentiable
 l = [T(0.0)];

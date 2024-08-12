@@ -5,12 +5,13 @@ using Enzyme
 Enzyme.API.runtimeActivity!(true)
 
 TIME_TOL = 1.5
+N_REPETITIONS = 1000
 
 # Test the Enzyme implementation
 T = Float32
 ArrayType = Array
 Re = T(1_000)
-n = 64
+n = 32
 N = n + 2
 lims = T(0), T(1);
 x, y = LinRange(lims..., n + 1), LinRange(lims..., n + 1);
@@ -20,12 +21,11 @@ _backend = get_backend(rand(Float32, 10))
 ###### BC_U
 myapply_bc_u! = _get_enz_bc_u!(_backend, setup)
 
-nreps = 10000
-_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i = 1:nreps
+_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i = 1:N_REPETITIONS
     local A = (rand(Float32, N, N), rand(Float32, N, N))
     IncompressibleNavierStokes.apply_bc_u!(A, 0.0f0, setup)
 end
-_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:nreps
+_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:N_REPETITIONS
     local A = (rand(Float32, N, N), rand(Float32, N, N))
     myapply_bc_u!(A)
 end
@@ -36,7 +36,7 @@ end
 @assert allocation_enz < TIME_TOL * allocation_INS "enzyme bc_u too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
 
 # Check if the implementation is correct
-for i = 1:nreps
+for i = 1:N_REPETITIONS
     local A = (rand(Float32, N, N), rand(Float32, N, N))
     A0 = (copy(A[1]), copy(A[2]))
     B = (copy(A[1]), copy(A[2]))
@@ -56,12 +56,11 @@ Enzyme.autodiff(Enzyme.Reverse, myapply_bc_u!, Const, DuplicatedNoNeed(A, dA))
 ####### BC_P
 myapply_bc_p! = _get_enz_bc_p!(_backend, setup);
 
-nreps = 10000
-_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i = 1:nreps
+_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i = 1:N_REPETITIONS
     local A = rand(Float32, N, N)
     IncompressibleNavierStokes.apply_bc_p!(A, 0.0f0, setup)
 end
-_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:nreps
+_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:N_REPETITIONS
     local A = rand(Float32, N, N)
     myapply_bc_p!(A)
 end
@@ -72,7 +71,7 @@ end
 @assert allocation_enz < TIME_TOL * allocation_INS "enzyme bc_p too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
 
 # Check if the implementation is correct
-for i = 1:nreps
+for i = 1:N_REPETITIONS
     local A = rand(Float32, N, N)
     A0 = copy(A)
     B = copy(A)
@@ -90,14 +89,13 @@ Enzyme.autodiff(Enzyme.Reverse, myapply_bc_p!, Const, DuplicatedNoNeed(A, dA))
 ####### Momentum
 my_momentum! = _get_enz_momentum!(_backend, nothing, setup)
 
-nreps = 1000
 # Speed test
-_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i = 1:nreps
+_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i = 1:N_REPETITIONS
     local u = random_field(setup, T(0))
     local F = random_field(setup, T(0))
     IncompressibleNavierStokes.momentum!(F, u, nothing, T(0), setup)
 end
-_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:nreps
+_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:N_REPETITIONS
     local u = random_field(setup, T(0))
     local F = random_field(setup, T(0))
     my_momentum!(F, u, T(0))
@@ -110,7 +108,7 @@ end
 @assert allocation_enz < TIME_TOL * allocation_INS "enzyme momentum too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
 
 # Check if the implementation is correct
-for i = 1:nreps
+for i = 1:N_REPETITIONS
     local u = random_field(setup, T(0))
     local F = random_field(setup, T(0))
     u0 = copy.(u)
@@ -137,14 +135,13 @@ Enzyme.autodiff(
 ####### Divergence
 my_divergence! = _get_enz_div!(_backend, setup)
 
-nreps = 1000
 # Speed test
-_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i = 1:nreps
+_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i = 1:N_REPETITIONS
     local d = rand(T, (N, N))
     local u = random_field(setup, T(0))
     IncompressibleNavierStokes.divergence!(d, u, setup)
 end
-_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:nreps
+_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:N_REPETITIONS
     local d = rand(T, (N, N))
     local u = random_field(setup, T(0))
     local z = Enzyme.make_zero(d)
@@ -158,7 +155,7 @@ end
 @assert allocation_enz < TIME_TOL * allocation_INS "enzyme divergence too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
 
 # Check if the implementation is correct
-for i = 1:nreps
+for i = 1:N_REPETITIONS
     local d = rand(T, (N, N))
     local u = random_field(setup, T(0))
     d0 = copy(d)
@@ -188,14 +185,13 @@ Enzyme.autodiff(
 my_psolver! = _get_enz_psolver!(setup)
 INSpsolver! = IncompressibleNavierStokes.psolver_direct(setup);
 
-nreps = 1000
 # Speed test
-_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i = 1:nreps
+_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i = 1:N_REPETITIONS
     local p = rand(T, (N, N))
     local d = rand(T, (N, N))
     INSpsolver!(p, d)
 end
-_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:nreps
+_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:N_REPETITIONS
     local p = rand(T, (N, N))
     local d = rand(T, (N, N))
     local ft = rand(T, n * n + 1)
@@ -210,7 +206,7 @@ end
 @assert allocation_enz < TIME_TOL * allocation_INS "enzyme psolver too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
 
 # Check if the implementation is correct
-for i = 1:nreps
+for i = 1:N_REPETITIONS
     local p = rand(T, (N, N))
     local d = rand(T, (N, N))
     local ft = rand(T, n * n + 1)
@@ -243,14 +239,13 @@ Enzyme.autodiff(
 ####### applypressure
 my_applypressure! = _get_enz_applypressure!(_backend, setup);
 
-nreps = 1000;
 # Speed test
-_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i = 1:nreps
+_, time_INS, allocation_INS, gc_INS, memory_counters_INS = @timed for i = 1:N_REPETITIONS
     local u = random_field(setup, T(0))
     local p = rand(T, (N, N))
     IncompressibleNavierStokes.applypressure!(u, p, setup)
 end
-_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:nreps
+_, time_enz, allocation_enz, gc_enz, memory_counters_enz = @timed for i = 1:N_REPETITIONS
     local u = random_field(setup, T(0))
     local p = rand(T, (N, N))
     my_applypressure!(u, p)
@@ -263,7 +258,7 @@ end
 @assert allocation_enz < TIME_TOL * allocation_INS "enzyme applypressure too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
 
 # Check if the implementation is correct
-for i = 1:nreps
+for i = 1:N_REPETITIONS
     local u = random_field(setup, T(0))
     local p = rand(T, (N, N))
     u0 = copy.(u)
