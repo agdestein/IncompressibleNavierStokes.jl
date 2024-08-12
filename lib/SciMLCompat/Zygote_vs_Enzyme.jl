@@ -29,7 +29,9 @@ _backend = get_backend(rand(Float32, 10))
 F = create_right_hand_side_enzyme(_backend, setup)
 
 # define the variables
+u0 = rand(T,(N,N,2))
 u = rand(T,(N,N,2))
+temp = similar(u);
 
 # Define a simple convolutional neural network
 dummy_NN = Lux.Chain(
@@ -51,23 +53,22 @@ dudt_nn(du, u, P, t) = begin
     nothing
 end
 
-dudt_nn(du, u, P, T(0))
-@assert sum(du)!=0
+dudt_nn(temp, u, P, T(0))
 
 # define and compile a mock a-priori loss with the neural network
-function l_apriori(l, u_ini, p, temp)
-    dudt_nn(temp, u_ini, p, 0.0f0)
+function l_apriori(l, u_ini, p, temp, t)
+    dudt_nn(temp, u_ini, p, t)
     l .= Float32(sum(u0 - temp))
     nothing
 end
 du = Enzyme.make_zero(u);
 dP = Enzyme.make_zero(P);
-temp = similar(u);
 dtemp = Enzyme.make_zero(temp);
 l = [T(0)]
-l_apriori(l, u, P, temp)
+l_apriori(l, u, P, temp, 0)
 l
 
+Enzyme.autodiff(Enzyme.Reverse, l_apriori, DuplicatedNoNeed([T(0)], [T(1)]), DuplicatedNoNeed(u, du), DuplicatedNoNeed(P, dP), DuplicatedNoNeed(temp, dtemp), Const(0))
 
 extra_par = [u, temp, du, dtemp, dP, P];
 function loss_gradient(G, extra_par) 
@@ -76,7 +77,7 @@ function loss_gradient(G, extra_par)
     # Reset gradient to zero
     Enzyme.make_zero!(dP)
     # And remember to pass the seed to the loss funciton with the dual part set to 1
-    Enzyme.autodiff(Enzyme.Reverse, l_apriori, DuplicatedNoNeed([T(0)], [T(1)]), DuplicatedNoNeed(u0, du), DuplicatedNoNeed(P, dP), DuplicatedNoNeed(temp, dtemp))
+    Enzyme.autodiff(Enzyme.Reverse, l_apriori, DuplicatedNoNeed([T(0)], [T(1)]), DuplicatedNoNeed(u0, du0), DuplicatedNoNeed(P, dP), DuplicatedNoNeed(temp, dtemp))
     # The gradient matters only for theta
     G .= dP.θ
     nothing
@@ -85,6 +86,12 @@ end
 # Trigger the gradient
 G = copy(dP.θ);
 oo = loss_gradient(G, extra_par)
+
+
+
+
+
+
 
 #### Test the compatibility with the Optimisation ecosystem
 
@@ -128,6 +135,8 @@ result_e, time_e, alloc_e, gc_e, mem_e = @timed Optimization.solve(optprob,
     OptimizationOptimisers.Adam(0.05),
     callback = callback,
     maxiters = 10)
+
+
 
 
 

@@ -23,7 +23,7 @@ setup = Setup(x, y; Re, ArrayType);
 _backend = get_backend(rand(Float32, 10))
 
 # Create the right hand side function
-F = create_right_hand_side_enzyme(_backend, setup)
+F = create_right_hand_side_enzyme(_backend, setup, T, n)
 
 # define the variables
 u0 = zeros(T, (N, N, 2))
