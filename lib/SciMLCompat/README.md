@@ -10,7 +10,7 @@ The tests showcase how the implementations can be used.
 From this directory, run:
 
 ```sh
-julia setup.jl
+julia --project setup.jl
 ```
 
 ## Run the tests
@@ -24,7 +24,8 @@ julia --project test/runtests.jl
 Option 2:
 
 ```sh
-julia --project 
+julia --project setup.jl
+julia --project
 ]
 test
 ```

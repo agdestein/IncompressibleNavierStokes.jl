@@ -67,7 +67,7 @@ function create_right_hand_side_enzyme(_backend, setup)
         u_view = eachslice(u; dims = 3)
         F = eachslice(p.f; dims = 3)
         e_bc_u!(u_view)
-        e_momentum!(F, u_view, t )
+        e_momentum!(F, u_view, t)
         e_bc_u!(F)
         e_divergence!(p.div, F, p.p)
         @. p.div *= Ω
