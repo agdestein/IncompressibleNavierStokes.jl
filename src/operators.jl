@@ -105,9 +105,7 @@ ChainRulesCore.rrule(::typeof(divergence), u, setup) = (
     divergence(u, setup),
     φ -> (
         NoTangent(),
-        divergence_adjoint!(Tangent{typeof(u)}(similar.(u)...), φ, setup),
-        # FIXME: ChainRulesTest and Zygote require conflicting definitions here
-        # divergence_adjoint!(similar.(u), φ, setup),
+        Tangent{typeof(u)}(divergence_adjoint!(similar.(u), φ, setup)...),
         NoTangent(),
     ),
 )
@@ -452,10 +450,7 @@ ChainRulesCore.rrule(::typeof(convection), u, setup) = (
     convection(u, setup),
     φ -> (
         NoTangent(),
-        convection_adjoint!(Tangent{typeof(u)}(zero.(u)...), (φ...,), u, setup),
-        # FIXME: ChainRulesTest and Zygote require conflicting definitions here
-        # convection_adjoint!(zero.(u), (φ...,), u, setup),
-        # convection_adjoint!(zero.(φ), (φ...,), u, setup),
+        Tangent{typeof(u)}(convection_adjoint!(zero.(u), (φ...,), u, setup)...),
         NoTangent(),
     ),
 )
@@ -533,10 +528,7 @@ ChainRulesCore.rrule(::typeof(diffusion), u, setup) = (
     diffusion(u, setup),
     φ -> (
         NoTangent(),
-        diffusion_adjoint!(Tangent{typeof(u)}(zero.(u)...), (φ...,), setup),
-        # FIXME: ChainRulesTest and Zygote require conflicting definitions here
-        # diffusion_adjoint!(zero.(u), (φ...,), setup),
-        # diffusion_adjoint!(zero.(φ), (φ...,), setup),
+        Tangent{typeof(u)}(diffusion_adjoint!(zero.(u), (φ...,), setup)...),
         NoTangent(),
     ),
 )
@@ -578,8 +570,11 @@ end
 #
 # ChainRulesCore.rrule(::typeof(convectiondiffusion), u, setup) = (
 #     convection(u, setup),
-#     φ ->
-#         (NoTangent(), convectiondiffusion_adjoint!(similar.(u), φ, setup), NoTangent()),
+#     φ -> (
+#         NoTangent(),
+#         Tangent{typeof(u)}(convectiondiffusion_adjoint!(similar.(u), φ, setup)...),
+#         NoTangent(),
+#     ),
 # )
 
 """
@@ -911,7 +906,7 @@ end
 #     (error(); momentum(u, temp, t, setup)),
 #     φ -> (
 #         NoTangent(),
-#         momentum_pullback!(zero.(φ), φ, u, temp, t, setup),
+#         Tangent{typeof(u)}(momentum_pullback!(zero.(φ), φ, u, temp, t, setup)...),
 #         NoTangent(),
 #         NoTangent(),
 #     ),
