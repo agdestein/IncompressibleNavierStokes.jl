@@ -85,7 +85,7 @@ end
 # Check if it is differentiable
 A = rand(Float32, N, N);
 dA = Enzyme.make_zero(A);
-@timed Enzyme.autodiff(Enzyme.Reverse, Const(myapply_bc_p!), Const, DuplicatedNoNeed(A, dA))
+Enzyme.autodiff(Enzyme.Reverse, Const(myapply_bc_p!), Const, DuplicatedNoNeed(A, dA))
 
 ####### Momentum
 my_f = _get_enz_momentum!(_backend, nothing, setup)
@@ -125,7 +125,7 @@ u = random_field(setup, T(0))
 F = random_field(setup, T(0))
 du = Enzyme.make_zero(u)
 dF = Enzyme.make_zero(F)
-@timed Enzyme.autodiff(
+Enzyme.autodiff(
     Enzyme.Reverse,
     Const(my_f),
     Const,
@@ -175,7 +175,7 @@ u = random_field(setup, T(0))
 du = Enzyme.make_zero(u)
 z = Enzyme.make_zero(d)
 dz = Enzyme.make_zero(z)
-@timed Enzyme.autodiff(
+Enzyme.autodiff(
     Enzyme.Reverse,
     Const(my_f),
     Const,
@@ -230,7 +230,7 @@ dp = Enzyme.make_zero(p);
 dd = Enzyme.make_zero(d);
 dft = Enzyme.make_zero(ft);
 dpt = Enzyme.make_zero(pt);
-@timed Enzyme.autodiff(
+Enzyme.autodiff(
     Enzyme.Reverse,
     my_f,
     Const,
@@ -277,7 +277,7 @@ u = random_field(setup, T(0))
 p = rand(T, (N, N))
 du = Enzyme.make_zero(u)
 dp = Enzyme.make_zero(p)
-@timed Enzyme.autodiff(
+Enzyme.autodiff(
     Enzyme.Reverse,
     Const(my_f),
     Const,

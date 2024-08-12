@@ -212,7 +212,6 @@ function _cache_psolver(::Array, setup)
     isdefinite =
         any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
     if isdefinite
-        println("Definite")
         # No extra DOF
         T = Float64 # This is currently required for SuiteSparse LU
         ftemp = zeros(T, prod(Np))
@@ -220,7 +219,6 @@ function _cache_psolver(::Array, setup)
         viewrange = (:)
         fact = factorize(L)
     else
-        println("Indefinite")
         # With extra DOF
         ftemp = zeros(T, prod(Np) + 1)
         ptemp = zeros(T, prod(Np) + 1)
