@@ -1,3 +1,7 @@
+"Use function name only as test set name"
+test_rrule_named(f, args...; kwargs...) =
+    test_rrule(f, args...; testset_name = string(f), kwargs...)
+
 # @testset "Chain rules boundary conditions" begin
 #     T = Float64
 #     Re = T(1_000)
@@ -11,8 +15,8 @@
 #     u = random_field(setup, T(0))
 #     randn!.(u)
 #     p = randn!(similar(u[1]))
-#     test_rrule(apply_bc_u, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
-#     test_rrule(apply_bc_p, p, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+#     test_rrule_named(apply_bc_u, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+#     test_rrule_named(apply_bc_p, p, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
 # end;
 
 # Test chain rule correctness by comparing with finite differences
@@ -53,42 +57,28 @@ testchainrules(dim) = @testset "Chain rules $(dim())D" begin
     randn!.(u)
     p = randn!(similar(u[1]))
     temp = randn!(similar(u[1]))
-    @testset "Boundary conditions" begin
-        test_rrule(apply_bc_u, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
-        test_rrule(apply_bc_p, p, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
-        test_rrule(apply_bc_temp, temp, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
-    end
-    @testset "Divergence" begin
-        test_rrule(divergence, u, setup ⊢ NoTangent())
-    end
-    @testset "Pressure gradient" begin
-        test_rrule(pressuregradient, p, setup ⊢ NoTangent())
-    end
-    @testset "Poisson" begin
-        test_rrule(poisson, psolver ⊢ NoTangent(), p)
-    end
-    @testset "Convection" begin
-        test_rrule(convection, u, setup ⊢ NoTangent())
-    end
-    @testset "Diffusion" begin
-        test_rrule(diffusion, u, setup ⊢ NoTangent())
-    end
-    @testset "Bodyforce" begin
-        @test_broken 1 == 2 # Just to identify location for broken rrule test
-        # test_rrule(bodyforce, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
-    end
-    @testset "Gravity" begin
-        test_rrule(gravity, temp, setup ⊢ NoTangent())
-    end
-    @testset "Dissipation" begin
-        @test_broken 1 == 2 # Just to identify location for broken rrule test
-        # test_rrule(dissipation, u, setup ⊢ NoTangent())
-        # ChainRulesCore.rrule(dissipation, u, setup)[2](temp)[2][2]
-    end
-    @testset "Convection-diffusion-temperature" begin
-        @test_broken 1 == 2 # Just to identify location for broken rrule test
-        # test_rrule(convection_diffusion_temp, u, temp, setup ⊢ NoTangent())
-    end
+
+    # Tests
+    test_rrule_named(apply_bc_u, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+    test_rrule_named(apply_bc_p, p, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+    test_rrule_named(apply_bc_temp, temp, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+    test_rrule_named(divergence, u, setup ⊢ NoTangent())
+    test_rrule_named(pressuregradient, p, setup ⊢ NoTangent())
+    test_rrule_named(poisson, psolver ⊢ NoTangent(), p)
+    test_rrule_named(convection, u, setup ⊢ NoTangent())
+    test_rrule_named(diffusion, u, setup ⊢ NoTangent())
+
+    @test_broken 1 == 2 # Just to identify location for broken rrule test
+    # test_rrule_named(bodyforce, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+
+    test_rrule_named(gravity, temp, setup ⊢ NoTangent())
+
+    @test_broken 1 == 2 # Just to identify location for broken rrule test
+    # test_rrule_named(dissipation, u, setup ⊢ NoTangent())
+    # ChainRulesCore.rrule(dissipation, u, setup)[2](temp)[2][2]
+
+    @test_broken 1 == 2 # Just to identify location for broken rrule test
+    # test_rrule_named(convection_diffusion_temp, u, temp, setup ⊢ NoTangent())
 end
 
 testchainrules(IncompressibleNavierStokes.Dimension(2));
