@@ -51,7 +51,7 @@ dtemp = Enzyme.make_zero(temp);
 apriori(u, P, temp)
 
 # check that the a-priori function is differentiable
-@timed Enzyme.autodiff(
+Enzyme.autodiff(
     Enzyme.Reverse,
     apriori,
     Active,
@@ -98,7 +98,7 @@ dtemp = Enzyme.make_zero(temp);
 apriori_nn(u, θ, temp)
 
 # check that the a-priori function is differentiable
-@timed Enzyme.autodiff(
+Enzyme.autodiff(
     Enzyme.Reverse,
     apriori_nn,
     Active,
@@ -142,7 +142,7 @@ l = [T(0.0)];
 dl = Enzyme.make_zero(l) .+ T(1);
 dθ = Enzyme.make_zero(θ);
 du = Enzyme.make_zero(u);
-@timed Enzyme.autodiff(
+Enzyme.autodiff(
     Enzyme.Reverse,
     loss,
     DuplicatedNoNeed(l, dl),

@@ -18,7 +18,6 @@ create_right_hand_side(setup, psolver) = function right_hand_side(u, p, t)
     F = INS.apply_bc_u(F, t, setup; dudt = true)
     PF = INS.project(F, setup; psolver)
     PF = INS.apply_bc_u(PF, t, setup; dudt = true)
-    PF = INS.apply_bc_u(PF, t, setup; dudt = true)
     stack(PF)
 end
 
@@ -37,11 +36,8 @@ function create_right_hand_side_inplace(setup, psolver)
         u = eachslice(u; dims = ndims(u))
         INS.apply_bc_u!(u, t, setup)
         INS.momentum!(F, u, nothing, t, setup)
-        INS.apply_bc_u!(u, t, setup)
-        INS.momentum!(F, u, nothing, t, setup)
         INS.apply_bc_u!(F, t, setup; dudt = true)
         INS.project!(F, setup; psolver, div, p)
-        INS.apply_bc_u!(F, t, setup; dudt = true)
         INS.apply_bc_u!(F, t, setup; dudt = true)
         for α = 1:D
             dudt[ntuple(Returns(:), D)..., α] .= F[α]
