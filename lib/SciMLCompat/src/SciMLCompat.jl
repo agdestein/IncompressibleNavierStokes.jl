@@ -18,6 +18,7 @@ create_right_hand_side(setup, psolver) = function right_hand_side(u, p, t)
     F = INS.apply_bc_u(F, t, setup; dudt = true)
     PF = INS.project(F, setup; psolver)
     PF = INS.apply_bc_u(PF, t, setup; dudt = true)
+    PF = INS.apply_bc_u(PF, t, setup; dudt = true)
     stack(PF)
 end
 
@@ -36,8 +37,11 @@ function create_right_hand_side_inplace(setup, psolver)
         u = eachslice(u; dims = ndims(u))
         INS.apply_bc_u!(u, t, setup)
         INS.momentum!(F, u, nothing, t, setup)
+        INS.apply_bc_u!(u, t, setup)
+        INS.momentum!(F, u, nothing, t, setup)
         INS.apply_bc_u!(F, t, setup; dudt = true)
         INS.project!(F, setup; psolver, div, p)
+        INS.apply_bc_u!(F, t, setup; dudt = true)
         INS.apply_bc_u!(F, t, setup; dudt = true)
         for α = 1:D
             dudt[ntuple(Returns(:), D)..., α] .= F[α]
@@ -69,22 +73,6 @@ function create_right_hand_side_enzyme(_backend, setup, T, n)
     ft=zeros(T,n*n+1)
     pt=zeros(T,n*n+1)
 
-    #function F_ip(du, u, p, t) 
-    #    u_view = eachslice(u; dims = 3)
-    #    F = eachslice(p.f; dims = 3)
-    #    e_bc_u!(u_view)
-    #    e_momentum!(F, u_view, t )
-    #    e_bc_u!(F)
-    #    e_divergence!(p.div, F, p.p)
-    #    @. p.div *= Ω
-    #    e_psolve!(p.p, p.div, p.ft, p.pt)
-    #    e_bc_p!(p.p)
-    #    e_applypressure!(F, p.p)
-    #    e_bc_u!(F)
-    #    du[:,:,1] .= F[1]
-    #    du[:,:,2] .= F[2]
-    #    nothing
-    #end;
     function F_ip(du, u, param, t) 
         u_view = eachslice(u; dims = 3)
         F = eachslice(f; dims = 3)
