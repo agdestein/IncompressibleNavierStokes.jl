@@ -5,6 +5,8 @@
 push!(LOAD_PATH, joinpath(@__DIR__, ".."))
 
 using Test
+using Random
+Random.seed!(42)
 
 @testset "enzyme" begin
     @test try

@@ -1,10 +1,8 @@
 using IncompressibleNavierStokes
 using SciMLCompat
-using KernelAbstractions
-using ComponentArrays
 using Lux
+using ComponentArrays
 using Random
-Random.seed!(123);
 rng = Random.default_rng();
 using Enzyme
 Enzyme.API.runtimeActivity!(true)
@@ -31,10 +29,10 @@ du = similar(u0)
 
 # test that the force is working
 F(du, u0, nothing, T(0))
-@assert sum(du)==0
-u = rand(T,(N,N,2))
+@test sum(du) == 0
+u = rand(T, (N, N, 2))
 F(du, u, nothing, T(0))
-@assert sum(du)!=0
+@test sum(du) != 0
 
 # define and compile a mock a-priori loss
 function apriori(u_ini, temp)
@@ -55,7 +53,7 @@ Enzyme.autodiff(
     DuplicatedNoNeed(temp, dtemp),
 )
 # and that there is no gradient since there are no trainable parameters
-@assert sum(dtemp) == 0
+@test sum(dtemp) == 0
 
 # Define a simple convolutional neural network
 dummy_NN = Lux.Chain(
@@ -76,10 +74,10 @@ end
 
 # test that the force is working
 dudt_nn(du, u0, θ, T(0))
-@assert sum(du) == 0
+@test sum(du) == 0
 u = rand(T, (N, N, 2))
 dudt_nn(du, u, θ, T(0))
-@assert sum(du) != 0
+@test sum(du) != 0
 
 # define and compile a mock a-priori loss with the neural network
 function apriori_nn(u_ini, p, temp)
@@ -102,13 +100,13 @@ Enzyme.autodiff(
     DuplicatedNoNeed(temp, dtemp),
 )
 # and check that the gradient is not zero
-@assert sum(dθ) != 0
+@test sum(dθ) != 0
 
 ###### Test the compatibility with the SciML ecosystem
 using DifferentialEquations
 using SciMLSensitivity
 dt = T(1e-3);
-trange = [T(0), T(2)*dt]
+trange = [T(0), T(2) * dt]
 saveat = [dt, 2dt];
 u = stack(random_field(setup, T(0)))
 prob = ODEProblem{true}(dudt_nn, u, trange; p = θ)
@@ -146,7 +144,7 @@ Enzyme.autodiff(
     Const(saveat),
 )
 # check the gradient
-@assert sum(dθ) != 0
+@test sum(dθ) != 0
 
 #### Test the compatibility with the Optimisation ecosystem
 using Optimization
