@@ -3,7 +3,6 @@
 # We consider the following methods:
 # * `IncompressibleNavierStokes.jl`
 # * SciML, scpecifically `DifferentialEquations.jl`
-# * `CoupledNODE.jl`: an in-house wrapper for SciML neural closures.
 
 # Setup and initial condition
 using GLMakie
@@ -32,7 +31,7 @@ saveat = savevery * dt;
             setup, nupdate = 10, displayfig = false,
             plot = INS.energy_history_plot),
         anim = INS.animator(;
-            setup, path = "./simulations/NavierStokes_2D/plots/vorticity_INS.mkv",
+            setup, path = "./lib/SciMLCompat/plots/vorticity_INS.mkv",
             nupdate = savevery),
         #espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 10),
         field = INS.fieldsaver(; setup, nupdate = savevery),
@@ -98,32 +97,18 @@ sol_ode, time_ode, allocation_ode, gc_ode, memory_counters_ode = @timed solve(
 # Out of place: `53.804647 seconds (8.36 M allocations: 84.888 GiB, 2.96% gc time)`
 # `67.595735 seconds (7.18 M allocations: 85.174 GiB, 2.06% gc time)``
 
-# ## CNODE
-import DiffEqFlux: NeuralODE
-import CoupledNODE: create_f_CNODE
-f_dns = create_f_CNODE((F_op,); is_closed = false);
-import Random, Lux;
-Random.seed!(123);
-rng = Random.default_rng();
-θ_dns, st_dns = Lux.setup(rng, f_dns);
-
-# Define the problem and solve it
-dns = NeuralODE(f_dns, trange, RK4(), p=myfull_cache, adaptive = false, dt = dt, saveat = saveat);
-p=myfull_cache
-sol_node, time_node, allocation_node, gc_node, memory_counters_node = @timed dns(stack(ustart), θ_dns, st_dns)[1];
-
 # ## Comparison
 # Bar plots comparing: time, memory allocation, and number of garbage collections (GC).
 import Plots
-p1 = Plots.bar(["INS", "SciML", "CNODE"], [time_ins, time_ode, time_node],
+p1 = Plots.bar(["INS", "SciML"], [time_ins, time_ode],
     xlabel = "Method", ylabel = "Time (s)", title = "Time comparison", legend = false);
 #Memory allocation
-p2 = Plots.bar(["INS", "SciML", "CNODE"],
-    [memory_counters.allocd, memory_counters_ode.allocd, memory_counters_node.allocd],
+p2 = Plots.bar(["INS", "SciML"],
+    [memory_counters.allocd, memory_counters_ode.allocd],
     xlabel = "Method", ylabel = "Memory (bytes)",
     title = "Memory comparison", legend = false);
 #Garbage collections
-p3 = Plots.bar(["INS", "SciML", "CNODE"], [gc, gc_ode, gc_node], xlabel = "Method",
+p3 = Plots.bar(["INS", "SciML"], [gc, gc_ode], xlabel = "Method",
     ylabel = "Number of GC", title = "GC comparison", legend = false);
 
 Plots.plot(p1, p2, p3, layout = (3, 1), size = (600, 800))
@@ -131,36 +116,24 @@ Plots.plot(p1, p2, p3, layout = (3, 1), size = (600, 800))
 # ### Plots: final state of $u$
 using Plots
 p1 = Plots.heatmap(title = "\$u\$ SciML ODE", sol_ode.u[end][:, :, 1], ticks = false);
-p2 = Plots.heatmap(title = "\$u\$ SciML CNODE", sol_node.u[end][:, :, 1], ticks = false);
 p3 = Plots.heatmap(title = "\$u\$ INS", state.u[1], ticks = false);
 p4 = Plots.heatmap(title = "\$u_{INS}-u_{ODE}\$",
     state.u[1] - sol_ode.u[end][:, :, 1], ticks = false);
-p5 = Plots.heatmap(title = "\$u_{INS}-u_{CNODE}\$",
-    state.u[1] - sol_node.u[end][:, :, 1], ticks = false);
-p6 = Plots.heatmap(title = "\$u_{CNODE}-u_{ODE}\$",
-    sol_node.u[end][:, :, 1] - sol_ode.u[end][:, :, 1], ticks = false);
-Plots.plot(p1, p2, p3, p4, p5, p6, layout = (2, 3), size = (900, 600), ticks = false)
+Plots.plot(p1, p3, p4, layout = (1, 3), size = (900, 600), ticks = false)
 
 # ### Plots: vorticity
 vins = INS.vorticity((state.u[1], state.u[2]), setup)
 vode = INS.vorticity((sol_ode.u[end][:, :, 1], sol_ode.u[end][:, :, 2]), setup)
-vnode = INS.vorticity((sol_node.u[end][:, :, 1], sol_node.u[end][:, :, 2]), setup)
 vor_lims = (-5, 5)
 diff_lims = (-0.4, 0.4)
 
 p1 = Plots.heatmap(title = "\$\\omega\$ SciML ODE", vode,
     color = :viridis, ticks = false, clims = vor_lims);
-p2 = Plots.heatmap(title = "\$\\omega\$ in SciML CNODE", vnode,
-    color = :viridis, ticks = false, clims = vor_lims);
 p3 = Plots.heatmap(title = "vorticity \$(\\omega)\$ in INS", vins,
     color = :viridis, ticks = false, clims = vor_lims);
 p4 = Plots.heatmap(title = "\$\\omega_{INS}-\\omega_{ODE}\$",
     vins - vode, clim = diff_lims, ticks = false);
-p5 = Plots.heatmap(title = "\$\\omega_{INS}-\\omega_{CNODE}\$",
-    vins - vnode, clim = diff_lims, ticks = false);
-p6 = Plots.heatmap(title = "\$\\omega_{CNODE}-\\omega_{ODE}\$",
-    vode - vnode, ticks = false, clim = (0, 0.2));
-Plots.plot(p1, p2, p3, p4, p5, p6, layout = (2, 3), size = (900, 600))
+Plots.plot(p1, p3, p4, layout = (1, 3), size = (900, 600))
 
 # ### Divergence:
 
@@ -184,12 +157,7 @@ for (idx, (t, u)) in enumerate(zip(sol_ode.t, sol_ode.u))
         ticks = false, size = (600, 600), clims = (-max_div_ode, max_div_ode))
     frame(anim, fig)
 end
-gif(anim, "simulations/NavierStokes_2D/plots/divergence_SciML.gif", fps = 15)
-
-# CNODE
-u_last_node = (sol_node.u[end][:, :, 1], sol_node.u[end][:, :, 2]);
-div_node = INS.divergence(u_last_node, setup)
-maximum(abs.(div_node))
+gif(anim, "lib/SciMLCompat/plots/divergence_SciML.gif", fps = 15)
 
 # **Conclusion:** While IncompressibleNavierStokes.jl guarantees a $\nabla \cdot u =0$ the other methods do not.
 
@@ -228,9 +196,9 @@ function animation_plots(; variable = "vorticity")
         frame(anim, fig)
     end
     if variable == "vorticity"
-        gif(anim, "simulations/NavierStokes_2D/plots/vorticity_SciML.gif", fps = 15)
+        gif(anim, "lib/SciMLCompat/plots/vorticity_SciML.gif", fps = 15)
     else
-        gif(anim, "simulations/NavierStokes_2D/plots/velocity_SciML.gif", fps = 15)
+        gif(anim, "lib/SciMLCompat/plots/velocity_SciML.gif", fps = 15)
     end
 end
 
@@ -250,7 +218,7 @@ for idx in 1:Int(ceil(trange[end] / saveat))
         aspect_ratio = :equal, ticks = false, size = (600, 600))
     frame(anim, fig)
 end
-gif(anim, "simulations/NavierStokes_2D/plots/u_INS-SciML.gif", fps = 15)
+gif(anim, "lib/SciMLCompat/plots/u_INS-SciML.gif", fps = 15)
 
 # ### Different initial conditions
 t_range_bench = (T(0), T(1))
@@ -307,6 +275,7 @@ maximum(abs.(div_INS_1))
 u_last_ode_1 = (sol_ode_1.u[end][:, :, 1], sol_ode_1.u[end][:, :, 2]);
 div_ode_1 = INS.divergence(u_last_ode_1, setup)
 max_div_ode_1 = maximum(abs.(div_ode_1))
+
 # The divergence of SciML solutin is large no matter: 
 # - how big the time step is. Tried (1e-3, 1e-4, 1e-5, 1e-6) and got the same value, being even larger for 1e-2.
 # - the solver used. Tried RK4 and Tsit5 and got the same value.
