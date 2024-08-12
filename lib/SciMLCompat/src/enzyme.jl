@@ -1,4 +1,3 @@
-
 """ 
 This module wraps some of the functions of the IncompressibleNavierStokes module
 in order to make them compatible with Enzyme AD.
@@ -18,7 +17,7 @@ struct Offset{D} end
 @inline (::Offset{D})(α) where {D} = CartesianIndex(ntuple(β -> β == α ? 1 : 0, D))
 
 """
-    __get_enz_bc_u!(_backend, setup)
+    _get_enz_bc_u!(_backend, setup)
 
 This function is used to precompile the function that applies the boundary conditions on u.
 It wraps everything such that the only thing that has to be passed from outside is the u array.
