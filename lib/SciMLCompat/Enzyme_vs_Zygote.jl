@@ -25,13 +25,9 @@ x , y = LinRange(lims..., n + 1), LinRange(lims..., n + 1);
 setup = Setup(x, y; Re, ArrayType);
 _backend = get_backend(rand(Float32, 10))
 
-# Create the right hand side function
-F = create_right_hand_side_enzyme(_backend, setup)
-
 # define the variables
 u0 = rand(T,(N,N,2))
 u = rand(T,(N,N,2))
-temp = similar(u);
 
 # Define a simple convolutional neural network
 dummy_NN = Lux.Chain(
@@ -39,21 +35,32 @@ dummy_NN = Lux.Chain(
     Lux.Conv((3, 3), 2 => 2, pad=(1, 1), stride=(1, 1)),
     x -> view(x, :),  
 )
-θ0, st = Lux.setup(rng, dummy_NN)
-θ = ComponentArray(θ0)
-P = ComponentArray(f=zeros(T, (N,N,2)),div=zeros(T,(N,N)), p=zeros(T,(N,N)), ft=zeros(T,n*n+1), pt=zeros(T,n*n+1), θ=copy(θ))
-@assert eltype(P)==T
-Lux.apply(dummy_NN, u, P.θ, st)[1];
+θ, st = Lux.setup(rng, dummy_NN)
+θ = ComponentArray(θ)
+Lux.apply(dummy_NN, u, θ, st)[1];
 
+# Zygote force
+F_op = create_right_hand_side(setup, INS.psolver_direct(setup))
+
+# Create the right hand side function
+F = create_right_hand_side_enzyme(_backend, setup)
 
 # Define the right hand side function with the neural network closure   
-dudt_nn(du, u, P, t) = begin 
-    F(du, u, P, t) 
-    view(du, :) .= view(du, :) .+ Lux.apply(dummy_NN, u, P.θ , st)[1]
+dudt_nn(u, θ, t) = begin 
+    F_op(u, θ, t) .+ Lux.apply(dummy_NN, u, θ , st)[1]
     nothing
 end
 
-dudt_nn(temp, u, P, T(0))
+dudt_nn(u, θ, T(0))
+
+
+
+# from here ....
+# 
+
+
+
+
 
 # define and compile a mock a-priori loss with the neural network
 function l_apriori(l, u_ini, p, temp, t)
