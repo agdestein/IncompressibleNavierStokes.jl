@@ -196,7 +196,7 @@ for i = 1:N_REPETITIONS
     p0 = copy(p)
     INSpsolver!(p, d)
     my_psolver!(p0, d, ft, pt)
-    @test isapprox(p, p0; rtol=1e-6, atol=1e-6)
+    @test isapprox(p, p0; rtol = 1e-6, atol = 1e-6)
 end
 
 # Speed test

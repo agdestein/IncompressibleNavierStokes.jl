@@ -5,7 +5,7 @@ in order to make them compatible with Enzyme AD.
 There are also some tests to check if the redefined functions are faster than the original ones and if they are differentiable.
 """
 
-using IncompressibleNavierStokes 
+using IncompressibleNavierStokes
 using SparseArrays
 using LinearAlgebra
 using KernelAbstractions
@@ -41,7 +41,7 @@ function _get_enz_bc_u!(_backend, setup)
         u[α][I+(N[β]-1)*e(β)] = u[α][I+e(β)]
     end
 
-    function bc_u!(u, β; isright, )
+    function bc_u!(u, β; isright)
         ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
         if isright
             for α = 1:D
@@ -52,24 +52,21 @@ function _get_enz_bc_u!(_backend, setup)
                 _bc_a!(_backend, workgroupsize)(u, Val(α), Val(β); ndrange)
             end
         end
-        
     end
 
-    function bc(u)
+    bc(u) =
         for β = 1:D
             bc_u!(u, β; isright = false)
             bc_u!(u, β; isright = true)
         end
-    end
 end
-
 
 """
     _get_enz_bc_p!(_backend, setup)
 
 This function is used to precompile the function that applies the boundary conditions on p.
 """
-function _get_enz_bc_p!(_backend, setup) 
+function _get_enz_bc_p!(_backend, setup)
     (; boundary_conditions, grid, workgroupsize) = setup
     (; dimension, N) = grid
     D = dimension()
@@ -77,7 +74,7 @@ function _get_enz_bc_p!(_backend, setup)
     for β = 1:D
         @assert boundary_conditions[β][1] isa PeriodicBC "Only PeriodicBC implemented"
     end
-    
+
     function bc_p!(p, β; isright)
         @kernel function _bc_a(p, ::Val{β}) where {β}
             I = @index(Global, Cartesian)
@@ -95,12 +92,11 @@ function _get_enz_bc_p!(_backend, setup)
         end
     end
 
-    function bc!(p)
+    bc!(p) =
         for β = 1:D
             bc_p!(p, β; isright = false)
             bc_p!(p, β; isright = true)
         end
-    end
 end
 
 """
@@ -110,7 +106,7 @@ This function is used to precompile the momentum function.
 The bodyforce is not yet implemented, while the gravity 
 is implemented in the IncompressibleNavierStokes module (but not tested here).
 """
-function _get_enz_momentum!(_backend, temp, setup) 
+function _get_enz_momentum!(_backend, temp, setup)
     (; grid, bodyforce, workgroupsize, Re) = setup
     (; dimension, Nu, Iu, Δ, Δu, A) = grid
     D = dimension()
@@ -119,7 +115,17 @@ function _get_enz_momentum!(_backend, temp, setup)
         e = Offset{D}()
         ν = 1 / Re
         (; Δ, Δu, A) = grid
-        @kernel function cd!(F, u, ::Val{α}, ::Val{βrange}, I0, Δu, Δ, ν, A) where {α,βrange}
+        @kernel function cd!(
+            F,
+            u,
+            ::Val{α},
+            ::Val{βrange},
+            I0,
+            Δu,
+            Δ,
+            ν,
+            A,
+        ) where {α,βrange}
             I = @index(Global, Cartesian)
             I = I + I0
             KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
@@ -141,17 +147,30 @@ function _get_enz_momentum!(_backend, temp, setup)
             for α = 1:D
                 I0 = first(Iu[α])
                 I0 -= oneunit(I0)
-                cd!(_backend, workgroupsize)(F, u, Val(α), Val(1:D), I0, Δu, Δ, ν, A; ndrange = Nu[α])
+                cd!(_backend, workgroupsize)(
+                    F,
+                    u,
+                    Val(α),
+                    Val(1:D),
+                    I0,
+                    Δu,
+                    Δ,
+                    ν,
+                    A;
+                    ndrange = Nu[α],
+                )
             end
             nothing
         end
     end
-    function get_bodyforce!(F, u, setup)
-        @error "Not implemented"
-    end
+    get_bodyforce!(F, u, setup) = @error "Not implemented"
     convectiondiffusion! = get_convectiondiffusion!()
-    bodyforce! = isnothing(bodyforce) ? (F,u,t)->nothing : (F,u,t)->get_bodyforce!(F, u, setup)
-    gravity! = isnothing(temp) ? (F,temp,setup)->nothing : (F,temp,setup)->IncompressibleNavierStokes.gravity!(F, temp, setup)
+    bodyforce! =
+        isnothing(bodyforce) ? (F, u, t) -> nothing :
+        (F, u, t) -> get_bodyforce!(F, u, setup)
+    gravity! =
+        isnothing(temp) ? (F, temp, setup) -> nothing :
+        (F, temp, setup) -> IncompressibleNavierStokes.gravity!(F, temp, setup)
     function momentum!(F, u, t)
         for α = 1:D
             F[α] .= 0
@@ -163,7 +182,6 @@ function _get_enz_momentum!(_backend, temp, setup)
     end
 end
 
-
 """
     _get_enz_div!(_backend, setup)
 
@@ -172,7 +190,7 @@ In particular, it precompiles Δ inside the function such that Enzyme does not t
 Also, the automatic differentiations requires a cache d to be preallocated and passed as an argument, on top of div.
 """
 
-function _get_enz_div!(_backend, setup) 
+function _get_enz_div!(_backend, setup)
     (; grid, workgroupsize) = setup
     (; dimension, Δ, Ip, Np) = grid
     D = dimension()
@@ -195,8 +213,6 @@ function _get_enz_div!(_backend, setup)
         nothing
     end
 end
-
-
 
 """
     _cache_psolver(grid, setup)
@@ -248,7 +264,6 @@ function _get_enz_psolver!(setup)
         nothing
     end
 end
-
 
 """
     _get_enz_applypressure!(_backend, setup)

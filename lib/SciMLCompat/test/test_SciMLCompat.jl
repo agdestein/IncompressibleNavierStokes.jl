@@ -157,7 +157,7 @@ function loss_gradient(G, θ, extra_par)
     # [!] Notice that we are updating P.θ in-place in the loss function
     # Reset gradient to zero
     Enzyme.make_zero!(dθ)
-    # And remember to pass the seed to the loss funciton with the dual part set to 1
+    # And remember to pass the seed to the loss function with the dual part set to 1
     Enzyme.autodiff(
         Enzyme.Reverse,
         loss,

@@ -54,22 +54,22 @@ To do so, it has to precompile and wrap all the intermediate operations
 as explained more in detail in enzyme.jl.
 """
 function create_right_hand_side_enzyme(_backend, setup, T, n)
-    e_bc_u! = _get_enz_bc_u!(_backend, setup);
-    e_bc_p! = _get_enz_bc_p!(_backend, setup);
-    e_momentum! = _get_enz_momentum!(_backend, nothing, setup);
-    e_divergence! = _get_enz_div!(_backend, setup);
-    e_psolve! = _get_enz_psolver!(setup);
-    e_applypressure! = _get_enz_applypressure!(_backend, setup);
-    Ω = setup.grid.Ω;
-    
-    N = n+2
-    f=zeros(T, (N,N,2))
-    div=zeros(T,(N,N))
-    p=zeros(T,(N,N))
-    ft=zeros(T,n*n+1)
-    pt=zeros(T,n*n+1)
+    e_bc_u! = _get_enz_bc_u!(_backend, setup)
+    e_bc_p! = _get_enz_bc_p!(_backend, setup)
+    e_momentum! = _get_enz_momentum!(_backend, nothing, setup)
+    e_divergence! = _get_enz_div!(_backend, setup)
+    e_psolve! = _get_enz_psolver!(setup)
+    e_applypressure! = _get_enz_applypressure!(_backend, setup)
+    Ω = setup.grid.Ω
 
-    function F_ip(du, u, param, t) 
+    N = n + 2
+    f = zeros(T, (N, N, 2))
+    div = zeros(T, (N, N))
+    p = zeros(T, (N, N))
+    ft = zeros(T, n * n + 1)
+    pt = zeros(T, n * n + 1)
+
+    function F_ip(du, u, param, t)
         u_view = eachslice(u; dims = 3)
         F = eachslice(f; dims = 3)
         e_bc_u!(u_view)
@@ -81,12 +81,20 @@ function create_right_hand_side_enzyme(_backend, setup, T, n)
         e_bc_p!(p)
         e_applypressure!(F, p)
         e_bc_u!(F)
-        du[:,:,1] .= F[1]
-        du[:,:,2] .= F[2]
+        du[:, :, 1] .= F[1]
+        du[:, :, 2] .= F[2]
         nothing
-    end;
+    end
 end
 
-export create_right_hand_side, create_right_hand_side_inplace, create_right_hand_side_enzyme, _get_enz_bc_u!, _get_enz_bc_p!, _get_enz_momentum!, _get_enz_div!, _get_enz_psolver!, _get_enz_applypressure!
+export create_right_hand_side,
+    create_right_hand_side_inplace,
+    create_right_hand_side_enzyme,
+    _get_enz_bc_u!,
+    _get_enz_bc_p!,
+    _get_enz_momentum!,
+    _get_enz_div!,
+    _get_enz_psolver!,
+    _get_enz_applypressure!
 
 end
