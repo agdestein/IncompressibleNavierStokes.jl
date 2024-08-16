@@ -15,6 +15,7 @@ lims = T(0), T(1)
 x, y = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
 setup = INS.Setup(x, y; Re, ArrayType);
 ustart = INS.random_field(setup, T(0));
+u0 = stack(ustart)
 psolver = INS.psolver_spectral(setup);
 dt = T(1e-3)
 trange = (T(0), T(10))
@@ -45,63 +46,37 @@ _, time_ins, allocation, gc, memory_counters = @timed INS.solve_unsteady(;
 
 # ## SciML
 # ### Projected force for SciML
-import DifferentialEquations: ODEProblem, solve, RK4
-## create some cache variables so that we do not have to allocate them at every time step
-F = similar(stack(ustart));
-cache_F = (F[:, :, 1], F[:, :, 2]);
-cache_div = INS.divergence(ustart, setup);
-cache_p = INS.pressure(ustart, nothing, 0.0f0, setup; psolver);
-cache_out = similar(F);
 
 # * Right-hand-side out-of-place
-function F_op(u, p=p, t = nothing)
-    u = eachslice(u; dims = 3)
-    INS.apply_bc_u!(u, t, setup)
-    INS.momentum!(p[1], u, nothing, t, setup)
-    INS.apply_bc_u!(p[1], t, setup; dudt = true)
-    INS.project!(p[1], setup; psolver=p[4], div=p[2], p=p[3])
-    INS.apply_bc_u!(p[1], t, setup; dudt = true)
-    return stack(p[1])
-end
-
-# Test the forces
-myfull_cache = (cache_F, cache_div, cache_p, psolver)
-F_op(stack(ustart), myfull_cache, 0.0f0); #Requires `stack(u)` to create one array
-prob_op = ODEProblem(F_op, stack(ustart), trange);
+import SciMLCompat: create_right_hand_side
+F_op = create_right_hand_side(setup, psolver)
 
 # * Right-hand-side in-place
-function F_ip(du, u, p, t = nothing)
-    u_view = eachslice(u; dims = 3)
-    INS.apply_bc_u!(u_view, t, setup)
-    INS.momentum!(p[1], u_view, nothing, t, setup)
-    INS.apply_bc_u!(p[1], t, setup; dudt = true)
-    INS.project!(p[1], setup; psolver=p[4], div=p[2], p=p[3])
-    INS.apply_bc_u!(p[1], t, setup; dudt = true)
-    du[:, :, 1] = p[1][1]
-    du[:, :, 2] = p[1][2]
-end
-
-temp = similar(stack(ustart))
-F_ip(temp, stack(ustart), myfull_cache, 0.0f0);
+import SciMLCompat: create_right_hand_side_inplace
+F_ip = create_right_hand_side_inplace(setup, psolver)
 
 # Solve the ODE using `ODEProblem`. We use `RK4` (Runge-Kutta 4th order) because this same method is used in `IncompressibleNavierStokes.jl`.
-prob = ODEProblem{true}(F_ip, stack(ustart), trange);
-sol_ode, time_ode, allocation_ode, gc_ode, memory_counters_ode = @timed solve(
-    prob, p = myfull_cache, RK4(); dt = dt, saveat = saveat, adaptive=false);
+import DifferentialEquations: ODEProblem, solve, RK4
+prob_op = ODEProblem(F_op, u0, trange);
+prob = ODEProblem{true}(F_ip, u0, trange);
 
 # Test the difference between in-place and out-of-place definitions
-@time sol = solve(prob, p = myfull_cache, RK4(); dt = dt, saveat = saveat);
-# In place: `46.664913 seconds (8.02 M allocations: 500.621 MiB, 0.07% gc time)`
-# `60.610772 seconds (6.84 M allocations: 452.611 MiB, 0.05% gc time)`
-@time sol = solve(prob_op, p = myfull_cache, RK4(); dt = dt, saveat = saveat);
-# Out of place: `53.804647 seconds (8.36 M allocations: 84.888 GiB, 2.96% gc time)`
-# `67.595735 seconds (7.18 M allocations: 85.174 GiB, 2.06% gc time)``
+@time solve(prob_op, RK4(); dt = dt, saveat = saveat);
+# Out of place: `64.082666 seconds (9.87 M allocations: 148.160 GiB, 4.25% gc time)`
+# `65.306065 seconds (13.11 M allocations: 148.372 GiB, 3.76% gc time, 3.20% compilation time)`
+@time solve(prob, RK4(); dt = dt, saveat = saveat);
+# In place: `45.684604 seconds (8.14 M allocations: 503.659 MiB, 0.09% gc time)`
+# `46.027974 seconds (8.20 M allocations: 507.999 MiB, 0.03% gc time, 0.08% compilation time)`
+
+# Get timed solution to compare.
+sol_ode, time_ode, allocation_ode, gc_ode, memory_counters_ode = @timed solve(
+    prob, RK4(); dt = dt, saveat = saveat, adaptive=false);
 
 # ## Comparison
 # Bar plots comparing: time, memory allocation, and number of garbage collections (GC).
 import Plots
 p1 = Plots.bar(["INS", "SciML"], [time_ins, time_ode],
-    xlabel = "Method", ylabel = "Time (s)", title = "Time comparison", legend = false);
+    xlabel = "Method", ylabel = "Time (s)", title = "Time comparison", legend = false, series_annotations=[time_ins, time_ode]);
 #Memory allocation
 p2 = Plots.bar(["INS", "SciML"],
     [memory_counters.allocd, memory_counters_ode.allocd],
@@ -167,7 +142,7 @@ gif(anim, "lib/SciMLCompat/plots/divergence_SciML.gif", fps = 15)
 let
     (; Iu) = setup.grid
     i = 1
-    #obs = Observable(sol.u[1][Iu[i], i])
+    #obs = Observable(sol_ode.u[1][Iu[i], i])
     obs = Observable(INS.vorticity((sol_ode.u[1][:, :, 1], sol_ode.u[1][:, :, 2]), setup))
     fig = GLMakie.heatmap(obs, colorrange = vor_lims)
     fig |> display
@@ -220,46 +195,14 @@ for idx in 1:Int(ceil(trange[end] / saveat))
 end
 gif(anim, "lib/SciMLCompat/plots/u_INS-SciML.gif", fps = 15)
 
-# ### Different initial conditions
-t_range_bench = (T(0), T(1))
-function bench_INS(ustart)
-    INS.solve_unsteady(; setup, ustart, tlims = t_range_bench, Δt = dt)
-end
-
-function bench_ode(u0)
-    prob = ODEProblem{true}(F_ip, stack(u0), t_range_bench)
-    solve(prob, RK4(); dt = dt, saveat = saveat, adaptive=false)
-end
-
-using Statistics
-total_diff, avg_diff, rel_error = [], [], [];
-samples = 1:100;
-for _ in samples
-    ustart = INS.random_field(setup, T(0))
-    state, _ = bench_INS(ustart)
-    sol_ode = bench_ode(ustart)
-    push!(total_diff, sum(abs.(state.u[1] - sol_ode.u[end][:, :, 1])))
-    push!(avg_diff, mean(abs.(state.u[1] - sol_ode.u[end][:, :, 1])))
-    #push!(rel_error, mean(abs.((state.u[1] - sol_ode.u[end][:, :, 1])/state.u[1]))) # zero division
-end
-
-Plots.histogram(total_diff, bins = 20, label = "Total error",
-    xlabel = "\$\\sum(|u_{INS}-u_{ODE}|)\$")
-Plots.histogram(avg_diff, bins = 20, label = "Mean absolute error",
-    xlabel = "\$\\langle |u_{INS}-u_{ODE}|\\rangle \$")
-
 # ## Testing
-dt_1= T(1e-3)
+dt_1= T(1e-2)
 trange_1 = (T(0), dt_1)
 state_1, outputs_1 = INS.solve_unsteady(; setup, ustart, tlims = trange_1, Δt = dt_1)
 
 import DifferentialEquations: Tsit5
-prob_1 = ODEProblem{true}(F_ip, stack(ustart), trange_1);
-sol_ode_1 = solve(prob_1, p = myfull_cache, Tsit5(); dt = dt_1, saveat = dt_1, adaptive=false);
-
-sol_ode_1.u[1] == stack(ustart) #first element is the initial condition
-size(sol_ode_1.u[end][:, :, 1])
-size(state_1.u[1])
+prob_1 = ODEProblem{true}(F_ip, u0, trange_1);
+sol_ode_1 = solve(prob_1, Tsit5(); dt = dt_1, saveat = dt_1, adaptive=false);
 
 # the difference between the solutions is not zero but is very little:
 sol_ode_1.u[end][:, :, 1] == state_1.u[1]
@@ -276,6 +219,6 @@ u_last_ode_1 = (sol_ode_1.u[end][:, :, 1], sol_ode_1.u[end][:, :, 2]);
 div_ode_1 = INS.divergence(u_last_ode_1, setup)
 max_div_ode_1 = maximum(abs.(div_ode_1))
 
-# The divergence of SciML solutin is large no matter: 
+# The divergence of SciML solution is large no matter: 
 # - how big the time step is. Tried (1e-3, 1e-4, 1e-5, 1e-6) and got the same value, being even larger for 1e-2.
-# - the solver used. Tried RK4 and Tsit5 and got the same value.
+# - the solver used. Tried `RK4` and `Tsit5` and got the same value.
