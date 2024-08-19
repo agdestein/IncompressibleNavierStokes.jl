@@ -47,9 +47,9 @@ snapshot files using the `save_vtk` function, or the full time series using the
 <table>
     <tbody>
         <tr>
-            <td style="width: 25%;"><a href="examples/Actuator2D.jl"><video autoplay loop src="docs/src/public/Actuator2D.mp4"></video></a></td>
+            <td style="width: 25%;"><a href="examples/Actuator2D.jl"><video autoplay controls loop src="docs/src/public/Actuator2D.mp4"></video></a></td>
             <td style="width: 25%;"><a href="examples/BackwardFacingStep2D.jl"><img src="docs/src/public/BackwardFacingStep2D.png"></a></td>
-            <td style="width: 25%;"><a href="examples/DecayingTurbulence2D.jl"><video autoplay loop src="docs/src/public/DecayingTurbulence2D.mp4"></video></a></td>
+            <td style="width: 25%;"><a href="examples/DecayingTurbulence2D.jl"><video autoplay controls loop src="docs/src/public/DecayingTurbulence2D.mp4"></video></a></td>
             <td style="width: 25%;"><a href="examples/TaylorGreenVortex2D.jl"><img src="docs/src/public/TaylorGreenVortex2D.png"></a></td>
         </tr>
         <tr>
@@ -71,9 +71,9 @@ snapshot files using the `save_vtk` function, or the full time series using the
             <td align="center">Taylor-Green vortex (3D)</td>
         </tr>
         <tr>
-            <td style="width: 25%;"><a href="examples/RayleighBenard2D.jl"><video autoplay loop src="docs/src/public/RayleighBenard2D.mp4"></video></a></td>
-            <td style="width: 25%;"><a href="examples/RayleighBenard3D.jl"><video autoplay loop src="docs/src/public/RayleighBenard3D.mp4"></video></a></td>
-            <td style="width: 25%;"><a href="examples/RayleighTaylor2D.jl"><video autoplay loop src="docs/src/public/RayleighTaylor2D.mp4"></video></a></td>
+            <td style="width: 25%;"><a href="examples/RayleighBenard2D.jl"><video autoplay controls loop src="docs/src/public/RayleighBenard2D.mp4"></video></a></td>
+            <td style="width: 25%;"><a href="examples/RayleighBenard3D.jl"><video autoplay controls loop src="docs/src/public/RayleighBenard3D.mp4"></video></a></td>
+            <td style="width: 25%;"><a href="examples/RayleighTaylor2D.jl"><video autoplay controls loop src="docs/src/public/RayleighTaylor2D.mp4"></video></a></td>
             <td style="width: 25%;">
               <!-- <a href="examples/RayleighTaylor3D.jl"><img src="docs/src/public/RayleighTaylor3D.png"></a> -->
             </td>
@@ -144,10 +144,6 @@ solve_unsteady(;
     ),
 )
 ```
-
-The resulting animation is shown below.
-
-https://github.com/agdestein/IncompressibleNavierStokes.jl/assets/40632532/6ee09a03-1674-46e0-843c-000f0b9b9527
 
 ## Similar projects
 
