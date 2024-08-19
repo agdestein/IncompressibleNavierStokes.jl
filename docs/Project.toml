@@ -16,3 +16,8 @@ IncompressibleNavierStokes = "0.6"
 Literate = "2"
 NeuralClosure = "0.1"
 julia = "1.9"
+
+[sources]
+Examples = {path = "../examples"}
+IncompressibleNavierStokes = {path = ".."}
+NeuralClosure = {path = "../lib/NeuralClosure"}
