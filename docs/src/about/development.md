@@ -32,7 +32,7 @@ Then changes to the IncompressibleNavierStokes modules are detected and reloaded
 
 To keep dependencies sparse, there are multiple `Project.toml` files in this
 repository, specifying environments. For example, the
-[`docs`](https://github.com/agdestein/IncompressibleNavierStokes.jl/blob/main/docs/Project.toml)
+[docs](https://github.com/agdestein/IncompressibleNavierStokes.jl/blob/main/docs/Project.toml)
 environment contains packages that are required to build documentation, but not
 needed to run the simulations.
 To add local packages to an environment and be detectable by Revise, they need
