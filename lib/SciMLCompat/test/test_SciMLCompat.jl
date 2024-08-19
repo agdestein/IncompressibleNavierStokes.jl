@@ -154,7 +154,6 @@ using Optimisers
 extra_par = [u, trange, saveat, du, dθ];
 function loss_gradient(G, θ, extra_par)
     u0, trange, saveat, du0, dθ = extra_par
-    # [!] Notice that we are updating P.θ in-place in the loss function
     # Reset gradient to zero
     Enzyme.make_zero!(dθ)
     # And remember to pass the seed to the loss function with the dual part set to 1
