@@ -72,9 +72,7 @@ snapshot files using the `save_vtk` function, or the full time series using the
         </tr>
         <tr>
             <td style="width: 25%;"><a href="examples/RayleighBenard2D.jl"><video autoplay loop src="docs/src/public/RayleighBenard2D.mp4"></video></a></td>
-            <td style="width: 25%;">
-              <!-- <a href="examples/RayleighBenard3D.jl"><img src="docs/src/public/RayleighBenard3D.png"></a> -->
-            </td>
+            <td style="width: 25%;"><a href="examples/RayleighBenard3D.jl"><video autoplay loop src="docs/src/public/RayleighBenard3D.mp4"></video></a></td>
             <td style="width: 25%;"><a href="examples/RayleighTaylor2D.jl"><video autoplay loop src="docs/src/public/RayleighTaylor2D.mp4"></video></a></td>
             <td style="width: 25%;">
               <!-- <a href="examples/RayleighTaylor3D.jl"><img src="docs/src/public/RayleighTaylor3D.png"></a> -->
@@ -84,21 +82,12 @@ snapshot files using the `save_vtk` function, or the full time series using the
             <td align="center">Rayleigh-Bénard (2D)</td>
             <td align="center">Rayleigh-Bénard (3D)</td>
             <td align="center">Rayleigh-Taylor (2D)</td>
-            <td align="center">Rayleigh-Taylor (3D)</td>
+            <!-- <td align="center">Rayleigh-Taylor (3D)</td> -->
         </tr>
     </tbody>
 </table>
 
-
-IncompressibleNavierStokes also supports adding a temperature equation.
-
-https://github.com/agdestein/IncompressibleNavierStokes.jl/assets/40632532/a264054b-641f-4bd4-b25c-693b9794e41d
-
 ## Demo
-
-The following example code using a negative body force on a small rectangle
-with an unsteady inflow. It simulates a wind turbine (actuator) under varying
-wind conditions.
 
 Make sure to have the `GLMakie` and `IncompressibleNavierStokes` installed:
 
