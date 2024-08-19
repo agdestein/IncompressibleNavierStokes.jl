@@ -44,11 +44,51 @@ The velocity and pressure fields may be visualized in a live session using
 snapshot files using the `save_vtk` function, or the full time series using the
 `VTKWriter` processor.
 
-| ![](assets/examples/Actuator2D.png) | ![](assets/examples/BackwardFacingStep2D.png) | ![](assets/examples/DecayingTurbulence2D.png) | ![](assets/examples/TaylorGreenVortex2D.png) |
-|:-:|:-:|:-:|:-:|
-| [Actuator (2D)](examples/Actuator2D.jl) | [Backward Facing Step (2D)](examples/BackwardFacingStep2D.jl) | [Decaying Turbulence (2D)](examples/DecayingTurbulence2D.jl) | [Taylor-Green Vortex (2D)](examples/TaylorGreenVortex2D.jl) |
-| ![](assets/examples/Actuator3D.png) | ![](assets/examples/BackwardFacingStep3D.png) | ![](assets/examples/DecayingTurbulence3D.png) | ![](assets/examples/TaylorGreenVortex3D.png) |
-| [Actuator (3D)](examples/Actuator3D.jl) | [Backward Facing Step (3D)](examples/BackwardFacingStep3D.jl) | [Decaying Turbulence (3D)](examples/DecayingTurbulence3D.jl) | [Taylor-Green Vortex (3D)](examples/TaylorGreenVortex3D.jl) |
+<table>
+    <tbody>
+        <tr>
+            <td style="width: 25%;"><a href="examples/Actuator2D.jl"><video autoplay loop src="docs/src/public/Actuator2D.mp4"></video></a></td>
+            <td style="width: 25%;"><a href="examples/BackwardFacingStep2D.jl"><img src="docs/src/public/BackwardFacingStep2D.png"></a></td>
+            <td style="width: 25%;"><a href="examples/DecayingTurbulence2D.jl"><video autoplay loop src="docs/src/public/DecayingTurbulence2D.mp4"></video></a></td>
+            <td style="width: 25%;"><a href="examples/TaylorGreenVortex2D.jl"><img src="docs/src/public/TaylorGreenVortex2D.png"></a></td>
+        </tr>
+        <tr>
+            <td align="center">Actuator (2D)</td>
+            <td align="center">Backward facing step (2D)</td>
+            <td align="center">Decaying turbulence (2D)</td>
+            <td align="center">Taylor-Green vortex (2D)</td>
+        </tr>
+        <tr>
+            <td style="width: 25%;"><a href="examples/Actuator3D.jl"><img src="docs/src/public/Actuator3D.png"></a></td>
+            <td style="width: 25%;"><a href="examples/BackwardFacingStep3D.jl"><img src="docs/src/public/BackwardFacingStep3D.png"></a></td>
+            <td style="width: 25%;"><a href="examples/DecayingTurbulence3D.jl"><img src="docs/src/public/DecayingTurbulence3D.png"></a></td>
+            <td style="width: 25%;"><a href="examples/TaylorGreenVortex3D.jl"><img src="docs/src/public/TaylorGreenVortex3D.png"></a></td>
+        </tr>
+        <tr>
+            <td align="center">Actuator (3D)</td>
+            <td align="center">Backward facing step (3D)</td>
+            <td align="center">Decaying turbulence (3D)</td>
+            <td align="center">Taylor-Green vortex (3D)</td>
+        </tr>
+        <tr>
+            <td style="width: 25%;"><a href="examples/RayleighBenard2D.jl"><video autoplay loop src="docs/src/public/RayleighBenard2D.mp4"></video></a></td>
+            <td style="width: 25%;">
+              <!-- <a href="examples/RayleighBenard3D.jl"><img src="docs/src/public/RayleighBenard3D.png"></a> -->
+            </td>
+            <td style="width: 25%;"><a href="examples/RayleighTaylor2D.jl"><video autoplay loop src="docs/src/public/RayleighTaylor2D.mp4"></video></a></td>
+            <td style="width: 25%;">
+              <!-- <a href="examples/RayleighTaylor3D.jl"><img src="docs/src/public/RayleighTaylor3D.png"></a> -->
+            </td>
+        </tr>
+        <tr>
+            <td align="center">Rayleigh-Bénard (2D)</td>
+            <td align="center">Rayleigh-Bénard (3D)</td>
+            <td align="center">Rayleigh-Taylor (2D)</td>
+            <td align="center">Rayleigh-Taylor (3D)</td>
+        </tr>
+    </tbody>
+</table>
+
 
 IncompressibleNavierStokes also supports adding a temperature equation.
 
@@ -73,46 +113,45 @@ Then run run the following code to make a short animation:
 using GLMakie
 using IncompressibleNavierStokes
 
-# A 2D grid is a Cartesian product of two vectors
-n = 40
-x = LinRange(0.0, 10.0, 5n + 1)
-y = LinRange(-2.0, 2.0, 2n + 1)
-
-# Boundary conditions
-boundary_conditions = (
-    # Inlet, outlet
-    (
-        # Unsteady BC requires time derivatives
-        DirichletBC(
-            (dim, x, y, t) -> sin(π / 6 * sin(π / 6 * t) + π / 2 * (dim() == 1)),
-            (dim, x, y, t) ->
-                (π / 6)^2 *
-                cos(π / 6 * t) *
-                cos(π / 6 * sin(π / 6 * t) + π / 2 * (dim() == 1)),
+# Setup
+setup = Setup(
+    tanh_grid(0.0, 2.0, 200, 1.2),
+    tanh_grid(0.0, 1.0, 100, 1.2);
+    boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
+    temperature = temperature_equation(;
+        Pr = 0.71,
+        Ra = 1e7,
+        Ge = 1.0,
+        boundary_conditions = (
+            (SymmetricBC(), SymmetricBC()),
+            (DirichletBC(1.0), DirichletBC(0.0)),
         ),
-        PressureBC(),
     ),
-
-    # Sides
-    (PressureBC(), PressureBC()),
 )
 
-# Actuator body force: A thrust coefficient distributed over a thin rectangle
-inside(x, y) = abs(x - 2.0) ≤ 0.055 && abs(y) ≤ 0.5
-bodyforce(dim, x, y, t) = dim() == 1 && inside(x, y) ? -1.82 : 0.0
+# Initial conditions
+U0(dim, x, y) = zero(x)
+T0(x, y) = 1 / 2 + sinpi(30 * x) / 100
+ustart = create_initial_conditions(setup, U0)
+tempstart = IncompressibleNavierStokes.apply_bc_temp(T0.(setup.grid.xp[1], setup.grid.xp[2]'), 0.0, setup)
 
-# Build setup and assemble operators
-setup = Setup(x, y; Re = 100.0, boundary_conditions, bodyforce);
-
-# Initial conditions (extend inflow)
-ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0);
-
-# Solve unsteady Navier-Stokes equations
+# Solve equation
 solve_unsteady(;
-    setup, ustart, tlims = (0.0, 48.0), Δt = 0.05,
-    processors = (
-        anim = animator(; setup, path = "vorticity.mp4", nupdate = 4),
-        log = timelogger(),
+    setup,
+    ustart,
+    tempstart,
+    tlims = (0.0, 30.0),
+    Δt = 0.02,
+    processors = (;
+        anim = animator(;
+            setup,
+            path = "temperature.mp4",
+            fieldname = :temperature,
+            colorrange = (0.0, 1.0),
+            size = (900, 500),
+            colormap = :seaborn_icefire_gradient,
+            nupdate = 5,
+        ),
     ),
 )
 ```
