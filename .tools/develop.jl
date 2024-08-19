@@ -1,5 +1,7 @@
 # Develop all environments in the project
 
+using Pkg
+
 envs = (
     ".",
     "lib/NeuralClosure",
@@ -16,5 +18,6 @@ root = joinpath(@__DIR__, "..")
 
 for e in envs
     e = joinpath(root, e)
-    run(`julia --project=$e setup.jl'`)
+    Pkg.activate(e)
+    Pkg.instantiate()
 end

@@ -10,10 +10,6 @@
 # The learned CNN parameters are also saved.
 
 # ## Load packages
-#
-# Note: Run `setup.jl` to install and load all required packages.
-# `IncompressibleNavierStokes` and `NeuralClosure` are local packages
-# that need to be `Pkg.develop`ed. This is done in the `setup.jl` script.
 
 using Adapt
 using GLMakie
