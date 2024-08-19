@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1'
+          - 'pre'
         os:
           - ubuntu-latest
         arch:
@@ -39,21 +39,19 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
       # - uses: julia-actions/julia-buildpkg@v1
-      - name: Build packages
-        run: |
-          julia --color=yes setup.jl
-          julia --color=yes lib/NeuralClosure/setup.jl
       - name: Test IncompressibleNavierStokes
         shell: julia --color=yes {0}
         run: |
             using Pkg
             Pkg.activate(".")
+            Pkg.instantiate()
             Pkg.test(; coverage=true)
       - name: Test NeuralClosure
         shell: julia --color=yes {0}
         run: |
             using Pkg
             Pkg.activate("lib/NeuralClosure")
+            Pkg.instantiate()
             Pkg.test(; coverage=true)
       # - uses: julia-actions/julia-runtest@v1
       #   with:

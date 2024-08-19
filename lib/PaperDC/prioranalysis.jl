@@ -6,10 +6,6 @@
 # - Compute quantities for different filters
 
 # ## Load packages
-#
-# Note: Run `setup.jl` to install and load all required packages.
-# `IncompressibleNavierStokes` and `NeuralClosure` are local packages
-# that need to be `Pkg.develop`ed. This is done in the `setup.jl` script.
 
 using CairoMakie
 using FFTW
