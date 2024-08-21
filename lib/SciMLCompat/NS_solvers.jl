@@ -5,11 +5,12 @@
 # * SciML, scpecifically `DifferentialEquations.jl`
 
 # Setup and initial condition
-using GLMakie
+using CairoMakie
 import IncompressibleNavierStokes as INS
 T = Float64
 ArrayType = Array
 Re = T(1_000)
+n = 128
 n = 256
 lims = T(0), T(1)
 x, y = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
