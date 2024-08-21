@@ -1,3 +1,9 @@
+# Here we show how to use the force from INS in SciML and how to train a simple model with a priori fitting.
+# We also leverage the compatibility with the Enzyme AD.
+
+# TLDR: Enzyme is faster than Zygote and eay to use for a-priori training.
+# [!] in the a-posteriori training, we point out some inefficiencies in the current implementation that could make the Enzyme AD even faster than this example.
+
 using CairoMakie
 using Optimization
 using OptimizationOptimisers
@@ -189,7 +195,7 @@ end
 
 # and train using Zygote
 callback = function (θ, l; doplot = false)
-    println(l)
+    println("Loss: ",l)
     return false
 end
 callback(θ_Z, loss_priori_Z(θ_Z))
@@ -300,7 +306,7 @@ result_priori_E, time_priori_E, alloc_priori_E, gc_priori_E, mem_priori_E = @tim
 p1=Plots.bar(["Zygote", "Enzyme"], [time_priori_Z, time_priori_E], xlabel = "Method", ylabel = "Time (s)", title = "Time comparison")
 p2=Plots.bar(["Zygote", "Enzyme"], [mem_priori_Z.allocd, mem_priori_E.allocd], xlabel = "Method", ylabel = "Memory (bytes)", title = "Memory comparison")
 p3=Plots.bar(["Zygote", "Enzyme"], [gc_priori_Z, gc_priori_E], xlabel = "Method", ylabel = "Number of GC", title = "GC comparison")
-Plots.plot(p1, p2, p3, layout=(3,1), size=(600, 800))
+Plots.plot(p1, p2, p3, layout=(3,1), size=(600, 800), suptitle = "A priori training")
 # and compare the total_loss at the end of the training
 function total_loss_Z(p)
     l = 0
@@ -329,147 +335,3 @@ tl_E = total_loss_E(θ_priori_E)
 
 # Compare the total loss
 Plots.bar(["(Random)", "Zygote", "Enzyme"], [tl0_E,tl_Z, tl_E], xlabel = "Method", ylabel = "Total Loss", title = "Total Loss comparison", yscale=:log10)
-
-########################
-# A posteriori
-########################
-using SciMLSensitivity
-# define the loss function
-nunroll = 5
-saveat_loss = [i*dt for i in 1:nunroll]
-tspan = [T(0), T(nunroll*dt)]
-function loss_posteriori_Z(p)
-    i0 = @Zygote.ignore rand(1:(length(saveat)-nunroll))
-    prob = ODEProblem(dudt_nn_Z, sol_les.u[i0], tspan, p)
-    pred = Array(solve(prob, RK4(); u0 = sol_les.u[i0], p = p, saveat = saveat_loss))
-    # remember to discard sol at i0
-    return T(sum(abs2, stack(sol_les.u[i0+1:i0+nunroll]) - pred))
-end
-
-callback(θ_Z, loss_posteriori_Z(θ_Z))
-
-optf = Optimization.OptimizationFunction((x,p)->loss_posteriori_Z(x), Optimization.AutoZygote()
-)
-optprob = Optimization.OptimizationProblem(optf, θ_Z)
-
-result_posteriori_Z, time_posteriori_Z, alloc_posteriori_Z, gc_posteriori_Z, mem_posteriori_Z = @timed Optimization.solve(
-    optprob,
-    OptimizationOptimisers.Adam(0.1),
-    callback = callback,
-    maxiters = 50,
-)
-θ_posteriori_Z = result_posteriori_Z.u
-
-
-# show (1) loss and (2) time comparing:
-#   - priori-Zygote 
-#   - priori-Enzyme
-#   - posteriori-Zygote
-#   - posteriori-Enzyme
-
-
-
-
-# from here ....
-# 
-
-
-
-# Define a posteriori loss function that calls the ODE solver
-# First, make a shorter run
-# and remember to set a small dt
-dt = T(1e-3);
-trange = [T(0), T(2e-3)]
-saveat = [dt, 2dt];
-u0stacked = stack(ustart);
-prob = ODEProblem{true}(dudt_nn, u0stacked, trange; p = P)
-ode_data = Array(solve(prob, RK4(); u0 = u0stacked, p = P, saveat = saveat))
-ode_data += T(0.1) * rand(Float32, size(ode_data))
-
-# the loss has to be in place 
-function loss(
-    l::Vector{Float32},
-    P,
-    u0::Array{Float32},
-    tspan::Vector{Float32},
-    t::Vector{Float32},
-)
-    myprob = ODEProblem{true}(dudt_nn, u0, tspan, P)
-    pred = Array(solve(myprob, RK4(); u0 = u0, p = P, saveat = t))
-    l .= Float32(sum(abs2, ode_data - pred))
-    nothing
-end
-l = [T(0.0)];
-loss(l, P, u0stacked, trange, saveat);
-l
-
-# Test if the loss can be autodiffed
-# [!] dl is called the 'seed' and it has to be marked to be one for correct gradient
-l = [T(0.0)];
-dl = Enzyme.make_zero(l) .+ T(1);
-dP = Enzyme.make_zero(P);
-du = Enzyme.make_zero(u0stacked);
-@timed Enzyme.autodiff(
-    Enzyme.Reverse,
-    loss,
-    DuplicatedNoNeed(l, dl),
-    DuplicatedNoNeed(P, dP),
-    DuplicatedNoNeed(u0stacked, du),
-    Const(trange),
-    Const(saveat),
-)
-dP.θ
-
-println("Now defining the gradient function")
-extra_par = [u0stacked, trange, saveat, du, dP, P];
-Textra = typeof(extra_par);
-function loss_gradient(G, extra_par)
-    u0, trange, saveat, du0, dP, P = extra_par
-    # [!] Notice that we are updating P.θ in-place in the loss function
-    # Reset gradient to zero
-    Enzyme.make_zero!(dP)
-    # And remember to pass the seed to the loss function with the dual part set to 1
-    Enzyme.autodiff(
-        Enzyme.Reverse,
-        loss,
-        DuplicatedNoNeed([T(0)], [T(1)]),
-        DuplicatedNoNeed(P, dP),
-        DuplicatedNoNeed(u0, du0),
-        Const(trange),
-        Const(saveat),
-    )
-    # The gradient matters only for theta
-    G .= dP.θ
-    nothing
-end
-
-# Trigger the gradient
-G = copy(dP.θ);
-oo = loss_gradient(G, extra_par)
-
-# This is to call loss using only P
-function over_loss(θ, p)
-    # Here we are updating P.θ in place
-    p.θ .= θ
-    loss(l, p, u0stacked, trange, saveat)
-    return l
-end
-callback = function (θ, l; doplot = false)
-    println(l)
-    return false
-end
-callback(P, over_loss(P.θ, P))
-
-using SciMLSensitivity, Optimization, OptimizationOptimisers, Optimisers
-optf = Optimization.OptimizationFunction(
-    (p, u) -> over_loss(p, u[end]);
-    grad = (G, p, e) -> loss_gradient(G, e),
-)
-optprob = Optimization.OptimizationProblem(optf, P.θ, extra_par)
-
-result_e, time_e, alloc_e, gc_e, mem_e = @timed Optimization.solve(
-    optprob,
-    OptimizationOptimisers.Adam(0.05),
-    callback = callback,
-    maxiters = 100,
-)
