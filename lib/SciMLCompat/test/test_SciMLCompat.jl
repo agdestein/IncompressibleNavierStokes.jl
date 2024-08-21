@@ -123,7 +123,7 @@ function loss(
 )
     myprob = ODEProblem{true}(dudt_nn, u0, tspan, θ)
     pred = Array(solve(myprob, RK4(); u0 = u0, p = θ, saveat = t))
-    l .= Float32(sum(abs2, ode_data - pred))
+    l .= T(sum(abs2, ode_data - pred))
     nothing
 end
 l = [T(0.0)];

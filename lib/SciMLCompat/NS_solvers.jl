@@ -7,7 +7,7 @@
 # Setup and initial condition
 using GLMakie
 import IncompressibleNavierStokes as INS
-T = Float32
+T = Float64
 ArrayType = Array
 Re = T(1_000)
 n = 256
@@ -82,6 +82,7 @@ prob = ODEProblem{true}(F_ip, u0, trange);
 sol_ode, time_ode, allocation_ode, gc_ode, memory_counters_ode =
     @timed solve(prob, RK4(); dt = dt, saveat = saveat, adaptive = false);
 
+sol_ode.u[end][:, :, 1]
 # ## Comparison
 # Bar plots comparing: time, memory allocation, and number of garbage collections (GC).
 import Plots
@@ -117,11 +118,10 @@ Plots.plot(p1, p2, p3; layout = (3, 1), size = (600, 800))
 
 # ### Plots: final state of $u$
 using Plots
-p1 = Plots.heatmap(; title = "\$u\$ SciML ODE", sol_ode.u[end][:, :, 1], ticks = false);
-p3 = Plots.heatmap(; title = "\$u\$ INS", state.u[1], ticks = false);
-p4 = Plots.heatmap(;
+p1 = Plots.heatmap(sol_ode.u[end][:, :, 1]; title = "\$u\$ SciML ODE", ticks = false);
+p3 = Plots.heatmap(state.u[1]; title = "\$u\$ INS", ticks = false);
+p4 = Plots.heatmap(state.u[1] - sol_ode.u[end][:, :, 1];
     title = "\$u_{INS}-u_{ODE}\$",
-    state.u[1] - sol_ode.u[end][:, :, 1],
     ticks = false,
 );
 Plots.plot(p1, p3, p4; layout = (1, 3), size = (900, 600), ticks = false)
@@ -132,23 +132,20 @@ vode = INS.vorticity((sol_ode.u[end][:, :, 1], sol_ode.u[end][:, :, 2]), setup)
 vor_lims = (-5, 5)
 diff_lims = (-0.4, 0.4)
 
-p1 = Plots.heatmap(;
+p1 = Plots.heatmap(vode;
     title = "\$\\omega\$ SciML ODE",
-    vode,
     color = :viridis,
     ticks = false,
     clims = vor_lims,
 );
-p3 = Plots.heatmap(;
+p3 = Plots.heatmap(vins;
     title = "vorticity \$(\\omega)\$ in INS",
-    vins,
     color = :viridis,
     ticks = false,
     clims = vor_lims,
 );
-p4 = Plots.heatmap(;
+p4 = Plots.heatmap(vins - vode;
     title = "\$\\omega_{INS}-\\omega_{ODE}\$",
-    vins - vode,
     clim = diff_lims,
     ticks = false,
 );
@@ -254,7 +251,7 @@ animation_plots(; variable = "velocity")
 # #### Animate the difference in solution using `Plots.jl`
 anim = Animation()
 for idx = 1:Int(ceil(trange[end] / saveat))
-    # the ODESolution saves the initial state too
+    #the ODESolution saves the initial state too
     error_u = abs.(outputs.field[idx].u[1] - sol_ode.u[idx+1][:, :, 1])
     title = @sprintf("\$|u_{INS}-u_{ODE}|\$, t = %.3f s", sol_ode.t[idx])
     fig = Plots.heatmap(
@@ -287,13 +284,15 @@ maximum(abs.(sol_ode_1.u[end][:, :, 1] - state_1.u[1]))
 #INS
 div_INS_1 = INS.divergence(state_1.u, setup)
 maximum(abs.(div_INS_1))
-#this is supprigingly larger than expected with dt=1e-3, but is again almost zero if the time step is reduced to 1e-4
+# this is supprigingly larger than expected with dt=1e-3, but is again almost zero if the time step is reduced to 1e-4
 
 #SciML
 u_last_ode_1 = (sol_ode_1.u[end][:, :, 1], sol_ode_1.u[end][:, :, 2]);
 div_ode_1 = INS.divergence(u_last_ode_1, setup)
 max_div_ode_1 = maximum(abs.(div_ode_1))
 
-# The divergence of SciML solution is large no matter: 
+# **(Single precision)** The divergence of SciML solution is large no matter: 
 # - how big the time step is. Tried (1e-3, 1e-4, 1e-5, 1e-6) and got the same value, being even larger for 1e-2.
 # - the solver used. Tried `RK4` and `Tsit5` and got the same value.
+
+# With **Double precision** the divergence is zero and SciML results are as good as those of  IncompressibleNavierStokes.jl.
