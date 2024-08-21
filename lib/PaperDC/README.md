@@ -5,10 +5,10 @@ Scripts for generating results of the paper
 
 ## Set up environment
 
-From this directory, run:
+Run:
 
 ```sh
-julia setup.jl
+julia --project=lib/PaperDC -e 'using Pkg; Pkg.instantiate()'
 ```
 
 Now you can run the scripts in this directory:

@@ -110,9 +110,7 @@ ChainRulesCore.rrule(::typeof(apply_bc_u), u, t, setup; kwargs...) = (
         NoTangent(),
         # Important: identity operator should be part of `apply_bc_u_pullback`,
         # but is actually implemented via the `copy` below instead.
-        apply_bc_u_pullback!(Tangent{typeof(u)}(copy.((φbar...,))...), t, setup; kwargs...),
-        # FIXME: ChainRulesTest and Zygote require conflicting definitions here
-        # apply_bc_u_pullback!(copy.((φbar...,)), t, setup; kwargs...),
+        Tangent{typeof(u)}(apply_bc_u_pullback!(copy.((φbar...,)), t, setup; kwargs...)...),
         NoTangent(),
         NoTangent(),
     ),

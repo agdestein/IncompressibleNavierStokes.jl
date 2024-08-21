@@ -26,10 +26,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
         with:
-          version: '1'
+          version: 'pre'
       - uses: julia-actions/cache@v2
       - name: Configure doc environment
-        run: julia --color=yes docs/setup.jl
+        shell: julia --color=yes --project=docs {0}
+        run: |
+          using Pkg
+          Pkg.instantiate()
       - uses: julia-actions/julia-docdeploy@v1
         with:
           install-package: false

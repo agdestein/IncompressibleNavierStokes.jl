@@ -47,3 +47,6 @@ Enzyme = "0.12.27"
 GLMakie = "0.10"
 IncompressibleNavierStokes = "0.6"
 OrdinaryDiffEq = "6"
+
+[sources]
+IncompressibleNavierStokes = {path = "../.."}

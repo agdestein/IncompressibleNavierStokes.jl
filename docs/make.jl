@@ -1,9 +1,5 @@
-# Show number of threads on GitHub Actions
-@info "" Threads.nthreads()
-
 # Look for environment variable triggering local development modifications
 localdev = haskey(ENV, "LOCALDEV")
-@show localdev
 
 # Get access to example dependencies
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
