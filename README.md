@@ -47,9 +47,9 @@ snapshot files using the `save_vtk` function, or the full time series using the
 <table>
     <tbody>
         <tr>
-            <td style="width: 25%;"><video autoplay controls loop src="docs/src/public/Actuator2D.mp4"></video></td>
+            <td style="width: 25%;"><img src="docs/src/public/Actuator2D.gif"></td>
             <td style="width: 25%;"><img src="docs/src/public/BackwardFacingStep2D.png"></td>
-            <td style="width: 25%;"><video autoplay controls loop src="docs/src/public/DecayingTurbulence2D.mp4"></video></td>
+            <td style="width: 25%;"><img src="docs/src/public/DecayingTurbulence2D.gif"></td>
             <td style="width: 25%;"><img src="docs/src/public/TaylorGreenVortex2D.png"></td>
         </tr>
         <tr>
@@ -71,9 +71,9 @@ snapshot files using the `save_vtk` function, or the full time series using the
             <td align="center"><a href="examples/TaylorGreenVortex3D.jl"> Taylor-Green vortex (3D)</a></td>
         </tr>
         <tr>
-            <td style="width: 25%;"><video autoplay controls loop src="docs/src/public/RayleighBenard2D.mp4"></video></td>
-            <td style="width: 25%;"><video autoplay controls loop src="docs/src/public/RayleighBenard3D.mp4"></video></td>
-            <td style="width: 25%;"><video autoplay controls loop src="docs/src/public/RayleighTaylor2D.mp4"></video></td>
+            <td style="width: 25%;"><img src="docs/src/public/RayleighBenard2D.gif"></td>
+            <td style="width: 25%;"><img src="docs/src/public/RayleighBenard3D.gif"></td>
+            <td style="width: 25%;"><img src="docs/src/public/RayleighTaylor2D.gif"></td>
             <td style="width: 25%;">
               <!-- <img src="docs/src/public/RayleighTaylor3D.png"> -->
             </td>
