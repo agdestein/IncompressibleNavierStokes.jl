@@ -399,25 +399,71 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kw
     u
 end
 
-# apply_bc_u_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...) =
-#     @not_implemented("DirichletBC pullback not yet implemented.")
+function apply_bc_u_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...)
+    (; grid, workgroupsize) = setup
+    (; dimension, N) = grid
+    D = dimension()
+    e = Offset{D}()
+    @kernel function adj_a!(φ, ::Val{α}, ::Val{β}) where {α,β}
+        I = @index(Global, Cartesian)
+        # Boundary values do not depend on u at all
+        φ[α][I] = 0
+    end
+    @kernel function adj_b!(φ, ::Val{α}, ::Val{β}) where {α,β}
+        I = @index(Global, Cartesian)
+        # Boundary values do not depend on u at all
+        # For DicircletBC, there are two ghost volumes to the right for the
+        # normal component, and one ghost volume for the parallel components
+        if α == β
+            φ[α][I+(N[β]-2)*e(β)] = 0
+        else
+            # If α == β, this componenent is an unused ghost volume that is
+            # never used, but is also left as it is by `apply_bc_u!` and must
+            # not be set to zero for the finite difference tests to pass
+            φ[α][I+(N[β]-1)*e(β)] = 0
+        end
+    end
+    ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
+    for α = 1:D
+        if isright
+            adj_b!(get_backend(φbar[1]), workgroupsize)(φbar, Val(α), Val(β); ndrange)
+        else
+            adj_a!(get_backend(φbar[1]), workgroupsize)(φbar, Val(α), Val(β); ndrange)
+        end
+    end
+    φbar
+end
 
 function apply_bc_p!(::DirichletBC, p, β, t, setup; isright, kwargs...)
-    (; dimension, N) = setup.grid
+    (; dimension, N, Ip, Np) = setup.grid
     D = dimension()
     e = Offset{D}()
     if isright
-        I = CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
-        p[I] .= p[I.-e(β)]
+        I = Ip[ntuple(γ -> γ == β ? (Np[γ]:Np[γ]) : (:), D)...]
+        p[I.+e(β)] .= p[I]
     else
-        I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
-        p[I] .= p[I.+e(β)]
+        I = Ip[ntuple(γ -> γ == β ? (1:1) : (:), D)...]
+        p[I.-e(β)] .= p[I]
     end
     p
 end
 
-# apply_bc_p_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...) =
-#     @not_implemented("DirichletBC pullback not yet implemented.")
+function apply_bc_p_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...)
+    (; grid, workgroupsize) = setup
+    (; dimension, N, Np, Ip) = grid
+    D = dimension()
+    e = Offset{D}()
+    if isright
+        I = Ip[ntuple(γ -> γ == β ? (Np[γ]:Np[γ]) : (:), D)...]
+        φbar[I] .+= φbar[I.+e(β)]
+        φbar[I.+e(β)] .= 0
+    else
+        I = Ip[ntuple(γ -> γ == β ? (1:1) : (:), D)...]
+        φbar[I] .+= φbar[I.-e(β)]
+        φbar[I.-e(β)] .= 0
+    end
+    φbar
+end
 
 function apply_bc_temp!(bc::DirichletBC, temp, β, t, setup; isright, kwargs...)
     (; dimension, N) = setup.grid
@@ -428,8 +474,21 @@ function apply_bc_temp!(bc::DirichletBC, temp, β, t, setup; isright, kwargs...)
     else
         CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
     end
-    temp[I] .= bc.u
+    temp[I] .= isnothing(bc.u) ? 0 : bc.u
     temp
+end
+
+function apply_bc_temp_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...)
+    (; dimension, N) = setup.grid
+    D = dimension()
+    e = Offset{D}()
+    I = if isright
+        CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
+    else
+        CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
+    end
+    φbar[I] .= 0
+    φbar
 end
 
 function apply_bc_u!(::SymmetricBC, u, β, t, setup; isright, kwargs...)
