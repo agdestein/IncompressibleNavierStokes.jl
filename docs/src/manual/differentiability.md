@@ -8,8 +8,8 @@ IncompressibleNavierStokes is
 [reverse-mode differentiable](https://juliadiff.org/ChainRulesCore.jl/stable/index.html#Reverse-mode-AD-rules-(rrules)),
 which means that you can back-propagate gradients through the code.
 This comes at a cost however, as intermediate velocity fields need to be stored
-in memory for use in the backward pass.  For this reason, many of the operators
-come with a slow differentiable allocating non-mutating variant (e.g.
+in memory for use in the backward pass. For this reason, many of the operators
+come in two versions:oa slow differentiable allocating non-mutating variant (e.g.
 [`divergence`](@ref)) and fast non-differentiable non-allocating mutating
 variant (e.g. [`divergence!`](@ref).)
 
