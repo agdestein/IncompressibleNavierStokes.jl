@@ -95,6 +95,22 @@ offset_p(::SymmetricBC, isright) = 1
 offset_u(::PressureBC, isnormal, isright) = 1 + !isnormal * !isright
 offset_p(::PressureBC, isright) = 1 + !isright
 
+function assert_validity(setup)
+    (; grid, boundary_conditions) = setup
+    (; dimension) = grid
+    D = dimension()
+    for α = 1:D
+        bc = boundary_conditions[α]
+        assert_validity(bc[1], α, setup; isright = false)
+        assert_validity(bc[2], α, setup; isright = true)
+    end
+end
+assert_validity(::AbstractBC, α, setup; isright) = nothing
+assert_validity(::PeriodicBC, α, setup; isright) = @assert(
+    (Δ -> all(≈(Δ[1]), Δ))(setup.grid.Δ[α]),
+    "PeriodicBC requires uniform grid spacing.",
+)
+
 "Get boundary indices."
 function boundary(β, N, I, isright)
     eβ = Offset{length(N)}()(β)

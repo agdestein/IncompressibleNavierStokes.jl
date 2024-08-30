@@ -34,6 +34,7 @@ function Setup(
         bodyforce = bodyforce!(F, u, T(0), setup)
         setup = (; setup..., issteadybodyforce = true, bodyforce)
     end
+    assert_validity(setup)
     setup
 end
 
