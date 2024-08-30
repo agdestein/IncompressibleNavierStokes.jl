@@ -8,12 +8,18 @@ testops(dim) = @testset "Operators $(dim())D" begin
     n = 16
     lims = T(0), T(1)
     x = if D == 2
-        stretched_grid(lims..., n, 1.2), cosine_grid(lims..., n)
+        tanh_grid(lims..., n), tanh_grid(lims..., n, 1.3)
     elseif D == 3
-        stretched_grid(lims..., n, 1.2), cosine_grid(lims..., n), cosine_grid(lims..., n)
+        tanh_grid(lims..., n, 1.2), tanh_grid(lims..., n, 1.1), cosine_grid(lims..., n)
     end
-    setup = Setup(x...; Re)
-    u = random_field(setup, T(0))
+    setup = Setup(
+        x...;
+        Re,
+        boundary_conditions = ntuple(d -> (DirichletBC(), DirichletBC()), D),
+    )
+    uref(dim, x, y, args...) =
+        -(dim() == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
+    u = create_initial_conditions(setup, uref, T(0))
     (; Iu, Ip, Ω) = setup.grid
 
     @testset "Divergence" begin

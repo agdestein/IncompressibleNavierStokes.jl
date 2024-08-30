@@ -34,6 +34,7 @@ using IncompressibleNavierStokes:
     momentum,
     poisson,
     pressuregradient,
+    project,
     smagorinsky_closure,
     tensorbasis,
     total_kinetic_energy,

@@ -7,8 +7,17 @@
 
     n = 64
     x = LinRange(0.0, 1.0, n + 1), LinRange(0.0, 1.0, n + 1)
-    setup = Setup(x...; Re = 100.0)
-    ustart = random_field(setup, 0.0)
+    setup = Setup(
+        x...;
+        Re = 100.0,
+        boundary_conditions = (
+            (DirichletBC(), DirichletBC()),
+            (DirichletBC(), DirichletBC()),
+        ),
+    )
+    uref(dim, x, y, args...) =
+        -(dim() == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
+    ustart = create_initial_conditions(setup, uref, 0.0)
 
     nprocess = 20
     nupdate = 10
