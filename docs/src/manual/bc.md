@@ -19,4 +19,5 @@ PressureBC
 ```@docs
 offset_p
 offset_u
+boundary
 ```

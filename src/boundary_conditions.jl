@@ -95,6 +95,16 @@ offset_p(::SymmetricBC, isright) = 1
 offset_u(::PressureBC, isnormal, isright) = 1 + !isnormal * !isright
 offset_p(::PressureBC, isright) = 1 + !isright
 
+"Get boundary indices."
+function boundary(β, N, I, isright)
+    eβ = Offset{length(N)}()(β)
+    if isright
+        I[1]+N[β]*eβ:I[end]+eβ
+    else
+        I[1]-eβ:I[end]-N[β]*eβ
+    end
+end
+
 function apply_bc_u! end
 function apply_bc_p! end
 function apply_bc_temp! end
@@ -266,98 +276,66 @@ function apply_bc_temp_pullback!(φbar, t, setup; kwargs...)
 end
 
 function apply_bc_u!(::PeriodicBC, u, β, t, setup; isright, kwargs...)
-    (; grid, workgroupsize) = setup
-    (; dimension, N) = grid
+    isright && return u # We do both in one go for "left"
+    (; dimension, Nu, Iu) = setup.grid
     D = dimension()
-    e = Offset{D}()
-    @kernel function _bc_a!(u, ::Val{α}, ::Val{β}) where {α,β}
-        I = @index(Global, Cartesian)
-        u[α][I] = u[α][I+(N[β]-2)*e(β)]
-    end
-    @kernel function _bc_b!(u, ::Val{α}, ::Val{β}) where {α,β}
-        I = @index(Global, Cartesian)
-        u[α][I+(N[β]-1)*e(β)] = u[α][I+e(β)]
-    end
-    ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     for α = 1:D
-        if isright
-            _bc_b!(get_backend(u[1]), workgroupsize)(u, Val(α), Val(β); ndrange)
-        else
-            _bc_a!(get_backend(u[1]), workgroupsize)(u, Val(α), Val(β); ndrange)
-        end
+        uα, eβ = u[α], Offset{D}()(β)
+        Ia = boundary(β, Nu[α], Iu[α], false)
+        Ib = boundary(β, Nu[α], Iu[α], true)
+        Ja = Ia .+ eβ
+        Jb = Ib .- eβ
+        @. uα[Ia] = uα[Jb]
+        @. uα[Ib] = uα[Ja]
     end
     u
 end
 
 function apply_bc_u_pullback!(::PeriodicBC, φbar, β, t, setup; isright, kwargs...)
-    (; grid, workgroupsize) = setup
-    (; dimension, N) = grid
+    isright && return φbar # We do both in one go for "left"
+    (; dimension, Nu, Iu) = setup.grid
     D = dimension()
-    e = Offset{D}()
-    @kernel function adj_a!(φ, ::Val{α}, ::Val{β}) where {α,β}
-        I = @index(Global, Cartesian)
-        φ[α][I+(N[β]-2)*e(β)] += φ[α][I]
-        φ[α][I] = 0
-    end
-    @kernel function adj_b!(φ, ::Val{α}, ::Val{β}) where {α,β}
-        I = @index(Global, Cartesian)
-        φ[α][I+e(β)] += φ[α][I+(N[β]-1)*e(β)]
-        φ[α][I+(N[β]-1)*e(β)] = 0
-    end
-    ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     for α = 1:D
-        if isright
-            adj_b!(get_backend(φbar[1]), workgroupsize)(φbar, Val(α), Val(β); ndrange)
-        else
-            adj_a!(get_backend(φbar[1]), workgroupsize)(φbar, Val(α), Val(β); ndrange)
-        end
+        φα, eβ = φbar[α], Offset{D}()(β)
+        Ia = boundary(β, Nu[α], Iu[α], false)
+        Ib = boundary(β, Nu[α], Iu[α], true)
+        Ja = Ia .+ eβ
+        Jb = Ib .- eβ
+        @. φα[Jb] += φα[Ia]
+        @. φα[Ja] += φα[Ib]
+        @. φα[Ia] = 0
+        @. φα[Ib] = 0
     end
     φbar
 end
 
 function apply_bc_p!(::PeriodicBC, p, β, t, setup; isright, kwargs...)
-    (; grid, workgroupsize) = setup
-    (; dimension, N) = grid
+    isright && return p # We do both in one go for "left"
+    (; dimension, Np, Ip) = setup.grid
     D = dimension()
-    e = Offset{D}()
-    @kernel function _bc_a(p, ::Val{β}) where {β}
-        I = @index(Global, Cartesian)
-        p[I] = p[I+(N[β]-2)*e(β)]
-    end
-    @kernel function _bc_b(p, ::Val{β}) where {β}
-        I = @index(Global, Cartesian)
-        p[I+(N[β]-1)*e(β)] = p[I+e(β)]
-    end
-    ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
-    if isright
-        _bc_b(get_backend(p), workgroupsize)(p, Val(β); ndrange)
-    else
-        _bc_a(get_backend(p), workgroupsize)(p, Val(β); ndrange)
-    end
+    eβ = Offset{D}()(β)
+    Ia = boundary(β, Np, Ip, false)
+    Ib = boundary(β, Np, Ip, true)
+    Ja = Ia .+ eβ
+    Jb = Ib .- eβ
+    @. p[Ia] = p[Jb]
+    @. p[Ib] = p[Ja]
     p
 end
 
 function apply_bc_p_pullback!(::PeriodicBC, φbar, β, t, setup; isright, kwargs...)
-    (; grid, workgroupsize) = setup
-    (; dimension, N) = grid
+    isright && return φbar # We do both in one go for "left"
+    (; dimension, Np, Ip) = setup.grid
     D = dimension()
-    e = Offset{D}()
-    @kernel function adj_a!(φ, ::Val{β}) where {β}
-        I = @index(Global, Cartesian)
-        φ[I+(N[β]-2)*e(β)] += φ[I]
-        φ[I] = 0
-    end
-    @kernel function adj_b!(φ, ::Val{β}) where {β}
-        I = @index(Global, Cartesian)
-        φ[I+e(β)] += φ[I+(N[β]-1)*e(β)]
-        φ[I+(N[β]-1)*e(β)] = 0
-    end
-    ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
-    if isright
-        adj_b!(get_backend(φbar), workgroupsize)(φbar, Val(β); ndrange)
-    else
-        adj_a!(get_backend(φbar), workgroupsize)(φbar, Val(β); ndrange)
-    end
+    eβ = Offset{D}()(β)
+    Ia = boundary(β, Np, Ip, false)
+    Ib = boundary(β, Np, Ip, true)
+    Ja = Ia .+ eβ
+    Jb = Ib .- eβ
+    @. φbar[Jb] += φbar[Ia]
+    @. φbar[Ja] += φbar[Ib]
+    @. φbar[Ia] = 0
+    @. φbar[Ib] = 0
     φbar
 end
 
@@ -368,19 +346,12 @@ apply_bc_temp_pullback!(bc::PeriodicBC, φbar, β, t, setup; isright, kwargs...)
     apply_bc_p_pullback!(bc, φbar, β, t, setup; isright, kwargs...)
 
 function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kwargs...)
-    (; dimension, x, xp, N) = setup.grid
+    (; dimension, x, xp, Nu, Iu) = setup.grid
     D = dimension()
-    e = Offset{D}()
     # isnothing(bc.u) && return
     bcfunc = dudt ? bc.dudt : bc.u
     for α = 1:D
-        I = if isright
-            CartesianIndices(
-                ntuple(γ -> γ == β ? α == β ? (N[γ]-1:N[γ]-1) : (N[γ]:N[γ]) : (1:N[γ]), D),
-            )
-        else
-            CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
-        end
+        I = boundary(β, Nu[α], Iu[α], isright)
         xI = ntuple(
             γ -> reshape(
                 γ == α ? x[γ][I.indices[α].+1] : xp[γ][I.indices[γ]],
@@ -400,182 +371,148 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kw
 end
 
 function apply_bc_u_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...)
-    (; grid, workgroupsize) = setup
-    (; dimension, N) = grid
+    (; dimension, Nu, Iu) = setup.grid
     D = dimension()
-    e = Offset{D}()
-    @kernel function adj_a!(φ, ::Val{α}, ::Val{β}) where {α,β}
-        I = @index(Global, Cartesian)
-        # Boundary values do not depend on u at all
-        φ[α][I] = 0
-    end
-    @kernel function adj_b!(φ, ::Val{α}, ::Val{β}) where {α,β}
-        I = @index(Global, Cartesian)
-        # Boundary values do not depend on u at all
-        # For DicircletBC, there are two ghost volumes to the right for the
-        # normal component, and one ghost volume for the parallel components
-        if α == β
-            φ[α][I+(N[β]-2)*e(β)] = 0
-        else
-            # If α == β, this componenent is an unused ghost volume that is
-            # never used, but is also left as it is by `apply_bc_u!` and must
-            # not be set to zero for the finite difference tests to pass
-            φ[α][I+(N[β]-1)*e(β)] = 0
-        end
-    end
-    ndrange = ntuple(γ -> γ == β ? 1 : N[γ], D)
     for α = 1:D
-        if isright
-            adj_b!(get_backend(φbar[1]), workgroupsize)(φbar, Val(α), Val(β); ndrange)
-        else
-            adj_a!(get_backend(φbar[1]), workgroupsize)(φbar, Val(α), Val(β); ndrange)
-        end
+        I = boundary(β, Nu[α], Iu[α], isright)
+        φbar[α][I] .= 0
     end
     φbar
 end
 
 function apply_bc_p!(::DirichletBC, p, β, t, setup; isright, kwargs...)
-    (; dimension, N, Ip, Np) = setup.grid
+    (; dimension, Ip, Np) = setup.grid
     D = dimension()
     e = Offset{D}()
-    if isright
-        I = Ip[ntuple(γ -> γ == β ? (Np[γ]:Np[γ]) : (:), D)...]
-        p[I.+e(β)] .= p[I]
-    else
-        I = Ip[ntuple(γ -> γ == β ? (1:1) : (:), D)...]
-        p[I.-e(β)] .= p[I]
-    end
+    I = boundary(β, Np, Ip, isright)
+    J = isright ? I .- e(β) : I .+ e(β)
+    @. p[I] = p[J]
     p
 end
 
 function apply_bc_p_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...)
-    (; grid, workgroupsize) = setup
-    (; dimension, N, Np, Ip) = grid
+    (; dimension, Np, Ip) = setup.grid
     D = dimension()
     e = Offset{D}()
-    if isright
-        I = Ip[ntuple(γ -> γ == β ? (Np[γ]:Np[γ]) : (:), D)...]
-        φbar[I] .+= φbar[I.+e(β)]
-        φbar[I.+e(β)] .= 0
-    else
-        I = Ip[ntuple(γ -> γ == β ? (1:1) : (:), D)...]
-        φbar[I] .+= φbar[I.-e(β)]
-        φbar[I.-e(β)] .= 0
-    end
+    I = boundary(β, Np, Ip, isright)
+    J = isright ? I .- e(β) : I .+ e(β)
+    @. φbar[J] += φbar[I]
+    φbar[I] .= 0
     φbar
 end
 
 function apply_bc_temp!(bc::DirichletBC, temp, β, t, setup; isright, kwargs...)
-    (; dimension, N) = setup.grid
-    D = dimension()
-    e = Offset{D}()
-    I = if isright
-        CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
-    else
-        CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
-    end
+    (; Np, Ip) = setup.grid
+    I = boundary(β, Np, Ip, isright)
     temp[I] .= isnothing(bc.u) ? 0 : bc.u
     temp
 end
 
 function apply_bc_temp_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...)
-    (; dimension, N) = setup.grid
-    D = dimension()
-    e = Offset{D}()
-    I = if isright
-        CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
-    else
-        CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
-    end
+    (; Np, Ip) = setup.grid
+    I = boundary(β, Np, Ip, isright)
     φbar[I] .= 0
     φbar
 end
 
 function apply_bc_u!(::SymmetricBC, u, β, t, setup; isright, kwargs...)
-    (; dimension, N) = setup.grid
+    (; dimension, Nu, Iu) = setup.grid
     D = dimension()
     e = Offset{D}()
     for α = 1:D
         if α != β
-            if isright
-                I = CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
-                u[α][I] .= u[α][I.-e(β)]
-            else
-                I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
-                u[α][I] .= u[α][I.+e(β)]
-            end
+            I = boundary(β, Nu[α], Iu[α], isright)
+            J = isright ? I .- e(β) : I .+ e(β)
+            @. u[α][I] = u[α][J]
         end
     end
     u
 end
 
-# apply_bc_u_pullback!(::SymmetricBC, φbar, β, t, setup; isright, kwargs...) =
-#     @not_implemented("SymmetricBC pullback not yet implemented.")
-
-function apply_bc_p!(::SymmetricBC, p, β, t, setup; isright, kwargs...)
-    (; dimension, N) = setup.grid
+function apply_bc_u_pullback!(::SymmetricBC, φbar, β, t, setup; isright, kwargs...)
+    (; dimension, Nu, Iu) = setup.grid
     D = dimension()
     e = Offset{D}()
-    if isright
-        I = CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
-        p[I] .= p[I.-e(β)]
-    else
-        I = CartesianIndices(ntuple(γ -> γ == β ? (1:1) : (1:N[γ]), D))
-        p[I] .= p[I.+e(β)]
+    for α = 1:D
+        if α != β
+            I = boundary(β, Nu[α], Iu[α], isright)
+            J = isright ? I .- e(β) : I .+ e(β)
+            @. φbar[α][J] += φbar[α][I]
+            @. φbar[α][I] = 0
+        end
     end
+    φbar
+end
+
+function apply_bc_p!(::SymmetricBC, p, β, t, setup; isright, kwargs...)
+    (; dimension, Np, Ip) = setup.grid
+    D = dimension()
+    e = Offset{D}()
+    I = boundary(β, Np, Ip, isright)
+    J = isright ? I .- e(β) : I .+ e(β)
+    @. p[I] = p[J]
     p
 end
 
-# apply_bc_p_pullback!(::SymmetricBC, φbar, β, t, setup; isright, kwargs...) =
-#     @not_implemented("SymmetricBC pullback not yet implemented.")
+function apply_bc_p_pullback!(::SymmetricBC, φbar, β, t, setup; isright, kwargs...)
+    (; dimension, Np, Ip) = setup.grid
+    D = dimension()
+    e = Offset{D}()
+    I = boundary(β, Np, Ip, isright)
+    J = isright ? I .- e(β) : I .+ e(β)
+    @. φbar[J] += φbar[I]
+    @. φbar[I] = 0
+    φbar
+end
 
 apply_bc_temp!(bc::SymmetricBC, temp, β, t, setup; isright, kwargs...) =
     apply_bc_p!(bc, temp, β, t, setup; isright, kwargs...)
 
+apply_bc_temp_pullback!(bc::SymmetricBC, φbar, β, t, setup; isright, kwargs...) =
+    apply_bc_p_pullback!(bc, φbar, β, t, setup; isright, kwargs...)
+
 function apply_bc_u!(bc::PressureBC, u, β, t, setup; isright, kwargs...)
-    (; grid, workgroupsize) = setup
-    (; dimension, N, Nu, Iu) = grid
+    (; dimension, Nu, Iu) = setup.grid
     D = dimension()
     e = Offset{D}()
-    @kernel function _bc_a!(u, ::Val{α}, ::Val{β}, I0) where {α,β}
-        I = @index(Global, Cartesian)
-        I = I + I0
-        u[α][I] = u[α][I+e(β)]
-    end
-    @kernel function _bc_b!(u, ::Val{α}, ::Val{β}, I0) where {α,β}
-        I = @index(Global, Cartesian)
-        I = I + I0
-        u[α][I] = u[α][I-e(β)]
-    end
-    ndrange = (N[1:β-1]..., 1, N[β+1:end]...)
     for α = 1:D
-        if isright
-            I0 = CartesianIndex(ntuple(γ -> γ == β ? N[β] : 1, D))
-            I0 -= oneunit(I0)
-            _bc_b!(get_backend(u[1]), workgroupsize)(u, Val(α), Val(β), I0; ndrange)
-        else
-            I0 = CartesianIndex(ntuple(γ -> γ == β && α != β ? 2 : 1, D))
-            I0 -= oneunit(I0)
-            _bc_a!(get_backend(u[1]), workgroupsize)(u, Val(α), Val(β), I0; ndrange)
-        end
+        I = boundary(β, Nu[α], Iu[α], isright)
+        J = isright ? I .- e(β) : I .+ e(β)
+        @. u[α][I] = u[α][J]
     end
     u
 end
 
-# apply_bc_u_pullback!(::PressureBC, φbar, β, t, setup; isright, kwargs...) =
-#     @not_implemented("PressureBC pullback not yet implemented.")
+function apply_bc_u_pullback!(::PressureBC, φbar, β, t, setup; isright, kwargs...)
+    (; dimension, Nu, Iu) = setup.grid
+    D = dimension()
+    e = Offset{D}()
+    for α = 1:D
+        I = boundary(β, Nu[α], Iu[α], isright)
+        J = isright ? I .- e(β) : I .+ e(β)
+        @. φbar[α][J] += φbar[α][I]
+        @. φbar[α][I] = 0
+    end
+    φbar
+end
 
 function apply_bc_p!(bc::PressureBC, p, β, t, setup; isright, kwargs...)
-    (; dimension, N) = setup.grid
-    D = dimension()
-    I = if isright
-        CartesianIndices(ntuple(γ -> γ == β ? (N[γ]:N[γ]) : (1:N[γ]), D))
-    else
-        CartesianIndices(ntuple(γ -> γ == β ? (2:2) : (1:N[γ]), D))
-    end
+    (; Np, Ip) = setup.grid
+    I = boundary(β, Np, Ip, isright)
     p[I] .= 0
     p
 end
 
-apply_bc_p_pullback!(::PressureBC, φbar, β, t, setup; isright, kwargs...) =
-    @not_implemented("PressureBC pullback not yet implemented.")
+function apply_bc_p_pullback!(::PressureBC, φbar, β, t, setup; isright, kwargs...)
+    (; Np, Ip) = setup.grid
+    I = boundary(β, Np, Ip, isright)
+    φbar[I] .= 0
+    φbar
+end
+
+# Symmetric BC for temperature
+apply_bc_temp!(bc::PressureBC, temp, β, t, setup; isright, kwargs...) =
+    apply_bc_temp!(SymmetricBC(), temp, β, t, setup; isright, kwargs...)
+
+apply_bc_temp_pullback!(bc::PressureBC, φbar, β, t, setup; isright, kwargs...) =
+    apply_bc_p_pullback!(SymmetricBC(), φbar, β, t, setup; isright, kwargs...)

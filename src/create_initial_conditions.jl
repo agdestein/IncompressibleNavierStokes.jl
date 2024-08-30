@@ -67,6 +67,7 @@ function create_spectrum(; setup, kp, rng = Random.default_rng())
     T = eltype(x[1])
     D = dimension()
     τ = T(2π)
+    @assert all(iseven, N) "Spectrum only implemented for even number of volumes."
 
     # Maximum wavenumber (remove ghost volumes)
     K = @. (N - 2) ÷ 2
@@ -175,17 +176,25 @@ function random_field(
     psolver = default_psolver(setup),
     rng = Random.default_rng(),
 )
-    (; dimension, x, Ip, Ω) = setup.grid
+    (; grid, boundary_conditions) = setup
+    (; dimension, N, x, Δ, Ip, Ω) = setup.grid
     D = dimension()
     T = eltype(x[1])
+
+    @assert all(==(PeriodicBC()), boundary_conditions) "Random field requires periodic boundary conditions."
+    @assert all(α -> all(==(Δ[α][1]), Δ[α]), 1:D) "Random field requires uniform grid spacing."
+    @assert all(iseven, N) "Random field requires even number of volumes."
 
     # Create random velocity field
     uhat = create_spectrum(; setup, kp, rng)
     u = ifft.(uhat)
     u = map(u -> A .* real.(u), u)
+    @show size.(u)
 
     # Add ghost volumes (one on each side for periodic)
     u = pad_circular.(u, 1; dims = 1:D)
+    @show size.(u)
+    error()
 
     # # Interpolate to staggered grid
     # interpolate_p_u!(u, setup)
