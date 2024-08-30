@@ -1,3 +1,7 @@
+```@meta
+CurrentModule = IncompressibleNavierStokes
+```
+
 # Differentiating through the code
 
 IncompressibleNavierStokes is
@@ -11,7 +15,7 @@ variant (e.g. [`divergence!`](@ref).)
 
 !!! warning "Differentiable code"
     To make your code differentiable, you must use the differentiable versions
-    of the operators (without the exclamations marks).
+    of the operators (without the exclamation marks).
 
 To differentiate the code, use [Zygote.jl](https://github.com/FluxML/Zygote.jl).
 
