@@ -5,7 +5,7 @@
     y = LinRange(0, 2π, n + 1)
     Re = 1e3
     setup = Setup(x, y; Re)
-    (; xp) = setup.grid
+    (; Ip, xp) = setup.grid
     D = 2
 
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
@@ -29,8 +29,8 @@
     )
 
     # Test that solvers compute the exact pressure
-    @test get_p(direct) ≈ p_exact
-    @test get_p(cg) ≈ p_exact
-    @test get_p(spectral) ≈ p_exact
-    @test get_p(spectral_lowmemory) ≈ p_exact
+    @test get_p(direct)[Ip] ≈ p_exact[Ip]
+    @test get_p(cg)[Ip] ≈ p_exact[Ip]
+    @test get_p(spectral)[Ip] ≈ p_exact[Ip]
+    @test get_p(spectral_lowmemory)[Ip] ≈ p_exact[Ip]
 end

@@ -47,11 +47,11 @@ for D in (2, 3)
         end
         lims = T(0), T(1)
         x = if D == 2
-            stretched_grid(lims..., n, 1.2), cosine_grid(lims..., n)
+            tanh_grid(lims..., n), tanh_grid(lims..., n, 1.3)
         elseif D == 3
-            stretched_grid(lims..., n, 1.2), cosine_grid(lims..., n), cosine_grid(lims..., n)
+            tanh_grid(lims..., n, 1.2), tanh_grid(lims..., n, 1.1), cosine_grid(lims..., n)
         end
-        boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x))
+        boundary_conditions = ntuple(d -> (DirichletBC(), DirichletBC()), D)
         temperature = temperature_equation(;
             Pr = T(0.71),
             Ra = T(1e6),
