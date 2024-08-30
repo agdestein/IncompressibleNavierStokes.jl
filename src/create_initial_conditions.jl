@@ -181,7 +181,10 @@ function random_field(
     D = dimension()
     T = eltype(x[1])
 
-    @assert all(==(PeriodicBC()), boundary_conditions) "Random field requires periodic boundary conditions."
+    @assert(
+        all(==((PeriodicBC(), PeriodicBC())), boundary_conditions),
+        "Random field requires periodic boundary conditions."
+    )
     @assert all(Δ -> all(≈(Δ[1]), Δ), Δ) "Random field requires uniform grid spacing."
     @assert all(iseven, N) "Random field requires even number of volumes."
 
@@ -189,12 +192,9 @@ function random_field(
     uhat = create_spectrum(; setup, kp, rng)
     u = ifft.(uhat)
     u = map(u -> A .* real.(u), u)
-    @show size.(u)
 
     # Add ghost volumes (one on each side for periodic)
     u = pad_circular.(u, 1; dims = 1:D)
-    @show size.(u)
-    error()
 
     # # Interpolate to staggered grid
     # interpolate_p_u!(u, setup)
