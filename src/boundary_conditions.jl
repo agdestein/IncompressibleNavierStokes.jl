@@ -105,12 +105,13 @@ function boundary(β, N, I, isright)
     end
 end
 
-function apply_bc_u! end
-function apply_bc_p! end
-function apply_bc_temp! end
-
+"Apply velocity boundary conditions (differentiable version)."
 apply_bc_u(u, t, setup; kwargs...) = apply_bc_u!(copy.(u), t, setup; kwargs...)
+
+"Apply pressure boundary conditions (differentiable version)."
 apply_bc_p(p, t, setup; kwargs...) = apply_bc_p!(copy(p), t, setup; kwargs...)
+
+"Apply temperature boundary conditions (differentiable version)."
 apply_bc_temp(temp, t, setup; kwargs...) = apply_bc_temp!(copy(temp), t, setup; kwargs...)
 
 ChainRulesCore.rrule(::typeof(apply_bc_u), u, t, setup; kwargs...) = (
@@ -125,7 +126,6 @@ ChainRulesCore.rrule(::typeof(apply_bc_u), u, t, setup; kwargs...) = (
         NoTangent(),
     ),
 )
-
 ChainRulesCore.rrule(::typeof(apply_bc_p), p, t, setup) = (
     apply_bc_p(p, t, setup),
     # With respect to (apply_bc_p, p, t, setup)
@@ -142,7 +142,6 @@ ChainRulesCore.rrule(::typeof(apply_bc_p), p, t, setup) = (
         NoTangent(),
     ),
 )
-
 ChainRulesCore.rrule(::typeof(apply_bc_temp), temp, t, setup) = (
     apply_bc_temp(temp, t, setup),
     # With respect to (apply_bc_temp, temp, t, setup)
@@ -160,6 +159,7 @@ ChainRulesCore.rrule(::typeof(apply_bc_temp), temp, t, setup) = (
     ),
 )
 
+"Apply velocity boundary conditions (in-place version)."
 function apply_bc_u!(u, t, setup; kwargs...)
     (; boundary_conditions) = setup
     D = length(u)
@@ -197,6 +197,7 @@ function apply_bc_u_pullback!(φbar, t, setup; kwargs...)
     φbar
 end
 
+"Apply pressure boundary conditions (in-place version)."
 function apply_bc_p!(p, t, setup; kwargs...)
     (; boundary_conditions, grid) = setup
     (; dimension) = grid
@@ -235,6 +236,7 @@ function apply_bc_p_pullback!(φbar, t, setup; kwargs...)
     φbar
 end
 
+"Apply temperature boundary conditions (in-place version)."
 function apply_bc_temp!(temp, t, setup; kwargs...)
     (; temperature, grid) = setup
     (; boundary_conditions) = temperature
@@ -346,7 +348,7 @@ apply_bc_temp_pullback!(bc::PeriodicBC, φbar, β, t, setup; isright, kwargs...)
     apply_bc_p_pullback!(bc, φbar, β, t, setup; isright, kwargs...)
 
 function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kwargs...)
-    (; dimension, x, xp, Nu, Iu) = setup.grid
+    (; dimension, xu, Nu, Iu) = setup.grid
     D = dimension()
     # isnothing(bc.u) && return
     bcfunc = dudt ? bc.dudt : bc.u
@@ -354,7 +356,7 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kw
         I = boundary(β, Nu[α], Iu[α], isright)
         xI = ntuple(
             γ -> reshape(
-                γ == α ? x[γ][I.indices[α].+1] : xp[γ][I.indices[γ]],
+                xu[α][γ][I.indices[γ]],
                 ntuple(Returns(1), γ - 1)...,
                 :,
                 ntuple(Returns(1), D - γ)...,

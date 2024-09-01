@@ -11,9 +11,8 @@ function create_initial_conditions(
     doproject = true,
 )
     (; grid) = setup
-    (; dimension, N, Iu, Ip, x, xp, Ω) = grid
+    (; dimension, N, Iu, x, xu) = grid
 
-    T = eltype(x[1])
     D = dimension()
 
     # Allocate velocity
@@ -21,10 +20,7 @@ function create_initial_conditions(
 
     # Initial velocities
     for α = 1:D
-        xin = ntuple(
-            β -> reshape(α == β ? x[β][2:end] : xp[β], ntuple(Returns(1), β - 1)..., :),
-            D,
-        )
+        xin = ntuple(β -> reshape(xu[α][β], ntuple(Returns(1), β - 1)..., :), D)
         u[α][Iu[α]] .= initial_velocity.((Dimension(α),), xin...)[Iu[α]]
     end
 
@@ -177,9 +173,8 @@ function random_field(
     rng = Random.default_rng(),
 )
     (; grid, boundary_conditions) = setup
-    (; dimension, N, x, Δ, Ip, Ω) = setup.grid
+    (; dimension, N, Δ) = grid
     D = dimension()
-    T = eltype(x[1])
 
     @assert(
         all(==((PeriodicBC(), PeriodicBC())), boundary_conditions),

@@ -77,8 +77,26 @@ function tanh_grid(a, b, N, γ = typeof(a)(1))
 end
 
 """
-Create nonuniform Cartesian box mesh `x[1]` × ... × `x[d]` with boundary
-conditions `boundary_conditions`.
+Create useful quantities for Cartesian box mesh
+``x[1] \\times \\dots \\times x[d]` with boundary conditions `boundary_conditions`.
+Return a named tuple (`[α]` denotes a tuple index) with the following fields:
+
+- `N[α]`: Number of finite volumes in direction `β`, including ghost volumes
+- `Nu[α][β]`: Number of `u[α]` velocity DOFs in direction `β`
+- `Np[α]`: Number of pressure DOFs in direction `α`
+- `Iu[α]`: Cartesian index range of `u[α]` velocity DOFs
+- `Ip`: Cartesian index range of pressure DOFs
+- `xlims[α]`: Tuple containing the limits of the physical domain (not grid) in the direction `α`
+- `x[α]`: α-coordinates of all volume boundaries, including the left point of the first ghost volume
+- `xu[α][β]`: β-coordinates of `u[α]` velocity points
+- `xp[α]`: α-coordinates of pressure points
+- `Δ[α]`: All volume widths in direction `α`
+- `Δu[α]`: Distance between pressure points in direction `α`
+- `Ω`: All volume sizes
+- `A[α][β]`: Interpolation weights from α-face centers ``x_I`` to ``x_{I \\pm h_β}``
+
+Note that the memory footprint of the redundant 1D-arrays above is negligible
+compared to the memory footprint of the 2D/3D-fields used in the code.
 """
 function Grid(x, boundary_conditions; ArrayType = Array)
     # Kill all LinRanges etc.
@@ -101,7 +119,7 @@ function Grid(x, boundary_conditions; ArrayType = Array)
     end
 
     # Number of finite volumes in each dimension, including ghost volumes
-    N = length.(x) .- 1
+    N = @. length(x) - 1
 
     # Number of velocity DOFs in each dimension
     Nu = ntuple(D) do α
@@ -110,6 +128,13 @@ function Grid(x, boundary_conditions; ArrayType = Array)
             nb = offset_u(boundary_conditions[β][2], α == β, true)
             N[β] - na - nb
         end
+    end
+
+    # Number of pressure DOFs in each dimension
+    Np = ntuple(D) do α
+        na = offset_p(boundary_conditions[α][1], false)
+        nb = offset_p(boundary_conditions[α][2], true)
+        N[α] - na - nb
     end
 
     # Cartesian index ranges of velocity DOFs
@@ -122,13 +147,6 @@ function Grid(x, boundary_conditions; ArrayType = Array)
         CartesianIndices(Iuα)
     end
 
-    # Number of p DOFs in each dimension
-    Np = ntuple(D) do α
-        na = offset_p(boundary_conditions[α][1], false)
-        nb = offset_p(boundary_conditions[α][2], true)
-        N[α] - na - nb
-    end
-
     # Cartesian index range of pressure DOFs
     Ip = CartesianIndices(ntuple(D) do α
         na = offset_p(boundary_conditions[α][1], false)
@@ -136,20 +154,45 @@ function Grid(x, boundary_conditions; ArrayType = Array)
         1+na:N[α]-nb
     end)
 
-    xp = ntuple(d -> (x[d][1:end-1] .+ x[d][2:end]) ./ 2, D)
+    # Coordinates of velocity points
+    xu = ntuple(D) do α
+        ntuple(D) do β
+            if α == β
+                x[β][2:end]
+            else
+                (x[β][1:end-1] .+ x[β][2:end]) ./ 2
+            end
+        end
+    end
+
+    # Coordinates of pressure points
+    xp = map(x -> (x[1:end-1] .+ x[2:end]) ./ 2, x)
 
     # Volume widths
     # Infinitely thin widths are set to `eps(T)` to avoid division by zero
-    Δ = ntuple(D) do d
-        Δ = diff(x[d])
+    Δ = map(x) do x
+        Δ = diff(x)
         Δ[Δ.==0] .= eps(eltype(Δ))
         Δ
     end
+
     Δu = ntuple(D) do d
         Δu = push!(diff(xp[d]), Δ[d][end] / 2)
         Δu[Δu.==0] .= eps(eltype(Δu))
         Δu
     end
+
+    # Δu = ntuple(D) do α
+    #     ntuple(D) do β
+    #         if α == β
+    #             Δu = push!(diff(xp[β]), Δ[β][end] / 2)
+    #             Δu[Δu.==0] .= eps(eltype(Δu))
+    #             Δu
+    #         else
+    #             Δ[β]
+    #         end
+    #     end
+    # end
 
     # Reference volume sizes
     Ω = ones(T, N...)
@@ -176,10 +219,7 @@ function Grid(x, boundary_conditions; ArrayType = Array)
     #         reshape(γ == β ? 1 : γ == α ? Δu[γ] : Δ[γ], ntuple(Returns(1), γ - 1)..., :)
     # end
 
-    # # Velocity points
-    # Xu = ntuple(α -> ones(T, N))
-
-    # Interpolation weights from α-face centers x_I to x_{I + δ(β) / 2}
+    # Interpolation weights from α-face centers x_I to x_{I \pm e(β) / 2}
     A = ntuple(
         α -> ntuple(
             β -> begin
@@ -191,8 +231,6 @@ function Grid(x, boundary_conditions; ArrayType = Array)
                     Aαβ2[end] = 1
                 else
                     # Interpolation from α-face center to left (1) or right (2) α-face β-edge
-                    # Aαβ1 = [(x[β][i] - xp[β][i-1]) / Δu[β][i-1] for i = 2:N[β]]
-                    # Aαβ2 = 1 .- Aαβ1
                     Aαβ2 = [(x[β][i] - xp[β][i-1]) / Δu[β][i-1] for i = 2:N[β]]
                     Aαβ1 = 1 .- Aαβ2
                     pushfirst!(Aαβ1, 1)
@@ -205,23 +243,30 @@ function Grid(x, boundary_conditions; ArrayType = Array)
         D,
     )
 
-    # Grid quantities
-    (;
+    # Store quantities
+    grid = (;
+        xlims,
         dimension,
         N,
         Nu,
         Np,
+
+        # Keep those as ranges
         Iu,
         Ip,
-        xlims,
-        x = ArrayType.(x),
-        xp = ArrayType.(xp),
-        Δ = ArrayType.(Δ),
-        Δu = ArrayType.(Δu),
-        Ω = ArrayType(Ω),
-        # Ωu = ArrayType.(Ωu),
-        # Ωω = ArrayType(Ωω),
-        # Γu = ArrayType.(Γu),
-        A,
+
+        # Put arrays on GPU, if requested
+        adapt(ArrayType, (;
+            x,
+            xu,
+            xp,
+            Δ,
+            Δu,
+            Ω,
+            # Ωu,
+            # Ωω,
+            # Γu,
+            A,
+        ))...,
     )
 end

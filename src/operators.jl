@@ -319,21 +319,6 @@ function convection!(F, u, setup)
                 A[β][α][2][I[α]-(α==β)] * u[β][I-e(β)] +
                 A[β][α][1][I[α]+(α!=β)] * u[β][I-e(β)+e(α)]
             uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+e(α)]
-
-            # # Half
-            # uαβ1 = (u[α][I-e(β)] + u[α][I]) / 2
-            # uβα1 = u[β][I-e(β)] / 2 + u[β][I-e(β)+e(α)] / 2
-            # uαβ2 = (u[α][I] + u[α][I+e(β)]) / 2
-            # uβα2 = u[β][I] / 2 + u[β][I+e(α)] / 2
-
-            # # Interpolation
-            # uαβ1 = A[α][β][2][I[β]-1] * u[α][I-e(β)] + A[α][β][1][I[β]] * u[α][I]
-            # uβα1 =
-            #     A[β][α][2][I[α]-(α==β)] * u[β][I-e(β)] +
-            #     A[β][α][1][I[α]+(α!=β)] * u[β][I-e(β)+e(α)]
-            # uαβ2 = A[α][β][2][I[β]] * u[α][I] + A[α][β][1][I[β]+1] * u[α][I+e(β)]
-            # uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+e(α)]
-
             F[α][I] -= (uαβ2 * uβα2 - uαβ1 * uβα1) / Δuαβ[I[β]]
         end
     end
@@ -467,14 +452,13 @@ function diffusion!(F, u, setup)
     @kernel function diff!(F, u, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
         I = @index(Global, Cartesian)
         I = I + I0
-        # for β = 1:D
         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
-            Δuαβ = (α == β ? Δu[β] : Δ[β])
-            F[α][I] +=
-                ν * (
-                    (u[α][I+e(β)] - u[α][I]) / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) -
-                    (u[α][I] - u[α][I-e(β)]) / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
-                ) / Δuαβ[I[β]]
+            Δuαβ = α == β ? Δu[β] : Δ[β]
+            Δa = β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]
+            Δb = β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]
+            ∂a = (u[α][I] - u[α][I-e(β)]) / Δa
+            ∂b = (u[α][I+e(β)] - u[α][I]) / Δb
+            F[α][I] += ν * (∂b - ∂a) / Δuαβ[I[β]]
         end
     end
     for α = 1:D
@@ -493,26 +477,27 @@ function diffusion_adjoint!(u, φ, setup)
     ν = 1 / Re
     @kernel function adj!(u, φ, ::Val{α}, ::Val{βrange}) where {α,βrange}
         I = @index(Global, Cartesian)
-        # for β = 1:D
         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
-            Δuαβ = (α == β ? Δu[β] : Δ[β])
+            Δuαβ = α == β ? Δu[β] : Δ[β]
             # F[α][I] += ν * u[α][I+e(β)] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
             # F[α][I] -= ν * u[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
             # F[α][I] -= ν * u[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
             # F[α][I] += ν * u[α][I-e(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
             val = zero(eltype(u[1]))
-            I - e(β) ∈ Iu[α] && (
+            if I - e(β) ∈ Iu[α]
                 val +=
                     ν * φ[α][I-e(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]-1]
-            )
-            I ∈ Iu[α] &&
-                (val -= ν * φ[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]])
-            I ∈ Iu[α] &&
-                (val -= ν * φ[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]])
-            I + e(β) ∈ Iu[α] && (
+            end
+            if I ∈ Iu[α]
+                val -= ν * φ[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]]
+            end
+            if I ∈ Iu[α]
+                val -= ν * φ[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]]
+            end
+            if I + e(β) ∈ Iu[α]
                 val +=
                     ν * φ[α][I+e(β)] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]+1]
-            )
+            end
             u[α][I] += val
         end
     end
@@ -542,7 +527,6 @@ function convectiondiffusion!(F, u, setup)
     @kernel function cd!(F, u, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
         I = @index(Global, Cartesian)
         I = I + I0
-        # for β = 1:D
         KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
             Δuαβ = α == β ? Δu[β] : Δ[β]
             uαβ1 = (u[α][I-e(β)] + u[α][I]) / 2
