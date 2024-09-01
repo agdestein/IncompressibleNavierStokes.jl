@@ -2,6 +2,7 @@
     IncompressibleNavierStokesCUDSSExt
 
 CUDSS extension for IncompressibleNavierStokes.
+This makes `psolver_direct` use a CUDSS decomposition for `CuArray`s.
 """
 module IncompressibleNavierStokesCUDSSExt
 
@@ -10,6 +11,7 @@ using CUDSS.CUDA
 using CUDSS.CUDA.CUSPARSE
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: PressureBC, laplacian_mat
+using PrecompileTools
 using SparseArrays
 
 # CUDA version, using CUDSS LDLt decomposition.
@@ -50,6 +52,32 @@ function IncompressibleNavierStokes.psolver_direct(::CuArray, setup)
         cudss("solve", solver, ptemp, ftemp)
         copyto!(view(view(p, Ip), :), eltype(p).(view(ptemp, viewrange)))
         p
+    end
+end
+
+# Same as src/precompile.jl, but for `CuArray`s
+PrecompileTools.@compile_workload begin
+    for D in (2, 3), T in (Float32, Float64)
+        # Periodic
+        x = ntuple(d -> range(T(0), T(1), 5), D)
+        setup = Setup(x...; Re = T(1000), ArrayType = CuArray)
+        ustart = create_initial_conditions(setup, (dim, x...) -> zero(x[1]))
+        solve_unsteady(; ustart, setup, Δt = T(1e-3), tlims = (T(0), T(1e-2)))
+
+        # Boundaries, temperature
+        x = ntuple(d -> tanh_grid(T(0), T(1), 6), D)
+        boundary_conditions = ntuple(d -> (DirichletBC(), PressureBC()), D)
+        temperature = temperature_equation(;
+            Pr = T(0.71),
+            Ra = T(1e6),
+            Ge = T(1.0),
+            boundary_conditions,
+        )
+        setup =
+            Setup(x...; Re = T(1000), temperature, boundary_conditions, ArrayType = CuArray)
+        ustart = create_initial_conditions(setup, (dim, x...) -> zero(x[1]))
+        tempstart = zero(ustart[1])
+        solve_unsteady(; ustart, tempstart, setup, Δt = T(1e-3), tlims = (T(0), T(1e-2)))
     end
 end
 

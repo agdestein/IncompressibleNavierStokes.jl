@@ -18,6 +18,7 @@ using KernelAbstractions
 using LinearAlgebra
 using Makie
 using NNlib
+using PrecompileTools
 using Printf
 using Random
 using SparseArrays
@@ -86,6 +87,9 @@ include("utils/plotgrid.jl")
 include("utils/get_lims.jl")
 include("utils/plotmat.jl")
 include("utils/spectral_stuff.jl")
+
+# Precompile workflow
+include("precompile.jl")
 
 # Boundary conditions
 export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
