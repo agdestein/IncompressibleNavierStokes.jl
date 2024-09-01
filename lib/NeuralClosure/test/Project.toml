@@ -4,11 +4,11 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 IncompressibleNavierStokes = "5e318141-6589-402b-868d-77d7df8c442e"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
+[sources]
+IncompressibleNavierStokes = {path = "../../.."}
+
 [compat]
 Aqua = "0.8"
 CairoMakie = "0.12"
 IncompressibleNavierStokes = "0.6"
 julia = "1.9"
-
-[sources]
-IncompressibleNavierStokes = {path = "../../.."}
