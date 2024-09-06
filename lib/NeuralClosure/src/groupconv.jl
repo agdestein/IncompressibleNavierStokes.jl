@@ -144,8 +144,6 @@ function Base.show(io::IO, gc::GroupConv2D)
     print(io, ")")
 end
 
-uses_bias(::Conv{N,use_bias}) where {N,use_bias} = use_bias
-
 function Lux.initialparameters(rng::AbstractRNG, gc::GroupConv2D)
     (; islifting, isprojecting, cin, cout, conv) = gc
     params = Lux.initialparameters(rng, conv)
@@ -163,7 +161,7 @@ function Lux.initialparameters(rng::AbstractRNG, gc::GroupConv2D)
             w4 = weight[:, :, 3*cin+1:4*cin, 1:cout],
         )
     end
-    if uses_bias(conv)
+    if Lux.has_bias(conv)
         (; bias) = params
         bias = bias[:, :, 1:cout, :]
         (; weight, bias)
@@ -179,7 +177,7 @@ function Lux.parameterlength(gc::GroupConv2D)
     (; kernel_size) = conv
     nn = islifting || isprojecting ? 2 : 4
     n = nn * prod(kernel_size) * cin * cout
-    n += uses_bias(conv) * cout
+    n += Lux.has_bias(conv) * cout
 end
 
 Lux.statelength(gc::GroupConv2D) = Lux.statelength(gc.conv)
