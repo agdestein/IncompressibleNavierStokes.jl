@@ -56,9 +56,7 @@ Average scalar field `ϕ` in the `α`-direction.
     (Δ[α][I[α]+1] * ϕ[I] + Δ[α][I[α]] * ϕ[I+e(α)]) / (Δ[α][I[α]] + Δ[α][I[α]+1])
 end
 
-"""
-Compute divergence of velocity field (in-place version).
-"""
+"Compute divergence of velocity field (in-place version)."
 function divergence!(div, u, setup)
     (; grid, workgroupsize) = setup
     (; Δ, N, Ip, Np) = grid
@@ -96,9 +94,7 @@ function divergence_adjoint!(u, φ, setup)
     u
 end
 
-"""
-Compute divergence of velocity field.
-"""
+"Compute divergence of velocity field."
 divergence(u, setup) = divergence!(fill!(similar(u[1], setup.grid.N), 0), u, setup)
 
 ChainRulesCore.rrule(::typeof(divergence), u, setup) = (

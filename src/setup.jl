@@ -1,6 +1,4 @@
-"""
-Create setup.
-"""
+"Create problem setup (stored in a named tuple)."
 function Setup(
     x...;
     boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
@@ -38,7 +36,7 @@ function Setup(
 end
 
 """
-Temperature equation setup.
+Create temperature equation setup (stored in a named tuple).
 
 The equation is parameterized by three dimensionless numbers (Prandtl number,
 Rayleigh number, and Gebhart number), and requires separate boundary conditions
