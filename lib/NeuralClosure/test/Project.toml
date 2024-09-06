@@ -2,13 +2,20 @@
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 IncompressibleNavierStokes = "5e318141-6589-402b-868d-77d7df8c442e"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+NeuralClosure = "099dac27-d7f2-4047-93d5-0baee36b9c25"
+Optimisers = "3bd65402-5787-11e9-1adc-39752487f4e2"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
 IncompressibleNavierStokes = {path = "../../.."}
+NeuralClosure = {path = ".."}
 
 [compat]
 Aqua = "0.8"
 CairoMakie = "0.12"
 IncompressibleNavierStokes = "0.6"
+Optimisers = "0.3"
+Random = "1"
 julia = "1.9"

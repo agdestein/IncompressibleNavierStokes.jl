@@ -2,7 +2,6 @@ using CairoMakie
 using IncompressibleNavierStokes
 using LinearAlgebra
 using NeuralClosure
-using NNlib
 using Optimisers
 using Random
 using Test
