@@ -40,32 +40,30 @@ zero on the entire boundary.
 """
 struct PressureBC <: AbstractBC end
 
-function ghost_a! end
-function ghost_b! end
+# Pad volume boundary coordinate vector with ghost coordinates
+function padghost! end
 
 # Add opposite boundary ghost volume
-# Do everything in first function call for periodic
-function ghost_a!(::PeriodicBC, x)
-    Δx_a = x[2] - x[1]
-    Δx_b = x[end] - x[end-1]
-    pushfirst!(x, x[1] - Δx_b)
-    push!(x, x[end] + Δx_a)
-end
-ghost_b!(::PeriodicBC, x) = nothing
+padghost!(::PeriodicBC, x, isright) =
+    if isright
+        Δx_a = x[2] - x[1]
+        push!(x, x[end] + Δx_a)
+    else
+        Δx_b = x[end] - x[end-1]
+        pushfirst!(x, x[1] - Δx_b)
+    end
 
 # Add infinitely thin boundary volume
-ghost_a!(::DirichletBC, x) = pushfirst!(x, x[1])
-ghost_b!(::DirichletBC, x) = push!(x, x[end])
+padghost!(::DirichletBC, x, isright) = isright ? push!(x, x[end]) : pushfirst!(x, x[1])
 
 # Duplicate boundary volume
-ghost_a!(::SymmetricBC, x) = pushfirst!(x, x[1] - (x[2] - x[1]))
-ghost_b!(::SymmetricBC, x) = push!(x, x[end] + (x[end] - x[end-1]))
+padghost!(::SymmetricBC, x, isright) =
+    isright ? push!(x, x[end] + (x[end] - x[end-1])) : pushfirst!(x, x[1] - (x[2] - x[1]))
 
 # Add infinitely thin boundary volume
 # On the left, we need to add two ghost volumes to have a normal component at
 # the left of the first ghost volume
-ghost_a!(::PressureBC, x) = pushfirst!(x, x[1], x[1])
-ghost_b!(::PressureBC, x) = push!(x, x[end])
+padghost!(::PressureBC, x, isright) = isright ? push!(x, x[end]) : pushfirst!(x, x[1], x[1])
 
 """
     $FUNCTIONNAME(bc, isnormal, isright)

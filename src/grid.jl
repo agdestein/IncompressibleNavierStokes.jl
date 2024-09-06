@@ -114,8 +114,8 @@ function Grid(x, boundary_conditions; ArrayType = Array)
     # volume.
     for d = 1:D
         a, b = boundary_conditions[d]
-        ghost_a!(a, x[d])
-        ghost_b!(b, x[d])
+        padghost!(a, x[d], false)
+        padghost!(b, x[d], true)
     end
 
     # Number of finite volumes in each dimension, including ghost volumes
