@@ -124,8 +124,8 @@ function Grid(x, boundary_conditions; ArrayType = Array)
     # Number of velocity DOFs in each dimension
     Nu = ntuple(D) do α
         ntuple(D) do β
-            na = offset_u(boundary_conditions[β][1], α == β, false)
-            nb = offset_u(boundary_conditions[β][2], α == β, true)
+            na = offset_u(boundary_conditions[β][1], false, α == β)
+            nb = offset_u(boundary_conditions[β][2], true, α == β)
             N[β] - na - nb
         end
     end
@@ -140,8 +140,8 @@ function Grid(x, boundary_conditions; ArrayType = Array)
     # Cartesian index ranges of velocity DOFs
     Iu = ntuple(D) do α
         Iuα = ntuple(D) do β
-            na = offset_u(boundary_conditions[β][1], α == β, false)
-            nb = offset_u(boundary_conditions[β][2], α == β, true)
+            na = offset_u(boundary_conditions[β][1], false, α == β)
+            nb = offset_u(boundary_conditions[β][2], true, α == β)
             1+na:N[β]-nb
         end
         CartesianIndices(Iuα)

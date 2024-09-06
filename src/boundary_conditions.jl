@@ -81,16 +81,16 @@ Number of non-DOF pressure components at boundary.
 """
 function offset_p end
 
-offset_u(::PeriodicBC, isnormal, isright) = 1
+offset_u(::PeriodicBC, isright, isnormal) = 1
 offset_p(::PeriodicBC, isright) = 1
 
-offset_u(::DirichletBC, isnormal, isright) = 1 + isnormal * isright
+offset_u(::DirichletBC, isright, isnormal) = 1 + isright * isnormal
 offset_p(::DirichletBC, isright) = 1
 
-offset_u(::SymmetricBC, isnormal, isright) = 1 + isnormal * isright
+offset_u(::SymmetricBC, isright, isnormal) = 1 + isright * isnormal
 offset_p(::SymmetricBC, isright) = 1
 
-offset_u(::PressureBC, isnormal, isright) = 1 + !isnormal * !isright
+offset_u(::PressureBC, isright, isnormal) = 1 + !isright * !isnormal
 offset_p(::PressureBC, isright) = 1 + !isright
 
 "Get boundary indices."
