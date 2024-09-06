@@ -116,10 +116,9 @@ testops(dim) = @testset "Operators $(dim())D" begin
 
     @testset "Convection-Diffusion" begin
         cd = convectiondiffusion!(zero.(u), u, setup)
-        c_and_d = zero.(u)
-        convection!(c_and_d, u, setup)
-        diffusion!(c_and_d, u, setup)
-        @test all(cd .≈ c_and_d)
+        c = convection(u, setup)
+        d = diffusion(u, setup)
+        @test all(cd .≈ c .+ d)
     end
 
     @testset "Momentum" begin

@@ -95,12 +95,11 @@ include("precompile.jl")
 export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
 
 # Processors
-export processor, timelogger, vtk_writer, fieldsaver, realtimeplotter
+export processor, timelogger, vtk_writer, fieldsaver, realtimeplotter, animator
 export fieldplot, energy_history_plot, energy_spectrum_plot
-export animator
 
 # Setup
-export Setup, temperature_equation
+export Setup, temperature_equation, scalarfield, vectorfield
 
 # 1D grids
 export stretched_grid, cosine_grid, tanh_grid
@@ -125,5 +124,35 @@ export plotmat
 
 # ODE methods
 export AdamsBashforthCrankNicolsonMethod, OneLegMethod, RKMethods
+
+# Operators
+export apply_bc_u,
+    apply_bc_p,
+    apply_bc_temp,
+    bodyforce,
+    convection_diffusion_temp,
+    convection,
+    diffusion,
+    dissipation,
+    dissipation_from_strain,
+    divergence,
+    eig2field,
+    get_scale_numbers,
+    gravity,
+    kinetic_energy,
+    interpolate_u_p,
+    interpolate_ω_p,
+    laplacian,
+    laplacian_mat,
+    momentum,
+    poisson,
+    pressuregradient,
+    project,
+    smagorinsky_closure,
+    tensorbasis,
+    total_kinetic_energy,
+    vorticity,
+    Dfield,
+    Qfield
 
 end
