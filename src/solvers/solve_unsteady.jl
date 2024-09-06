@@ -34,7 +34,9 @@ function solve_unsteady(;
 
     tstart, tend = tlims
     isadaptive = isnothing(Δt)
-    isadaptive && (cflbuf = similar(ustart[1]))
+    if isadaptive
+        cflbuf = scalarfield(setup)
+    end
 
     # Cache arrays for intermediate computations
     cache = ode_method_cache(method, setup, ustart, tempstart)

@@ -29,8 +29,8 @@ testops(dim) = @testset "Operators $(dim())D" begin
     end
 
     @testset "Pressure gradient" begin
-        v = randn!.(similar.(u))
-        p = randn!(similar(u[1]))
+        v = randn!.(vectorfield(setup))
+        p = randn!(scalarfield(setup))
         v = apply_bc_u(v, T(0), setup)
         p = apply_bc_p(p, T(0), setup)
         Dv = divergence(v, setup)
@@ -58,7 +58,7 @@ testops(dim) = @testset "Operators $(dim())D" begin
     end
 
     @testset "Laplacian" begin
-        p = randn!(similar(u[1]))
+        p = randn!(scalarfield(setup))
         p = apply_bc_p(p, T(0), setup)
         Lp = laplacian(p, setup)
         @test Lp isa Array{T}
@@ -130,7 +130,7 @@ testops(dim) = @testset "Operators $(dim())D" begin
     end
 
     @testset "Other fields" begin
-        p = randn!(similar(u[1]))
+        p = randn!(scalarfield(setup))
         ω = vorticity(u, setup)
         D == 2 && @test ω isa Array{T}
         D == 3 && @test ω isa Tuple

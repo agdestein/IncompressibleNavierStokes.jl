@@ -218,9 +218,9 @@ function psolver_cg(
     (; grid, workgroupsize) = setup
     (; Np, Ip, Ω) = grid
     T = eltype(setup.grid.x[1])
-    r = similar(setup.grid.x[1], setup.grid.N)
-    L = similar(setup.grid.x[1], setup.grid.N)
-    q = similar(setup.grid.x[1], setup.grid.N)
+    r = scalarfield(setup)
+    L = scalarfield(setup)
+    q = scalarfield(setup)
     function psolve!(p, f)
         function innerdot(a, b)
             @kernel function innerdot!(d, a, b, I0)

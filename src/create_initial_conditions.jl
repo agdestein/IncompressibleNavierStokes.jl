@@ -16,7 +16,7 @@ function create_initial_conditions(
     D = dimension()
 
     # Allocate velocity
-    u = ntuple(d -> fill!(similar(x[1], N), 0), D)
+    u = vectorfield(setup)
 
     # Initial velocities
     for α = 1:D

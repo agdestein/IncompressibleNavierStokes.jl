@@ -80,7 +80,7 @@ function observefield(
         up = interpolate_u_p(u, setup)
     elseif fieldname == :velocitynorm
         up = interpolate_u_p(u, setup)
-        upnorm = zero(up[1])
+        upnorm = scalarfield(setup)
     elseif fieldname == :vorticity
         ω = vorticity(u, setup)
         ωp = interpolate_ω_p(ω, setup)
@@ -91,23 +91,23 @@ function observefield(
             @warn "Creating new pressure solver for observefield"
             psolver = default_psolver(setup)
         end
-        F = zero.(u)
-        div = zero(u[1])
-        p = zero(u[1])
+        F = vectorfield(setup)
+        div = scalarfield(setup)
+        p = scalarfield(setup)
     elseif fieldname == :Dfield
         if isnothing(psolver)
             @warn "Creating new pressure solver for observefield"
             psolver = default_psolver(setup)
         end
-        F = zero.(u)
-        div = zero(u[1])
-        p = zero(u[1])
-        G = similar.(u)
-        d = similar(u[1])
+        F = vectorfield(setup)
+        div = scalarfield(setup)
+        p = scalarfield(setup)
+        F = vectorfield(setup)
+        d = scalarfield(setup)
     elseif fieldname == :Qfield
-        Q = similar(u[1])
+        Q = scalarfield(setup)
     elseif fieldname == :eig2field
-        λ = similar(u[1])
+        λ = scalarfield(setup)
     elseif fieldname in union(Symbol.(["B$i" for i = 1:11]), Symbol.(["V$i" for i = 1:5]))
         sym = string(fieldname)[1]
         sym = sym == 'B' ? 1 : 2
@@ -524,7 +524,7 @@ Create energy history plot.
 function energy_history_plot(state; setup)
     @assert state isa Observable "Energy history requires observable state."
     (; Ω, Ip) = setup.grid
-    e = zero(state[].u[1])
+    e = scalarfield(setup)
     _points = Point2f[]
     points = lift(state) do (; u, t)
         kinetic_energy!(e, u, setup)

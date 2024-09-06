@@ -27,8 +27,8 @@ function Setup(
     if !isnothing(bodyforce) && issteadybodyforce
         (; dimension, x, N) = setup.grid
         T = eltype(x[1])
-        F = ntuple(α -> zero(similar(x[1], N)), dimension())
-        u = ntuple(α -> zero(similar(x[1], N)), dimension())
+        F = vectorfield(setup)
+        F = vectorfield(setup)
         bodyforce = bodyforce!(F, u, T(0), setup)
         setup = (; setup..., issteadybodyforce = true, bodyforce)
     end
@@ -74,3 +74,10 @@ function temperature_equation(;
     γ = α1 / α3
     (; α1, α2, α3, α4, γ, dodissipation, boundary_conditions, gdir)
 end
+
+"Create empty scalar field."
+scalarfield(setup) = fill!(similar(setup.grid.x[1], setup.grid.N), 0)
+
+"Create empty vector field."
+vectorfield(setup) =
+    ntuple(α -> fill!(similar(setup.grid.x[1], setup.grid.N), 0), setup.grid.dimension())

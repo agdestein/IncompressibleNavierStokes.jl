@@ -893,7 +893,7 @@ divs = let
         Δt = (t[2] - t[1]) / nupdate
         T = eltype(ustart[1])
         dwriter = processor() do state
-            div = fill!(similar(setup.grid.x[1], setup.grid.N), 0)
+            div = scalarfield(setup)
             dhist = zeros(T, 0)
             on(state) do (; u, n)
                 if n % nupdate == 0

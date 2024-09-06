@@ -95,13 +95,13 @@ function divergence_adjoint!(u, φ, setup)
 end
 
 "Compute divergence of velocity field."
-divergence(u, setup) = divergence!(fill!(similar(u[1], setup.grid.N), 0), u, setup)
+divergence(u, setup) = divergence!(scalarfield(setup), u, setup)
 
 ChainRulesCore.rrule(::typeof(divergence), u, setup) = (
     divergence(u, setup),
     φ -> (
         NoTangent(),
-        Tangent{typeof(u)}(divergence_adjoint!(similar.(u), φ, setup)...),
+        Tangent{typeof(u)}(divergence_adjoint!(vectorfield(setup), φ, setup)...),
         NoTangent(),
     ),
 )
@@ -153,7 +153,11 @@ pressuregradient(p, setup) =
 
 ChainRulesCore.rrule(::typeof(pressuregradient), p, setup) = (
     pressuregradient(p, setup),
-    φ -> (NoTangent(), pressuregradient_adjoint!(similar(p), (φ...,), setup), NoTangent()),
+    φ -> (
+        NoTangent(),
+        pressuregradient_adjoint!(scalarfield(setup), (φ...,), setup),
+        NoTangent(),
+    ),
 )
 
 """
@@ -203,7 +207,7 @@ end
 #
 # ChainRulesCore.rrule(::typeof(applypressure), p, setup) = (
 #     applypressure(u, p, setup),
-#     φ -> (NoTangent(), applypressure_adjoint!(similar(p), (φ...,), setup), NoTangent()),
+#     φ -> (NoTangent(), applypressure_adjoint!(scalarfield(setup), (φ...,), setup), NoTangent()),
 # )
 
 """
@@ -287,7 +291,7 @@ end
 """
 Compute Laplacian of pressure field.
 """
-laplacian(p, setup) = laplacian!(similar(p), p, setup)
+laplacian(p, setup) = laplacian!(scalarfield(setup), p, setup)
 
 """
 Compute convective term.
@@ -552,7 +556,7 @@ end
 #     convection(u, setup),
 #     φ -> (
 #         NoTangent(),
-#         Tangent{typeof(u)}(convectiondiffusion_adjoint!(similar.(u), φ, setup)...),
+#         Tangent{typeof(u)}(convectiondiffusion_adjoint!(vectorfield(setup), φ, setup)...),
 #         NoTangent(),
 #     ),
 # )
@@ -895,12 +899,8 @@ end
 """
 Compute vorticity field.
 """
-vorticity(u, setup) = vorticity!(
-    length(u) == 2 ? similar(u[1], setup.grid.N) :
-    ntuple(α -> similar(u[1], setup.grid.N), length(u)),
-    u,
-    setup,
-)
+vorticity(u, setup) =
+    vorticity!(length(u) == 2 ? scalarfield(setup) : vectorfield(setup), u, setup)
 
 """
 Compute vorticity field.
@@ -1049,9 +1049,7 @@ function smagorinsky_closure(setup)
     D = dimension()
     T = eltype(x[1])
     σ = similar(x[1], SMatrix{D,D,T,D * D}, N)
-    s = ntuple(α -> similar(x[1], N), D)
-    # σ = zero(similar(x[1], SMatrix{D,D,T,D * D}, N))
-    # s = ntuple(α -> zero(similar(x[1], N)), D)
+    s = vectorfield(setup)
     function closure(u, θ)
         smagtensor!(σ, u, θ, setup)
         apply_bc_p!(σ, zero(T), setup)
@@ -1127,8 +1125,7 @@ end
 """
 Interpolate velocity to pressure points.
 """
-interpolate_u_p(u, setup) =
-    interpolate_u_p!(ntuple(α -> similar(u[1], setup.grid.N), length(u)), u, setup)
+interpolate_u_p(u, setup) = interpolate_u_p!(vectorfield(setup), u, setup)
 
 """
 Interpolate velocity to pressure points.
@@ -1155,8 +1152,7 @@ end
 Interpolate vorticity to pressure points.
 """
 interpolate_ω_p(ω, setup) = interpolate_ω_p!(
-    setup.grid.dimension() == 2 ? similar(ω, setup.grid.N) :
-    ntuple(α -> similar(ω[1], setup.grid.N), length(ω)),
+    setup.grid.dimension() == 2 ? scalarfield(setup) : vectorfield(setup),
     ω,
     setup,
 )
@@ -1248,13 +1244,8 @@ end
 """
 Compute the ``D``-field.
 """
-Dfield(p, setup; kwargs...) = Dfield!(
-    zero(p),
-    ntuple(α -> similar(p, setup.grid.N), setup.grid.dimension()),
-    p,
-    setup;
-    kwargs...,
-)
+Dfield(p, setup; kwargs...) =
+    Dfield!(scalarfield(setup), vectorfield(setup), p, setup; kwargs...)
 
 """
 Compute ``Q``-field [Jeong1995](@cite) given by
@@ -1289,7 +1280,7 @@ end
 """
 Compute the ``Q``-field.
 """
-Qfield(u, setup) = Qfield!(similar(u[1], setup.grid.N), u, setup)
+Qfield(u, setup) = Qfield!(scalarfield(setup), u, setup)
 
 """
 Compute the second eigenvalue of ``S^2 + R^2``,
@@ -1319,7 +1310,7 @@ end
 Compute the second eigenvalue of ``S^2 + \\Omega^2``,
 as proposed by Jeong and Hussain [Jeong1995](@cite).
 """
-eig2field(u, setup) = eig2field!(similar(u[1], setup.grid.N), u, setup)
+eig2field(u, setup) = eig2field!(scalarfield(setup), u, setup)
 
 """
 Compute kinetic energy field ``k`` (in-place version).
@@ -1372,7 +1363,8 @@ end
 """
 Compute kinetic energy field ``e`` (out-of-place version).
 """
-kinetic_energy(u, setup; kwargs...) = kinetic_energy!(similar(u[1]), u, setup; kwargs...)
+kinetic_energy(u, setup; kwargs...) =
+    kinetic_energy!(scalarfield(setup), u, setup; kwargs...)
 
 """
 Compute total kinetic energy. The velocity components are interpolated to the
