@@ -1418,7 +1418,7 @@ volume centers and squared.
 function total_kinetic_energy(u, setup; kwargs...)
     (; Ip) = setup.grid
     k = kinetic_energy(u, setup; kwargs...)
-    k = scalewithvolume(k, Ip)
+    k = scalewithvolume(k, setup)
     sum(view(k, Ip))
 end
 

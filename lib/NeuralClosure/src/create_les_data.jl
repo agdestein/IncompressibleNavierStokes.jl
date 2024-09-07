@@ -125,7 +125,7 @@ function create_les_data(;
     )
     les = [
         Setup(;
-            ntuple(α -> LinRange(lims[α]..., nles[α] + 1), D),
+            x = ntuple(α -> LinRange(lims[α]..., nles[α] + 1), D),
             Re,
             ArrayType,
             kwargs...,

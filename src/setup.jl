@@ -27,9 +27,9 @@ function Setup(;
     if !isnothing(bodyforce) && issteadybodyforce
         (; dimension, x, N) = setup.grid
         T = eltype(x[1])
+        u = vectorfield(setup)
         F = vectorfield(setup)
-        F = vectorfield(setup)
-        bodyforce = bodyforce!(F, u, T(0), setup)
+        bodyforce = applybodyforce!(F, u, T(0), setup)
         setup = (; setup..., issteadybodyforce = true, bodyforce)
     end
     setup

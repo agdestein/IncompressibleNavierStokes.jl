@@ -16,9 +16,9 @@
         elseif D == 3
             tanh_grid(lims..., n, 1.2), tanh_grid(lims..., n, 1.1), cosine_grid(lims..., n)
         end
-        setup = Setup(
+        setup = Setup(;
             x,
-            Re;
+            Re,
             boundary_conditions = ntuple(d -> (DirichletBC(), DirichletBC()), D),
         )
         uref(dim, x, y, args...) =

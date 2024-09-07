@@ -8,8 +8,9 @@
     dir = joinpath(tempdir(), "INSTest")
 
     n = 64
+    x = LinRange(0.0, 1.0, n + 1), LinRange(0.0, 1.0, n + 1)
     setup = Setup(;
-        x = (LinRange(0.0, 1.0, n + 1), LinRange(0.0, 1.0, n + 1)),
+        x,
         Re = 100.0,
         boundary_conditions = (
             (DirichletBC(), DirichletBC()),
