@@ -123,7 +123,7 @@ export AdamsBashforthCrankNicolsonMethod, OneLegMethod, RKMethods
 export apply_bc_u,
     apply_bc_p,
     apply_bc_temp,
-    bodyforce,
+    applybodyforce,
     convection_diffusion_temp,
     convection,
     diffusion,
