@@ -78,15 +78,10 @@ include("create_initial_conditions.jl")
 include("processors.jl")
 
 # Solvers
-# include("solvers/get_timestep.jl")
-include("solvers/cfl.jl")
-include("solvers/solve_unsteady.jl")
+include("solver.jl")
 
 # Utils
-include("utils/plotgrid.jl")
-include("utils/get_lims.jl")
-include("utils/plotmat.jl")
-include("utils/spectral_stuff.jl")
+include("utils.jl")
 
 # Precompile workflow
 include("precompile.jl")
@@ -120,7 +115,6 @@ export create_initial_conditions, random_field
 
 # Utils
 export plotgrid, save_vtk
-export plotmat
 
 # ODE methods
 export AdamsBashforthCrankNicolsonMethod, OneLegMethod, RKMethods

@@ -1,3 +1,4 @@
+"Get matrix for the Laplacian operator."
 function laplacian_mat(setup)
     (; grid, boundary_conditions) = setup
     (; dimension, x, N, Np, Ip, Δ, Δu, Ω) = grid
