@@ -4,7 +4,7 @@ PrecompileTools.@compile_workload begin
         # Periodic
         x = ntuple(d -> range(T(0), T(1), 5), D)
         setup = Setup(x...; Re = T(1000))
-        ustart = create_initial_conditions(setup, (dim, x...) -> zero(x[1]))
+        ustart = velocityfield(setup, (dim, x...) -> zero(x[1]))
         solve_unsteady(; ustart, setup, Δt = T(1e-3), tlims = (T(0), T(1e-2)))
 
         # Boundaries, temperature
@@ -17,7 +17,7 @@ PrecompileTools.@compile_workload begin
             boundary_conditions,
         )
         setup = Setup(x...; Re = T(1000), temperature, boundary_conditions)
-        ustart = create_initial_conditions(setup, (dim, x...) -> zero(x[1]))
+        ustart = velocityfield(setup, (dim, x...) -> zero(x[1]))
         tempstart = zero(ustart[1])
         solve_unsteady(; ustart, tempstart, setup, Δt = T(1e-3), tlims = (T(0), T(1e-2)))
     end

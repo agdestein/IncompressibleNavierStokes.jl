@@ -23,7 +23,7 @@
         )
         uref(dim, x, y, args...) =
             -(dim() == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
-        u = create_initial_conditions(setup, uref, T(0))
+        u = velocityfield(setup, uref, T(0))
         (; Iu, Ip, Ω) = setup.grid
 
         @testset "Divergence" begin

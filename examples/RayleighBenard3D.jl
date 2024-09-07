@@ -59,7 +59,7 @@ plotgrid(y, z)
 @time psolver = psolver_direct(setup)
 
 # Initial conditions
-ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x); psolver);
+ustart = velocityfield(setup, (dim, x, y, z) -> zero(x); psolver);
 (; xp) = setup.grid;
 ## T0(x, y, z) = 1 - z;
 ## T0(x, y, z) = one(x) / 2 + max(sin(20 * x) * sinpi(20 * y) / 100, 0); ## Perturbation

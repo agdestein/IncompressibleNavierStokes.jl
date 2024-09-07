@@ -34,13 +34,13 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
         x = ntuple(α -> LinRange(lims..., n + 1), D)
         setup = Setup(x...; Re, ArrayType)
         psolver = psolver_spectral(setup)
-        ustart = create_initial_conditions(
+        ustart = velocityfield(
             setup,
             (dim, x...) -> uref(dim, x..., tlims[1]),
             tlims[1];
             psolver,
         )
-        ut = create_initial_conditions(
+        ut = velocityfield(
             setup,
             (dim, x...) -> uref(dim, x..., tlims[2]),
             tlims[2];

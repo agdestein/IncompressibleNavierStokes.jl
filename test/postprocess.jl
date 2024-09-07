@@ -19,7 +19,7 @@
     )
     uref(dim, x, y, args...) =
         -(dim() == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
-    ustart = create_initial_conditions(setup, uref, 0.0)
+    ustart = velocityfield(setup, uref, 0.0)
 
     nprocess = 20
     nupdate = 10

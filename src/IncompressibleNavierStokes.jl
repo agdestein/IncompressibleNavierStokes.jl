@@ -72,7 +72,7 @@ include("time_steppers/lambda_max.jl")
 include("time_steppers/RKMethods.jl")
 
 # Preprocess
-include("create_initial_conditions.jl")
+include("velocityfield.jl")
 
 # Processors
 include("processors.jl")
@@ -111,7 +111,7 @@ export default_psolver,
 export solve_unsteady
 
 # Field generation
-export create_initial_conditions, random_field
+export velocityfield, random_field
 
 # Utils
 export plotgrid, save_vtk

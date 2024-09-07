@@ -56,7 +56,7 @@ setup = Setup(
 @time psolver = psolver_direct(setup)
 
 # Initial conditions
-ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x); psolver);
+ustart = velocityfield(setup, (dim, x, y, z) -> zero(x); psolver);
 (; xp) = setup.grid;
 xx = xp[1];
 xy = reshape(xp[2], 1, :);

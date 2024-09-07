@@ -80,7 +80,7 @@ setup = Setup(x, y; boundary_conditions, Re, ArrayType);
 
 # The initial conditions are provided in function. The value `dim()` determines
 # the velocity component.
-ustart = create_initial_conditions(setup, (dim, x, y) -> zero(x));
+ustart = velocityfield(setup, (dim, x, y) -> zero(x));
 
 # Iteration processors are called after every `nupdate` time steps. This can be
 # useful for logging, plotting, or saving results. Their respective outputs are

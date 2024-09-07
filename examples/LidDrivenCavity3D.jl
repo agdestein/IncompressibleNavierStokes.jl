@@ -49,7 +49,7 @@ boundary_conditions = (
 setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
 
 # Initial conditions
-ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x))
+ustart = velocityfield(setup, (dim, x, y, z) -> zero(x))
 
 # Solve unsteady problem
 (; u, t), outputs = solve_unsteady(;

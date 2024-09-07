@@ -53,7 +53,7 @@ plotgrid(x, y; figure = (; size = (600, 150)))
 setup = Setup(x, y; Re, boundary_conditions, ArrayType);
 
 # Initial conditions (extend inflow)
-ustart = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)));
+ustart = velocityfield(setup, (dim, x, y) -> U(dim, x, y, zero(x)));
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);

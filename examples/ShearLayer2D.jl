@@ -44,7 +44,7 @@ d = T(π / 15)
 e = T(0.05)
 U1(y) = y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d)
 ## U1(y) = T(1) + (y ≤ π ? tanh((y - T(π / 2)) / d) : tanh((T(3π / 2) - y) / d))
-ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? U1(y) : e * sin(x));
+ustart = velocityfield(setup, (dim, x, y) -> dim() == 1 ? U1(y) : e * sin(x));
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(;

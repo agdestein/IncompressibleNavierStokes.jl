@@ -3,9 +3,9 @@ Create divergence free initial velocity field `u` at starting time `t`.
 The initial conditions of `u[α]` are specified by the function
 `initial_velocity(Dimension(α), x...)`.
 """
-function create_initial_conditions(
+function velocityfield(
     setup,
-    initial_velocity,
+    ufunc,
     t = convert(eltype(setup.grid.x[1]), 0);
     psolver = default_psolver(setup),
     doproject = true,
@@ -21,7 +21,7 @@ function create_initial_conditions(
     # Initial velocities
     for α = 1:D
         xin = ntuple(β -> reshape(xu[α][β], ntuple(Returns(1), β - 1)..., :), D)
-        u[α][Iu[α]] .= initial_velocity.((Dimension(α),), xin...)[Iu[α]]
+        u[α][Iu[α]] .= ufunc.((Dimension(α),), xin...)[Iu[α]]
     end
 
     # Make velocity field divergence free

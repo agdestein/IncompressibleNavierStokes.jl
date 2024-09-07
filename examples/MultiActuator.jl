@@ -74,7 +74,7 @@ plotgrid(x, y; figure = (; size = (600, 300)))
 setup = Setup(x, y; Re = T(1000), boundary_conditions, bodyforce, ArrayType);
 
 # Initial conditions (extend inflow)
-ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? one(x) : zero(x));
+ustart = velocityfield(setup, (dim, x, y) -> dim() == 1 ? one(x) : zero(x));
 t = T(0)
 
 boxes = map(bodyforce.forces) do (; xc, yc, D, δ)

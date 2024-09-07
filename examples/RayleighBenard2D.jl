@@ -102,7 +102,7 @@ setup = Setup(
 );
 
 # Initial conditions
-ustart = create_initial_conditions(setup, (dim, x, y) -> zero(x));
+ustart = velocityfield(setup, (dim, x, y) -> zero(x));
 (; xp) = setup.grid;
 ## T0(x, y) = 1 - y;
 ## T0(x, y) = one(y) / 2;

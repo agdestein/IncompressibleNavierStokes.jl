@@ -121,7 +121,7 @@ setup = Setup(
 # Initial conditions
 U0(dim, x, y) = zero(x)
 T0(x, y) = 1 / 2 + sinpi(30 * x) / 100
-ustart = create_initial_conditions(setup, U0)
+ustart = velocityfield(setup, U0)
 tempstart = IncompressibleNavierStokes.apply_bc_temp(T0.(setup.grid.xp[1], setup.grid.xp[2]'), 0.0, setup)
 
 # Solve equation

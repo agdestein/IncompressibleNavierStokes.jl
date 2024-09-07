@@ -56,7 +56,7 @@ bodyforce(dim, x, y, t) = dim() == 1 ? -cₜ * inside(x, y) : 0.0
 setup = Setup(x, y; Re = 100.0, boundary_conditions, bodyforce);
 
 # Initial conditions (extend inflow)
-ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0);
+ustart = velocityfield(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0);
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(;

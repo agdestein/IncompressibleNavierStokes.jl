@@ -50,7 +50,7 @@ setup = Setup(x, y; Re, boundary_conditions);
 psolver = psolver_direct(setup);
 
 # Initial conditions (extend inflow)
-ustart = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, 0.0); psolver);
+ustart = velocityfield(setup, (dim, x, y) -> U(dim, x, y, 0.0); psolver);
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(;

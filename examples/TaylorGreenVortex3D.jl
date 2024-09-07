@@ -38,7 +38,7 @@ setup = Setup(x, y, z; Re, ArrayType);
 psolver = psolver_spectral(setup);
 
 # Initial conditions
-ustart = create_initial_conditions(
+ustart = velocityfield(
     setup,
     (dim, x, y, z) ->
         dim() == 1 ? sinpi(2x) * cospi(2y) * sinpi(2z) / 2 :

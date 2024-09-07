@@ -13,7 +13,7 @@ t_start, t_end = tlims = (0.0, 5.0)
 initial_velocity_u(x, y) = cos(x)sin(y)
 initial_velocity_v(x, y) = -sin(x)cos(y)
 initial_pressure(x, y) = -1 / 4 * (cos(2x) + cos(2y))
-V = create_initial_conditions(
+V = velocityfield(
     setup,
     initial_velocity_u,
     initial_velocity_v,

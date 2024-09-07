@@ -55,7 +55,7 @@ boundary_conditions = (
 setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
 
 # Initial conditions (extend inflow)
-ustart = create_initial_conditions(setup, (dim, x, y, z) -> U(dim, x, y, z, zero(x)));
+ustart = velocityfield(setup, (dim, x, y, z) -> U(dim, x, y, z, zero(x)));
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);
