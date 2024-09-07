@@ -757,16 +757,16 @@ function dissipation_from_strain!(ϵ, u, setup)
 end
 
 "Compute body force (differentiable version)."
-bodyforce(u, t, setup) = bodyforce!(zero.(u), u, t, setup)
+applybodyforce(u, t, setup) = applybodyforce!(zero.(u), u, t, setup)
 
-ChainRulesCore.rrule(::typeof(bodyforce), u, t, setup) =
-    (bodyforce(u, t, setup), φ -> error("Not yet implemented"))
+ChainRulesCore.rrule(::typeof(applybodyforce), u, t, setup) =
+    (applybodyforce(u, t, setup), φ -> error("Not yet implemented"))
 
 """
 Compute body force (in-place version).
 Add the result to `F`.
 """
-function bodyforce!(F, u, t, setup)
+function applybodyforce!(F, u, t, setup)
     (; grid, workgroupsize, bodyforce, issteadybodyforce) = setup
     (; dimension, Δ, Δu, Nu, Iu, x, xp) = grid
     D = dimension()
@@ -852,14 +852,14 @@ Right hand side of momentum equations, excluding pressure gradient
 (differentiable version).
 """
 function momentum(u, temp, t, setup)
-    (; grid, closure_model) = setup
+    (; grid, bodyforce, closure_model) = setup
     (; dimension) = grid
     D = dimension()
     d = diffusion(u, setup)
     c = convection(u, setup)
     F = @. d + c
     if !isnothing(bodyforce)
-        f = bodyforce(u, t, setup)
+        f = applybodyforce(u, t, setup)
         F .+= f
     end
     if !isnothing(temp)
@@ -891,7 +891,7 @@ function momentum!(F, u, temp, t, setup)
     # diffusion!(F, u, setup)
     # convection!(F, u, setup)
     convectiondiffusion!(F, u, setup)
-    isnothing(bodyforce) || bodyforce!(F, u, t, setup)
+    isnothing(bodyforce) || applybodyforce!(F, u, t, setup)
     isnothing(temp) || gravity!(F, temp, setup)
     F
 end
