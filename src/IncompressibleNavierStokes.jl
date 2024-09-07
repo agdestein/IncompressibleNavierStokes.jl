@@ -62,6 +62,10 @@ include("setup.jl")
 include("pressure.jl")
 include("operators.jl")
 include("matrices.jl")
+include("initializers.jl")
+include("processors.jl")
+include("solver.jl")
+include("utils.jl")
 
 # Time steppers
 include("time_steppers/methods.jl")
@@ -70,18 +74,6 @@ include("time_steppers/step.jl")
 include("time_steppers/isexplicit.jl")
 include("time_steppers/lambda_max.jl")
 include("time_steppers/RKMethods.jl")
-
-# Preprocess
-include("create_initial_conditions.jl")
-
-# Processors
-include("processors.jl")
-
-# Solvers
-include("solver.jl")
-
-# Utils
-include("utils.jl")
 
 # Precompile workflow
 include("precompile.jl")

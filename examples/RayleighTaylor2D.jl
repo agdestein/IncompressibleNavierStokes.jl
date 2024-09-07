@@ -44,7 +44,7 @@ setup = Setup(
 
 # Initial conditions
 ustart = velocityfield(setup, (dim, x, y) -> zero(x));
-tempstart = temperaturefield(setup; (x, y) -> one(x) * (1 + sinpi(x) / 50 > y));
+tempstart = temperaturefield(setup, (x, y) -> one(x) * (1 + sinpi(x) / 50 > y));
 
 # Solve equation
 state, outputs = solve_unsteady(;

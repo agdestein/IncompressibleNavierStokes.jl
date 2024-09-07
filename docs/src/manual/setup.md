@@ -27,3 +27,10 @@ Pages   = ["grid.jl"]
 Modules = [IncompressibleNavierStokes]
 Pages   = ["setup.jl"]
 ```
+
+## Field initializers
+
+```@autodocs
+Modules = [IncompressibleNavierStokes]
+Pages = ["initializers.jl"]
+```

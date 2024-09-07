@@ -49,10 +49,9 @@ end
 # Define observer function to track average temperature.
 function averagetemp(state; setup)
     state isa Observable || (state = Observable(state))
-    (; x, Δ, Ip, Δu) = setup.grid
-    T = eltype(Δ[1])
+    (; xp, Δ, Ip) = setup.grid
     ix = Ip.indices[1]
-    Ty = lift(state) do (; temp, t)
+    Ty = lift(state) do (; temp)
         Ty = sum(temp[ix, :] .* Δ[1][ix]; dims = 1) ./ sum(Δ[1][ix])
         Array(Ty)[:]
     end

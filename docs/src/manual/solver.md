@@ -4,13 +4,6 @@ CurrentModule = IncompressibleNavierStokes
 
 # Solvers
 
-## Initial conditions
-
-```@autodocs
-Modules = [IncompressibleNavierStokes]
-Pages = ["create_initial_conditions.jl"]
-```
-
 ## Solvers
 
 ```@autodocs

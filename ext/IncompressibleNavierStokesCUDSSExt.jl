@@ -76,7 +76,7 @@ PrecompileTools.@compile_workload begin
         setup =
             Setup(x...; Re = T(1000), temperature, boundary_conditions, ArrayType = CuArray)
         ustart = velocityfield(setup, (dim, x...) -> zero(x[1]))
-        tempstart = zero(ustart[1])
+        tempstart = temperaturefield(setup, (x...) -> zero(x[1]))
         solve_unsteady(; ustart, tempstart, setup, Δt = T(1e-3), tlims = (T(0), T(1e-2)))
     end
 end

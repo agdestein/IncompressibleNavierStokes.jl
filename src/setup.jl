@@ -74,10 +74,3 @@ function temperature_equation(;
     γ = α1 / α3
     (; α1, α2, α3, α4, γ, dodissipation, boundary_conditions, gdir)
 end
-
-"Create empty scalar field."
-scalarfield(setup) = fill!(similar(setup.grid.x[1], setup.grid.N), 0)
-
-"Create empty vector field."
-vectorfield(setup) =
-    ntuple(α -> fill!(similar(setup.grid.x[1], setup.grid.N), 0), setup.grid.dimension())
