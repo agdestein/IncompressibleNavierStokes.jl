@@ -56,6 +56,39 @@ Average scalar field `ϕ` in the `α`-direction.
     (Δ[α][I[α]+1] * ϕ[I] + Δ[α][I[α]] * ϕ[I+e(α)]) / (Δ[α][I[α]] + Δ[α][I[α]+1])
 end
 
+"Scale scalar field `p` with volume sizes (differentiable version)."
+function scalewithvolume(p, setup)
+    (; grid) = setup
+    (; dimension, Δ) = grid
+    if dimension() == 2
+        Δx = Δ[1]
+        Δy = Δ[2]'
+        @. p * Δx * Δy
+    else
+        Δx = Δ[1]
+        Δy = reshape(Δ[2], 1, :)
+        Δz = reshape(Δ[3], 1, 1, :)
+        @. p * Δx * Δy * Δz
+    end
+end
+
+"Scale scalar field with volume sizes (in-place version)."
+function scalewithvolume!(p, setup)
+    (; grid) = setup
+    (; dimension, Δ) = grid
+    if dimension() == 2
+        Δx = Δ[1]
+        Δy = Δ[2]'
+        @. p *= Δx * Δy
+    else
+        Δx = Δ[1]
+        Δy = reshape(Δ[2], 1, :)
+        Δz = reshape(Δ[3], 1, 1, :)
+        @. p *= Δx * Δy * Δz
+    end
+    p
+end
+
 "Compute divergence of velocity field (differentiable version)."
 divergence(u, setup) = divergence!(scalarfield(setup), u, setup)
 
@@ -207,7 +240,7 @@ laplacian(p, setup) = laplacian!(scalarfield(setup), p, setup)
 "Compute Laplacian of pressure field (in-place version)."
 function laplacian!(L, p, setup)
     (; grid, workgroupsize, boundary_conditions) = setup
-    (; dimension, Δ, Δu, N, Np, Ip, Ω) = grid
+    (; dimension, Δ, Δu, N, Np, Ip) = grid
     D = dimension()
     e = Offset{D}()
     # @kernel function lap!(L, p, I0)
@@ -218,19 +251,19 @@ function laplacian!(L, p, setup)
     #         # bc = boundary_conditions[α]
     #         if bc[1] isa PressureBC && I[α] == I0[α] + 1
     #             lap +=
-    #                 Ω[I] / Δ[α][I[α]] *
+    #                 ΩI / Δ[α][I[α]] *
     #                 ((p[I+e(α)] - p[I]) / Δu[α][I[α]] - (p[I]) / Δu[α][I[α]-1])
     #         elseif bc[2] isa PressureBC && I[α] == I0[α] + Np[α]
     #             lap +=
-    #                 Ω[I] / Δ[α][I[α]] *
+    #                 ΩI / Δ[α][I[α]] *
     #                 ((-p[I]) / Δu[α][I[α]] - (p[I] - p[I-e(α)]) / Δu[α][I[α]-1])
     #         elseif bc[1] isa DirichletBC && I[α] == I0[α] + 1
-    #             lap += Ω[I] / Δ[α][I[α]] * ((p[I+e(α)] - p[I]) / Δu[α][I[α]])
+    #             lap += ΩI / Δ[α][I[α]] * ((p[I+e(α)] - p[I]) / Δu[α][I[α]])
     #         elseif bc[2] isa DirichletBC && I[α] == I0[α] + Np[α]
-    #             lap += Ω[I] / Δ[α][I[α]] * (-(p[I] - p[I-e(α)]) / Δu[α][I[α]-1])
+    #             lap += ΩI / Δ[α][I[α]] * (-(p[I] - p[I-e(α)]) / Δu[α][I[α]-1])
     #         else
     #             lap +=
-    #                 Ω[I] / Δ[α][I[α]] *
+    #                 ΩI / Δ[α][I[α]] *
     #                 ((p[I+e(α)] - p[I]) / Δu[α][I[α]] - (p[I] - p[I-e(α)]) / Δu[α][I[α]-1])
     #         end
     #     end
@@ -239,22 +272,24 @@ function laplacian!(L, p, setup)
     @kernel function lapα!(L, p, I0, ::Val{α}, bc) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
+        ΔI = getindex.(Δ, I.I)
+        ΩI = prod(ΔI)
         # bc = boundary_conditions[α]
         if bc[1] isa PressureBC && I[α] == I0[α] + 1
             L[I] +=
-                Ω[I] / Δ[α][I[α]] *
+                ΩI / Δ[α][I[α]] *
                 ((p[I+e(α)] - p[I]) / Δu[α][I[α]] - (p[I]) / Δu[α][I[α]-1])
         elseif bc[2] isa PressureBC && I[α] == I0[α] + Np[α]
             L[I] +=
-                Ω[I] / Δ[α][I[α]] *
+                ΩI / Δ[α][I[α]] *
                 ((-p[I]) / Δu[α][I[α]] - (p[I] - p[I-e(α)]) / Δu[α][I[α]-1])
         elseif bc[1] isa DirichletBC && I[α] == I0[α] + 1
-            L[I] += Ω[I] / Δ[α][I[α]] * ((p[I+e(α)] - p[I]) / Δu[α][I[α]])
+            L[I] += ΩI / Δ[α][I[α]] * ((p[I+e(α)] - p[I]) / Δu[α][I[α]])
         elseif bc[2] isa DirichletBC && I[α] == I0[α] + Np[α]
-            L[I] += Ω[I] / Δ[α][I[α]] * (-(p[I] - p[I-e(α)]) / Δu[α][I[α]-1])
+            L[I] += ΩI / Δ[α][I[α]] * (-(p[I] - p[I-e(α)]) / Δu[α][I[α]-1])
         else
             L[I] +=
-                Ω[I] / Δ[α][I[α]] *
+                ΩI / Δ[α][I[α]] *
                 ((p[I+e(α)] - p[I]) / Δu[α][I[α]] - (p[I] - p[I-e(α)]) / Δu[α][I[α]-1])
         end
         # L[I] = lap
@@ -1381,9 +1416,9 @@ Compute total kinetic energy. The velocity components are interpolated to the
 volume centers and squared.
 """
 function total_kinetic_energy(u, setup; kwargs...)
-    (; Ω, Ip) = setup.grid
+    (; Ip) = setup.grid
     k = kinetic_energy(u, setup; kwargs...)
-    k .*= Ω
+    k = scalewithvolume(k, Ip)
     sum(view(k, Ip))
 end
 
@@ -1400,10 +1435,11 @@ Get the following dimensional scale numbers [Pope2000](@cite):
 """
 function get_scale_numbers(u, setup)
     (; grid, Re) = setup
-    (; dimension, Iu, Ip, Δ, Δu, Ω) = grid
+    (; dimension, Iu, Ip, Δ, Δu) = grid
     D = dimension()
     T = eltype(u[1])
     ν = 1 / Re
+    Ω = scalewithvolume!(fill!(scalarfield(setup), 1), setup)
     uavg =
         sum(1:D) do α
             Δα = ntuple(

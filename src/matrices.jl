@@ -1,7 +1,7 @@
 "Get matrix for the Laplacian operator."
 function laplacian_mat(setup)
     (; grid, boundary_conditions) = setup
-    (; dimension, x, N, Np, Ip, Δ, Δu, Ω) = grid
+    (; dimension, x, N, Np, Ip, Δ, Δu) = grid
     backend = get_backend(x[1])
     T = eltype(x[1])
     D = dimension()
@@ -12,6 +12,7 @@ function laplacian_mat(setup)
     J = similar(x[1], CartesianIndex{D}, 0)
     val = similar(x[1], 0)
     I0 = Ia - oneunit(Ia)
+    Ω = scalewithvolume!(fill!(scalarfield(setup), 1), setup)
     for α = 1:D
         a, b = boundary_conditions[α]
         i = Ip[ntuple(β -> α == β ? (2:Np[α]-1) : (:), D)...][:]

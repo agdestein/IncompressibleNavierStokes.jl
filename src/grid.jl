@@ -92,7 +92,6 @@ Return a named tuple (`[α]` denotes a tuple index) with the following fields:
 - `xp[α]`: α-coordinates of pressure points
 - `Δ[α]`: All volume widths in direction `α`
 - `Δu[α]`: Distance between pressure points in direction `α`
-- `Ω`: All volume sizes
 - `A[α][β]`: Interpolation weights from α-face centers ``x_I`` to ``x_{I \\pm h_β}``
 
 Note that the memory footprint of the redundant 1D-arrays above is negligible
@@ -194,11 +193,11 @@ function Grid(x, boundary_conditions; ArrayType = Array)
     #     end
     # end
 
-    # Reference volume sizes
-    Ω = ones(T, N...)
-    for d = 1:D
-        Ω .*= reshape(Δ[d], ntuple(Returns(1), d - 1)..., :)
-    end
+    # # Reference volume sizes
+    # Ω = ones(T, N...)
+    # for d = 1:D
+    #     Ω .*= reshape(Δ[d], ntuple(Returns(1), d - 1)..., :)
+    # end
 
     # # Velocity volume sizes
     # Ωu = ntuple(α -> ones(T, N), D)
@@ -262,7 +261,7 @@ function Grid(x, boundary_conditions; ArrayType = Array)
             xp,
             Δ,
             Δu,
-            Ω,
+            # Ω,
             # Ωu,
             # Ωω,
             # Γu,

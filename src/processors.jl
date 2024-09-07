@@ -523,12 +523,12 @@ Create energy history plot.
 """
 function energy_history_plot(state; setup)
     @assert state isa Observable "Energy history requires observable state."
-    (; Ω, Ip) = setup.grid
+    (; Δ, Ip) = setup.grid
     e = scalarfield(setup)
     _points = Point2f[]
     points = lift(state) do (; u, t)
         kinetic_energy!(e, u, setup)
-        e .*= Ω
+        scalewithvolume!(e, setup)
         E = sum(e[Ip])
         push!(_points, Point2f(t, E))
     end

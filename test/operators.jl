@@ -24,7 +24,7 @@
         uref(dim, x, y, args...) =
             -(dim() == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
         u = velocityfield(setup, uref, T(0))
-        (; Iu, Ip, Ω) = setup.grid
+        (; Iu, Ip) = setup.grid
 
         @testset "Divergence" begin
             div = divergence(u, setup)
@@ -39,7 +39,8 @@
             p = apply_bc_p(p, T(0), setup)
             Dv = divergence(v, setup)
             Gp = pressuregradient(p, setup)
-            pDv = sum((p.*Ω.*Dv)[Ip])
+            ΩDv = scalewithvolume(Dv, setup)
+            pDv = sum((p.*ΩDv)[Ip])
             vGp = if D == 2
                 vGpx = v[1] .* setup.grid.Δu[1] .* setup.grid.Δ[2]' .* Gp[1]
                 vGpy = v[2] .* setup.grid.Δ[1] .* setup.grid.Δu[2]' .* Gp[2]
@@ -66,7 +67,8 @@
             p = apply_bc_p(p, T(0), setup)
             Lp = laplacian(p, setup)
             @test Lp isa Array{T}
-            @test sum((p.*Ω.*Lp)[Ip]) ≤ 0 # Check negativity
+            ΩLp = scalewithvolume(Lp, setup)
+            @test sum((p.*ΩLp)[Ip]) ≤ 0 # Check negativity
             L = laplacian_mat(setup)
             @test L isa SparseMatrixCSC
             @test norm((Lp)[Ip][:] - (L * p[Ip][:])) ≈ 0 atol = 1e-12
