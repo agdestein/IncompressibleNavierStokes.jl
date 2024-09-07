@@ -35,13 +35,9 @@ temperature = temperature_equation(;
 
 # Setup
 n = 80
-x = LinRange(T(0), T(1), n + 1)
-y = LinRange(T(0), T(1), n + 1)
-z = LinRange(T(0), T(2), 2n + 1)
-setup = Setup(
+x = LinRange(T(0), T(1), n + 1), LinRange(T(0), T(1), n + 1), LinRange(T(0), T(2), 2n + 1)
+setup = Setup(;
     x,
-    y,
-    z;
     boundary_conditions = (
         (DirichletBC(), DirichletBC()),
         (DirichletBC(), DirichletBC()),

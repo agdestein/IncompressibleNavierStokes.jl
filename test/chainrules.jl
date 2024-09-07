@@ -17,8 +17,8 @@
         x = range(lims..., n + 1), range(lims..., n + 1)
         for bc in (PeriodicBC(), DirichletBC(), SymmetricBC(), PressureBC())
             boundary_conditions = ((bc, bc), (bc, bc))
-            setup = Setup(
-                x...;
+            setup = Setup(;
+                x,
                 Re,
                 boundary_conditions,
                 temperature = temperature_equation(; Pr, Ra, Ge, boundary_conditions),
@@ -61,7 +61,7 @@
                 Ge = T(1.0),
                 boundary_conditions,
             )
-            setup = Setup(x...; boundary_conditions, Re, temperature)
+            setup = Setup(; x, boundary_conditions, Re, temperature)
             psolver = default_psolver(setup)
             u = ntuple(α -> randn(T, setup.grid.N), D)
             p = randn(T, setup.grid.N)

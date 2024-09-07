@@ -66,12 +66,11 @@ bodyforce = create_manyforce(
 
 # A 2D grid is a Cartesian product of two vectors
 n = 50
-x = LinRange(T(0), T(10), 5n + 1)
-y = LinRange(-T(2), T(2), 2n + 1)
-plotgrid(x, y; figure = (; size = (600, 300)))
+x = LinRange(T(0), T(10), 5n + 1), LinRange(-T(2), T(2), 2n + 1)
+plotgrid(x...; figure = (; size = (600, 300)))
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re = T(1000), boundary_conditions, bodyforce, ArrayType);
+setup = Setup(; x, Re = T(1000), boundary_conditions, bodyforce, ArrayType);
 
 # Initial conditions (extend inflow)
 ustart = velocityfield(setup, (dim, x, y) -> dim() == 1 ? one(x) : zero(x));

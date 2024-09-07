@@ -2,9 +2,8 @@ T = Float64
 Re = 500.0
 
 n = 50
-x = LinRange(0, 2π, n + 1)
-y = LinRange(0, 2π, n + 1)
-setup = Setup(x, y; Re)
+x = LinRange(0, 2π, n + 1), LinRange(0, 2π, n + 1)
+setup = Setup(; x, Re)
 
 psolver = psolver_spectral(setup)
 

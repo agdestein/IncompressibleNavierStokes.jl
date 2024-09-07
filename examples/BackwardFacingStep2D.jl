@@ -45,12 +45,11 @@ boundary_conditions = (
 
 # A 2D grid is a Cartesian product of two vectors. Here we refine the grid near
 # the walls.
-x = LinRange(T(0), T(10), 301)
-y = cosine_grid(-T(0.5), T(0.5), 51)
-plotgrid(x, y; figure = (; size = (600, 150)))
+x = LinRange(T(0), T(10), 301), cosine_grid(-T(0.5), T(0.5), 51)
+plotgrid(x...; figure = (; size = (600, 150)))
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re, boundary_conditions, ArrayType);
+setup = Setup(; x, Re, boundary_conditions, ArrayType);
 
 # Initial conditions (extend inflow)
 ustart = velocityfield(setup, (dim, x, y) -> U(dim, x, y, zero(x)));

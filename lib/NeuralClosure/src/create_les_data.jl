@@ -117,15 +117,15 @@ function create_les_data(;
     end
 
     # Build setup and assemble operators
-    dns = Setup(
-        ntuple(α -> LinRange(lims[α]..., ndns[α] + 1), D)...;
+    dns = Setup(;
+        x = ntuple(α -> LinRange(lims[α]..., ndns[α] + 1), D),
         Re,
         ArrayType,
         kwargs...,
     )
     les = [
-        Setup(
-            ntuple(α -> LinRange(lims[α]..., nles[α] + 1), D)...;
+        Setup(;
+            ntuple(α -> LinRange(lims[α]..., nles[α] + 1), D),
             Re,
             ArrayType,
             kwargs...,

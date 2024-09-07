@@ -1,6 +1,6 @@
 "Create problem setup (stored in a named tuple)."
-function Setup(
-    x...;
+function Setup(;
+    x,
     boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
     bodyforce = nothing,
     issteadybodyforce = true,

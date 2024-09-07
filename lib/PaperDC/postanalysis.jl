@@ -154,8 +154,8 @@ data_test.comptime / 60
 
 # Build LES setup and assemble operators
 getsetups(params) = [
-    Setup(
-        ntuple(α -> LinRange(T(0), T(1), nles[α] + 1), params.D)...;
+    Setup(;
+        x = ntuple(α -> LinRange(T(0), T(1), nles[α] + 1), params.D),
         params.Re,
         params.ArrayType,
     ) for nles in params.nles

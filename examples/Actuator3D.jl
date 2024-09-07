@@ -31,10 +31,8 @@ ArrayType = Array
 Re = T(100)
 
 # A 3D grid is a Cartesian product of three vectors
-x = LinRange(0.0, 6.0, 31)
-y = LinRange(-2.0, 2.0, 41)
-z = LinRange(-2.0, 2.0, 41)
-plotgrid(x, y, z)
+x = LinRange(0.0, 6.0, 31), LinRange(-2.0, 2.0, 41), LinRange(-2.0, 2.0, 41)
+plotgrid(x...)
 
 # Boundary conditions: Unsteady BC requires time derivatives
 boundary_conditions = (
@@ -69,7 +67,7 @@ inside(x, y, z) = abs(x - cx) ≤ δ / 2 && (y - cy)^2 + (z - cz)^2 ≤ (D / 2)^
 bodyforce(dim, x, y, z) = dim() == 1 ? -cₜ * inside(x, y, z) : zero(x)
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; Re, boundary_conditions, bodyforce, ArrayType);
+setup = Setup(; x, Re, boundary_conditions, bodyforce, ArrayType);
 
 # Initial conditions (extend inflow)
 ustart = velocityfield(setup, (dim, x, y, z) -> dim() == 1 ? one(x) : zero(x));

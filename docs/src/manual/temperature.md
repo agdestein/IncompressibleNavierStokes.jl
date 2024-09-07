@@ -11,8 +11,7 @@ To enable the temperature equation, you need to set the `temperature` keyword
 in setup:
 
 ```julia
-setup = Setup(
-    args...;
+setup = Setup(;
     kwargs...,
     temperature = temperature_equation(; kwargs...),
 )

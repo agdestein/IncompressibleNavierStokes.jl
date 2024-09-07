@@ -35,13 +35,13 @@ temperature = temperature_equation(;
 
 # Setup
 n = 60
-x = LinRange(T(0), T(π), 2n)
-y = tanh_grid(T(0), T(1), n, T(1.2))
-z = tanh_grid(T(0), T(1), n, T(1.2))
-setup = Setup(
+x = (
+    LinRange(T(0), T(π), 2n),
+    tanh_grid(T(0), T(1), n, T(1.2)),
+    tanh_grid(T(0), T(1), n, T(1.2)),
+)
+setup = Setup(;
     x,
-    y,
-    z;
     boundary_conditions = (
         (PeriodicBC(), PeriodicBC()),
         (DirichletBC(), DirichletBC()),
@@ -52,8 +52,8 @@ setup = Setup(
     ArrayType,
 );
 
-plotgrid(x, y)
-plotgrid(y, z)
+plotgrid(x[1], x[2])
+plotgrid(x[2], x[3])
 
 # This will factorize the Laplace matrix
 @time psolver = psolver_direct(setup)

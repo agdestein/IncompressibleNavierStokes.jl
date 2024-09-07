@@ -26,10 +26,8 @@ Re = T(1_000)
 
 # A 3D grid is a Cartesian product of three vectors. Here we refine the grid
 # near the walls.
-x = cosine_grid(T(0), T(1), 25)
-y = cosine_grid(T(0), T(1), 25)
-z = LinRange(-T(0.2), T(0.2), 11)
-plotgrid(x, y, z)
+x = cosine_grid(T(0), T(1), 25), cosine_grid(T(0), T(1), 25), LinRange(-T(0.2), T(0.2), 11)
+plotgrid(x...)
 
 # Boundary conditions: horizontal movement of the top lid
 U(dim, x, y, z, t) = dim() == 1 ? one(x) : dim() == 2 ? zero(x) : one(x) / 5
@@ -46,7 +44,7 @@ boundary_conditions = (
 )
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
+setup = Setup(; x, Re, boundary_conditions, ArrayType);
 
 # Initial conditions
 ustart = velocityfield(setup, (dim, x, y, z) -> zero(x))

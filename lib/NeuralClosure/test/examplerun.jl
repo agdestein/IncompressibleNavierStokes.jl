@@ -28,7 +28,7 @@
     # Build LES setups and assemble operators
     setups = map(params.nles) do nles
         x = ntuple(α -> LinRange(0.0, 1.0, nles[α] + 1), params.D)
-        Setup(x...; params.Re)
+        Setup(; x, params.Re)
     end
 
     # Create input/output arrays for a-priori training (ubar vs c)

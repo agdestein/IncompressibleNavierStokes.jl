@@ -41,12 +41,11 @@ boundary_conditions = (
 # A 2D grid is a Cartesian product of two vectors
 n = 64
 ## n = 256
-x = LinRange(0.0, 256.0, 4n)
-y = LinRange(-32.0, 32.0, n)
-plotgrid(x, y; figure = (; size = (600, 250)))
+x = LinRange(0.0, 256.0, 4n), LinRange(-32.0, 32.0, n)
+plotgrid(x...; figure = (; size = (600, 250)))
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re, boundary_conditions);
+setup = Setup(; x, Re, boundary_conditions);
 psolver = psolver_direct(setup);
 
 # Initial conditions (extend inflow)

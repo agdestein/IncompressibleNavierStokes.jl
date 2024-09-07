@@ -20,9 +20,8 @@ ispath(outdir) || mkpath(outdir)
 
 # A 2D grid is a Cartesian product of two vectors
 n = 40
-x = LinRange(0.0, 10.0, 5n + 1)
-y = LinRange(-2.0, 2.0, 2n + 1)
-plotgrid(x, y; figure = (; size = (600, 300)))
+x = LinRange(0.0, 10.0, 5n + 1), LinRange(-2.0, 2.0, 2n + 1)
+plotgrid(x...; figure = (; size = (600, 300)))
 
 # Boundary conditions
 boundary_conditions = (
@@ -53,7 +52,7 @@ inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
 bodyforce(dim, x, y, t) = dim() == 1 ? -cₜ * inside(x, y) : 0.0
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re = 100.0, boundary_conditions, bodyforce);
+setup = Setup(; x, Re = 100.0, boundary_conditions, bodyforce);
 
 # Initial conditions (extend inflow)
 ustart = velocityfield(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0);

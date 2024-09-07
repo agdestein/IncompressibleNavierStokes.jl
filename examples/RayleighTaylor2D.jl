@@ -20,9 +20,8 @@ T = Float64
 
 # Grid
 n = 50
-x = tanh_grid(T(0), T(1), n, T(1.5))
-y = tanh_grid(T(0), T(2), 2n, T(1.5))
-plotgrid(x, y; figure = (; size = (300, 600)))
+x = tanh_grid(T(0), T(1), n, T(1.5)), tanh_grid(T(0), T(2), 2n, T(1.5))
+plotgrid(x...; figure = (; size = (300, 600)))
 
 # Setup
 temperature = temperature_equation(;
@@ -34,9 +33,8 @@ temperature = temperature_equation(;
     gdir = 2,
     nondim_type = 1,
 )
-setup = Setup(
+setup = Setup(;
     x,
-    y;
     boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
     Re = 1 / temperature.α1,
     temperature,

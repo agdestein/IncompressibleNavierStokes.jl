@@ -31,12 +31,11 @@ Re = T(2000)
 # A 2D grid is a Cartesian product of two vectors
 n = 128
 lims = T(0), T(2π)
-x = LinRange(lims..., n + 1)
-y = LinRange(lims..., n + 1)
-plotgrid(x, y)
+x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
+plotgrid(x...)
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re, ArrayType);
+setup = Setup(; x, Re, ArrayType);
 
 # Initial conditions: We add 1 to u in order to make global momentum
 # conservation less trivial

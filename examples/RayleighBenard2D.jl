@@ -86,14 +86,12 @@ temperature = temperature_equation(;
 
 # Grid
 n = 100
-x = tanh_grid(T(0), T(2), 2n, T(1.2))
-y = tanh_grid(T(0), T(1), n, T(1.2))
-plotgrid(x, y)
+x = tanh_grid(T(0), T(2), 2n, T(1.2)), tanh_grid(T(0), T(1), n, T(1.2))
+plotgrid(x...)
 
 # Setup
-setup = Setup(
+setup = Setup(;
     x,
-    y;
     boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
     Re = 1 / temperature.α1,
     temperature,

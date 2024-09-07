@@ -32,7 +32,7 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
     for (i, n) in enumerate(nlist)
         @info "Computing error for n = $n"
         x = ntuple(α -> LinRange(lims..., n + 1), D)
-        setup = Setup(x...; Re, ArrayType)
+        setup = Setup(; x, Re, ArrayType)
         psolver = psolver_spectral(setup)
         ustart = velocityfield(
             setup,

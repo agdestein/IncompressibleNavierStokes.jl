@@ -8,7 +8,7 @@ using GLMakie
 Re = 2e3
 n = 128
 x = LinRange(0.0, 1.0, n + 1), LinRange(0.0, 1.0, n + 1);
-setup = Setup(x...; Re);
+setup = Setup(; x..., Re);
 ustart = random_field(setup, 0.0);
 psolver = psolver_spectral(setup);
 

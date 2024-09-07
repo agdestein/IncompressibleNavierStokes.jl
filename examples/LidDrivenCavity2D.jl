@@ -70,13 +70,12 @@ boundary_conditions = (
 # the walls.
 n = 32
 lims = T(0), T(1)
-x = cosine_grid(lims..., n)
-y = cosine_grid(lims..., n)
-plotgrid(x, y)
+x = cosine_grid(lims..., n), cosine_grid(lims..., n)
+plotgrid(x...)
 
 # We can now build the setup and assemble operators.
 # A 3D setup is built if we also provide a vector of z-coordinates.
-setup = Setup(x, y; boundary_conditions, Re, ArrayType);
+setup = Setup(; x, boundary_conditions, Re, ArrayType);
 
 # The initial conditions are provided in function. The value `dim()` determines
 # the velocity component.

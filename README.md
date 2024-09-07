@@ -104,8 +104,7 @@ using IncompressibleNavierStokes
 
 # Setup
 setup = Setup(
-    tanh_grid(0.0, 2.0, 200, 1.2),
-    tanh_grid(0.0, 1.0, 100, 1.2);
+    x = (tanh_grid(0.0, 2.0, 200, 1.2), tanh_grid(0.0, 1.0, 100, 1.2)),
     boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
     temperature = temperature_equation(;
         Pr = 0.71,
