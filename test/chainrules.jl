@@ -1,3 +1,6 @@
+using ChainRulesCore
+using ChainRulesTestUtils
+
 "Use function name only as test set name"
 test_rrule_named(f, args...; kwargs...) =
     test_rrule(f, args...; testset_name = string(f), kwargs...)

@@ -1,21 +1,13 @@
-using Aqua
-using CairoMakie
-using ChainRulesCore
-using ChainRulesTestUtils
-using IncompressibleNavierStokes
-using IncompressibleNavierStokes: convectiondiffusion!
-using LinearAlgebra
-using Random
-using SparseArrays
-using Statistics
-using Test
+using TestItems
+using TestItemRunner
 
-@testset "IncompressibleNavierStokes" begin
-    include("grid.jl")
-    include("psolvers.jl")
-    include("operators.jl")
-    include("chainrules.jl")
-    # include("timesteppers.jl")
-    include("postprocess.jl")
-    include("aqua.jl")
-end
+@testitem "Grid" begin include("grid.jl") end
+@testitem "Pressure" begin include("psolvers.jl") end
+@testitem "Operators" begin include("operators.jl") end
+@testitem "Chain rules" begin include("chainrules.jl") end
+# @testitem "Time steppers" begin include("timesteppers.jl") end
+@testitem "Post process" begin include("postprocess.jl") end
+@testitem "Aqua" begin include("aqua.jl") end
+
+# Only run tests from this test dir, and not from other packages in monorepo
+@run_package_tests filter = t -> occursin(@__DIR__, t.filename)

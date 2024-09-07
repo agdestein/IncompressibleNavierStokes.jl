@@ -1,3 +1,8 @@
+using Random
+using IncompressibleNavierStokes: convectiondiffusion!
+using LinearAlgebra
+using SparseArrays
+
 testops(dim) = @testset "Operators $(dim())D" begin
     @info "Testing operators in $(dim())D"
 
