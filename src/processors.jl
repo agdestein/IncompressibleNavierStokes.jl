@@ -49,10 +49,10 @@ timelogger(; showmax = true, showdt = true, nupdate = 1) =
             Δt = t - told[]
             told[] = t
             n % nupdate == 0 || return
-            @printf "Iteration %d\tt = %g" n t
-            showdt && @printf "\tΔt = %g" Δt
-            showmax && @printf "\tumax = %g" maximum(maximum.(abs, u))
-            println()
+            msg = @sprintf "Iteration %d\tt = %g" n t
+            showdt && (msg = @sprintf "%s\tΔt = %g" msg Δt)
+            showmax && (msg = @sprintf "%s\tumax = %g" msg maximum(maximum.(abs, u)))
+            @info msg
         end
         nothing
     end

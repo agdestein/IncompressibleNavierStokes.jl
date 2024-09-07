@@ -14,7 +14,7 @@
         tsim = 0.5,
         Δt = 5e-3,
         nles = [(16, 16), (32, 32)],
-        ndns = (64, 64),
+        ndns = (32, 32),
         filters = (FaceAverage(),),
         create_psolver = psolver_spectral,
         icfunc = (setup, psolver, rng) ->
@@ -81,8 +81,9 @@
             (; callbackstate, callback) = create_callback(
                 create_relerr_prior(m.closure, validset...);
                 θ,
-                displayref = true,
-                display_each_iteration = true, # Set to `true` if using CairoMakie
+                displayref = false,
+                displayfig = false,
+                display_each_iteration = false, # Set to `true` if using CairoMakie
             )
             (; optstate, θ, callbackstate) = train(
                 [d],
@@ -122,7 +123,8 @@
                 );
                 θ,
                 displayref = false,
-                display_each_iteration = true, # Set to `true` if using CairoMakie
+                displayfig = false,
+                display_each_iteration = false, # Set to `true` if using CairoMakie
             )
             (; optstate, θ, callbackstate) = train(
                 [d],

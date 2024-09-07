@@ -68,7 +68,6 @@
     end
 
     @testset "Animation" begin
-        @info "Testing 2D processors: Animation"
         @test isfile(joinpath(dir, "solution.mkv"))
     end
 end
