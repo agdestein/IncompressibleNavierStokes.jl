@@ -46,26 +46,18 @@ M \bar{v} & = 0, \\
 
 IncompressibleNavierStokes provides a NeuralClosure module.
 
-```@docs
-NeuralClosure.NeuralClosure
+```@autodocs
+Modules = [NeuralClosure]
+Pages = ["NeuralClosure.jl", "closure.jl"]
 ```
+
+## Filters
 
 The following filters are available:
 
-```@docs
-NeuralClosure.AbstractFilter
-NeuralClosure.FaceAverage
-NeuralClosure.VolumeAverage
-NeuralClosure.reconstruct
-NeuralClosure.reconstruct!
-```
-
-The following functions create data.
-
-```@docs
-NeuralClosure.filtersaver
-NeuralClosure.create_les_data
-NeuralClosure.create_io_arrays
+```@autodocs
+Modules = [NeuralClosure]
+Pages = ["filter.jl"]
 ```
 
 ## Training
@@ -91,18 +83,9 @@ differentiate, as it does not involve solving the ODE. However, minimizing
 error on the LES solution error. The posterior loss does, but has a longer
 computational chain involving solving the LES ODE.
 
-```@docs
-NeuralClosure.create_dataloader_prior
-NeuralClosure.create_dataloader_post
-NeuralClosure.train
-NeuralClosure.create_loss_prior
-NeuralClosure.create_relerr_prior
-NeuralClosure.mean_squared_error
-NeuralClosure.create_loss_post
-NeuralClosure.create_relerr_post
-NeuralClosure.create_callback
-NeuralClosure.create_relerr_symmetry_prior
-NeuralClosure.create_relerr_symmetry_post
+```@autodocs
+Modules = [NeuralClosure]
+Pages = ["training.jl"]
 ```
 
 ## Neural architectures
@@ -110,17 +93,14 @@ NeuralClosure.create_relerr_symmetry_post
 We provide neural architectures: A convolutional neural network (CNN), group
 convolutional neural networks (G-CNN) and a Fourier neural operator (FNO).
 
-```@docs
-NeuralClosure.wrappedclosure
-NeuralClosure.create_closure
-NeuralClosure.create_tensorclosure
-NeuralClosure.collocate
-NeuralClosure.decollocate
-NeuralClosure.cnn
-NeuralClosure.gcnn
-NeuralClosure.fno
-NeuralClosure.GroupConv2D
-NeuralClosure.rot2
-NeuralClosure.rot2stag
-NeuralClosure.FourierLayer
+```@autodocs
+Modules = [NeuralClosure]
+Pages = ["cnn.jl", "groupconv.jl", "fno.jl"]
+```
+
+## Data generation
+
+```@autodocs
+Modules = [NeuralClosure]
+Pages = ["create_les_data.jl"]
 ```

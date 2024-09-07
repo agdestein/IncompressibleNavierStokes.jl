@@ -122,7 +122,7 @@ export default defineConfig({
           {
             text: 'API',
             items: [
-              { text: 'Boundary conditions', link: '/manual/bc' },
+              { text: 'Problem setup', link: '/manual/setup' },
               { text: 'Pressure solvers', link: '/manual/pressure' },
               { text: 'Floating point precision', link: '/manual/precision' },
               { text: 'GPU Support', link: '/manual/gpu' },
@@ -131,7 +131,8 @@ export default defineConfig({
               { text: 'Differentiating code', link: '/manual/differentiability' },
               { text: 'Large eddy simulation', link: '/manual/les' },
               { text: 'Neural closure models', link: '/manual/closure' },
-              { text: 'API', link: '/manual/api' },
+              { text: 'Solver', link: '/manual/solver' },
+              { text: 'Utils', link: '/manual/utils' },
             ],
           },
         ],
@@ -211,7 +212,7 @@ export default defineConfig({
           {
             text: 'API',
             items: [
-              { text: 'Boundary conditions', link: '/manual/bc' },
+              { text: 'Problem setup', link: '/manual/setup' },
               { text: 'Pressure solvers', link: '/manual/pressure' },
               { text: 'Floating point precision', link: '/manual/precision' },
               { text: 'GPU Support', link: '/manual/gpu' },
@@ -220,7 +221,8 @@ export default defineConfig({
               { text: 'Differentiating code', link: '/manual/differentiability' },
               { text: 'Large eddy simulation', link: '/manual/les' },
               { text: 'Neural closure models', link: '/manual/closure' },
-              { text: 'API', link: '/manual/api' },
+              { text: 'Solver', link: '/manual/solver' },
+              { text: 'Utils', link: '/manual/utils' },
             ],
           },
         ],
