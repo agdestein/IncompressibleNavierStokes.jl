@@ -1,10 +1,5 @@
-@info "Testing grid"
-
-a = 1.2
-b = 4.5
-N = 76
-
-@testset "Cosine grid" begin
+@testitem "Cosine grid" begin
+    a, b, N = 1.2, 4.5, 76
     x = cosine_grid(a, b, N)
     @test length(x) == N + 1
     @test x[1] ≈ a
@@ -12,7 +7,8 @@ N = 76
     @test all(diff(x) .> 0)
 end
 
-@testset "Stretched grid" begin
+@testitem "Stretched grid" begin
+    a, b, N = 1.2, 4.5, 76
     @test_throws ErrorException stretched_grid(a, b, N, -0.1)
     @test_throws ErrorException stretched_grid(a, b, N, 0)
 
@@ -37,7 +33,8 @@ end
     @test all(diff(diff(x)) .> 0)
 end
 
-@testset "Tanh grid" begin
+@testitem "Tanh grid" begin
+    a, b, N = 1.2, 4.5, 76
     x = tanh_grid(a, b, N, 2)
     @test length(x) == N + 1
     @test x[1] ≈ a

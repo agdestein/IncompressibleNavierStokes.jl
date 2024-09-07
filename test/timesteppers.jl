@@ -23,7 +23,6 @@ V = create_initial_conditions(
 )
 
 @testset "Steady state" begin
-    @info "Testing steady state solver"
     V, p = solve_steady_state(setup, V₀, p₀)
     uₕ = V[setup.grid.indu]
     vₕ = V[setup.grid.indv]
@@ -42,11 +41,9 @@ V_exact = [uₕ[:]; vₕ[:]]
 
 @testset "Unsteady solvers" begin
     @testset "Explicit Runge Kutta" begin
-        @info "Testing explicit Runge-Kutta, out-of-place version"
         state, outputs =
             solve_unsteady(setup, V₀, tlims; Δt = 0.01, psolver, inplace = false)
         @test norm(state.u - u_exact) / norm(u_exact) < 1e-4
-        @info "Testing explicit Runge-Kutta, in-place version"
         stateip, outputsip =
             solve_unsteady(setup, V₀, tlims; Δt = 0.01, psolver, inplace = true)
         @test stateip.u ≈ state.u
@@ -54,7 +51,6 @@ V_exact = [uₕ[:]; vₕ[:]]
     end
 
     @testset "Implicit Runge Kutta" begin
-        @info "Testing implicit Runge-Kutta, out-of-place version"
         @test_broken solve_unsteady(
             setup,
             V₀,
@@ -64,7 +60,6 @@ V_exact = [uₕ[:]; vₕ[:]]
             psolver,
             inplace = false,
         ) isa Tuple
-        @info "Testing implicit Runge-Kutta, in-place version"
         (; u, t), outputs = solve_unsteady(
             setup,
             V₀,
@@ -79,7 +74,6 @@ V_exact = [uₕ[:]; vₕ[:]]
     end
 
     @testset "One-leg beta method" begin
-        @info "Testing one-leg beta method, out-of-place version"
         state, outputs = solve_unsteady(
             setup,
             V₀,
@@ -90,7 +84,6 @@ V_exact = [uₕ[:]; vₕ[:]]
             inplace = false,
         )
         @test norm(state.u - u_exact) / norm(u_exact) < 1e-4
-        @info "Testing one-leg beta method, in-place version"
         stateip, outputsip = solve_unsteady(
             setup,
             V₀,
@@ -105,7 +98,6 @@ V_exact = [uₕ[:]; vₕ[:]]
     end
 
     @testset "Adams-Bashforth Crank-Nicolson" begin
-        @info "Testing Adams-Bashforth Crank-Nicolson method, out-of-place version"
         state, outputs = solve_unsteady(
             setup,
             V₀,
@@ -116,7 +108,6 @@ V_exact = [uₕ[:]; vₕ[:]]
             inplace = false,
         )
         @test norm(state.u - u_exact) / norm(u_exact) < 1e-4
-        @info "Testing Adams-Bashforth Crank-Nicolson method, in-place version"
         stateip, outputs = solve_unsteady(
             setup,
             V₀,
