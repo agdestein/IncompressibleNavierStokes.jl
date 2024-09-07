@@ -1,7 +1,7 @@
 """
-Create divergence free initial velocity field `u` at starting time `t`.
+Create divergence free velocity field `u` with boundary conditions at time `t`.
 The initial conditions of `u[α]` are specified by the function
-`initial_velocity(Dimension(α), x...)`.
+`ufunc(Dimension(α), x...)`.
 """
 function velocityfield(
     setup,
@@ -20,8 +20,11 @@ function velocityfield(
 
     # Initial velocities
     for α = 1:D
-        xin = ntuple(β -> reshape(xu[α][β], ntuple(Returns(1), β - 1)..., :), D)
-        u[α][Iu[α]] .= ufunc.((Dimension(α),), xin...)[Iu[α]]
+        xin = ntuple(
+            β -> reshape(xu[α][β][Iu[α].indices[β]], ntuple(Returns(1), β - 1)..., :),
+            D,
+        )
+        u[α][Iu[α]] .= ufunc.((Dimension(α),), xin...)
     end
 
     # Make velocity field divergence free
@@ -33,6 +36,17 @@ function velocityfield(
 
     # Initial conditions, including initial boundary conditions
     u
+end
+
+"Create temperature field from function with boundary conditions at time `t`."
+function temperaturefield(setup, tempfunc, t = zero(eltype(setup.grid.x[1])))
+    (; grid) = setup
+    (; dimension, N, Ip, xp) = grid
+    D = dimension()
+    xin = ntuple(β -> reshape(xp[β][Ip.indices[β]], ntuple(Returns(1), β - 1)..., :), D)
+    temperature = scalarfield(setup)
+    temperature[Ip] .= tempfunc.(xin...)
+    apply_bc_temp!(temperature, t, setup)
 end
 
 # function create_spectrum(; setup, A, σ, s, rng = Random.default_rng())

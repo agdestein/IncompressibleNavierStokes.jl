@@ -44,10 +44,7 @@ setup = Setup(
 
 # Initial conditions
 ustart = velocityfield(setup, (dim, x, y) -> zero(x));
-(; xp) = setup.grid;
-## T0(x, y) = one(x) * (1 > y);
-T0(x, y) = one(x) * (1 + sinpi(x) / 50 > y); ## Perturbation
-tempstart = T0.(xp[1], xp[2]');
+tempstart = temperaturefield(setup; (x, y) -> one(x) * (1 + sinpi(x) / 50 > y));
 
 # Solve equation
 state, outputs = solve_unsteady(;

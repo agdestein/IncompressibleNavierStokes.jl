@@ -57,11 +57,7 @@ setup = Setup(
 
 # Initial conditions
 ustart = velocityfield(setup, (dim, x, y, z) -> zero(x); psolver);
-(; xp) = setup.grid;
-xx = xp[1];
-xy = reshape(xp[2], 1, :);
-xz = reshape(xp[3], 1, 1, :);
-tempstart = @. $(T(1)) * (1 + sin($(T(1.05 * π)) / 20 * xx) * sin($(T(π)) * xy) > xz);
+tempstart = temperaturefield(setup, (x, y, z) -> (1 + sinpi(x / 20) * sinpi(y) > z));
 
 fieldplot(
     (; u = ustart, temp = tempstart, t = T(0));

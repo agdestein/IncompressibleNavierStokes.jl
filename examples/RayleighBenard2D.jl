@@ -103,12 +103,7 @@ setup = Setup(
 
 # Initial conditions
 ustart = velocityfield(setup, (dim, x, y) -> zero(x));
-(; xp) = setup.grid;
-## T0(x, y) = 1 - y;
-## T0(x, y) = one(y) / 2;
-T0(x, y) = one(y) / 2 + max(sinpi(20 * x) / 100, 0); ## Perturbation
-## T0(x, y) = 1 - y + max(sinpi(20 * x) / 1000, 0); ## Perturbation
-tempstart = T0.(xp[1], xp[2]');
+tempstart = temperaturefield(setup, (x, y) -> one(y) / 2 + max(sinpi(20 * x) / 100, 0));
 
 # Processors
 GLMakie.closeall() #!md

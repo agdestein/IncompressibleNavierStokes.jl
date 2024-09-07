@@ -60,12 +60,8 @@ plotgrid(y, z)
 
 # Initial conditions
 ustart = velocityfield(setup, (dim, x, y, z) -> zero(x); psolver);
-(; xp) = setup.grid;
-## T0(x, y, z) = 1 - z;
-## T0(x, y, z) = one(x) / 2 + max(sin(20 * x) * sinpi(20 * y) / 100, 0); ## Perturbation
-T0(x, y, z) = one(x) / 2 + sin(20 * x) * sinpi(20 * y) / 100; ## Perturbation
-tempstart = T0.(xp[1], reshape(xp[2], 1, :), reshape(xp[3], 1, 1, :));
-IncompressibleNavierStokes.apply_bc_temp!(tempstart, T(0), setup)
+tempstart =
+    temperaturefield(setup, (x, y, z) -> one(x) / 2 + sin(20 * x) * sinpi(20 * y) / 100);
 
 # Solve equation
 state, outputs = solve_unsteady(;
