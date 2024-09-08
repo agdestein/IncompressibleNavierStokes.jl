@@ -1,7 +1,7 @@
 name = "SciMLCompat"
 uuid = "1bf6d972-577c-4d20-a599-fe90675ca8fc"
 authors = ["Syver Døving Agdestein <syverda@gmail.com>"]
-version = "0.1.0"
+version = "1.0.0"
 
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
@@ -15,5 +15,5 @@ path = "../.."
 [compat]
 CairoMakie = "0.12"
 GLMakie = "0.10"
-IncompressibleNavierStokes = "0.6"
+IncompressibleNavierStokes = "1"
 OrdinaryDiffEq = "6"
