@@ -23,7 +23,7 @@ DocStringExtensions = "0.9"
 IncompressibleNavierStokes = "0.6"
 KernelAbstractions = "0.9"
 LinearAlgebra = "1"
-Lux = "0.5"
+Lux = "1"
 Makie = "0.21"
 NNlib = "0.9"
 Observables = "0.5"
@@ -32,5 +32,5 @@ Random = "1"
 Zygote = "0.6"
 julia = "1.9"
 
-[sources]
-IncompressibleNavierStokes = {path = "../.."}
+[sources.IncompressibleNavierStokes]
+path = "../.."
