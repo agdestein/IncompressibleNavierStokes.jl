@@ -106,6 +106,19 @@ end
 "Create direct Poisson solver using an appropriate matrix decomposition."
 psolver_direct(setup) = psolver_direct(setup.grid.x[1], setup) # Dispatch on array type
 
+psolver_direct(::Any, setup) = error("""
+    Unsupported array type.
+
+    If you are using CUDA `CuArray`s, do
+
+    ```julia
+    using Pkg
+    Pkg.add("CUDSS")
+    ```
+
+    This will trigger an extension that works for `CuArrays`.
+    """)
+
 # CPU version
 function psolver_direct(::Array, setup)
     (; grid, boundary_conditions) = setup
@@ -116,9 +129,9 @@ function psolver_direct(::Array, setup)
         any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
     if isdefinite
         # No extra DOF
-        T = Float64 # This is currently required for SuiteSparse LU
-        ftemp = zeros(T, prod(Np))
-        ptemp = zeros(T, prod(Np))
+        Ttemp = Float64 # This is currently required for SuiteSparse LU
+        ftemp = zeros(Ttemp, prod(Np))
+        ptemp = zeros(Ttemp, prod(Np))
         viewrange = (:)
         fact = factorize(L)
     else
@@ -136,7 +149,12 @@ function psolver_direct(::Array, setup)
     function psolve!(p, f)
         copyto!(view(ftemp, viewrange), view(view(f, Ip), :))
         ptemp .= fact \ ftemp
-        copyto!(view(view(p, Ip), :), eltype(p).(view(ptemp, viewrange)))
+        if isdefinite && !(0.0 isa T)
+            # Convert from Float64 to T
+            copyto!(view(view(p, Ip), :), T.(view(ptemp, viewrange)))
+        else
+            copyto!(view(view(p, Ip), :), view(ptemp, viewrange))
+        end
         p
     end
 end
