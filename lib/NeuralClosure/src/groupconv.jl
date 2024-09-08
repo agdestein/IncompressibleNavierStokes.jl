@@ -103,7 +103,7 @@ The layer has three variants:
 - If `isprojecting`, it projects a rotation-state vector `(u1, u2, u3, v4)` into a vector `(v1, v2)`.
 - Otherwise, it cyclically transforms the rotation-state vector `(u1, u2, u3, u4)` into a new rotation-state vector `(v1, v2, v3, v4)`.
 """
-struct GroupConv2D{C} <: Lux.AbstractExplicitLayer
+struct GroupConv2D{C} <: Lux.AbstractLuxLayer
     islifting::Bool
     isprojecting::Bool
     cin::Int
@@ -163,7 +163,7 @@ function Lux.initialparameters(rng::AbstractRNG, gc::GroupConv2D)
     end
     if Lux.has_bias(conv)
         (; bias) = params
-        bias = bias[:, :, 1:cout, :]
+        bias = bias[1:cout]
         (; weight, bias)
     else
         (; weight)
@@ -217,12 +217,12 @@ function (gc::GroupConv2D)(x, params, state)
     end
 
     # Bias
-    params = if haskey(params, :bias)
+    params = if Lux.has_bias(conv)
         (; bias) = params
         bias = if isprojecting
-            cat(bias, bias; dims = 3)
+            vcat(bias, bias)
         else
-            cat(bias, bias, bias, bias; dims = 3)
+            vcat(bias, bias, bias, bias)
         end
         (; weight, bias)
     else

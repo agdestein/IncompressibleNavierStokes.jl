@@ -58,7 +58,7 @@ Some important sizes:
 - `kmax`: Cut-off wavenumber
 - `nsample`: Number of input samples (treated independently)
 """
-struct FourierLayer{D,A,F} <: Lux.AbstractExplicitLayer
+struct FourierLayer{D,A,F} <: Lux.AbstractLuxLayer
     dimension::Dimension{D}
     kmax::Int
     cin::Int
