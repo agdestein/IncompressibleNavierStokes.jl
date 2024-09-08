@@ -42,10 +42,6 @@ boundary_conditions = (
             (dim, x, y, z, t) ->
                 dim() == 1 ? cos(π / 6 * sin(π / 6 * t)) :
                 dim() == 2 ? sin(π / 6 * sin(π / 6 * t)) : zero(x),
-            (dim, x, y, z, t) ->
-                dim() == 1 ? -(π / 6)^2 * cos(π / 6 * t) * sin(π / 6 * sin(π / 6 * t)) :
-                dim() == 2 ? (π / 6)^2 * cos(π / 6 * t) * cos(π / 6 * sin(π / 6 * t)) :
-                zero(x),
         ),
         PressureBC(),
     ),

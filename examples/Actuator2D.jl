@@ -28,13 +28,7 @@ boundary_conditions = (
     ## x left, x right
     (
         ## Unsteady BC requires time derivatives
-        DirichletBC(
-            (dim, x, y, t) -> sin(π / 6 * sin(π / 6 * t) + π / 2 * (dim() == 1)),
-            (dim, x, y, t) ->
-                (π / 6)^2 *
-                cos(π / 6 * t) *
-                cos(π / 6 * sin(π / 6 * t) + π / 2 * (dim() == 1)),
-        ),
+        DirichletBC((dim, x, y, t) -> sin(π / 6 * sin(π / 6 * t) + π / 2 * (dim() == 1))),
         PressureBC(),
     ),
 

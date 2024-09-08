@@ -18,7 +18,7 @@ outdir = joinpath(@__DIR__, "output", "PlanarMixing2D")
 # Viscosity model
 Re = 500.0
 
-# Boundary conditions: Unsteady BC requires time derivatives
+# Boundary conditions
 ΔU = 1.0
 Ubar = 1.0
 ϵ = (0.082Ubar, 0.012Ubar)
@@ -28,11 +28,9 @@ U(dim, x, y, t) =
     dim() == 1 ?
     1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * sin(ω * t)) :
     0.0
-dUdt(dim, x, y, t) =
-    dim() == 1 ? sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * ω * cos(ω * t)) : 0.0
 boundary_conditions = (
     ## x left, x right
-    (DirichletBC(U, dUdt), PressureBC()),
+    (DirichletBC(U), PressureBC()),
 
     ## y rear, y front
     (PressureBC(), PressureBC()),

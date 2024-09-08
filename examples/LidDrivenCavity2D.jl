@@ -50,19 +50,13 @@ ArrayType = Array
 Re = T(1_000)
 
 # Non-zero Dirichlet boundary conditions are specified as plain Julia functions.
-# Note that time derivatives are required.
+U = (T(1), T(0))
 boundary_conditions = (
     ## x left, x right
     (DirichletBC(), DirichletBC()),
 
     ## y bottom, y top
-    (
-        DirichletBC(),
-        DirichletBC(
-            (dim, x, y, t) -> dim() == 1 ? one(x) : zero(x),
-            (dim, x, y, t) -> zero(x),
-        ),
-    ),
+    (DirichletBC(), DirichletBC(U)),
 )
 
 # We create a two-dimensional domain with a box of size `[1, 1]`. The grid is

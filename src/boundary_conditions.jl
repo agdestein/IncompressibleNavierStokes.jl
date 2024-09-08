@@ -10,18 +10,13 @@ u1_BC` up to `u[d] = (x..., t) -> ud_BC`, where `d` is the dimension.
 
 When `u` is `nothing`, then the boundary conditions are
 no slip boundary conditions, where all velocity components are zero.
-
-To make the pressure the same order as velocity, also provide `dudt`.
 """
-struct DirichletBC{U,DUDT} <: AbstractBC
+struct DirichletBC{U} <: AbstractBC
     "Boundary condition"
     u::U
-
-    "Time derivative of boundary condition"
-    dudt::DUDT
-
-    DirichletBC(u = nothing, dudt = nothing) = new{typeof(u),typeof(dudt)}(u, dudt)
 end
+
+DirichletBC() = DirichletBC(nothing)
 
 """
 Symmetric boundary conditions.
@@ -348,8 +343,20 @@ apply_bc_temp_pullback!(bc::PeriodicBC, φbar, β, t, setup; isright, kwargs...)
 function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kwargs...)
     (; dimension, xu, Nu, Iu) = setup.grid
     D = dimension()
-    # isnothing(bc.u) && return
-    bcfunc = dudt ? bc.dudt : bc.u
+    bcfunc = if isnothing(bc.u)
+        Returns(0)
+    elseif bc.u isa Tuple
+        (dim, args...) -> dudt ? zero(bc.u[dim()]) : bc.u[dim()]
+    elseif dudt
+        # Use central difference to approximate dudt
+        h = sqrt(eps(eltype(u[1]))) / 2
+        function (args...)
+            dim, x..., t = args
+            (bc.u(dim, x..., t + h) - bc.u(dim, x..., t - h)) / 2h
+        end
+    else
+        bc.u
+    end
     for α = 1:D
         I = boundary(β, Nu[α], Iu[α], isright)
         xI = ntuple(
@@ -361,11 +368,7 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kw
             ),
             D,
         )
-        if isnothing(bc.u)
-            u[α][I] .= 0
-        else
-            u[α][I] .= bcfunc.((Dimension(α),), xI..., t)
-        end
+        u[α][I] .= bcfunc.((Dimension(α),), xI..., t)
     end
     u
 end
@@ -404,7 +407,15 @@ end
 function apply_bc_temp!(bc::DirichletBC, temp, β, t, setup; isright, kwargs...)
     (; Np, Ip) = setup.grid
     I = boundary(β, Np, Ip, isright)
-    temp[I] .= isnothing(bc.u) ? 0 : bc.u
+    bcfunc = if isnothing(bc.u)
+        Returns(0)
+    elseif bc.u isa Number
+        Returns(bc.u)
+    else
+        bc.u
+    end
+    xI = ntuple(α -> reshape(xp[α][I.indices[α]], ntuple(Returns(1), α - 1)..., :), D)
+    temp[I] .= bcfunc.(xI..., t)
     temp
 end
 

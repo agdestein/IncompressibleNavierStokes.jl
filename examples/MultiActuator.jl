@@ -26,17 +26,7 @@ ArrayType = Array
 boundary_conditions = (
     ## x left, x right
     (
-        ## Unsteady BC requires time derivatives
-        DirichletBC(
-            (dim, x, y, t) -> sinpi(sinpi(t / 6) / 6 + one(x) / 2 * (dim() == 1)),
-            let
-                p = T(π)
-                (dim, x, y, t) ->
-                    (p / 6)^2 *
-                    cospi(t / 6) *
-                    cospi(sinpi(t / 6) / 6 + one(x) / 2 * (dim() == 1))
-            end,
-        ),
+        DirichletBC((dim, x, y, t) -> sinpi(sinpi(t / 6) / 6 + one(x) / 2 * (dim() == 1))),
         PressureBC(),
     ),
 

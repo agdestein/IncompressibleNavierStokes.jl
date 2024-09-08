@@ -34,10 +34,9 @@ Re = T(3_000)
 # Boundary conditions: steady inflow on the top half
 U(dim, x, y, t) =
     dim() == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x) + randn(typeof(x)) / 1_000
-dUdt(dim, x, y, t) = zero(x)
 boundary_conditions = (
     ## x left, x right
-    (DirichletBC(U, dUdt), PressureBC()),
+    (DirichletBC(U), PressureBC()),
 
     ## y rear, y front
     (DirichletBC(), DirichletBC()),

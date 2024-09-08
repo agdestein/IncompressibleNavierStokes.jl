@@ -30,14 +30,13 @@ x = cosine_grid(T(0), T(1), 25), cosine_grid(T(0), T(1), 25), LinRange(-T(0.2), 
 plotgrid(x...)
 
 # Boundary conditions: horizontal movement of the top lid
-U(dim, x, y, z, t) = dim() == 1 ? one(x) : dim() == 2 ? zero(x) : one(x) / 5
-dUdt(dim, x, y, z, t) = zero(x)
+U = (T(1), T(1 / 5), T(0))
 boundary_conditions = (
     ## x left, x right
     (DirichletBC(), DirichletBC()),
 
     ## y rear, y front
-    (DirichletBC(), DirichletBC(U, dUdt)),
+    (DirichletBC(), DirichletBC(U)),
 
     ## z bottom, z top
     (PeriodicBC(), PeriodicBC()),
