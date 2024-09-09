@@ -806,28 +806,19 @@ Add the result to `F`.
 """
 function applybodyforce!(F, u, t, setup)
     (; grid, workgroupsize, bodyforce, issteadybodyforce) = setup
-    (; dimension, Δ, Δu, Nu, Iu, x, xp) = grid
+    (; dimension, Iu, xu) = grid
     D = dimension()
     e = Offset{D}()
-    @assert D == 2
-    @kernel function f!(F, ::Val{α}, t, I0) where {α}
-        I = @index(Global, Cartesian)
-        I = I + I0
-        # xI = ntuple(β -> α == β ? x[β][1+I[β]] : xp[β][I[β]], D)
-        xI = (
-            α == 1 ? x[1][1+I[1]] : xp[1][I[1]],
-            α == 2 ? x[2][1+I[2]] : xp[2][I[2]],
-            # α == 3 ? x[3][1+I[3]] : xp[3][I[3]],
-        )
-        F[α][I] += bodyforce(Dimension(α), xI..., t)
-    end
     for α = 1:D
-        I0 = first(Iu[α])
-        I0 -= oneunit(I0)
         if issteadybodyforce
             F[α] .+= bodyforce[α]
         else
-            f!(get_backend(F[1]), workgroupsize)(F, Val(α), t, I0; ndrange = Nu[α])
+            xin = ntuple(
+                β -> reshape(xu[α][β][Iu[α].indices[β]], ntuple(Returns(1), β - 1)..., :),
+                D,
+            )
+            dimtup = (Dimension(α),)
+            @. F[α][Iu[α]] += bodyforce(dimtup, xin..., t)
         end
     end
     F
