@@ -31,7 +31,7 @@ ComponentArrays = "0.15"
 FFTW = "1.8"
 GLMakie = "0.10"
 IncompressibleNavierStokes = "0.6"
-JLD2 = "0.4"
+JLD2 = "0.5"
 LinearAlgebra = "1"
 Lux = "0.5"
 LuxCUDA = "0.3"
@@ -42,6 +42,8 @@ Optimisers = "0.3"
 Zygote = "0.6"
 julia = "1.9"
 
-[sources]
-IncompressibleNavierStokes = {path = "../.."}
-NeuralClosure = {path = "../NeuralClosure"}
+[sources.IncompressibleNavierStokes]
+path = "../.."
+
+[sources.NeuralClosure]
+path = "../NeuralClosure"
