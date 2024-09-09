@@ -88,14 +88,18 @@ offset_p(::SymmetricBC, isright) = 1
 offset_u(::PressureBC, isright, isnormal) = 1 + !isright * !isnormal
 offset_p(::PressureBC, isright) = 1 + !isright
 
-"Get boundary indices."
+"""
+Get boundary indices of boundary layer normal to `β`.
+The `CartesianIndices` given by `I` should contain those of the inner DOFs,
+typically `Ip` or `Iu[α]`.
+The boundary layer is then just outside those.
+"""
 function boundary(β, N, I, isright)
-    eβ = Offset{length(N)}()(β)
-    if isright
-        I[1]+N[β]*eβ:I[end]+eβ
-    else
-        I[1]-eβ:I[end]-N[β]*eβ
-    end
+    D = length(N)
+    Iβ = I.indices[β]
+    i = isright ? Iβ[end] + 1 : Iβ[1] - 1
+    ranges = ntuple(α -> α == β ? (i:i) : (1:N[α]), D)
+    CartesianIndices(ranges)
 end
 
 "Apply velocity boundary conditions (differentiable version)."
@@ -272,12 +276,12 @@ end
 
 function apply_bc_u!(::PeriodicBC, u, β, t, setup; isright, kwargs...)
     isright && return u # We do both in one go for "left"
-    (; dimension, Nu, Iu) = setup.grid
+    (; dimension, N, Iu) = setup.grid
     D = dimension()
     for α = 1:D
         uα, eβ = u[α], Offset{D}()(β)
-        Ia = boundary(β, Nu[α], Iu[α], false)
-        Ib = boundary(β, Nu[α], Iu[α], true)
+        Ia = boundary(β, N, Iu[α], false)
+        Ib = boundary(β, N, Iu[α], true)
         Ja = Ia .+ eβ
         Jb = Ib .- eβ
         @. uα[Ia] = uα[Jb]
@@ -288,12 +292,12 @@ end
 
 function apply_bc_u_pullback!(::PeriodicBC, φbar, β, t, setup; isright, kwargs...)
     isright && return φbar # We do both in one go for "left"
-    (; dimension, Nu, Iu) = setup.grid
+    (; dimension, N, Iu) = setup.grid
     D = dimension()
     for α = 1:D
         φα, eβ = φbar[α], Offset{D}()(β)
-        Ia = boundary(β, Nu[α], Iu[α], false)
-        Ib = boundary(β, Nu[α], Iu[α], true)
+        Ia = boundary(β, N, Iu[α], false)
+        Ib = boundary(β, N, Iu[α], true)
         Ja = Ia .+ eβ
         Jb = Ib .- eβ
         @. φα[Jb] += φα[Ia]
@@ -304,13 +308,13 @@ function apply_bc_u_pullback!(::PeriodicBC, φbar, β, t, setup; isright, kwargs
     φbar
 end
 
-function apply_bc_p!(::PeriodicBC, p, β, t, setup; isright, kwargs...)
+function apply_bc_p!(bc::PeriodicBC, p, β, t, setup; isright, kwargs...)
     isright && return p # We do both in one go for "left"
-    (; dimension, Np, Ip) = setup.grid
+    (; dimension, N, Ip) = setup.grid
     D = dimension()
     eβ = Offset{D}()(β)
-    Ia = boundary(β, Np, Ip, false)
-    Ib = boundary(β, Np, Ip, true)
+    Ia = boundary(β, N, Ip, false)
+    Ib = boundary(β, N, Ip, true)
     Ja = Ia .+ eβ
     Jb = Ib .- eβ
     @. p[Ia] = p[Jb]
@@ -320,11 +324,11 @@ end
 
 function apply_bc_p_pullback!(::PeriodicBC, φbar, β, t, setup; isright, kwargs...)
     isright && return φbar # We do both in one go for "left"
-    (; dimension, Np, Ip) = setup.grid
+    (; dimension, N, Ip) = setup.grid
     D = dimension()
     eβ = Offset{D}()(β)
-    Ia = boundary(β, Np, Ip, false)
-    Ib = boundary(β, Np, Ip, true)
+    Ia = boundary(β, N, Ip, false)
+    Ib = boundary(β, N, Ip, true)
     Ja = Ia .+ eβ
     Jb = Ib .- eβ
     @. φbar[Jb] += φbar[Ia]
@@ -341,7 +345,7 @@ apply_bc_temp_pullback!(bc::PeriodicBC, φbar, β, t, setup; isright, kwargs...)
     apply_bc_p_pullback!(bc, φbar, β, t, setup; isright, kwargs...)
 
 function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kwargs...)
-    (; dimension, xu, Nu, Iu) = setup.grid
+    (; dimension, N, xu, Iu) = setup.grid
     D = dimension()
     bcfunc = if isnothing(bc.u)
         Returns(0)
@@ -358,7 +362,7 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kw
         bc.u
     end
     for α = 1:D
-        I = boundary(β, Nu[α], Iu[α], isright)
+        I = boundary(β, N, Iu[α], isright)
         xI = ntuple(
             γ -> reshape(
                 xu[α][γ][I.indices[γ]],
@@ -374,30 +378,30 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kw
 end
 
 function apply_bc_u_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...)
-    (; dimension, Nu, Iu) = setup.grid
+    (; dimension, N, Iu) = setup.grid
     D = dimension()
     for α = 1:D
-        I = boundary(β, Nu[α], Iu[α], isright)
+        I = boundary(β, N, Iu[α], isright)
         φbar[α][I] .= 0
     end
     φbar
 end
 
 function apply_bc_p!(::DirichletBC, p, β, t, setup; isright, kwargs...)
-    (; dimension, Ip, Np) = setup.grid
+    (; dimension, N, Ip) = setup.grid
     D = dimension()
     e = Offset{D}()
-    I = boundary(β, Np, Ip, isright)
+    I = boundary(β, N, Ip, isright)
     J = isright ? I .- e(β) : I .+ e(β)
     @. p[I] = p[J]
     p
 end
 
 function apply_bc_p_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...)
-    (; dimension, Np, Ip) = setup.grid
+    (; dimension, N, Ip) = setup.grid
     D = dimension()
     e = Offset{D}()
-    I = boundary(β, Np, Ip, isright)
+    I = boundary(β, N, Ip, isright)
     J = isright ? I .- e(β) : I .+ e(β)
     @. φbar[J] += φbar[I]
     φbar[I] .= 0
@@ -405,9 +409,9 @@ function apply_bc_p_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwarg
 end
 
 function apply_bc_temp!(bc::DirichletBC, temp, β, t, setup; isright, kwargs...)
-    (; dimension, Np, Ip, xp) = setup.grid
+    (; dimension, N, Ip, xp) = setup.grid
     D = dimension()
-    I = boundary(β, Np, Ip, isright)
+    I = boundary(β, N, Ip, isright)
     bcfunc = if isnothing(bc.u)
         Returns(0)
     elseif bc.u isa Number
@@ -421,8 +425,8 @@ function apply_bc_temp!(bc::DirichletBC, temp, β, t, setup; isright, kwargs...)
 end
 
 function apply_bc_temp_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwargs...)
-    (; Np, Ip) = setup.grid
-    I = boundary(β, Np, Ip, isright)
+    (; N, Ip) = setup.grid
+    I = boundary(β, N, Ip, isright)
     φbar[I] .= 0
     φbar
 end
@@ -457,20 +461,20 @@ function apply_bc_u_pullback!(::SymmetricBC, φbar, β, t, setup; isright, kwarg
 end
 
 function apply_bc_p!(::SymmetricBC, p, β, t, setup; isright, kwargs...)
-    (; dimension, Np, Ip) = setup.grid
+    (; dimension, N, Ip) = setup.grid
     D = dimension()
     e = Offset{D}()
-    I = boundary(β, Np, Ip, isright)
+    I = boundary(β, N, Ip, isright)
     J = isright ? I .- e(β) : I .+ e(β)
     @. p[I] = p[J]
     p
 end
 
 function apply_bc_p_pullback!(::SymmetricBC, φbar, β, t, setup; isright, kwargs...)
-    (; dimension, Np, Ip) = setup.grid
+    (; dimension, N, Ip) = setup.grid
     D = dimension()
     e = Offset{D}()
-    I = boundary(β, Np, Ip, isright)
+    I = boundary(β, N, Ip, isright)
     J = isright ? I .- e(β) : I .+ e(β)
     @. φbar[J] += φbar[I]
     @. φbar[I] = 0
@@ -509,15 +513,15 @@ function apply_bc_u_pullback!(::PressureBC, φbar, β, t, setup; isright, kwargs
 end
 
 function apply_bc_p!(bc::PressureBC, p, β, t, setup; isright, kwargs...)
-    (; Np, Ip) = setup.grid
-    I = boundary(β, Np, Ip, isright)
+    (; N, Ip) = setup.grid
+    I = boundary(β, N, Ip, isright)
     p[I] .= 0
     p
 end
 
 function apply_bc_p_pullback!(::PressureBC, φbar, β, t, setup; isright, kwargs...)
-    (; Np, Ip) = setup.grid
-    I = boundary(β, Np, Ip, isright)
+    (; N, Ip) = setup.grid
+    I = boundary(β, N, Ip, isright)
     φbar[I] .= 0
     φbar
 end
