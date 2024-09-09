@@ -405,7 +405,8 @@ function apply_bc_p_pullback!(::DirichletBC, φbar, β, t, setup; isright, kwarg
 end
 
 function apply_bc_temp!(bc::DirichletBC, temp, β, t, setup; isright, kwargs...)
-    (; Np, Ip) = setup.grid
+    (; dimension, Np, Ip, xp) = setup.grid
+    D = dimension()
     I = boundary(β, Np, Ip, isright)
     bcfunc = if isnothing(bc.u)
         Returns(0)
