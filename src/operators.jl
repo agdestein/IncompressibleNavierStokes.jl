@@ -237,6 +237,9 @@ end
 "Compute Laplacian of pressure field (differentiable version)."
 laplacian(p, setup) = laplacian!(scalarfield(setup), p, setup)
 
+ChainRulesCore.rrule(::typeof(laplacian), p, setup) =
+    (laplacian(p, setup), φ -> error("Pullback for `laplacian` not yet implemented."))
+
 "Compute Laplacian of pressure field (in-place version)."
 function laplacian!(L, p, setup)
     (; grid, workgroupsize, boundary_conditions) = setup
