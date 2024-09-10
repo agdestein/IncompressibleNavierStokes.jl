@@ -488,11 +488,11 @@ apply_bc_temp_pullback!(bc::SymmetricBC, φbar, β, t, setup; isright, kwargs...
     apply_bc_p_pullback!(bc, φbar, β, t, setup; isright, kwargs...)
 
 function apply_bc_u!(bc::PressureBC, u, β, t, setup; isright, kwargs...)
-    (; dimension, Nu, Iu) = setup.grid
+    (; dimension, N, Iu) = setup.grid
     D = dimension()
     e = Offset{D}()
     for α = 1:D
-        I = boundary(β, Nu[α], Iu[α], isright)
+        I = boundary(β, N, Iu[α], isright)
         J = isright ? I .- e(β) : I .+ e(β)
         @. u[α][I] = u[α][J]
     end
@@ -500,11 +500,11 @@ function apply_bc_u!(bc::PressureBC, u, β, t, setup; isright, kwargs...)
 end
 
 function apply_bc_u_pullback!(::PressureBC, φbar, β, t, setup; isright, kwargs...)
-    (; dimension, Nu, Iu) = setup.grid
+    (; dimension, N, Iu) = setup.grid
     D = dimension()
     e = Offset{D}()
     for α = 1:D
-        I = boundary(β, Nu[α], Iu[α], isright)
+        I = boundary(β, N, Iu[α], isright)
         J = isright ? I .- e(β) : I .+ e(β)
         @. φbar[α][J] += φbar[α][I]
         @. φbar[α][I] = 0

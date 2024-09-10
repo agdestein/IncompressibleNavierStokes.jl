@@ -46,7 +46,7 @@ inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
 bodyforce(dim, x, y, t) = dim() == 1 ? -cₜ * inside(x, y) : 0.0
 
 # Build setup and assemble operators
-setup = Setup(; x, Re = 100.0, boundary_conditions, bodyforce);
+setup = Setup(; x, Re = 100.0, boundary_conditions, bodyforce, issteadybodyforce = true);
 
 # Initial conditions (extend inflow)
 ustart = velocityfield(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0);
