@@ -17,8 +17,7 @@
             (DirichletBC(), DirichletBC()),
         ),
     )
-    uref(dim, x, y, args...) =
-        -(dim() == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
+    uref(dim, x, y, args...) = dim == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)
     ustart = velocityfield(setup, uref, 0.0)
 
     nprocess = 20

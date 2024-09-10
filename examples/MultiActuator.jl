@@ -26,7 +26,7 @@ ArrayType = Array
 boundary_conditions = (
     ## x left, x right
     (
-        DirichletBC((dim, x, y, t) -> sinpi(sinpi(t / 6) / 6 + one(x) / 2 * (dim() == 1))),
+        DirichletBC((dim, x, y, t) -> sinpi(sinpi(t / 6) / 6 + one(x) / 2 * (dim == 1))),
         PressureBC(),
     ),
 
@@ -37,7 +37,7 @@ boundary_conditions = (
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
 create_bodyforce(; xc, yc, D, δ, C) =
     (dim, x, y, t) ->
-        dim() == 1 && abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2 ? -C / (D * δ) : zero(x)
+        dim == 1 && abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2 ? -C / (D * δ) : zero(x)
 
 create_manyforce(forces...) = function (dim, x, y, t)
     out = zero(x)
@@ -60,10 +60,17 @@ x = LinRange(T(0), T(10), 5n + 1), LinRange(-T(2), T(2), 2n + 1)
 plotgrid(x...; figure = (; size = (600, 300)))
 
 # Build setup and assemble operators
-setup = Setup(; x, Re = T(1000), boundary_conditions, bodyforce, ArrayType);
+setup = Setup(;
+    x,
+    Re = T(1000),
+    boundary_conditions,
+    bodyforce,
+    issteadybodyforce = true,
+    ArrayType,
+);
 
 # Initial conditions (extend inflow)
-ustart = velocityfield(setup, (dim, x, y) -> dim() == 1 ? one(x) : zero(x));
+ustart = velocityfield(setup, (dim, x, y) -> dim == 1 ? one(x) : zero(x));
 t = T(0)
 
 boxes = map(bodyforce.forces) do (; xc, yc, D, δ)

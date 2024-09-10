@@ -22,7 +22,7 @@
             boundary_conditions = ntuple(d -> (DirichletBC(), DirichletBC()), D),
         )
         uref(dim, x, y, args...) =
-            -(dim() == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
+            -(dim == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
         u = velocityfield(setup, uref, T(0))
         (; Iu, Ip) = setup.grid
 

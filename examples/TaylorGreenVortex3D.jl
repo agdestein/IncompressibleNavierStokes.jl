@@ -39,8 +39,8 @@ psolver = psolver_spectral(setup);
 ustart = velocityfield(
     setup,
     (dim, x, y, z) ->
-        dim() == 1 ? sinpi(2x) * cospi(2y) * sinpi(2z) / 2 :
-        dim() == 2 ? -cospi(2x) * sinpi(2y) * sinpi(2z) / 2 : zero(x);
+        dim == 1 ? sinpi(2x) * cospi(2y) * sinpi(2z) / 2 :
+        dim == 2 ? -cospi(2x) * sinpi(2y) * sinpi(2z) / 2 : zero(x);
     psolver,
 );
 

@@ -86,7 +86,7 @@ setup = Setup(x, Re, ArrayType);
 ## setup = Setup(; x, Re, boundary_conditions, ArrayType);
 
 # Initial conditions
-ustart = velocityfield(setup, (dim, x, y) -> dim() == 1 ? U(x, y) : zero(x));
+ustart = velocityfield(setup, (dim, x, y) -> dim == 1 ? U(x, y) : zero(x));
 
 # Real time plot: Streamwise average and spectrum
 function meanplot(state; setup)

@@ -40,8 +40,8 @@ boundary_conditions = (
     (
         DirichletBC(
             (dim, x, y, z, t) ->
-                dim() == 1 ? cos(π / 6 * sin(π / 6 * t)) :
-                dim() == 2 ? sin(π / 6 * sin(π / 6 * t)) : zero(x),
+                dim == 1 ? cos(π / 6 * sin(π / 6 * t)) :
+                dim == 2 ? sin(π / 6 * sin(π / 6 * t)) : zero(x),
         ),
         PressureBC(),
     ),
@@ -60,13 +60,13 @@ D = T(1)                      # Disk diameter
 Cₜ = T(0.2)                  # Thrust coefficient
 cₜ = Cₜ / (π * (D / 2)^2 * δ)
 inside(x, y, z) = abs(x - cx) ≤ δ / 2 && (y - cy)^2 + (z - cz)^2 ≤ (D / 2)^2
-bodyforce(dim, x, y, z) = dim() == 1 ? -cₜ * inside(x, y, z) : zero(x)
+bodyforce(dim, x, y, z) = dim == 1 ? -cₜ * inside(x, y, z) : zero(x)
 
 # Build setup and assemble operators
 setup = Setup(; x, Re, boundary_conditions, bodyforce, ArrayType);
 
 # Initial conditions (extend inflow)
-ustart = velocityfield(setup, (dim, x, y, z) -> dim() == 1 ? one(x) : zero(x));
+ustart = velocityfield(setup, (dim, x, y, z) -> dim == 1 ? one(x) : zero(x));
 
 # Solve unsteady problem
 (; u, t), outputs = solve_unsteady(;

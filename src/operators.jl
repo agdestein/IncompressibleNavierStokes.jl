@@ -817,8 +817,7 @@ function applybodyforce!(F, u, t, setup)
                 β -> reshape(xu[α][β][Iu[α].indices[β]], ntuple(Returns(1), β - 1)..., :),
                 D,
             )
-            dimtup = (Dimension(α),)
-            @. F[α][Iu[α]] += bodyforce(dimtup, xin..., t)
+            @. F[α][Iu[α]] += bodyforce(α, xin..., t)
         end
     end
     F

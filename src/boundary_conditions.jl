@@ -350,13 +350,13 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kw
     bcfunc = if isnothing(bc.u)
         Returns(0)
     elseif bc.u isa Tuple
-        (dim, args...) -> dudt ? zero(bc.u[dim()]) : bc.u[dim()]
+        (α, args...) -> dudt ? zero(bc.u[α]) : bc.u[α]
     elseif dudt
         # Use central difference to approximate dudt
         h = sqrt(eps(eltype(u[1]))) / 2
         function (args...)
-            dim, x..., t = args
-            (bc.u(dim, x..., t + h) - bc.u(dim, x..., t - h)) / 2h
+            args..., t = args
+            (bc.u(args..., t + h) - bc.u(args..., t - h)) / 2h
         end
     else
         bc.u
@@ -372,7 +372,7 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kw
             ),
             D,
         )
-        u[α][I] .= bcfunc.((Dimension(α),), xI..., t)
+        u[α][I] .= bcfunc.(α, xI..., t)
     end
     u
 end

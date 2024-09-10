@@ -38,7 +38,7 @@ LinRange(-T(0.25), T(0.25), 9)
 plotgrid(x...)
 
 # Boundary conditions: steady inflow on the top half
-U(dim, x, y, z, t) = dim() == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x)
+U(dim, x, y, z, t) = dim == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x)
 boundary_conditions = (
     ## x left, x right
     (DirichletBC(U), PressureBC()),

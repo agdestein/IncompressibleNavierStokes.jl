@@ -30,7 +30,7 @@ axis = range(0.0, 1.0, n + 1)
 setup = Setup(;
     x = (axis, axis),
     Re = 2e3,
-    bodyforce = (dim, x, y, t) -> (dim() == 1) * 5 * sinpi(8 * y),
+    bodyforce = (dim, x, y, t) -> (dim == 1) * 5 * sinpi(8 * y),
     issteadybodyforce = true,
 );
 ustart = random_field(setup, 0.0; A = 1e-2);

@@ -25,7 +25,7 @@ Ubar = 1.0
 n = (0.4π, 0.3π)
 ω = (0.22, 0.11)
 U(dim, x, y, t) =
-    dim() == 1 ?
+    dim == 1 ?
     1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * sin(ω * t)) :
     0.0
 boundary_conditions = (

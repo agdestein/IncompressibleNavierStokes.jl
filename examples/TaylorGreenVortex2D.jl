@@ -61,7 +61,7 @@ end
 
 # Analytical solution for 2D Taylor-Green vortex
 solution(Re) =
-    (dim, x, y, t) -> (dim() == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)) * exp(-2t / Re)
+    (dim, x, y, t) -> (dim == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)) * exp(-2t / Re)
 
 # Compute error for different resolutions
 Re = 2.0e3

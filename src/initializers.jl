@@ -8,7 +8,7 @@ vectorfield(setup) =
 """
 Create divergence free velocity field `u` with boundary conditions at time `t`.
 The initial conditions of `u[α]` are specified by the function
-`ufunc(Dimension(α), x...)`.
+`ufunc(α, x...)`.
 """
 function velocityfield(
     setup,
@@ -31,7 +31,7 @@ function velocityfield(
             β -> reshape(xu[α][β][Iu[α].indices[β]], ntuple(Returns(1), β - 1)..., :),
             D,
         )
-        u[α][Iu[α]] .= ufunc.((Dimension(α),), xin...)
+        u[α][Iu[α]] .= ufunc.(α, xin...)
     end
 
     # Make velocity field divergence free
