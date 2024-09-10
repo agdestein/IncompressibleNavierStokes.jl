@@ -35,13 +35,13 @@ temperature = temperature_equation(;
 
 # Setup
 n = 60
-x = LinRange(T(0), T(π), 2n)
-y = tanh_grid(T(0), T(1), n, T(1.2))
-z = tanh_grid(T(0), T(1), n, T(1.2))
-setup = Setup(
+x = (
+    LinRange(T(0), T(π), 2n),
+    tanh_grid(T(0), T(1), n, T(1.2)),
+    tanh_grid(T(0), T(1), n, T(1.2)),
+)
+setup = Setup(;
     x,
-    y,
-    z;
     boundary_conditions = (
         (PeriodicBC(), PeriodicBC()),
         (DirichletBC(), DirichletBC()),
@@ -52,20 +52,16 @@ setup = Setup(
     ArrayType,
 );
 
-plotgrid(x, y)
-plotgrid(y, z)
+plotgrid(x[1], x[2])
+plotgrid(x[2], x[3])
 
 # This will factorize the Laplace matrix
 @time psolver = psolver_direct(setup)
 
 # Initial conditions
-ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x); psolver);
-(; xp) = setup.grid;
-## T0(x, y, z) = 1 - z;
-## T0(x, y, z) = one(x) / 2 + max(sin(20 * x) * sinpi(20 * y) / 100, 0); ## Perturbation
-T0(x, y, z) = one(x) / 2 + sin(20 * x) * sinpi(20 * y) / 100; ## Perturbation
-tempstart = T0.(xp[1], reshape(xp[2], 1, :), reshape(xp[3], 1, 1, :));
-IncompressibleNavierStokes.apply_bc_temp!(tempstart, T(0), setup)
+ustart = velocityfield(setup, (dim, x, y, z) -> zero(x); psolver);
+tempstart =
+    temperaturefield(setup, (x, y, z) -> one(x) / 2 + sin(20 * x) * sinpi(20 * y) / 100);
 
 # Solve equation
 state, outputs = solve_unsteady(;

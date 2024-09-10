@@ -35,13 +35,9 @@ temperature = temperature_equation(;
 
 # Setup
 n = 80
-x = LinRange(T(0), T(1), n + 1)
-y = LinRange(T(0), T(1), n + 1)
-z = LinRange(T(0), T(2), 2n + 1)
-setup = Setup(
+x = LinRange(T(0), T(1), n + 1), LinRange(T(0), T(1), n + 1), LinRange(T(0), T(2), 2n + 1)
+setup = Setup(;
     x,
-    y,
-    z;
     boundary_conditions = (
         (DirichletBC(), DirichletBC()),
         (DirichletBC(), DirichletBC()),
@@ -56,12 +52,8 @@ setup = Setup(
 @time psolver = psolver_direct(setup)
 
 # Initial conditions
-ustart = create_initial_conditions(setup, (dim, x, y, z) -> zero(x); psolver);
-(; xp) = setup.grid;
-xx = xp[1];
-xy = reshape(xp[2], 1, :);
-xz = reshape(xp[3], 1, 1, :);
-tempstart = @. $(T(1)) * (1 + sin($(T(1.05 * π)) / 20 * xx) * sin($(T(π)) * xy) > xz);
+ustart = velocityfield(setup, (dim, x, y, z) -> zero(x); psolver);
+tempstart = temperaturefield(setup, (x, y, z) -> (1 + sinpi(x / 20) * sinpi(y) > z));
 
 fieldplot(
     (; u = ustart, temp = tempstart, t = T(0));

@@ -78,16 +78,15 @@ U(x, y) = (1 + T(0.1) * (rand(T) - T(0.5))) * U(y)
 n = 64
 ## n = 128
 ## n = 256
-x = LinRange(T(0), T(16), 4n + 1)
-y = LinRange(-T(10), T(10), 5n + 1)
-plotgrid(x, y)
+x = LinRange(T(0), T(16), 4n + 1), LinRange(-T(10), T(10), 5n + 1)
+plotgrid(x...)
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re, ArrayType);
-## setup = Setup(x, y; Re, boundary_conditions, ArrayType);
+setup = Setup(x, Re, ArrayType);
+## setup = Setup(; x, Re, boundary_conditions, ArrayType);
 
 # Initial conditions
-ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? U(x, y) : zero(x));
+ustart = velocityfield(setup, (dim, x, y) -> dim == 1 ? U(x, y) : zero(x));
 
 # Real time plot: Streamwise average and spectrum
 function meanplot(state; setup)

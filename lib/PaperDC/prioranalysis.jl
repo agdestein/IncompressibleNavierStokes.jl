@@ -68,13 +68,13 @@ filterdefs = [
 # Setup
 lims = T(0), T(1)
 dns = let
-    setup = Setup(ntuple(α -> LinRange(lims..., ndns + 1), D)...; Re, ArrayType)
+    setup = Setup(; x = ntuple(α -> LinRange(lims..., ndns + 1), D), Re, ArrayType)
     psolver = psolver_spectral(setup)
     (; setup, psolver)
 end;
 filters = map(filterdefs) do (Φ, nles)
     compression = ndns ÷ nles
-    setup = Setup(ntuple(α -> LinRange(lims..., nles + 1), D)...; Re, ArrayType)
+    setup = Setup(; x = ntuple(α -> LinRange(lims..., nles + 1), D), Re, ArrayType)
     psolver = psolver_spectral(setup)
     (; setup, Φ, compression, psolver)
 end;

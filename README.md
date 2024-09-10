@@ -104,8 +104,7 @@ using IncompressibleNavierStokes
 
 # Setup
 setup = Setup(
-    tanh_grid(0.0, 2.0, 200, 1.2),
-    tanh_grid(0.0, 1.0, 100, 1.2);
+    x = (tanh_grid(0.0, 2.0, 200, 1.2), tanh_grid(0.0, 1.0, 100, 1.2)),
     boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
     temperature = temperature_equation(;
         Pr = 0.71,
@@ -118,17 +117,11 @@ setup = Setup(
     ),
 )
 
-# Initial conditions
-U0(dim, x, y) = zero(x)
-T0(x, y) = 1 / 2 + sinpi(30 * x) / 100
-ustart = create_initial_conditions(setup, U0)
-tempstart = IncompressibleNavierStokes.apply_bc_temp(T0.(setup.grid.xp[1], setup.grid.xp[2]'), 0.0, setup)
-
 # Solve equation
 solve_unsteady(;
     setup,
-    ustart,
-    tempstart,
+    ustart = velocityfield(setup, (dim, x, y) -> zero(x)),
+    tempstart = temperaturefield(setup, (x, y) -> 1 / 2 + sinpi(30 * x) / 100),
     tlims = (0.0, 30.0),
     Δt = 0.02,
     processors = (;

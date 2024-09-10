@@ -1,7 +1,7 @@
 name = "Examples"
 uuid = "318dbb63-4243-420f-99f2-d56058123f9d"
 authors = ["Syver Døving Agdestein <syverda@gmail.com>"]
-version = "0.1.0"
+version = "1.0.0"
 
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
@@ -15,14 +15,14 @@ Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
-[sources]
-IncompressibleNavierStokes = {path = ".."}
+[sources.IncompressibleNavierStokes]
+path = ".."
 
 [compat]
 CairoMakie = "0.12"
 FFTW = "1"
 GLMakie = "0.10"
-IncompressibleNavierStokes = "0.6"
+IncompressibleNavierStokes = "1"
 JLD2 = "0.4"
 LaTeXStrings = "1"
 LinearAlgebra = "1"

@@ -31,8 +31,3 @@ viscosity. The baseline viscosity models transfer of energy from resolved to
 atomic scales. The new turbulent viscosity on the other hand, models energy
 transfer from resolved to unresolved scales. This non-constant field is
 computed from the local velocity field.
-
-```@docs
-smagtensor!
-smagorinsky_closure
-```

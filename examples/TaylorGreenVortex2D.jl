@@ -32,15 +32,15 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType =
     for (i, n) in enumerate(nlist)
         @info "Computing error for n = $n"
         x = ntuple(α -> LinRange(lims..., n + 1), D)
-        setup = Setup(x...; Re, ArrayType)
+        setup = Setup(; x, Re, ArrayType)
         psolver = psolver_spectral(setup)
-        ustart = create_initial_conditions(
+        ustart = velocityfield(
             setup,
             (dim, x...) -> uref(dim, x..., tlims[1]),
             tlims[1];
             psolver,
         )
-        ut = create_initial_conditions(
+        ut = velocityfield(
             setup,
             (dim, x...) -> uref(dim, x..., tlims[2]),
             tlims[2];
@@ -61,7 +61,7 @@ end
 
 # Analytical solution for 2D Taylor-Green vortex
 solution(Re) =
-    (dim, x, y, t) -> (dim() == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)) * exp(-2t / Re)
+    (dim, x, y, t) -> (dim == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)) * exp(-2t / Re)
 
 # Compute error for different resolutions
 Re = 2.0e3

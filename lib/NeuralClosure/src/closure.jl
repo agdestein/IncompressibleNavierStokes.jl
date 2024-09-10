@@ -17,13 +17,17 @@ function wrappedclosure(m, setup)
         if D == 2
             u = cat(u[1][Iu[1]], u[2][Iu[2]]; dims = 3)
             u = reshape(u, size(u)..., 1) # One sample
+            # u = collocate(u)
             mu = m(u, θ)
+            # mu = decollocate(mu)
             mu = pad_circular(mu, 1)
             mu = (mu[:, :, 1, 1], mu[:, :, 2, 1])
         elseif D == 3
             u = cat(u[1][Iu[1]], u[2][Iu[2]], u[3][Iu[3]]; dims = 4)
             u = reshape(u, size(u)..., 1) # One sample
+            # u = collocate(u)
             mu = m(u, θ)
+            # mu = decollocate(mu)
             mu = pad_circular(mu, 1)
             mu = (mu[:, :, :, 1, 1], mu[:, :, :, 2, 1], mu[:, :, :, 3, 1])
         end

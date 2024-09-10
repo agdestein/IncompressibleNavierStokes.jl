@@ -50,19 +50,13 @@ ArrayType = Array
 Re = T(1_000)
 
 # Non-zero Dirichlet boundary conditions are specified as plain Julia functions.
-# Note that time derivatives are required.
+U = (T(1), T(0))
 boundary_conditions = (
     ## x left, x right
     (DirichletBC(), DirichletBC()),
 
     ## y bottom, y top
-    (
-        DirichletBC(),
-        DirichletBC(
-            (dim, x, y, t) -> dim() == 1 ? one(x) : zero(x),
-            (dim, x, y, t) -> zero(x),
-        ),
-    ),
+    (DirichletBC(), DirichletBC(U)),
 )
 
 # We create a two-dimensional domain with a box of size `[1, 1]`. The grid is
@@ -70,17 +64,16 @@ boundary_conditions = (
 # the walls.
 n = 32
 lims = T(0), T(1)
-x = cosine_grid(lims..., n)
-y = cosine_grid(lims..., n)
-plotgrid(x, y)
+x = cosine_grid(lims..., n), cosine_grid(lims..., n)
+plotgrid(x...)
 
 # We can now build the setup and assemble operators.
 # A 3D setup is built if we also provide a vector of z-coordinates.
-setup = Setup(x, y; boundary_conditions, Re, ArrayType);
+setup = Setup(; x, boundary_conditions, Re, ArrayType);
 
 # The initial conditions are provided in function. The value `dim()` determines
 # the velocity component.
-ustart = create_initial_conditions(setup, (dim, x, y) -> zero(x));
+ustart = velocityfield(setup, (dim, x, y) -> zero(x));
 
 # Iteration processors are called after every `nupdate` time steps. This can be
 # useful for logging, plotting, or saving results. Their respective outputs are

@@ -1,20 +1,7 @@
-# Add environment for package being tested via
-# load path for live testing, since the test Project.toml
-# is not allowed to depend on the tested package for Pkg.test()
-# to work correctly
-push!(LOAD_PATH, joinpath(@__DIR__, ".."))
+using TestItemRunner
+using Logging
 
-using Aqua
-using IncompressibleNavierStokes
-using NeuralClosure
-using Test
-
-@testset "NeuralClosure" begin
-    @testset "Example run" begin
-        include("examplerun.jl")
-    end
-    @testset "Aqua" begin
-        @info "Testing code with Aqua"
-        Aqua.test_all(NeuralClosure; ambiguities = false)
-    end
+# Hide @info output
+with_logger(ConsoleLogger(Warn)) do
+    @run_package_tests
 end

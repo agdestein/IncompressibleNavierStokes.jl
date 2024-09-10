@@ -1,7 +1,6 @@
 ```@meta
 CurrentModule = IncompressibleNavierStokes
 ```
-
 # Temperature equation
 
 IncompressibleNavierStokes.jl supports adding a temperature equation, which is
@@ -12,8 +11,7 @@ To enable the temperature equation, you need to set the `temperature` keyword
 in setup:
 
 ```julia
-setup = Setup(
-    args...;
+setup = Setup(;
     kwargs...,
     temperature = temperature_equation(; kwargs...),
 )
@@ -21,13 +19,6 @@ setup = Setup(
 
 where `temperature_equation` can be configured as follows:
 
-```@docs
+```@docs; canonical = false
 temperature_equation
-```
-
-Some operators are available for the temperature equation:
-```@docs
-gravity!
-convection_diffusion_temp!
-dissipation!
 ```
