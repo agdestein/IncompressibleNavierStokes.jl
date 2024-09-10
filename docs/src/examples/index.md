@@ -28,6 +28,12 @@ const simple = [
     desc: "Decaying vortex structures in a periodic 3D-box",
   },
   {
+    href: "generated/Kolmogorov2D",
+    src: "../Kolmogorov2D.png",
+    caption: "Kolmogorov flow (2D)",
+    desc: "Initiate a flow through a sinusoidal force",
+  },
+  {
     href: "generated/ShearLayer2D",
     src: "../ShearLayer2D.png",
     caption: "Shear-layer (2D)",

@@ -21,7 +21,7 @@ function timestep(method::AdamsBashforthCrankNicolsonMethod, stepper, Δt)
     (; convection_model, viscosity_model, Re, force, grid, operators, boundary_conditions) =
         setup
     (; bc_unsteady) = boundary_conditions
-    (; NV, Ω) = grid
+    (; NV) = grid
     (; G, M) = operators
     (; Diff) = operators
     (; p_add_solve, α₁, α₂, θ, method_startup) = method

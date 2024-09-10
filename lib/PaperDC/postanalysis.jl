@@ -60,10 +60,9 @@ ispath(outdir) || mkpath(outdir)
 #
 # Note: Using `rng = Random.default_rng()` twice seems to point to the
 # same RNG, and mutating one also mutates the other.
-# `rng = Random.Xoshiro()` creates an independent copy each time.
+# `rng = Xoshiro()` creates an independent copy each time.
 #
-# We define all the seeds here so that we don't accidentally type the same seed
-# twice.
+# We define all the seeds here.
 
 seeds = (;
     dns = 123, # Initial conditions
@@ -103,8 +102,7 @@ clean() = (GC.gc(); CUDA.reclaim())
 # Important: Created and seeded first, then shared for all initial conditions.
 # After each initial condition generation, it is mutated and creates different
 # IC for the next iteration.
-rng = Random.Xoshiro()
-Random.seed!(rng, seeds.dns)
+rng = Xoshiro(seeds.dns)
 
 # Parameters
 get_params(nlesscalar) = (;
@@ -153,13 +151,14 @@ data_test.comptime / 60
 (sum(d -> d.comptime, data_train) + sum(d -> d.comptime, data_valid) + data_test.comptime)
 
 # Build LES setup and assemble operators
-getsetups(params) = [
-    Setup(
-        ntuple(α -> LinRange(T(0), T(1), nles[α] + 1), params.D)...;
+getsetups(params) = map(
+    nles -> Setup(;
+        x = ntuple(α -> LinRange(T(0), T(1), nles[α] + 1), params.D),
         params.Re,
         params.ArrayType,
-    ) for nles in params.nles
-]
+    ),
+    params.nles,
+)
 setups_train = getsetups(params_train);
 setups_valid = getsetups(params_valid);
 setups_test = getsetups(params_test);
@@ -222,7 +221,7 @@ end
 # Random number generator for initial CNN parameters.
 # All training sessions will start from the same θ₀
 # for a fair comparison.
-rng = Random.Xoshiro(seeds.θ₀)
+rng = Xoshiro(seeds.θ₀)
 
 ## # CNN architecture 1
 ## mname = "balzac"
@@ -276,13 +275,12 @@ end
 
 # Train
 let
-    rng = Random.Xoshiro()
-    Random.seed!(rng, seeds.prior)
     ngrid, nfilter = size(io_train)
     for ifil = 1:nfilter, ig = 1:ngrid
         clean()
         starttime = time()
         println("ig = $ig, ifil = $ifil")
+        rng = Xoshiro(seeds.prior) # Same seed for all training setups
         d = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device, rng)
         θ = T(1.0e0) * device(θ₀)
         loss = create_loss_prior(mean_squared_error, closure)
@@ -347,12 +345,12 @@ end
 
 # Train
 let
-    rng = Random.Xoshiro(seeds.post)
     ngrid, nfilter = size(io_train)
     for iorder = 1:2, ifil = 1:nfilter, ig = 1:ngrid
         clean()
         starttime = time()
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
+        rng = Xoshiro(seeds.post) # Same seed for all training setups
         setup = setups_train[ig]
         psolver = psolver_spectral(setup)
         loss = create_loss_post(;
@@ -893,7 +891,7 @@ divs = let
         Δt = (t[2] - t[1]) / nupdate
         T = eltype(ustart[1])
         dwriter = processor() do state
-            div = fill!(similar(setup.grid.x[1], setup.grid.N), 0)
+            div = scalarfield(setup)
             dhist = zeros(T, 0)
             on(state) do (; u, n)
                 if n % nupdate == 0

@@ -32,7 +32,7 @@ lims = T(0), T(1)
 x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
 
 # Build setup and assemble operators
-setup = Setup(x...; Re, ArrayType);
+setup = Setup(; x, Re, ArrayType);
 
 # Create random initial conditions
 ustart = random_field(setup, T(0));

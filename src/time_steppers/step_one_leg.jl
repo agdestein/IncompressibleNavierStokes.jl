@@ -17,7 +17,6 @@ function timestep(method::OneLegMethod, stepper, Δt; θ = nothing)
     (; setup, psolver, u, p, t, n, uold, pold, told) = stepper
     (; p_add_solve, β, method_startup) = method
     (; grid, boundary_conditions) = setup
-    (; Ω) = grid
     T = typeof(Δt)
 
     # One-leg requires state at previous time step, which is not available at
@@ -59,7 +58,7 @@ function timestep(method::OneLegMethod, stepper, Δt; θ = nothing)
 
     # Divergence of intermediate velocity field
     div = divergence(unew, setup) / Δtᵦ
-    div = @. div * Ω
+    div = scalewithvolume(div, setup)
 
     # Solve the Poisson equation for the pressure
     Δp = poisson(psolver, div)
@@ -93,7 +92,6 @@ function timestep!(method::OneLegMethod, stepper, Δt; θ = nothing, cache)
     (; setup, psolver, u, p, t, n, uold, pold, told) = stepper
     (; p_add_solve, β, method_startup) = method
     (; grid, boundary_conditions) = setup
-    (; Ω) = grid
     (; unew, pnew, div, F, Δp) = cache
     T = typeof(Δt)
 
@@ -135,7 +133,7 @@ function timestep!(method::OneLegMethod, stepper, Δt; θ = nothing, cache)
 
     # Divergence of intermediate velocity field
     divergence!(div, unew, setup)
-    @. div *= Ω
+    scalewithvolume!(div, setup)
 
     # Solve the Poisson equation for the pressure
     poisson!(psolver, Δp, div)

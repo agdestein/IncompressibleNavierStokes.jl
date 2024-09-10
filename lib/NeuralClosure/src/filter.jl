@@ -20,12 +20,8 @@ struct FaceAverage <: AbstractFilter end
 "Average fine grid velocity field over coarse volume."
 struct VolumeAverage <: AbstractFilter end
 
-(Φ::AbstractFilter)(u, setup_les, compression) = Φ(
-    ntuple(α -> fill!(similar(u[1], setup_les.grid.N), 0), length(u)),
-    u,
-    setup_les,
-    compression,
-)
+(Φ::AbstractFilter)(u, setup_les, compression) =
+    Φ(vectorfield(setup_les), u, setup_les, compression)
 
 function (::FaceAverage)(v, u, setup_les, comp)
     (; grid, workgroupsize) = setup_les
@@ -79,13 +75,8 @@ function reconstruct!(u, v, setup_dns, setup_les, comp)
 end
 
 "Reconstruct DNS velocity field. See also [`reconstruct!`](@ref)."
-reconstruct(v, setup_dns, setup_les, comp) = reconstruct!(
-    ntuple(α -> fill!(similar(v[1], setup_dns.grid.N), 0), length(v)),
-    v,
-    setup_dns,
-    setup_les,
-    comp,
-)
+reconstruct(v, setup_dns, setup_les, comp) =
+    reconstruct!(vectorfield(setup_dns), v, setup_dns, setup_les, comp)
 
 function (::VolumeAverage)(v, u, setup_les, comp)
     (; grid, boundary_conditions, workgroupsize) = setup_les

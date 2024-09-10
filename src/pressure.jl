@@ -10,9 +10,7 @@
 Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
 For periodic and no-slip BC, the sum of `f` should be zero.
 
-Non-mutating/allocating/out-of-place version.
-
-See also [`poisson!`](@ref).
+Differentiable version.
 """
 poisson(psolver, f) = poisson!(psolver, zero(f), f)
 
@@ -20,60 +18,49 @@ poisson(psolver, f) = poisson!(psolver, zero(f), f)
 ChainRulesCore.rrule(::typeof(poisson), psolver, f) =
     (poisson(psolver, f), φ -> (NoTangent(), NoTangent(), poisson(psolver, unthunk(φ))))
 
-"""
-Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
-For periodic and no-slip BC, the sum of `f` should be zero.
-
-Mutating/non-allocating/in-place version.
-
-See also [`poisson`](@ref).
-"""
+"Solve the Poisson equation for the pressure (in-place version)."
 poisson!(psolver, p, f) = psolver(p, f)
 
 """
 Compute pressure from velocity field. This makes the pressure compatible with the velocity
 field, resulting in same order pressure as velocity.
-"""
-function pressure!(p, u, temp, t, setup; psolver, F, div)
-    (; grid) = setup
-    (; dimension, Iu, Ip, Ω) = grid
-    D = dimension()
-    momentum!(F, u, temp, t, setup)
-    apply_bc_u!(F, t, setup; dudt = true)
-    divergence!(div, F, setup)
-    @. div *= Ω
-    poisson!(psolver, p, div)
-    apply_bc_p!(p, t, setup)
-    p
-end
 
-"""
-Compute pressure from velocity field. This makes the pressure compatible with the velocity
-field, resulting in same order pressure as velocity.
+Differentiable version.
 """
 function pressure(u, temp, t, setup; psolver)
     (; grid) = setup
-    (; dimension, Iu, Ip, Ω) = grid
+    (; dimension, Iu, Ip) = grid
     D = dimension()
     F = momentum(u, temp, t, setup)
     F = apply_bc_u(F, t, setup; dudt = true)
     div = divergence(F, setup)
-    div = @. div * Ω
+    div = scalewithvolume(div, setup)
     p = poisson(psolver, div)
     p = apply_bc_p(p, t, setup)
     p
 end
 
-"""
-Project velocity field onto divergence-free space.
-"""
+"Compute pressure from velocity field (in-place version)."
+function pressure!(p, u, temp, t, setup; psolver, F, div)
+    (; grid) = setup
+    (; dimension, Iu, Ip) = grid
+    D = dimension()
+    momentum!(F, u, temp, t, setup)
+    apply_bc_u!(F, t, setup; dudt = true)
+    divergence!(div, F, setup)
+    scalewithvolume!(div, setup)
+    poisson!(psolver, p, div)
+    apply_bc_p!(p, t, setup)
+    p
+end
+
+"Project velocity field onto divergence-free space (differentiable version)."
 function project(u, setup; psolver)
-    (; Ω) = setup.grid
     T = eltype(u[1])
 
     # Divergence of tentative velocity field
     div = divergence(u, setup)
-    div = @. div * Ω
+    div = scalewithvolume(div, setup)
 
     # Solve the Poisson equation
     p = poisson(psolver, div)
@@ -84,14 +71,13 @@ function project(u, setup; psolver)
     u .- G
 end
 
-"Project velocity field onto divergence-free space."
+"Project velocity field onto divergence-free space (in-place version)."
 function project!(u, setup; psolver, div, p)
-    (; Ω) = setup.grid
     T = eltype(u[1])
 
     # Divergence of tentative velocity field
     divergence!(div, u, setup)
-    @. div *= Ω
+    scalewithvolume!(div, setup)
 
     # Solve the Poisson equation
     poisson!(psolver, p, div)
@@ -120,6 +106,19 @@ end
 "Create direct Poisson solver using an appropriate matrix decomposition."
 psolver_direct(setup) = psolver_direct(setup.grid.x[1], setup) # Dispatch on array type
 
+psolver_direct(::Any, setup) = error("""
+    Unsupported array type.
+
+    If you are using CUDA `CuArray`s, do
+
+    ```julia
+    using Pkg
+    Pkg.add("CUDSS")
+    ```
+
+    This will trigger an extension that works for `CuArrays`.
+    """)
+
 # CPU version
 function psolver_direct(::Array, setup)
     (; grid, boundary_conditions) = setup
@@ -130,9 +129,9 @@ function psolver_direct(::Array, setup)
         any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
     if isdefinite
         # No extra DOF
-        T = Float64 # This is currently required for SuiteSparse LU
-        ftemp = zeros(T, prod(Np))
-        ptemp = zeros(T, prod(Np))
+        Ttemp = Float64 # This is currently required for SuiteSparse LU
+        ftemp = zeros(Ttemp, prod(Np))
+        ptemp = zeros(Ttemp, prod(Np))
         viewrange = (:)
         fact = factorize(L)
     else
@@ -150,7 +149,12 @@ function psolver_direct(::Array, setup)
     function psolve!(p, f)
         copyto!(view(ftemp, viewrange), view(view(f, Ip), :))
         ptemp .= fact \ ftemp
-        copyto!(view(view(p, Ip), :), eltype(p).(view(ptemp, viewrange)))
+        if isdefinite && !(0.0 isa T)
+            # Convert from Float64 to T
+            copyto!(view(view(p, Ip), :), T.(view(ptemp, viewrange)))
+        else
+            copyto!(view(view(p, Ip), :), view(ptemp, viewrange))
+        end
         p
     end
 end
@@ -189,15 +193,17 @@ end
 # Preconditioner
 function create_laplace_diag(setup)
     (; grid, workgroupsize) = setup
-    (; dimension, Δ, Δu, N, Np, Ip, Ω) = grid
+    (; dimension, Δ, Δu, N, Np, Ip) = grid
     D = dimension()
     δ = Offset{D}()
     @kernel function _laplace_diag!(z, p, I0)
         I = @index(Global, Cartesian)
         I = I + I0
+        ΔI = getindex.(Δ, I.I)
+        ΩI = prod(ΔI)
         d = zero(eltype(z))
         for α = 1:length(I)
-            d -= Ω[I] / Δ[α][I[α]] * (1 / Δu[α][I[α]] + 1 / Δu[α][I[α]-1])
+            d -= ΩI / Δ[α][I[α]] * (1 / Δu[α][I[α]] + 1 / Δu[α][I[α]-1])
         end
         z[I] = -p[I] / d
     end
@@ -216,11 +222,11 @@ function psolver_cg(
     preconditioner = create_laplace_diag(setup),
 )
     (; grid, workgroupsize) = setup
-    (; Np, Ip, Ω) = grid
+    (; Np, Ip) = grid
     T = eltype(setup.grid.x[1])
-    r = similar(setup.grid.x[1], setup.grid.N)
-    L = similar(setup.grid.x[1], setup.grid.N)
-    q = similar(setup.grid.x[1], setup.grid.N)
+    r = scalarfield(setup)
+    L = scalarfield(setup)
+    q = scalarfield(setup)
     function psolve!(p, f)
         function innerdot(a, b)
             @kernel function innerdot!(d, a, b, I0)
@@ -312,15 +318,7 @@ function psolver_spectral(setup)
     # Fourier transform of the discretization
     # Assuming uniform grid, although Δx[1] and Δx[2] do not need to be the same
 
-    k = ntuple(
-        d -> reshape(
-            0:Np[d]-1,
-            ntuple(Returns(1), d - 1)...,
-            :,
-            ntuple(Returns(1), D - d)...,
-        ),
-        D,
-    )
+    k = ntuple(d -> reshape(0:Np[d]-1, ntuple(Returns(1), d - 1)..., :), D)
 
     Ahat = fill!(similar(x[1], Complex{T}, Np), 0)
     Tπ = T(π) # CUDA doesn't like pi

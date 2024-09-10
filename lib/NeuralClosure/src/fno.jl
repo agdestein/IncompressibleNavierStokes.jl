@@ -25,12 +25,11 @@ function fno(; setup, kmax, c, σ, ψ, rng = Random.default_rng(), kwargs...)
         # Put inputs in pressure points
         collocate,
 
-        # Conv(ntuple(Returns(1), D), D => c[1]; use_bias = false, init_weight),
-
         # Some Fourier layers
-        (
-            FourierLayer(dimension, kmax[i], c[i] => c[i+1]; σ = σ[i], init_weight) for
-            i ∈ eachindex(σ)
+        map(
+            i ->
+                FourierLayer(dimension, kmax[i], c[i] => c[i+1]; σ = σ[i], init_weight),
+            eachindex(σ),
         )...,
 
         # Compress with a final dense layer
@@ -41,6 +40,7 @@ function fno(; setup, kmax, c, σ, ψ, rng = Random.default_rng(), kwargs...)
         # Differentiate output to velocity points
         decollocate,
     )
+
     create_closure(layers...; rng)
 end
 
@@ -58,7 +58,7 @@ Some important sizes:
 - `kmax`: Cut-off wavenumber
 - `nsample`: Number of input samples (treated independently)
 """
-struct FourierLayer{D,A,F} <: Lux.AbstractExplicitLayer
+struct FourierLayer{D,A,F} <: Lux.AbstractLuxLayer
     dimension::Dimension{D}
     kmax::Int
     cin::Int

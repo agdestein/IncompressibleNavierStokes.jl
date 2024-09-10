@@ -49,10 +49,9 @@ end
 # Define observer function to track average temperature.
 function averagetemp(state; setup)
     state isa Observable || (state = Observable(state))
-    (; x, Δ, Ip, Δu) = setup.grid
-    T = eltype(Δ[1])
+    (; xp, Δ, Ip) = setup.grid
     ix = Ip.indices[1]
-    Ty = lift(state) do (; temp, t)
+    Ty = lift(state) do (; temp)
         Ty = sum(temp[ix, :] .* Δ[1][ix]; dims = 1) ./ sum(Δ[1][ix])
         Array(Ty)[:]
     end
@@ -87,14 +86,12 @@ temperature = temperature_equation(;
 
 # Grid
 n = 100
-x = tanh_grid(T(0), T(2), 2n, T(1.2))
-y = tanh_grid(T(0), T(1), n, T(1.2))
-plotgrid(x, y)
+x = tanh_grid(T(0), T(2), 2n, T(1.2)), tanh_grid(T(0), T(1), n, T(1.2))
+plotgrid(x...)
 
 # Setup
-setup = Setup(
+setup = Setup(;
     x,
-    y;
     boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
     Re = 1 / temperature.α1,
     temperature,
@@ -102,13 +99,8 @@ setup = Setup(
 );
 
 # Initial conditions
-ustart = create_initial_conditions(setup, (dim, x, y) -> zero(x));
-(; xp) = setup.grid;
-## T0(x, y) = 1 - y;
-## T0(x, y) = one(y) / 2;
-T0(x, y) = one(y) / 2 + max(sinpi(20 * x) / 100, 0); ## Perturbation
-## T0(x, y) = 1 - y + max(sinpi(20 * x) / 1000, 0); ## Perturbation
-tempstart = T0.(xp[1], xp[2]');
+ustart = velocityfield(setup, (dim, x, y) -> zero(x));
+tempstart = temperaturefield(setup, (x, y) -> one(y) / 2 + max(sinpi(20 * x) / 100, 0));
 
 # Processors
 GLMakie.closeall() #!md
