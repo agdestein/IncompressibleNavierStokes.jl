@@ -1,31 +1,37 @@
+"Create empty scalar field."
+scalarfield(setup) = fill!(similar(setup.grid.x[1], setup.grid.N), 0)
+
+"Create empty vector field."
+vectorfield(setup) =
+    ntuple(α -> fill!(similar(setup.grid.x[1], setup.grid.N), 0), setup.grid.dimension())
+
 """
-Create divergence free initial velocity field `u` at starting time `t`.
+Create divergence free velocity field `u` with boundary conditions at time `t`.
 The initial conditions of `u[α]` are specified by the function
-`initial_velocity(Dimension(α), x...)`.
+`ufunc(α, x...)`.
 """
-function create_initial_conditions(
+function velocityfield(
     setup,
-    initial_velocity,
+    ufunc,
     t = convert(eltype(setup.grid.x[1]), 0);
     psolver = default_psolver(setup),
     doproject = true,
 )
     (; grid) = setup
-    (; dimension, N, Iu, Ip, x, xp, Ω) = grid
+    (; dimension, N, Iu, x, xu) = grid
 
-    T = eltype(x[1])
     D = dimension()
 
     # Allocate velocity
-    u = ntuple(d -> fill!(similar(x[1], N), 0), D)
+    u = vectorfield(setup)
 
     # Initial velocities
     for α = 1:D
         xin = ntuple(
-            β -> reshape(α == β ? x[β][2:end] : xp[β], ntuple(Returns(1), β - 1)..., :),
+            β -> reshape(xu[α][β][Iu[α].indices[β]], ntuple(Returns(1), β - 1)..., :),
             D,
         )
-        u[α][Iu[α]] .= initial_velocity.((Dimension(α),), xin...)[Iu[α]]
+        u[α][Iu[α]] .= ufunc.(α, xin...)
     end
 
     # Make velocity field divergence free
@@ -37,6 +43,17 @@ function create_initial_conditions(
 
     # Initial conditions, including initial boundary conditions
     u
+end
+
+"Create temperature field from function with boundary conditions at time `t`."
+function temperaturefield(setup, tempfunc, t = zero(eltype(setup.grid.x[1])))
+    (; grid) = setup
+    (; dimension, N, Ip, xp) = grid
+    D = dimension()
+    xin = ntuple(β -> reshape(xp[β][Ip.indices[β]], ntuple(Returns(1), β - 1)..., :), D)
+    temperature = scalarfield(setup)
+    temperature[Ip] .= tempfunc.(xin...)
+    apply_bc_temp!(temperature, t, setup)
 end
 
 # function create_spectrum(; setup, A, σ, s, rng = Random.default_rng())
@@ -177,15 +194,14 @@ function random_field(
     rng = Random.default_rng(),
 )
     (; grid, boundary_conditions) = setup
-    (; dimension, N, x, Δ, Ip, Ω) = setup.grid
+    (; dimension, N, Δ) = grid
     D = dimension()
-    T = eltype(x[1])
 
     @assert(
         all(==((PeriodicBC(), PeriodicBC())), boundary_conditions),
         "Random field requires periodic boundary conditions."
     )
-    @assert all(Δ -> all(≈(Δ[1]), Δ), Δ) "Random field requires uniform grid spacing."
+    @assert all(Δ -> all(≈(0), diff(Δ)), Δ) "Random field requires uniform grid spacing."
     @assert all(iseven, N) "Random field requires even number of volumes."
 
     # Create random velocity field

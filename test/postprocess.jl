@@ -1,23 +1,24 @@
-@testset "Processors" begin
+@testitem "Post process" begin
+    using CairoMakie
+    using LinearAlgebra
+
     D = 2
-    @info "Testing processors in $(D)D"
 
     # Temporary directory
     dir = joinpath(tempdir(), "INSTest")
 
     n = 64
     x = LinRange(0.0, 1.0, n + 1), LinRange(0.0, 1.0, n + 1)
-    setup = Setup(
-        x...;
+    setup = Setup(;
+        x,
         Re = 100.0,
         boundary_conditions = (
             (DirichletBC(), DirichletBC()),
             (DirichletBC(), DirichletBC()),
         ),
     )
-    uref(dim, x, y, args...) =
-        -(dim() == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
-    ustart = create_initial_conditions(setup, uref, 0.0)
+    uref(dim, x, y, args...) = dim == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)
+    ustart = velocityfield(setup, uref, 0.0)
 
     nprocess = 20
     nupdate = 10
@@ -53,7 +54,6 @@
     end
 
     @testset "VTK files" begin
-        @info "Testing VTK files"
         @test isfile(joinpath(dir, "solution.pvd"))
         @test isfile(joinpath(dir, "solution_t=0p0.vtr"))
         save_vtk(state; setup, filename = joinpath(dir, "snapshot"))
@@ -61,14 +61,12 @@
     end
 
     @testset "Plots" begin
-        @info "Testing Plots"
         @test plotgrid(x...) isa Makie.FigureAxisPlot
         @test fieldplot(state; setup) isa Figure
         @test energy_spectrum_plot(state; setup) isa Figure
     end
 
     @testset "Animation" begin
-        @info "Testing 2D processors: Animation"
         @test isfile(joinpath(dir, "solution.mkv"))
     end
 end

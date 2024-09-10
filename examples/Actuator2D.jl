@@ -20,22 +20,15 @@ ispath(outdir) || mkpath(outdir)
 
 # A 2D grid is a Cartesian product of two vectors
 n = 40
-x = LinRange(0.0, 10.0, 5n + 1)
-y = LinRange(-2.0, 2.0, 2n + 1)
-plotgrid(x, y; figure = (; size = (600, 300)))
+x = LinRange(0.0, 10.0, 5n + 1), LinRange(-2.0, 2.0, 2n + 1)
+plotgrid(x...; figure = (; size = (600, 300)))
 
 # Boundary conditions
 boundary_conditions = (
     ## x left, x right
     (
         ## Unsteady BC requires time derivatives
-        DirichletBC(
-            (dim, x, y, t) -> sin(π / 6 * sin(π / 6 * t) + π / 2 * (dim() == 1)),
-            (dim, x, y, t) ->
-                (π / 6)^2 *
-                cos(π / 6 * t) *
-                cos(π / 6 * sin(π / 6 * t) + π / 2 * (dim() == 1)),
-        ),
+        DirichletBC((dim, x, y, t) -> sin(π / 6 * sin(π / 6 * t) + π / 2 * (dim == 1))),
         PressureBC(),
     ),
 
@@ -50,13 +43,13 @@ D = 1.0           # Disk diameter
 Cₜ = 0.2          # Thrust coefficient
 cₜ = Cₜ / (D * δ)
 inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
-bodyforce(dim, x, y, t) = dim() == 1 ? -cₜ * inside(x, y) : 0.0
+bodyforce(dim, x, y, t) = dim == 1 ? -cₜ * inside(x, y) : 0.0
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re = 100.0, boundary_conditions, bodyforce);
+setup = Setup(; x, Re = 100.0, boundary_conditions, bodyforce, issteadybodyforce = true);
 
 # Initial conditions (extend inflow)
-ustart = create_initial_conditions(setup, (dim, x, y) -> dim() == 1 ? 1.0 : 0.0);
+ustart = velocityfield(setup, (dim, x, y) -> dim == 1 ? 1.0 : 0.0);
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(;

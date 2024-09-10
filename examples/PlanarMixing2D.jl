@@ -18,21 +18,19 @@ outdir = joinpath(@__DIR__, "output", "PlanarMixing2D")
 # Viscosity model
 Re = 500.0
 
-# Boundary conditions: Unsteady BC requires time derivatives
+# Boundary conditions
 ΔU = 1.0
 Ubar = 1.0
 ϵ = (0.082Ubar, 0.012Ubar)
 n = (0.4π, 0.3π)
 ω = (0.22, 0.11)
 U(dim, x, y, t) =
-    dim() == 1 ?
+    dim == 1 ?
     1.0 + ΔU / 2 * tanh(2y) + sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * sin(ω * t)) :
     0.0
-dUdt(dim, x, y, t) =
-    dim() == 1 ? sum(@. ϵ * (1 - tanh(y / 2)^2) * cos(n * y) * ω * cos(ω * t)) : 0.0
 boundary_conditions = (
     ## x left, x right
-    (DirichletBC(U, dUdt), PressureBC()),
+    (DirichletBC(U), PressureBC()),
 
     ## y rear, y front
     (PressureBC(), PressureBC()),
@@ -41,16 +39,15 @@ boundary_conditions = (
 # A 2D grid is a Cartesian product of two vectors
 n = 64
 ## n = 256
-x = LinRange(0.0, 256.0, 4n)
-y = LinRange(-32.0, 32.0, n)
-plotgrid(x, y; figure = (; size = (600, 250)))
+x = LinRange(0.0, 256.0, 4n), LinRange(-32.0, 32.0, n)
+plotgrid(x...; figure = (; size = (600, 250)))
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re, boundary_conditions);
+setup = Setup(; x, Re, boundary_conditions);
 psolver = psolver_direct(setup);
 
 # Initial conditions (extend inflow)
-ustart = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, 0.0); psolver);
+ustart = velocityfield(setup, (dim, x, y) -> U(dim, x, y, 0.0); psolver);
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(;

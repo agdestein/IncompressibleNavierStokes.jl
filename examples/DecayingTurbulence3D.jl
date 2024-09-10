@@ -30,12 +30,10 @@ Re = T(6_000)
 # A 3D grid is a Cartesian product of three vectors
 n = 32
 lims = T(0), T(1)
-x = LinRange(lims..., n + 1)
-y = LinRange(lims..., n + 1)
-z = LinRange(lims..., n + 1)
+x = LinRange(lims..., n + 1), LinRange(lims..., n + 1), LinRange(lims..., n + 1)
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; Re, ArrayType);
+setup = Setup(; x, Re, ArrayType);
 
 # Since the grid is uniform and identical for x, y, and z, we may use a
 # specialized spectral pressure solver

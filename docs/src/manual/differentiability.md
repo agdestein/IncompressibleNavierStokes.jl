@@ -26,7 +26,7 @@ make a time stepping loop composed of differentiable operations:
 
 ```julia
 import IncompressibleNavierStokes as INS
-setup = INS.Setup(0:0.01:1, 0:0.01:1; Re = 500.0)
+setup = INS.Setup(; x = (0:0.01:1, 0:0.01:1), Re = 500.0)
 psolver = INS.default_psolver(setup)
 method = INS.RKMethods.RK44P2()
 Δt = 0.01

@@ -1,8 +1,6 @@
-"""
-Create setup.
-"""
-function Setup(
-    x...;
+"Create problem setup (stored in a named tuple)."
+function Setup(;
+    x,
     boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
     bodyforce = nothing,
     issteadybodyforce = true,
@@ -29,16 +27,16 @@ function Setup(
     if !isnothing(bodyforce) && issteadybodyforce
         (; dimension, x, N) = setup.grid
         T = eltype(x[1])
-        F = ntuple(α -> zero(similar(x[1], N)), dimension())
-        u = ntuple(α -> zero(similar(x[1], N)), dimension())
-        bodyforce = bodyforce!(F, u, T(0), setup)
+        u = vectorfield(setup)
+        F = vectorfield(setup)
+        bodyforce = applybodyforce!(F, u, T(0), setup)
         setup = (; setup..., issteadybodyforce = true, bodyforce)
     end
     setup
 end
 
 """
-Temperature equation setup.
+Create temperature equation setup (stored in a named tuple).
 
 The equation is parameterized by three dimensionless numbers (Prandtl number,
 Rayleigh number, and Gebhart number), and requires separate boundary conditions

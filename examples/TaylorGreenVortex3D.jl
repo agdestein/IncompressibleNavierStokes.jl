@@ -6,48 +6,43 @@
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-# Output directory
-outdir = joinpath(@__DIR__, "output", "TaylorGreenVortex3D")
-ispath(outdir) || mkpath(outdir)
-
 # Floating point precision
 T = Float64
 
-# Array type
+# ## Array type
+#
+# Running in 3D is heavier than in 2D.
+# If you are running this on a CPU, consider using multiple threads by
+# starting Julia with `julia -t auto`, or
+# add `-t auto` to # the `julia.additionalArgs` # setting in VSCode.
+
 ArrayType = Array
 ## using CUDA; ArrayType = CuArray
 ## using AMDGPU; ArrayType = ROCArray
 ## using oneAPI; ArrayType = oneArray
 ## using Metal; ArrayType = MtlArray
 
-# Reynolds number
-Re = T(6_000)
+# ## Setup
 
-# A 3D grid is a Cartesian product of three vectors
 n = 32
-lims = T(0), T(1)
-x = LinRange(lims..., n + 1)
-y = LinRange(lims..., n + 1)
-z = LinRange(lims..., n + 1)
-
-# Build setup and assemble operators
-setup = Setup(x, y, z; Re, ArrayType);
-
-# Since the grid is uniform and identical for x, y, and z, we may use a
-# specialized spectral pressure solver
+r = range(T(0), T(1), n + 1)
+setup = Setup(; x = (r, r, r), Re = T(1e3), ArrayType);
 psolver = psolver_spectral(setup);
 
 # Initial conditions
-ustart = create_initial_conditions(
-    setup,
-    (dim, x, y, z) ->
-        dim() == 1 ? sinpi(2x) * cospi(2y) * sinpi(2z) / 2 :
-        dim() == 2 ? -cospi(2x) * sinpi(2y) * sinpi(2z) / 2 : zero(x);
-    psolver,
-);
+U(dim, x, y, z) =
+    if dim == 1
+        sinpi(2x) * cospi(2y) * sinpi(2z) / 2
+    elseif dim == 2
+        -cospi(2x) * sinpi(2y) * sinpi(2z) / 2
+    else
+        zero(x)
+    end
+ustart = velocityfield(setup, U, psolver);
 
-# Solve unsteady problem
-(; u, t), outputs = solve_unsteady(;
+# ## Solve unsteady problem
+
+state, outputs = solve_unsteady(;
     setup,
     ustart,
     tlims = (T(0), T(1.0)),
@@ -63,21 +58,15 @@ ustart = create_initial_conditions(
         espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 10),
         ## anim = animator(; setup, path = "$outdir/solution.mkv", nupdate = 20),
         ## vtk = vtk_writer(; setup, nupdate = 10, dir = outdir, filename = "solution"),
-        ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 100),
     ),
     psolver,
 );
 
 # ## Post-process
-#
-# We may visualize or export the computed fields
 
 # Energy history
 outputs.ehist
 
 # Energy spectrum
 outputs.espec
-
-# Export to VTK
-save_vtk(state; setup, filename = joinpath(outdir, "solution"), psolver)

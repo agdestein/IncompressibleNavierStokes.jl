@@ -32,17 +32,16 @@ ArrayType = Array
 Re = T(1000)
 
 # A 3D grid is a Cartesian product of three vectors
-x = LinRange(T(0), T(10), 129)
-y = LinRange(-T(0.5), T(0.5), 17)
-z = LinRange(-T(0.25), T(0.25), 9)
-plotgrid(x, y, z)
+x = LinRange(T(0), T(10), 129),
+LinRange(-T(0.5), T(0.5), 17),
+LinRange(-T(0.25), T(0.25), 9)
+plotgrid(x...)
 
 # Boundary conditions: steady inflow on the top half
-U(dim, x, y, z, t) = dim() == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x)
-dUdt(dim, x, y, z, t) = zero(x)
+U(dim, x, y, z, t) = dim == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x)
 boundary_conditions = (
     ## x left, x right
-    (DirichletBC(U, dUdt), PressureBC()),
+    (DirichletBC(U), PressureBC()),
 
     ## y rear, y front
     (DirichletBC(), DirichletBC()),
@@ -52,10 +51,10 @@ boundary_conditions = (
 )
 
 # Build setup and assemble operators
-setup = Setup(x, y, z; Re, boundary_conditions, ArrayType);
+setup = Setup(; x, Re, boundary_conditions, ArrayType);
 
 # Initial conditions (extend inflow)
-ustart = create_initial_conditions(setup, (dim, x, y, z) -> U(dim, x, y, z, zero(x)));
+ustart = velocityfield(setup, (dim, x, y, z) -> U(dim, x, y, z, zero(x)));
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);

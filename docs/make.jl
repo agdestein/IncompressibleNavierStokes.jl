@@ -27,6 +27,7 @@ examples = [
     (false, "examples/DecayingTurbulence3D"),
     (true, "examples/TaylorGreenVortex2D"),
     (false, "examples/TaylorGreenVortex3D"),
+    (false, "examples/Kolmogorov2D"),
     (false, "examples/ShearLayer2D"),
     (false, "examples/PlaneJets2D"),
 

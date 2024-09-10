@@ -44,14 +44,14 @@ jobs:
         run: |
             using Pkg
             Pkg.activate(".")
-            Pkg.instantiate()
+            # Pkg.instantiate()
             Pkg.test(; coverage=true)
       - name: Test NeuralClosure
         shell: julia --color=yes {0}
         run: |
             using Pkg
             Pkg.activate("lib/NeuralClosure")
-            Pkg.instantiate()
+            # Pkg.instantiate()
             Pkg.test(; coverage=true)
       # - uses: julia-actions/julia-runtest@v1
       #   with:

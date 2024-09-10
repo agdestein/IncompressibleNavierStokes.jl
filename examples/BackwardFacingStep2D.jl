@@ -33,11 +33,10 @@ Re = T(3_000)
 
 # Boundary conditions: steady inflow on the top half
 U(dim, x, y, t) =
-    dim() == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x) + randn(typeof(x)) / 1_000
-dUdt(dim, x, y, t) = zero(x)
+    dim == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x) + randn(typeof(x)) / 1_000
 boundary_conditions = (
     ## x left, x right
-    (DirichletBC(U, dUdt), PressureBC()),
+    (DirichletBC(U), PressureBC()),
 
     ## y rear, y front
     (DirichletBC(), DirichletBC()),
@@ -45,15 +44,14 @@ boundary_conditions = (
 
 # A 2D grid is a Cartesian product of two vectors. Here we refine the grid near
 # the walls.
-x = LinRange(T(0), T(10), 301)
-y = cosine_grid(-T(0.5), T(0.5), 51)
-plotgrid(x, y; figure = (; size = (600, 150)))
+x = LinRange(T(0), T(10), 301), cosine_grid(-T(0.5), T(0.5), 51)
+plotgrid(x...; figure = (; size = (600, 150)))
 
 # Build setup and assemble operators
-setup = Setup(x, y; Re, boundary_conditions, ArrayType);
+setup = Setup(; x, Re, boundary_conditions, ArrayType);
 
 # Initial conditions (extend inflow)
-ustart = create_initial_conditions(setup, (dim, x, y) -> U(dim, x, y, zero(x)));
+ustart = velocityfield(setup, (dim, x, y) -> U(dim, x, y, zero(x)));
 
 # Solve steady state problem
 ## u, p = solve_steady_state(setup, u₀, p₀);

@@ -5,7 +5,7 @@ only has to be passed to the [`Setup`](@ref) function:
 
 ```julia
 using CUDA
-setup = Setup(x...; kwargs..., ArrayType = CuArray)
+setup = Setup(; kwargs..., ArrayType = CuArray)
 ```
 
 All operators have been
