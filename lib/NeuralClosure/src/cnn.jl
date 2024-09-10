@@ -27,34 +27,21 @@ function cnn(;
     # Add input channel size
     c = [D; c]
 
-    # Create convolutional closure model
-    layers = (
-        # Put inputs in pressure points
-        collocate,
+    # Add padding so that output has same shape as commutator error
+    padder = ntuple(α -> (u -> pad_circular(u, sum(r); dims = α)), D)
 
-        # Add padding so that output has same shape as commutator error
-        ntuple(
-            α ->
-                boundary_conditions[α][1] isa PeriodicBC ?
-                u -> pad_circular(u, sum(r); dims = α) :
-                u -> pad_repeat(u, sum(r); dims = α),
-            D,
+    # Some convolutional layers
+    convs = map(
+        i -> Conv(
+            ntuple(α -> 2r[i] + 1, D),
+            c[i] => c[i+1],
+            σ[i];
+            use_bias = b[i],
+            init_weight = glorot_uniform_T,
         ),
-
-        # Some convolutional layers
-        (
-            Conv(
-                ntuple(α -> 2r[i] + 1, D),
-                c[i] => c[i+1],
-                σ[i];
-                use_bias = b[i],
-                init_weight = glorot_uniform_T,
-            ) for i ∈ eachindex(r)
-        )...,
-
-        # Differentiate output to velocity points
-        decollocate,
+        eachindex(r),
     )
 
-    create_closure(layers...; rng)
+    # Create convolutional closure model
+    create_closure(collocate, padder, convs..., decollocate; rng)
 end
