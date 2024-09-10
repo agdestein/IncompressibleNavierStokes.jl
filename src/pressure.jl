@@ -318,15 +318,7 @@ function psolver_spectral(setup)
     # Fourier transform of the discretization
     # Assuming uniform grid, although Δx[1] and Δx[2] do not need to be the same
 
-    k = ntuple(
-        d -> reshape(
-            0:Np[d]-1,
-            ntuple(Returns(1), d - 1)...,
-            :,
-            ntuple(Returns(1), D - d)...,
-        ),
-        D,
-    )
+    k = ntuple(d -> reshape(0:Np[d]-1, ntuple(Returns(1), d - 1)..., :), D)
 
     Ahat = fill!(similar(x[1], Complex{T}, Np), 0)
     Tπ = T(π) # CUDA doesn't like pi
