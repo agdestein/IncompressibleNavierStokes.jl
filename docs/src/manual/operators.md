@@ -15,38 +15,7 @@ assembling sparse operators to perform the same operations. While being very
 efficient and also compatible with CUDA (CUSPARSE), storing these matrices in
 memory is expensive for large 3D problems.
 
-```@docs
-Offset
-avg
-divergence!
-divergence
-vorticity
-vorticity!
-convection!
-diffusion!
-bodyforce!
-momentum!
-momentum
-laplacian!
-laplacian
-pressuregradient!
-pressuregradient
-interpolate_u_p
-interpolate_u_p!
-interpolate_ω_p
-interpolate_ω_p!
-Dfield!
-Dfield
-Qfield!
-Qfield
-eig2field!
-eig2field
-kinetic_energy
-kinetic_energy!
-total_kinetic_energy
-tensorbasis
-divoftensor!
-tensorbasis!
-get_scale_numbers
-dissipation_from_strain!
+```@autodocs
+Modules = [IncompressibleNavierStokes]
+Pages = ["operators.jl", "matrices.jl"]
 ```

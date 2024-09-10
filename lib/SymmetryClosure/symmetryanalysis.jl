@@ -150,8 +150,11 @@ sum(dd -> sum(d -> d.comptime, dd), (data_train, data_valid, data_test))
 # Build LES setups and assemble operators
 getsetups(params) =
     map(params.nles) do nles
-        x = ntuple(α -> LinRange(T(0), T(1), nles[α] + 1), params.D)
-        Setup(x...; params.Re, params.ArrayType)
+        Setup(;
+            x = ntuple(α -> LinRange(T(0), T(1), nles[α] + 1), params.D),
+            params.Re,
+            params.ArrayType,
+        )
     end
 
 setups_train = getsetups(params_train);

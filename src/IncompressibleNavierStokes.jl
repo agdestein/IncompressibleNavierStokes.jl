@@ -18,6 +18,7 @@ using KernelAbstractions
 using LinearAlgebra
 using Makie
 using NNlib
+using PrecompileTools
 using Printf
 using Random
 using SparseArrays
@@ -61,6 +62,10 @@ include("setup.jl")
 include("pressure.jl")
 include("operators.jl")
 include("matrices.jl")
+include("initializers.jl")
+include("processors.jl")
+include("solver.jl")
+include("utils.jl")
 
 # Time steppers
 include("time_steppers/methods.jl")
@@ -70,33 +75,18 @@ include("time_steppers/isexplicit.jl")
 include("time_steppers/lambda_max.jl")
 include("time_steppers/RKMethods.jl")
 
-# Preprocess
-include("create_initial_conditions.jl")
-
-# Processors
-include("processors.jl")
-
-# Solvers
-# include("solvers/get_timestep.jl")
-include("solvers/cfl.jl")
-include("solvers/solve_unsteady.jl")
-
-# Utils
-include("utils/plotgrid.jl")
-include("utils/get_lims.jl")
-include("utils/plotmat.jl")
-include("utils/spectral_stuff.jl")
+# Precompile workflow
+include("precompile.jl")
 
 # Boundary conditions
 export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
 
 # Processors
-export processor, timelogger, vtk_writer, fieldsaver, realtimeplotter
+export processor, timelogger, vtk_writer, fieldsaver, realtimeplotter, animator
 export fieldplot, energy_history_plot, energy_spectrum_plot
-export animator
 
 # Setup
-export Setup, temperature_equation
+export Setup, temperature_equation, scalarfield, vectorfield
 
 # 1D grids
 export stretched_grid, cosine_grid, tanh_grid
@@ -113,13 +103,43 @@ export default_psolver,
 export solve_unsteady
 
 # Field generation
-export create_initial_conditions, random_field
+export velocityfield, temperaturefield, random_field
 
 # Utils
 export plotgrid, save_vtk
-export plotmat
 
 # ODE methods
 export AdamsBashforthCrankNicolsonMethod, OneLegMethod, RKMethods
+
+# Operators
+export apply_bc_u,
+    apply_bc_p,
+    apply_bc_temp,
+    applybodyforce,
+    convection_diffusion_temp,
+    convection,
+    diffusion,
+    dissipation,
+    dissipation_from_strain,
+    divergence,
+    eig2field,
+    get_scale_numbers,
+    gravity,
+    kinetic_energy,
+    interpolate_u_p,
+    interpolate_ω_p,
+    laplacian,
+    laplacian_mat,
+    momentum,
+    poisson,
+    pressuregradient,
+    project,
+    scalewithvolume,
+    smagorinsky_closure,
+    tensorbasis,
+    total_kinetic_energy,
+    vorticity,
+    Dfield,
+    Qfield
 
 end

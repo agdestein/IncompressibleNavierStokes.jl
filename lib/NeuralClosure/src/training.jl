@@ -258,6 +258,7 @@ function create_callback(
     callbackstate = (; θmin = θ, emin = eltype(θ)(Inf), hist = Point2f[]),
     displayref = true,
     display_each_iteration = false,
+    displayfig = true,
     filename = nothing,
 )
     istart = isempty(callbackstate.hist) ? 0 : Int(callbackstate.hist[end][1])
@@ -265,7 +266,7 @@ function create_callback(
     fig = lines(obs; axis = (; title = "Relative prediction error", xlabel = "Iteration"))
     displayref && hlines!([1.0f0]; linestyle = :dash)
     obs[] = callbackstate.hist
-    display(fig)
+    displayfig && display(fig)
     function callback(state, i, θ)
         e = err(θ)
         @info "Iteration $i \trelative error: $e"

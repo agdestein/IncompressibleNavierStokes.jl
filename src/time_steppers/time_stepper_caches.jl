@@ -50,7 +50,7 @@ function ode_method_cache(method::ExplicitRungeKuttaMethod, setup, u, temp)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup, V, p) where {T}
-    (; NV, Np, Ω) = setup.grid
+    (; NV, Np) = setup.grid
     (; G, M) = setup.operators
     (; A, b, c) = method
 

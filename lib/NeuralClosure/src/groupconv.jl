@@ -103,7 +103,7 @@ The layer has three variants:
 - If `isprojecting`, it projects a rotation-state vector `(u1, u2, u3, v4)` into a vector `(v1, v2)`.
 - Otherwise, it cyclically transforms the rotation-state vector `(u1, u2, u3, u4)` into a new rotation-state vector `(v1, v2, v3, v4)`.
 """
-struct GroupConv2D{C} <: Lux.AbstractExplicitLayer
+struct GroupConv2D{C} <: Lux.AbstractLuxLayer
     islifting::Bool
     isprojecting::Bool
     cin::Int
@@ -144,8 +144,6 @@ function Base.show(io::IO, gc::GroupConv2D)
     print(io, ")")
 end
 
-uses_bias(::Conv{N,use_bias}) where {N,use_bias} = use_bias
-
 function Lux.initialparameters(rng::AbstractRNG, gc::GroupConv2D)
     (; islifting, isprojecting, cin, cout, conv) = gc
     params = Lux.initialparameters(rng, conv)
@@ -163,9 +161,9 @@ function Lux.initialparameters(rng::AbstractRNG, gc::GroupConv2D)
             w4 = weight[:, :, 3*cin+1:4*cin, 1:cout],
         )
     end
-    if uses_bias(conv)
+    if Lux.has_bias(conv)
         (; bias) = params
-        bias = bias[:, :, 1:cout, :]
+        bias = bias[1:cout]
         (; weight, bias)
     else
         (; weight)
@@ -179,7 +177,7 @@ function Lux.parameterlength(gc::GroupConv2D)
     (; kernel_size) = conv
     nn = islifting || isprojecting ? 2 : 4
     n = nn * prod(kernel_size) * cin * cout
-    n += uses_bias(conv) * cout
+    n += Lux.has_bias(conv) * cout
 end
 
 Lux.statelength(gc::GroupConv2D) = Lux.statelength(gc.conv)
@@ -219,12 +217,12 @@ function (gc::GroupConv2D)(x, params, state)
     end
 
     # Bias
-    params = if haskey(params, :bias)
+    params = if Lux.has_bias(conv)
         (; bias) = params
         bias = if isprojecting
-            cat(bias, bias; dims = 3)
+            vcat(bias, bias)
         else
-            cat(bias, bias, bias, bias; dims = 3)
+            vcat(bias, bias, bias, bias)
         end
         (; weight, bias)
     else
@@ -250,36 +248,23 @@ function gcnn(; setup, radii, channels, activations, use_bias, rng = Random.defa
     # Add input channel size
     c = [1; c]
 
-    # Create convolutional closure model
-    layers = (
-        # Put inputs in pressure points
-        collocate,
+    # Add padding so that output has same shape as commutator error
+    padder = ntuple(α -> (u -> pad_circular(u, sum(r); dims = α)), D)
 
-        # Add padding so that output has same shape as commutator error
-        ntuple(
-            α ->
-                boundary_conditions[α][1] isa PeriodicBC ?
-                u -> pad_circular(u, sum(r); dims = α) :
-                u -> pad_repeat(u, sum(r); dims = α),
-            D,
+    # Some convolutional layers
+    gconvs = map(
+        i -> GroupConv2D(
+            ntuple(α -> 2r[i] + 1, D),
+            c[i] => c[i+1],
+            σ[i];
+            use_bias = b[i],
+            init_weight = glorot_uniform_T,
+            islifting = i == 1,
+            isprojecting = i == length(r),
         ),
-
-        # Some convolutional layers
-        (
-            GroupConv2D(
-                ntuple(α -> 2r[i] + 1, D),
-                c[i] => c[i+1],
-                σ[i];
-                use_bias = b[i],
-                init_weight = glorot_uniform_T,
-                islifting = i == 1,
-                isprojecting = i == length(r),
-            ) for i ∈ eachindex(r)
-        )...,
-
-        # Differentiate output to velocity points
-        decollocate,
+        eachindex(r),
     )
 
-    create_closure(layers...; rng)
+    # Create group-convolutional closure model
+    create_closure(collocate, padder, gconvs..., decollocate; rng)
 end
