@@ -26,7 +26,7 @@ include("fno.jl")
 include("groupconv.jl")
 include("training.jl")
 include("filter.jl")
-include("create_les_data.jl")
+include("data_generation.jl")
 
 export cnn, gcnn, fno, FourierLayer, GroupConv2D, rot2, rot2stag
 export train
