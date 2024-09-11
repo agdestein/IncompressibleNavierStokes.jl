@@ -33,13 +33,13 @@ function gaussian_force(
 end
 
 function lesdatagen(dnsobs, Φ, les, compression, psolver)
-    Φu = zero.(Φ(dnsobs[].u, les, compression))
-    p = zero(Φu[1])
-    div = zero(p)
-    ΦF = zero.(Φu)
-    FΦ = zero.(Φu)
-    c = zero.(Φu)
-    results = (; u = fill(Array.(dnsobs[].u), 0), c = fill(Array.(dnsobs[].u), 0))
+    p = scalarfield(les)
+    div = scalarfield(les)
+    Φu = vectorfield(les)
+    FΦ = vectorfield(les)
+    ΦF = vectorfield(les)
+    c = vectorfield(les)
+    results = (; u = fill(Array.(Φu), 0), c = fill(Array.(c), 0))
     temp = nothing
     on(dnsobs) do (; u, F, t)
         Φ(Φu, u, les, compression)
@@ -65,17 +65,16 @@ filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 
         (results, state) -> (; results..., comptime = time() - results.comptime),
     ) do state
         comptime = time()
-        (; x) = dns.grid
-        T = eltype(x[1])
-        F = zero.(state[].u)
-        div = zero(state[].u[1])
-        p = zero(state[].u[1])
+        t = fill(state[].t, 0)
+        F = vectorfield(dns)
+        div = scalarfield(dns)
+        p = scalarfield(dns)
         dnsobs = Observable((; state[].u, F, state[].t))
         data = map(
-            (i, Φ) -> lesdatagen(dnsobs, Φ, les[i], compression[i], psolver_les[i]),
+            splat((i, Φ) -> lesdatagen(dnsobs, Φ, les[i], compression[i], psolver_les[i])),
             Iterators.product(1:length(les), filters),
         )
-        results = (; data, t = zeros(T, 0), comptime)
+        results = (; data, t, comptime)
         temp = nothing
         on(state) do (; u, t, n)
             n % nupdate == 0 || return
