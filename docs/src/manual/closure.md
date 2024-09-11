@@ -102,5 +102,5 @@ Pages = ["cnn.jl", "groupconv.jl", "fno.jl"]
 
 ```@autodocs
 Modules = [NeuralClosure]
-Pages = ["create_les_data.jl"]
+Pages = ["data_generation.jl"]
 ```
