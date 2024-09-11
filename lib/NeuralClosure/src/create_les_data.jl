@@ -71,10 +71,10 @@ filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 
         div = zero(state[].u[1])
         p = zero(state[].u[1])
         dnsobs = Observable((; state[].u, F, state[].t))
-        data = [
-            lesdatagen(dnsobs, Φ, les[i], compression[i], psolver_les[i]) for
-            i = 1:length(les), Φ in filters
-        ]
+        data = map(
+            (i, Φ) -> lesdatagen(dnsobs, Φ, les[i], compression[i], psolver_les[i]),
+            Iterators.product(1:length(les), filters),
+        )
         results = (; data, t = zeros(T, 0), comptime)
         temp = nothing
         on(state) do (; u, t, n)
@@ -123,14 +123,15 @@ function create_les_data(;
         ArrayType,
         kwargs...,
     )
-    les = [
-        Setup(;
+    les = map(
+        nles -> Setup(;
             x = ntuple(α -> LinRange(lims[α]..., nles[α] + 1), D),
             Re,
             ArrayType,
             kwargs...,
-        ) for nles in nles
-    ]
+        ),
+        nles,
+    )
 
     # Since the grid is uniform and identical for x and y, we may use a specialized
     # spectral pressure solver
@@ -202,7 +203,7 @@ function create_les_data(;
 end
 
 """
-Create ``(\\bar{u}, c)`` pairs for training.
+Create ``(\\bar{u}, c)`` pairs for a-priori training.
 """
 function create_io_arrays(data, setups)
     nsample = length(data)
