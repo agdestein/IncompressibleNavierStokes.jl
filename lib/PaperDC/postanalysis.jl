@@ -31,18 +31,6 @@ using FFTW
 # Color palette for consistent theme throughout paper
 palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])
 
-# Encode projection order ("close first, then project" etc)
-getorder(i) =
-    if i == 1
-        :first
-    elseif i == 2
-        :last
-    elseif i == 3
-        :second
-    else
-        error("Unknown order: $i")
-    end
-
 # Choose where to put output
 plotdir = "output/postanalysis/plots"
 outdir = "output/postanalysis"
@@ -350,13 +338,14 @@ let
         clean()
         starttime = time()
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
+        projectorder = ProjectOrder.T(iorder)
         rng = Xoshiro(seeds.post) # Same seed for all training setups
         setup = setups_train[ig]
         psolver = psolver_spectral(setup)
         loss = create_loss_post(;
             setup,
             psolver,
-            method = RKProject(RK44(; T), getorder(iorder)),
+            method = RKProject(RK44(; T), projectorder),
             closure,
             nupdate = 2, # Time steps per loss evaluation
         )
@@ -373,7 +362,7 @@ let
                 data,
                 setup,
                 psolver,
-                method = RKProject(RK44(; T), getorder(iorder)),
+                method = RKProject(RK44(; T), projectorder),
                 closure_model = wrappedclosure(closure, setup),
                 nupdate = 2,
             );
@@ -434,7 +423,7 @@ smag = map(CartesianIndices((size(io_train, 2), 2))) do I
         e = T(0)
         for igrid = 1:ngrid
             println("iorder = $iorder, ifil = $ifil, θ = $θ, igrid = $igrid")
-            projectorder = getorder(iorder)
+            projectorder = ProjectOrder.T(iorder)
             setup = setups_train[igrid]
             psolver = psolver_spectral(setup)
             d = data_train[isample]
@@ -444,7 +433,7 @@ smag = map(CartesianIndices((size(io_train, 2), 2))) do I
                 data,
                 setup,
                 psolver,
-                method = RKProject(RK44(; T), getorder(iorder)),
+                method = RKProject(RK44(; T), projectorder),
                 closure_model = IncompressibleNavierStokes.smagorinsky_closure(setup),
                 nupdate,
             )
@@ -517,7 +506,7 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
     e_cnn_post = zeros(T, size(data_test.data)..., 2)
     for iorder = 1:2, ifil = 1:2, ig = 1:size(data_test.data, 1)
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
-        projectorder = getorder(iorder)
+        projectorder = ProjectOrder.T(iorder)
         setup = setups_test[ig]
         psolver = psolver_spectral(setup)
         data = (; u = device.(data_test.data[ig, ifil].u), t = data_test.t)
@@ -533,7 +522,7 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
             data,
             setup,
             psolver,
-            method = RKProject(RK44(; T), getorder(iorder)),
+            method = RKProject(RK44(; T), projectorder),
             closure_model = smagorinsky_closure(setup),
             nupdate,
         )
@@ -545,7 +534,7 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
                 data,
                 setup,
                 psolver,
-                method = RKProject(RK44(; T), getorder(iorder)),
+                method = RKProject(RK44(; T), projectorder),
                 closure_model = wrappedclosure(closure, setup),
                 nupdate,
             )
@@ -725,6 +714,7 @@ kineticenergy = let
     ke_cnn_post = fill(zeros(T, 0), ngrid, nfilter, 2)
     for iorder = 1:2, ifil = 1:nfilter, ig = 1:ngrid
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
+        projectorder = ProjectOrder.T(iorder)
         setup = setups_test[ig]
         psolver = psolver_spectral(setup)
         t = data_test.t
@@ -756,11 +746,7 @@ kineticenergy = let
         end
         ke_smag[ig, ifil, iorder] =
             solve_unsteady(;
-                (;
-                    setup...,
-                    projectorder = getorder(iorder),
-                    closure_model = smagorinsky_closure(setup),
-                ),
+                (; setup..., projectorder, closure_model = smagorinsky_closure(setup)),
                 ustart,
                 tlims,
                 Δt,
@@ -770,11 +756,7 @@ kineticenergy = let
             )[2].ewriter
         ke_cnn_prior[ig, ifil, iorder] =
             solve_unsteady(;
-                (;
-                    setup...,
-                    projectorder = getorder(iorder),
-                    closure_model = wrappedclosure(closure, setup),
-                ),
+                (; setup..., projectorder, closure_model = wrappedclosure(closure, setup)),
                 ustart,
                 tlims,
                 Δt,
@@ -784,11 +766,7 @@ kineticenergy = let
             )[2].ewriter
         ke_cnn_post[ig, ifil, iorder] =
             solve_unsteady(;
-                (;
-                    setup...,
-                    projectorder = getorder(iorder),
-                    closure_model = wrappedclosure(closure, setup),
-                ),
+                (; setup..., projectorder, closure_model = wrappedclosure(closure, setup)),
                 ustart,
                 tlims,
                 Δt,
@@ -812,6 +790,7 @@ with_theme(; palette) do
     t = data_test.t
     for iorder = 1:2, ifil = 1:2, igrid = 1:3
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
+        projectorder = ProjectOrder.T(iorder)
         lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
         nles = params_test.nles[igrid]
@@ -882,6 +861,7 @@ divs = let
     d_cnn_post = fill(zeros(T, 0), ngrid, nfilter, 3)
     for iorder = 1:3, ifil = 1:nfilter, ig = 1:ngrid
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
+        projectorder = ProjectOrder.T(iorder)
         setup = setups_test[ig]
         psolver = psolver_spectral(setup)
         t = data_test.t
@@ -920,7 +900,7 @@ divs = let
                 (; setup..., closure_model),
                 ustart,
                 tlims,
-                method = RKProject(RK44(; T), getorder(iorder)),
+                method = RKProject(RK44(; T), projectorder),
                 Δt,
                 processors = (; dwriter),
                 psolver,
@@ -962,6 +942,7 @@ with_theme(;
     for islog in (false,)
         for iorder = 1:2, ifil = 1:2, igrid = 1:3
             println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
+            projectorder = ProjectOrder.T(iorder)
             lesmodel = if iorder == 1
                 "DIF"
             elseif iorder == 2
@@ -1014,6 +995,7 @@ ufinal = let
     for iorder = 1:2, ifil = 1:nfilter, igrid = 1:ngrid
         clean()
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
+        projectorder = ProjectOrder.T(iorder)
         t = data_test.t
         setup = setups_test[igrid]
         psolver = psolver_spectral(setup)
@@ -1027,7 +1009,7 @@ ufinal = let
                 (; setup..., closure_model),
                 ustart,
                 tlims,
-                method = RKProject(RK44(; T), getorder(iorder)),
+                method = RKProject(RK44(; T), projectorder),
                 Δt,
                 psolver,
                 θ,
@@ -1066,6 +1048,7 @@ CairoMakie.activate!()
 fig = with_theme(; palette) do
     for iorder = 1:2, ifil = 1:2, igrid = 1:3
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
+        projectorder = ProjectOrder.T(iorder)
         lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
         nles = params_test.nles[igrid]
@@ -1153,6 +1136,7 @@ with_theme(; fontsize = 25, palette) do
     path = "$plotdir/les_fields/$mname"
     ispath(path) || mkpath(path)
     for iorder = 1:2, ifil = 1:2, igrid = 1:3
+        projectorder = ProjectOrder.T(iorder)
         setup = setups_test[igrid]
         name = "$path/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid)"
         lesmodel = iorder == 1 ? "DIF" : "DCF"

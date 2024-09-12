@@ -1,16 +1,27 @@
+"Encode projection order for use in [`RKProject`](@ref)."
+@enumx ProjectOrder begin
+    "Project RHS before applying closure term."
+    First = 1
+
+    "Project solution instead of RHS (same as `rk`)."
+    Last = 2
+
+    "Project RHS after applying closure term."
+    Second = 3
+end
+
 """
-    RKProject(rk, projectorder)
+    RKProject(rk, order)
 
-Runge-Kutta method with different projection order.
-The Runge-Kutta method `rk` can be for example `RKMethods.RK44()`.
-
-- `projetorder = :first`: Project RHS before applying closure term.
-- `projetorder = :second`: Project RHS after applying closure term.
-- `projetorder = :last`: Project solution instead of RHS (same as `rk`).
+Runge-Kutta method with different projection order than the default Runge-Kutta method.
 """
 struct RKProject{T,R} <: IncompressibleNavierStokes.AbstractODEMethod{T}
+    "Runge-Kutta method, for example `RKMethods.RK44()`."
     rk::R
-    projectorder::Symbol
+
+    "Projection order, see [`ProjectOrder`](@ref)."
+    projectorder::ProjectOrder.T
+
     RKProject(rk, projectorder) = new{eltype(rk.A),typeof(rk)}(rk, projectorder)
 end
 
@@ -43,7 +54,7 @@ function IncompressibleNavierStokes.timestep!(
     D = dimension()
     nstage = length(b)
     m = closure_model
-    projectorder ∈ (:first, :second, :last) || error("Unknown projectorder: $projectorder")
+    @assert projectorder ∈ instances(ProjectOrder.T) "Unknown projectorder: $projectorder"
 
     # Update current solution
     t₀ = t
@@ -55,7 +66,7 @@ function IncompressibleNavierStokes.timestep!(
         momentum!(ku[i], u, temp, t, setup)
 
         # Project F first
-        if projectorder == :first
+        if projectorder == ProjectOrder.first
             apply_bc_u!(ku[i], t, setup; dudt = true)
             project!(ku[i], setup; psolver, div, p)
         end
@@ -64,7 +75,7 @@ function IncompressibleNavierStokes.timestep!(
         isnothing(m) || map((k, m) -> k .+= m, ku[i], m(u, θ))
 
         # Project F second
-        if projectorder == :second
+        if projectorder == ProjectOrder.second
             apply_bc_u!(ku[i], t, setup; dudt = true)
             project!(ku[i], setup; psolver, div, p)
         end
@@ -83,7 +94,7 @@ function IncompressibleNavierStokes.timestep!(
 
         # Project stage u directly
         # Make velocity divergence free at time t
-        if projectorder == :last
+        if projectorder == ProjectOrder.Last
             apply_bc_u!(u, t, setup)
             project!(u, setup; psolver, div, p)
         end
