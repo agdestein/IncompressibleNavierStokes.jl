@@ -92,17 +92,17 @@ filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 
 Create filtered DNS data.
 """
 function create_les_data(;
-    D = 2,
-    Re = 2e3,
-    lims = ntuple(α -> (typeof(Re)(0), typeof(Re)(1)), D),
-    nles = [ntuple(α -> 64, D)],
-    ndns = ntuple(α -> 256, D),
-    filters = (FaceAverage(),),
-    tburn = typeof(Re)(0.1),
-    tsim = typeof(Re)(0.1),
-    Δt = typeof(Re)(1e-4),
-    create_psolver = psolver_spectral,
-    savefreq = 1,
+    D,
+    Re,
+    lims,
+    nles,
+    ndns,
+    filters,
+    tburn,
+    tsim,
+    savefreq,
+    Δt = nothing,
+    create_psolver = default_psolver,
     ArrayType = Array,
     icfunc = (setup, psolver, rng) -> random_field(setup, typeof(Re)(0); psolver, rng),
     rng,
@@ -110,21 +110,14 @@ function create_les_data(;
 )
     T = typeof(Re)
 
-    compression = [ndns[1] ÷ nles[1] for nles in nles]
-    for (c, n) in zip(compression, nles), α = 1:D
-        @assert c * n[α] == ndns[α]
-    end
+    compression = div.(ndns, nles)
+    @assert all(==(ndns), compression .* nles)
 
     # Build setup and assemble operators
-    dns = Setup(;
-        x = ntuple(α -> LinRange(lims[α]..., ndns[α] + 1), D),
-        Re,
-        ArrayType,
-        kwargs...,
-    )
+    dns = Setup(; x = ntuple(α -> LinRange(lims..., ndns + 1), D), Re, ArrayType, kwargs...)
     les = map(
         nles -> Setup(;
-            x = ntuple(α -> LinRange(lims[α]..., nles[α] + 1), D),
+            x = ntuple(α -> LinRange(lims..., nles + 1), D),
             Re,
             ArrayType,
             kwargs...,
@@ -136,20 +129,6 @@ function create_les_data(;
     # spectral pressure solver
     psolver = create_psolver(dns)
     psolver_les = create_psolver.(les)
-
-    # Number of time steps to save
-    nt = round(Int, tsim / Δt)
-    Δt = tsim / nt
-
-    # datasize = Base.summarysize(filtered) / 1e6
-    datasize =
-        length(filters) *
-        (nt ÷ savefreq + 1) *
-        sum(prod.(nles)) *
-        D *
-        2 *
-        length(bitstring(zero(T))) / 8 / 1e6
-    @info "Generating $datasize Mb of filtered DNS data"
 
     # Initial conditions
     ustart = icfunc(dns, psolver, rng)
@@ -207,25 +186,28 @@ Create ``(\\bar{u}, c)`` pairs for a-priori training.
 function create_io_arrays(data, setups)
     nsample = length(data)
     ngrid, nfilter = size(data[1].data)
-    nt = length(data[1].t) - 1
     T = eltype(data[1].t)
     map(CartesianIndices((ngrid, nfilter))) do I
         ig, ifil = I.I
         (; dimension, N, Iu) = setups[ig].grid
         D = dimension()
-        u = zeros(T, (N .- 2)..., D, nt + 1, nsample)
-        c = zeros(T, (N .- 2)..., D, nt + 1, nsample)
-        ifield = ntuple(Returns(:), D)
-        for is = 1:nsample, it = 1:nt+1, α = 1:D
-            copyto!(
-                view(u, ifield..., α, it, is),
-                view(data[is].data[ig, ifil].u[it][α], Iu[α]),
-            )
-            copyto!(
-                view(c, ifield..., α, it, is),
-                view(data[is].data[ig, ifil].c[it][α], Iu[α]),
-            )
+        colons = ntuple(Returns(:), D)
+        fields = map((:u, :c)) do usym
+            u = map(1:nsample) do is
+                traj = data[is]
+                nt = length(traj.t)
+                u = zeros(T, (N .- 2)..., D, nt)
+                for it = 1:nt, α = 1:D
+                    copyto!(
+                        view(u, colons..., α, it),
+                        view(getfield(traj.data[ig, ifil], usym)[it][α], Iu[α]),
+                    )
+                end
+                u
+            end
+            u = cat(u...; dims = D + 2)
+            usym => u
         end
-        (; u = reshape(u, (N .- 2)..., D, :), c = reshape(c, (N .- 2)..., D, :))
+        (; fields...)
     end
 end

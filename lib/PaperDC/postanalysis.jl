@@ -32,10 +32,10 @@ using FFTW
 palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])
 
 # Choose where to put output
-plotdir = "output/postanalysis/plots"
 outdir = "output/postanalysis"
-ispath(plotdir) || mkpath(plotdir)
+plotdir = "$outdir/plots"
 ispath(outdir) || mkpath(outdir)
+ispath(plotdir) || mkpath(plotdir)
 
 ########################################################################## #src
 
@@ -93,17 +93,16 @@ clean() = (GC.gc(); CUDA.reclaim())
 rng = Xoshiro(seeds.dns)
 
 # Parameters
-get_params(nlesscalar) = (;
+get_params(nles) = (;
     D = 2,
     Re = T(10_000),
+    nles, # LES resolutions
+    ndns = 4096, # DNS resolution
+    filters = (FaceAverage(), VolumeAverage()),
     tburn = T(0.05),
     tsim = T(0.5),
     Δt = T(5e-5),
-    nles = map(n -> (n, n), nlesscalar), # LES resolutions
-    ndns = (n -> (n, n))(4096), # DNS resolution
-    filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
-    create_psolver = psolver_spectral,
     icfunc = (setup, psolver, rng) ->
         random_field(setup, zero(eltype(setup.grid.x[1])); kp = 20, psolver, rng),
     rng,

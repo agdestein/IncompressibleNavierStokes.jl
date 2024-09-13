@@ -10,15 +10,12 @@
     params = (;
         D = 2,
         Re = 1e3,
+        lims = (0.0, 1.0),
+        nles = [16, 32],
+        ndns = 32,
+        filters = (FaceAverage(),),
         tburn = 5e-2,
         tsim = 0.5,
-        Δt = 5e-3,
-        nles = [(16, 16), (32, 32)],
-        ndns = (32, 32),
-        filters = (FaceAverage(),),
-        create_psolver = psolver_spectral,
-        icfunc = (setup, psolver, rng) ->
-            random_field(setup, zero(eltype(setup.grid.x[1])); kp = 20, psolver, rng),
         rng,
         savefreq = 1,
     )
@@ -26,10 +23,11 @@
     data = [create_les_data(; params...) for _ = 1:3]
 
     # Build LES setups and assemble operators
-    setups = map(params.nles) do nles
-        x = ntuple(α -> LinRange(0.0, 1.0, nles[α] + 1), params.D)
-        Setup(; x, params.Re)
-    end
+    setups = map(
+        nles ->
+            Setup(; x = ntuple(α -> LinRange(0.0, 1.0, nles + 1), params.D), params.Re),
+        params.nles,
+    )
 
     # Create input/output arrays for a-priori training (ubar vs c)
     io = create_io_arrays(data, setups)
