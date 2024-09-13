@@ -7,6 +7,10 @@
 
 # ## Load packages
 
+if false                      #src
+    include("src/PaperDC.jl") #src
+end                           #src
+
 using CairoMakie
 using FFTW
 using GLMakie

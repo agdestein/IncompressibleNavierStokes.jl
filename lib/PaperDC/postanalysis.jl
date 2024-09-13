@@ -11,6 +11,10 @@
 
 # ## Load packages
 
+if false                      #src
+    include("src/PaperDC.jl") #src
+end                           #src
+
 using Adapt
 using GLMakie
 using CairoMakie

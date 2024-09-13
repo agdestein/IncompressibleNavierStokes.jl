@@ -8,6 +8,7 @@ using EnumX
 using LinearAlgebra
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: momentum!, divergence!, project!, apply_bc_u!
+using NeuralClosure
 using Observables
 using Random
 
