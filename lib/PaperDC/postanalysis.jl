@@ -272,7 +272,8 @@ let
         starttime = time()
         println("ig = $ig, ifil = $ifil")
         rng = Xoshiro(seeds.prior) # Same seed for all training setups
-        d = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device, rng)
+        dataloader =
+            create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device, rng)
         θ = T(1.0e0) * device(θ₀)
         loss = create_loss_prior(mean_squared_error, closure)
         opt = Adam(T(1.0e-3))
@@ -286,7 +287,7 @@ let
             display_each_iteration = false, # Set to `true` if using CairoMakie
         )
         (; optstate, θ, callbackstate) = train(
-            [d],
+            dataloader,
             loss,
             optstate,
             θ;
@@ -353,7 +354,7 @@ let
             nupdate = 2, # Time steps per loss evaluation
         )
         data = [(; u = d.data[ig, ifil].u, d.t) for d in data_train]
-        d = create_dataloader_post(data; device, nunroll = 20, rng)
+        dataloader = create_dataloader_post(data; device, nunroll = 20, rng)
         θ = copy(θ_cnn_prior[ig, ifil])
         opt = Adam(T(1.0e-3))
         optstate = Optimisers.setup(opt, θ)
@@ -373,7 +374,7 @@ let
             displayref = false,
         )
         (; optstate, θ, callbackstate) = train(
-            [d],
+            dataloader,
             loss,
             optstate,
             θ;

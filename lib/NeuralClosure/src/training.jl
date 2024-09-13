@@ -35,7 +35,7 @@ Return the a new named tuple `(; opt, θ, callbackstate)` with
 updated state and parameters.
 """
 function train(
-    dataloaders,
+    dataloader,
     loss,
     optstate,
     θ;
@@ -45,10 +45,8 @@ function train(
     callbackstate = nothing,
 )
     for i = 1:niter
-        g = sum(dataloaders) do d
-            b = d()
-            first(gradient(θ -> loss(b, θ), θ))
-        end
+        batch = dataloader()
+        g, = gradient(θ -> loss(batch, θ), θ)
         optstate, θ = Optimisers.update(optstate, θ, g)
         if i % ncallback == 0
             callbackstate = callback(callbackstate, i, θ)
