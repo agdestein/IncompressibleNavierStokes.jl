@@ -151,10 +151,13 @@ function create_les_data(;
     # _les = (; les..., bodyforce = force_les)
 
     # Solve burn-in DNS
+    # The initial spectrum is artificial, but this small simulation will
+    # create a more realistic spectrum for the DNS simulation
     (; u, t), outputs =
         solve_unsteady(; setup = _dns, ustart, tlims = (T(0), tburn), Δt, psolver)
 
     # Solve DNS and store filtered quantities
+    # Use the result of the burn-in as initial conditions
     (; u, t), outputs = solve_unsteady(;
         setup = _dns,
         ustart = u,

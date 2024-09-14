@@ -68,19 +68,21 @@ seeds = (;
 
 # ## Hardware selection
 
+# Precision
 T = Float32
 
+# Device
 if CUDA.functional()
-    # For running on a CUDA compatible GPU
+    ## For running on a CUDA compatible GPU
     @info "Running on CUDA"
     ArrayType = CuArray
     CUDA.allowscalar(false)
     device = x -> adapt(CuArray, x)
     clean() = (GC.gc(); CUDA.reclaim())
 else
-    # For running on CPU.
-    # Consider reducing the sizes of DNS, LES, and CNN layers if
-    # you want to test run on a laptop.
+    ## For running on CPU.
+    ## Consider reducing the sizes of DNS, LES, and CNN layers if
+    ## you want to test run on a laptop.
     @warn "Running on CPU"
     ArrayType = Array
     device = identity
@@ -105,28 +107,28 @@ params = (;
     tburn = T(0.2),
     tsim = T(2),
     savefreq = 8,
-    ndns = 128,
+    ndns = 512,
     nles = [64],
     filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
     create_psolver = psolver_spectral_lowmemory,
 )
 
-create_data = true
+create_data = false
 create_data && for (seed, filename) in zip(dns_seeds, filenames)
-    @info "Creating DNS trajectory"
+    @info "Creating DNS trajectory, file $(basename(filename))"
     rng = Xoshiro(seed)
     data = create_les_data(; params..., rng)
     jldsave(filename; data)
 end
 
 # Load filtered DNS data
-data = load.(filenames, "data")
+data = load.(filenames, "data");
 Base.summarysize(data) * 1e-9
 
-data_train = data[1:8]
-data_valid = data[9:9]
-data_test = data[10:10]
+data_train = data[1:8];
+data_valid = data[9:9];
+data_test = data[10:10];
 
 # Build LES setup and assemble operators
 setups = map(
@@ -142,6 +144,50 @@ setups = map(
 io_train = create_io_arrays(data_train, setups);
 io_valid = create_io_arrays(data_valid, setups);
 io_test = create_io_arrays(data_test, setups);
+
+# ### Plot data
+
+let
+    u = data_train[1].data[1, 1].u
+    t = data_train[1].t
+    i = 17
+    # function field(u) 
+    #     ux = u[1][1:end-1, :, i]
+    #     uy = u[2][:, 1:end-1, i]
+    #     ω = -diff(ux; dims = 2) + diff(uy; dims = 1)
+    # end
+    # function field(u) 
+    #     ex = u[1][:, :, i] .^2
+    #     ey = u[2][:, :, i] .^2
+    #     sqrt.(ex .+ ey)
+    # end
+    field(u) = u[1][:, :, i]
+    o = Observable(field(u[1]))
+    hm = heatmap(o)
+    display(hm)
+    tprev = T(0)
+    for (t, u) in zip(t, u)
+        Δt = t - tprev
+        o[] = field(u)
+        sleep(2 * Δt)
+        tprev = t
+    end
+end
+
+let
+    i = 1
+    u = data_train[i].data[1, 1].u
+    t = data_train[i].t
+    o = Observable(u[1][1])
+    volume(o) |> display
+    tprev = T(0)
+    for (t, u) in zip(t, u)
+        Δt = t - tprev
+        o[] = u[1]
+        sleep(2 * Δt)
+        tprev = t
+    end
+end
 
 ########################################################################## #src
 
@@ -436,16 +482,16 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
 # ### Compute a-posteriori errors
 
 (; e_nm, e_smag, e_cnn, e_cnn_post) = let
-    e_nm = zeros(T, size(data_test.data)...)
-    e_smag = zeros(T, size(data_test.data)..., 2)
-    e_cnn = zeros(T, size(data_test.data)..., 2)
-    e_cnn_post = zeros(T, size(data_test.data)..., 2)
-    for iorder = 1:2, ifil = 1:2, ig = 1:size(data_test.data, 1)
+    e_nm = zeros(T, size(data_test[1].data)...)
+    e_smag = zeros(T, size(data_test[1].data)..., 2)
+    e_cnn = zeros(T, size(data_test[1].data)..., 2)
+    e_cnn_post = zeros(T, size(data_test[1].data)..., 2)
+    for iorder = 1:2, ifil = 1:2, ig = 1:size(data_test[1].data, 1)
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         projectorder = ProjectOrder.T(iorder)
-        setup = setups_test[ig]
+        setup = setups[ig]
         psolver = psolver_spectral(setup)
-        data = (; u = device.(data_test.data[ig, ifil].u), t = data_test.t)
+        data = (; u = device.(data_test[1].data[ig, ifil].u), t = data_test[1].t)
         nupdate = 2
         ## No model
         ## Only for closurefirst, since projectfirst is the same
