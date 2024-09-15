@@ -1,37 +1,39 @@
-@testitem "Chain rules" begin
+@testsnippet ChainRulesStuff begin
     using ChainRulesCore
     using ChainRulesTestUtils
 
     "Use function name only as test set name"
     test_rrule_named(f, args...; kwargs...) =
         test_rrule(f, args...; testset_name = string(f), kwargs...)
+end
 
-    @testset "Chain rules boundary conditions" begin
-        T = Float64
-        Re = T(1_000)
-        Pr = T(0.71)
-        Ra = T(1e6)
-        Ge = T(1.0)
-        n = 7
-        lims = T(0), T(1)
-        x = range(lims..., n + 1), range(lims..., n + 1)
-        for bc in (PeriodicBC(), DirichletBC(), SymmetricBC(), PressureBC())
-            boundary_conditions = ((bc, bc), (bc, bc))
-            setup = Setup(;
-                x,
-                Re,
-                boundary_conditions,
-                temperature = temperature_equation(; Pr, Ra, Ge, boundary_conditions),
-            )
-            u = randn(T, setup.grid.N), randn(T, setup.grid.N)
-            p = randn(T, setup.grid.N)
-            temp = randn(T, setup.grid.N)
-            test_rrule_named(apply_bc_u, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
-            test_rrule_named(apply_bc_p, p, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
-            test_rrule_named(apply_bc_temp, temp, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
-        end
+@testitem "Chain rules (boundary conditions)" setup = [ChainRulesStuff] begin
+    T = Float64
+    Re = T(1_000)
+    Pr = T(0.71)
+    Ra = T(1e6)
+    Ge = T(1.0)
+    n = 7
+    lims = T(0), T(1)
+    x = range(lims..., n + 1), range(lims..., n + 1)
+    for bc in (PeriodicBC(), DirichletBC(), SymmetricBC(), PressureBC())
+        boundary_conditions = ((bc, bc), (bc, bc))
+        setup = Setup(;
+            x,
+            Re,
+            boundary_conditions,
+            temperature = temperature_equation(; Pr, Ra, Ge, boundary_conditions),
+        )
+        u = randn(T, setup.grid.N), randn(T, setup.grid.N)
+        p = randn(T, setup.grid.N)
+        temp = randn(T, setup.grid.N)
+        test_rrule_named(apply_bc_u, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+        test_rrule_named(apply_bc_p, p, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+        test_rrule_named(apply_bc_temp, temp, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
     end
+end
 
+@testitem "Chain rules (operators)" setup = [ChainRulesStuff] begin
     # Test chain rule correctness by comparing with finite differences
     for D in (2, 3)
         @testset "Chain rules $(D)D" begin
