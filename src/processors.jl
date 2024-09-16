@@ -464,6 +464,7 @@ function fieldplot(
     levels = LinRange{eltype(setup.grid.x[1])}(-10, 5, 10),
     docolorbar = false,
     size = nothing,
+    type = contour,
     kwargs...,
 )
     (; grid) = setup
@@ -498,22 +499,32 @@ function fieldplot(
     size = isnothing(size) ? (;) : (; size)
     fig = Figure(; size...)
     # ax = Axis3(fig[1, 1]; title = titlecase(string(fieldname)), aspect...)
-    hm = contour(
-        fig[1, 1],
-        # ax,
-        xf...,
-        field;
-        levels,
-        # color = xf[2]' .+ 0 .* field[],
-        # colorrange,
-        colorrange = lims,
-        # colorrange = extrema(levels),
-        alpha,
-        # isorange,
-        # highclip = :red,
-        # lowclip = :red,
-        kwargs...,
-    )
+    if type == volume
+        hm = volume(
+            fig[1, 1],
+            xf...,
+            field;
+            # colorrange = lims,
+            kwargs...,
+        )
+    elseif type == contour
+        hm = contour(
+            fig[1, 1],
+            # ax,
+            xf...,
+            field;
+            levels,
+            # color = xf[2]' .+ 0 .* field[],
+            # colorrange,
+            colorrange = lims,
+            # colorrange = extrema(levels),
+            alpha,
+            # isorange,
+            # highclip = :red,
+            # lowclip = :red,
+            kwargs...,
+        )
+    end
     docolorbar && Colorbar(fig[1, 2], hm)
     fig
 end
