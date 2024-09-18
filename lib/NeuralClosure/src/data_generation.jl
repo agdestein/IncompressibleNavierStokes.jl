@@ -160,7 +160,7 @@ function create_les_data(;
 
     # Define cache outside `solve_unsteady` to re-use the arrays for the
     # filtered DNS force
-    cache = IncompressibleNavierStokes.ode_method_cache(method, setup)
+    cache = IncompressibleNavierStokes.ode_method_cache(method, _dns)
 
     # Solve burn-in DNS
     # The initial spectrum is artificial, but this small simulation will

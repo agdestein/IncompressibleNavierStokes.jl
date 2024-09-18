@@ -243,11 +243,9 @@ function psolver_cg(
             d[]
         end
 
-        # Initial residual
-        laplacian!(L, p, setup)
-
         # Initialize
         q .= 0
+        laplacian!(L, q, setup) # Initial residual
         r .= p .- L
         ρ_prev = one(T)
         # residual = norm(r[Ip])
@@ -285,7 +283,7 @@ function psolver_cg(
             residual = sqrt(sum(abs2, view(r, Ip)))
             # residual = sqrt(sum(abs2, r))
             # residual = sqrt(innerdot(r, r))
-
+            
             iteration += 1
         end
 
