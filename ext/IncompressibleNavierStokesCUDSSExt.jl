@@ -46,9 +46,9 @@ function IncompressibleNavierStokes.psolver_direct(::CuArray, setup)
     solver = CudssSolver(L, structure, _view)
     cudss("analysis", solver, ptemp, ftemp)
     cudss("factorization", solver, ptemp, ftemp) # Compute factorization
-    function psolve!(p, f)
+    function psolve!(p)
         T = eltype(p)
-        copyto!(view(ftemp, viewrange), view(view(f, Ip), :))
+        copyto!(view(ftemp, viewrange), view(view(p, Ip), :))
         cudss("solve", solver, ptemp, ftemp)
         copyto!(view(view(p, Ip), :), eltype(p).(view(ptemp, viewrange)))
         p
