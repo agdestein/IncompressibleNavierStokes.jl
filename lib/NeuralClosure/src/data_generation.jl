@@ -108,6 +108,7 @@ function create_les_data(;
     tsim,
     savefreq,
     Δt = nothing,
+    method = RKMethods.RK44(; T = tyepof(Re)),
     create_psolver = default_psolver,
     ArrayType = Array,
     icfunc = (setup, psolver, rng) -> random_field(setup, typeof(Re)(0); psolver, rng),
@@ -169,6 +170,7 @@ function create_les_data(;
         ustart,
         tlims = (T(0), tburn),
         Δt,
+        method,
         psolver,
         cache,
         processors,
@@ -181,6 +183,7 @@ function create_les_data(;
         ustart = u,
         tlims = (T(0), tsim),
         Δt,
+        method,
         cache,
         processors = (;
             processors...,
