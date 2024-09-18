@@ -59,14 +59,22 @@ end
 """
 Save filtered DNS data.
 """
-filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 1) =
+filtersaver(
+    dns,
+    les,
+    filters,
+    compression,
+    psolver_dns,
+    psolver_les;
+    nupdate = 1,
+    F = vectorfield(dns),
+    p = scalarfield(dns),
+) =
     processor(
         (results, state) -> (; results..., comptime = time() - results.comptime),
     ) do state
         comptime = time()
         t = fill(state[].t, 0)
-        F = vectorfield(dns)
-        p = scalarfield(dns)
         dnsobs = Observable((; state[].u, F, state[].t))
         data = map(
             splat((i, Φ) -> lesdatagen(dnsobs, Φ, les[i], compression[i], psolver_les[i])),
