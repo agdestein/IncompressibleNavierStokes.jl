@@ -110,12 +110,12 @@ dns_seeds = splitseed(seeds.dns, ntrajectory)
 params = (;
     D = 3,
     lims = (T(0), T(1)),
-    Re = T(2e3),
+    Re = T(4e3),
     tburn = T(0.2),
     tsim = T(2),
-    savefreq = 8,
+    savefreq = 16,
     ndns = 1024,
-    nles = [64],
+    nles = [64, 128],
     filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
     create_psolver = psolver_spectral_lowmemory,
@@ -127,10 +127,9 @@ create_data = true
 create_data && let
     i = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
     seed, filename = dns_seeds[i], filenames[i]
-    @info "Creating DNS trajectory, file $(basename(filename))"
+    @info "Creating DNS trajectory for seed $seed (DNS $i of $ntrajectory)"
     rng = Xoshiro(seed)
     data = create_les_data(; params..., rng)
-    jldsave(filename; data)
     @info "Trajectory took $(data.comptime / 60) minutes to compute"
 end
 
@@ -140,7 +139,7 @@ exit()
 data = load.(filenames, "data");
 Base.summarysize(data) * 1e-9
 
-sum(d -> d.comptime, data) / 3600 * 8
+sum(d -> d.comptime, data) / 3600
 
 data_train = data[1:8];
 data_valid = data[9:9];
@@ -182,12 +181,13 @@ let
     fig = heatmap(o)
     display(fig)
     tprev = T(0)
-    for (t, u) in zip(t, u)
+    # for (t, u) in zip(t, u)
+    for (t, u) in collect(zip(t, u))[1:4:end]
         Δt = t - tprev
         o[] = field(u)
         sleep(2 * Δt)
         tprev = t
-        display(fig)
+        # display(fig)
         sleep(0.05)
     end
 end
@@ -198,8 +198,10 @@ let
     t = data_train[i].t
     o = Observable(u[1][1])
     volume(o) |> display
+    sleep(1)
     tprev = T(0)
-    for (t, u) in zip(t, u)
+    # for (t, u) in zip(t, u)
+    for (t, u) in collect(zip(t, u))[1:4:end]
         Δt = t - tprev
         o[] = u[1]
         sleep(2 * Δt)
@@ -529,21 +531,22 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
         # e_smag[ig, ifil, iorder] = err(θ_smag[ifil, iorder])
         ## CNN
         ## Only the first grids are trained for
-        err = create_relerr_post(;
-            data,
-            setup,
-            psolver,
-            method = RKProject(RK44(; T), projectorder),
-            closure_model = wrappedclosure(closure, setup),
-            nupdate,
-        )
-        e_cnn[ig, ifil, iorder] = err(θ_cnn_prior[ig, ifil])
+        # err = create_relerr_post(;
+        #     data,
+        #     setup,
+        #     psolver,
+        #     method = RKProject(RK44(; T), projectorder),
+        #     closure_model = wrappedclosure(closure, setup),
+        #     nupdate,
+        # )
+        # e_cnn[ig, ifil, iorder] = err(θ_cnn_prior[ig, ifil])
         # e_cnn_post[ig, ifil, iorder] = err(θ_cnn_post[ig, ifil, iorder])
     end
     (; e_nm, e_smag, e_cnn, e_cnn_post)
 end
 clean()
 
+e_nm
 e_cnn
 
 round.(
@@ -703,7 +706,7 @@ end
 
 kineticenergy = let
     clean()
-    ngrid, nfilter = size(io_train)
+    ngrid, nfilter = size(data_train[1].data)
     template(sz...) = fill((; thist = zeros(T, 0), ehist = zeros(T, 0)), sz...)
     ke_ref = template(ngrid, nfilter)
     ke_nomodel = template(ngrid, nfilter)
@@ -758,20 +761,20 @@ kineticenergy = let
         #         psolver,
         #         θ = θ_smag[ifil, iorder],
         #     )[2].ewriter
-        ke_cnn_prior[ig, ifil, iorder] =
-            solve_unsteady(;
-                setup = (;
-                    setup...,
-                    projectorder,
-                    closure_model = wrappedclosure(closure, setup),
-                ),
-                ustart,
-                tlims,
-                Δt,
-                processors,
-                psolver,
-                θ = θ_cnn_prior[ig, ifil],
-            )[2].ewriter
+        # ke_cnn_prior[ig, ifil, iorder] =
+        #     solve_unsteady(;
+        #         setup = (;
+        #             setup...,
+        #             projectorder,
+        #             closure_model = wrappedclosure(closure, setup),
+        #         ),
+        #         ustart,
+        #         tlims,
+        #         Δt,
+        #         processors,
+        #         psolver,
+        #         θ = θ_cnn_prior[ig, ifil],
+        #     )[2].ewriter
         # ke_cnn_post[ig, ifil, iorder] =
         #     solve_unsteady(;
         #         setup = (; setup..., projectorder, closure_model = wrappedclosure(closure, setup)),
@@ -832,13 +835,13 @@ with_theme(; palette) do
         #     color = Cycled(2),
         #     label = "Smagorinsky",
         # )
-        lines!(
-            ax,
-            kineticenergy.ke_cnn_prior[igrid, ifil, iorder].thist[2:end],
-            kineticenergy.ke_cnn_prior[igrid, ifil, iorder].ehist[2:end];
-            color = Cycled(3),
-            label = "CNN (prior)",
-        )
+        # lines!(
+        #     ax,
+        #     kineticenergy.ke_cnn_prior[igrid, ifil, iorder].thist[2:end],
+        #     kineticenergy.ke_cnn_prior[igrid, ifil, iorder].ehist[2:end];
+        #     color = Cycled(3),
+        #     label = "CNN (prior)",
+        # )
         # lines!(
         #     ax,
         #     t,
@@ -851,8 +854,8 @@ with_theme(; palette) do
         iorder == 2 && axislegend(; position = :lb)
         name = "$plotdir/energy_evolution"
         ispath(name) || mkpath(name)
-        # save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
-        fig |> display
+        save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
+        # fig |> display
     end
 end
 
@@ -995,7 +998,7 @@ end
 # ## Solutions at final time
 
 ufinal = let
-    ngrid, nfilter = size(io_train)
+    ngrid, nfilter = size(data_train[1].data)
     temp = ntuple(α -> zeros(T, 0, 0, 0), 3)
     u_ref = fill(temp, ngrid, nfilter)
     u_nomodel = fill(temp, ngrid, nfilter)
@@ -1031,8 +1034,8 @@ ufinal = let
         end
         # u_smag[igrid, ifil, iorder] =
         #     s(smagorinsky_closure(setup), θ_smag[ifil, iorder])
-        u_cnn_prior[igrid, ifil, iorder] =
-            s(wrappedclosure(closure, setup), θ_cnn_prior[igrid, ifil])
+        # u_cnn_prior[igrid, ifil, iorder] =
+        #     s(wrappedclosure(closure, setup), θ_cnn_prior[igrid, ifil])
         # u_cnn_post[igrid, ifil, iorder] =
         #     s(wrappedclosure(closure, setup), θ_cnn_post[igrid, ifil, iorder])
     end
@@ -1054,7 +1057,9 @@ clean();
 
 # Better for PDF export
 CairoMakie.activate!()
+GLMakie.activate!()
 
+GLMakie.closeall()
 fig = with_theme(; palette) do
     for iorder = 1:2, ifil = 1:2, igrid = 1:1
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
@@ -1062,14 +1067,13 @@ fig = with_theme(; palette) do
         fil = ifil == 1 ? "FA" : "VA"
         nles = params.nles[igrid]
         setup = setups[igrid]
-        fields =
-            [
-                ufinal.u_ref[igrid, ifil],
-                ufinal.u_nomodel[igrid, ifil],
-                # ufinal.u_smag[igrid, ifil, iorder],
-                ufinal.u_cnn_prior[igrid, ifil, iorder],
-                # ufinal.u_cnn_post[igrid, ifil, iorder],
-            ] .|> device
+        fields = [
+            ufinal.u_ref[igrid, ifil],
+            ufinal.u_nomodel[igrid, ifil],
+            # ufinal.u_smag[igrid, ifil, iorder],
+            # ufinal.u_cnn_prior[igrid, ifil, iorder],
+            # ufinal.u_cnn_post[igrid, ifil, iorder],
+        ] .|> device
         (; Ip) = setup.grid
         (; A, κ, K) = IncompressibleNavierStokes.spectral_stuff(setup)
         specs = map(fields) do u
@@ -1085,10 +1089,10 @@ fig = with_theme(; palette) do
         end
         kmax = maximum(κ)
         ## Build inertial slope above energy
-        krange = [T(16), T(κ[end])]
+        krange = [T(8), T(κ[end])]
         slope, slopelabel = -T(3), L"$\kappa^{-3}$"
         slopeconst = maximum(specs[1] ./ κ .^ slope)
-        offset = 3
+        offset = 2
         inertia = offset .* slopeconst .* krange .^ slope
         ## Nice ticks
         logmax = round(Int, log2(kmax + 1))
@@ -1106,7 +1110,7 @@ fig = with_theme(; palette) do
         )
         lines!(ax, κ, specs[2]; color = Cycled(1), label = "No model")
         # lines!(ax, κ, specs[3]; color = Cycled(2), label = "Smagorinsky")
-        lines!(ax, κ, specs[3]; color = Cycled(3), label = "CNN (prior)")
+        # lines!(ax, κ, specs[3]; color = Cycled(3), label = "CNN (prior)")
         # lines!(ax, κ, specs[5]; color = Cycled(4), label = "CNN (post)")
         lines!(ax, κ, specs[1]; color = Cycled(1), linestyle = :dash, label = "Reference")
         lines!(ax, krange, inertia; color = Cycled(1), label = slopelabel, linestyle = :dot)
@@ -1115,76 +1119,8 @@ fig = with_theme(; palette) do
         # ylims!(ax, (T(1e-3), T(0.35)))
         name = "$plotdir/energy_spectra"
         ispath(name) || mkpath(name)
-        # save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
-        display(fig)
+        save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
+        # display(GLMakie.Screen(), fig)
     end
 end
 clean();
-
-########################################################################## #src
-
-# ### Plot fields
-
-# Export to PNG, otherwise each volume gets represented
-# as a separate rectangle in the PDF
-# (takes time to load in the article PDF)
-GLMakie.activate!()
-
-with_theme(; fontsize = 25, palette) do
-    ## Reference box for eddy comparison
-    x1 = 0.3
-    x2 = 0.5
-    y1 = 0.5
-    y2 = 0.7
-    box = [
-        Point2f(x1, y1),
-        Point2f(x2, y1),
-        Point2f(x2, y2),
-        Point2f(x1, y2),
-        Point2f(x1, y1),
-    ]
-    path = "$plotdir/les_fields/$mname"
-    ispath(path) || mkpath(path)
-    for iorder = 1:2, ifil = 1:2, igrid = 1:3
-        setup = setups[igrid]
-        name = "$path/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid)"
-        lesmodel = iorder == 1 ? "DIF" : "DCF"
-        fil = ifil == 1 ? "FA" : "VA"
-        nles = params_test.nles[igrid]
-        function makeplot(u, title, suffix)
-            fig = fieldplot(
-                (; u, t = T(0));
-                setup,
-                title,
-                docolorbar = false,
-                size = (500, 500),
-            )
-            lines!(box; linewidth = 5, color = Cycled(2)) # Red in palette
-            fname = "$(name)_$(suffix).png"
-            save(fname, fig)
-            ## run(`convert $fname -trim $fname`) # Requires imagemagick
-        end
-        iorder == 2 &&
-            makeplot(device(ufinal.u_ref[igrid, ifil]), "Reference, $fil, $nles", "ref")
-        iorder == 2 && makeplot(
-            device(ufinal.u_nomodel[igrid, ifil]),
-            "No closure, $fil, $nles",
-            "nomodel",
-        )
-        makeplot(
-            device(ufinal.u_smag[igrid, ifil, iorder]),
-            "Smagorinsky, $lesmodel, $fil, $nles",
-            "smag",
-        )
-        makeplot(
-            device(ufinal.u_cnn_prior[igrid, ifil, iorder]),
-            "CNN (prior), $lesmodel, $fil, $nles",
-            "prior",
-        )
-        makeplot(
-            device(ufinal.u_cnn_post[igrid, ifil, iorder]),
-            "CNN (post), $lesmodel, $fil, $nles",
-            "post",
-        )
-    end
-end
