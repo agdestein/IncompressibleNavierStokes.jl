@@ -39,7 +39,7 @@ function solve_unsteady(;
     end
 
     # Cache arrays for intermediate computations
-    cache = ode_method_cache(method, setup, ustart, tempstart)
+    cache = ode_method_cache(method, setup)
 
     # Time stepper
     stepper =

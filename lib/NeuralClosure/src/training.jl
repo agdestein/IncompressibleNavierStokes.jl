@@ -136,7 +136,7 @@ function create_relerr_post(;
     D = dimension()
     (; u, t) = data
     v = copy.(u[1])
-    cache = IncompressibleNavierStokes.ode_method_cache(method, setup, v, nothing)
+    cache = IncompressibleNavierStokes.ode_method_cache(method, setup)
     function relerr_post(θ)
         T = eltype(u[1][1])
         copyto!.(v, u[1])
@@ -183,7 +183,7 @@ function create_relerr_symmetry_post(;
     (; dimension, Iu) = setup.grid
     D = dimension()
     T = eltype(u[1])
-    cache = IncompressibleNavierStokes.ode_method_cache(method, setup, copy.(u), nothing)
+    cache = IncompressibleNavierStokes.ode_method_cache(method, setup)
     function err(θ)
         stepper = IncompressibleNavierStokes.create_stepper(
             method;

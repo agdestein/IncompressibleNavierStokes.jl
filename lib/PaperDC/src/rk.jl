@@ -25,8 +25,8 @@ struct RKProject{T,R} <: IncompressibleNavierStokes.AbstractODEMethod{T}
     RKProject(rk, projectorder) = new{eltype(rk.A),typeof(rk)}(rk, projectorder)
 end
 
-IncompressibleNavierStokes.ode_method_cache(method::RKProject, setup, u, temp) =
-    IncompressibleNavierStokes.ode_method_cache(method.rk, setup, u, temp)
+IncompressibleNavierStokes.ode_method_cache(method::RKProject, setup) =
+    IncompressibleNavierStokes.ode_method_cache(method.rk, setup)
 
 IncompressibleNavierStokes.create_stepper(
     method::RKProject;
