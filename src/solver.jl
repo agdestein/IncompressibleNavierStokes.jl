@@ -28,6 +28,8 @@ function solve_unsteady(;
     docopy = true,
     processors = (;),
     θ = nothing,
+    # Cache arrays for intermediate computations
+    cache = ode_method_cache(method, setup),
 )
     docopy && (ustart = copy.(ustart))
     docopy && !isnothing(tempstart) && (tempstart = copy(tempstart))
@@ -37,9 +39,6 @@ function solve_unsteady(;
     if isadaptive
         cflbuf = scalarfield(setup)
     end
-
-    # Cache arrays for intermediate computations
-    cache = ode_method_cache(method, setup)
 
     # Time stepper
     stepper =

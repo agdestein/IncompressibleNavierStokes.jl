@@ -157,6 +157,10 @@ function create_les_data(;
     # _dns = (; dns..., bodyforce = force_dns)
     # _les = (; les..., bodyforce = force_les)
 
+    # Define cache outside `solve_unsteady` to re-use the arrays for the
+    # filtered DNS force
+    cache = IncompressibleNavierStokes.ode_method_cache(method, setup)
+
     # Solve burn-in DNS
     # The initial spectrum is artificial, but this small simulation will
     # create a more realistic spectrum for the DNS simulation
@@ -166,6 +170,7 @@ function create_les_data(;
         tlims = (T(0), tburn),
         Δt,
         psolver,
+        cache,
         processors,
     )
 
@@ -176,6 +181,7 @@ function create_les_data(;
         ustart = u,
         tlims = (T(0), tsim),
         Δt,
+        cache,
         processors = (;
             processors...,
             f = filtersaver(
@@ -186,6 +192,13 @@ function create_les_data(;
                 psolver,
                 psolver_les;
                 nupdate = savefreq,
+
+                # Reuse arrays from cache.
+                # Since processors are called outside
+                # Runge-Kutta steps, there is no danger
+                # in overwriteng the arrays.
+                F = cache.u₀,
+                p = cache.p,
             ),
         ),
         psolver,
