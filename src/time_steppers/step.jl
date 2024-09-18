@@ -1,4 +1,11 @@
 """
+    $FUNCTIONNAME(method; setup, psolver, u, temp, t, n)
+
+Create time stepper.
+"""
+function create_stepper end
+
+"""
     $FUNCTIONNAME(method, stepper, Δt; θ = nothing)
 
 Perform one time step.
