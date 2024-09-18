@@ -66,7 +66,7 @@ function IncompressibleNavierStokes.timestep!(
         momentum!(ku[i], u, temp, t, setup)
 
         # Project F first
-        if projectorder == ProjectOrder.first
+        if projectorder == ProjectOrder.First
             apply_bc_u!(ku[i], t, setup; dudt = true)
             project!(ku[i], setup; psolver, div, p)
         end
@@ -75,7 +75,7 @@ function IncompressibleNavierStokes.timestep!(
         isnothing(m) || map((k, m) -> k .+= m, ku[i], m(u, θ))
 
         # Project F second
-        if projectorder == ProjectOrder.second
+        if projectorder == ProjectOrder.Second
             apply_bc_u!(ku[i], t, setup; dudt = true)
             project!(ku[i], setup; psolver, div, p)
         end
@@ -117,7 +117,7 @@ function IncompressibleNavierStokes.timestep(method::RKProject, stepper, Δt; θ
     D = dimension()
     nstage = length(b)
     m = closure_model
-    projectorder ∈ (:first, :second, :last) || error("Unknown projectorder: $projectorder")
+    @assert projectorder ∈ instances(ProjectOrder.T) "Unknown projectorder: $projectorder"
 
     # Update current solution (does not depend on previous step size)
     t₀ = t
@@ -130,7 +130,7 @@ function IncompressibleNavierStokes.timestep(method::RKProject, stepper, Δt; θ
         F = IncompressibleNavierStokes.momentum(u, temp, t, setup)
 
         # Project F first
-        if projectorder == :first
+        if projectorder == ProjectOrder.First
             F = IncompressibleNavierStokes.apply_bc_u(F, t, setup; dudt = true)
             F = IncompressibleNavierStokes.project(F, setup; psolver)
         end
@@ -139,7 +139,7 @@ function IncompressibleNavierStokes.timestep(method::RKProject, stepper, Δt; θ
         isnothing(m) || (F = F .+ m(u, θ))
 
         # Project F second
-        if projectorder == :second
+        if projectorder == ProjectOrder.Second
             F = IncompressibleNavierStokes.apply_bc_u(F, t, setup; dudt = true)
             F = IncompressibleNavierStokes.project(F, setup; psolver)
         end
@@ -159,7 +159,7 @@ function IncompressibleNavierStokes.timestep(method::RKProject, stepper, Δt; θ
 
         # Project stage u directly
         # Make velocity divergence free at time t
-        if projectorder == :last
+        if projectorder == ProjectOrder.Last
             u = IncompressibleNavierStokes.apply_bc_u(u, t, setup)
             u = IncompressibleNavierStokes.project(u, setup; psolver)
         end
