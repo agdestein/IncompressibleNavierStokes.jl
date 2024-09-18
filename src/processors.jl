@@ -586,7 +586,7 @@ function energy_spectrum_plot(
             abs2.(uhat) ./ (2 * prod(size(uhat))^2)
         end
         e = A * reshape(e, :)
-        # e = [sum(e[m]) for m in masks] # Mask
+        # e = map(m -> sum(view(e, m)), masks) # Mask
         e = max.(e, eps(T)) # Avoid log(0)
         Array(e)
     end
