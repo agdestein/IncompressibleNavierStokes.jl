@@ -341,9 +341,7 @@ function psolver_spectral(setup)
     plan = plan_fft(fhat)
 
     function psolver(p)
-        p = view(p, Ip)
-
-        fhat .= complex.(p)
+        fhat .= complex.(view(p, Ip))
 
         # Fourier transform of right hand side
         mul!(phat, plan, fhat)
@@ -403,8 +401,7 @@ function psolver_spectral_lowmemory(setup)
     phat = fill!(similar(x[1], Complex{T}, Np), 0)
 
     function psolve!(p)
-        p = view(p, Ip)
-        phat .= complex.(p)
+        phat .= complex.(view(p, Ip))
 
         # Fourier transform of right hand side
         fft!(phat)
