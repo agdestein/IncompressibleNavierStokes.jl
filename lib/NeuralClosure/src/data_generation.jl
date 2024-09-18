@@ -34,7 +34,6 @@ end
 
 function lesdatagen(dnsobs, Φ, les, compression, psolver)
     p = scalarfield(les)
-    div = scalarfield(les)
     Φu = vectorfield(les)
     FΦ = vectorfield(les)
     ΦF = vectorfield(les)
@@ -47,7 +46,7 @@ function lesdatagen(dnsobs, Φ, les, compression, psolver)
         Φ(ΦF, F, les, compression)
         momentum!(FΦ, Φu, temp, t, les)
         apply_bc_u!(FΦ, t, les; dudt = true)
-        project!(FΦ, les; psolver, div, p)
+        project!(FΦ, les; psolver, p)
         for α = 1:length(u)
             c[α] .= ΦF[α] .- FΦ[α]
         end
@@ -67,7 +66,6 @@ filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 
         comptime = time()
         t = fill(state[].t, 0)
         F = vectorfield(dns)
-        div = scalarfield(dns)
         p = scalarfield(dns)
         dnsobs = Observable((; state[].u, F, state[].t))
         data = map(
@@ -80,7 +78,7 @@ filtersaver(dns, les, filters, compression, psolver_dns, psolver_les; nupdate = 
             n % nupdate == 0 || return
             momentum!(F, u, temp, t, dns)
             apply_bc_u!(F, t, dns; dudt = true)
-            project!(F, dns; psolver = psolver_dns, div, p)
+            project!(F, dns; psolver = psolver_dns, p)
             push!(results.t, t)
             dnsobs[] = (; u, F, t)
         end
@@ -153,8 +151,14 @@ function create_les_data(;
     # Solve burn-in DNS
     # The initial spectrum is artificial, but this small simulation will
     # create a more realistic spectrum for the DNS simulation
-    (; u, t), outputs =
-        solve_unsteady(; setup = _dns, ustart, tlims = (T(0), tburn), Δt, psolver)
+    (; u, t), outputs = solve_unsteady(;
+        setup = _dns,
+        ustart,
+        tlims = (T(0), tburn),
+        Δt,
+        psolver,
+        processors = (; log = timelogger(; nupdate = 10)),
+    )
 
     # Solve DNS and store filtered quantities
     # Use the result of the burn-in as initial conditions

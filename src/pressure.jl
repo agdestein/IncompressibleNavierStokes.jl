@@ -12,14 +12,14 @@ For periodic and no-slip BC, the sum of `f` should be zero.
 
 Differentiable version.
 """
-poisson(psolver, f) = poisson!(psolver, zero(f), f)
+poisson(psolver, f) = poisson!(psolver, copy(f))
 
 # Laplacian is auto-adjoint
 ChainRulesCore.rrule(::typeof(poisson), psolver, f) =
     (poisson(psolver, f), φ -> (NoTangent(), NoTangent(), poisson(psolver, unthunk(φ))))
 
 "Solve the Poisson equation for the pressure (in-place version)."
-poisson!(psolver, p, f) = psolver(p, f)
+poisson!(psolver, f) = psolver(f)
 
 """
 Compute pressure from velocity field. This makes the pressure compatible with the velocity
@@ -41,15 +41,15 @@ function pressure(u, temp, t, setup; psolver)
 end
 
 "Compute pressure from velocity field (in-place version)."
-function pressure!(p, u, temp, t, setup; psolver, F, div)
+function pressure!(p, u, temp, t, setup; psolver, F)
     (; grid) = setup
     (; dimension, Iu, Ip) = grid
     D = dimension()
     momentum!(F, u, temp, t, setup)
     apply_bc_u!(F, t, setup; dudt = true)
-    divergence!(div, F, setup)
-    scalewithvolume!(div, setup)
-    poisson!(psolver, p, div)
+    divergence!(p, F, setup)
+    scalewithvolume!(p, setup)
+    poisson!(psolver, p)
     apply_bc_p!(p, t, setup)
     p
 end
@@ -72,15 +72,15 @@ function project(u, setup; psolver)
 end
 
 "Project velocity field onto divergence-free space (in-place version)."
-function project!(u, setup; psolver, div, p)
+function project!(u, setup; psolver, p)
     T = eltype(u[1])
 
     # Divergence of tentative velocity field
-    divergence!(div, u, setup)
-    scalewithvolume!(div, setup)
+    divergence!(p, u, setup)
+    scalewithvolume!(p, setup)
 
     # Solve the Poisson equation
-    poisson!(psolver, p, div)
+    poisson!(psolver, p)
     apply_bc_p!(p, T(0), setup)
 
     # Apply pressure correction term
@@ -146,8 +146,8 @@ function psolver_direct(::Array, setup)
         fact = ldlt(L)
     end
     # fact = factorize(L)
-    function psolve!(p, f)
-        copyto!(view(ftemp, viewrange), view(view(f, Ip), :))
+    function psolve!(p)
+        copyto!(view(ftemp, viewrange), view(view(p, Ip), :))
         ptemp .= fact \ ftemp
         if isdefinite && !(0.0 isa T)
             # Convert from Float64 to T
@@ -182,8 +182,8 @@ function psolver_cg_matrix(setup; kwargs...)
         L = [L e; e' 0]
         viewrange = 1:prod(Np)
     end
-    function psolve!(p, f)
-        copyto!(view(ftemp, viewrange), view(view(f, Ip), :))
+    function psolve!(p)
+        copyto!(view(ftemp, viewrange), view(view(p, Ip), :))
         cg!(ptemp, L, ftemp; kwargs...)
         copyto!(view(view(p, Ip), :), view(ptemp, viewrange))
         p
@@ -227,7 +227,7 @@ function psolver_cg(
     r = scalarfield(setup)
     L = scalarfield(setup)
     q = scalarfield(setup)
-    function psolve!(p, f)
+    function psolve!(p)
         function innerdot(a, b)
             @kernel function innerdot!(d, a, b, I0)
                 I = @index(Global, Cartesian)
@@ -243,20 +243,20 @@ function psolver_cg(
             d[]
         end
 
-        p .= 0
-
         # Initial residual
         laplacian!(L, p, setup)
 
         # Initialize
         q .= 0
-        r .= f .- L
+        r .= p .- L
         ρ_prev = one(T)
         # residual = norm(r[Ip])
         residual = sqrt(sum(abs2, view(r, Ip)))
         # residual = norm(r)
         tolerance = max(reltol * residual, abstol)
         iteration = 0
+
+        p .= 0
 
         while iteration < maxiter && residual > tolerance
             preconditioner(L, r)
@@ -340,10 +340,10 @@ function psolver_spectral(setup)
     fhat = zero(Ahat)
     plan = plan_fft(fhat)
 
-    function psolver(p, f)
-        f = view(f, Ip)
+    function psolver(p)
+        p = view(p, Ip)
 
-        fhat .= complex.(f)
+        fhat .= complex.(p)
 
         # Fourier transform of right hand side
         mul!(phat, plan, fhat)
@@ -402,10 +402,9 @@ function psolver_spectral_lowmemory(setup)
     # Placeholders for intermediate results
     phat = fill!(similar(x[1], Complex{T}, Np), 0)
 
-    function psolve!(p, f)
-        f = view(f, Ip)
-
-        phat .= complex.(f)
+    function psolve!(p)
+        p = view(p, Ip)
+        phat .= complex.(p)
 
         # Fourier transform of right hand side
         fft!(phat)

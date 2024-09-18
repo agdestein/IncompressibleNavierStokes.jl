@@ -6,7 +6,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
     (; grid, closure_model, temperature) = setup
     (; dimension, Iu) = grid
     (; A, b, c) = method
-    (; u₀, ku, div, p, temp₀, ktemp, diff) = cache
+    (; u₀, ku, p, temp₀, ktemp, diff) = cache
     D = dimension()
     nstage = length(b)
     m = closure_model
@@ -51,7 +51,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
         # Project stage u directly
         # Make velocity divergence free at time t
         apply_bc_u!(u, t, setup)
-        project!(u, setup; psolver, div, p)
+        project!(u, setup; psolver, p)
     end
 
     # This is redundant, but Neumann BC need to have _exact_ copies

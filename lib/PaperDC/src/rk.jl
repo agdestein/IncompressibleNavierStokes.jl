@@ -50,7 +50,7 @@ function IncompressibleNavierStokes.timestep!(
     (; dimension, Iu) = grid
     (; rk, projectorder) = method
     (; A, b, c) = rk
-    (; u₀, ku, div, p) = cache
+    (; u₀, ku, p) = cache
     D = dimension()
     nstage = length(b)
     m = closure_model
@@ -68,7 +68,7 @@ function IncompressibleNavierStokes.timestep!(
         # Project F first
         if projectorder == ProjectOrder.First
             apply_bc_u!(ku[i], t, setup; dudt = true)
-            project!(ku[i], setup; psolver, div, p)
+            project!(ku[i], setup; psolver, p)
         end
 
         # Add closure term
@@ -77,7 +77,7 @@ function IncompressibleNavierStokes.timestep!(
         # Project F second
         if projectorder == ProjectOrder.Second
             apply_bc_u!(ku[i], t, setup; dudt = true)
-            project!(ku[i], setup; psolver, div, p)
+            project!(ku[i], setup; psolver, p)
         end
 
         # Intermediate time step
@@ -96,7 +96,7 @@ function IncompressibleNavierStokes.timestep!(
         # Make velocity divergence free at time t
         if projectorder == ProjectOrder.Last
             apply_bc_u!(u, t, setup)
-            project!(u, setup; psolver, div, p)
+            project!(u, setup; psolver, p)
         end
     end
 
