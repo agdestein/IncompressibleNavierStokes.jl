@@ -108,7 +108,7 @@ function create_les_data(;
     tsim,
     savefreq,
     Δt = nothing,
-    method = RKMethods.RK44(; T = tyepof(Re)),
+    method = RKMethods.RK44(; T = typeof(Re)),
     create_psolver = default_psolver,
     ArrayType = Array,
     icfunc = (setup, psolver, rng) -> random_field(setup, typeof(Re)(0); psolver, rng),

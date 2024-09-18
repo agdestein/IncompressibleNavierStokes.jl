@@ -283,7 +283,7 @@ function psolver_cg(
             residual = sqrt(sum(abs2, view(r, Ip)))
             # residual = sqrt(sum(abs2, r))
             # residual = sqrt(innerdot(r, r))
-            
+
             iteration += 1
         end
 
