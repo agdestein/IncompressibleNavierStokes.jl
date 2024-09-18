@@ -15,10 +15,12 @@ if false                      #src
     include("src/PaperDC.jl") #src
 end                           #src
 
+@info "Launching les3d.jl"
+
 using Adapt
 using CUDA
-using GLMakie
-using CairoMakie
+# using GLMakie
+# using CairoMakie
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes.RKMethods
 using JLD2
@@ -33,14 +35,19 @@ using PaperDC
 using Random
 using FFTW
 
+@info "Finished loading packages"
+
 # Color palette for consistent theme throughout paper
 palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])
 
 # Choose where to put output
-outdir = joinpath(@__DIR__, "output", "les3D")
+# outdir = joinpath(@__DIR__, "output", "les3D")
+outdir = joinpath(ENV["DEEPDIP"], "output", "les3D")
 plotdir = "$outdir/plots"
 ispath(outdir) || mkpath(outdir)
 ispath(plotdir) || mkpath(plotdir)
+
+@info "Created $outdir"
 
 ########################################################################## #src
 
@@ -103,24 +110,31 @@ dns_seeds = splitseed(seeds.dns, ntrajectory)
 params = (;
     D = 3,
     lims = (T(0), T(1)),
-    Re = T(4e3),
+    Re = T(2e3),
     tburn = T(0.2),
     tsim = T(2),
     savefreq = 8,
-    ndns = 512,
+    ndns = 1024,
     nles = [64],
     filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
     create_psolver = psolver_spectral_lowmemory,
+    method = RKMethods.Wray3(; T),
 )
 
-create_data = false
-create_data && for (seed, filename) in zip(dns_seeds, filenames)
+create_data = true
+# create_data && for (seed, filename) in zip(dns_seeds, filenames)
+create_data && let
+    i = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
+    seed, filename = dns_seeds[i], filenames[i]
     @info "Creating DNS trajectory, file $(basename(filename))"
     rng = Xoshiro(seed)
     data = create_les_data(; params..., rng)
     jldsave(filename; data)
+    @info "Trajectory took $(data.comptime / 60) minutes to compute"
 end
+
+exit()
 
 # Load filtered DNS data
 data = load.(filenames, "data");
