@@ -6,11 +6,12 @@
 #
 # We need NeuralClosure for the filter definitions.
 
-if false                      #src
-    include("src/PaperDC.jl") #src
-end                           #src
+if false                                            #src
+    include("../src/IncompressibleNavierStokes.jl") #src
+end                                                 #src
 
-using CairoMakie
+## using CairoMakie
+using GLMakie
 using IncompressibleNavierStokes
 using NeuralClosure
 
@@ -43,7 +44,7 @@ let
     framerate = 24
     sleeptime = 0.01
     fieldname = :vorticity
-    filename = "dns_and_les.mp4"
+    filename = joinpath(@__DIR__, "dns_and_les.mp4")
 
     x1, x2 = 0.3, 0.5
     y1, y2 = 0.5, 0.7
@@ -77,8 +78,8 @@ let
     cflbuf = scalarfield(dns.setup)
 
     state_dns = Observable(INS.get_state(stepper_dns))
-    state_ref = Observable(INS.get_state(stepper_les))
     state_les = Observable(INS.get_state(stepper_les))
+    state_ref = Observable(deepcopy(state_les[]))
     f_dns = observefield(state_dns; dns.setup, fieldname)
     f_ref = observefield(state_ref; les.setup, fieldname)
     f_les = observefield(state_les; les.setup, fieldname)
@@ -104,25 +105,22 @@ let
     lines!(ax[2], box; linewidth = 2, color = :red)
     lines!(ax[3], box; linewidth = 2, color = :red)
 
-    display(fig)
-
-    # stream = VideoStream(fig; framerate, visible = false)
+    stream = VideoStream(fig; framerate, visible = true)
 
     while stepper_dns.t < tstop
         Δt = cfl * INS.get_cfl_timestep!(cflbuf, stepper_dns.u, dns.setup)
-        stepper_dns =
-            IncompressibleNavierStokes.timestep!(method, stepper_dns, Δt; cache = cache_dns)
-        stepper_les =
-            IncompressibleNavierStokes.timestep!(method, stepper_les, Δt; cache = cache_les)
+        stepper_dns = INS.timestep!(method, stepper_dns, Δt; cache = cache_dns)
+        stepper_les = INS.timestep!(method, stepper_les, Δt; cache = cache_les)
         if stepper_dns.n % nupdate == 0
             state_dns[] = INS.get_state(stepper_dns)
             state_les[] = INS.get_state(stepper_les)
             Φ(state_ref[].u, state_dns[].u, les.setup, compression)
             notify(state_ref)
-            display(fig)
-            # recordframe!(stream)
+            recordframe!(stream)
             sleep(sleeptime)
         end
     end
-    # save(filename, stream)
+
+    save(filename, stream)
+    fig
 end
