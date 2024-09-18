@@ -14,7 +14,7 @@ T = Float64
 # Running in 3D is heavier than in 2D.
 # If you are running this on a CPU, consider using multiple threads by
 # starting Julia with `julia -t auto`, or
-# add `-t auto` to # the `julia.additionalArgs` # setting in VSCode.
+# add `"julia.NumThreads": "auto"` to the settings in VSCode.
 
 ArrayType = Array
 ## using CUDA; ArrayType = CuArray
