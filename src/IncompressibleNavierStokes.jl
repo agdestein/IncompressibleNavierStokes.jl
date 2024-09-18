@@ -82,7 +82,8 @@ include("precompile.jl")
 export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
 
 # Processors
-export processor, timelogger, vtk_writer, fieldsaver, realtimeplotter, animator
+export processor,
+    timelogger, vtk_writer, observefield, fieldsaver, realtimeplotter, animator
 export fieldplot, energy_history_plot, energy_spectrum_plot
 
 # Setup
@@ -100,13 +101,13 @@ export default_psolver,
     psolver_spectral_lowmemory
 
 # Solvers
-export solve_unsteady
+export solve_unsteady, timestep, create_stepper
 
 # Field generation
 export velocityfield, temperaturefield, random_field
 
 # Utils
-export plotgrid, save_vtk
+export plotgrid, save_vtk, get_lims
 
 # ODE methods
 export AdamsBashforthCrankNicolsonMethod, OneLegMethod, RKMethods
