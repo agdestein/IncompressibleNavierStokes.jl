@@ -111,6 +111,7 @@ function create_les_data(;
     create_psolver = default_psolver,
     ArrayType = Array,
     icfunc = (setup, psolver, rng) -> random_field(setup, typeof(Re)(0); psolver, rng),
+    processors = (; log = timelogger(; nupdate = 10)),
     rng,
     kwargs...,
 )
@@ -165,7 +166,7 @@ function create_les_data(;
         tlims = (T(0), tburn),
         Δt,
         psolver,
-        processors = (; log = timelogger(; nupdate = 10)),
+        processors,
     )
 
     # Solve DNS and store filtered quantities
@@ -176,6 +177,7 @@ function create_les_data(;
         tlims = (T(0), tsim),
         Δt,
         processors = (;
+            processors...,
             f = filtersaver(
                 _dns,
                 _les,
@@ -185,8 +187,6 @@ function create_les_data(;
                 psolver_les;
                 nupdate = savefreq,
             ),
-            # plot = realtimeplotter(; setup = dns, nupdate = 10),
-            log = timelogger(; nupdate = 10),
         ),
         psolver,
     )
