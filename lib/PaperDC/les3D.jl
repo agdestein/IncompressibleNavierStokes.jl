@@ -126,6 +126,8 @@ end
 data = load.(filenames, "data");
 Base.summarysize(data) * 1e-9
 
+sum(d -> d.comptime, data) / 3600 * 8
+
 data_train = data[1:8];
 data_valid = data[9:9];
 data_test = data[10:10];
