@@ -41,9 +41,8 @@ using FFTW
 # Write output to file, as the default SLURM file is not updated often enough
 jobid = ENV["SLURM_JOB_ID"]
 taskid = ENV["SLURM_ARRAY_TASK_ID"]
-logfile = "log_$(jobid)_$(taskid).txt"
-logfile = joinpath(@__DIR__, logfile)
-filelogger = FileLogger(logfile)
+logfile = joinpath(@__DIR__, "log_$(jobid)_$(taskid).txt")
+filelogger = MinLevelLogger(FileLogger(logfile), Logging.Info)
 logger = TeeLogger(global_logger(), filelogger)
 global_logger(logger)
 
@@ -1072,7 +1071,7 @@ CairoMakie.activate!()
 GLMakie.activate!()
 
 GLMakie.closeall()
-fig = with_theme(; palette) do
+with_theme(; palette) do
     for iorder = 1:2, ifil = 1:2, igrid = 1:1
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
         lesmodel = iorder == 1 ? "DIF" : "DCF"
@@ -1102,7 +1101,7 @@ fig = with_theme(; palette) do
         kmax = maximum(κ)
         ## Build inertial slope above energy
         krange = [T(8), T(κ[end])]
-        slope, slopelabel = -T(3), L"$\kappa^{-3}$"
+        slope, slopelabel = -T(5 / 3), L"$\kappa^{-5 / 3}$"
         slopeconst = maximum(specs[1] ./ κ .^ slope)
         offset = 2
         inertia = offset .* slopeconst .* krange .^ slope
