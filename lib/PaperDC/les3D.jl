@@ -113,7 +113,7 @@ end
 
 ntrajectory = 10
 dns_seeds = splitseed(seeds.dns, ntrajectory)
-filenames = map(seed -> "$outdir/data_$seed.jld2", dns_seeds)
+filenames = map(seed -> "$outdir/data_$(repr(seed)).jld2", dns_seeds)
 
 # Parameters
 params = (;
