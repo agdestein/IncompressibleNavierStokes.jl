@@ -141,7 +141,12 @@ create_data && let
     data = create_les_data(; params..., rng)
     @info "Saving data to $filename"
     jldsave(filename; data)
-    @info "Trajectory took $(data.comptime / 60) minutes to compute"
+    @info(
+        "Trajectory info:",
+        data.comptime / 60,
+        length(data.t),
+        Base.summarysize(data) * 1e-9,
+    )
 end
 
 exit()
