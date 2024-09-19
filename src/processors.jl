@@ -42,17 +42,31 @@ processor(initialize, finalize = (initialized, state) -> initialized) =
 """
 Create processor that logs time step information.
 """
-timelogger(; showmax = true, showdt = true, nupdate = 1) =
+timelogger(;
+    showiter = false,
+    showt = true,
+    showdt = true,
+    showmax = true,
+    showspeed = true,
+    nupdate = 1,
+) =
     processor() do state
         told = Ref(state[].t)
+        oldtime = time()
         on(state) do (; u, t, n)
             Δt = t - told[]
             told[] = t
             n % nupdate == 0 || return
-            msg = @sprintf "Iteration %d\tt = %g" n t
-            showdt && (msg = @sprintf "%s\tΔt = %g" msg Δt)
-            showmax && (msg = @sprintf "%s\tumax = %g" msg maximum(maximum.(abs, u)))
-            @info msg
+            newtime = time()
+            itertime = (newtime - oldtime) / nupdate
+            oldtime = newtime
+            msg = String[]
+            showiter && push!(msg, "Iteration $n")
+            showt && push!(msg, @sprintf("t = %g", t))
+            showdt && push!(msg, @sprintf("Δt = %.2g", Δt))
+            showmax && push!(msg, @sprintf("umax = %.2g", maximum(maximum.(abs, u))))
+            showspeed && push!(msg, @sprintf("itertime = %.2g", itertime))
+            @info join(msg, "\t")
         end
         nothing
     end
