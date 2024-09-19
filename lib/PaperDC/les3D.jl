@@ -113,8 +113,8 @@ end
 # Create filtered DNS data for training, validation, and testing.
 
 ntrajectory = 10
-filenames = map(i -> "$outdir/data_$i.jld2", 1:ntrajectory)
 dns_seeds = splitseed(seeds.dns, ntrajectory)
+filenames = map(seed -> "$outdir/data_$seed.jld2", dns_seeds)
 
 # Parameters
 params = (;
@@ -140,6 +140,8 @@ create_data && let
     @info "Creating DNS trajectory for seed $seed (DNS $i of $ntrajectory)"
     rng = Xoshiro(seed)
     data = create_les_data(; params..., rng)
+    @info "Saving data to $filename"
+    jldsave(filename; data)
     @info "Trajectory took $(data.comptime / 60) minutes to compute"
 end
 
