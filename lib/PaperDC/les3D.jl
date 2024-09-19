@@ -164,7 +164,7 @@ data_test = data[10:10];
 # Build LES setup and assemble operators
 setups = map(
     nles -> Setup(;
-        x = ntuple(α -> range(params.lims..., params.nles[1] + 1), params.D),
+        x = ntuple(α -> range(params.lims..., nles + 1), params.D),
         params.Re,
         params.ArrayType,
     ),
