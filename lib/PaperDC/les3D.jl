@@ -26,6 +26,7 @@ using IncompressibleNavierStokes.RKMethods
 using JLD2
 using LaTeXStrings
 using LinearAlgebra
+using LoggingExtras
 using Lux
 using LuxCUDA
 using NeuralClosure
@@ -36,6 +37,15 @@ using Random
 using FFTW
 
 @info "Finished loading packages"
+
+# Write output to file, as the default SLURM file is not updated often enough
+jobid = ENV["SLURM_JOB_ID"]
+taskid = ENV["SLURM_ARRAY_TASK_ID"]
+logfile = "log_$(jobid)_$(taskid).txt"
+logfile = joinpath(@__DIR__, logfile)
+filelogger = FileLogger(logfile)
+logger = TeeLogger(global_logger(), filelogger)
+global_logger(logger)
 
 # Color palette for consistent theme throughout paper
 palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])
