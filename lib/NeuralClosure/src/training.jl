@@ -243,7 +243,9 @@ If not using interactive GLMakie window, set `displayupdates` to
 function create_callback(
     err;
     θ,
-    callbackstate = (; n = 0, θmin = θ, emin = eltype(θ)(Inf), hist = Point2f[]),
+    callbackstate = (; n = 0, θmin = θ, emin = eltype(θ)(Inf), hist = Point2f[],
+    ctime = time(),
+                    ),
     displayref = true,
     displayfig = true,
     displayupdates = false,
@@ -261,7 +263,10 @@ function create_callback(
         if n % nupdate == 0
             (; θ) = trainstate
             e = err(θ)
-            @info "Iteration $n \trelative error: $e"
+            newtime = time()
+            itertime = (newtime - callbackstate.ctime) / nupdate
+            @reset callbackstate.ctime = newtime
+            @info "Iteration $n \t relative error: $e \t sec/iter: $itertime"
             hist = push!(copy(hist), Point2f(n, e))
             @reset callbackstate.hist = hist
             obs[] = hist
