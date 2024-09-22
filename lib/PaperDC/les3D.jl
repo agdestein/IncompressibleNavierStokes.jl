@@ -131,7 +131,7 @@ params = (;
     method = RKMethods.Wray3(; T),
 )
 
-create_data = true
+create_data = false
 # create_data && for (seed, filename) in zip(dns_seeds, filenames)
 create_data && let
     i = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
@@ -148,8 +148,6 @@ create_data && let
         Base.summarysize(data) * 1e-9,
     )
 end
-
-exit()
 
 # Load filtered DNS data
 data = load.(filenames, "data");
@@ -178,10 +176,10 @@ io_test = create_io_arrays(data_test, setups);
 
 # ### Plot data
 
-let
-    u = data_train[1].data[1, 1].u
+false && let
+    u = data_train[1].data[2, 1].u
     t = data_train[1].t
-    i = 17
+    i = 8
     # function field(u)
     #     ux = u[1][1:end-1, :, i]
     #     uy = u[2][:, 1:end-1, i]
@@ -208,9 +206,9 @@ let
     end
 end
 
-let
+false && let
     i = 1
-    u = data_train[i].data[1, 1].u
+    u = data_train[i].data[2, 1].u
     t = data_train[i].t
     o = Observable(u[1][1])
     volume(o) |> display
@@ -236,10 +234,10 @@ end
 # CNN architecture
 closure, θ₀ = cnn(;
     setup = setups[1],
-    radii = [2, 2, 2, 2],
-    channels = [12, 12, 12, params.D],
-    activations = [tanh, tanh, tanh, identity],
-    use_bias = [true, true, true, false],
+    radii = [2, 2, 2, 2, 2],
+    channels = [24, 24, 24, 24, params.D],
+    activations = [tanh, tanh, tanh, tanh, identity],
+    use_bias = [true, true, true, true, false],
     rng = Xoshiro(seeds.θ₀),
 );
 closure.chain
@@ -257,6 +255,8 @@ g = let
     g, = gradient(θ -> sum(closure(u, θ)), θ)
     Array(g)
 end
+
+clean()
 
 ########################################################################## #src
 
@@ -283,11 +283,7 @@ let
         starttime = time()
         @info "Training a-priori for ig = $ig, ifil = $ifil"
         trainseed, validseed = splitseed(seeds.prior, 2) # Same seed for all training setups
-        dataloader = create_dataloader_prior(
-            io_train[ig, ifil];
-            batchsize = 50,
-            device,
-        )
+        dataloader = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device)
         θ = T(1.0e0) * device(θ₀)
         loss = create_loss_prior(mean_squared_error, closure)
         opt = Adam(T(1.0e-3))
@@ -359,7 +355,7 @@ let
         @info "Training a-posteriori for iorder = $iorder, ifil = $ifil, ig = $ig"
         projectorder = ProjectOrder.T(iorder)
         rng = Xoshiro(seeds.post) # Same seed for all training setups
-        setup = setups_train[ig]
+        setup = setups[ig]
         psolver = psolver_spectral(setup)
         loss = create_loss_post(;
             setup,
@@ -814,8 +810,9 @@ clean();
 # Better for PDF export
 CairoMakie.activate!()
 
+# GLMakie.closeall()
 with_theme(; palette) do
-    for iorder = 1:2, ifil = 1:2, igrid = 1:1
+    for iorder = 1:2, ifil = 1:2, igrid = 1:2
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
         lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
@@ -872,7 +869,7 @@ with_theme(; palette) do
         name = "$plotdir/energy_evolution"
         ispath(name) || mkpath(name)
         save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
-        # fig |> display
+        # display(GLMakie.Screen(), fig)
     end
 end
 
@@ -1078,7 +1075,7 @@ GLMakie.activate!()
 
 GLMakie.closeall()
 with_theme(; palette) do
-    for iorder = 1:2, ifil = 1:2, igrid = 1:1
+    for iorder = 1:2, ifil = 1:2, igrid = 2:2
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
         lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
