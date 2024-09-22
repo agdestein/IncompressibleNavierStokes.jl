@@ -47,7 +47,7 @@ function train(;
     for i = 1:niter
         batch = dataloader()
         g, = gradient(θ -> loss(batch, θ), θ)
-        optstate, θ = Optimisers.update(optstate, θ, g)
+        optstate, θ = Optimisers.update!(optstate, θ, g)
         if i % ncallback == 0
             callbackstate = callback(callbackstate, i, θ)
         end
