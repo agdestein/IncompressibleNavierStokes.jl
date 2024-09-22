@@ -294,19 +294,24 @@ let
             create_relerr_prior(closure, validset...);
             θ,
             displayref = true,
-            display_each_iteration = true, # Set to `true` if using CairoMakie
+            displayupdates = true, # Set to `true` if using CairoMakie
             nupdate = 20,
         )
-        (; optstate, θ, callbackstate) = train(;
+        (; trainstate, callbackstate) = train(;
             dataloader,
             loss,
-            optstate,
-            θ,
-            rng = Xoshiro(trainseed),
+            trainstate = (; optstate, θ, rng = Xoshiro(trainseed)),
             niter = 10_000,
             callbackstate,
             callback,
         )
+        # if !isnothing(statename) && callbackstate.n % nsave == 0
+        #     # Save all states to resume training later
+        #     # First move all arrays to CPU
+        #     c = adapt(Array, callbackstate)
+        #     t = adapt(Array, trainstate)
+        #     jldsave(statename; callbackstate = c, trainstate = t)
+        # end
         θ = callbackstate.θmin # Use best θ instead of last θ
         prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
         jldsave(priorfiles[ig, ifil]; prior)
@@ -385,12 +390,10 @@ let
             displayref = false,
             nupdate = 10,
         )
-        (; optstate, θ, callbackstate) = train(;
+        (; trainstate, callbackstate) = train(;
             dataloader,
             loss,
-            optstate,
-            θ,
-            rng,
+            trainstate = (; optstate, θ, rng),
             niter = 2000,
             callbackstate,
             callback,

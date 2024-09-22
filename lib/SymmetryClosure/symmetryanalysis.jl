@@ -307,15 +307,13 @@ dotrain && let
             create_relerr_prior(m.closure, validset...);
             θ,
             displayref = true,
-            display_each_iteration = true, # Set to `true` if using CairoMakie
+            displayupdates = true, # Set to `true` if using CairoMakie
             nupdate = 20,
         )
-        (; optstate, θ, callbackstate) = train(;
+        (; trainstate, callbackstate) = train(;
             dataloader,
             loss,
-            optstate,
-            θ,
-            rng,
+            trainstate = (; optstate, θ, rng),
             niter = 10_000,
             callbackstate,
             callback,

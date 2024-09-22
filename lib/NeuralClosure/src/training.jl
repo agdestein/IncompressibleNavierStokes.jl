@@ -33,14 +33,7 @@ optimiser `opt` for `niter` iterations.
 Return the a new named tuple `(; opt, θ, callbackstate)` with
 updated state and parameters.
 """
-function train(;
-    dataloader,
-    loss,
-    trainstate,
-    niter = 100,
-    callback,
-    callbackstate,
-)
+function train(; dataloader, loss, trainstate, niter = 100, callback, callbackstate)
     for i = 1:niter
         (; optstate, Θ, rng) = trainstate
         batch, rng = dataloader(rng)
@@ -49,7 +42,7 @@ function train(;
         trainstate = (; optstate, θ, rng)
         callbackstate = callback(callbackstate, trainstate)
     end
-    (; callbackstate, trainstate)
+    (; trainstate, callbackstate)
 end
 
 """
@@ -255,9 +248,7 @@ function create_callback(
     displayfig = true,
     displayupdates = false,
     figname = nothing,
-    # statename = nothing,
     nupdate,
-    # nsave,
 )
     nstart = callbackstate.n
     obs = Observable([Point2f(0, 0)])
@@ -278,18 +269,11 @@ function create_callback(
             displayupdates && display(fig)
             isnothing(figname) || save(figname, fig)
             state = (; callbackstate..., hist)
-            if e < state.emin 
+            if e < state.emin
                 @reset state.θmin = θ
                 @reset state.emin = e
             end
         end
-        # if !isnothing(statename) && callbackstate.n % nsave == 0
-        #     # Save all states to resume training later
-        #     # First move all arrays to CPU
-        #     c = adapt(Array, callbackstate)
-        #     t = adapt(Array, trainstate)
-        #     jldsave(statename; callbackstate = c, trainstate = t)
-        # end
         callbackstate
     end
     (; callbackstate, callback)
