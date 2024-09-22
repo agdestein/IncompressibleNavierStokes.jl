@@ -279,57 +279,54 @@ end
 
 # Train
 let
-    ngrid, nfilter = size(io_train)
-    for ifil = 1:nfilter, ig = 1:ngrid
-        clean()
-        starttime = time()
-        @info "Training a-priori for ig = $ig, ifil = $ifil"
-        trainseed, validseed = splitseed(seeds.prior, 2) # Same seed for all training setups
-        dataloader = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device)
-        θ = T(1.0e0) * device(θ₀)
-        loss = create_loss_prior(mean_squared_error, closure)
-        opt = Adam(T(1.0e-3))
-        optstate = Optimisers.setup(opt, θ)
-        it = rand(Xoshiro(validseed), 1:size(io_valid[ig, ifil].u, params.D + 2), 50)
-        validset = device(map(v -> v[:, :, :, :, it], io_valid[ig, ifil]))
-        (; callbackstate, callback) = create_callback(
-            create_relerr_prior(closure, validset...);
-            θ,
-            displayref = true,
-            displayupdates = true, # Set to `true` if using CairoMakie
-            figname = joinpath(plotdir, "prior_ifilter$(ifil)_igrid$(ig).pdf"),
-            nupdate = 20,
-        )
-        trainstate = (; optstate, θ, rng = Xoshiro(trainseed))
-        base, ext = splitext(priorfiles[ig, ifil])
-        checkpointname = "$(base)_checkpoint.jld2"
-        icheck = 1
-        if false
-            # Resume from checkpoint
-            icheck, trainstate, callbackstate =
-                load(checkpointname, "icheck", "trainstate", "callbackstate")
-            trainstate = trainstate |> gpu_device()
-            @reset callbackstate.θmin = callbackstate.θmin |> gpu_device()
-        end
-        for ickeck = icheck:3
-            (; trainstate, callbackstate) = train(;
-                dataloader,
-                loss,
-                trainstate,
-                callbackstate,
-                callback,
-                niter = 1_000,
-            )
-            # Save all states to resume training later
-            # First move all arrays to CPU
-            c = callbackstate |> cpu_device()
-            t = trainstate |> cpu_device()
-            jldsave(checkpointname; icheck, callbackstate = c, trainstate = t)
-        end
-        θ = callbackstate.θmin # Use best θ instead of last θ
-        prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
-        jldsave(priorfiles[ig, ifil]; prior)
+    I = CartesianIndices(io_train)
+    itask = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
+    igrid, ifil = I[itask].I
+    # ngrid, nfilter = size(io_train)
+    # for ifil = 1:nfilter, ig = 1:ngrid
+    clean()
+    starttime = time()
+    @info "Training a-priori for ig = $ig, ifil = $ifil"
+    trainseed, validseed = splitseed(seeds.prior, 2) # Same seed for all training setups
+    dataloader = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device)
+    θ = T(1.0e0) * device(θ₀)
+    loss = create_loss_prior(mean_squared_error, closure)
+    opt = Adam(T(1.0e-3))
+    optstate = Optimisers.setup(opt, θ)
+    it = rand(Xoshiro(validseed), 1:size(io_valid[ig, ifil].u, params.D + 2), 50)
+    validset = device(map(v -> v[:, :, :, :, it], io_valid[ig, ifil]))
+    (; callbackstate, callback) = create_callback(
+        create_relerr_prior(closure, validset...);
+        θ,
+        displayref = true,
+        displayupdates = true, # Set to `true` if using CairoMakie
+        figname = joinpath(plotdir, "prior_ifilter$(ifil)_igrid$(ig).pdf"),
+        nupdate = 20,
+    )
+    trainstate = (; optstate, θ, rng = Xoshiro(trainseed))
+    base, ext = splitext(priorfiles[ig, ifil])
+    checkpointname = "$(base)_checkpoint.jld2"
+    icheck = 1
+    if false
+        # Resume from checkpoint
+        icheck, trainstate, callbackstate =
+            load(checkpointname, "icheck", "trainstate", "callbackstate")
+        trainstate = trainstate |> gpu_device()
+        @reset callbackstate.θmin = callbackstate.θmin |> gpu_device()
     end
+    for ickeck = icheck:3
+        (; trainstate, callbackstate) =
+            train(; dataloader, loss, trainstate, callbackstate, callback, niter = 1_000)
+        # Save all states to resume training later
+        # First move all arrays to CPU
+        c = callbackstate |> cpu_device()
+        t = trainstate |> cpu_device()
+        jldsave(checkpointname; icheck, callbackstate = c, trainstate = t)
+    end
+    θ = callbackstate.θmin # Use best θ instead of last θ
+    prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
+    jldsave(priorfiles[ig, ifil]; prior)
+    # end
     clean()
 end
 
