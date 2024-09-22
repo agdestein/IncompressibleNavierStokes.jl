@@ -287,7 +287,6 @@ let
             io_train[ig, ifil];
             batchsize = 50,
             device,
-            rng = Xoshiro(trainseed),
         )
         θ = T(1.0e0) * device(θ₀)
         loss = create_loss_prior(mean_squared_error, closure)
@@ -306,6 +305,7 @@ let
             loss,
             optstate,
             θ,
+            rng = Xoshiro(trainseed),
             niter = 10_000,
             ncallback = 20,
             callbackstate,
@@ -369,7 +369,7 @@ let
             nupdate = 2, # Time steps per loss evaluation
         )
         data = [(; u = d.data[ig, ifil].u, d.t) for d in data_train]
-        dataloader = create_dataloader_post(data; device, nunroll = 20, rng)
+        dataloader = create_dataloader_post(data; device, nunroll = 20)
         θ = copy(θ_cnn_prior[ig, ifil])
         opt = Adam(T(1.0e-3))
         optstate = Optimisers.setup(opt, θ)
@@ -393,6 +393,7 @@ let
             loss,
             optstate,
             θ,
+            rng,
             niter = 2000,
             ncallback = 10,
             callbackstate,

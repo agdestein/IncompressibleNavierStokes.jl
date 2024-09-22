@@ -3,28 +3,27 @@ Create dataloader that uses a batch of `batchsize` random samples from
 `data` at each evaluation.
 The batch is moved to `device`.
 """
-create_dataloader_prior(data; batchsize = 50, device = identity, rng) =
-    function dataloader()
-        x, y = data
-        nsample = size(x)[end]
-        d = ndims(x)
-        i = sort(shuffle(rng, 1:nsample)[1:batchsize])
-        xuse = device(Array(selectdim(x, d, i)))
-        yuse = device(Array(selectdim(y, d, i)))
-        xuse, yuse
-    end
+create_dataloader_prior(data; batchsize = 50, device = identity) = function dataloader(rng)
+    x, y = data
+    nsample = size(x)[end]
+    d = ndims(x)
+    i = sort(shuffle(rng, 1:nsample)[1:batchsize])
+    xuse = device(Array(selectdim(x, d, i)))
+    yuse = device(Array(selectdim(y, d, i)))
+    (xuse, yuse), rng
+end
 
 """
 Create trajectory dataloader.
 """
-create_dataloader_post(trajectories; nunroll = 10, device = identity, rng) =
-    function dataloader()
-        (; u, t) = rand(trajectories)
+create_dataloader_post(trajectories; nunroll = 10, device = identity) =
+    function dataloader(rng)
+        (; u, t) = rand(rng, trajectories)
         nt = length(t)
         @assert nt ≥ nunroll
         istart = rand(rng, 1:nt-nunroll)
         it = istart:istart+nunroll
-        (; u = device.(u[it]), t = t[it])
+        (; u = device.(u[it]), t = t[it]), rng
     end
 
 """
@@ -39,13 +38,14 @@ function train(;
     loss,
     optstate,
     θ,
+    rng,
     niter = 100,
     ncallback = 1,
     callback = (state, i, θ) -> println("Iteration $i of $niter"),
     callbackstate = nothing,
 )
     for i = 1:niter
-        batch = dataloader()
+        batch, rng = dataloader(rng)
         g, = gradient(θ -> loss(batch, θ), θ)
         optstate, θ = Optimisers.update!(optstate, θ, g)
         if i % ncallback == 0

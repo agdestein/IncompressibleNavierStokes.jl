@@ -69,7 +69,7 @@
         rng = Xoshiro(123)
         ig = 1
         for (im, m) in enumerate(models)
-            dataloader = create_dataloader_prior(io[ig]; batchsize = 10, rng)
+            dataloader = create_dataloader_prior(io[ig]; batchsize = 10)
             θ = m.θ₀
             loss = create_loss_prior(mean_squared_error, m.closure)
             opt = Adam(1.0e-3)
@@ -88,6 +88,7 @@
                 loss,
                 optstate,
                 θ,
+                rng,
                 niter = 10,
                 ncallback = 1,
                 callbackstate,
@@ -105,7 +106,7 @@
             psolver = psolver_spectral(setup)
             loss = create_loss_post(; setup, psolver, m.closure, nupdate = 1)
             snaps = [(; u = d.data[ig].u, d.t) for d in data]
-            dataloader = create_dataloader_post(snaps; nunroll = 5, rng)
+            dataloader = create_dataloader_post(snaps; nunroll = 5)
             θ = copy(m.θ₀)
             opt = Adam(1.0e-3)
             optstate = Optimisers.setup(opt, θ)
@@ -129,6 +130,7 @@
                 loss,
                 optstate,
                 θ,
+                rng,
                 niter = 3,
                 ncallback = 1,
                 callbackstate,

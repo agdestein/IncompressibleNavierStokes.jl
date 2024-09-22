@@ -290,13 +290,13 @@ end
 # Train
 dotrain = false
 dotrain && let
-    rng = Xoshiro(seeds.training)
     for (im, m) in enumerate(models), ig = 1:length(nles)
         @info "Training for $(m.name), grid $ig"
         clean()
         plotfile = "$plotdir/training_prior_$(m.name)_igrid$ig.pdf"
+        rng = Xoshiro(seeds.training)
         starttime = time()
-        dataloader = create_dataloader_prior(io_train[ig]; batchsize = 100, device, rng)
+        dataloader = create_dataloader_prior(io_train[ig]; batchsize = 100, device)
         θ = device(m.θ₀)
         loss = create_loss_prior(mean_squared_error, m.closure)
         opt = Adam(T(1.0e-3))
@@ -314,6 +314,7 @@ dotrain && let
             loss,
             optstate,
             θ,
+            rng,
             niter = 10_000,
             ncallback = 20,
             callbackstate,
