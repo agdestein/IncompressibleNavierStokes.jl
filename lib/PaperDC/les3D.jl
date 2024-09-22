@@ -245,20 +245,15 @@ closure.chain
 
 # Give the CNN a test run
 # Note: Data and parameters are stored on the CPU, and
-# must be moved to the GPU before running (`device`)
-closure(device(io_train[1, 1].u[:, :, :, :, 1:50]), device(θ₀));
-
-using NeuralClosure.Zygote
-
-g = let
-    u = device(io_train[1, 1].u[:, :, :, :, 1:50])
-    θ = device(θ₀)
-    g, = gradient(θ -> sum(closure(u, θ)), θ)
-    Array(g)
+# must be moved to the GPU before use (with `gpu_device`)
+let
+    using NeuralClosure.Zygote
+    u = io_train[1, 1].u[:, :, :, :, 1:50] |> gpu_device()
+    θ = θ₀ |> gpu_device()
+    closure(u, θ)
+    gradient(θ -> sum(closure(u, θ)), θ)
+    clean()
 end
-
-g = nothing
-clean()
 
 ########################################################################## #src
 
