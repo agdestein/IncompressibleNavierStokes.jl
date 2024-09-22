@@ -3,6 +3,7 @@ Neural closure modelling tools.
 """
 module NeuralClosure
 
+using Accessors
 using ComponentArrays: ComponentArray
 using DocStringExtensions
 using IncompressibleNavierStokes

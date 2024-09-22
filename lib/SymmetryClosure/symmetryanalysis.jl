@@ -308,6 +308,7 @@ dotrain && let
             θ,
             displayref = true,
             display_each_iteration = true, # Set to `true` if using CairoMakie
+            nupdate = 20,
         )
         (; optstate, θ, callbackstate) = train(;
             dataloader,
@@ -316,7 +317,6 @@ dotrain && let
             θ,
             rng,
             niter = 10_000,
-            ncallback = 20,
             callbackstate,
             callback,
         )

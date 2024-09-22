@@ -295,6 +295,7 @@ let
             θ,
             displayref = true,
             display_each_iteration = true, # Set to `true` if using CairoMakie
+            nupdate = 20,
         )
         (; optstate, θ, callbackstate) = train(;
             dataloader,
@@ -303,7 +304,6 @@ let
             θ,
             rng = Xoshiro(trainseed),
             niter = 10_000,
-            ncallback = 20,
             callbackstate,
             callback,
         )
@@ -383,6 +383,7 @@ let
             );
             θ,
             displayref = false,
+            nupdate = 10,
         )
         (; optstate, θ, callbackstate) = train(;
             dataloader,
@@ -391,7 +392,6 @@ let
             θ,
             rng,
             niter = 2000,
-            ncallback = 10,
             callbackstate,
             callback,
         )

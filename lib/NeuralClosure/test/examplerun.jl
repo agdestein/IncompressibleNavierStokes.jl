@@ -82,6 +82,7 @@
                 displayref = false,
                 displayfig = false,
                 display_each_iteration = false, # Set to `true` if using CairoMakie
+                nupdate = 1,
             )
             (; optstate, θ, callbackstate) = train(;
                 dataloader,
@@ -90,7 +91,6 @@
                 θ,
                 rng,
                 niter = 10,
-                ncallback = 1,
                 callbackstate,
                 callback,
             )
@@ -124,6 +124,7 @@
                 displayref = false,
                 displayfig = false,
                 display_each_iteration = false, # Set to `true` if using CairoMakie
+                nupdate = 1,
             )
             (; optstate, θ, callbackstate) = train(;
                 dataloader,
@@ -132,7 +133,6 @@
                 θ,
                 rng,
                 niter = 3,
-                ncallback = 1,
                 callbackstate,
                 callback,
             )

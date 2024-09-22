@@ -36,23 +36,20 @@ updated state and parameters.
 function train(;
     dataloader,
     loss,
-    optstate,
-    θ,
-    rng,
+    trainstate,
     niter = 100,
-    ncallback = 1,
-    callback = (state, i, θ) -> println("Iteration $i of $niter"),
-    callbackstate = nothing,
+    callback,
+    callbackstate,
 )
     for i = 1:niter
+        (; optstate, Θ, rng) = trainstate
         batch, rng = dataloader(rng)
         g, = gradient(θ -> loss(batch, θ), θ)
         optstate, θ = Optimisers.update!(optstate, θ, g)
-        if i % ncallback == 0
-            callbackstate = callback(callbackstate, i, θ)
-        end
+        trainstate = (; optstate, θ, rng)
+        callbackstate = callback(callbackstate, trainstate)
     end
-    (; optstate, θ, callbackstate)
+    (; callbackstate, trainstate)
 end
 
 """
@@ -247,36 +244,53 @@ At each callback, plot is updated and current error is printed.
 
 If `state` is nonempty, it also plots previous convergence.
 
-If not using interactive GLMakie window, set `display_each_iteration` to
+If not using interactive GLMakie window, set `displayupdates` to
 `true`.
 """
 function create_callback(
     err;
     θ,
-    callbackstate = (; θmin = θ, emin = eltype(θ)(Inf), hist = Point2f[]),
+    callbackstate = (; n = 0, θmin = θ, emin = eltype(θ)(Inf), hist = Point2f[]),
     displayref = true,
-    display_each_iteration = false,
     displayfig = true,
-    filename = nothing,
+    displayupdates = false,
+    figname = nothing,
+    # statename = nothing,
+    nupdate,
+    # nsave,
 )
-    istart = isempty(callbackstate.hist) ? 0 : Int(callbackstate.hist[end][1])
+    nstart = callbackstate.n
     obs = Observable([Point2f(0, 0)])
     fig = lines(obs; axis = (; title = "Relative prediction error", xlabel = "Iteration"))
     displayref && hlines!([1.0f0]; linestyle = :dash)
     obs[] = callbackstate.hist
     displayfig && display(fig)
-    function callback(state, i, θ)
-        e = err(θ)
-        @info "Iteration $i \trelative error: $e"
-        hist = push!(copy(state.hist), Point2f(istart + i, e))
-        obs[] = hist
-        # i < 30 || autolimits!(fig.axis)
-        autolimits!(fig.axis)
-        display_each_iteration && display(fig)
-        isnothing(filename) || save(filename, fig)
-        state = (; state..., hist)
-        e < state.emin && (state = (; state..., θmin = θ, emin = e))
-        state
+    function callback(callbackstate, trainstate)
+        @reset callbackstate.n += 1
+        if callbackstate.n % nupdate == 0
+            (; θ) = trainstate
+            e = err(θ)
+            @info "Iteration $n \trelative error: $e"
+            hist = push!(copy(callbackstate.hist), Point2f(nstart + n, e))
+            obs[] = hist
+            # n < 30 || autolimits!(fig.axis)
+            autolimits!(fig.axis)
+            displayupdates && display(fig)
+            isnothing(figname) || save(figname, fig)
+            state = (; callbackstate..., hist)
+            if e < state.emin 
+                @reset state.θmin = θ
+                @reset state.emin = e
+            end
+        end
+        # if !isnothing(statename) && callbackstate.n % nsave == 0
+        #     # Save all states to resume training later
+        #     # First move all arrays to CPU
+        #     c = adapt(Array, callbackstate)
+        #     t = adapt(Array, trainstate)
+        #     jldsave(statename; callbackstate = c, trainstate = t)
+        # end
+        callbackstate
     end
     (; callbackstate, callback)
 end
