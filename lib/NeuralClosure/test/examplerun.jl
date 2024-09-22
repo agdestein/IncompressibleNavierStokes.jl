@@ -83,11 +83,11 @@
                 displayfig = false,
                 display_each_iteration = false, # Set to `true` if using CairoMakie
             )
-            (; optstate, θ, callbackstate) = train(
+            (; optstate, θ, callbackstate) = train(;
                 dataloader,
                 loss,
                 optstate,
-                θ;
+                θ,
                 niter = 10,
                 ncallback = 1,
                 callbackstate,
@@ -124,11 +124,11 @@
                 displayfig = false,
                 display_each_iteration = false, # Set to `true` if using CairoMakie
             )
-            (; optstate, θ, callbackstate) = train(
+            (; optstate, θ, callbackstate) = train(;
                 dataloader,
                 loss,
                 optstate,
-                θ;
+                θ,
                 niter = 3,
                 ncallback = 1,
                 callbackstate,

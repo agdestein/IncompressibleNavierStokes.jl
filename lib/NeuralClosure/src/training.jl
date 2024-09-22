@@ -34,11 +34,11 @@ optimiser `opt` for `niter` iterations.
 Return the a new named tuple `(; opt, θ, callbackstate)` with
 updated state and parameters.
 """
-function train(
+function train(;
     dataloader,
     loss,
     optstate,
-    θ;
+    θ,
     niter = 100,
     ncallback = 1,
     callback = (state, i, θ) -> println("Iteration $i of $niter"),

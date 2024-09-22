@@ -296,7 +296,7 @@ dotrain && let
         clean()
         plotfile = "$plotdir/training_prior_$(m.name)_igrid$ig.pdf"
         starttime = time()
-        d = create_dataloader_prior(io_train[ig]; batchsize = 100, device, rng)
+        dataloader = create_dataloader_prior(io_train[ig]; batchsize = 100, device, rng)
         θ = device(m.θ₀)
         loss = create_loss_prior(mean_squared_error, m.closure)
         opt = Adam(T(1.0e-3))
@@ -309,11 +309,11 @@ dotrain && let
             displayref = true,
             display_each_iteration = true, # Set to `true` if using CairoMakie
         )
-        (; optstate, θ, callbackstate) = train(
-            [d],
+        (; optstate, θ, callbackstate) = train(;
+            dataloader,
             loss,
             optstate,
-            θ;
+            θ,
             niter = 10_000,
             ncallback = 20,
             callbackstate,

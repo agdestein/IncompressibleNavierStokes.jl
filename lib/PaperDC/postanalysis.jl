@@ -286,11 +286,11 @@ let
             displayref = true,
             display_each_iteration = false, # Set to `true` if using CairoMakie
         )
-        (; optstate, θ, callbackstate) = train(
+        (; optstate, θ, callbackstate) = train(;
             dataloader,
             loss,
             optstate,
-            θ;
+            θ,
             niter = 10_000,
             ncallback = 20,
             callbackstate,
@@ -373,11 +373,11 @@ let
             θ,
             displayref = false,
         )
-        (; optstate, θ, callbackstate) = train(
+        (; optstate, θ, callbackstate) = train(;
             dataloader,
             loss,
             optstate,
-            θ;
+            θ,
             niter = 2000,
             ncallback = 10,
             callbackstate,
