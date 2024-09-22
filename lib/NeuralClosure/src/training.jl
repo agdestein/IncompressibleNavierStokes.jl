@@ -35,7 +35,7 @@ updated state and parameters.
 """
 function train(; dataloader, loss, trainstate, niter = 100, callback, callbackstate)
     for i = 1:niter
-        (; optstate, Θ, rng) = trainstate
+        (; optstate, θ, rng) = trainstate
         batch, rng = dataloader(rng)
         g, = gradient(θ -> loss(batch, θ), θ)
         optstate, θ = Optimisers.update!(optstate, θ, g)
@@ -250,7 +250,6 @@ function create_callback(
     figname = nothing,
     nupdate,
 )
-    nstart = callbackstate.n
     obs = Observable([Point2f(0, 0)])
     fig = lines(obs; axis = (; title = "Relative prediction error", xlabel = "Iteration"))
     displayref && hlines!([1.0f0]; linestyle = :dash)
@@ -258,20 +257,21 @@ function create_callback(
     displayfig && display(fig)
     function callback(callbackstate, trainstate)
         @reset callbackstate.n += 1
-        if callbackstate.n % nupdate == 0
+        (; n, hist) = callbackstate
+        if n % nupdate == 0
             (; θ) = trainstate
             e = err(θ)
             @info "Iteration $n \trelative error: $e"
-            hist = push!(copy(callbackstate.hist), Point2f(nstart + n, e))
+            hist = push!(copy(hist), Point2f(n, e))
+            @reset callbackstate.hist = hist
             obs[] = hist
             # n < 30 || autolimits!(fig.axis)
             autolimits!(fig.axis)
             displayupdates && display(fig)
             isnothing(figname) || save(figname, fig)
-            state = (; callbackstate..., hist)
-            if e < state.emin
-                @reset state.θmin = θ
-                @reset state.emin = e
+            if e < callbackstate.emin
+                @reset callbackstate.θmin = θ
+                @reset callbackstate.emin = e
             end
         end
         callbackstate

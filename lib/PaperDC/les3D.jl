@@ -17,10 +17,11 @@ end                           #src
 
 @info "Launching les3d.jl"
 
+using Accessors
 using Adapt
 using CUDA
 # using GLMakie
-# using CairoMakie
+using CairoMakie
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes.RKMethods
 using JLD2
@@ -256,6 +257,7 @@ g = let
     Array(g)
 end
 
+g = nothing
 clean()
 
 ########################################################################## #src
@@ -295,15 +297,21 @@ let
             θ,
             displayref = true,
             displayupdates = true, # Set to `true` if using CairoMakie
+            figname = joinpath(plotdir, "prior_ifilter$(ifil)_igrid$(ig).pdf"),
             nupdate = 20,
         )
         trainstate = (; optstate, θ, rng = Xoshiro(trainseed))
         base, ext = splitext(priorfiles[ig, ifil])
         checkpointname = "$(base)_checkpoint.jld2"
-        # i, trainstate, callbackstate = load(checkpointname, "i", "trainstate", "callbackstate")
-        # trainstate = trainstate |> device
-        # callbackstate = (; callbackstate, θmin = device(callbackstate.θmin))
-        for i = 1:10
+        icheck = 1
+        if false
+            # Resume from checkpoint
+            icheck, trainstate, callbackstate =
+                load(checkpointname, "icheck", "trainstate", "callbackstate")
+            trainstate = trainstate |> gpu_device()
+            @reset callbackstate.θmin = callbackstate.θmin |> gpu_device()
+        end
+        for ickeck = icheck:3
             (; trainstate, callbackstate) = train(;
                 dataloader,
                 loss,
@@ -314,9 +322,9 @@ let
             )
             # Save all states to resume training later
             # First move all arrays to CPU
-            c = adapt(Array, callbackstate)
-            t = adapt(Array, trainstate)
-            jldsave(checkpointname; i, callbackstate = c, trainstate = t)
+            c = callbackstate |> cpu_device()
+            t = trainstate |> cpu_device()
+            jldsave(checkpointname; icheck, callbackstate = c, trainstate = t)
         end
         θ = callbackstate.θmin # Use best θ instead of last θ
         prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
