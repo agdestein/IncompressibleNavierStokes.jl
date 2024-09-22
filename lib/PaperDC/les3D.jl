@@ -297,27 +297,35 @@ let
             displayupdates = true, # Set to `true` if using CairoMakie
             nupdate = 20,
         )
-        (; trainstate, callbackstate) = train(;
-            dataloader,
-            loss,
-            trainstate = (; optstate, θ, rng = Xoshiro(trainseed)),
-            niter = 10_000,
-            callbackstate,
-            callback,
-        )
-        # if !isnothing(statename) && callbackstate.n % nsave == 0
-        #     # Save all states to resume training later
-        #     # First move all arrays to CPU
-        #     c = adapt(Array, callbackstate)
-        #     t = adapt(Array, trainstate)
-        #     jldsave(statename; callbackstate = c, trainstate = t)
-        # end
+        trainstate = (; optstate, θ, rng = Xoshiro(trainseed))
+        base, ext = splitext(priorfiles[ig, ifil])
+        checkpointname = "$(base)_checkpoint.jld2"
+        # i, trainstate, callbackstate = load(checkpointname, "i", "trainstate", "callbackstate")
+        # trainstate = trainstate |> device
+        # callbackstate = (; callbackstate, θmin = device(callbackstate.θmin))
+        for i = 1:10
+            (; trainstate, callbackstate) = train(;
+                dataloader,
+                loss,
+                trainstate,
+                callbackstate,
+                callback,
+                niter = 1_000,
+            )
+            # Save all states to resume training later
+            # First move all arrays to CPU
+            c = adapt(Array, callbackstate)
+            t = adapt(Array, trainstate)
+            jldsave(checkpointname; i, callbackstate = c, trainstate = t)
+        end
         θ = callbackstate.θmin # Use best θ instead of last θ
         prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
         jldsave(priorfiles[ig, ifil]; prior)
     end
     clean()
 end
+
+exit()
 
 # Load learned parameters and training times
 prior = load.(priorfiles, "prior")
