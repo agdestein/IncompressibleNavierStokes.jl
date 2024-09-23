@@ -74,10 +74,9 @@ function create_loss_post(;
     psolver,
     closure,
     nupdate = 1,
-    projectorder = :last,
 )
     closure_model = wrappedclosure(closure, setup)
-    setup = (; setup..., closure_model, projectorder)
+    setup = (; setup..., closure_model)
     (; dimension, Iu) = setup.grid
     D = dimension()
     function loss_post(data, θ)
@@ -119,9 +118,8 @@ function create_relerr_post(;
     psolver,
     closure_model,
     nupdate = 1,
-    projectorder = :last,
 )
-    setup = (; setup..., closure_model, projectorder)
+    setup = (; setup..., closure_model)
     (; dimension, Iu) = setup.grid
     D = dimension()
     (; u, t) = data
