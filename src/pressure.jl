@@ -319,9 +319,8 @@ function psolver_spectral(setup)
     k = ntuple(d -> reshape(0:Np[d]-1, ntuple(Returns(1), d - 1)..., :), D)
 
     Ahat = fill!(similar(x[1], Complex{T}, Np), 0)
-    Tπ = T(π) # CUDA doesn't like pi
     for d = 1:D
-        @. Ahat += sin(k[d] * Tπ / Np[d])^2 / Δx[d]^2
+        @. Ahat += sinpi(k[d] / Np[d])^2 / Δx[d]^2
     end
 
     # Scale with Δx*Δy*Δz, since we solve the PDE in integrated form
