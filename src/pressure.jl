@@ -391,9 +391,8 @@ function psolver_spectral_lowmemory(setup)
 
     k = 0:Np[1]-1
 
-    Tπ = T(π) # CUDA doesn't like pi
     ahat = fill!(similar(x[1], Np[1]), 0)
-    @. ahat = 4 * Δx^D * sin(k * Tπ / Np[1])^2 / Δx^2
+    @. ahat = 4 * Δx^D * sinpi(k / Np[1])^2 / Δx^2
 
     # Placeholders for intermediate results
     phat = fill!(similar(x[1], Complex{T}, Np), 0)
