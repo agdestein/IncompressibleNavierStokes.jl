@@ -374,7 +374,7 @@ trainpost = true
 trainpost && let
     itask = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
     # ig, ifil, iorder = I_post[itask].I
-    ig, ifil, iorder = 2, 2, 2
+    # ig, ifil, iorder = 1, 2, 2
     # ngrid, nfilter = size(io_train)
     # for iorder = 1:2, ifil = 1:nfilter, ig = 1:ngrid
     clean()
@@ -409,6 +409,7 @@ trainpost && let
             nupdate = 2,
         );
         θ,
+        figname = "$plotdir/post_$(iorder)_$(ifil)_$(ig).pdf",
         displayref = false,
         nupdate = 5,
     )
@@ -434,7 +435,7 @@ trainpost && let
     end
     θ = callbackstate.θmin # Use best θ instead of last θ
     post = (; θ = Array(θ), comptime = time() - starttime)
-    jldsave(postfiles[iorder, ifil, ig]; post)
+    jldsave(postfiles[ig, ifil, iorder]; post)
     clean()
 end
 
