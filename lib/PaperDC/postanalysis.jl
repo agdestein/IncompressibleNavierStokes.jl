@@ -382,7 +382,7 @@ let
         )
         θ = callbackstate.θmin # Use best θ instead of last θ
         post = (; θ = Array(θ), comptime = time() - starttime)
-        jldsave(postfiles[iorder, ifil, ig]; post)
+        jldsave(postfiles[ig, ifil, iorder]; post)
     end
     clean()
 end

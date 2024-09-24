@@ -390,7 +390,11 @@ trainpost && let
         closure,
         nupdate = 2, # Time steps per loss evaluation
     )
-    dataloader = create_dataloader_post(map(d -> (; u = d.data[ig, ifil].u, d.t) , data_train); device, nunroll = 5)
+    dataloader = create_dataloader_post(
+        map(d -> (; u = d.data[ig, ifil].u, d.t), data_train);
+        device,
+        nunroll = 5,
+    )
     # θ = copy(θ_cnn_prior[ig, ifil])
     θ = device(θ₀)
     opt = Adam(T(1.0e-3))
@@ -409,7 +413,7 @@ trainpost && let
             nupdate = 2,
         );
         θ,
-        figname = "$plotdir/post_$(iorder)_$(ifil)_$(ig).pdf",
+        figname = "$plotdir/post_iorder$(iorder)_ifilter$(ifil)_igrid$(ig).pdf",
         displayref = false,
         nupdate = 5,
     )
@@ -554,12 +558,14 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
 # ### Compute a-posteriori errors
 
 (; e_nm, e_smag, e_cnn, e_cnn_post) = let
+    nfilter = length(params.filters)
+    ngrid = length(params.nles)
     e_nm = zeros(T, size(data_test[1].data)...)
     e_smag = zeros(T, size(data_test[1].data)..., 2)
     e_cnn = zeros(T, size(data_test[1].data)..., 2)
     e_cnn_post = zeros(T, size(data_test[1].data)..., 2)
-    for iorder = 1:2, ifil = 1:2, ig = 1:size(data_test[1].data, 1)
-        println("iorder = $iorder, ifil = $ifil, ig = $ig")
+    for iorder = 1:2, ifil = 1:nfilter, ig = 1:ngrid
+        @info "Computing a-posteriori errors: iorder = $iorder, ifil = $ifil, ig = $ig"
         projectorder = ProjectOrder.T(iorder)
         setup = setups[ig]
         psolver = psolver_spectral(setup)
@@ -766,7 +772,7 @@ kineticenergy = let
     ke_cnn_prior = template(ngrid, nfilter, 2)
     ke_cnn_post = template(ngrid, nfilter, 2)
     for iorder = 1:2, ifil = 1:nfilter, ig = 1:ngrid
-        println("iorder = $iorder, ifil = $ifil, ig = $ig")
+        println("Computing kinetic energy: iorder = $iorder, ifil = $ifil, ig = $ig")
         projectorder = ProjectOrder.T(iorder)
         setup = setups[ig]
         psolver = psolver_spectral(setup)
@@ -852,7 +858,7 @@ CairoMakie.activate!()
 # GLMakie.closeall()
 with_theme(; palette) do
     for iorder = 1:2, ifil = 1:2, igrid = 1:2
-        println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
+        println("Plotting energy evolution: iorder = $iorder, ifil = $ifil, igrid = $igrid")
         lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
         nles = params.nles[igrid]
@@ -1060,7 +1066,7 @@ ufinal = let
     u_cnn_post = fill(temp, ngrid, nfilter, 3)
     for iorder = 1:2, ifil = 1:nfilter, igrid = 1:ngrid
         clean()
-        println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
+        @info "Computing test solutions: iorder = $iorder, ifil = $ifil, igrid = $igrid"
         projectorder = ProjectOrder.T(iorder)
         t = data_test[1].t
         setup = setups[igrid]
