@@ -27,15 +27,13 @@ inflow(dim, x, y, t) = sinpi(sinpi(t / 6) / 6 + (dim == 1) / 2)
 boundary_conditions = ((DirichletBC(inflow), PressureBC()), (PressureBC(), PressureBC()))
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
-bodyforce = let
-    xc, yc = 2.0, 0.0 # Disk center
-    D = 1.0           # Disk diameter
-    δ = 0.11          # Disk thickness
-    C = 0.2           # Thrust coefficient
-    c = C / (D * δ)   # Normalize
-    inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
-    bodyforce(dim, x, y, t) = -c * (dim == 1) * inside(x, y)
-end
+xc, yc = 2.0, 0.0 # Disk center
+D = 1.0           # Disk diameter
+δ = 0.11          # Disk thickness
+C = 0.2           # Thrust coefficient
+c = C / (D * δ)   # Normalize
+inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
+bodyforce(dim, x, y, t) = -c * (dim == 1) * inside(x, y)
 
 # Build setup
 setup = Setup(; x, Re = 100.0, boundary_conditions, bodyforce, issteadybodyforce = true);
