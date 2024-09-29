@@ -106,7 +106,6 @@ function observefield(
             psolver = default_psolver(setup)
         end
         F = vectorfield(setup)
-        div = scalarfield(setup)
         p = scalarfield(setup)
     elseif fieldname == :Dfield
         if isnothing(psolver)
@@ -114,7 +113,6 @@ function observefield(
             psolver = default_psolver(setup)
         end
         F = vectorfield(setup)
-        div = scalarfield(setup)
         p = scalarfield(setup)
         F = vectorfield(setup)
         d = scalarfield(setup)
@@ -157,9 +155,9 @@ function observefield(
         elseif fieldname == :streamfunction
             get_streamfunction(setup, u, t)
         elseif fieldname == :pressure
-            pressure!(p, u, temp, t, setup; psolver, F, div)
+            pressure!(p, u, temp, t, setup; psolver, F)
         elseif fieldname == :Dfield
-            pressure!(p, u, temp, t, setup; psolver, F, div)
+            pressure!(p, u, temp, t, setup; psolver, F)
             Dfield!(d, G, p, setup)
             din = view(d, Ip)
             @. din = log(max(logtol, din))
