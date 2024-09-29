@@ -4,7 +4,8 @@
 # turbine blade in a wall-less domain. The blade is modeled as a uniform body
 # force on a thin rectangle.
 
-# We start by loading packages.
+# ## Packages
+#
 # A [Makie](https://github.com/JuliaPlots/Makie.jl) plotting backend is needed
 # for plotting. `GLMakie` creates an interactive window (useful for real-time
 # plotting), but does not work when building this example on GitHub.
@@ -14,9 +15,7 @@
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-# Output directory
-outdir = joinpath(@__DIR__, "output", "Actuator2D")
-ispath(outdir) || mkpath(outdir)
+# ## Setup
 
 # A 2D grid is a Cartesian product of two vectors
 n = 40
@@ -24,34 +23,28 @@ x = LinRange(0.0, 10.0, 5n + 1), LinRange(-2.0, 2.0, 2n + 1)
 plotgrid(x...; figure = (; size = (600, 300)))
 
 # Boundary conditions
-boundary_conditions = (
-    ## x left, x right
-    (
-        ## Unsteady BC requires time derivatives
-        DirichletBC((dim, x, y, t) -> sin(π / 6 * sin(π / 6 * t) + π / 2 * (dim == 1))),
-        PressureBC(),
-    ),
-
-    ## y rear, y front
-    (PressureBC(), PressureBC()),
-)
+inflow(dim, x, y, t) = sinpi(sinpi(t / 6) / 6 + (dim == 1) / 2)
+boundary_conditions = ((DirichletBC(inflow), PressureBC()), (PressureBC(), PressureBC()))
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
-xc, yc = 2.0, 0.0 # Disk center
-D = 1.0           # Disk diameter
-δ = 0.11          # Disk thickness
-Cₜ = 0.2          # Thrust coefficient
-cₜ = Cₜ / (D * δ)
-inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
-bodyforce(dim, x, y, t) = dim == 1 ? -cₜ * inside(x, y) : 0.0
+bodyforce = let
+    xc, yc = 2.0, 0.0 # Disk center
+    D = 1.0           # Disk diameter
+    δ = 0.11          # Disk thickness
+    C = 0.2           # Thrust coefficient
+    c = C / (D * δ)   # Normalize
+    inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
+    bodyforce(dim, x, y, t) = -c * (dim == 1) * inside(x, y)
+end
 
-# Build setup and assemble operators
+# Build setup
 setup = Setup(; x, Re = 100.0, boundary_conditions, bodyforce, issteadybodyforce = true);
 
 # Initial conditions (extend inflow)
-ustart = velocityfield(setup, (dim, x, y) -> dim == 1 ? 1.0 : 0.0);
+ustart = velocityfield(setup, (dim, x, y) -> inflow(dim, x, y, 0.0))
 
-# Solve unsteady problem
+# ## Solve unsteady problem
+
 state, outputs = solve_unsteady(;
     setup,
     ustart,
@@ -60,16 +53,6 @@ state, outputs = solve_unsteady(;
     Δt = 0.05,
     processors = (
         rtp = realtimeplotter(; setup, size = (600, 300), nupdate = 5),
-        ## ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 1),
-        ## espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 1),
-        ## anim = animator(;
-        ##     setup,
-        ##     path = joinpath(outdir, "solution.mp4"),
-        ##     size = (600, 300),
-        ##     nupdate = 5,
-        ## ),
-        ## vtk = vtk_writer(; setup, nupdate = 10, dir = "$outdir", filename = "solution"),
-        ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 24),
     ),
 );
@@ -79,11 +62,6 @@ state, outputs = solve_unsteady(;
 #md # ```
 
 # ## Post-process
-#
-# We may visualize or export the computed fields
-
-# Export to VTK
-save_vtk(state; setup, filename = joinpath(outdir, "solution"))
 
 # We create a box to visualize the actuator.
 box = (
@@ -105,3 +83,11 @@ fig
 fig = fieldplot(state; setup, size = (600, 300), fieldname = :vorticity)
 lines!(box...; color = :red)
 fig
+
+#md # ## Copy-pasteable code
+#md #
+#md # Below is the full code for this example stripped of comments and output.
+#md #
+#md # ```julia
+#md # CODE_CONTENT
+#md # ```

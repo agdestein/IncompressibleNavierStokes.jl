@@ -124,3 +124,11 @@ fieldplot(state; setup, fieldname = :vorticity)
 ## outputs.vtk
 ## outputs.field
 outputs.log
+
+#md # ## Copy-pasteable code
+#md #
+#md # Below is the full code for this example stripped of comments and output.
+#md #
+#md # ```julia
+#md # CODE_CONTENT
+#md # ```

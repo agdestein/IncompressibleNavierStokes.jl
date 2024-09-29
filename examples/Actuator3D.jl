@@ -99,3 +99,11 @@ outputs.rtp
 
 # Export to VTK
 save_vtk(state; setup, filename = joinpath(outdir, "solution"))
+
+#md # ## Copy-pasteable code
+#md #
+#md # Below is the full code for this example stripped of comments and output.
+#md #
+#md # ```julia
+#md # CODE_CONTENT
+#md # ```

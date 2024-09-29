@@ -57,11 +57,16 @@ examples = [
 output = "examples/generated"
 outputdir = joinpath(@__DIR__, "src", output)
 ## rm(outputdir; recursive = true)
+scriptdir = mktempdir()
 for (run, name) in examples
     inputfile = joinpath(@__DIR__, "..", name * ".jl")
+    script = Literate.script(inputfile, scriptdir; config = Dict("credit" => false))
+    code = strip(read(script, String))
+    codepair = "CODE_CONTENT" => code
+    replacefunc(pairs...) = content -> replace(content, pairs...)
     if run
         # With code execution blocks
-        Literate.markdown(inputfile, outputdir)
+        Literate.markdown(inputfile, outputdir; postprocess = replacefunc(codepair))
     else
         # Turn off code execution.
         # Note: Literate has a `documenter = false` option, but this would also remove
@@ -73,7 +78,7 @@ for (run, name) in examples
             preprocess = content ->
                 "# *Note: Output is not generated for this example (to save resources on GitHub).*\n\n" *
                 content,
-            postprocess = content -> replace(content, r"@example.*" => "julia"),
+            postprocess = replacefunc(codepair, r"@example.*" => "julia"),
         )
     end
 end

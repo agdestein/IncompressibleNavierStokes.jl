@@ -93,3 +93,11 @@ fig
 
 # Save figure
 save(joinpath(outdir, "convergence.png"), fig)
+
+#md # ## Copy-pasteable code
+#md #
+#md # Below is the full code for this example stripped of comments and output.
+#md #
+#md # ```julia
+#md # CODE_CONTENT
+#md # ```

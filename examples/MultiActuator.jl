@@ -134,3 +134,11 @@ fig
 fig = fieldplot(state; setup, size = (600, 300), fieldname = :vorticity)
 lines!.(boxes; color = :red);
 fig
+
+#md # ## Copy-pasteable code
+#md #
+#md # Below is the full code for this example stripped of comments and output.
+#md #
+#md # ```julia
+#md # CODE_CONTENT
+#md # ```

@@ -65,3 +65,11 @@ state, outputs = solve_unsteady(;
 #md # ```@raw html
 #md # <video src="/RayleighTaylor2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>
 #md # ```
+
+#md # ## Copy-pasteable code
+#md #
+#md # Below is the full code for this example stripped of comments and output.
+#md #
+#md # ```julia
+#md # CODE_CONTENT
+#md # ```
