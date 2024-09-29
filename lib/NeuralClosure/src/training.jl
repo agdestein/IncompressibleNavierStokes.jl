@@ -241,9 +241,13 @@ If not using interactive GLMakie window, set `displayupdates` to
 function create_callback(
     err;
     θ,
-    callbackstate = (; n = 0, θmin = θ, emin = eltype(θ)(Inf), hist = Point2f[],
-    ctime = time(),
-                    ),
+    callbackstate = (;
+        n = 0,
+        θmin = θ,
+        emin = eltype(θ)(Inf),
+        hist = Point2f[],
+        ctime = time(),
+    ),
     displayref = true,
     displayfig = true,
     displayupdates = false,
