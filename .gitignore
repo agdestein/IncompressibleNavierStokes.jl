@@ -10,9 +10,7 @@
 /scratch/
 /Paper/
 *output/
-
-# Vim swap
 *.swp
-
-# Mac OS
+*.un~
 *.DS_Store
+*.out
