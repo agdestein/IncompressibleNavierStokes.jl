@@ -17,7 +17,7 @@ defineProps<Props>();
 <template>
     <div class="img-box">
         <a :href="href">
-            <img :src="withBase(src)" height="150px" alt="">
+            <img :src="withBase(src)" heigth="100px" alt="">
             <div class="transparent-box1">
                 <div class="caption">
                     <h2>{{ caption }}</h2>
@@ -37,8 +37,8 @@ defineProps<Props>();
     box-sizing: content-box;
     border-radius: 14px;
     margin: 20px;
-    height: 350px;
-    width: 250px;
+    height: 230px;
+    width: 230px;
     overflow: hidden;
     display: inline-block;
     color: white;
@@ -78,8 +78,8 @@ defineProps<Props>();
 }
 
 .transparent-box1 {
-    height: 250px;
-    width: 250px;
+    height: 160px;
+    width: 230px;
     background-color: transparent;
     position: absolute;
     top: 0;
@@ -88,11 +88,11 @@ defineProps<Props>();
 }
 
 .transparent-box2 {
-    height: 100px;
-    width: 250px;
+    height: 70px;
+    width: 230px;
     background-color: transparent;
     position: absolute;
-    top: 250px;
+    top: 160px;
     left: 0;
     transition: background-color 0.3s ease;
 }

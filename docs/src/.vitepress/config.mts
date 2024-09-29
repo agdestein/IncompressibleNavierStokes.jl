@@ -61,54 +61,7 @@ export default defineConfig({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Getting Started', link: '/getting_started' },
-      {
-        text: 'Examples',
-        items: [
-          { text: 'Examples', link: '/examples/' },
-          {
-            text: 'Simple flows',
-            items: [
-              { text: 'Decaying Turbulunce (2D)', link: '/examples/generated/DecayingTurbulence2D' },
-              { text: 'Decaying Turbulunce (3D)', link: '/examples/generated/DecayingTurbulence3D' },
-              { text: 'Taylor-Green Vortex (2D)', link: '/examples/generated/TaylorGreenVortex2D' },
-              { text: 'Taylor-Green Vortex (3D)', link: '/examples/generated/TaylorGreenVortex3D' },
-              { text: 'Kolmogorov flow (2D)', link: '/examples/generated/Kolmogorov2D' },
-              { text: 'Shear Layer (2D)', link: '/examples/generated/ShearLayer2D' },
-              { text: 'Plane jets (2D)', link: '/examples/generated/PlaneJets2D' },
-            ],
-          },
-          {
-            text: 'Mixed boundary conditions',
-            items: [
-              { text: 'Actuator (2D)', link: '/examples/generated/Actuator2D' },
-              { text: 'Actuator (3D)', link: '/examples/generated/Actuator3D' },
-              { text: 'Backward Facing Step (2D)', link: '/examples/generated/BackwardFacingStep2D' },
-              { text: 'Backward Facing Step (3D)', link: '/examples/generated/BackwardFacingStep3D' },
-              { text: 'Lid-Driven Cavity (2D)', link: '/examples/generated/LidDrivenCavity2D' },
-              { text: 'Lid-Driven Cavity (3D)', link: '/examples/generated/LidDrivenCavity3D' },
-              { text: 'Multiple actuators (2D)', link: '/examples/generated/MultiActuator' },
-              { text: 'Planar Mixing (2D)', link: '/examples/generated/PlanarMixing2D' },
-            ],
-          },
-          {
-            text: 'With temperature field',
-            items: [
-              { text: 'Rayleigh-Bénard (2D)', link: '/examples/generated/RayleighBenard2D' },
-              { text: 'Rayleigh-Bénard (3D)', link: '/examples/generated/RayleighBenard3D' },
-              { text: 'Rayleigh-Taylor (2D)', link: '/examples/generated/RayleighTaylor2D' },
-              { text: 'Rayleigh-Taylor (3D)', link: '/examples/generated/RayleighTaylor3D' },
-            ],
-          },
-          {
-            text: 'Neural closure models',
-            items: [
-              { text: 'Filter analysis', link: '/examples/generated/prioranalysis' },
-              { text: 'CNN closures', link: '/examples/generated/postanalysis' },
-              { text: 'Equivariant closures', link: '/examples/generated/symmetryanalysis' },
-            ],
-          },
-        ],
-      },
+      { text: 'Examples', link: '/examples/', activeMatch: '/examples/.*' },
       {
         text: 'Manual',
         items: [
@@ -158,9 +111,8 @@ export default defineConfig({
     ],
     sidebar: {
       "/examples/": {
-        text: 'Examples',
         items: [
-          { text: 'Examples', link: '/examples' },
+          { text: 'Examples gallery', link: '/examples/' },
           {
             text: 'Simple flows',
             items: [
