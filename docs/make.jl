@@ -4,6 +4,11 @@ localdev = haskey(ENV, "LOCALDEV")
 # Get access to example dependencies
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 
+# Using the default GitHubActionsLogger currently fails on v1.11
+# https://github.com/julia-actions/GitHubActions.jl/pull/34
+using Logging
+global_logger(ConsoleLogger())
+
 using IncompressibleNavierStokes
 using NeuralClosure
 using Literate
