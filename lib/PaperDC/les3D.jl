@@ -289,7 +289,7 @@ trainprior && let
     @info "Training a-priori for ig = $ig, ifil = $ifil"
     trainseed, validseed = splitseed(seeds.prior, 2) # Same seed for all training setups
     dataloader = create_dataloader_prior(io_train[ig, ifil]; batchsize = 20, device)
-    θ = T(1.0) * device(θ₀)
+    θ = device(θ₀)
     loss = create_loss_prior(mean_squared_error, closure)
     opt = Adam(T(1.0e-3))
     optstate = Optimisers.setup(opt, θ)

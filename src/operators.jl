@@ -48,6 +48,9 @@ struct Offset{D} end
 
 @inline (::Offset{D})(α) where {D} = CartesianIndex(ntuple(β -> β == α ? 1 : 0, D))
 
+"Get tuple of all unit vectors as Cartesian indices."
+unit_cartesian_indices(D) = ntuple(α -> Offset{D}()(α), D)
+
 """
 Average scalar field `ϕ` in the `α`-direction.
 """
