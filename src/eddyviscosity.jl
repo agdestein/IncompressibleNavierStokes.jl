@@ -1,4 +1,4 @@
-function strain_natural!(S, u::NTuple{2}, θ, setup)
+function strain_natural!(S, u, θ, setup)
     (; grid, workgroupsize) = setup
     (; dimension, Np, Ip, Δ, Δu) = grid
     @kernel function S!(S, u, I0::CartesianIndex{2})
