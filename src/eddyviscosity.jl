@@ -23,10 +23,10 @@ end
     S.xy[I] = (∂u∂y + ∂v∂x) / 2
 end
 
-@kernel function strain_natural_kernel!(S, u, I0::CartesianIndex{3}, Δ, Δu)
+@kernel function strain_natural_kernel!(S, uu, I0::CartesianIndex{3}, Δ, Δu)
     I = @index(Global, Cartesian)
     I = I + I0
-    u, v, w = u[1], u[2], u[3]
+    u, v, w = uu[1], uu[2], uu[3]
     ex, ey, ez = unit_cartesian_indices(3)
     Δux, Δuy, Δuz = Δu[1][I[1]], Δ[2][I[2]], Δ[3][I[3]]
     Δvx, Δvy, Δvz = Δ[1][I[1]], Δu[2][I[2]], Δ[3][I[3]]
