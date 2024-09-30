@@ -89,9 +89,9 @@ function apply_eddy_viscosity!(σ, visc, setup)
         Δux, Δuy = Δu[1][I[1]], Δu[2][I[2]]
         # TODO: Add interpolation weigths here
         visc_xy = (visc[I] + visc[I+ex] + visc[I+ey] + visc[I+ex+ey]) / 4
-        σ.xx[I] = visc[I] * s.xx[I]
-        σ.yy[I] = visc[I] * s.yy[I]
-        σ.xy[I] = visc_xy * s.xy[I]
+        σ.xx[I] = 2 * visc[I] * s.xx[I]
+        σ.yy[I] = 2 * visc[I] * s.yy[I]
+        σ.xy[I] = 2 * visc_xy * s.xy[I]
     end
     @kernel function apply!(σ, visc, I0::CartesianIndex{3})
         I = @index(Global, Cartesian)
@@ -103,12 +103,12 @@ function apply_eddy_viscosity!(σ, visc, setup)
         visc_xy = (visc[I] + visc[I+ex] + visc[I+ey] + visc[I+ex+ey]) / 4
         visc_xz = (visc[I] + visc[I+ex] + visc[I+ez] + visc[I+ex+ez]) / 4
         visc_yz = (visc[I] + visc[I+ey] + visc[I+ez] + visc[I+ey+ez]) / 4
-        σ.xx[I] = visc[I] * s.xx[I]
-        σ.yy[I] = visc[I] * s.yy[I]
-        σ.zz[I] = visc[I] * s.zz[I]
-        σ.xy[I] = visc_xy * s.xy[I]
-        σ.xz[I] = visc_xz * s.xz[I]
-        σ.yz[I] = visc_yz * s.yz[I]
+        σ.xx[I] = 2 * visc[I] * s.xx[I]
+        σ.yy[I] = 2 * visc[I] * s.yy[I]
+        σ.zz[I] = 2 * visc[I] * s.zz[I]
+        σ.xy[I] = 2 * visc_xy * s.xy[I]
+        σ.xz[I] = 2 * visc_xz * s.xz[I]
+        σ.yz[I] = 2 * visc_yz * s.yz[I]
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
