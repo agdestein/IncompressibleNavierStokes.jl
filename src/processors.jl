@@ -560,6 +560,41 @@ function energy_history_plot(state; setup)
     fig
 end
 
+"Observe energy spectrum of `state`."
+function observespectrum(state; setup, npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) / 2)
+    state isa Observable || (state = Observable(state))
+
+    (; dimension, xp, Ip, Np) = setup.grid
+    T = eltype(xp[1])
+    D = dimension()
+
+    (; A, κ, K) = spectral_stuff(setup; npoint, a)
+    # (; masks, κ, K) = get_spectrum(setup; npoint, a) # Mask
+
+    # Energy
+    uhat = similar(xp[1], Complex{T}, Np)
+    # up = interpolate_u_p(state[].u, setup)
+    _ehat = zeros(T, size(A, 1))
+    ehat = lift(state) do (; u)
+        # interpolate_u_p!(up, u, setup)
+        up = u
+        # TODO: Maybe preallocate e and A * e
+        e = sum(up) do u
+            copyto!(uhat, view(u, Ip))
+            fft!(uhat)
+            uhathalf = view(uhat, ntuple(α -> 1:K[α], D)...)
+            # uhat = fft(u)[ntuple(α -> 1:K, D)...] # Mask
+            abs2.(uhathalf) ./ (2 * prod(size(uhathalf))^2)
+        end
+        e = A * reshape(e, :)
+        # e = map(m -> sum(view(e, m)), masks) # Mask
+        e = max.(e, eps(T)) # Avoid log(0)
+        copyto!(_ehat, e)
+    end
+
+    (; ehat, κ)
+end
+
 """
 Create energy spectrum plot.
 The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is defined by
@@ -569,12 +604,19 @@ The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is defined 
 ```
 
 as in San and Staples [San2012](@cite).
+
+Keyword arguments:
+
+- `sloperange = [0.6, 0.9]`: Percentage (between 0 and 1) of x-axis where the slope is plotted.
+- `slopeoffset = 1.3`: How far above the energy spectrum the inertial slope is plotted.
+- `kwargs...`: They are passed to [`observespectrum`](@ref).
 """
 function energy_spectrum_plot(
     state;
     setup,
-    npoint = 100,
-    a = typeof(setup.Re)(1 + sqrt(5)) / 2,
+    sloperange = [0.6, 0.9],
+    slopeoffset = 1.3,
+    kwargs...,
 )
     state isa Observable || (state = Observable(state))
 
@@ -582,37 +624,16 @@ function energy_spectrum_plot(
     T = eltype(xp[1])
     D = dimension()
 
-    (; A, κ, K) = spectral_stuff(setup; npoint, a)
-    # (; masks, κ, K) = get_spectrum(setup; npoint, a) # Mask
+    (; ehat, κ) = observespectrum(state; setup, kwargs...)
+
     kmax = maximum(κ)
 
-    # Energy
-    # up = interpolate_u_p(state[].u, setup)
-    ehat = lift(state) do (; u, t)
-        # interpolate_u_p!(up, u, setup)
-        up = u
-        e = sum(up) do u
-            u = u[Ip]
-            uhat = fft(u)[ntuple(α -> 1:K[α], D)...]
-            # uhat = fft(u)[ntuple(α -> 1:K, D)...] # Mask
-            abs2.(uhat) ./ (2 * prod(size(uhat))^2)
-        end
-        e = A * reshape(e, :)
-        # e = map(m -> sum(view(e, m)), masks) # Mask
-        e = max.(e, eps(T)) # Avoid log(0)
-        Array(e)
-    end
-
     # Build inertial slope above energy
-    # krange = LinRange(1, kmax, 100)
-    # krange = collect(1, kmax)
-    # krange = [cbrt(T(kmax)), T(kmax)]
-    krange = [kmax^T(0.3), kmax^(T(0.8))]
-    # krange = [T(kmax)^(T(2) / 3), T(kmax)]
+    krange = kmax .^ sloperange
     slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}$") : (-T(5 / 3), L"$k^{-5/3}$")
     inertia = lift(ehat) do ehat
         slopeconst = maximum(ehat ./ κ .^ slope)
-        2 .* slopeconst .* krange .^ slope
+        slopeoffset .* slopeconst .* krange .^ slope
     end
 
     # Nice ticks
@@ -631,7 +652,7 @@ function energy_spectrum_plot(
     )
     lines!(ax, κ, ehat; label = "Kinetic energy")
     lines!(ax, krange, inertia; label = slopelabel, linestyle = :dash)
-    axislegend(ax)
+    axislegend(ax; position = :lb)
     # autolimits!(ax)
     on(e -> autolimits!(ax), ehat)
     autolimits!(ax)
