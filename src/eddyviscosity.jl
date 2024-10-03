@@ -53,7 +53,14 @@ function smagorinsky_viscosity!(visc, S, θ, setup)
     (; dimension, Np, Ip, Δ) = grid
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    smagorinsky_viscosity_kernel!(get_backend(visc), workgroupsize)(visc, S, I0, Δ, θ; ndrange = Np)
+    smagorinsky_viscosity_kernel!(get_backend(visc), workgroupsize)(
+        visc,
+        S,
+        I0,
+        Δ,
+        θ;
+        ndrange = Np,
+    )
     visc
 end
 
@@ -87,7 +94,14 @@ function apply_eddy_viscosity!(σ, visc, setup)
     (; Np, Ip, Δ, Δu) = grid
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    apply_eddy_viscosity_kernel!(get_backend(visc), workgroupsize)(σ, visc, I0, Δ, Δu; ndrange = Np)
+    apply_eddy_viscosity_kernel!(get_backend(visc), workgroupsize)(
+        σ,
+        visc,
+        I0,
+        Δ,
+        Δu;
+        ndrange = Np,
+    )
     σ
 end
 
@@ -127,7 +141,14 @@ function divoftensor_natural!(c, σ, setup)
     (; Np, Ip, Δ, Δu) = grid
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    divoftensor_natural_kernel!(get_backend(c[1]), workgroupsize)(c, σ, I0, Δ, Δu; ndrange = Np)
+    divoftensor_natural_kernel!(get_backend(c[1]), workgroupsize)(
+        c,
+        σ,
+        I0,
+        Δ,
+        Δu;
+        ndrange = Np,
+    )
     c
 end
 
