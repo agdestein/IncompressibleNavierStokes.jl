@@ -338,10 +338,10 @@ end
 # # Load learned parameters and training times
 # prior = load.(priorfiles, "prior")
 # θ_cnn_prior = [copyto!(device(θ₀), p.θ) for p in prior];
-# 
+#
 # # Check that parameters are within reasonable bounds
 # θ_cnn_prior .|> extrema
-# 
+#
 # # Training times
 # map(p -> p.comptime, prior)
 # map(p -> p.comptime, prior) |> vec

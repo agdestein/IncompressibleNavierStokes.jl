@@ -78,9 +78,23 @@ filtersaver(
         dnsobs = Observable((; state[].u, F, state[].t))
         data = map(
             splat((i, Φ) -> lesdatagen(dnsobs, Φ, les[i], compression[i], psolver_les[i])),
-            Iterators.product(1:length(les), filters),
+            Iterators.product(eachindex(les), filters),
         )
-        results = (; data, t, comptime)
+        # if !isnothing(les.bodyforce)
+        #     # Overwrite LES body force field with filtered DNS bodyforce.
+        #     # In principle, they should be very similar, but the original LES
+        #     # body force field is obtained with pointwise evaluation,
+        #     # while the one appearing in the filterd DNS equation is
+        #     # discretely filtered.
+        #     @assert les.issteadybodyforce
+        #     Φ(les.bodyforce, dns.bodyforce, les, compression)
+        # end
+        results = (;
+            data,
+            t,
+            # les.bodyforce,
+            comptime,
+        )
         temp = nothing
         on(state) do (; u, t, n)
             n % nupdate == 0 || return
@@ -143,30 +157,15 @@ function create_les_data(;
 
     any(u -> any(isnan, u), ustart) && @warn "Initial conditions contain NaNs"
 
-    # Random body force
-    # force_dns =
-    #     gaussian_force(xdns...) +
-    #     gaussian_force(xdns...) +
-    #     # gaussian_force(xdns...) +
-    #     # gaussian_force(xdns...) +
-    #     gaussian_force(xdns...)
-    # force_dns = zero.(u₀)
-    # force_les = face_average(force_dns, les, compression)
-
-    _dns = dns
-    _les = les
-    # _dns = (; dns..., bodyforce = force_dns)
-    # _les = (; les..., bodyforce = force_les)
-
     # Define cache outside `solve_unsteady` to re-use the arrays for the
     # filtered DNS force
-    cache = IncompressibleNavierStokes.ode_method_cache(method, _dns)
+    cache = IncompressibleNavierStokes.ode_method_cache(method, dns)
 
     # Solve burn-in DNS
     # The initial spectrum is artificial, but this small simulation will
     # create a more realistic spectrum for the DNS simulation
     (; u, t), outputs = solve_unsteady(;
-        setup = _dns,
+        setup = dns,
         ustart,
         tlims = (T(0), tburn),
         Δt,
@@ -178,8 +177,8 @@ function create_les_data(;
 
     # Solve DNS and store filtered quantities
     # Use the result of the burn-in as initial conditions
-    (; u, t), outputs = solve_unsteady(;
-        setup = _dns,
+    _, outputs = solve_unsteady(;
+        setup = dns,
         ustart = u,
         tlims = (T(0), tsim),
         Δt,
@@ -188,8 +187,8 @@ function create_les_data(;
         processors = (;
             processors...,
             f = filtersaver(
-                _dns,
-                _les,
+                dns,
+                les,
                 filters,
                 compression,
                 psolver,
@@ -207,7 +206,6 @@ function create_les_data(;
         psolver,
     )
 
-    # Store result for current IC
     outputs.f
 end
 
@@ -215,8 +213,7 @@ end
 Create ``(\\bar{u}, c)`` pairs for a-priori training.
 """
 function create_io_arrays(data, setups)
-    nsample = length(data)
-    ngrid, nfilter = size(data[1].data)
+    ngrid, nfilter, nseed = size(data)
     T = eltype(data[1].t)
     map(CartesianIndices((ngrid, nfilter))) do I
         ig, ifil = I.I
@@ -224,14 +221,14 @@ function create_io_arrays(data, setups)
         D = dimension()
         colons = ntuple(Returns(:), D)
         fields = map((:u, :c)) do usym
-            u = map(1:nsample) do is
-                traj = data[is]
-                nt = length(traj.t)
+            u = map(1:nseed) do is
+                sample = data[ig, ifil, is]
+                nt = length(sample.t)
                 u = zeros(T, (N .- 2)..., D, nt)
                 for it = 1:nt, α = 1:D
                     copyto!(
                         view(u, colons..., α, it),
-                        view(getfield(traj.data[ig, ifil], usym)[it][α], Iu[α]),
+                        view(getfield(sample, usym)[it][α], Iu[α]),
                     )
                 end
                 u
