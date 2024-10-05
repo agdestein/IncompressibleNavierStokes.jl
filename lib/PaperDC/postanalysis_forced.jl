@@ -25,17 +25,16 @@ ispath(logdir) || mkpath(logdir)
 # ## Configure logger
 
 using LoggingExtras
+using Dates
 
 # Write output to file, as the default SLURM file is not updated often enough
-logfile = joinpath(logdir, "job.out")
+logfile = joinpath(logdir, "log_$(Dates.now()).out")
 # jobid = ENV["SLURM_JOB_ID"]
 # taskid = ENV["SLURM_ARRAY_TASK_ID"]
 # logfile = joinpath(logdir, "job=$(jobid)_task=$(taskid).out")
 filelogger = MinLevelLogger(FileLogger(logfile), Logging.Info)
-logger = TeeLogger(global_logger(), filelogger)
+logger = TeeLogger(ConsoleLogger(), filelogger)
 global_logger(logger)
-
-using Dates
 
 @info """
 A-posteriori analysis: Forced turbulence (2D)
@@ -66,6 +65,7 @@ using JLD2
 using LaTeXStrings
 using LinearAlgebra
 using Lux
+using LuxCUDA
 using NeuralClosure
 using NNlib
 using Optimisers
@@ -131,11 +131,11 @@ end
 params = (;
     D = 2,
     lims = (T(0), T(1)),
-    Re = T(1e4),
-    tburn = T(0.2),
+    Re = T(6e3),
+    tburn = T(0.5),
     tsim = T(2),
     savefreq = 16,
-    ndns = 4096,
+    ndns = 2048,
     nles = [64, 128, 256],
     filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
@@ -145,19 +145,22 @@ params = (;
     method = RKMethods.Wray3(; T),
     bodyforce = (dim, x, y, t) -> (dim == 1) * 5 * sinpi(8 * y),
     issteadybodyforce = true,
+    processors = (; log = timelogger(; nupdate = 100)),
 )
 
 # Data file names
 ntrajectory = 10
 dns_seeds = splitseed(seeds.dns, ntrajectory)
-filenames = map(
-    (nles, Φ, seed) -> "$outdir/data_seed=$(repr(seed))_filter=$(Φ)_nles=$(nles).jld2",
-    Iterators.product(params.nles, params.filters, dns_seeds),
-)
+datadir = joinpath(outdir, "data")
+ispath(datadir) || mkpath(datadir)
+filenames =
+    map(Iterators.product(params.nles, params.filters, dns_seeds)) do (nles, Φ, seed)
+        "$datadir/seed=$(repr(seed))_filter=$(Φ)_nles=$(nles).jld2"
+    end
 
 create_data = false
 create_data && for (iseed, seed) in enumerate(dns_seeds)
-    @info "Creating DNS trajectory for seed $seed (DNS $iseed of $ntrajectory)"
+    @info "Creating DNS trajectory for seed $(repr(seed)) (DNS $iseed of $ntrajectory)"
     (; data, t, comptime) = create_les_data(; params..., rng = Xoshiro(seed))
     @info("Trajectory info:", comptime / 60, length(t), Base.summarysize(data) * 1e-9,)
     for ifilter in eachindex(params.filters), igrid in eachindex(params.nles)
@@ -180,7 +183,7 @@ sum(d -> d.comptime, data) / 60
 # Build LES setup and assemble operators
 setups = map(
     nles -> Setup(;
-        x = ntuple(α -> LinRange(params.lims..., nles[α] + 1), params.D),
+        x = ntuple(α -> LinRange(params.lims..., nles + 1), params.D),
         params.Re,
         params.ArrayType,
     ),
@@ -188,9 +191,9 @@ setups = map(
 )
 
 # Create input/output arrays for a-priori training (ubar vs c)
-io_train = create_io_arrays(data_train, setups_train);
-io_valid = create_io_arrays(data_valid, setups_valid);
-io_test = create_io_arrays(data_test, setups_test);
+io_train = create_io_arrays(data_train, setups);
+io_valid = create_io_arrays(data_valid, setups);
+io_test = create_io_arrays(data_test, setups);
 
 # Check that data is reasonably bounded
 io_train[1].u |> extrema
@@ -202,7 +205,8 @@ io_test[1].c |> extrema
 
 # Inspect data (live animation with GLMakie)
 # GLMakie.activate!()
-false && let
+doplot = false
+doplot && let
     ig = 2
     ifil = 1
     iseed = 1
@@ -210,15 +214,17 @@ false && let
     u = device.(field[1])
     o = Observable((; u, temp = nothing, t = nothing))
     ## energy_spectrum_plot(o; setup) |> display
-    fieldplot(
+    fig = fieldplot(
         o;
         setup,
         ## fieldname = :velocitynorm,
         ## fieldname = 1,
-    ) |> display
-    for u in u
+    )
+    fig |> display
+    for u in field[1:10:end]
         o[] = (; o[]..., u = device(u))
-        sleep(0.001)
+        fig |> display
+        sleep(0.05)
     end
 end
 
@@ -232,7 +238,7 @@ end
 closure, θ₀ = cnn(;
     setup = setups[1],
     radii = [2, 2, 2, 2, 2],
-    channels = [24, 24, 24, 24, params_train.D],
+    channels = [24, 24, 24, 24, params.D],
     activations = [tanh, tanh, tanh, tanh, identity],
     use_bias = [true, true, true, true, false],
     rng = Xoshiro(seeds.θ₀),
@@ -247,7 +253,7 @@ closure.chain
 let
     @info "CNN warm up run"
     using NeuralClosure.Zygote
-    u = io_train[1, 1].u |> x -> selectdim(x, ndims(x), 1:10) |> gpu_device()
+    u = io_train[1, 1].u |> x -> selectdim(x, ndims(x), 1:10) |> collect |> gpu_device()
     θ = θ₀ |> gpu_device()
     closure(u, θ)
     gradient(θ -> sum(closure(u, θ)), θ)
@@ -267,12 +273,12 @@ end
 
 # Parameter save files
 priorfiles = map(
-    (nles, Φ) -> "$outdir/prior_filter=$(Φ)_nles=$(nles).jld2",
+    splat((nles, Φ) -> "$outdir/prior_filter=$(Φ)_nles=$(nles).jld2"),
     Iterators.product(params.nles, params.filters),
 )
 
 # Train
-trainprior = false
+trainprior = true
 for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles)
     trainprior || break
     clean()
@@ -288,7 +294,8 @@ for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles
     opt = Adam(T(1.0e-3))
     optstate = Optimisers.setup(opt, θ)
     it = rand(Xoshiro(validseed), 1:size(io_valid[ig, ifil].u, params.D + 2), 50)
-    validset = gpu_device()(map(v -> selectdim(v, ndims(v), it), io_valid[ig, ifil]))
+    validset =
+        gpu_device()(map(v -> collect(selectdim(v, ndims(v), it)), io_valid[ig, ifil]))
     (; callbackstate, callback) = create_callback(
         create_relerr_prior(closure, validset...);
         θ,
@@ -322,7 +329,7 @@ clean()
 
 # Load learned parameters and training times
 prior = load_object.(priorfiles)
-θ_cnn_prior = getfield.(prior, :θ);
+θ_cnn_prior = map(p -> copyto!(copy(θ₀), p.θ), prior)
 
 # Check that parameters are within reasonable bounds
 θ_cnn_prior .|> extrema
@@ -350,7 +357,7 @@ projectorders = ProjectOrder.First, ProjectOrder.Last
 
 # Parameter save files
 postfiles = map(
-    (nles, Φ, o) -> "$outdir/post_projectorder=$(o)_filter=$(Φ)_nles=$(nles).jld2",
+    splat((nles, Φ, o) -> "$outdir/post_projectorder=$(o)_filter=$(Φ)_nles=$(nles).jld2"),
     Iterators.product(params.nles, params.filters, projectorders),
 )
 
@@ -439,7 +446,7 @@ clean()
 
 # Load learned parameters and training times
 post = load_object.(postfiles)
-θ_cnn_post = getfield.(post, :θ);
+θ_cnn_post = map(p -> copyto!(copy(θ₀), p.θ), post)
 
 # Check that parameters are within reasonable bounds
 θ_cnn_post .|> extrema
@@ -463,7 +470,7 @@ map(p -> p.comptime, post) |> sum |> x -> x / 3600
 # width (=grid size) is part of the model definition separately.
 
 smagfiles = map(
-    (Φ, o) -> "$outdir/smag_filter=$(Φ)_projectorder=$(o).jld2",
+    splat((Φ, o) -> "$outdir/smag_filter=$(Φ)_projectorder=$(o).jld2"),
     Iterators.product(params.filters, projectorders),
 )
 
@@ -475,17 +482,15 @@ for (iorder, projectorder) in enumerate(projectorders),
     clean()
     filename = smagfiles[ifil, iorder]
     starttime = time()
-    ifil, iorder = I.I
-    ngrid = size(io_train, 1)
     θmin = T(0)
     emin = T(Inf)
     isample = 1
     it = 1:50
-    for θ in LinRange(T(0), T(0.5), 501)
+    for (iθ, θ) in enumerate(range(T(0), T(0.5), 501))
+        iθ % 50 == 0 && @info "Testing Smagorinsky" projectorder Φ θ
         e = T(0)
-        for (ig, nles) in enumerate(params.nles)
-            @info "Testing Smagorinsky" projectorder Φ nles θ
-            setup = setups_train[igrid]
+        for (igrid, nles) in enumerate(params.nles)
+            setup = setups[igrid]
             psolver = psolver_spectral(setup)
             d = data_train[igrid, ifil, isample]
             data = (; u = device.(d.u[it]), t = d.t[it])
@@ -502,7 +507,7 @@ for (iorder, projectorder) in enumerate(projectorders),
             )
             e += err(θ)
         end
-        e /= ngrid
+        e /= length(params.nles)
         if e < emin
             emin = e
             θmin = θ
@@ -531,22 +536,25 @@ getfield.(smag, :comptime) |> sum
 #
 # Note that it is still interesting to compute the a-priori errors for the
 # a-posteriori trained CNN.
-
 eprior = let
     prior = zeros(T, size(θ_cnn_prior))
     post = zeros(T, size(θ_cnn_post)...)
     for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles)
         @info "Computing a-priori errors" Φ nles
-        testset = device(io_test[ig, ifil])
+        testset = io_test[ig, ifil]
+        u, c = testset.u[:, :, :, 1:100], testset.c[:, :, :, 1:100]
+        testset = (u, c) |> gpu_device()
         err = create_relerr_prior(closure, testset...)
         prior[ig, ifil] = err(gpu_device()(θ_cnn_prior[ig, ifil]))
         for iorder in eachindex(projectorders)
-            post[ig, ifil, iorder] = err(gpu_device()(θ_cnn_post[ig, ifil, iorder]))
+            # post[ig, ifil, iorder] = err(gpu_device()(θ_cnn_post[ig, ifil, iorder]))
         end
     end
     (; prior, post)
 end
 clean()
+
+io_test[1][1] |> size
 
 eprior.prior
 eprior.post
@@ -559,10 +567,11 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
 # ### Compute a-posteriori errors
 
 (; e_nm, e_smag, e_cnn, e_cnn_post) = let
-    e_nm = zeros(T, size(data_test.data)...)
-    e_smag = zeros(T, size(data_test.data)..., 2)
-    e_cnn = zeros(T, size(data_test.data)..., 2)
-    e_cnn_post = zeros(T, size(data_test.data)..., 2)
+    s = (length(params.nles), length(params.filters), length(projectorders))
+    e_nm = zeros(T, s)
+    e_smag = zeros(T, s)
+    e_cnn = zeros(T, s)
+    e_cnn_post = zeros(T, s)
     for (iorder, projectorder) in enumerate(projectorders),
         (ifil, Φ) in enumerate(params.filters),
         (ig, nles) in enumerate(params.nles)
@@ -571,8 +580,9 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
         setup = setups[ig]
         psolver = psolver_spectral(setup)
         sample = data_test[ig, ifil, 1]
-        data = (; u = device.(sample.u), t = sample.t)
-        nupdate = 2
+        it = 1:100
+        data = (; u = device.(sample.u[it]), t = sample.t[it])
+        nupdate = 16
         ## No model
         err =
             create_relerr_post(; data, setup, psolver, closure_model = nothing, nupdate)
@@ -597,11 +607,16 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
             nupdate,
         )
         e_cnn[ig, ifil, iorder] = err(gpu_device()(θ_cnn_prior[ig, ifil]))
-        e_cnn_post[ig, ifil, iorder] = err(gpu_device()(θ_cnn_post[ig, ifil, iorder]))
+        # e_cnn_post[ig, ifil, iorder] = err(gpu_device()(θ_cnn_post[ig, ifil, iorder]))
     end
     (; e_nm, e_smag, e_cnn, e_cnn_post)
 end
 clean()
+
+e_nm
+e_smag
+e_cnn
+e_cnn_post
 
 round.(
     [e_nm[:] reshape(e_smag, :, 2) reshape(e_cnn, :, 2) reshape(e_cnn_post, :, 2)][
@@ -668,7 +683,7 @@ with_theme(; palette) do
             (e_nm, :circle, "No closure", Cycled(1)),
             (e_smag, :utriangle, "Smagorinsky", Cycled(2)),
             (e_cnn, :rect, "CNN (Lprior)", Cycled(3)),
-            (e_cnn_post, :diamond, "CNN (Lpost)", Cycled(4)),
+            # (e_cnn_post, :diamond, "CNN (Lpost)", Cycled(4)),
         ]
             for ifil = 1:2
                 linestyle = ifil == 1 ? :solid : :dash

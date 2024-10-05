@@ -13,6 +13,10 @@
 # - gpu_h100: 16 cores
 # https://servicedesk.surf.nl/wiki/display/WIKI/Snellius+partitions+and+accounting
 
+mkdir -p /scratch-shared/$USER
+
+export JULIA_DEPOT_PATH=/scratch-shared/$USER/.julia
+
 cd $HOME/projects/IncompressibleNavierStokes/lib/PaperDC
 
 julia --project les3D.jl
