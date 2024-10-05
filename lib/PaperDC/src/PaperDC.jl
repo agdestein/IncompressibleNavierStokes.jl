@@ -30,7 +30,7 @@ end
 include("observe.jl")
 include("rk.jl")
 
-export splitseed
+export splitseed, namedtupleload
 export observe_u, observe_v
 export ProjectOrder, RKProject
 
