@@ -1,6 +1,8 @@
 using GLMakie
 using CairoMakie
 
+GLMakie.activate!()
+
 palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])
 
 plotdir = joinpath(@__DIR__, "output", "transferfunctions")
@@ -33,7 +35,8 @@ VA2D = @. gx * gy
 FAx2D = @. one(gx) * gy
 FAy2D = @. gx * one(gy)
 VA2D_diag = diag(VA2D)[1:idiag]
-FAx2D_diag = map(i -> FAx2D[i, i], 1:idiag)FAy2D_diag = map(i -> FAy2D[i, i], 1:idiag)
+FAx2D_diag = map(i -> FAx2D[i, i], 1:idiag)
+FAy2D_diag = map(i -> FAy2D[i, i], 1:idiag)
 VA3D = @. gx * gy * gz
 FAx3D = @. one(gx) * gy * gz
 FAx3D_diag = map(i -> FAx3D[i, i, 1], 1:idiag)
@@ -73,6 +76,7 @@ with_theme(; palette) do
 
     isovalue = 0.95
     kwargs = (; algorithm = :iso, isorange = 0.002, isovalue)
+    lims = (0, 64)
     ax = Axis3(
         fig[1, 3];
         xlabel = "k₁",
@@ -80,10 +84,11 @@ with_theme(; palette) do
         zlabel = "k₃",
         azimuth = π / 4,
         title = "Isocontours at $isovalue for G and G¹ (3D)",
+        aspect = :data,
+        # limits = (lims, lims, lims),
     )
     volume!(ax, k, k, k, VA3D; kwargs...)
     volume!(ax, k, k, k, FAx3D; kwargs..., alpha = 0.5)
-    fig
 
     ax = Axis(
         fig[2, 1];
@@ -184,10 +189,12 @@ with_theme(; palette) do
     )
     axislegend(ax; position = :lb)
 
-    save("$plotdir/transferfunctions.png", fig)
+    save("$plotdir/transferfunctions.png", fig; px_per_unit = 1.5)
 
     fig
 end
+
+# save("$plotdir/transferfunctions.png", current_figure(); px_per_unit = 1.5)
 
 GLMakie.activate!()
 
@@ -195,6 +202,7 @@ let
     isovalue = 0.95
     kwargs = (; algorithm = :iso, isorange = 0.002, isovalue)
     fig = Figure()
+    lims = (0, 64)
     ax = Axis3(
         fig[1, 1];
         xlabel = "kx",
@@ -202,7 +210,12 @@ let
         zlabel = "kz",
         azimuth = π / 4,
         title = "Isocontours at $isovalue for VA and FAx (3D)",
+        aspect = :data,
+        limits = (lims, lims, lims),
     )
+    # xlims!(0, 64)
+    # ylims!(0, 64)
+    # zlims!(0, 64)
     volume!(ax, k, k, k, VA3D; kwargs...)
     volume!(ax, k, k, k, FAx3D; kwargs..., alpha = 0.5)
     fig
