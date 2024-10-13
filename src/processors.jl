@@ -584,7 +584,7 @@ function observespectrum(state; setup, npoint = 100, a = typeof(setup.Re)(1 + sq
             fft!(uhat)
             uhathalf = view(uhat, ntuple(α -> 1:K[α], D)...)
             # uhat = fft(u)[ntuple(α -> 1:K, D)...] # Mask
-            abs2.(uhathalf) ./ (2 * prod(size(uhathalf))^2)
+            abs2.(uhathalf) ./ (2 * prod(size(u))^2)
         end
         e = A * reshape(e, :)
         # e = map(m -> sum(view(e, m)), masks) # Mask
