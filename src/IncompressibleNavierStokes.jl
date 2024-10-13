@@ -109,7 +109,7 @@ export solve_unsteady, timestep, create_stepper
 export velocityfield, temperaturefield, random_field
 
 # Utils
-export plotgrid, save_vtk, get_lims
+export splitseed, plotgrid, save_vtk, get_lims
 
 # ODE methods
 export AdamsBashforthCrankNicolsonMethod, OneLegMethod, RKMethods

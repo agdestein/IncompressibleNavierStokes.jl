@@ -1,3 +1,6 @@
+"Split random number generator seed into `n` new seeds."
+splitseed(seed, n) = rand(Xoshiro(seed), UInt32, n)
+
 """
 Get approximate lower and upper limits of a field `x` based on the mean and standard
 deviation (``\\mu \\pm n \\sigma``). If `x` is constant, a margin of `1e-4` is enforced. This is required for contour
