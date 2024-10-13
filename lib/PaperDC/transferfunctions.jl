@@ -45,12 +45,7 @@ FAx3D_diagdiag = map(i -> FAx3D[i, i, i], 1:idiagdiag)
 with_theme(; palette) do
     fig = Figure(; size = (1300, 700))
 
-    Label(
-        fig[0, 1:3],
-        "Transfer functions";
-        valign = :bottom,
-        font = :bold,
-    )
+    Label(fig[0, 1:3], "Transfer functions"; valign = :bottom, font = :bold)
 
     ax = Axis3(
         fig[1, 1];

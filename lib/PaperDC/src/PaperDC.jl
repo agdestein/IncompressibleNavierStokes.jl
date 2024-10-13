@@ -7,7 +7,8 @@ using DocStringExtensions
 using EnumX
 using LinearAlgebra
 using IncompressibleNavierStokes
-using IncompressibleNavierStokes: momentum!, divergence!, project!, apply_bc_u!
+using IncompressibleNavierStokes:
+    momentum!, divergence!, project!, apply_bc_u!, kinetic_energy!, scalewithvolume!
 using JLD2
 using NeuralClosure
 using Observables
