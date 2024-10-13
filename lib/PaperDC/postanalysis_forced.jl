@@ -375,15 +375,6 @@ for (iorder, projectorder) in enumerate(projectorders),
     figname = joinpath(plotdir, basename(filename) * ".pdf")
     checkpointname = join(splitext(filename), "_checkpoint")
     rng = Xoshiro(seeds.post) # Same seed for all training setups
-    setup = setups_train[ig]
-    psolver = psolver_spectral(setup)
-    loss = create_loss_post(;
-        setup,
-        psolver,
-        method = RKProject(RK44(; T), projectorder),
-        closure,
-        nupdate = 2, # Time steps per loss evaluation
-    )
     setup = setups[ig]
     psolver = psolver_spectral(setup)
     loss = create_loss_post(;
