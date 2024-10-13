@@ -29,12 +29,12 @@ ispath(output) || mkpath(output)
 # ## Hardware selection
 
 if CUDA.functional()
-    # For running on GPU
+    ## For running on GPU
     CUDA.allowscalar(false)
     ArrayType = CuArray
     clean() = (GC.gc(); CUDA.reclaim()) # This seems to be needed to free up memory
 else
-    # For running on CPU
+    ## For running on CPU
     ArrayType = Array
     clean() = nothing
 end

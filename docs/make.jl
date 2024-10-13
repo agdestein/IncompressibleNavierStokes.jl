@@ -47,10 +47,10 @@ examples = [
     (true, "examples/RayleighTaylor2D"),
     (false, "examples/RayleighTaylor3D"),
 
-    # Neural closure models
-    (false, "lib/PaperDC/prioranalysis"),
-    (false, "lib/PaperDC/postanalysis"),
-    (false, "lib/SymmetryClosure/symmetryanalysis"),
+    # # Neural closure models
+    # (false, "lib/PaperDC/prioranalysis"),
+    # (false, "lib/PaperDC/postanalysis"),
+    # (false, "lib/SymmetryClosure/symmetryanalysis"),
 ]
 
 # Convert scripts to executable markdown files

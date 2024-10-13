@@ -147,14 +147,14 @@ export default defineConfig({
               { text: 'Rayleigh-Taylor (3D)', link: '/examples/generated/RayleighTaylor3D' },
             ],
           },
-          {
-            text: 'Neural closure models',
-            items: [
-              { text: 'Filter analysis', link: '/examples/generated/prioranalysis' },
-              { text: 'CNN closures', link: '/examples/generated/postanalysis' },
-              { text: 'Equivariant closures', link: '/examples/generated/symmetryanalysis' },
-            ],
-          },
+          // {
+          //   text: 'Neural closure models',
+          //   items: [
+          //     { text: 'Filter analysis', link: '/examples/generated/prioranalysis' },
+          //     { text: 'CNN closures', link: '/examples/generated/postanalysis' },
+          //     { text: 'Equivariant closures', link: '/examples/generated/symmetryanalysis' },
+          //   ],
+          // },
         ],
       },
       "/manual/": {
