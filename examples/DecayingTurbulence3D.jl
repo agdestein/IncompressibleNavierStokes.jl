@@ -18,7 +18,7 @@ T = Float32
 n = 128
 ax = range(T(0), T(1), n + 1)
 setup = Setup(; x = (ax, ax, ax), Re = T(4e3), ArrayType);
-psolver = psolver_spectral_lowmemory(setup);
+psolver = default_psolver(setup);
 ustart = random_field(setup; psolver);
 
 # ## Solve problem

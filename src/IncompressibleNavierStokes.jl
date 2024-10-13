@@ -100,12 +100,7 @@ export Setup, temperature_equation, scalarfield, vectorfield
 export stretched_grid, cosine_grid, tanh_grid
 
 # Pressure solvers
-export default_psolver,
-    psolver_direct,
-    psolver_cg,
-    psolver_cg_matrix,
-    psolver_spectral,
-    psolver_spectral_lowmemory
+export default_psolver, psolver_direct, psolver_cg, psolver_cg_matrix, psolver_spectral
 
 # Solvers
 export solve_unsteady, timestep, create_stepper

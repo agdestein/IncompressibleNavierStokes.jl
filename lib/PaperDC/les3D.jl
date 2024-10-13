@@ -129,7 +129,6 @@ params = (;
     nles = [64, 128],
     filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
-    create_psolver = psolver_spectral_lowmemory,
     method = RKMethods.Wray3(; T),
 )
 

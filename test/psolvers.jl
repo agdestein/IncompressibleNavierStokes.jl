@@ -18,7 +18,6 @@
     direct = psolver_direct(setup)
     cg = psolver_cg(setup)
     spectral = psolver_spectral(setup)
-    spectral_lowmemory = psolver_spectral_lowmemory(setup)
 
     get_p(psolver) = IncompressibleNavierStokes.apply_bc_p(
         IncompressibleNavierStokes.poisson(psolver, lap),
@@ -30,5 +29,4 @@
     @test get_p(direct)[Ip] ≈ p_exact[Ip]
     @test get_p(cg)[Ip] ≈ p_exact[Ip]
     @test get_p(spectral)[Ip] ≈ p_exact[Ip]
-    @test get_p(spectral_lowmemory)[Ip] ≈ p_exact[Ip]
 end

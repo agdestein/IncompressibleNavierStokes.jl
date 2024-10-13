@@ -141,7 +141,6 @@ params = (;
     ArrayType,
     icfunc = (setup, psolver, rng) ->
         random_field(setup, zero(eltype(setup.grid.x[1])); kp = 20, psolver, rng),
-    create_psolver = psolver_spectral_lowmemory,
     method = RKMethods.Wray3(; T),
     bodyforce = (dim, x, y, t) -> (dim == 1) * 5 * sinpi(8 * y),
     issteadybodyforce = true,
