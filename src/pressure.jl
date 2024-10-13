@@ -371,7 +371,7 @@ function psolver_spectral_lowmemory(setup)
     D = dimension()
     T = eltype(Δ[1])
 
-    Δx = Array(Δ[1])[1]
+    Δx = first.(Array.(Δ))
 
     @assert(
         all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions),
@@ -379,38 +379,44 @@ function psolver_spectral_lowmemory(setup)
     )
 
     @assert(
-        all(α -> all(≈(Δx), Δ[α]), 1:D),
+        all(α -> all(≈(Δx[α]), Δ[α]), 1:D),
         "Spectral psolver requires uniform grid along each dimension",
     )
 
-    @assert all(n -> n == Np[1], Np)
+    # Since we use rfft, the first dimension is halved
+    kmax = ntuple(α -> α == 1 ? div(Np[α], 2) + 1 : Np[α], D)
 
-    # Fourier transform of the discretization
+    # Fourier transform of the discrete Laplacian
     # Assuming uniform grid, although Δx[1] and Δx[2] do not need to be the same
-
-    k = 0:Np[1]-1
-
-    ahat = fill!(similar(x[1], Np[1]), 0)
-    @. ahat = 4 * Δx^D * sinpi(k / Np[1])^2 / Δx^2
+    ahat = ntuple(D) do α
+        k = 0:kmax[α]-1
+        ahat = similar(x[1], kmax[α])
+        Ω = prod(Δx)
+        @. ahat = 4 * Ω * sinpi(k / Np[α])^2 / Δx[α]^2
+        ahat
+    end
 
     # Placeholders for intermediate results
-    phat = fill!(similar(x[1], Complex{T}, Np), 0)
+    phat = similar(x[1], Complex{T}, kmax)
+    pI = similar(x[1], Np)
+    plan = plan_rfft(pI)
 
     function psolve!(p)
-        phat .= complex.(view(p, Ip))
+        # Buffer of the right size (cannot work on view directly)
+        copyto!(pI, view(p, Ip))
 
         # Fourier transform of right hand side
-        fft!(phat)
+        mul!(phat, plan, pI)
 
         # Solve for coefficients in Fourier space
         if D == 2
-            ax = ahat
-            ay = reshape(ahat, 1, :)
+            ax = reshape(ahat[1], :)
+            ay = reshape(ahat[2], 1, :)
             @. phat = -phat / (ax + ay)
         else
-            ax = ahat
-            ay = reshape(ahat, 1, :)
-            az = reshape(ahat, 1, 1, :)
+            ax = reshape(ahat[1], :)
+            ay = reshape(ahat[2], 1, :)
+            az = reshape(ahat[3], 1, 1, :)
             @. phat = -phat / (ax + ay + az)
         end
 
@@ -420,9 +426,11 @@ function psolver_spectral_lowmemory(setup)
         # (otherwise CUDA gets annoyed)
         phat[1:1] .= 0
 
-        # Transform back
-        ifft!(phat)
-        @. p[Ip] = real(phat)
+        # Inverse Fourier transform
+        ldiv!(pI, plan, phat)
+
+        # Put results in full size array
+        copyto!(view(p, Ip), pI)
 
         p
     end
