@@ -50,9 +50,83 @@ end
 @assert allocation_enz < TIME_TOL * allocation_INS "enzyme bc_u too much memory: allocation_enz = $allocation_enz, allocation_INS = $allocation_INS"
 
 # Check if it is differentiable
-A = (rand(Float32, N, N), rand(Float32, N, N))
+A = (rand(Float64, N, N), rand(Float64, N, N))
 dA = Enzyme.make_zero(A)
 Enzyme.autodiff(Enzyme.Reverse, myapply_bc_u!, Const, DuplicatedNoNeed(A, dA))
+dA
+
+
+dA = (A[1]* rand(Float64, size(A[1],1), size(A[1],2)), A[2]* rand(Float64, size(A[1],1), size(A[1],2)))
+maximum(dA[1]), maximum(dA[2])
+Enzyme.autodiff(Enzyme.Reverse, IncompressibleNavierStokes.apply_bc_u!, Const, DuplicatedNoNeed(A, dA), Const(0.0f0), Const(setup))
+dA
+maximum(dA[1]), maximum(dA[2])
+
+
+import .EnzymeRules: forward, reverse, augmented_primal
+using EnzymeCore.EnzymeRules
+using .EnzymeRules
+
+Float32
+RevConfig
+EnzymeRules.RevConfig
+EnzymeCore.EnzymeRules.RevConfig
+EnzymeCore.EnzymeRules.RevConfigWidth{1}
+function reverse(config::EnzymeCore.EnzymeRules.RevConfigWidth{1}, func::Const{typeof(f)}, ::Type{<:Const}, x::Duplicated)
+    println("In custom augmented primal rule.")
+    # Compute primal
+    if needs_primal(config)
+        primal = func.val(x.val)
+    else
+        y = copy(x)
+        y.val .= x.val.^2 # y still needs to be mutated even if primal not needed!
+        primal = nothing
+    end
+    # Save x in tape if x will be overwritten
+    if overwritten(config)[3]
+        tape = copy(x.val)
+    else
+        tape = nothing
+    end
+    # Return an AugmentedReturn object with shadow = nothing
+    return AugmentedReturn(primal, nothing, tape)
+end
+#
+#
+#function ChainRulesCore.rrule(::typeof(myapply_bc_u!), x)
+#    y = myapply_bc_u!(x)
+#    function myapply_bc_u_pullback(ȳ)
+#        println("ȳ = ", ȳ)
+#        return NoTangent(), 2*x
+#    end
+#    return y, myapply_bc_u_pullback
+#end
+#
+## Test using ChainRules
+#function ChainRulesCore.rrule(::typeof(f), A)
+#    y = f(A)
+#    function _pullback(Y)
+#        dY = Enzyme.make_zero(Y)
+#        Enzyme.autodiff(Enzyme.Reverse, myapply_bc_u!, Const, Duplicated(Y, dY))
+#        return (NoTangent(), dY)
+#    end
+#    return y, _pullback
+#end
+#function f(A)
+#    myapply_bc_u!(A)
+#    return A 
+#end
+#f(A)
+#function ChainRulesCore.frule((df, dA), ::typeof(f), A)
+#    y = f(A)
+#    ∂y = Enzyme.make_zero(y)
+#    Enzyme.autodiff(Enzyme.Reverse, myapply_bc_u!, Const, Duplicated(y, ∂y))
+#    return y, ∂y
+#end
+#test_frule(f, A)#; rrule_f = rrule_via_ad)
+#test_rrule(f, A; rrule_f = rrule_via_ad)
+## from the error in rrule it seems that the derivative does not correspond to the expected one
+## we get 0 as derivative from enzyme, is that correct or not? finitediff gets non 0
 
 ####### BC_P
 myapply_bc_p! = _get_enz_bc_p!(_backend, setup);

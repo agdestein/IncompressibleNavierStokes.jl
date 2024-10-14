@@ -302,6 +302,7 @@ result_posteriori_Z, time_posteriori_Z, alloc_posteriori_Z, gc_posteriori_Z, mem
     callback = callback,
     maxiters = 50,
 )
+Zygote.gradient(loss_posteriori_Z, result_posteriori_Z.u)
 θ_posteriori_Z = result_posteriori_Z.u
 
 
