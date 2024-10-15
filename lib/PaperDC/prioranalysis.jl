@@ -17,6 +17,7 @@ using FFTW
 using GLMakie
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: momentum, project, apply_bc_u!, spectral_stuff
+using JLD2
 using NeuralClosure
 using PaperDC
 using Printf
@@ -42,60 +43,101 @@ end
 # ## Setup
 
 # 2D configuration
-D = 2
-T = Float64;
-ndns = 4096
-Re = T(10_000)
-kp = 20
-# Δt = T(5e-5)
-filterdefs = [
-    (FaceAverage(), 64),
-    (FaceAverage(), 128),
-    (FaceAverage(), 256),
-    (VolumeAverage(), 64),
-    (VolumeAverage(), 128),
-    (VolumeAverage(), 256),
-]
+case = let
+    T = Float64
+    (;
+        name = "2D_double",
+        D = 2,
+        T,
+        ndns = 2048,
+        Re = T(10_000),
+        kp = 20,
+        tlims = (T(0), T(1e-1)),
+        # Δt = T(5e-5)
+        filterdefs = [
+            (FaceAverage(), 64),
+            (FaceAverage(), 128),
+            (FaceAverage(), 256),
+            (VolumeAverage(), 64),
+            (VolumeAverage(), 128),
+            (VolumeAverage(), 256),
+        ],
+    )
+end
 
 # 3D configuration
-D = 3
-T, ndns = Float64, 512 # Works on a 40GB A100 GPU. Use Float32 and smaller n for less memory.
-Re = T(2_000)
-kp = 5
-Δt = T(1e-4)
-filterdefs = [
-    (FaceAverage(), 32),
-    (FaceAverage(), 64),
-    (FaceAverage(), 128),
-    (VolumeAverage(), 32),
-    (VolumeAverage(), 64),
-    (VolumeAverage(), 128),
-]
+case = let
+    D = 3
+    T, ndns = Float64, 512 # Works on a 40GB A100 GPU. Use Float32 and smaller n for less memory.
+    Re = T(2_000)
+    kp = 5
+    tlims = (T(0), T(1e-1))
+    filterdefs = [
+        (FaceAverage(), 32),
+        (FaceAverage(), 64),
+        (FaceAverage(), 128),
+        (VolumeAverage(), 32),
+        (VolumeAverage(), 64),
+        (VolumeAverage(), 128),
+    ]
+    name = "D=$(D)_T=$(T)_Re=$(Re)"
+    (; D, T, ndns, Re, kp, tlims, filterdefs, name)
+end
+
+# Larger 3D configuration
+case = let
+    D = 3
+    T = Float32
+    ndns = 1024 # Works on a 80GB H100 GPU. Use smaller n for less memory.
+    Re = T(6_000)
+    kp = 10
+    tlims = (T(0), T(1e-1))
+    filterdefs = [
+        (FaceAverage(), 32),
+        (FaceAverage(), 64),
+        (FaceAverage(), 128),
+        (FaceAverage(), 256),
+        (VolumeAverage(), 32),
+        (VolumeAverage(), 64),
+        (VolumeAverage(), 128),
+        (VolumeAverage(), 256),
+    ]
+    name = "D=$(D)_T=$(T)_Re=$(Re)"
+    (; D, T, ndns, Re, kp, tlims, filterdefs, name)
+end
 
 # Setup
-lims = T(0), T(1)
+lims = case.T(0), case.T(1)
 dns = let
-    setup = Setup(; x = ntuple(α -> LinRange(lims..., ndns + 1), D), Re, ArrayType)
+    setup = Setup(;
+        x = ntuple(α -> LinRange(lims..., case.ndns + 1), case.D),
+        case.Re,
+        ArrayType,
+    )
     psolver = default_psolver(setup)
     (; setup, psolver)
 end;
-filters = map(filterdefs) do (Φ, nles)
-    compression = ndns ÷ nles
-    setup = Setup(; x = ntuple(α -> LinRange(lims..., nles + 1), D), Re, ArrayType)
+filters = map(case.filterdefs) do (Φ, nles)
+    compression = case.ndns ÷ nles
+    setup = Setup(;
+        x = ntuple(α -> LinRange(lims..., nles + 1), case.D),
+        case.Re,
+        ArrayType,
+    )
     psolver = default_psolver(setup)
     (; setup, Φ, compression, psolver)
 end;
 
 # Create random initial conditions
 rng = Xoshiro(12345)
-ustart = random_field(dns.setup, T(0); kp, dns.psolver, rng);
+ustart = random_field(dns.setup, case.T(0); case.kp, dns.psolver, rng);
 clean()
 
 # Solve unsteady problem
-@time state, outputs = solve_unsteady(;
+state, outputs = solve_unsteady(;
     dns.setup,
     ustart,
-    tlims = (T(0), T(1e-1)),
+    case.tlims,
     # Δt,
     docopy = true, # leave initial conditions unchanged, false to free up memory
     dns.psolver,
@@ -108,13 +150,14 @@ clean()
 
 # ## Plot 2D fields
 
-D == 2 && with_theme(; fontsize = 25) do
+case.D == 2 && with_theme(; fontsize = 25) do
+    (; T) = case
     ## Compute quantities
     fil = filters[2]
     apply_bc_u!(state.u, T(0), dns.setup)
-    v = fil.Φ(state.u, fil.setup, fil.compression)
-    apply_bc_u!(v, T(0), fil.setup)
-    Fv = momentum(v, nothing, T(0), fil.setup)
+    Φu = fil.Φ(state.u, fil.setup, fil.compression)
+    apply_bc_u!(Φu, T(0), fil.setup)
+    Fv = momentum(Φu, nothing, T(0), fil.setup)
     apply_bc_u!(Fv, T(0), fil.setup)
     PFv = project(Fv, fil.setup; psolver = fil.psolver)
     apply_bc_u!(PFv, T(0), fil.setup)
@@ -129,7 +172,7 @@ D == 2 && with_theme(; fontsize = 25) do
 
     ## Make plots
     makeplot(field, setup, title, name) = save(
-        "$output/$name.png",
+        "$output/$(case.name)_$name.png",
         fieldplot(
             (; u = field, temp = nothing, t = T(0));
             setup,
@@ -140,11 +183,11 @@ D == 2 && with_theme(; fontsize = 25) do
     )
     makeplot(ustart, dns.setup, "u₀", "ustart")
     makeplot(state.u, dns.setup, "u", "u")
-    makeplot(v, fil.setup, "ū", "v")
-    makeplot(PF, dns.setup, "PF(u)", "PFu")
-    makeplot(PFv, fil.setup, "P̄F̄(ū)", "PFv")
-    makeplot(ΦPF, fil.setup, "ΦPF(u)", "PhiPFu")
-    makeplot(c, fil.setup, "c(u, ū)", "c")
+    makeplot(Φu, fil.setup, "ū", "Phi_u")
+    makeplot(PF, dns.setup, "PF(u)", "P_F_u")
+    makeplot(PFv, fil.setup, "P̄F̄(ū)", "P_F_Phi_u")
+    makeplot(ΦPF, fil.setup, "ΦPF(u)", "Phi_P_F_u")
+    makeplot(c, fil.setup, "c(u)", "c")
 end
 
 # ## Plot 3D fields
@@ -156,10 +199,8 @@ GLMakie.activate!()
 
 # Make plots
 D == 3 && with_theme() do
-    path = "$output/priorfields/lambda2"
-    ispath(path) || mkpath(path)
     function makeplot(field, setup, name)
-        name = "$path/$name.png"
+        name = "$output/$(case.name)_$name.png"
         save(
             name,
             fieldplot(
@@ -173,7 +214,7 @@ D == 3 && with_theme() do
         )
         try
             ## Trim whitespace with ImageMagick
-            run(`convert $name -trim $name`)
+            run(`magick $name -trim $name`)
         catch e
             @warn """
             ImageMagick not found.
@@ -182,61 +223,63 @@ D == 3 && with_theme() do
             """
         end
     end
-    makeplot(u₀, dns.setup, "Re$(Int(Re))_start") # Requires docopy = true in solve
-    makeplot(state.u, dns.setup, "Re$(Int(Re))_end")
+    makeplot(u₀, dns.setup, "Re=$(Int(Re))_start") # Requires docopy = true in solve
+    makeplot(state.u, dns.setup, "Re=$(Int(Re))_end")
     i = 3
     makeplot(
         filters[i].Φ(state.u, filters[i].setup, filters[i].compression),
         filters[i].setup,
-        "Re$(Int(Re))_end_filtered",
+        "Re=$(Int(Re))_end_filtered",
     )
 end
 
 # ## Compute average quantities
 
-let
-    open("$output/averages_$(D)D.txt", "w") do io
-        println(io, "Φ\t\tM\tDu\tPv\tPc\tc\tE")
-        for o in outputs.obs
-            nt = length(o.t)
-            Dv = sum(o.Dv) / nt
-            Pc = sum(o.Pc) / nt
-            Pv = sum(o.Pv) / nt
-            c = sum(o.c) / nt
-            E = sum(o.E) / nt
-            @printf(
-                io,
-                "%s\t%d^%d\t%.2g\t%.2g\t%.2g\t%.2g\t%.2g\n",
-                ## "%s &\t\$%d^%d\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$\n",
-                typeof(o.Φ),
-                o.Mα,
-                D,
-                Dv,
-                Pv,
-                Pc,
-                c,
-                E,
-            )
-        end
+open("$output/$(case.name)_averages.txt", "w") do io
+    println(io, "Φ\t\tM\tDu\tPv\tPc\tc\tE")
+    for o in outputs.obs
+        nt = length(o.t)
+        Dv = sum(o.Dv) / nt
+        Pc = sum(o.Pc) / nt
+        Pv = sum(o.Pv) / nt
+        c = sum(o.c) / nt
+        E = sum(o.E) / nt
+        @printf(
+            io,
+            "%s\t%d^%d\t%.2g\t%.2g\t%.2g\t%.2g\t%.2g\n",
+            ## "%s &\t\$%d^%d\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$ &\t\$%.2g\$\n",
+            typeof(o.Φ),
+            o.Mα,
+            case.D,
+            Dv,
+            Pv,
+            Pc,
+            c,
+            E,
+        )
     end
 end
 
 # ## Plot spectra
 
-specs = let
+let
     fields = [state.u, ustart, map(f -> f.Φ(state.u, f.setup, f.compression), filters)...]
     setups = [dns.setup, dns.setup, getfield.(filters, :setup)...]
-    map(fields, setups) do u, setup
+    specs = map(fields, setups) do u, setup
         clean() # Free up memory
         state = (; u)
         spec = observespectrum(state; setup)
         (; spec.κ, ehat = spec.ehat[])
     end
+    save_object("$output/$(case.name)_spectra.jld2", specs)
 end
+
+specs = load_object("$output/$(case.name)_spectra.jld2")
 
 # Plot predicted spectra
 CairoMakie.activate!()
 with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])) do
+    (; D, T) = case
     kmax = maximum(specs[1].κ)
     ## Build inertial slope above energy
     krange, slope, slopelabel = if D == 2
@@ -313,11 +356,14 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
         ygridvisible = false,
         backgroundcolor = :white,
     )
+    # https://discourse.julialang.org/t/makie-inset-axes-and-their-drawing-order/60987/5
+    translate!(ax2.scene, 0, 0, 10)
+    translate!(ax2.elements[:background], 0, 0, 9)
     lines!(ax2, plotparts(1)...; color = Cycled(1))
     lines!(ax2, plotparts(5)...; color = Cycled(2))
     lines!(ax2, plotparts(8)...; color = Cycled(3))
 
-    # save("$output/spectra_$(D)D_dyadic_Re$(Int(Re)).pdf", fig)
+    save("$output/$(case.name)_spectra.pdf", fig)
     fig
 end
 clean()
