@@ -5,11 +5,32 @@
 # - Generate filtered DNS data
 # - Compute quantities for different filters
 
-# ## Load packages
+@info "Script started"
 
 if false                      #src
     include("src/PaperDC.jl") #src
 end                           #src
+
+# Output directory
+output = joinpath(@__DIR__, "output", "prioranalysis")
+logdir = joinpath(output, "logs")
+ispath(output) || mkpath(output)
+ispath(logdir) || mkpath(logdir)
+
+# ## Configure logger
+
+using PaperDC
+using Dates
+
+# Write output to file, as the default SLURM file is not updated often enough
+logfile = joinpath(logdir, "log_$(Dates.now()).out")
+# jobid = ENV["SLURM_JOB_ID"]
+# logfile = joinpath(logdir, "job=$(jobid).out")
+setsnelliuslogger(logfile)
+
+@info "# A-posteriori analysis: Forced turbulence (2D)"
+
+# ## Load packages
 
 using CairoMakie
 using CUDA
@@ -22,10 +43,6 @@ using NeuralClosure
 using PaperDC
 using Printf
 using Random
-
-# Output directory
-output = joinpath(@__DIR__, "output", "prioranalysis")
-ispath(output) || mkpath(output)
 
 # ## Hardware selection
 

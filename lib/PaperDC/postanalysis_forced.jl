@@ -9,6 +9,8 @@
 # The filtered DNS data is saved and can be loaded in a subesequent session.
 # The learned CNN parameters are also saved.
 
+@info "Script started"
+
 # Color palette for consistent theme throughout paper
 palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])
 
@@ -24,7 +26,7 @@ ispath(logdir) || mkpath(logdir)
 
 # ## Configure logger
 
-using LoggingExtras
+using PaperDC
 using Dates
 
 # Write output to file, as the default SLURM file is not updated often enough
@@ -32,19 +34,9 @@ logfile = joinpath(logdir, "log_$(Dates.now()).out")
 # jobid = ENV["SLURM_JOB_ID"]
 # taskid = ENV["SLURM_ARRAY_TASK_ID"]
 # logfile = joinpath(logdir, "job=$(jobid)_task=$(taskid).out")
-filelogger = MinLevelLogger(FileLogger(logfile), Logging.Info)
-logger = TeeLogger(ConsoleLogger(), filelogger)
-global_logger(logger)
+setsnelliuslogger(logfile)
 
-@info """
-A-posteriori analysis: Forced turbulence (2D)
-
-Starting at $(Dates.now())
-
-Last commit:
-
-$(cd(() -> read(`git log -n 1`, String), @__DIR__))
-"""
+@info "# A-posteriori analysis: Forced turbulence (2D)"
 
 # ## Load packages
 
@@ -69,7 +61,6 @@ using LuxCUDA
 using NeuralClosure
 using NNlib
 using Optimisers
-using PaperDC
 using Random
 using SparseArrays
 using FFTW
