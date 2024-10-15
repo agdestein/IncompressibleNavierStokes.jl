@@ -106,8 +106,9 @@ function (::VolumeAverage)(v, u, setup_les, comp)
         volume = CartesianIndices(
             ntuple(
                 β ->
-                    α == β ? iseven(comp) ? (comp÷2:comp÷2+comp) : (comp+1:2comp+1) :
-                    (1:comp),
+                    α == β ?
+                    iseven(comp) ? (div(comp, 2):div(comp, 2)+comp) :
+                    (div(comp, 2)+1:div(comp, 2)+comp) : (1:comp),
                 D,
             ),
         )
