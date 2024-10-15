@@ -37,7 +37,7 @@ using CUDA
 using FFTW
 # using GLMakie
 using IncompressibleNavierStokes
-using IncompressibleNavierStokes: apply_bc_u!
+using IncompressibleNavierStokes: apply_bc_u!, ode_method_cache
 using JLD2
 using NeuralClosure
 using PaperDC
@@ -161,7 +161,7 @@ clean()
 # Solve unsteady problem
 state, outputs = let
     method = RKMethods.Wray3(; case.T)
-    cache = ode_method_cache(method, setup)
+    cache = ode_method_cache(method, dns.setup)
     solve_unsteady(;
         dns.setup,
         ustart,
@@ -175,7 +175,7 @@ state, outputs = let
                 dns.setup,
                 dns.psolver,
                 filters;
-                PF = cache.F,
+                PF = cache.ku[1],
                 p = cache.p,
                 nupdate = 20,
             ),
