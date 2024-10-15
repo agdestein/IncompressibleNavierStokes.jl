@@ -1133,7 +1133,7 @@ with_theme(; palette) do
             # ufinal.u_cnn_post[igrid, ifil, iorder],
         ] .|> device
         (; Ip) = setup.grid
-        (; A, κ, K) = IncompressibleNavierStokes.spectral_stuff(setup)
+        (; inds, κ, K) = IncompressibleNavierStokes.spectral_stuff2(setup)
         specs = map(fields) do u
             up = u
             e = sum(up) do u
@@ -1141,7 +1141,7 @@ with_theme(; palette) do
                 uhat = fft(u)[ntuple(α -> 1:K[α], 3)...]
                 abs2.(uhat) ./ (3 * prod(size(u))^2)
             end
-            e = A * reshape(e, :)
+            e = map(i -> sum(view(e, i)), inds)
             ## e = max.(e, eps(T)) # Avoid log(0)
             ehat = Array(e)
         end

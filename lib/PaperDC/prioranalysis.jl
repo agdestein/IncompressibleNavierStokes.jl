@@ -37,7 +37,7 @@ using CUDA
 using FFTW
 # using GLMakie
 using IncompressibleNavierStokes
-using IncompressibleNavierStokes: momentum, project, apply_bc_u!, spectral_stuff
+using IncompressibleNavierStokes: apply_bc_u!
 using JLD2
 using NeuralClosure
 using PaperDC

@@ -568,13 +568,12 @@ function observespectrum(state; setup, npoint = 100, a = typeof(setup.Re)(1 + sq
     T = eltype(xp[1])
     D = dimension()
 
-    (; A, κ, K) = spectral_stuff(setup; npoint, a)
-    # (; masks, κ, K) = get_spectrum(setup; npoint, a) # Mask
+    (; inds, κ, K) = spectral_stuff2(setup; npoint, a)
 
     # Energy
     uhat = similar(xp[1], Complex{T}, Np)
     # up = interpolate_u_p(state[].u, setup)
-    _ehat = zeros(T, size(A, 1))
+    _ehat = zeros(T, length(κ))
     ehat = lift(state) do (; u)
         # interpolate_u_p!(up, u, setup)
         up = u
@@ -583,11 +582,9 @@ function observespectrum(state; setup, npoint = 100, a = typeof(setup.Re)(1 + sq
             copyto!(uhat, view(u, Ip))
             fft!(uhat)
             uhathalf = view(uhat, ntuple(α -> 1:K[α], D)...)
-            # uhat = fft(u)[ntuple(α -> 1:K, D)...] # Mask
             abs2.(uhathalf) ./ (2 * prod(size(u))^2)
         end
-        e = A * reshape(e, :)
-        # e = map(m -> sum(view(e, m)), masks) # Mask
+        e = map(i -> sum(view(e, i)), inds)
         e = max.(e, eps(T)) # Avoid log(0)
         copyto!(_ehat, e)
     end
