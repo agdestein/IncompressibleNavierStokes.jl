@@ -35,7 +35,7 @@ setsnelliuslogger(logfile)
 using CairoMakie
 using CUDA
 using FFTW
-using GLMakie
+# using GLMakie
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: momentum, project, apply_bc_u!, spectral_stuff
 using JLD2
@@ -62,24 +62,22 @@ end
 # 2D configuration
 case = let
     T = Float64
-    (;
-        name = "2D_double",
-        D = 2,
-        T,
-        ndns = 2048,
-        Re = T(10_000),
-        kp = 20,
-        tlims = (T(0), T(1e-1)),
-        # Δt = T(5e-5)
-        filterdefs = [
-            (FaceAverage(), 64),
-            (FaceAverage(), 128),
-            (FaceAverage(), 256),
-            (VolumeAverage(), 64),
-            (VolumeAverage(), 128),
-            (VolumeAverage(), 256),
-        ],
-    )
+    D = 2
+    ndns = 2048
+    Re = T(10_000)
+    kp = 20
+    tlims = (T(0), T(1e-1))
+    docopy = true
+    filterdefs = [
+        (FaceAverage(), 64),
+        (FaceAverage(), 128),
+        (FaceAverage(), 256),
+        (VolumeAverage(), 64),
+        (VolumeAverage(), 128),
+        (VolumeAverage(), 256),
+    ]
+    name = "D=$(D)_T=$(T)_Re=$(Re)"
+    (; D, T, ndns, Re, kp, tlims, docopy, filterdefs, name)
 end
 
 # 3D configuration
@@ -89,6 +87,7 @@ case = let
     Re = T(2_000)
     kp = 5
     tlims = (T(0), T(1e-1))
+    docopy = true
     filterdefs = [
         (FaceAverage(), 32),
         (FaceAverage(), 64),
@@ -98,7 +97,7 @@ case = let
         (VolumeAverage(), 128),
     ]
     name = "D=$(D)_T=$(T)_Re=$(Re)"
-    (; D, T, ndns, Re, kp, tlims, filterdefs, name)
+    (; D, T, ndns, Re, kp, tlims, docopy, filterdefs, name)
 end
 
 # Larger 3D configuration
@@ -109,18 +108,19 @@ case = let
     Re = T(6_000)
     kp = 10
     tlims = (T(0), T(1e-1))
+    docopy = false
     filterdefs = [
         (FaceAverage(), 32),
         (FaceAverage(), 64),
         (FaceAverage(), 128),
-        (FaceAverage(), 256),
+        # (FaceAverage(), 256),
         (VolumeAverage(), 32),
         (VolumeAverage(), 64),
         (VolumeAverage(), 128),
-        (VolumeAverage(), 256),
+        # (VolumeAverage(), 256),
     ]
     name = "D=$(D)_T=$(T)_Re=$(Re)"
-    (; D, T, ndns, Re, kp, tlims, filterdefs, name)
+    (; D, T, ndns, Re, kp, tlims, docopy, filterdefs, name)
 end
 
 # Setup
@@ -150,19 +150,32 @@ rng = Xoshiro(12345)
 ustart = random_field(dns.setup, case.T(0); case.kp, dns.psolver, rng);
 clean()
 
+# Compute initial spectrum since we will overwrite ustart to save memory
+specstart = let
+    state = (; u = ustart)
+    spec = observespectrum(state; dns.setup)
+    (; spec.κ, ehat = spec.ehat[])
+end
+
 # Solve unsteady problem
-state, outputs = solve_unsteady(;
-    dns.setup,
-    ustart,
-    case.tlims,
-    # Δt,
-    docopy = true, # leave initial conditions unchanged, false to free up memory
-    dns.psolver,
-    processors = (
-        obs = observe_u(dns.setup, dns.psolver, filters; nupdate = 20),
-        log = timelogger(; nupdate = 5),
-    ),
-);
+state, outputs = 
+    let 
+        method = RKMethods.Wray3(; case.T)
+        cache = ode_method_cache(method, setup)
+        solve_unsteady(;
+            dns.setup,
+            ustart,
+            case.tlims,
+            case.docopy, # leave initial conditions unchanged, false to free up memory
+            method,
+            cache,
+            dns.psolver,
+            processors = (
+                obs = observe_u(dns.setup, dns.psolver, filters; PF = cache.F, p = cache.p, nupdate = 20),
+                log = timelogger(; nupdate = 5),
+            ),
+        )
+    end;
 clean()
 
 # ## Plot 2D fields
@@ -212,10 +225,10 @@ end
 # Contour plots in 3D only work with GLMakie.
 # For using GLMakie on headless servers, see
 # <https://docs.makie.org/stable/explanations/headless/#glmakie>
-GLMakie.activate!()
+# GLMakie.activate!()
 
 # Make plots
-D == 3 && with_theme() do
+false && D == 3 && with_theme() do
     function makeplot(field, setup, name)
         name = "$output/$(case.name)_$name.png"
         save(
@@ -280,14 +293,15 @@ end
 # ## Plot spectra
 
 let
-    fields = [state.u, ustart, map(f -> f.Φ(state.u, f.setup, f.compression), filters)...]
-    setups = [dns.setup, dns.setup, getfield.(filters, :setup)...]
+    fields = [state.u, map(f -> f.Φ(state.u, f.setup, f.compression), filters)...]
+    setups = [dns.setup, getfield.(filters, :setup)...]
     specs = map(fields, setups) do u, setup
         clean() # Free up memory
         state = (; u)
         spec = observespectrum(state; setup)
         (; spec.κ, ehat = spec.ehat[])
     end
+    pushfirst!(specs, specstart)
     save_object("$output/$(case.name)_spectra.jld2", specs)
 end
 
@@ -322,8 +336,8 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
         title = "Kinetic energy ($(D)D)",
     )
     plotparts(i) = specs[i].κ, specs[i].ehat
-    lines!(ax, plotparts(1)...; color = Cycled(1), label = "DNS")
-    lines!(ax, plotparts(2)...; color = Cycled(4), label = "DNS, t = 0")
+    lines!(ax, plotparts(2)...; color = Cycled(1), label = "DNS")
+    lines!(ax, plotparts(1)...; color = Cycled(4), label = "DNS, t = 0")
     lines!(ax, plotparts(3)...; color = Cycled(2), label = "Filtered DNS (FA)")
     lines!(ax, plotparts(4)...; color = Cycled(2))
     lines!(ax, plotparts(5)...; color = Cycled(2))

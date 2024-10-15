@@ -63,10 +63,10 @@ function observe_v(dnsobs, Φ, les, compression, psolver)
     results
 end
 
-observe_u(dns, psolver_dns, filters; nupdate = 1) =
+observe_u(dns, psolver_dns, filters; PF, p, nupdate = 1) =
     processor() do state
-        PF = zero.(state[].u)
-        p = zero(state[].u[1])
+        # PF = zero.(state[].u)
+        # p = zero(state[].u[1])
         dnsobs = Observable((; state[].u, PF, state[].t, E = zero(eltype(p))))
         results =
             map(f -> observe_v(dnsobs, f.Φ, f.setup, f.compression, f.psolver), filters)
