@@ -582,7 +582,7 @@ function observespectrum(state; setup, npoint = 100, a = typeof(setup.Re)(1 + sq
             copyto!(uhat, view(u, Ip))
             fft!(uhat)
             uhathalf = view(uhat, ntuple(α -> 1:K[α], D)...)
-            abs2.(uhathalf) ./ (2 * prod(size(u))^2)
+            abs2.(uhathalf) ./ (2 * prod(Np)^2)
         end
         e = map(i -> sum(view(e, i)), inds)
         e = max.(e, eps(T)) # Avoid log(0)
