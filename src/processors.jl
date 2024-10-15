@@ -568,7 +568,7 @@ function observespectrum(state; setup, npoint = 100, a = typeof(setup.Re)(1 + sq
     T = eltype(xp[1])
     D = dimension()
 
-    (; inds, κ, K) = spectral_stuff2(setup; npoint, a)
+    (; inds, κ, K) = spectral_stuff(setup; npoint, a)
 
     # Energy
     uhat = similar(xp[1], Complex{T}, Np)

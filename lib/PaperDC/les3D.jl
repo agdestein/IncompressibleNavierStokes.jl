@@ -1133,7 +1133,7 @@ with_theme(; palette) do
             # ufinal.u_cnn_post[igrid, ifil, iorder],
         ] .|> device
         (; Ip) = setup.grid
-        (; inds, κ, K) = IncompressibleNavierStokes.spectral_stuff2(setup)
+        (; inds, κ, K) = IncompressibleNavierStokes.spectral_stuff(setup)
         specs = map(fields) do u
             up = u
             e = sum(up) do u

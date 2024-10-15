@@ -156,26 +156,33 @@ specstart = let
     spec = observespectrum(state; dns.setup)
     (; spec.κ, ehat = spec.ehat[])
 end
+clean()
 
 # Solve unsteady problem
-state, outputs = 
-    let 
-        method = RKMethods.Wray3(; case.T)
-        cache = ode_method_cache(method, setup)
-        solve_unsteady(;
-            dns.setup,
-            ustart,
-            case.tlims,
-            case.docopy, # leave initial conditions unchanged, false to free up memory
-            method,
-            cache,
-            dns.psolver,
-            processors = (
-                obs = observe_u(dns.setup, dns.psolver, filters; PF = cache.F, p = cache.p, nupdate = 20),
-                log = timelogger(; nupdate = 5),
+state, outputs = let
+    method = RKMethods.Wray3(; case.T)
+    cache = ode_method_cache(method, setup)
+    solve_unsteady(;
+        dns.setup,
+        ustart,
+        case.tlims,
+        case.docopy, # leave initial conditions unchanged, false to free up memory
+        method,
+        cache,
+        dns.psolver,
+        processors = (
+            obs = observe_u(
+                dns.setup,
+                dns.psolver,
+                filters;
+                PF = cache.F,
+                p = cache.p,
+                nupdate = 20,
             ),
-        )
-    end;
+            log = timelogger(; nupdate = 5),
+        ),
+    )
+end;
 clean()
 
 # ## Plot 2D fields
@@ -228,7 +235,8 @@ end
 # GLMakie.activate!()
 
 # Make plots
-false && D == 3 && with_theme() do
+# D == 3 &&
+false && with_theme() do
     function makeplot(field, setup, name)
         name = "$output/$(case.name)_$name.png"
         save(
