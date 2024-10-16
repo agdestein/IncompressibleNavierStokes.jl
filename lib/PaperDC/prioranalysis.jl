@@ -64,63 +64,29 @@ case = let
     T = Float64
     D = 2
     ndns = 2048
-    Re = T(10_000)
+    Re = T(6e3)
     kp = 20
-    tlims = (T(0), T(1e-1))
+    tlims = (T(0), T(5e-1))
     docopy = true
-    filterdefs = [
-        (FaceAverage(), 64),
-        (FaceAverage(), 128),
-        (FaceAverage(), 256),
-        (VolumeAverage(), 64),
-        (VolumeAverage(), 128),
-        (VolumeAverage(), 256),
-    ]
-    name = "D=$(D)_T=$(T)_Re=$(Re)"
-    (; D, T, ndns, Re, kp, tlims, docopy, filterdefs, name)
+    nles = [64, 128, 256]
+    filterdefs = [FaceAverage(), VolumeAverage()]
+    name = "D=$(D)_T=$(T)_Re=$(Re)_t=$(tlims[2])"
+    (; D, T, ndns, Re, kp, tlims, docopy, nles, filterdefs,name)
 end
 
 # 3D configuration
 case = let
     D = 3
-    T, ndns = Float64, 512 # Works on a 40GB A100 GPU. Use Float32 and smaller n for less memory.
-    Re = T(2_000)
-    kp = 5
-    tlims = (T(0), T(1e-1))
-    docopy = true
-    filterdefs = [
-        (FaceAverage(), 32),
-        (FaceAverage(), 64),
-        (FaceAverage(), 128),
-        (VolumeAverage(), 32),
-        (VolumeAverage(), 64),
-        (VolumeAverage(), 128),
-    ]
-    name = "D=$(D)_T=$(T)_Re=$(Re)"
-    (; D, T, ndns, Re, kp, tlims, docopy, filterdefs, name)
-end
-
-# Larger 3D configuration
-case = let
-    D = 3
     T = Float32
-    ndns = 1024 # Works on a 80GB H100 GPU. Use smaller n for less memory.
-    Re = T(6_000)
-    kp = 10
-    tlims = (T(0), T(1e-1))
+    ndns = 256 # Works on a 80GB H100 GPU. Use smaller n for less memory.
+    Re = T(4e3)
+    kp = 20
+    tlims = (T(0), T(5e-1))
     docopy = false
-    filterdefs = [
-        (FaceAverage(), 32),
-        (FaceAverage(), 64),
-        (FaceAverage(), 128),
-        # (FaceAverage(), 256),
-        (VolumeAverage(), 32),
-        (VolumeAverage(), 64),
-        (VolumeAverage(), 128),
-        # (VolumeAverage(), 256),
-    ]
-    name = "D=$(D)_T=$(T)_Re=$(Re)"
-    (; D, T, ndns, Re, kp, tlims, docopy, filterdefs, name)
+    nles = [32, 64, 128, 256]
+    filterdefs = [FaceAverage(), VolumeAverage()]
+    name = "D=$(D)_T=$(T)_Re=$(Re)_t=$(tlims[2])"
+    (; D, T, ndns, Re, kp, tlims, docopy, nles, filterdefs, name)
 end
 
 # Setup
@@ -134,7 +100,7 @@ dns = let
     psolver = default_psolver(setup)
     (; setup, psolver)
 end;
-filters = map(case.filterdefs) do (Φ, nles)
+filters = map(Iterators.product(case.nles, case.filterdefs)) do (nles, Φ)
     compression = case.ndns ÷ nles
     setup = Setup(;
         x = ntuple(α -> LinRange(lims..., nles + 1), case.D),
@@ -310,23 +276,27 @@ let
         (; spec.κ, ehat = spec.ehat[])
     end
     pushfirst!(specs, specstart)
-    save_object("$output/$(case.name)_spectra.jld2", specs)
+    save_object("$output/spectra_$(case.name).jld2", specs)
 end
 
-specs = load_object("$output/$(case.name)_spectra.jld2")
+specs = load_object("$output/spectra_$(case.name).jld2")
+# specs = load_object("$(ENV["HOME"])/haha/$(case.name)_spectra.jld2")
 
 # Plot predicted spectra
 CairoMakie.activate!()
+
 with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])) do
     (; D, T) = case
     kmax = maximum(specs[1].κ)
     ## Build inertial slope above energy
     krange, slope, slopelabel = if D == 2
-        [T(16), T(128)], -T(3), L"$\kappa^{-3}$"
+        # [T(16), T(128)], -T(3), L"$\kappa^{-3}$"
+        [T(8), T(100)], -T(3), L"$\kappa^{-3}$"
     elseif D == 3
-        [T(16), T(100)], -T(5 / 3), L"$\kappa^{-5/3}$"
+        # [T(16), T(100)], -T(5 / 3), L"$\kappa^{-5/3}$"
+        [T(32), T(200)], -T(5 / 3), L"$\kappa^{-5/3}$"
     end
-    slopeconst = maximum(specs[1].ehat ./ specs[1].κ .^ slope)
+    slopeconst = maximum(specs[2].ehat ./ specs[2].κ .^ slope)
     offset = D == 2 ? 3 : 2
     inertia = offset .* slopeconst .* krange .^ slope
     ## Nice ticks
@@ -344,31 +314,42 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
         title = "Kinetic energy ($(D)D)",
     )
     plotparts(i) = specs[i].κ, specs[i].ehat
-    lines!(ax, plotparts(2)...; color = Cycled(1), label = "DNS")
+    nnles = length(case.nles)
+    FA = 3:2+nnles
+    VA = 3+nnles:2+2*nnles
+
     lines!(ax, plotparts(1)...; color = Cycled(4), label = "DNS, t = 0")
-    lines!(ax, plotparts(3)...; color = Cycled(2), label = "Filtered DNS (FA)")
-    lines!(ax, plotparts(4)...; color = Cycled(2))
-    lines!(ax, plotparts(5)...; color = Cycled(2))
-    lines!(ax, plotparts(6)...; color = Cycled(3), label = "Filtered DNS (VA)")
-    lines!(ax, plotparts(7)...; color = Cycled(3))
-    lines!(ax, plotparts(8)...; color = Cycled(3))
+    lines!(ax, plotparts(2)...; color = Cycled(1), label = "DNS")
+    for i in FA
+        label = i == FA[1] ? "Filtered DNS (FA)" : nothing
+        lines!(ax, plotparts(i)...; color = Cycled(2), label)
+    end
+    for i in VA
+        label = i == VA[1] ? "Filtered DNS (VA)" : nothing
+        lines!(ax, plotparts(i)...; color = Cycled(3), label)
+    end
     lines!(ax, krange, inertia; color = Cycled(1), label = slopelabel, linestyle = :dash)
     axislegend(ax; position = :lb)
+    if D == 3
+        text!(ax, "32"; position = (17, 2e-3))
+        text!(ax, "64"; position = (35, 9e-4))
+        text!(ax, "128"; position = (66, 9e-5))
+        text!(ax, "256"; position = (132, 2.3e-6))
+        text!(ax, "1024"; position = (203, 1.4e-7))
+    end
     autolimits!(ax)
     if D == 2
         limits!(ax, (T(0.8), T(800)), (T(1e-10), T(1e0)))
         # limits!(ax, (T(16), T(128)), (T(1e-4), T(1e-1)))
     elseif D == 3
-        limits!(ax, (T(8e-1), T(200)), (T(4e-5), T(1.5e0)))
+        # limits!(ax, (T(8e-1), T(1024)), (T(4e-5), T(1.5e0)))
+        xlims!(ax, T(8e-1), T(550))
     end
-
     x1, y1 = 477, 358
     x0, y0 = x1 - 90, y1 - 94
-
-    k0, k1 = 100, 130
-    e0, e1 = 6e-5, 3e-4
+    k0, k1 = 130, 160
+    e0, e1 = 2e-4, 7e-4
     limits = (k0, k1, e0, e1)
-
     lines!(
         ax,
         [
@@ -381,7 +362,6 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
         color = :black,
         linewidth = 1.5,
     )
-
     ax2 = Axis(
         fig;
         bbox = BBox(x0, x1, y0, y1),
@@ -398,11 +378,9 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
     # https://discourse.julialang.org/t/makie-inset-axes-and-their-drawing-order/60987/5
     translate!(ax2.scene, 0, 0, 10)
     translate!(ax2.elements[:background], 0, 0, 9)
-    lines!(ax2, plotparts(1)...; color = Cycled(1))
-    lines!(ax2, plotparts(5)...; color = Cycled(2))
-    lines!(ax2, plotparts(8)...; color = Cycled(3))
-
-    save("$output/$(case.name)_spectra.pdf", fig)
+    lines!(ax2, plotparts(2)...; color = Cycled(1))
+    lines!(ax2, plotparts(FA[end])...; color = Cycled(2))
+    lines!(ax2, plotparts(VA[end])...; color = Cycled(3))
+    save("$output/spectra_$(case.name).pdf", fig)
     fig
 end
-clean()
