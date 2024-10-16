@@ -71,14 +71,14 @@ case = let
     nles = [64, 128, 256]
     filterdefs = [FaceAverage(), VolumeAverage()]
     name = "D=$(D)_T=$(T)_Re=$(Re)_t=$(tlims[2])"
-    (; D, T, ndns, Re, kp, tlims, docopy, nles, filterdefs,name)
+    (; D, T, ndns, Re, kp, tlims, docopy, nles, filterdefs, name)
 end
 
 # 3D configuration
 case = let
     D = 3
     T = Float32
-    ndns = 256 # Works on a 80GB H100 GPU. Use smaller n for less memory.
+    ndns = 1024 # Works on a 80GB H100 GPU. Use smaller n for less memory.
     Re = T(4e3)
     kp = 20
     tlims = (T(0), T(5e-1))
@@ -239,7 +239,7 @@ end
 
 # ## Compute average quantities
 
-open("$output/$(case.name)_averages.txt", "w") do io
+open("$output/averages_$(case.name).txt", "w") do io
     println(io, "Φ\t\tM\tDu\tPv\tPc\tc\tE")
     for o in outputs.obs
         nt = length(o.t)
