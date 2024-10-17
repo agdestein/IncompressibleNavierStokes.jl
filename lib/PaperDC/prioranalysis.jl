@@ -330,10 +330,11 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
         lines!(ax, plotparts(i)...; color = Cycled(3), label)
     end
     lines!(ax, krange, inertia; color = Cycled(1), label = slopelabel, linestyle = :dash)
-    axislegend(ax;
+    axislegend(
+        ax;
         position = :lb,
         # position = (0.2, 0.01),
-     )
+    )
     autolimits!(ax)
     if D == 2
         limits!(ax, (T(0.8), T(460)), (T(1e-7), T(1e0)))

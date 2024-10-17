@@ -176,6 +176,8 @@ setups = map(
         x = ntuple(α -> LinRange(params.lims..., nles + 1), params.D),
         params.Re,
         params.ArrayType,
+        params.bodyforce,
+        params.issteadybodyforce,
     ),
     params.nles,
 )
@@ -268,14 +270,14 @@ priorfiles = map(
 )
 
 # Train
-trainprior = true
+trainprior = false
 for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles)
     trainprior || break
     clean()
     starttime = time()
     @info "Training a-priori" Φ nles
     filename = priorfiles[ig, ifil]
-    figname = joinpath(plotdir, basename(filename) * ".pdf")
+    figname = joinpath(plotdir, splitext(basename(filename))[1] * ".pdf")
     checkpointname = join(splitext(filename), "_checkpoint")
     trainseed, validseed = splitseed(seeds.prior, 2) # Same seed for all training setups
     dataloader = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device)
@@ -352,7 +354,7 @@ postfiles = map(
 )
 
 # Train
-trainpost = true
+trainpost = false
 for (iorder, projectorder) in enumerate(projectorders),
     (ifil, Φ) in enumerate(params.filters),
     (ig, nles) in enumerate(params.nles)
@@ -363,7 +365,7 @@ for (iorder, projectorder) in enumerate(projectorders),
     @info "Training a-posteriori" projectorder Φ nles
 
     filename = postfiles[ig, ifil, iorder]
-    figname = joinpath(plotdir, basename(filename) * ".pdf")
+    figname = joinpath(plotdir, splitext(basename(filename))[1] * ".pdf")
     checkpointname = join(splitext(filename), "_checkpoint")
     rng = Xoshiro(seeds.post) # Same seed for all training setups
     setup = setups[ig]
@@ -380,12 +382,13 @@ for (iorder, projectorder) in enumerate(projectorders),
         device,
         nunroll = 20,
     )
-    θ = device(θ₀)
+    # θ = θ₀ |> gpu_device()
+    θ = θ_cnn_prior[ig, ifil] |> gpu_device()
     opt = Adam(T(1.0e-3))
     optstate = Optimisers.setup(opt, θ)
     (; callbackstate, callback) = let
         d = data_valid[ig, ifil, 1]
-        it = 1:30
+        it = 1:50
         data = (; u = device.(d.u[it]), t = d.t[it])
         create_callback(
             create_relerr_post(;
@@ -399,7 +402,8 @@ for (iorder, projectorder) in enumerate(projectorders),
             θ,
             figname,
             displayref = false,
-            nupdate = 5,
+            displayupdates = true,
+            nupdate = 10,
         )
     end
     trainstate = (; optstate, θ, rng = Xoshiro(seeds.post))
@@ -455,7 +459,7 @@ smagfiles = map(
     Iterators.product(params.filters, projectorders),
 )
 
-trainsmagorinsky = true
+trainsmagorinsky = false
 for (iorder, projectorder) in enumerate(projectorders),
     (ifil, Φ) in enumerate(params.filters)
 
@@ -528,7 +532,7 @@ eprior = let
         err = create_relerr_prior(closure, testset...)
         prior[ig, ifil] = err(gpu_device()(θ_cnn_prior[ig, ifil]))
         for iorder in eachindex(projectorders)
-            # post[ig, ifil, iorder] = err(gpu_device()(θ_cnn_post[ig, ifil, iorder]))
+            post[ig, ifil, iorder] = err(gpu_device()(θ_cnn_post[ig, ifil, iorder]))
         end
     end
     (; prior, post)
@@ -588,7 +592,7 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
             nupdate,
         )
         e_cnn[ig, ifil, iorder] = err(gpu_device()(θ_cnn_prior[ig, ifil]))
-        # e_cnn_post[ig, ifil, iorder] = err(gpu_device()(θ_cnn_post[ig, ifil, iorder]))
+        e_cnn_post[ig, ifil, iorder] = err(gpu_device()(θ_cnn_post[ig, ifil, iorder]))
     end
     (; e_nm, e_smag, e_cnn, e_cnn_post)
 end
@@ -664,7 +668,7 @@ with_theme(; palette) do
             (e_nm, :circle, "No closure", Cycled(1)),
             (e_smag, :utriangle, "Smagorinsky", Cycled(2)),
             (e_cnn, :rect, "CNN (Lprior)", Cycled(3)),
-            # (e_cnn_post, :diamond, "CNN (Lpost)", Cycled(4)),
+            (e_cnn_post, :diamond, "CNN (Lpost)", Cycled(4)),
         ]
             for ifil = 1:2
                 linestyle = ifil == 1 ? :solid : :dash
@@ -672,8 +676,8 @@ with_theme(; palette) do
                 scatterlines!(nles, e[:, ifil, iorder]; color, linestyle, marker, label)
             end
         end
-        axislegend(; position = :lb)
-        ylims!(ax, (T(0.025), T(1.00)))
+        axislegend(; position = :rt)
+        # ylims!(ax, (T(0.025), T(1.00)))
         save("$plotdir/epost_projectorder=$(projectorder).pdf", fig)
         display(fig)
     end
@@ -687,73 +691,81 @@ end
 
 kineticenergy = let
     clean()
-    ngrid, nfilter = size(io_train)
-    ke_ref = fill(zeros(T, 0), ngrid, nfilter)
-    ke_nomodel = fill(zeros(T, 0), ngrid, nfilter)
-    ke_smag = fill(zeros(T, 0), ngrid, nfilter, 2)
-    ke_cnn_prior = fill(zeros(T, 0), ngrid, nfilter, 2)
-    ke_cnn_post = fill(zeros(T, 0), ngrid, nfilter, 2)
-    for iorder = 1:2, ifil = 1:nfilter, ig = 1:ngrid
+    ngrid, nfilter, norder =
+        length(params.nles), length(params.filters), length(projectorders)
+    ke_ref = fill(zeros(Point2f, 0), ngrid, nfilter, norder)
+    ke_nomodel = fill(zeros(Point2f, 0), ngrid, nfilter, norder)
+    ke_smag = fill(zeros(Point2f, 0), ngrid, nfilter, norder)
+    ke_cnn_prior = fill(zeros(Point2f, 0), ngrid, nfilter, norder)
+    ke_cnn_post = fill(zeros(Point2f, 0), ngrid, nfilter, norder)
+    for iorder = 1:norder, ifil = 1:nfilter, ig = 1:ngrid
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         projectorder = ProjectOrder.T(iorder)
-        setup = setups_test[ig]
+        setup = setups[ig]
         psolver = psolver_spectral(setup)
-        t = data_test.t
-        ustart = data_test.data[ig, ifil].u[1] |> device
-        tlims = (t[1], t[end])
-        nupdate = 2
-        Δt = (t[2] - t[1]) / nupdate
+        sample = data_test[ig, ifil, 1]
+        ustart = sample.u[1] |> device
+        tlims = (sample.t[1], sample.t[end])
         T = eltype(ustart[1])
+        nupdate = 2
         ewriter = processor() do state
-            ehist = zeros(T, 0)
-            on(state) do (; u, n)
+            ehist = zeros(Point2f, 0)
+            on(state) do (; u, t, n)
                 if n % nupdate == 0
-                    e = IncompressibleNavierStokes.total_kinetic_energy(u, setup)
-                    push!(ehist, e)
+                    e = total_kinetic_energy(u, setup)
+                    push!(ehist, Point2f(t, e))
                 end
             end
             state[] = state[] # Compute initial energy
             ehist
         end
         processors = (; ewriter)
-        if iorder == 1
-            ## Does not depend on projection order
-            ke_ref[ig, ifil] = map(
-                u -> IncompressibleNavierStokes.total_kinetic_energy(device(u), setup),
-                data_test.data[ig, ifil].u,
-            )
-            ke_nomodel[ig, ifil] =
-                solve_unsteady(; setup, ustart, tlims, Δt, processors, psolver)[2].ewriter
-        end
+        ## Does not depend on projection order
+        ke_ref[ig, ifil, iorder] = map(
+            (t, u) -> Point2f(t, total_kinetic_energy(device(u), setup)),
+            sample.t,
+            sample.u,
+        )
+        ke_nomodel[ig, ifil, iorder] =
+            solve_unsteady(; setup, ustart, tlims, processors, psolver)[2].ewriter
         ke_smag[ig, ifil, iorder] =
             solve_unsteady(;
-                (; setup..., projectorder, closure_model = smagorinsky_closure(setup)),
+                setup = (;
+                    setup...,
+                    projectorder,
+                    closure_model = smagorinsky_closure(setup),
+                ),
                 ustart,
                 tlims,
-                Δt,
                 processors,
                 psolver,
                 θ = θ_smag[ifil, iorder],
             )[2].ewriter
         ke_cnn_prior[ig, ifil, iorder] =
             solve_unsteady(;
-                (; setup..., projectorder, closure_model = wrappedclosure(closure, setup)),
+                setup = (;
+                    setup...,
+                    projectorder,
+                    closure_model = wrappedclosure(closure, setup),
+                ),
                 ustart,
                 tlims,
-                Δt,
                 processors,
                 psolver,
-                θ = θ_cnn_prior[ig, ifil],
+                θ = gpu_device()(θ_cnn_prior[ig, ifil]),
             )[2].ewriter
         ke_cnn_post[ig, ifil, iorder] =
             solve_unsteady(;
-                (; setup..., projectorder, closure_model = wrappedclosure(closure, setup)),
+                setup = (;
+                    setup...,
+                    projectorder,
+                    closure_model = wrappedclosure(closure, setup),
+                ),
                 ustart,
                 tlims,
-                Δt,
                 processors,
                 psolver,
-                θ = θ_cnn_post[ig, ifil, iorder],
+                θ = gpu_device()(θ_cnn_post[ig, ifil, iorder]),
             )[2].ewriter
     end
     (; ke_ref, ke_nomodel, ke_smag, ke_cnn_prior, ke_cnn_post)
@@ -768,13 +780,14 @@ clean();
 CairoMakie.activate!()
 
 with_theme(; palette) do
-    t = data_test.t
-    for iorder = 1:2, ifil = 1:2, igrid = 1:3
+    for (iorder, projectorder) in enumerate(projectorders),
+        (ifil, Φ) in enumerate(params.filters),
+        (igrid, nles) in enumerate(params.nles)
+
         println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
         projectorder = ProjectOrder.T(iorder)
         lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
-        nles = params_test.nles[igrid]
         fig = Figure(; size = (500, 400))
         ax = Axis(
             fig[1, 1];
@@ -784,45 +797,40 @@ with_theme(; palette) do
         )
         lines!(
             ax,
-            t,
-            kineticenergy.ke_ref[igrid, ifil];
+            kineticenergy.ke_ref[igrid, ifil, iorder];
             color = Cycled(1),
             linestyle = :dash,
             label = "Reference",
         )
         lines!(
             ax,
-            t,
-            kineticenergy.ke_nomodel[igrid, ifil];
+            kineticenergy.ke_nomodel[igrid, ifil, iorder];
             color = Cycled(1),
             label = "No closure",
         )
         lines!(
             ax,
-            t,
             kineticenergy.ke_smag[igrid, ifil, iorder];
             color = Cycled(2),
             label = "Smagorinsky",
         )
         lines!(
             ax,
-            t,
             kineticenergy.ke_cnn_prior[igrid, ifil, iorder];
             color = Cycled(3),
             label = "CNN (prior)",
         )
         lines!(
             ax,
-            t,
             kineticenergy.ke_cnn_post[igrid, ifil, iorder];
             color = Cycled(4),
             label = "CNN (post)",
         )
-        iorder == 1 && axislegend(; position = :lt)
-        iorder == 2 && axislegend(; position = :lb)
-        name = "$plotdir/energy_evolution/$mname/"
+        axislegend(; position = :lt)
+        name = "$plotdir/energy_evolution/"
         ispath(name) || mkpath(name)
-        save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
+        save("$(name)/projectorder=$(projectorder)_filter=$(Φ)_nles=$(nles).pdf", fig)
+        display(fig)
     end
 end
 
@@ -843,7 +851,7 @@ divs = let
     for iorder = 1:3, ifil = 1:nfilter, ig = 1:ngrid
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         projectorder = ProjectOrder.T(iorder)
-        setup = setups_test[ig]
+        setup = setups[ig]
         psolver = psolver_spectral(setup)
         t = data_test.t
         ustart = data_test.data[ig, ifil].u[1] |> device
@@ -932,7 +940,7 @@ with_theme(;
                 "DCF-RHS"
             end
             fil = ifil == 1 ? "FA" : "VA"
-            nles = params_test.nles[igrid]
+            nles = params.nles[igrid]
             fig = Figure(; size = (500, 400))
             ax = Axis(
                 fig[1, 1];
@@ -966,46 +974,47 @@ end
 # ## Solutions at final time
 
 ufinal = let
-    ngrid, nfilter = size(io_train)
+    ngrid, nfilter, norder =
+        length(params.nles), length(params.filters), length(projectorders)
     temp = ntuple(α -> zeros(T, 0, 0), 2)
-    u_ref = fill(temp, ngrid, nfilter)
-    u_nomodel = fill(temp, ngrid, nfilter)
-    u_smag = fill(temp, ngrid, nfilter, 2)
-    u_cnn_prior = fill(temp, ngrid, nfilter, 2)
-    u_cnn_post = fill(temp, ngrid, nfilter, 2)
-    for iorder = 1:2, ifil = 1:nfilter, igrid = 1:ngrid
+    u_ref = fill(temp, ngrid, nfilter, norder)
+    u_nomodel = fill(temp, ngrid, nfilter, norder)
+    u_smag = fill(temp, ngrid, nfilter, norder)
+    u_cnn_prior = fill(temp, ngrid, nfilter, norder)
+    u_cnn_post = fill(temp, ngrid, nfilter, norder)
+    for (iorder, projectorder) in enumerate(projectorders),
+        (ifil, Φ) in enumerate(params.filters),
+        (igrid, nles) in enumerate(params.nles)
+
         clean()
-        println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
-        projectorder = ProjectOrder.T(iorder)
-        t = data_test.t
-        setup = setups_test[igrid]
+        @info "Computing test solutions" projectorder Φ nles
+        setup = setups[igrid]
         psolver = psolver_spectral(setup)
-        ustart = data_test.data[igrid, ifil].u[1] |> device
+        sample = data_test[igrid, ifil, 1]
+        ustart = sample.u[1] |> gpu_device()
+        t = sample.t
         tlims = (t[1], t[end])
         nupdate = 2
-        Δt = (t[2] - t[1]) / nupdate
         T = eltype(ustart[1])
         s(closure_model, θ) =
             solve_unsteady(;
-                (; setup..., closure_model),
+                setup = (; setup..., closure_model),
                 ustart,
                 tlims,
-                method = RKProject(RK44(; T), projectorder),
-                Δt,
+                method = RKProject(params.method, projectorder),
                 psolver,
                 θ,
             )[1].u .|> Array
-        if iorder == 1
-            ## Does not depend on projection order
-            u_ref[igrid, ifil] = data_test.data[igrid, ifil].u[end]
-            u_nomodel[igrid, ifil] = s(nothing, nothing)
-        end
+        u_ref[igrid, ifil, iorder] = sample.u[end]
+        u_nomodel[igrid, ifil, iorder] = s(nothing, nothing)
         u_smag[igrid, ifil, iorder] =
             s(smagorinsky_closure(setup), θ_smag[ifil, iorder])
         u_cnn_prior[igrid, ifil, iorder] =
-            s(wrappedclosure(closure, setup), θ_cnn_prior[igrid, ifil])
-        u_cnn_post[igrid, ifil, iorder] =
-            s(wrappedclosure(closure, setup), θ_cnn_post[igrid, ifil, iorder])
+            s(wrappedclosure(closure, setup), gpu_device()(θ_cnn_prior[igrid, ifil]))
+        u_cnn_post[igrid, ifil, iorder] = s(
+            wrappedclosure(closure, setup),
+            gpu_device()(θ_cnn_post[igrid, ifil, iorder]),
+        )
     end
     (; u_ref, u_nomodel, u_smag, u_cnn_prior, u_cnn_post)
 end;
@@ -1027,17 +1036,19 @@ clean();
 CairoMakie.activate!()
 
 fig = with_theme(; palette) do
-    for iorder = 1:2, ifil = 1:2, igrid = 1:3
-        println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
-        projectorder = ProjectOrder.T(iorder)
+    for (iorder, projectorder) in enumerate(projectorders),
+        (ifil, Φ) in enumerate(params.filters),
+        (igrid, nles) in enumerate(params.nles)
+
+        @info "Plotting spectra" projectorder Φ nles
         lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
-        nles = params_test.nles[igrid]
-        setup = setups_test[igrid]
+        nles = params.nles[igrid]
+        setup = setups[igrid]
         fields =
             [
-                ufinal.u_ref[igrid, ifil],
-                ufinal.u_nomodel[igrid, ifil],
+                ufinal.u_ref[igrid, ifil, iorder],
+                ufinal.u_nomodel[igrid, ifil, iorder],
                 ufinal.u_smag[igrid, ifil, iorder],
                 ufinal.u_cnn_prior[igrid, ifil, iorder],
                 ufinal.u_cnn_post[igrid, ifil, iorder],
@@ -1045,20 +1056,14 @@ fig = with_theme(; palette) do
         (; Ip) = setup.grid
         (; inds, κ, K) = IncompressibleNavierStokes.spectral_stuff(setup)
         specs = map(fields) do u
-            up = u
-            e = sum(up) do u
-                u = u[Ip]
-                uhat = fft(u)[ntuple(α -> 1:K[α], 2)...]
-                abs2.(uhat) ./ (2 * prod(size(u))^2)
-            end
-            e = map(i -> sum(view(e, i)), inds)
-            ## e = max.(e, eps(T)) # Avoid log(0)
-            ehat = Array(e)
+            state = (; u)
+            spec = observespectrum(state; setup)
+            spec.ehat[]
         end
         kmax = maximum(κ)
         ## Build inertial slope above energy
-        krange = [T(16), T(κ[end])]
-        slope, slopelabel = -T(3), L"$\kappa^{-3}"
+        krange = [T(4), T(κ[end] / 2)]
+        slope, slopelabel = -T(3), L"$\kappa^{-3}$"
         slopeconst = maximum(specs[1] ./ κ .^ slope)
         offset = 3
         inertia = offset .* slopeconst .* krange .^ slope
@@ -1082,12 +1087,13 @@ fig = with_theme(; palette) do
         lines!(ax, κ, specs[5]; color = Cycled(4), label = "CNN (post)")
         lines!(ax, κ, specs[1]; color = Cycled(1), linestyle = :dash, label = "Reference")
         lines!(ax, krange, inertia; color = Cycled(1), label = slopelabel, linestyle = :dot)
-        axislegend(ax; position = :cb)
+        axislegend(ax; position = :lb)
         autolimits!(ax)
-        ylims!(ax, (T(1e-3), T(0.35)))
-        name = "$plotdir/energy_spectra/$mname"
+        # ylims!(ax, (T(1e-3), T(0.35)))
+        name = "$plotdir/spectra/"
         ispath(name) || mkpath(name)
-        save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
+        save("$(name)/projectorder=$(projectorder)_filter=$(Φ)_nles=$(nles).pdf", fig)
+        display(fig)
     end
 end
 clean();
@@ -1114,18 +1120,20 @@ with_theme(; fontsize = 25, palette) do
         Point2f(x1, y2),
         Point2f(x1, y1),
     ]
-    path = "$plotdir/les_fields/$mname"
+    path = "$plotdir/les_fields"
     ispath(path) || mkpath(path)
-    for iorder = 1:2, ifil = 1:2, igrid = 1:3
-        projectorder = ProjectOrder.T(iorder)
-        setup = setups_test[igrid]
-        name = "$path/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid)"
+    for (iorder, projectorder) in enumerate(projectorders),
+        (ifil, Φ) in enumerate(params.filters),
+        (igrid, nles) in enumerate(params.nles)
+
+        setup = setups[igrid]
+        name = "$path/projectorder=$(projectorder)_filter=$(Φ)_nles=$(nles)"
         lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
-        nles = params_test.nles[igrid]
+        nles = params.nles[igrid]
         function makeplot(u, title, suffix)
             fig = fieldplot(
-                (; u, t = T(0));
+                (; u, temp = nothing, t = T(0));
                 setup,
                 title,
                 docolorbar = false,
@@ -1134,12 +1142,12 @@ with_theme(; fontsize = 25, palette) do
             lines!(box; linewidth = 5, color = Cycled(2)) # Red in palette
             fname = "$(name)_$(suffix).png"
             save(fname, fig)
+            display(fig)
             ## run(`convert $fname -trim $fname`) # Requires imagemagick
         end
-        iorder == 2 &&
-            makeplot(device(ufinal.u_ref[igrid, ifil]), "Reference, $fil, $nles", "ref")
-        iorder == 2 && makeplot(
-            device(ufinal.u_nomodel[igrid, ifil]),
+        makeplot(device(ufinal.u_ref[igrid, ifil, iorder]), "Reference, $fil, $nles", "ref")
+        makeplot(
+            device(ufinal.u_nomodel[igrid, ifil, iorder]),
             "No closure, $fil, $nles",
             "nomodel",
         )
