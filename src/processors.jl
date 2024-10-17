@@ -585,7 +585,7 @@ function observespectrum(state; setup, npoint = 100, a = typeof(setup.Re)(1 + sq
             abs2.(uhathalf) ./ (2 * prod(Np)^2)
         end
         e = map(i -> sum(view(e, i)), inds)
-        e = max.(e, eps(T)) # Avoid log(0)
+        # e = max.(e, eps(T)) # Avoid log(0)
         copyto!(_ehat, e)
     end
 

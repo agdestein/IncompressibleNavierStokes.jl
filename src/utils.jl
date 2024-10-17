@@ -98,7 +98,8 @@ function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) /
     # κ = logrange(T(1), T(kmax) - 1, npoint)
     # κ = logrange(T(1), T(kmax) / a, npoint)
     # κ = logrange(a, T(kmax) / a, npoint)
-    κ = logrange(T(1), T(sqrt(D) * kmax), npoint)
+    κ = logrange(T(1), T(kmax), npoint)
+    # κ = logrange(T(1), T(sqrt(D) * kmax), npoint)
     κ = sort(unique(round.(Int, κ)))
     npoint = length(κ)
 
