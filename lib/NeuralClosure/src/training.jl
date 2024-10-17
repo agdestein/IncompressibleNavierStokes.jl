@@ -83,19 +83,12 @@ function create_loss_post(;
         T = eltype(θ)
         (; u, t) = data
         v = u[1]
-        stepper = IncompressibleNavierStokes.create_stepper(
-            method;
-            setup,
-            psolver,
-            u = v,
-            temp = nothing,
-            t = t[1],
-        )
+        stepper = create_stepper(method; setup, psolver, u = v, temp = nothing, t = t[1])
         loss = zero(eltype(v[1]))
         for it = 2:length(t)
             Δt = (t[it] - t[it-1]) / nupdate
             for isub = 1:nupdate
-                stepper = IncompressibleNavierStokes.timestep(method, stepper, Δt; θ)
+                stepper = timestep(method, stepper, Δt; θ)
             end
             a, b = T(0), T(0)
             for α = 1:length(u[1])
@@ -128,14 +121,7 @@ function create_relerr_post(;
     function relerr_post(θ)
         T = eltype(u[1][1])
         copyto!.(v, u[1])
-        stepper = IncompressibleNavierStokes.create_stepper(
-            method;
-            setup,
-            psolver,
-            u = v,
-            temp = nothing,
-            t = t[1],
-        )
+        stepper = create_stepper(method; setup, psolver, u = v, temp = nothing, t = t[1])
         e = zero(T)
         for it = 2:length(t)
             Δt = (t[it] - t[it-1]) / nupdate
@@ -173,15 +159,9 @@ function create_relerr_symmetry_post(;
     T = eltype(u[1])
     cache = IncompressibleNavierStokes.ode_method_cache(method, setup)
     function err(θ)
-        stepper = IncompressibleNavierStokes.create_stepper(
-            method;
-            setup,
-            psolver,
-            u = copy.(u),
-            temp = nothing,
-            t = T(0),
-        )
-        stepper_rot = IncompressibleNavierStokes.create_stepper(
+        stepper =
+            create_stepper(method; setup, psolver, u = copy.(u), temp = nothing, t = T(0))
+        stepper_rot = create_stepper(
             method;
             setup,
             psolver,
