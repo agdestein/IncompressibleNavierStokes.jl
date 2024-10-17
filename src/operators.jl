@@ -798,20 +798,31 @@ function dissipation_from_strain!(ϵ, u, setup)
 end
 
 "Compute body force (differentiable version)."
-applybodyforce(u, t, setup) = applybodyforce!(zero.(u), u, t, setup)
+function applybodyforce(u, t, setup)
+    (; grid, bodyforce, issteadybodyforce) = setup
+    (; dimension) = grid
+    D = dimension()
+    if issteadybodyforce
+        bodyforce
+    else
+        map(α -> bodyforce.(α, x[α]..., t), 1:D)
+    end
+end
 
-ChainRulesCore.rrule(::typeof(applybodyforce), u, t, setup) =
-    (applybodyforce(u, t, setup), φ -> error("Not yet implemented"))
+# "Compute body force (differentiable version)."
+# applybodyforce(u, t, setup) = applybodyforce!(zero.(u), u, t, setup)
+
+# ChainRulesCore.rrule(::typeof(applybodyforce), u, t, setup) =
+#     (applybodyforce(u, t, setup), φ -> error("Not yet implemented"))
 
 """
 Compute body force (in-place version).
 Add the result to `F`.
 """
 function applybodyforce!(F, u, t, setup)
-    (; grid, workgroupsize, bodyforce, issteadybodyforce) = setup
+    (; grid, bodyforce, issteadybodyforce) = setup
     (; dimension, Iu, xu) = grid
     D = dimension()
-    e = Offset{D}()
     for α = 1:D
         if issteadybodyforce
             F[α] .+= bodyforce[α]
@@ -891,7 +902,7 @@ function momentum(u, temp, t, setup)
     F = @. d + c
     if !isnothing(bodyforce)
         f = applybodyforce(u, t, setup)
-        F .+= f
+        F = F .+ f
     end
     if !isnothing(temp)
         g = gravity(temp, setup)
