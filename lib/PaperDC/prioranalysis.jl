@@ -97,21 +97,14 @@ end
 # Setup
 lims = case.T(0), case.T(1)
 dns = let
-    setup = Setup(;
-        x = ntuple(α -> range(lims..., case.ndns + 1), case.D),
-        case.Re,
-        ArrayType,
-    )
+    setup = Setup(; x = ntuple(α -> range(lims..., case.ndns + 1), case.D), case.Re, ArrayType)
     psolver = default_psolver(setup)
     (; setup, psolver)
 end;
 filters = map(Iterators.product(case.nles, case.filterdefs)) do (nles, Φ)
     compression = case.ndns ÷ nles
-    setup = Setup(;
-        x = ntuple(α -> range(lims..., nles + 1), case.D),
-        case.Re,
-        ArrayType,
-    )
+    setup =
+        Setup(; x = ntuple(α -> range(lims..., nles + 1), case.D), case.Re, ArrayType)
     psolver = default_psolver(setup)
     (; setup, Φ, compression, psolver)
 end;

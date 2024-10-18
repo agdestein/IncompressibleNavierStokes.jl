@@ -247,11 +247,11 @@ closure.chain
 
 # Give the CNN a test run
 # Note: Data and parameters are stored on the CPU, and
-# must be moved to the GPU before use (with `gpu_device`)
+# must be moved to the GPU before use (with `device`)
 let
     using NeuralClosure.Zygote
-    u = io_train[1, 1].u[:, :, :, :, 1:10] |> gpu_device()
-    θ = θ₀ |> gpu_device()
+    u = io_train[1, 1].u[:, :, :, :, 1:10] |> device
+    θ = θ₀ |> device
     closure(u, θ)
     gradient(θ -> sum(closure(u, θ)), θ)
     clean()
@@ -310,8 +310,8 @@ trainprior && let
         # Resume from checkpoint
         ncheck, trainstate, callbackstate =
             load(checkpointname, "ncheck", "trainstate", "callbackstate")
-        trainstate = trainstate |> gpu_device()
-        @reset callbackstate.θmin = callbackstate.θmin |> gpu_device()
+        trainstate = trainstate |> device
+        @reset callbackstate.θmin = callbackstate.θmin |> device
     end
     for icheck = ncheck+1:10
         (; trainstate, callbackstate) = train(;
@@ -424,8 +424,8 @@ trainpost && let
         @info "Resuming from checkpoint $checkpointname"
         ncheck, trainstate, callbackstate =
             load(checkpointname, "ncheck", "trainstate", "callbackstate")
-        trainstate = trainstate |> gpu_device()
-        @reset callbackstate.θmin = callbackstate.θmin |> gpu_device()
+        trainstate = trainstate |> device
+        @reset callbackstate.θmin = callbackstate.θmin |> device
     end
     for icheck = ncheck+1:10
         (; trainstate, callbackstate) =

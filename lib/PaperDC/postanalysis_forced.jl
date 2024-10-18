@@ -254,12 +254,12 @@ closure.chain
 
 # Give the CNN a test run
 # Note: Data and parameters are stored on the CPU, and
-# must be moved to the GPU before use (with `gpu_device`)
+# must be moved to the GPU before use (with `device`)
 let
     @info "CNN warm up run"
     using NeuralClosure.Zygote
-    u = io_train[1, 1].u |> x -> selectdim(x, ndims(x), 1:10) |> collect |> gpu_device()
-    θ = θ₀ |> gpu_device()
+    u = io_train[1, 1].u |> x -> selectdim(x, ndims(x), 1:10) |> collect |> device
+    θ = θ₀ |> device
     closure(u, θ)
     gradient(θ -> sum(closure(u, θ)), θ)
     clean()
@@ -307,7 +307,7 @@ for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles
     optstate = Optimisers.setup(opt, θ)
     it = rand(Xoshiro(validseed), 1:size(io_valid[ig, ifil].u, params.D + 2), 50)
     validset =
-        gpu_device()(map(v -> collect(selectdim(v, ndims(v), it)), io_valid[ig, ifil]))
+        device(map(v -> collect(selectdim(v, ndims(v), it)), io_valid[ig, ifil]))
     (; callbackstate, callback) = create_callback(
         create_relerr_prior(closure, validset...);
         θ,
@@ -321,8 +321,8 @@ for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles
     if false
         # Resume from checkpoint
         (; ncheck, trainstate, callbackstate) = namedtupleload(checkpointname)
-        trainstate = trainstate |> gpu_device()
-        @reset callbackstate.θmin = callbackstate.θmin |> gpu_device()
+        trainstate = trainstate |> device
+        @reset callbackstate.θmin = callbackstate.θmin |> device
     end
     for icheck = ncheck+1:10
         (; trainstate, callbackstate) =
@@ -410,8 +410,8 @@ for (iorder, projectorder) in enumerate(projectorders),
         device,
         nunroll = 20,
     )
-    # θ = θ₀ |> gpu_device()
-    θ = θ_cnn_prior[ig, ifil] |> gpu_device()
+    # θ = θ₀ |> device
+    θ = θ_cnn_prior[ig, ifil] |> device
     opt = Adam(T(1.0e-3))
     optstate = Optimisers.setup(opt, θ)
     (; callbackstate, callback) = let
@@ -439,8 +439,8 @@ for (iorder, projectorder) in enumerate(projectorders),
     if false
         @info "Resuming from checkpoint $checkpointname"
         ncheck, trainstate, callbackstate = namedtupleload(checkpointname)
-        trainstate = trainstate |> gpu_device()
-        @reset callbackstate.θmin = callbackstate.θmin |> gpu_device()
+        trainstate = trainstate |> device
+        @reset callbackstate.θmin = callbackstate.θmin |> device
     end
     for icheck = ncheck+1:10
         (; trainstate, callbackstate) =
@@ -556,11 +556,11 @@ eprior = let
         @info "Computing a-priori errors" Φ nles
         testset = io_test[ig, ifil]
         u, c = testset.u[:, :, :, 1:100], testset.c[:, :, :, 1:100]
-        testset = (u, c) |> gpu_device()
+        testset = (u, c) |> device
         err = create_relerr_prior(closure, testset...)
-        prior[ig, ifil] = err(gpu_device()(θ_cnn_prior[ig, ifil]))
+        prior[ig, ifil] = err(device(θ_cnn_prior[ig, ifil]))
         for iorder in eachindex(projectorders)
-            post[ig, ifil, iorder] = err(gpu_device()(θ_cnn_post[ig, ifil, iorder]))
+            post[ig, ifil, iorder] = err(device(θ_cnn_post[ig, ifil, iorder]))
         end
     end
     (; prior, post)
@@ -619,8 +619,8 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
             closure_model = wrappedclosure(closure, setup),
             nupdate,
         )
-        e_cnn[ig, ifil, iorder] = err(gpu_device()(θ_cnn_prior[ig, ifil]))
-        e_cnn_post[ig, ifil, iorder] = err(gpu_device()(θ_cnn_post[ig, ifil, iorder]))
+        e_cnn[ig, ifil, iorder] = err(device(θ_cnn_prior[ig, ifil]))
+        e_cnn_post[ig, ifil, iorder] = err(device(θ_cnn_post[ig, ifil, iorder]))
     end
     (; e_nm, e_smag, e_cnn, e_cnn_post)
 end
@@ -780,7 +780,7 @@ kineticenergy = let
                 tlims,
                 processors,
                 psolver,
-                θ = gpu_device()(θ_cnn_prior[ig, ifil]),
+                θ = device(θ_cnn_prior[ig, ifil]),
             )[2].ewriter
         ke_cnn_post[ig, ifil, iorder] =
             solve_unsteady(;
@@ -793,7 +793,7 @@ kineticenergy = let
                 tlims,
                 processors,
                 psolver,
-                θ = gpu_device()(θ_cnn_post[ig, ifil, iorder]),
+                θ = device(θ_cnn_post[ig, ifil, iorder]),
             )[2].ewriter
     end
     (; ke_ref, ke_nomodel, ke_smag, ke_cnn_prior, ke_cnn_post)
@@ -1019,7 +1019,7 @@ ufinal = let
         setup = setups[igrid]
         psolver = psolver_spectral(setup)
         sample = data_test[igrid, ifil, 1]
-        ustart = sample.u[1] |> gpu_device()
+        ustart = sample.u[1] |> device
         t = sample.t
         tlims = (t[1], t[end])
         nupdate = 2
@@ -1038,10 +1038,10 @@ ufinal = let
         u_smag[igrid, ifil, iorder] =
             s(smagorinsky_closure(setup), θ_smag[ifil, iorder])
         u_cnn_prior[igrid, ifil, iorder] =
-            s(wrappedclosure(closure, setup), gpu_device()(θ_cnn_prior[igrid, ifil]))
+            s(wrappedclosure(closure, setup), device(θ_cnn_prior[igrid, ifil]))
         u_cnn_post[igrid, ifil, iorder] = s(
             wrappedclosure(closure, setup),
-            gpu_device()(θ_cnn_post[igrid, ifil, iorder]),
+            device(θ_cnn_post[igrid, ifil, iorder]),
         )
     end
     (; u_ref, u_nomodel, u_smag, u_cnn_prior, u_cnn_post)
