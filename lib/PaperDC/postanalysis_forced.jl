@@ -147,10 +147,12 @@ params = (;
 
 # Data file names
 ntrajectory = 10
+itrain, ivalid, itest =
+    1:ntrajectory-2, ntrajectory-1:ntrajectory-1, ntrajectory:ntrajectory
 dns_seeds = splitseed(seeds.dns, ntrajectory)
 datadir = joinpath(outdir, "data")
 ispath(datadir) || mkpath(datadir)
-filenames =
+datafiles =
     map(Iterators.product(params.nles, params.filters, dns_seeds)) do (nles, Φ, seed)
         "$datadir/seed=$(repr(seed))_filter=$(Φ)_nles=$(nles).jld2"
     end
@@ -158,7 +160,7 @@ filenames =
 create_data = false
 create_data && for (iseed, seed) in enumerate(dns_seeds)
     if isslurm && iseed != taskid
-         # Each task does one initial condition
+        # Each task does one initial condition
         @info "Skipping seed $seed on for $taskid"
         continue
     else
@@ -168,20 +170,22 @@ create_data && for (iseed, seed) in enumerate(dns_seeds)
     @info("Trajectory info:", comptime / 60, length(t), Base.summarysize(data) * 1e-9,)
     for ifilter in eachindex(params.filters), igrid in eachindex(params.nles)
         (; u, c) = data[igrid, ifilter]
-        filename = filenames[igrid, ifilter, iseed]
-        @info "Saving data to $filename"
-        jldsave(filename; u, c, t, comptime)
+        f = datafiles[igrid, ifilter, iseed]
+        @info "Saving data to $f"
+        jldsave(f; u, c, t, comptime)
     end
 end
 
-# Load filtered DNS data
-data = namedtupleload.(filenames);
-data_train = data[:, :, 1:8]
-data_valid = data[:, :, 9:9]
-data_test = data[:, :, 10:10]
-
 # Computational time
-@info "Data" sum(d -> d.comptime, data) / 60 Base.summarysize(data) * 1e-9
+let
+    comptime, datasize = 0.0, 0.0
+    for f in datafiles
+        data = namedtupleload(f)
+        comptime += data.comptime
+        datasize += Base.summarysize(data)
+    end
+    @info "Data" comptime / 60 datasize * 1e-9
+end
 
 # Build LES setup and assemble operators
 setups = map(
@@ -194,44 +198,6 @@ setups = map(
     ),
     params.nles,
 )
-
-# Create input/output arrays for a-priori training (ubar vs c)
-io_train = create_io_arrays(data_train, setups);
-io_valid = create_io_arrays(data_valid, setups);
-io_test = create_io_arrays(data_test, setups);
-
-# Check that data is reasonably bounded
-io_train[1].u |> extrema
-io_train[1].c |> extrema
-io_valid[1].u |> extrema
-io_valid[1].c |> extrema
-io_test[1].u |> extrema
-io_test[1].c |> extrema
-
-# Inspect data (live animation with GLMakie)
-# GLMakie.activate!()
-doplot = false
-doplot && let
-    ig = 2
-    ifil = 1
-    iseed = 1
-    field, setup = data[ig, ifil, iseed].u, setups[ig]
-    u = device.(field[1])
-    o = Observable((; u, temp = nothing, t = nothing))
-    ## energy_spectrum_plot(o; setup) |> display
-    fig = fieldplot(
-        o;
-        setup,
-        ## fieldname = :velocitynorm,
-        ## fieldname = 1,
-    )
-    fig |> display
-    for u in field[1:10:end]
-        o[] = (; o[]..., u = device(u))
-        fig |> display
-        sleep(0.05)
-    end
-end
 
 ########################################################################## #src
 
@@ -258,7 +224,7 @@ closure.chain
 let
     @info "CNN warm up run"
     using NeuralClosure.Zygote
-    u = io_train[1, 1].u |> x -> selectdim(x, ndims(x), 1:10) |> collect |> device
+    u = randn(T, 32, 32, 2, 10) |> device
     θ = θ₀ |> device
     closure(u, θ)
     gradient(θ -> sum(closure(u, θ)), θ)
@@ -296,31 +262,35 @@ for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles
     end
     clean()
     starttime = time()
-    filename = priorfiles[ig, ifil]
-    figname = joinpath(plotdir, splitext(basename(filename))[1] * ".pdf")
-    checkpointname = join(splitext(filename), "_checkpoint")
+    priorfile = priorfiles[ig, ifil]
+    figfile = joinpath(plotdir, splitext(basename(priorfile))[1] * ".pdf")
+    checkfile = join(splitext(priorfile), "_checkpoint")
     trainseed, validseed = splitseed(seeds.prior, 2) # Same seed for all training setups
-    dataloader = create_dataloader_prior(io_train[ig, ifil]; batchsize = 50, device)
+    setup = setups[ig]
+    data_train = namedtupleload.(datafiles[ig, ifil, itrain])
+    data_valid = namedtupleload.(datafiles[ig, ifil, ivalid])
+    io_train = create_io_arrays(data_train, setup)
+    io_valid = create_io_arrays(data_valid, setup)
+    dataloader = create_dataloader_prior(io_train; batchsize = 50, device)
     θ = device(θ₀)
     loss = create_loss_prior(mean_squared_error, closure)
     opt = Adam(T(1.0e-3))
     optstate = Optimisers.setup(opt, θ)
-    it = rand(Xoshiro(validseed), 1:size(io_valid[ig, ifil].u, params.D + 2), 50)
-    validset =
-        device(map(v -> collect(selectdim(v, ndims(v), it)), io_valid[ig, ifil]))
+    it = rand(Xoshiro(validseed), 1:size(io_valid.u, params.D + 2), 50)
+    validset = device(map(v -> collect(selectdim(v, ndims(v), it)), io_valid))
     (; callbackstate, callback) = create_callback(
         create_relerr_prior(closure, validset...);
         θ,
         displayref = true,
         displayupdates = true, # Set to `true` if using CairoMakie
-        figname,
+        figfile,
         nupdate = 20,
     )
     trainstate = (; optstate, θ, rng = Xoshiro(trainseed))
     ncheck = 0
     if false
         # Resume from checkpoint
-        (; ncheck, trainstate, callbackstate) = namedtupleload(checkpointname)
+        (; ncheck, trainstate, callbackstate) = namedtupleload(checkfile)
         trainstate = trainstate |> device
         @reset callbackstate.θmin = callbackstate.θmin |> device
     end
@@ -331,11 +301,11 @@ for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles
         # First move all arrays to CPU
         c = callbackstate |> cpu_device()
         t = trainstate |> cpu_device()
-        jldsave(checkpointname; ncheck = icheck, callbackstate = c, trainstate = t)
+        jldsave(checkfile; ncheck = icheck, callbackstate = c, trainstate = t)
     end
     θ = callbackstate.θmin # Use best θ instead of last θ
     prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
-    save_object(filename, prior)
+    save_object(priorfile, prior)
 end
 clean()
 
@@ -381,7 +351,10 @@ for (iorder, projectorder) in enumerate(projectorders),
     (ifil, Φ) in enumerate(params.filters),
     (ig, nles) in enumerate(params.nles)
 
-    itotal = (iorder - 1) * length(params.nles) * length(params.filters) + (ifil - 1) * length(params.nles) + ig
+    itotal =
+        (iorder - 1) * length(params.nles) * length(params.filters) +
+        (ifil - 1) * length(params.nles) +
+        ig
     trainpost || break
     if isslurm && itotal != taskid
         # Each task does one training
@@ -392,9 +365,9 @@ for (iorder, projectorder) in enumerate(projectorders),
     end
     clean()
     starttime = time()
-    filename = postfiles[ig, ifil, iorder]
-    figname = joinpath(plotdir, splitext(basename(filename))[1] * ".pdf")
-    checkpointname = join(splitext(filename), "_checkpoint")
+    postfile = postfiles[ig, ifil, iorder]
+    figfile = joinpath(plotdir, splitext(basename(postfile))[1] * ".pdf")
+    checkfile = join(splitext(postfile), "_checkpoint")
     rng = Xoshiro(seeds.post) # Same seed for all training setups
     setup = setups[ig]
     psolver = psolver_spectral(setup)
@@ -405,17 +378,16 @@ for (iorder, projectorder) in enumerate(projectorders),
         closure,
         nupdate = 2, # Time steps per loss evaluation
     )
-    dataloader = create_dataloader_post(
-        map(d -> (; d.u, d.t), data_train[ig, ifil, :]);
-        device,
-        nunroll = 20,
-    )
+    data_train = namedtupleload.(datafiles[ig, ifil, itrain])
+    data_valid = namedtupleload.(datafiles[ig, ifil, ivalid])
+    dataloader =
+        create_dataloader_post(map(d -> (; d.u, d.t), data_train); device, nunroll = 20)
     # θ = θ₀ |> device
     θ = θ_cnn_prior[ig, ifil] |> device
     opt = Adam(T(1.0e-3))
     optstate = Optimisers.setup(opt, θ)
     (; callbackstate, callback) = let
-        d = data_valid[ig, ifil, 1]
+        d = data_valid[1]
         it = 1:50
         data = (; u = device.(d.u[it]), t = d.t[it])
         create_callback(
@@ -428,7 +400,7 @@ for (iorder, projectorder) in enumerate(projectorders),
                 nupdate = 2,
             );
             θ,
-            figname,
+            figfile,
             displayref = false,
             displayupdates = true,
             nupdate = 10,
@@ -437,23 +409,23 @@ for (iorder, projectorder) in enumerate(projectorders),
     trainstate = (; optstate, θ, rng = Xoshiro(seeds.post))
     ncheck = 0
     if false
-        @info "Resuming from checkpoint $checkpointname"
-        ncheck, trainstate, callbackstate = namedtupleload(checkpointname)
+        @info "Resuming from checkpoint $checkfile"
+        ncheck, trainstate, callbackstate = namedtupleload(checkfile)
         trainstate = trainstate |> device
         @reset callbackstate.θmin = callbackstate.θmin |> device
     end
     for icheck = ncheck+1:10
         (; trainstate, callbackstate) =
             train(; dataloader, loss, trainstate, niter = 200, callbackstate, callback)
-        @info "Saving checkpoint to $(basename(checkpointname))..."
+        @info "Saving checkpoint to $(basename(checkfile))..."
         c = callbackstate |> cpu_device()
         t = trainstate |> cpu_device()
-        jldsave(checkpointname; ncheck = icheck, callbackstate = c, trainstate = t)
+        jldsave(checkfile; ncheck = icheck, callbackstate = c, trainstate = t)
         @info "... done"
     end
     θ = callbackstate.θmin # Use best θ instead of last θ
     results = (; θ = Array(θ), comptime = time() - starttime)
-    save_object(filename, results)
+    save_object(postfile, results)
 end
 clean()
 
@@ -493,11 +465,11 @@ for (iorder, projectorder) in enumerate(projectorders),
 
     trainsmagorinsky || break
     clean()
-    filename = smagfiles[ifil, iorder]
+    data_train = namedtupleload.(datafiles[:, ifil, itrain[1]])
+    smagfile = smagfiles[ifil, iorder]
     starttime = time()
     θmin = T(0)
     emin = T(Inf)
-    isample = 1
     it = 1:50
     for (iθ, θ) in enumerate(range(T(0), T(0.5), 501))
         iθ % 50 == 0 && @info "Testing Smagorinsky" projectorder Φ θ
@@ -505,7 +477,7 @@ for (iorder, projectorder) in enumerate(projectorders),
         for (igrid, nles) in enumerate(params.nles)
             setup = setups[igrid]
             psolver = psolver_spectral(setup)
-            d = data_train[igrid, ifil, isample]
+            d = data_train[igrid]
             data = (; u = device.(d.u[it]), t = d.t[it])
             nupdate = 4
             err = create_relerr_post(;
@@ -527,7 +499,7 @@ for (iorder, projectorder) in enumerate(projectorders),
         end
     end
     results = (; θ = θmin, comptime = time() - starttime)
-    save_object(filename, results)
+    save_object(smagfile, results)
 end
 clean()
 
@@ -592,7 +564,7 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
         @info "Computing a-posteriori errors" projectorder Φ nles
         setup = setups[ig]
         psolver = psolver_spectral(setup)
-        sample = data_test[ig, ifil, 1]
+        sample = namedtupleload.(datafiles[ig, ifil, itest[1]])
         it = 1:100
         data = (; u = device.(sample.u[it]), t = sample.t[it])
         nupdate = 16
@@ -731,7 +703,7 @@ kineticenergy = let
         projectorder = ProjectOrder.T(iorder)
         setup = setups[ig]
         psolver = psolver_spectral(setup)
-        sample = data_test[ig, ifil, 1]
+        sample = namedtupleload.(datafiles[ig, ifil, itest[1]])
         ustart = sample.u[1] |> device
         tlims = (sample.t[1], sample.t[end])
         T = eltype(ustart[1])
@@ -870,19 +842,21 @@ end
 
 divs = let
     clean()
-    ngrid, nfilter = size(io_train)
+    ngrid, nfilter, norder =
+        length(params.nles), length(params.filters), length(projectorders)
     d_ref = fill(zeros(T, 0), ngrid, nfilter)
-    d_nomodel = fill(zeros(T, 0), ngrid, nfilter, 3)
-    d_smag = fill(zeros(T, 0), ngrid, nfilter, 3)
-    d_cnn_prior = fill(zeros(T, 0), ngrid, nfilter, 3)
-    d_cnn_post = fill(zeros(T, 0), ngrid, nfilter, 3)
+    d_nomodel = fill(zeros(T, 0), ngrid, nfilter, norder)
+    d_smag = fill(zeros(T, 0), ngrid, nfilter, norder)
+    d_cnn_prior = fill(zeros(T, 0), ngrid, nfilter, norder)
+    d_cnn_post = fill(zeros(T, 0), ngrid, nfilter, norder)
     for iorder = 1:3, ifil = 1:nfilter, ig = 1:ngrid
         println("iorder = $iorder, ifil = $ifil, ig = $ig")
         projectorder = ProjectOrder.T(iorder)
         setup = setups[ig]
         psolver = psolver_spectral(setup)
+        data_test = namedtupleload.(datafiles[ig, ifil, itest[1]])
         t = data_test.t
-        ustart = data_test.data[ig, ifil].u[1] |> device
+        ustart = data_test.u[1] |> device
         tlims = (t[1], t[end])
         nupdate = 2
         Δt = (t[2] - t[1]) / nupdate
@@ -904,7 +878,7 @@ divs = let
         end
         if iorder == 1
             ## Does not depend on projection order
-            d_ref[ig, ifil] = map(data_test.data[ig, ifil].u) do u
+            d_ref[ig, ifil] = map(data_test.u) do u
                 u = device(u)
                 div = IncompressibleNavierStokes.divergence(u, setup)
                 d = view(div, setup.grid.Ip)
@@ -954,7 +928,6 @@ with_theme(;
     ## fontsize = 20,
     palette,
 ) do
-    t = data_test.t
     # for islog in (true, false)
     for islog in (false,)
         for iorder = 1:2, ifil = 1:2, igrid = 1:3
@@ -976,13 +949,12 @@ with_theme(;
                 xlabel = "t",
                 title = "Divergence: $lesmodel, $fil,  $nles",
             )
-            lines!(ax, t, divs.d_nomodel[igrid, ifil, iorder]; label = "No closure")
-            lines!(ax, t, divs.d_smag[igrid, ifil, iorder]; label = "Smagorinsky")
-            lines!(ax, t, divs.d_cnn_prior[igrid, ifil, iorder]; label = "CNN (prior)")
-            lines!(ax, t, divs.d_cnn_post[igrid, ifil, iorder]; label = "CNN (post)")
+            lines!(ax, divs.d_nomodel[igrid, ifil, iorder]; label = "No closure")
+            lines!(ax, divs.d_smag[igrid, ifil, iorder]; label = "Smagorinsky")
+            lines!(ax, divs.d_cnn_prior[igrid, ifil, iorder]; label = "CNN (prior)")
+            lines!(ax, divs.d_cnn_post[igrid, ifil, iorder]; label = "CNN (post)")
             lines!(
                 ax,
-                t,
                 divs.d_ref[igrid, ifil];
                 color = Cycled(1),
                 linestyle = :dash,
@@ -1018,7 +990,7 @@ ufinal = let
         @info "Computing test solutions" projectorder Φ nles
         setup = setups[igrid]
         psolver = psolver_spectral(setup)
-        sample = data_test[igrid, ifil, 1]
+        sample = namedtupleload.(datafiles[ig, ifil, itest[1]])
         ustart = sample.u[1] |> device
         t = sample.t
         tlims = (t[1], t[end])
@@ -1039,10 +1011,8 @@ ufinal = let
             s(smagorinsky_closure(setup), θ_smag[ifil, iorder])
         u_cnn_prior[igrid, ifil, iorder] =
             s(wrappedclosure(closure, setup), device(θ_cnn_prior[igrid, ifil]))
-        u_cnn_post[igrid, ifil, iorder] = s(
-            wrappedclosure(closure, setup),
-            device(θ_cnn_post[igrid, ifil, iorder]),
-        )
+        u_cnn_post[igrid, ifil, iorder] =
+            s(wrappedclosure(closure, setup), device(θ_cnn_post[igrid, ifil, iorder]))
     end
     (; u_ref, u_nomodel, u_smag, u_cnn_prior, u_cnn_post)
 end;

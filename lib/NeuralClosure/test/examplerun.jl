@@ -36,7 +36,10 @@
     )
 
     # Create input/output arrays for a-priori training (ubar vs c)
-    io = create_io_arrays(data, setups)
+    io = map(
+        I -> create_io_arrays(data[I[1], I[2], :], setups[I[1]]),
+        Iterators.product(eachindex(params.nles), eachindex(params.filters)),
+    )
 
     m_cnn = let
         rng = Xoshiro(123)

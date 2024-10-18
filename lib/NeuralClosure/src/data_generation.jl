@@ -212,30 +212,25 @@ end
 """
 Create ``(\\bar{u}, c)`` pairs for a-priori training.
 """
-function create_io_arrays(data, setups)
-    ngrid, nfilter, nseed = size(data)
+function create_io_arrays(data, setup)
+    (; dimension, N, Iu) = setup.grid
     T = eltype(data[1].t)
-    map(CartesianIndices((ngrid, nfilter))) do I
-        ig, ifil = I.I
-        (; dimension, N, Iu) = setups[ig].grid
-        D = dimension()
-        colons = ntuple(Returns(:), D)
-        fields = map((:u, :c)) do usym
-            u = map(1:nseed) do is
-                sample = data[ig, ifil, is]
-                nt = length(sample.t)
-                u = zeros(T, (N .- 2)..., D, nt)
-                for it = 1:nt, α = 1:D
-                    copyto!(
-                        view(u, colons..., α, it),
-                        view(getfield(sample, usym)[it][α], Iu[α]),
-                    )
-                end
-                u
+    D = dimension()
+    colons = ntuple(Returns(:), D)
+    fields = map((:u, :c)) do usym
+        u = map(data) do trajectory
+            nt = length(trajectory.t)
+            u = zeros(T, (N .- 2)..., D, nt)
+            for it = 1:nt, α = 1:D
+                copyto!(
+                    view(u, colons..., α, it),
+                    view(getfield(trajectory, usym)[it][α], Iu[α]),
+                )
             end
-            u = cat(u...; dims = D + 2)
-            usym => u
+            u
         end
-        (; fields...)
+        u = cat(u...; dims = D + 2)
+        usym => u
     end
+    (; fields...)
 end

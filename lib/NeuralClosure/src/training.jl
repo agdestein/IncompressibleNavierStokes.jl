@@ -231,7 +231,7 @@ function create_callback(
     displayref = true,
     displayfig = true,
     displayupdates = false,
-    figname = nothing,
+    figfile = nothing,
     nupdate,
 )
     obs = Observable([Point2f(0, 0)])
@@ -255,7 +255,7 @@ function create_callback(
             # n < 30 || autolimits!(fig.axis)
             autolimits!(fig.axis)
             displayupdates && display(fig)
-            isnothing(figname) || save(figname, fig)
+            isnothing(figfile) || save(figfile, fig)
             if e < callbackstate.emin
                 @reset callbackstate.θmin = θ
                 @reset callbackstate.emin = e
