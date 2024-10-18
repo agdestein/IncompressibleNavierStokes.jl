@@ -10,6 +10,7 @@
 /scratch/
 /Paper/
 *output/
+/lib/Bench
 *.swp
 *.un~
 *.DS_Store
