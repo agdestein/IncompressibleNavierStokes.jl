@@ -9,13 +9,18 @@
 # The filtered DNS data is saved and can be loaded in a subesequent session.
 # The learned CNN parameters are also saved.
 
+if false                      #src
+    include("src/PaperDC.jl") #src
+end                           #src
+
 @info "Script started"
 
 # Color palette for consistent theme throughout paper
 palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])
 
 # Choose where to put output
-outdir = joinpath(@__DIR__, "output", "kolmogorov")
+basedir = haskey(ENV, "DEEPDIP") ? ENV["DEEPDIP"] : @__DIR__
+outdir = joinpath(basedir, "output", "kolmogorov")
 plotdir = joinpath(outdir, "plots")
 logdir = joinpath(outdir, "logs")
 ispath(outdir) || mkpath(outdir)
@@ -30,19 +35,20 @@ using PaperDC
 using Dates
 
 # Write output to file, as the default SLURM file is not updated often enough
-logfile = joinpath(logdir, "log_$(Dates.now()).out")
-# jobid = ENV["SLURM_JOB_ID"]
-# taskid = ENV["SLURM_ARRAY_TASK_ID"]
-# logfile = joinpath(logdir, "job=$(jobid)_task=$(taskid).out")
+isslurm = haskey(ENV, "SLURM_JOB_ID")
+if isslurm
+    jobid = parse(Int, ENV["SLURM_JOB_ID"])
+    taskid = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
+    logfile = "job=$(jobid)_task=$(taskid)_$(Dates.now()).out"
+else
+    logfile = "log_$(Dates.now()).out"
+end
+logfile = joinpath(logdir, logfile)
 setsnelliuslogger(logfile)
 
 @info "# A-posteriori analysis: Forced turbulence (2D)"
 
 # ## Load packages
-
-if false                      #src
-    include("src/PaperDC.jl") #src
-end                           #src
 
 @info "Loading packages"
 
@@ -92,7 +98,8 @@ seeds = (;
 # ## Hardware selection
 
 # Precision
-T = Float32
+# T = Float32
+T = Float64
 
 # Device
 if CUDA.functional()
@@ -124,10 +131,10 @@ params = (;
     lims = (T(0), T(1)),
     Re = T(6e3),
     tburn = T(0.5),
-    tsim = T(2),
-    savefreq = 16,
-    ndns = 2048,
-    nles = [64, 128, 256],
+    tsim = T(5),
+    savefreq = 50,
+    ndns = 4096,
+    nles = [32, 64, 128, 256],
     filters = (FaceAverage(), VolumeAverage()),
     ArrayType,
     icfunc = (setup, psolver, rng) ->
@@ -150,7 +157,13 @@ filenames =
 
 create_data = false
 create_data && for (iseed, seed) in enumerate(dns_seeds)
-    @info "Creating DNS trajectory for seed $(repr(seed)) (DNS $iseed of $ntrajectory)"
+    if isslurm && iseed != taskid
+         # Each task does one initial condition
+        @info "Skipping seed $seed on for $taskid"
+        continue
+    else
+        @info "Creating DNS trajectory for seed $(repr(seed)) (DNS $iseed of $ntrajectory)"
+    end
     (; data, t, comptime) = create_les_data(; params..., rng = Xoshiro(seed))
     @info("Trajectory info:", comptime / 60, length(t), Base.summarysize(data) * 1e-9,)
     for ifilter in eachindex(params.filters), igrid in eachindex(params.nles)
@@ -168,7 +181,7 @@ data_valid = data[:, :, 9:9]
 data_test = data[:, :, 10:10]
 
 # Computational time
-sum(d -> d.comptime, data) / 60
+@info "Data" sum(d -> d.comptime, data) / 60 Base.summarysize(data) * 1e-9
 
 # Build LES setup and assemble operators
 setups = map(
@@ -273,9 +286,16 @@ priorfiles = map(
 trainprior = false
 for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles)
     trainprior || break
+    itotal = (ifil - 1) * length(params.nles) + ig
+    if isslurm && itotal != taskid
+        # Each task does one training
+        @info "Skipping a-priori training for task $(taskid)" Φ nles
+        continue
+    else
+        @info "Training a-priori" Φ nles
+    end
     clean()
     starttime = time()
-    @info "Training a-priori" Φ nles
     filename = priorfiles[ig, ifil]
     figname = joinpath(plotdir, splitext(basename(filename))[1] * ".pdf")
     checkpointname = join(splitext(filename), "_checkpoint")
@@ -319,6 +339,8 @@ for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles
 end
 clean()
 
+@info "Finished a-priori training."
+
 # Load learned parameters and training times
 prior = load_object.(priorfiles)
 θ_cnn_prior = map(p -> copyto!(copy(θ₀), p.θ), prior)
@@ -354,16 +376,22 @@ postfiles = map(
 )
 
 # Train
-trainpost = false
+trainpost = true
 for (iorder, projectorder) in enumerate(projectorders),
     (ifil, Φ) in enumerate(params.filters),
     (ig, nles) in enumerate(params.nles)
 
+    itotal = (iorder - 1) * length(params.nles) * length(params.filters) + (ifil - 1) * length(params.nles) + ig
     trainpost || break
+    if isslurm && itotal != taskid
+        # Each task does one training
+        @info "Skipping a-posteriori training for task $(taskid)" projectorder Φ nles
+        continue
+    else
+        @info "Training a-posteriori" projectorder Φ nles
+    end
     clean()
     starttime = time()
-    @info "Training a-posteriori" projectorder Φ nles
-
     filename = postfiles[ig, ifil, iorder]
     figname = joinpath(plotdir, splitext(basename(filename))[1] * ".pdf")
     checkpointname = join(splitext(filename), "_checkpoint")

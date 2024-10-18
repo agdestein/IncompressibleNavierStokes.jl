@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=18
 #SBATCH --gpus=1
-#SBATCH --partition=gpu_h100
-#SBATCH --time=01:30:00
+#SBATCH --partition=gpu_a100
+#SBATCH --time=04:00:00
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=sda@cwi.nl
 
@@ -15,10 +15,10 @@
 
 mkdir -p /scratch-shared/$USER
 
-export JULIA_DEPOT_PATH=/scratch-shared/$USER/.julia
+export JULIA_DEPOT_PATH=/scratch-shared/$USER/.julia:
 
 cd $HOME/projects/IncompressibleNavierStokes/lib/PaperDC
 
 # module load julia
 
-julia --project prioranalysis.jl
+julia --project postanalysis_forced.jl

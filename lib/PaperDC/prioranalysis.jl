@@ -23,9 +23,14 @@ using PaperDC
 using Dates
 
 # Write output to file, as the default SLURM file is not updated often enough
-logfile = joinpath(logdir, "log_$(Dates.now()).out")
-# jobid = ENV["SLURM_JOB_ID"]
-# logfile = joinpath(logdir, "job=$(jobid).out")
+isslurm = haskey(ENV, "SLURM_JOB_ID")
+if isslurm
+    jobid = parse(Int, ENV["SLURM_JOB_ID"])
+    logfile = "job=$(jobid)_$(Dates.now()).out"
+else
+    logfile = "log_$(Dates.now()).out")
+end
+logfile = joinpath(logdir, logfile)
 setsnelliuslogger(logfile)
 
 @info "# A-posteriori analysis: Forced turbulence (2D)"
@@ -93,7 +98,7 @@ end
 lims = case.T(0), case.T(1)
 dns = let
     setup = Setup(;
-        x = ntuple(α -> LinRange(lims..., case.ndns + 1), case.D),
+        x = ntuple(α -> range(lims..., case.ndns + 1), case.D),
         case.Re,
         ArrayType,
     )
@@ -103,7 +108,7 @@ end;
 filters = map(Iterators.product(case.nles, case.filterdefs)) do (nles, Φ)
     compression = case.ndns ÷ nles
     setup = Setup(;
-        x = ntuple(α -> LinRange(lims..., nles + 1), case.D),
+        x = ntuple(α -> range(lims..., nles + 1), case.D),
         case.Re,
         ArrayType,
     )
