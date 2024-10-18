@@ -28,7 +28,7 @@ if isslurm
     jobid = parse(Int, ENV["SLURM_JOB_ID"])
     logfile = "job=$(jobid)_$(Dates.now()).out"
 else
-    logfile = "log_$(Dates.now()).out")
+    logfile = "log_$(Dates.now()).out"
 end
 logfile = joinpath(logdir, logfile)
 setsnelliuslogger(logfile)
