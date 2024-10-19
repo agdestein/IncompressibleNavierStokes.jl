@@ -156,8 +156,8 @@ datafiles =
         "$datadir/seed=$(repr(seed))_filter=$(Φ)_nles=$(nles).jld2"
     end
 
-create_data = false
-create_data && for (iseed, seed) in enumerate(dns_seeds)
+createdata = false
+createdata && for (iseed, seed) in enumerate(dns_seeds)
     if isslurm && iseed != taskid
         # Each task does one initial condition
         @info "Skipping seed $seed on for $taskid"
@@ -176,7 +176,8 @@ create_data && for (iseed, seed) in enumerate(dns_seeds)
 end
 
 # Computational time
-let
+docomp = false
+docomp && let
     comptime, datasize = 0.0, 0.0
     for f in datafiles[1, 1, :]
         comptime += load(f, "comptime")
@@ -192,7 +193,7 @@ end
 # Build LES setup and assemble operators
 setups = map(
     nles -> Setup(;
-        x = ntuple(α -> LinRange(params.lims..., nles + 1), params.D),
+        x = ntuple(α -> range(params.lims..., nles + 1), params.D),
         params.Re,
         params.ArrayType,
         params.bodyforce,
@@ -373,12 +374,13 @@ for (iorder, projectorder) in enumerate(projectorders),
     rng = Xoshiro(seeds.post) # Same seed for all training setups
     setup = setups[ig]
     psolver = psolver_spectral(setup)
+    nsubstep = 5
     loss = create_loss_post(;
         setup,
         psolver,
         method = RKProject(params.method, projectorder),
         closure,
-        nupdate = 2, # Time steps per loss evaluation
+        nupdate = nsubstep, # Time steps per loss evaluation
     )
     data_train = namedtupleload.(datafiles[ig, ifil, itrain])
     data_valid = namedtupleload.(datafiles[ig, ifil, ivalid])
@@ -399,7 +401,7 @@ for (iorder, projectorder) in enumerate(projectorders),
                 psolver,
                 method = RKProject(params.method, projectorder),
                 closure_model = wrappedclosure(closure, setup),
-                nupdate = 2,
+                nupdate = nsubstep,
             );
             θ,
             figfile,
