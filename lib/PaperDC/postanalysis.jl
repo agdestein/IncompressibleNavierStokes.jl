@@ -98,8 +98,7 @@ seeds = (;
 # ## Hardware selection
 
 # Precision
-# T = Float32
-T = Float64
+T = Float32
 
 # Device
 if CUDA.functional()
@@ -146,7 +145,7 @@ params = (;
 )
 
 # Data file names
-ntrajectory = 10
+ntrajectory = 8
 itrain, ivalid, itest =
     1:ntrajectory-2, ntrajectory-1:ntrajectory-1, ntrajectory:ntrajectory
 dns_seeds = splitseed(seeds.dns, ntrajectory)
@@ -179,12 +178,15 @@ end
 # Computational time
 let
     comptime, datasize = 0.0, 0.0
+    for f in datafiles[1, 1, :]
+        comptime += load(f, "comptime")
+    end
     for f in datafiles
         data = namedtupleload(f)
-        comptime += data.comptime
         datasize += Base.summarysize(data)
     end
     @info "Data" comptime / 60 datasize * 1e-9
+    clean()
 end
 
 # Build LES setup and assemble operators
@@ -428,6 +430,8 @@ for (iorder, projectorder) in enumerate(projectorders),
     save_object(postfile, results)
 end
 clean()
+
+exit()
 
 # Load learned parameters and training times
 post = load_object.(postfiles)
