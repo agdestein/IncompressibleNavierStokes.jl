@@ -278,29 +278,28 @@ let
 end
 
 specs = load_object("$output/spectra_$(case.name).jld2")
-# specs = load_object("$(ENV["HOME"])/haha/$(case.name)_spectra.jld2")
 
 # Plot predicted spectra
 CairoMakie.activate!()
 
 with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])) do
     (; D, T) = case
-    kmax = maximum(specs[1].κ)
+
     ## Build inertial slope above energy
     krange, slope, slopelabel = if D == 2
-        # [T(16), T(128)], -T(3), L"$\kappa^{-3}$"
         [T(18), T(128)], -T(3), L"$\kappa^{-3}$"
     elseif D == 3
-        # [T(16), T(100)], -T(5 / 3), L"$\kappa^{-5/3}$"
-        # [T(32), T(128)], -T(5 / 3), L"$\kappa^{-5/3}$"
         [T(80), T(256)], -T(5 / 3), L"$\kappa^{-5/3}$"
     end
     slopeconst = maximum(specs[2].ehat ./ specs[2].κ .^ slope)
     offset = D == 2 ? 3 : 2
     inertia = offset .* slopeconst .* krange .^ slope
+
     ## Nice ticks
+    kmax = maximum(specs[1].κ)
     logmax = round(Int, log2(kmax + 1))
     xticks = T(2) .^ (0:logmax)
+
     ## Make plot
     fig = Figure(; size = (500, 400))
     ax = Axis(
@@ -334,35 +333,41 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
         # position = (0.2, 0.01),
     )
     autolimits!(ax)
+    D == 2 && limits!(ax, (T(0.8), T(460)), (T(1e-7), T(1e0)))
+    # D == 2 && limits!(ax, (T(16), T(128)), (T(1e-4), T(1e-1)))
+    # D == 3 && limits!(ax, (T(8e-1), T(700)), (T(5e-9), T(3.0e-2)))
+    # D == 3 && limits!(ax, (T(8e-1), T(850)), (T(1.5e-5), T(1.0e-1)))
+
+    # Add resolution numbers just below plots
     if D == 2
-        limits!(ax, (T(0.8), T(460)), (T(1e-7), T(1e0)))
-        # limits!(ax, (T(16), T(128)), (T(1e-4), T(1e-1)))
-        o = 6
-        sk, se = 1.08, 1.4
         text!(ax, "4096"; position = (198, 1.4e-7))
-        x1, y1 = 477, 358
-        x0, y0 = x1 - 90, y1 - 94
         textk, texte = 1.5, 2.0
     elseif D == 3
-        # limits!(ax, (T(8e-1), T(700)), (T(5e-9), T(3.0e-2)))
-        # limits!(ax, (T(8e-1), T(850)), (T(1.5e-5), T(1.0e-1)))
         # text!(ax, "1024"; position = (241, 2.4e-8))
         text!(ax, "1024"; position = (259, 2.4e-5))
-        o = 7
-        sk, se = 1.15, 1.3
-        x1, y1 = 390, 185
-        x0, y0 = x1 - 120, y1 - 120
         textk, texte = 1.5, 1.5
     end
-    kk, ee = plotparts(FA[end])
-    kk, ee = kk[end-o], ee[end-o]
-    k0, k1 = kk / sk, kk * sk
-    e0, e1 = ee / se, ee * se
     for (i, nles) in zip(VA, case.nles)
         κ, e = plotparts(i)
         text!(ax, "$nles"; position = (κ[end] / textk, e[end] / texte))
     end
 
+    # Plot zoom-in box
+    if D == 2
+        o = 6
+        sk, se = 1.08, 1.4
+        x1, y1 = 477, 358
+        x0, y0 = x1 - 90, y1 - 94
+    elseif D == 3
+        o = 7
+        sk, se = 1.15, 1.3
+        x1, y1 = 390, 185
+        x0, y0 = x1 - 120, y1 - 120
+    end
+    kk, ee = plotparts(FA[end])
+    kk, ee = kk[end-o], ee[end-o]
+    k0, k1 = kk / sk, kk * sk
+    e0, e1 = ee / se, ee * se
     limits = (k0, k1, e0, e1)
     lines!(
         ax,
@@ -396,6 +401,7 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
     lines!(ax2, plotparts(2)...; color = Cycled(1))
     lines!(ax2, plotparts(FA[end])...; color = Cycled(2))
     lines!(ax2, plotparts(VA[end])...; color = Cycled(3))
+
     save("$output/spectra_$(case.name).pdf", fig)
     fig
 end
