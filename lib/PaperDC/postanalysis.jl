@@ -467,12 +467,14 @@ map(p -> p.comptime, post) |> sum |> x -> x / 3600
 # The constant is shared for all grid sizes, since the filter
 # width (=grid size) is part of the model definition separately.
 
+
+# Parameter save files
 smagfiles = let
     smagdir = joinpath(outdir, "smagorinsky")
     ispath(smagdir) || mkpath(smagdir)
     map(
-        splat((Φ, o) -> "$smagdir/filter=$(Φ)_projectorder=$(o).jld2"),
-        Iterators.product(params.filters, projectorders),
+        splat((nles, Φ, o) -> "$smagdir/projectorder=$(o)_filter=$(Φ)_nles=$(nles).jld2"),
+        Iterators.product(params.nles, params.filters, projectorders),
     )
 end
 
@@ -485,7 +487,6 @@ for (iorder, projectorder) in enumerate(projectorders),
         (iorder - 1) * length(params.nles) * length(params.filters) +
         (ifil - 1) * length(params.nles) +
         igrid
-    itotal == 1 || break
     trainsmagorinsky || break
     if isslurm && itotal != taskid
         # Each task does one training
@@ -496,11 +497,10 @@ for (iorder, projectorder) in enumerate(projectorders),
     end
     starttime = time()
     clean()
-    smagfile = smagfiles[ifil, iorder]
+    smagfile = smagfiles[igrid, ifil, iorder]
     setup = setups[igrid]
     psolver = psolver_spectral(setup)
-    data_train = namedtupleload.(datafiles[:, ifil, itrain[1]])
-    d = data_train[igrid]
+    d = namedtupleload(datafiles[igrid, ifil, itrain[1]])
     it = 1:50
     data = (; u = device.(d.u[it]), t = d.t[it])
     θmin = T(0)
