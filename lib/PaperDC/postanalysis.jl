@@ -467,7 +467,6 @@ map(p -> p.comptime, post) |> sum |> x -> x / 3600
 # The constant is shared for all grid sizes, since the filter
 # width (=grid size) is part of the model definition separately.
 
-
 # Parameter save files
 smagfiles = let
     smagdir = joinpath(outdir, "smagorinsky")
@@ -550,8 +549,12 @@ eprior = let
     post = zeros(T, size(θ_cnn_post)...)
     for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles)
         @info "Computing a-priori errors" Φ nles
-        testset = io_test[ig, ifil]
-        u, c = testset.u[:, :, :, 1:100], testset.c[:, :, :, 1:100]
+
+        setup = setups[ig]
+        data = namedtupleload.(datafiles[ig, ifil, itest])
+        testset = create_io_arrays(data, setup)
+        i = 1:100
+        u, c = testset.u[:, :, :, i], testset.c[:, :, :, i]
         testset = (u, c) |> device
         err = create_relerr_prior(closure, testset...)
         prior[ig, ifil] = err(device(θ_cnn_prior[ig, ifil]))
@@ -591,7 +594,7 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
         sample = namedtupleload.(datafiles[ig, ifil, itest[1]])
         it = 1:100
         data = (; u = device.(sample.u[it]), t = sample.t[it])
-        nupdate = 16
+        nupdate = 5
         ## No model
         err =
             create_relerr_post(; data, setup, psolver, closure_model = nothing, nupdate)
@@ -605,7 +608,7 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
             closure_model = smagorinsky_closure(setup),
             nupdate,
         )
-        e_smag[ig, ifil, iorder] = err(θ_smag[ifil, iorder])
+        e_smag[ig, ifil, iorder] = err(θ_smag[ig, ifil, iorder])
         ## CNN
         err = create_relerr_post(;
             data,
@@ -617,10 +620,10 @@ eprior.post |> x -> reshape(x, :, 2) |> x -> round.(x; digits = 2)
         )
         e_cnn[ig, ifil, iorder] = err(device(θ_cnn_prior[ig, ifil]))
         e_cnn_post[ig, ifil, iorder] = err(device(θ_cnn_post[ig, ifil, iorder]))
+        clean()
     end
     (; e_nm, e_smag, e_cnn, e_cnn_post)
 end
-clean()
 
 e_nm
 e_smag
@@ -700,7 +703,7 @@ with_theme(; palette) do
                 scatterlines!(nles, e[:, ifil, iorder]; color, linestyle, marker, label)
             end
         end
-        axislegend(; position = :rt)
+        axislegend(; position = :lb)
         # ylims!(ax, (T(0.025), T(1.00)))
         save("$plotdir/epost_projectorder=$(projectorder).pdf", fig)
         display(fig)
@@ -713,88 +716,116 @@ end
 
 # ### Compute total kinetic energy as a function of time
 
-kineticenergy = let
-    clean()
+divergencehistory, energyhistory = let
     ngrid, nfilter, norder =
         length(params.nles), length(params.filters), length(projectorders)
-    ke_ref = fill(zeros(Point2f, 0), ngrid, nfilter, norder)
-    ke_nomodel = fill(zeros(Point2f, 0), ngrid, nfilter, norder)
-    ke_smag = fill(zeros(Point2f, 0), ngrid, nfilter, norder)
-    ke_cnn_prior = fill(zeros(Point2f, 0), ngrid, nfilter, norder)
-    ke_cnn_post = fill(zeros(Point2f, 0), ngrid, nfilter, norder)
-    for iorder = 1:norder, ifil = 1:nfilter, ig = 1:ngrid
-        println("iorder = $iorder, ifil = $ifil, ig = $ig")
-        projectorder = ProjectOrder.T(iorder)
+    divergencehistory = (;
+        ref = fill(zeros(Point2f, 0), ngrid, nfilter, norder),
+        nomodel = fill(zeros(Point2f, 0), ngrid, nfilter, norder),
+        smag = fill(zeros(Point2f, 0), ngrid, nfilter, norder),
+        cnn_prior = fill(zeros(Point2f, 0), ngrid, nfilter, norder),
+        cnn_post = fill(zeros(Point2f, 0), ngrid, nfilter, norder),
+    )
+    energyhistory = (;
+        ref = fill(zeros(Point2f, 0), ngrid, nfilter, norder),
+        nomodel = fill(zeros(Point2f, 0), ngrid, nfilter, norder),
+        smag = fill(zeros(Point2f, 0), ngrid, nfilter, norder),
+        cnn_prior = fill(zeros(Point2f, 0), ngrid, nfilter, norder),
+        cnn_post = fill(zeros(Point2f, 0), ngrid, nfilter, norder),
+    )
+    for (iorder, projectorder) in enumerate(projectorders),
+        (ifil, Φ) in enumerate(params.filters),
+        (ig, nles) in enumerate(params.nles)
+
+        @info "Computing divergence and kinetic energy" projectorder Φ nles
         setup = setups[ig]
         psolver = psolver_spectral(setup)
-        sample = namedtupleload.(datafiles[ig, ifil, itest[1]])
+        sample = namedtupleload(datafiles[ig, ifil, itest[1]])
         ustart = sample.u[1] |> device
-        tlims = (sample.t[1], sample.t[end])
         T = eltype(ustart[1])
-        nupdate = 2
-        ewriter = processor() do state
-            ehist = zeros(Point2f, 0)
-            on(state) do (; u, t, n)
-                if n % nupdate == 0
-                    e = total_kinetic_energy(u, setup)
-                    push!(ehist, Point2f(t, e))
-                end
+
+        # Reference trajectories
+        divergencehistory.ref[ig, ifil, iorder] = let
+            div = scalarfield(setup)
+            udev = vectorfield(setup)
+            map(sample.t[1:10:end], sample.u[1:10:end]) do t, u
+                copyto!.(udev, u)
+                IncompressibleNavierStokes.divergence!(div, udev, setup)
+                d = view(div, setup.grid.Ip)
+                d = sum(abs2, d) / length(d)
+                d = sqrt(d)
+                Point2f(t, d)
             end
-            state[] = state[] # Compute initial energy
-            ehist
         end
-        processors = (; ewriter)
-        ## Does not depend on projection order
-        ke_ref[ig, ifil, iorder] = map(
+        energyhistory.ref[ig, ifil, iorder] = map(
             (t, u) -> Point2f(t, total_kinetic_energy(device(u), setup)),
             sample.t,
             sample.u,
         )
-        ke_nomodel[ig, ifil, iorder] =
-            solve_unsteady(; setup, ustart, tlims, processors, psolver)[2].ewriter
-        ke_smag[ig, ifil, iorder] =
-            solve_unsteady(;
-                setup = (;
-                    setup...,
-                    projectorder,
-                    closure_model = smagorinsky_closure(setup),
-                ),
+
+        nupdate = 5
+        writer = processor() do state
+            div = scalarfield(setup)
+            dhist = Point2f[]
+            ehist = zeros(Point2f, 0)
+            on(state) do (; u, t, n)
+                if n % nupdate == 0
+                    IncompressibleNavierStokes.divergence!(div, u, setup)
+                    d = view(div, setup.grid.Ip)
+                    d = sum(abs2, d) / length(d)
+                    d = sqrt(d)
+                    push!(dhist, Point2f(t, d))
+                    e = total_kinetic_energy(u, setup)
+                    push!(ehist, Point2f(t, e))
+                end
+            end
+            state[] = state[] # Compute initial divergence
+            (; dhist, ehist)
+        end
+
+        for (sym, closure_model, θ) in [
+            (:nomodel, nothing, nothing),
+            (:smag, smagorinsky_closure(setup), θ_smag[ig, ifil, iorder]),
+            (:cnn_prior, wrappedclosure(closure, setup), device(θ_cnn_prior[ig, ifil])),
+            (
+                :cnn_post,
+                wrappedclosure(closure, setup),
+                device(θ_cnn_post[ig, ifil, iorder]),
+            ),
+        ]
+            _, results = solve_unsteady(;
+                setup = (; setup..., closure_model),
                 ustart,
-                tlims,
-                processors,
+                tlims = (sample.t[1], sample.t[end]),
+                Δt_min = T(1e-5),
+                method = RKProject(params.method, projectorder),
+                processors = (; writer, logger = timelogger(; nupdate = 1000)),
                 psolver,
-                θ = θ_smag[ifil, iorder],
-            )[2].ewriter
-        ke_cnn_prior[ig, ifil, iorder] =
-            solve_unsteady(;
-                setup = (;
-                    setup...,
-                    projectorder,
-                    closure_model = wrappedclosure(closure, setup),
-                ),
-                ustart,
-                tlims,
-                processors,
-                psolver,
-                θ = device(θ_cnn_prior[ig, ifil]),
-            )[2].ewriter
-        ke_cnn_post[ig, ifil, iorder] =
-            solve_unsteady(;
-                setup = (;
-                    setup...,
-                    projectorder,
-                    closure_model = wrappedclosure(closure, setup),
-                ),
-                ustart,
-                tlims,
-                processors,
-                psolver,
-                θ = device(θ_cnn_post[ig, ifil, iorder]),
-            )[2].ewriter
+                θ,
+            )
+            divergencehistory[sym][ig, ifil, iorder] = results.writer.dhist
+            energyhistory[sym][ig, ifil, iorder] = results.writer.ehist
+        end
     end
-    (; ke_ref, ke_nomodel, ke_smag, ke_cnn_prior, ke_cnn_post)
+    divergencehistory, energyhistory
 end;
 clean();
+
+########################################################################## #src
+
+# Check that energy is within reasonable bounds
+ehistory.ref .|> extrema
+ehistory.nomodel .|> extrema
+ehistory.smag .|> extrema
+ehistory.cnn_prior .|> extrema
+ehistory.cnn_post .|> extrema
+
+# Check that divergence is within reasonable bounds
+divergencehistory.ref .|> extrema
+divergencehistory.nomodel .|> extrema
+divergencehistory.smag .|> extrema
+divergencehistory.cnn_prior .|> extrema
+divergencehistory.cnn_post .|> extrema
 
 ########################################################################## #src
 
@@ -808,138 +839,80 @@ with_theme(; palette) do
         (ifil, Φ) in enumerate(params.filters),
         (igrid, nles) in enumerate(params.nles)
 
-        println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
-        projectorder = ProjectOrder.T(iorder)
+        @info "Plotting energy evolution" projectorder Φ nles
         lesmodel = iorder == 1 ? "DIF" : "DCF"
         fil = ifil == 1 ? "FA" : "VA"
         fig = Figure(; size = (500, 400))
         ax = Axis(
             fig[1, 1];
+            # xscale = log10,
+            # yscale = log10,
             xlabel = "t",
             ylabel = "E(t)",
             title = "Kinetic energy: $lesmodel, $fil",
         )
-        lines!(
-            ax,
-            kineticenergy.ke_ref[igrid, ifil, iorder];
-            color = Cycled(1),
-            linestyle = :dash,
-            label = "Reference",
-        )
-        lines!(
-            ax,
-            kineticenergy.ke_nomodel[igrid, ifil, iorder];
-            color = Cycled(1),
-            label = "No closure",
-        )
-        lines!(
-            ax,
-            kineticenergy.ke_smag[igrid, ifil, iorder];
-            color = Cycled(2),
-            label = "Smagorinsky",
-        )
-        lines!(
-            ax,
-            kineticenergy.ke_cnn_prior[igrid, ifil, iorder];
-            color = Cycled(3),
-            label = "CNN (prior)",
-        )
-        lines!(
-            ax,
-            kineticenergy.ke_cnn_post[igrid, ifil, iorder];
-            color = Cycled(4),
-            label = "CNN (post)",
-        )
+        # xlims!(ax, (1e-2, 5.0))
+        # xlims!(ax, (0.0, 1.0))
+        # ylims!(ax, (1.3, 2.3))
+        plots = [
+            (energyhistory.ref, :dash, 1, "Reference"),
+            (energyhistory.nomodel, :solid, 1, "No closure"),
+            (energyhistory.smag, :solid, 2, "Smagorinsky"),
+            (energyhistory.cnn_prior, :solid, 3, "CNN (prior)"),
+            (energyhistory.cnn_post, :solid, 4, "CNN (post)"),
+        ]
+        for (p, linestyle, i, label) in plots
+            lines!(ax, p[igrid, ifil, iorder]; color = Cycled(i), linestyle, label)
+        end
         axislegend(; position = :lt)
+
+        # # Plot zoom-in box
+        # tlims = 1.0, 1.7
+        # klims = 1.7, 2.1
+        # box = [
+        #     Point2f(tlims[1], klims[1]),
+        #     Point2f(tlims[2], klims[1]),
+        #     Point2f(tlims[2], klims[2]),
+        #     Point2f(tlims[1], klims[2]),
+        #     Point2f(tlims[1], klims[1]),
+        # ]
+        # lines!(ax, box; color = :black)
+        # ax2 = Axis(
+        #     fig[1,1];
+        #     # bbox = BBox(0.8, 0.9, 0.2, 0.3),
+        #     width=Relative(0.3),
+        #     height=Relative(0.3),
+        #     halign=0.95,
+        #     valign=0.05,
+        #     limits = (tlims..., klims...),
+        #     xscale = log10,
+        #     yscale = log10,
+        #     xticksvisible = false,
+        #     xticklabelsvisible = false,
+        #     xgridvisible = false,
+        #     yticksvisible = false,
+        #     yticklabelsvisible = false,
+        #     ygridvisible = false,
+        #     backgroundcolor = :white,
+        # )
+        # # https://discourse.julialang.org/t/makie-inset-axes-and-their-drawing-order/60987/5
+        # translate!(ax2.scene, 0, 0, 10)
+        # translate!(ax2.elements[:background], 0, 0, 9)
+        # for (sym, linestyle, i, label) in plots
+        #     lines!(
+        #         ax2,
+        #         getfield(kineticenergy, sym)[igrid, ifil, iorder];
+        #         color = Cycled(i),
+        #         linestyle,
+        #     )
+        # end
+
         name = "$plotdir/energy_evolution/"
         ispath(name) || mkpath(name)
         save("$(name)/projectorder=$(projectorder)_filter=$(Φ)_nles=$(nles).pdf", fig)
         display(fig)
     end
 end
-
-########################################################################## #src
-
-# ## Divergence evolution
-
-# ### Compute divergence as a function of time
-
-divs = let
-    clean()
-    ngrid, nfilter, norder =
-        length(params.nles), length(params.filters), length(projectorders)
-    d_ref = fill(zeros(T, 0), ngrid, nfilter)
-    d_nomodel = fill(zeros(T, 0), ngrid, nfilter, norder)
-    d_smag = fill(zeros(T, 0), ngrid, nfilter, norder)
-    d_cnn_prior = fill(zeros(T, 0), ngrid, nfilter, norder)
-    d_cnn_post = fill(zeros(T, 0), ngrid, nfilter, norder)
-    for iorder = 1:3, ifil = 1:nfilter, ig = 1:ngrid
-        println("iorder = $iorder, ifil = $ifil, ig = $ig")
-        projectorder = ProjectOrder.T(iorder)
-        setup = setups[ig]
-        psolver = psolver_spectral(setup)
-        data_test = namedtupleload.(datafiles[ig, ifil, itest[1]])
-        t = data_test.t
-        ustart = data_test.u[1] |> device
-        tlims = (t[1], t[end])
-        nupdate = 2
-        Δt = (t[2] - t[1]) / nupdate
-        T = eltype(ustart[1])
-        dwriter = processor() do state
-            div = scalarfield(setup)
-            dhist = zeros(T, 0)
-            on(state) do (; u, n)
-                if n % nupdate == 0
-                    IncompressibleNavierStokes.divergence!(div, u, setup)
-                    d = view(div, setup.grid.Ip)
-                    d = sum(abs2, d) / length(d)
-                    d = sqrt(d)
-                    push!(dhist, d)
-                end
-            end
-            state[] = state[] # Compute initial divergence
-            dhist
-        end
-        if iorder == 1
-            ## Does not depend on projection order
-            d_ref[ig, ifil] = map(data_test.u) do u
-                u = device(u)
-                div = IncompressibleNavierStokes.divergence(u, setup)
-                d = view(div, setup.grid.Ip)
-                d = sum(abs2, d) / length(d)
-                d = sqrt(d)
-            end
-        end
-        s(closure_model, θ) =
-            solve_unsteady(;
-                (; setup..., closure_model),
-                ustart,
-                tlims,
-                method = RKProject(RK44(; T), projectorder),
-                Δt,
-                processors = (; dwriter),
-                psolver,
-                θ,
-            )[2].dwriter
-        iorder_use = iorder == 3 ? 2 : iorder
-        d_nomodel[ig, ifil, iorder] = s(nothing, nothing)
-        d_smag[ig, ifil, iorder] =
-            s(smagorinsky_closure(setup), θ_smag[ifil, iorder_use])
-        d_cnn_prior[ig, ifil, iorder] =
-            s(wrappedclosure(closure, setup), θ_cnn_prior[ig, ifil])
-        d_cnn_post[ig, ifil, iorder] =
-            s(wrappedclosure(closure, setup), θ_cnn_post[ig, ifil, iorder_use])
-    end
-    (; d_ref, d_nomodel, d_smag, d_cnn_prior, d_cnn_post)
-end;
-clean();
-
-# Check that divergence is within reasonable bounds
-divs.d_ref .|> extrema
-divs.d_nomodel .|> extrema
-divs.d_smag .|> extrema
-divs.d_cnn_prior .|> extrema
-divs.d_cnn_post .|> extrema
 
 ########################################################################## #src
 
@@ -952,44 +925,38 @@ with_theme(;
     ## fontsize = 20,
     palette,
 ) do
-    # for islog in (true, false)
-    for islog in (false,)
-        for iorder = 1:2, ifil = 1:2, igrid = 1:3
-            println("iorder = $iorder, ifil = $ifil, igrid = $igrid")
-            projectorder = ProjectOrder.T(iorder)
-            lesmodel = if iorder == 1
-                "DIF"
-            elseif iorder == 2
-                "DCF"
-            elseif iorder == 3
-                "DCF-RHS"
-            end
-            fil = ifil == 1 ? "FA" : "VA"
-            nles = params.nles[igrid]
-            fig = Figure(; size = (500, 400))
-            ax = Axis(
-                fig[1, 1];
-                yscale = islog ? log10 : identity,
-                xlabel = "t",
-                title = "Divergence: $lesmodel, $fil,  $nles",
-            )
-            lines!(ax, divs.d_nomodel[igrid, ifil, iorder]; label = "No closure")
-            lines!(ax, divs.d_smag[igrid, ifil, iorder]; label = "Smagorinsky")
-            lines!(ax, divs.d_cnn_prior[igrid, ifil, iorder]; label = "CNN (prior)")
-            lines!(ax, divs.d_cnn_post[igrid, ifil, iorder]; label = "CNN (post)")
-            lines!(
-                ax,
-                divs.d_ref[igrid, ifil];
-                color = Cycled(1),
-                linestyle = :dash,
-                label = "Reference",
-            )
-            iorder == 2 && ifil == 1 && axislegend(; position = :rt)
-            islog && ylims!(ax, (T(1e-6), T(1e3)))
-            name = "$plotdir/divergence/$mname/$(islog ? "log" : "lin")"
-            ispath(name) || mkpath(name)
-            save("$(name)/iorder$(iorder)_ifilter$(ifil)_igrid$(igrid).pdf", fig)
-        end
+    islog = true
+    for (iorder, projectorder) in enumerate(projectorders),
+        (ifil, Φ) in enumerate(params.filters),
+        (igrid, nles) in enumerate(params.nles)
+
+        @info "Plotting divergence" projectorder Φ nles
+        lesmodel = iorder == 1 ? "DIF" : "DCF"
+        fil = ifil == 1 ? "FA" : "VA"
+        fig = Figure(; size = (500, 400))
+        ax = Axis(
+            fig[1, 1];
+            yscale = islog ? log10 : identity,
+            xlabel = "t",
+            title = "Divergence: $lesmodel, $fil,  $nles",
+        )
+        lines!(ax, divergencehistory.nomodel[igrid, ifil, iorder]; label = "No closure")
+        lines!(ax, divergencehistory.smag[igrid, ifil, iorder]; label = "Smagorinsky")
+        lines!(ax, divergencehistory.cnn_prior[igrid, ifil, iorder]; label = "CNN (prior)")
+        lines!(ax, divergencehistory.cnn_post[igrid, ifil, iorder]; label = "CNN (post)")
+        lines!(
+            ax,
+            divergencehistory.ref[igrid, ifil, iorder];
+            color = Cycled(1),
+            linestyle = :dash,
+            label = "Reference",
+        )
+        iorder == 2 && ifil == 1 && axislegend(; position = :rt)
+        islog && ylims!(ax, (T(1e-6), T(1e3)))
+        name = "$plotdir/divergence/"
+        ispath(name) || mkpath(name)
+        save("$(name)/projectorder=$(projectorder)_filter=$(Φ)_nles=$(nles).pdf", fig)
+        display(fig)
     end
 end
 
@@ -1014,11 +981,11 @@ ufinal = let
         @info "Computing test solutions" projectorder Φ nles
         setup = setups[igrid]
         psolver = psolver_spectral(setup)
-        sample = namedtupleload.(datafiles[ig, ifil, itest[1]])
+        sample = namedtupleload(datafiles[ig, ifil, itest[1]])
         ustart = sample.u[1] |> device
         t = sample.t
         tlims = (t[1], t[end])
-        nupdate = 2
+        nupdate = 5
         T = eltype(ustart[1])
         s(closure_model, θ) =
             solve_unsteady(;
