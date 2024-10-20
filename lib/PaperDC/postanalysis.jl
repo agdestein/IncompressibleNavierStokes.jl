@@ -246,10 +246,15 @@ end
 # Plot training progress (for a validation data batch).
 
 # Parameter save files
-priorfiles = map(
-    splat((nles, Φ) -> "$outdir/prior_filter=$(Φ)_nles=$(nles).jld2"),
-    Iterators.product(params.nles, params.filters),
-)
+
+priorfiles = let
+    priordir = joinpath(outdir, "priortraining")
+    ispath(priordir) || mkpath(priordir)
+    map(
+        splat((nles, Φ) -> "$priordir/filter=$(Φ)_nles=$(nles).jld2"),
+        Iterators.product(params.nles, params.filters),
+    )
+end
 
 # Train
 trainprior = false
@@ -266,7 +271,8 @@ for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles
     clean()
     starttime = time()
     priorfile = priorfiles[ig, ifil]
-    figfile = joinpath(plotdir, splitext(basename(priorfile))[1] * ".pdf")
+    figfile =
+        joinpath(plotdir, "priortraining_" * splitext(basename(priorfile))[1] * ".pdf")
     checkfile = join(splitext(priorfile), "_checkpoint")
     trainseed, validseed = splitseed(seeds.prior, 2) # Same seed for all training setups
     setup = setups[ig]
@@ -343,10 +349,14 @@ map(p -> p.comptime, prior) |> sum |> x -> x / 3600 # Hours
 projectorders = ProjectOrder.First, ProjectOrder.Last
 
 # Parameter save files
-postfiles = map(
-    splat((nles, Φ, o) -> "$outdir/post_projectorder=$(o)_filter=$(Φ)_nles=$(nles).jld2"),
-    Iterators.product(params.nles, params.filters, projectorders),
-)
+postfiles = let
+    postdir = jointpath(outdir, "posttraining")
+    ispath(postdir) || mkpath(postdir)
+    map(
+        splat((nles, Φ, o) -> "$postdir/projectorder=$(o)_filter=$(Φ)_nles=$(nles).jld2"),
+        Iterators.product(params.nles, params.filters, projectorders),
+    )
+end
 
 # Train
 trainpost = false
@@ -369,7 +379,7 @@ for (iorder, projectorder) in enumerate(projectorders),
     clean()
     starttime = time()
     postfile = postfiles[ig, ifil, iorder]
-    figfile = joinpath(plotdir, splitext(basename(postfile))[1] * ".pdf")
+    figfile = joinpath(plotdir, "posttraining_" * splitext(basename(postfile))[1] * ".pdf")
     checkfile = join(splitext(postfile), "_checkpoint")
     rng = Xoshiro(seeds.post) # Same seed for all training setups
     setup = setups[ig]
@@ -457,10 +467,14 @@ map(p -> p.comptime, post) |> sum |> x -> x / 3600
 # The constant is shared for all grid sizes, since the filter
 # width (=grid size) is part of the model definition separately.
 
-smagfiles = map(
-    splat((Φ, o) -> "$outdir/smag_filter=$(Φ)_projectorder=$(o).jld2"),
-    Iterators.product(params.filters, projectorders),
-)
+smagfiles = let
+    smagdir = joinpath(outdir, "smagorinsky")
+    ispath(smagdir) || mkpath(smagdir)
+    map(
+        splat((Φ, o) -> "$smagdir/filter=$(Φ)_projectorder=$(o).jld2"),
+        Iterators.product(params.filters, projectorders),
+    )
+end
 
 trainsmagorinsky = false
 for (iorder, projectorder) in enumerate(projectorders),
