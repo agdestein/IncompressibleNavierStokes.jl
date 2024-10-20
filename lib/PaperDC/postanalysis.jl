@@ -349,7 +349,7 @@ postfiles = map(
 )
 
 # Train
-trainpost = true
+trainpost = false
 for (iorder, projectorder) in enumerate(projectorders),
     (ifil, Φ) in enumerate(params.filters),
     (ig, nles) in enumerate(params.nles)
@@ -433,8 +433,6 @@ for (iorder, projectorder) in enumerate(projectorders),
 end
 clean()
 
-exit()
-
 # Load learned parameters and training times
 post = load_object.(postfiles)
 θ_cnn_post = map(p -> copyto!(copy(θ₀), p.θ), post)
@@ -444,7 +442,6 @@ post = load_object.(postfiles)
 
 # Training times
 map(p -> p.comptime, post)
-map(p -> p.comptime, post) |> x -> reshape(x, 6, 2)
 map(p -> p.comptime, post) ./ 60
 map(p -> p.comptime, post) |> sum
 map(p -> p.comptime, post) |> sum |> x -> x / 60
@@ -467,43 +464,50 @@ smagfiles = map(
 
 trainsmagorinsky = false
 for (iorder, projectorder) in enumerate(projectorders),
-    (ifil, Φ) in enumerate(params.filters)
+    (ifil, Φ) in enumerate(params.filters),
+    (igrid, nles) in enumerate(params.nles)
 
+    itotal =
+        (iorder - 1) * length(params.nles) * length(params.filters) +
+        (ifil - 1) * length(params.nles) +
+        igrid
+    itotal == 1 || break
     trainsmagorinsky || break
-    clean()
-    data_train = namedtupleload.(datafiles[:, ifil, itrain[1]])
-    smagfile = smagfiles[ifil, iorder]
+    if isslurm && itotal != taskid
+        # Each task does one training
+        @info "Skipping Smagorinsky training for task $(taskid)" projectorder Φ nles
+        continue
+    else
+        @info "Training Smagorinsky" projectorder Φ nles
+    end
     starttime = time()
+    clean()
+    smagfile = smagfiles[ifil, iorder]
+    setup = setups[igrid]
+    psolver = psolver_spectral(setup)
+    data_train = namedtupleload.(datafiles[:, ifil, itrain[1]])
+    d = data_train[igrid]
+    it = 1:50
+    data = (; u = device.(d.u[it]), t = d.t[it])
     θmin = T(0)
     emin = T(Inf)
-    it = 1:50
-    for (iθ, θ) in enumerate(range(T(0), T(0.5), 501))
-        iθ % 50 == 0 && @info "Testing Smagorinsky" projectorder Φ θ
-        e = T(0)
-        for (igrid, nles) in enumerate(params.nles)
-            setup = setups[igrid]
-            psolver = psolver_spectral(setup)
-            d = data_train[igrid]
-            data = (; u = device.(d.u[it]), t = d.t[it])
-            nupdate = 4
-            err = create_relerr_post(;
-                data,
-                setup,
-                psolver,
-                method = RKProject(params.method, projectorder),
-                closure_model = IncompressibleNavierStokes.smagorinsky_closure_natural(
-                    setup,
-                ),
-                nupdate,
-            )
-            e += err(θ)
-        end
-        e /= length(params.nles)
+    err = create_relerr_post(;
+        data,
+        setup,
+        psolver,
+        method = RKProject(params.method, projectorder),
+        closure_model = IncompressibleNavierStokes.smagorinsky_closure_natural(setup),
+        nupdate = 5, # Number of time steps between t[i] and t[i + 1]
+    )
+    for (iθ, θ) in enumerate(range(T(0), T(0.3), 301))
+        iθ % 50 == 0 && @info "Testing θ = $θ"
+        e = err(θ)
         if e < emin
             emin = e
             θmin = θ
         end
     end
+    @info "Optimal θ = $θmin"
     results = (; θ = θmin, comptime = time() - starttime)
     save_object(smagfile, results)
 end
