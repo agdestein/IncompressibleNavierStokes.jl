@@ -350,7 +350,7 @@ projectorders = ProjectOrder.First, ProjectOrder.Last
 
 # Parameter save files
 postfiles = let
-    postdir = jointpath(outdir, "posttraining")
+    postdir = joinpath(outdir, "posttraining")
     ispath(postdir) || mkpath(postdir)
     map(
         splat((nles, Φ, o) -> "$postdir/projectorder=$(o)_filter=$(Φ)_nles=$(nles).jld2"),
