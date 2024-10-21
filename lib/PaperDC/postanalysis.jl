@@ -271,8 +271,9 @@ for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles
     clean()
     starttime = time()
     priorfile = priorfiles[ig, ifil]
-    figfile =
-        joinpath(plotdir, "priortraining_" * splitext(basename(priorfile))[1] * ".pdf")
+    figdir = joinpath(plotdir, "priortraining")
+    ispath(figdir) || mkpath(figdir)
+    figfile = joinpath(figdir, splitext(basename(priorfile))[1] * ".pdf")
     checkfile = join(splitext(priorfile), "_checkpoint")
     trainseed, validseed = splitseed(seeds.prior, 2) # Same seed for all training setups
     setup = setups[ig]
@@ -313,26 +314,76 @@ for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles
         jldsave(checkfile; ncheck = icheck, callbackstate = c, trainstate = t)
     end
     θ = callbackstate.θmin # Use best θ instead of last θ
-    prior = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
-    save_object(priorfile, prior)
+    priortraining = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)
+    save_object(priorfile, priortraining)
 end
 clean()
 
 @info "Finished a-priori training."
 
 # Load learned parameters and training times
-prior = load_object.(priorfiles)
-θ_cnn_prior = map(p -> copyto!(copy(θ₀), p.θ), prior)
+priortraining = load_object.(priorfiles)
+θ_cnn_prior = map(p -> copyto!(copy(θ₀), p.θ), priortraining)
 
 # Check that parameters are within reasonable bounds
 θ_cnn_prior .|> extrema
 
 # Training times
-map(p -> p.comptime, prior)
-map(p -> p.comptime, prior) |> vec
-map(p -> p.comptime, prior) |> sum # Seconds
-map(p -> p.comptime, prior) |> sum |> x -> x / 60 # Minutes
-map(p -> p.comptime, prior) |> sum |> x -> x / 3600 # Hours
+map(p -> p.comptime, priortraining)
+map(p -> p.comptime, priortraining) |> vec
+map(p -> p.comptime, priortraining) |> sum # Seconds
+map(p -> p.comptime, priortraining) |> sum |> x -> x / 60 # Minutes
+map(p -> p.comptime, priortraining) |> sum |> x -> x / 3600 # Hours
+
+# ## Plot training history
+
+with_theme(; palette) do
+    fig = Figure(; size = (1000, 400))
+    for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles)
+        fil = Φ isa FaceAverage ? "FA" : "VA"
+        xlabel = ifil == 2 ? "Iteration" : ""
+        ylabel = ig == 1 ? Φ isa FaceAverage ? "Error (FA)" : "Error (VA)" : ""
+        title = ifil == 1 ? "n = $(nles)" : ""
+        xticksvisible = ifil == 2
+        xticklabelsvisible = ifil == 2
+        yticksvisible = ig == 1
+        yticklabelsvisible = ig == 1
+        ax = Axis(
+            fig[ifil, ig];
+            title,
+            xlabel,
+            ylabel,
+            xticksvisible,
+            xticklabelsvisible,
+            yticksvisible,
+            yticklabelsvisible,
+        )
+        lines!(ax, priortraining[ig, ifil].hist)
+    end
+    linkaxes!(filter(x -> x isa Axis, fig.content)...)
+    fig
+end
+
+with_theme(; palette) do
+    for (ig, nles) in enumerate(params.nles)
+        fig = Figure(; size = (350, 300))
+        ax = Axis(fig[1, 1];
+        title = "A-priori training error, n = $(nles)",
+        xlabel = "Iteration")
+        for (ifil, Φ) in enumerate(params.filters)
+            lines!(
+                ax,
+                priortraining[ig, ifil].hist;
+                label = Φ isa FaceAverage ? "FA" : "VA",
+            )
+        end
+        axislegend(ax)
+        figdir = joinpath(plotdir, "priortraining")
+        ispath(figdir) || mkpath(figdir)
+        save("$figdir/nles=$(nles).pdf", fig)
+        display(fig)
+    end
+end
 
 ########################################################################## #src
 
@@ -379,7 +430,9 @@ for (iorder, projectorder) in enumerate(projectorders),
     clean()
     starttime = time()
     postfile = postfiles[ig, ifil, iorder]
-    figfile = joinpath(plotdir, "posttraining_" * splitext(basename(postfile))[1] * ".pdf")
+    figdir = joinpath(plotdir, "posttraining")
+    ispath(figdir) || mkpath(figdir)
+    figfile = joinpath(plotdir, splitext(basename(postfile))[1] * ".pdf")
     checkfile = join(splitext(postfile), "_checkpoint")
     rng = Xoshiro(seeds.post) # Same seed for all training setups
     setup = setups[ig]

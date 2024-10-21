@@ -199,8 +199,8 @@ end
 # GLMakie.activate!()
 
 # Make plots
-# D == 3 &&
-false && with_theme() do
+dovolumeplot = false && D == 3
+dovolumeplot && with_theme() do
     function makeplot(field, setup, name)
         name = "$output/$(case.name)_$name.png"
         save(
