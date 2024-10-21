@@ -4,9 +4,10 @@
 #SBATCH --cpus-per-task=18
 #SBATCH --gpus=1
 #SBATCH --partition=gpu_a100
-#SBATCH --time=05:00:00
+#SBATCH --time=00:30:00
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=sda@cwi.nl
+#SBATCH --array=1-16
 
 # Note:
 # - gpu_a100: 18 cores
@@ -18,7 +19,5 @@ mkdir -p /scratch-shared/$USER
 export JULIA_DEPOT_PATH=/scratch-shared/$USER/.julia:
 
 cd $HOME/projects/IncompressibleNavierStokes/lib/PaperDC
-
-# module load julia
 
 julia --project postanalysis.jl
