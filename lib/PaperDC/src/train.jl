@@ -68,7 +68,8 @@ function trainprior(;
         end
         starttime = time()
         priorfile = getpriorfile(outdir, nles, Φ)
-        ispath(dirname(priorfile)) || mkpath(dirname(priorfile))
+        priordir = dirname(priorfile)
+        ispath(priordir) || mkpath(priordir)
         figdir = joinpath(plotdir, "priortraining")
         ispath(figdir) || mkpath(figdir)
         figfile = joinpath(figdir, splitext(basename(priorfile))[1] * ".pdf")
