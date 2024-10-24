@@ -289,7 +289,7 @@ trainprior && let
     trainseed, validseed = splitseed(seeds.prior, 2) # Same seed for all training setups
     dataloader = create_dataloader_prior(io_train[ig, ifil]; batchsize = 20, device)
     θ = device(θ₀)
-    loss = create_loss_prior(mean_squared_error, closure)
+    loss = create_loss_prior(mean_squared_error(), closure)
     opt = Adam(T(1.0e-3))
     optstate = Optimisers.setup(opt, θ)
     it = rand(Xoshiro(validseed), 1:size(io_valid[ig, ifil].u, params.D + 2), 50)

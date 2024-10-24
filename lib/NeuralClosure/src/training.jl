@@ -62,7 +62,7 @@ Compute MSE between `f(x, θ)` and `y`.
 
 The MSE is further divided by `normalize(y)`.
 """
-mean_squared_error(f, x, y, θ; normalize = y -> sum(abs2, y), λ = sqrt(eltype(x)(1e-8))) =
+mean_squared_error(; normalize = y -> sum(abs2, y), λ = eltype(x)(1e-4)) = (f, x, y, θ) ->
     sum(abs2, f(x, θ) - y) / normalize(y) + λ * sum(abs2, θ)
 
 """

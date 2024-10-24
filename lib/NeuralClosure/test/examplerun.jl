@@ -80,7 +80,7 @@
         for (im, m) in enumerate(models)
             dataloader = create_dataloader_prior(sample; batchsize = 10)
             θ = m.θ₀
-            loss = create_loss_prior(mean_squared_error, m.closure)
+            loss = create_loss_prior(mean_squared_error(), m.closure)
             opt = Adam(1.0e-3)
             optstate = Optimisers.setup(opt, θ)
             it = rand(rng, 1:size(sample.u, 4), 5)
