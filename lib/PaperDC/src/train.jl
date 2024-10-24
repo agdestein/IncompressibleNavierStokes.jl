@@ -100,8 +100,9 @@ function trainprior(;
         if loadcheckpoint
             # Resume from checkpoint
             (; ncheck, trainstate, callbackstate) = namedtupleload(checkfile)
-            trainstate = trainstate |> device
-            @reset callbackstate.θmin = callbackstate.θmin |> device
+            @assert eltype(callbackstate.θmin) == Float32 "gpu_device() only works with Float32"
+            trainstate = trainstate |> gpu_device()
+            @reset callbackstate.θmin = callbackstate.θmin |> gpu_device()
         else
             ncheck = 0
             trainstate = (; optstate, θ, rng = Xoshiro(batchseed))
@@ -215,8 +216,9 @@ function trainpost(;
         if loadcheckpoint
             @info "Resuming from checkpoint $checkfile"
             ncheck, trainstate, callbackstate = namedtupleload(checkfile)
-            trainstate = trainstate |> device
-            @reset callbackstate.θmin = callbackstate.θmin |> device
+            @assert eltype(callbackstate.θmin) == Float32 "gpu_device() only works with Float32"
+            trainstate = trainstate |> gpu_device()
+            @reset callbackstate.θmin = callbackstate.θmin |> gpu_device()
         else
             ncheck = 0
             trainstate = (; optstate, θ, rng = Xoshiro(postseed))
