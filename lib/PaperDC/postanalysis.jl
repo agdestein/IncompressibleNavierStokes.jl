@@ -233,8 +233,9 @@ dotrainprior && trainprior(;
     closure,
     θ_start,
     opt = Adam(T(1.0e-3)),
-    nvalid = 50,
-    batchsize = 50,
+    λ = T(1e-4),
+    nvalid = 64,
+    batchsize = 64,
     displayref = true,
     displayupdates = true, # Set to `true` if using CairoMakie
     nupdate_callback = 20,

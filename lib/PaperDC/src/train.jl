@@ -46,6 +46,7 @@ function trainprior(;
     closure,
     θ_start,
     opt,
+    λ,
     nvalid,
     batchsize,
     displayref,
@@ -84,7 +85,7 @@ function trainprior(;
         io_valid = create_io_arrays(data_valid, setup)
         dataloader = create_dataloader_prior(io_train; batchsize, device)
         θ = device(θ_start)
-        loss = create_loss_prior(mean_squared_error, closure)
+        loss = create_loss_prior(mean_squared_error(; λ), closure)
         optstate = Optimisers.setup(opt, θ)
         it = rand(Xoshiro(validseed), 1:size(io_valid.u, params.D + 2), nvalid)
         validset = device(map(v -> collect(selectdim(v, ndims(v), it)), io_valid))
