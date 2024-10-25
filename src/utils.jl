@@ -104,13 +104,19 @@ function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) /
     npoint = length(κ)
 
     for i = 1:npoint
-        jstart = findfirst(≥(κ[i] / a), ksort)
-        jstop = findfirst(≥(κ[i] * a), ksort)
-        # jstart = findfirst(≥(κ[i] - T(1.01)), ksort)
-        # jstop = findfirst(≥(κ[i] + T(1.01)), ksort)
+        if D == 2
+            # Dyadic binning - this gives the k^-3 slope in 2D
+            jstart = findfirst(≥(κ[i] / a), ksort)
+            jstop = findfirst(≥(κ[i] * a), ksort)
+        elseif D == 3
+            # Linear binning - this gives the k^-5/3 slope in 3D
+            jstart = findfirst(≥(κ[i] - T(0.51)), ksort)
+            jstop = findfirst(≥(κ[i] + T(0.51)), ksort)
+            # jstart = findfirst(≥(κ[i] - T(1.01)), ksort)
+            # jstop = findfirst(≥(κ[i] + T(1.01)), ksort)
+        end
         isnothing(jstop) && (jstop = length(ksort) + 1)
         jstop -= 1
-        nk = jstop - jstart + 1
         push!(inds, adapt(IntArray, isort[jstart:jstop]))
     end
 
