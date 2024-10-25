@@ -46,14 +46,16 @@ function trainprior(;
     closure,
     θ_start,
     opt,
-    λ,
+    λ = nothing,
+    noiselevel = nothing,
+    scheduler = nothing,
     nvalid,
     batchsize,
     displayref,
     displayupdates,
     nupdate_callback,
     loadcheckpoint,
-    ncheckpoint,
+    nepoch,
     niter,
 )
     device(x) = adapt(params.ArrayType, x)
@@ -83,9 +85,9 @@ function trainprior(;
             map(s -> namedtupleload(getdatafile(outdir, nles, Φ, s)), dns_seeds_valid)
         io_train = create_io_arrays(data_train, setup)
         io_valid = create_io_arrays(data_valid, setup)
-        dataloader = create_dataloader_prior(io_train; batchsize, device)
+        # dataloader = create_dataloader_prior(io_train; batchsize, device)
         θ = device(θ_start)
-        loss = create_loss_prior(mean_squared_error(; λ), closure)
+        loss = create_loss_prior(closure)
         optstate = Optimisers.setup(opt, θ)
         it = rand(Xoshiro(validseed), 1:size(io_valid.u, params.D + 2), nvalid)
         validset = device(map(v -> collect(selectdim(v, ndims(v), it)), io_valid))
@@ -99,22 +101,52 @@ function trainprior(;
         )
         if loadcheckpoint
             # Resume from checkpoint
-            (; ncheck, trainstate, callbackstate) = namedtupleload(checkfile)
+            (; icheck, trainstate, callbackstate) = namedtupleload(checkfile)
             @assert eltype(callbackstate.θmin) == Float32 "gpu_device() only works with Float32"
             trainstate = trainstate |> gpu_device()
             @reset callbackstate.θmin = callbackstate.θmin |> gpu_device()
         else
-            ncheck = 0
-            trainstate = (; optstate, θ, rng = Xoshiro(batchseed))
+            icheck = 0
+            trainstate = (; optstate, θ, rng = Xoshiro(batchseed), i = 0)
         end
-        for icheck = ncheck+1:ncheckpoint
-            (; trainstate, callbackstate) =
-                train(; dataloader, loss, trainstate, callbackstate, callback, niter)
+        for iepoch = icheck+1:nepoch
+            # (; trainstate, callbackstate) = train(;
+            #     dataloader,
+            #     loss,
+            #     trainstate,
+            #     scheduler,
+            #     callbackstate,
+            #     callback,
+            #     niter,
+            # )
+            dataloader = DataLoader(
+                (io_train.u, io_train.c);
+                batchsize,
+                trainstate.rng,
+                buffer = true,
+                shuffle = true,
+                parallel = false,
+                partial = false,
+            )
+            (; trainstate, callbackstate) = trainepoch(;
+                dataloader,
+                loss,
+                trainstate,
+                callbackstate,
+                callback,
+                device,
+                noiselevel,
+                λ,
+            )
+            if !isnothing(scheduler)
+                eta = scheduler(iepoch)
+                Optimisers.adjust!(trainstate.optstate, eta)
+            end
             # Save all states to resume training later
             # First move all arrays to CPU
             c = callbackstate |> cpu_device()
             t = trainstate |> cpu_device()
-            jldsave(checkfile; ncheck = icheck, callbackstate = c, trainstate = t)
+            jldsave(checkfile; icheck = iepoch, callbackstate = c, trainstate = t)
         end
         θ = callbackstate.θmin # Use best θ instead of last θ
         results = (; θ = Array(θ), comptime = time() - starttime, callbackstate.hist)

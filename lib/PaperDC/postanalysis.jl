@@ -68,6 +68,7 @@ using LuxCUDA
 using NeuralClosure
 using NNlib
 using Optimisers
+using ParameterSchedulers
 using Random
 using SparseArrays
 
@@ -168,6 +169,7 @@ docomp && let
         data = namedtupleload(getdatafile(outdir, nles, Φ, seed))
         datasize += Base.summarysize(data)
     end
+    @info "Data" comptime
     @info "Data" comptime / 60 datasize * 1e-9
     clean()
 end
@@ -221,28 +223,37 @@ end
 # Parameter save files
 
 # Train
-dotrainprior = false
-dotrainprior && trainprior(;
-    params,
-    priorseed = seeds.prior,
-    dns_seeds_train,
-    dns_seeds_valid,
-    taskid,
-    outdir,
-    plotdir,
-    closure,
-    θ_start,
-    opt = Adam(T(1.0e-3)),
-    λ = T(1e-4),
-    nvalid = 64,
-    batchsize = 64,
-    displayref = true,
-    displayupdates = true, # Set to `true` if using CairoMakie
-    nupdate_callback = 20,
-    loadcheckpoint = false,
-    ncheckpoint = 10,
-    niter = 1000,
-)
+let
+    dotrainprior = false
+    nepoch = 50
+    # niter = 200
+    niter = nothing
+    dotrainprior && trainprior(;
+        params,
+        priorseed = seeds.prior,
+        dns_seeds_train,
+        dns_seeds_valid,
+        taskid,
+        outdir,
+        plotdir,
+        closure,
+        θ_start,
+        # opt = AdamW(; eta = T(1.0e-3), lambda = T(5.0e-5)),
+        opt = Adam(T(1.0e-3)),
+        λ = T(5.0e-5),
+        # λ = nothing,
+        # noiselevel = T(1e-3),
+        scheduler = CosAnneal(; l0 = T(1e-6), l1 = T(1e-3), period = nepoch),
+        nvalid = 64,
+        batchsize = 64,
+        displayref = true,
+        displayupdates = true, # Set to `true` if using CairoMakie
+        nupdate_callback = 20,
+        loadcheckpoint = true,
+        nepoch,
+        niter,
+    )
+end
 
 # Load learned parameters and training times
 priortraining = loadprior(outdir, params.nles, params.filters)
@@ -256,30 +267,30 @@ map(p -> p.comptime, priortraining) |> sum |> x -> x / 60 # Minutes
 # ## Plot training history
 
 with_theme(; palette) do
-    fig = Figure(; size = (1000, 400))
-    for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles)
-        fil = Φ isa FaceAverage ? "FA" : "VA"
-        xlabel = ifil == 2 ? "Iteration" : ""
-        ylabel = ig == 1 ? Φ isa FaceAverage ? "Error (FA)" : "Error (VA)" : ""
-        title = ifil == 1 ? "n = $(nles)" : ""
-        xticksvisible = ifil == 2
-        xticklabelsvisible = ifil == 2
-        yticksvisible = ig == 1
-        yticklabelsvisible = ig == 1
+    fig = Figure(; size = (900, 250))
+    for (ig, nles) in enumerate(params.nles)
         ax = Axis(
-            fig[ifil, ig];
-            title,
-            xlabel,
-            ylabel,
-            xticksvisible,
-            xticklabelsvisible,
-            yticksvisible,
-            yticklabelsvisible,
+            fig[1, ig];
+            title = "n = $(nles)",
+            xlabel = "Iteration",
+            ylabel = "A-priori error",
+            ylabelvisible = ig == 1,
+            yticksvisible = ig == 1,
+            yticklabelsvisible = ig == 1,
         )
-        lines!(ax, priortraining[ig, ifil].hist)
+        ylims!(0, 1)
+        for (ifil, Φ) in enumerate(params.filters)
+            label = Φ isa FaceAverage ? "FA" : "VA"
+            lines!(ax, priortraining[ig, ifil].hist; label)
+        end
     end
-    linkaxes!(filter(x -> x isa Axis, fig.content)...)
-    fig
+    axes = filter(x -> x isa Axis, fig.content)
+    linkaxes!(axes...)
+    Legend(fig[1, end+1], axes[1])
+    figdir = joinpath(plotdir, "priortraining")
+    ispath(figdir) || mkpath(figdir)
+    save("$figdir/validationerror.pdf", fig)
+    display(fig)
 end
 
 with_theme(; palette) do
@@ -401,7 +412,7 @@ eprior = let
     for (ifil, Φ) in enumerate(params.filters), (ig, nles) in enumerate(params.nles)
         @info "Computing a-priori errors" Φ nles
 
-        setup = setups[ig]
+        setup = getsetup(; params, nles)
         data = map(s -> namedtupleload(getdatafile(outdir, nles, Φ, s)), dns_seeds_test)
         testset = create_io_arrays(data, setup)
         i = 1:100
@@ -421,6 +432,13 @@ clean()
 
 # ### Compute a-posteriori errors
 
+let
+    sample = namedtupleload(
+        getdatafile(outdir, params.nles[1], params.filters[1], dns_seeds_test[1]),
+    )
+    sample.t[100]
+end
+
 epost = let
     s = (length(params.nles), length(params.filters), length(projectorders))
     epost = (;
@@ -434,7 +452,7 @@ epost = let
         (ig, nles) in enumerate(params.nles)
 
         @info "Computing a-posteriori errors" projectorder Φ nles
-        setup = setups[ig]
+        setup = getsetup(; params, nles)
         psolver = psolver_spectral(setup)
         sample = namedtupleload(getdatafile(outdir, nles, Φ, dns_seeds_test[1]))
         it = 1:100
