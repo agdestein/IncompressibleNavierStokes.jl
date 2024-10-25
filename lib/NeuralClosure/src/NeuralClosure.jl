@@ -12,9 +12,11 @@ using KernelAbstractions
 using LinearAlgebra
 using Lux
 using Makie
+using MLUtils
 using NNlib
 using Observables
 using Optimisers
+using Printf
 using Random
 using Zygote
 

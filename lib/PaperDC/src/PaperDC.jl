@@ -15,6 +15,7 @@ using IncompressibleNavierStokes:
 using JLD2
 using LoggingExtras
 using Lux
+using MLUtils
 using NeuralClosure
 using Observables
 using Optimisers
