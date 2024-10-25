@@ -233,7 +233,7 @@ The `kwargs` are passed to [`snapshotsaver`](@ref).
 function save_vtk(state; setup, filename = "output/solution", kwargs...)
     path = dirname(filename)
     isdir(path) || mkpath(path)
-    savesnapshot! = snapshotsaver(state; setup)
+    savesnapshot! = snapshotsaver(state; setup, kwargs...)
     savesnapshot!(filename)
 end
 
