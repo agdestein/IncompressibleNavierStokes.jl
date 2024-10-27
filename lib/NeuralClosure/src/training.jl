@@ -24,14 +24,17 @@ end
 """
 Create trajectory dataloader.
 """
-create_dataloader_post(trajectories; nunroll = 10, device = identity) =
+create_dataloader_post(trajectories; ntrajectory, nunroll, device = identity) =
     function dataloader(rng)
-        (; u, t) = rand(rng, trajectories)
-        nt = length(t)
-        @assert nt ≥ nunroll
-        istart = rand(rng, 1:nt-nunroll)
-        it = istart:istart+nunroll
-        (; u = device.(u[it]), t = t[it]), rng
+        batch = shuffle(rng, trajectories)[1:ntrajectory] # Select a subset of trajectories
+        data = map(batch) do (; u, t)
+            nt = length(t)
+            @assert nt ≥ nunroll "Trajectory too short for nunroll = $nunroll"
+            istart = rand(rng, 1:nt-nunroll)
+            it = istart:istart+nunroll
+            (; u = device.(u[it]), t = t[it])
+        end
+        data, rng
     end
 
 """
@@ -41,26 +44,14 @@ optimiser `opt` for `niter` iterations.
 Return the a new named tuple `(; opt, θ, callbackstate)` with
 updated state and parameters.
 """
-function train(;
-    dataloader,
-    loss,
-    trainstate,
-    niter = 100,
-    scheduler,
-    callback,
-    callbackstate,
-)
+function train(; dataloader, loss, trainstate, niter, callback, callbackstate, λ = nothing)
     for _ = 1:niter
-        (; optstate, θ, rng, i) = trainstate
-        i = i + 1
+        (; optstate, θ, rng) = trainstate
         batch, rng = dataloader(rng)
         g, = gradient(θ -> loss(batch, θ), θ)
+        isnothing(λ) || @.(g += λ * θ) # Weight decay
         optstate, θ = Optimisers.update!(optstate, θ, g)
-        if !isnothing(scheduler)
-            eta = scheduler(i)
-            Optimisers.adjust!(optstate, eta)
-        end
-        trainstate = (; optstate, θ, rng, i)
+        trainstate = (; optstate, θ, rng)
         callbackstate = callback(callbackstate, trainstate)
     end
     (; trainstate, callbackstate)
@@ -90,7 +81,8 @@ function trainepoch(;
     noisebuf = copy(x)
     batch = (x, y)
     for batch_cpu in dataloader
-        (; optstate, θ, rng) = trainstate
+        (; optstate, θ, rng, i) = trainstate
+        i += 1
         copyto!.(batch, batch_cpu)
         if !isnothing(noiselevel)
             # Add noise to input
@@ -121,50 +113,38 @@ create_relerr_prior(f, x, y) = θ -> norm(f(x, θ) - y) / norm(y)
 """
 Create a-posteriori loss function.
 """
-function create_loss_post(;
-    setup,
-    method = RKMethods.RK44(; T = eltype(setup.grid.x[1])),
-    psolver,
-    closure,
-    nupdate = 1,
-)
+function create_loss_post(; setup, method, psolver, closure, nsubstep = 1)
     closure_model = wrappedclosure(closure, setup)
     setup = (; setup..., closure_model)
-    (; dimension, Iu) = setup.grid
+    (; dimension, Iu, x) = setup.grid
     D = dimension()
-    function loss_post(data, θ)
-        T = eltype(θ)
-        (; u, t) = data
-        v = u[1]
-        stepper = create_stepper(method; setup, psolver, u = v, temp = nothing, t = t[1])
-        loss = zero(eltype(v[1]))
-        for it = 2:length(t)
-            Δt = (t[it] - t[it-1]) / nupdate
-            for isub = 1:nupdate
-                stepper = timestep(method, stepper, Δt; θ)
+    loss_post(data, θ) =
+        sum(data) do (; u, t)
+            T = eltype(θ)
+            v = u[1]
+            stepper =
+                create_stepper(method; setup, psolver, u = v, temp = nothing, t = t[1])
+            loss = zero(T)
+            for it = 2:length(t)
+                Δt = (t[it] - t[it-1]) / nsubstep
+                for isub = 1:nsubstep
+                    stepper = timestep(method, stepper, Δt; θ)
+                end
+                a, b = T(0), T(0)
+                for α = 1:length(u[1])
+                    a += sum(abs2, (stepper.u[α]-u[it][α])[Iu[α]])
+                    b += sum(abs2, u[it][α][Iu[α]])
+                end
+                loss += a / b
             end
-            a, b = T(0), T(0)
-            for α = 1:length(u[1])
-                a += sum(abs2, (stepper.u[α]-u[it][α])[Iu[α]])
-                b += sum(abs2, u[it][α][Iu[α]])
-            end
-            loss += a / b
-        end
-        loss / (length(t) - 1)
-    end
+            loss / (length(t) - 1)
+        end / length(data)
 end
 
 """
 Create a-posteriori relative error.
 """
-function create_relerr_post(;
-    data,
-    setup,
-    method = RKMethods.RK44(; T = eltype(setup.grid.x[1])),
-    psolver,
-    closure_model,
-    nupdate = 1,
-)
+function create_relerr_post(; data, setup, method, psolver, closure_model, nsubstep = 1)
     setup = (; setup..., closure_model)
     (; dimension, Iu) = setup.grid
     D = dimension()
@@ -177,8 +157,8 @@ function create_relerr_post(;
         stepper = create_stepper(method; setup, psolver, u = v, temp = nothing, t = t[1])
         e = zero(T)
         for it = 2:length(t)
-            Δt = (t[it] - t[it-1]) / nupdate
-            for isub = 1:nupdate
+            Δt = (t[it] - t[it-1]) / nsubstep
+            for isub = 1:nsubstep
                 stepper =
                     IncompressibleNavierStokes.timestep!(method, stepper, Δt; θ, cache)
             end

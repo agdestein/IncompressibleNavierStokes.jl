@@ -107,7 +107,7 @@ function trainprior(;
             @reset callbackstate.θmin = callbackstate.θmin |> gpu_device()
         else
             icheck = 0
-            trainstate = (; optstate, θ, rng = Xoshiro(batchseed), i = 0)
+            trainstate = (; optstate, θ, rng = Xoshiro(batchseed))
             callbackstate = callback(callbackstate, trainstate) # Initial callback 
         end
         for iepoch = icheck+1:nepoch
@@ -177,15 +177,18 @@ function trainpost(;
     dns_seeds_valid,
     nsubstep,
     nunroll,
+    ntrajectory,
     closure,
     θ_start,
     opt,
+    λ = nothing,
+    scheduler,
     nunroll_valid,
     nupdate_callback,
     displayref,
     displayupdates,
     loadcheckpoint,
-    ncheckpoint,
+    nepoch,
     niter,
 )
     device(x) = adapt(params.ArrayType, x)
@@ -216,14 +219,18 @@ function trainpost(;
             psolver,
             method = RKProject(params.method, projectorder),
             closure,
-            nupdate = nsubstep, # Time steps per loss evaluation
+            nsubstep, # Time steps per loss evaluation
         )
         data_train =
             map(s -> namedtupleload(getdatafile(outdir, nles, Φ, s)), dns_seeds_train)
         data_valid =
             map(s -> namedtupleload(getdatafile(outdir, nles, Φ, s)), dns_seeds_valid)
-        dataloader =
-            create_dataloader_post(map(d -> (; d.u, d.t), data_train); device, nunroll)
+        dataloader = create_dataloader_post(
+            map(d -> (; d.u, d.t), data_train);
+            device,
+            nunroll,
+            ntrajectory,
+        )
         θ = θ_start[igrid, ifil] |> device
         optstate = Optimisers.setup(opt, θ)
         (; callbackstate, callback) = let
@@ -237,7 +244,7 @@ function trainpost(;
                     psolver,
                     method = RKProject(params.method, projectorder),
                     closure_model = wrappedclosure(closure, setup),
-                    nupdate = nsubstep,
+                    nsubstep,
                 );
                 θ,
                 figfile,
@@ -248,22 +255,26 @@ function trainpost(;
         end
         if loadcheckpoint
             @info "Resuming from checkpoint $checkfile"
-            ncheck, trainstate, callbackstate = namedtupleload(checkfile)
+            (; icheck, trainstate, callbackstate) = namedtupleload(checkfile)
             @assert eltype(callbackstate.θmin) == Float32 "gpu_device() only works with Float32"
             trainstate = trainstate |> gpu_device()
             @reset callbackstate.θmin = callbackstate.θmin |> gpu_device()
         else
-            ncheck = 0
+            icheck = 0
             trainstate = (; optstate, θ, rng = Xoshiro(postseed))
             callbackstate = callback(callbackstate, trainstate) # Initial callback 
         end
-        for icheck = ncheck+1:ncheckpoint
+        for iepoch = icheck+1:nepoch
             (; trainstate, callbackstate) =
-                train(; dataloader, loss, trainstate, niter, callbackstate, callback)
+                train(; dataloader, loss, trainstate, niter, callbackstate, callback, λ)
+            if !isnothing(scheduler)
+                eta = scheduler(iepoch)
+                Optimisers.adjust!(trainstate.optstate, eta)
+            end
             @info "Saving checkpoint to $(basename(checkfile))"
             c = callbackstate |> cpu_device()
             t = trainstate |> cpu_device()
-            jldsave(checkfile; ncheck = icheck, callbackstate = c, trainstate = t)
+            jldsave(checkfile; icheck = iepoch, callbackstate = c, trainstate = t)
         end
         θ = callbackstate.θmin # Use best θ instead of last θ
         results = (; θ = Array(θ), comptime = time() - starttime)
