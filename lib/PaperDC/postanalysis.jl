@@ -241,7 +241,6 @@ let
         # opt = AdamW(; eta = T(1.0e-3), lambda = T(5.0e-5)),
         opt = Adam(T(1.0e-3)),
         λ = T(5.0e-5),
-        # λ = nothing,
         # noiselevel = T(1e-3),
         scheduler = CosAnneal(; l0 = T(1e-6), l1 = T(1e-3), period = nepoch),
         nvalid = 64,
@@ -249,7 +248,7 @@ let
         displayref = true,
         displayupdates = true, # Set to `true` if using CairoMakie
         nupdate_callback = 20,
-        loadcheckpoint = true,
+        loadcheckpoint = false,
         nepoch,
         niter,
     )
@@ -262,12 +261,13 @@ priortraining = loadprior(outdir, params.nles, params.filters)
 
 # Training times
 map(p -> p.comptime, priortraining)
+map(p -> p.comptime, priortraining) |> vec .|> x -> round(x; digits = 1)
 map(p -> p.comptime, priortraining) |> sum |> x -> x / 60 # Minutes
 
 # ## Plot training history
 
 with_theme(; palette) do
-    fig = Figure(; size = (900, 250))
+    fig = Figure(; size = (950, 250))
     for (ig, nles) in enumerate(params.nles)
         ax = Axis(
             fig[1, ig];
@@ -278,11 +278,23 @@ with_theme(; palette) do
             yticksvisible = ig == 1,
             yticklabelsvisible = ig == 1,
         )
-        ylims!(0, 1)
+        ylims!(-0.05, 1.05)
+        lines!(
+            ax,
+            [Point2f(0, 1), Point2f(priortraining[ig, 1].hist[end][1], 1)];
+            label = "No closure",
+            linestyle = :dash,
+        )
         for (ifil, Φ) in enumerate(params.filters)
             label = Φ isa FaceAverage ? "FA" : "VA"
             lines!(ax, priortraining[ig, ifil].hist; label)
         end
+        # lines!(
+        #     ax,
+        #     [Point2f(0, 0), Point2f(priortraining[ig, 1].hist[end][1], 0)];
+        #     label = "DNS",
+        #     linestyle = :dash,
+        # )
     end
     axes = filter(x -> x isa Axis, fig.content)
     linkaxes!(axes...)
@@ -291,29 +303,6 @@ with_theme(; palette) do
     ispath(figdir) || mkpath(figdir)
     save("$figdir/validationerror.pdf", fig)
     display(fig)
-end
-
-with_theme(; palette) do
-    for (ig, nles) in enumerate(params.nles)
-        fig = Figure(; size = (350, 300))
-        ax = Axis(
-            fig[1, 1];
-            title = "A-priori training error, n = $(nles)",
-            xlabel = "Iteration",
-        )
-        for (ifil, Φ) in enumerate(params.filters)
-            lines!(
-                ax,
-                priortraining[ig, ifil].hist;
-                label = Φ isa FaceAverage ? "FA" : "VA",
-            )
-        end
-        axislegend(ax)
-        figdir = joinpath(plotdir, "priortraining")
-        ispath(figdir) || mkpath(figdir)
-        save("$figdir/nles=$(nles).pdf", fig)
-        display(fig)
-    end
 end
 
 ########################################################################## #src
@@ -331,29 +320,38 @@ end
 projectorders = ProjectOrder.First, ProjectOrder.Last
 
 # Train
-dotrainpost = false
-dotrainpost && trainpost(;
-    params,
-    projectorders,
-    outdir,
-    plotdir,
-    taskid,
-    postseed = seeds.post,
-    dns_seeds_train,
-    dns_seeds_valid,
-    nsubstep = 5,
-    nunroll = 20,
-    closure,
-    θ_start = θ_cnn_prior,
-    opt = Adam(T(1.0e-3)),
-    nunroll_valid = 50,
-    nupdate_callback = 10,
-    displayref = false,
-    displayupdates = true,
-    loadcheckpoint = false,
-    ncheckpoint = 10,
-    niter = 200,
-)
+let
+    dotrainpost = true
+    nepoch = 10
+    dotrainpost && trainpost(;
+        params,
+        projectorders,
+        outdir,
+        plotdir,
+        taskid = 1,
+        postseed = seeds.post,
+        dns_seeds_train,
+        dns_seeds_valid,
+        nsubstep = 5,
+        nunroll = 10,
+        ntrajectory = 5,
+        closure,
+        θ_start = θ_cnn_prior,
+        opt = Adam(T(1e-4)),
+        λ = T(5e-5),
+        scheduler = CosAnneal(; l0 = T(1e-6), l1 = T(1e-4), period = nepoch),
+        nunroll_valid = 50,
+        nupdate_callback = 10,
+        displayref = false,
+        displayupdates = true,
+        loadcheckpoint = false,
+        nepoch,
+        niter = 100,
+    )
+end
+
+# x = namedtupleload(getdatafile(outdir, params.nles[1], params.filters[1], dns_seeds_train[1]))
+# x.t[2] - x.t[1]
 
 # Load learned parameters and training times
 

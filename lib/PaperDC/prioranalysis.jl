@@ -39,7 +39,6 @@ setsnelliuslogger(logfile)
 
 using CairoMakie
 using CUDA
-using FFTW
 # using GLMakie
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: apply_bc_u!, ode_method_cache
@@ -71,7 +70,7 @@ case = let
     ndns = 4096
     Re = T(1e4)
     kp = 20
-    tlims = (T(0), T(1e-1))
+    tlims = (T(0), T(1e0))
     docopy = true
     nles = [32, 64, 128, 256]
     filterdefs = [FaceAverage(), VolumeAverage()]
@@ -86,13 +85,16 @@ case = let
     ndns = 1024 # Works on a 80GB H100 GPU. Use smaller n for less memory.
     Re = T(1e4)
     kp = 20
-    tlims = (T(0), T(1e-1))
+    tlims = (T(0), T(1e0))
     docopy = false
     nles = [32, 64, 128, 256]
     filterdefs = [FaceAverage(), VolumeAverage()]
     name = "D=$(D)_T=$(T)_Re=$(Re)_t=$(tlims[2])"
     (; D, T, ndns, Re, kp, tlims, docopy, nles, filterdefs, name)
 end
+
+casedir = joinpath(output, case.name)
+ispath(casedir) || mkpath(casedir)
 
 # Setup
 lims = case.T(0), case.T(1)
@@ -154,7 +156,7 @@ clean()
 case.D == 2 && with_theme(; fontsize = 25) do
     (; T) = case
     ## Compute quantities
-    fil = filters[2]
+    fil = filters[3]
     apply_bc_u!(state.u, T(0), dns.setup)
     Φu = fil.Φ(state.u, fil.setup, fil.compression)
     apply_bc_u!(Φu, T(0), fil.setup)
@@ -173,7 +175,7 @@ case.D == 2 && with_theme(; fontsize = 25) do
 
     ## Make plots
     makeplot(field, setup, title, name) = save(
-        "$output/$(case.name)_$name.png",
+        "$casedir/$name.png",
         fieldplot(
             (; u = field, temp = nothing, t = T(0));
             setup,
@@ -202,7 +204,7 @@ end
 dovolumeplot = false && D == 3
 dovolumeplot && with_theme() do
     function makeplot(field, setup, name)
-        name = "$output/$(case.name)_$name.png"
+        name = "$casedir/$name.png"
         save(
             name,
             fieldplot(
@@ -225,19 +227,19 @@ dovolumeplot && with_theme() do
             """
         end
     end
-    makeplot(u₀, dns.setup, "Re=$(Int(Re))_start") # Requires docopy = true in solve
-    makeplot(state.u, dns.setup, "Re=$(Int(Re))_end")
+    makeplot(u₀, dns.setup, "start") # Requires docopy = true in solve
+    makeplot(state.u, dns.setup, "end")
     i = 3
     makeplot(
         filters[i].Φ(state.u, filters[i].setup, filters[i].compression),
         filters[i].setup,
-        "Re=$(Int(Re))_end_filtered",
+        "end_filtered",
     )
 end
 
 # ## Compute average quantities
 
-open("$output/averages_$(case.name).txt", "w") do io
+open("$casedir/averages.txt", "w") do io
     println(io, "Φ\t\tM\tDu\tPv\tPc\tc\tE")
     for o in outputs.obs
         nt = length(o.t)
@@ -274,10 +276,10 @@ let
         (; spec.κ, ehat = spec.ehat[])
     end
     pushfirst!(specs, specstart)
-    save_object("$output/spectra_$(case.name).jld2", specs)
+    save_object("$casedir/spectra.jld2", specs)
 end
 
-specs = load_object("$output/spectra_$(case.name).jld2")
+specs = load_object("$casedir/spectra.jld2")
 
 # Plot predicted spectra
 CairoMakie.activate!()
@@ -287,9 +289,10 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
 
     ## Build inertial slope above energy
     krange, slope, slopelabel = if D == 2
-        [T(18), T(128)], -T(3), L"$\kappa^{-3}$"
+        [T(8), T(50)], -T(3), L"$\kappa^{-3}$"
     elseif D == 3
-        [T(80), T(256)], -T(5 / 3), L"$\kappa^{-5/3}$"
+        # [T(80), T(256)], -T(5 / 3), L"$\kappa^{-5/3}$"
+        [T(5), T(32)], -T(5 / 3), L"$\kappa^{-5/3}$"
     end
     slopeconst = maximum(specs[2].ehat ./ specs[2].κ .^ slope)
     offset = D == 2 ? 3 : 2
@@ -309,7 +312,7 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
         xscale = log10,
         yscale = log10,
         limits = (1, kmax, T(1e-8), T(1)),
-        title = "Kinetic energy ($(D)D)",
+        title = "Energy spectrum ($(D)D)",
     )
     plotparts(i) = specs[i].κ, specs[i].ehat
     nnles = length(case.nles)
@@ -333,19 +336,23 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
         # position = (0.2, 0.01),
     )
     autolimits!(ax)
-    D == 2 && limits!(ax, (T(0.8), T(460)), (T(1e-7), T(1e0)))
-    # D == 2 && limits!(ax, (T(16), T(128)), (T(1e-4), T(1e-1)))
-    # D == 3 && limits!(ax, (T(8e-1), T(700)), (T(5e-9), T(3.0e-2)))
-    # D == 3 && limits!(ax, (T(8e-1), T(850)), (T(1.5e-5), T(1.0e-1)))
+    if D == 2
+        xlims!(ax, T(0.8), T(460))
+        ylims!(ax, T(1e-10), T(1e0))
+    elseif D == 3
+        xlims!(ax, 0.8, 290)
+        ylims!(ax, 1e-11, 3e-3)
+    end
 
     # Add resolution numbers just below plots
     if D == 2
-        text!(ax, "4096"; position = (198, 1.4e-7))
+        text!(ax, "4096"; position = (175, 1.5e-10))
         textk, texte = 1.5, 2.0
     elseif D == 3
         # text!(ax, "1024"; position = (241, 2.4e-8))
-        text!(ax, "1024"; position = (259, 2.4e-5))
-        textk, texte = 1.5, 1.5
+        # text!(ax, "1024"; position = (259, 2.4e-5))
+        text!(ax, "1024"; position = (110, 1.5e-11))
+        textk, texte = 1.55, 1.6
     end
     for (i, nles) in zip(VA, case.nles)
         κ, e = plotparts(i)
@@ -355,14 +362,15 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
     # Plot zoom-in box
     if D == 2
         o = 6
-        sk, se = 1.08, 1.4
+        sk, se = 1.06, 1.4
         x1, y1 = 477, 358
         x0, y0 = x1 - 90, y1 - 94
     elseif D == 3
         o = 7
-        sk, se = 1.15, 1.3
-        x1, y1 = 390, 185
-        x0, y0 = x1 - 120, y1 - 120
+        sk, se = 1.05, 1.3
+        # x1, y1 = 360, 185
+        x1, y1 = 477, 358
+        x0, y0 = x1 - 90, y1 - 94
     end
     kk, ee = plotparts(FA[end])
     kk, ee = kk[end-o], ee[end-o]
@@ -402,6 +410,6 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
     lines!(ax2, plotparts(FA[end])...; color = Cycled(2))
     lines!(ax2, plotparts(VA[end])...; color = Cycled(3))
 
-    save("$output/spectra_$(case.name).pdf", fig)
+    save("$casedir/spectra.pdf", fig)
     fig
 end
