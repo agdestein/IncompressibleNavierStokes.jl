@@ -293,7 +293,6 @@ function create_callback(
     obs[] = callbackstate.hist
     displayfig && display(fig)
     function callback(callbackstate, trainstate)
-        @reset callbackstate.n += 1
         (; n, hist) = callbackstate
         if n % nupdate == 0
             (; θ) = trainstate
@@ -322,6 +321,7 @@ function create_callback(
                 @reset callbackstate.emin = e
             end
         end
+        @reset callbackstate.n += 1
         callbackstate
     end
     (; callbackstate, callback)

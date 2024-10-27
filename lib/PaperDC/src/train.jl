@@ -108,6 +108,7 @@ function trainprior(;
         else
             icheck = 0
             trainstate = (; optstate, θ, rng = Xoshiro(batchseed), i = 0)
+            callbackstate = callback(callbackstate, trainstate) # Initial callback 
         end
         for iepoch = icheck+1:nepoch
             # (; trainstate, callbackstate) = train(;
@@ -254,6 +255,7 @@ function trainpost(;
         else
             ncheck = 0
             trainstate = (; optstate, θ, rng = Xoshiro(postseed))
+            callbackstate = callback(callbackstate, trainstate) # Initial callback 
         end
         for icheck = ncheck+1:ncheckpoint
             (; trainstate, callbackstate) =
