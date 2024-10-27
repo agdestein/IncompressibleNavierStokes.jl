@@ -108,7 +108,7 @@ function trainprior(;
         else
             icheck = 0
             trainstate = (; optstate, θ, rng = Xoshiro(batchseed))
-            callbackstate = callback(callbackstate, trainstate) # Initial callback 
+            callbackstate = callback(callbackstate, trainstate) # Initial callback
         end
         for iepoch = icheck+1:nepoch
             # (; trainstate, callbackstate) = train(;
@@ -210,7 +210,7 @@ function trainpost(;
         ispath(dirname(postfile)) || mkpath(dirname(postfile))
         figdir = joinpath(plotdir, "posttraining")
         ispath(figdir) || mkpath(figdir)
-        figfile = joinpath(plotdir, splitext(basename(postfile))[1] * ".pdf")
+        figfile = joinpath(figdir, splitext(basename(postfile))[1] * ".pdf")
         checkfile = join(splitext(postfile), "_checkpoint")
         setup = getsetup(; params, nles)
         psolver = default_psolver(setup)
@@ -262,7 +262,7 @@ function trainpost(;
         else
             icheck = 0
             trainstate = (; optstate, θ, rng = Xoshiro(postseed))
-            callbackstate = callback(callbackstate, trainstate) # Initial callback 
+            callbackstate = callback(callbackstate, trainstate) # Initial callback
         end
         for iepoch = icheck+1:nepoch
             (; trainstate, callbackstate) =

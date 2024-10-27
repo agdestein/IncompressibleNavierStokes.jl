@@ -267,6 +267,11 @@ map(p -> p.comptime, priortraining) |> sum |> x -> x / 60 # Minutes
 # ## Plot training history
 
 with_theme(; palette) do
+    # Turn off for array jobs.
+    # If all the workers do this at the same time, one might
+    # error when saving the file at the same time
+    doplot = false
+    doplot || return
     fig = Figure(; size = (950, 250))
     for (ig, nles) in enumerate(params.nles)
         ax = Axis(
@@ -321,14 +326,14 @@ projectorders = ProjectOrder.First, ProjectOrder.Last
 
 # Train
 let
-    dotrainpost = true
+    dotrainpost = false
     nepoch = 10
     dotrainpost && trainpost(;
         params,
         projectorders,
         outdir,
         plotdir,
-        taskid = 1,
+        taskid,
         postseed = seeds.post,
         dns_seeds_train,
         dns_seeds_valid,
@@ -338,7 +343,7 @@ let
         closure,
         θ_start = θ_cnn_prior,
         opt = Adam(T(1e-4)),
-        λ = T(5e-5),
+        λ = T(5e-8),
         scheduler = CosAnneal(; l0 = T(1e-6), l1 = T(1e-4), period = nepoch),
         nunroll_valid = 50,
         nupdate_callback = 10,
