@@ -153,8 +153,9 @@ clean()
 
 # ## Plot 2D fields
 
-case.D == 2 && with_theme(; fontsize = 25) do
+case.D == 2 && with_theme() do
     (; T) = case
+
     ## Compute quantities
     fil = filters[3]
     apply_bc_u!(state.u, T(0), dns.setup)
@@ -174,23 +175,40 @@ case.D == 2 && with_theme(; fontsize = 25) do
     apply_bc_u!(c, T(0), fil.setup)
 
     ## Make plots
-    makeplot(field, setup, title, name) = save(
-        "$casedir/$name.png",
-        fieldplot(
-            (; u = field, temp = nothing, t = T(0));
-            setup,
-            title,
-            docolorbar = false,
-            size = (500, 500),
-        ),
-    )
-    makeplot(ustart, dns.setup, "u₀", "ustart")
-    makeplot(state.u, dns.setup, "u", "u")
-    makeplot(Φu, fil.setup, "ū", "Phi_u")
-    makeplot(PF, dns.setup, "PF(u)", "P_F_u")
-    makeplot(PFv, fil.setup, "P̄F̄(ū)", "P_F_Phi_u")
-    makeplot(ΦPF, fil.setup, "ΦPF(u)", "Phi_P_F_u")
-    makeplot(c, fil.setup, "c(u)", "c")
+    fields = [
+        (ustart, dns.setup, "u₀"),
+        (c, fil.setup, "c(u)"),
+        (state.u, dns.setup, "u"),
+        (PF, dns.setup, "PF(u)"),
+        (Φu, fil.setup, "ū"),
+        (PFv, fil.setup, "P̄F̄(ū)"),
+    ]
+    fig = Figure(; size = (600, 450))
+    for (I, field) in enumerate(fields)
+        f, setup, title = field
+        (; Ip, xp) = setup.grid
+        i, j = CartesianIndices((2, 3))[I].I
+        w = vorticity(f, setup)
+        # w = f[1] |> Array
+        w = w[Ip] |> Array
+        lims = get_lims(w)
+        xw = xp[1][Ip.indices[1]], xp[2][Ip.indices[2]]
+        xw = Array.(xw)
+        heatmap(fig[i, j], xw..., w;
+        colorrange = lims,
+            axis = (;
+                title,
+                xticksvisible = false,
+                xticklabelsvisible = false,
+                yticksvisible = false,
+                yticklabelsvisible = false,
+                aspect = DataAspect(),
+            ),
+        )
+    end
+    display(fig)
+    name = "$casedir/fields.png"
+    save(name, fig; px_per_unit = 2)
 end
 
 # ## Plot 3D fields
