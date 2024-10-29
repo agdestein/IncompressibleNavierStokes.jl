@@ -27,6 +27,11 @@ ispath(outdir) || mkpath(outdir)
 ispath(plotdir) || mkpath(plotdir)
 ispath(logdir) || mkpath(logdir)
 
+# Turn off plots for array jobs.
+# If all the workers do this at the same time, one might
+# error when saving the file at the same time
+doplot() = true
+
 ########################################################################## #src
 
 # ## Configure logger
@@ -267,11 +272,7 @@ map(p -> p.comptime, priortraining) |> sum |> x -> x / 60 # Minutes
 # ## Plot training history
 
 with_theme(; palette) do
-    # Turn off for array jobs.
-    # If all the workers do this at the same time, one might
-    # error when saving the file at the same time
-    doplot = false
-    doplot || return
+    doplot() || return
     fig = Figure(; size = (950, 250))
     for (ig, nles) in enumerate(params.nles)
         ax = Axis(
@@ -355,9 +356,6 @@ let
     )
 end
 
-# x = namedtupleload(getdatafile(outdir, params.nles[1], params.filters[1], dns_seeds_train[1]))
-# x.t[2] - x.t[1]
-
 # Load learned parameters and training times
 
 posttraining = loadpost(outdir, params.nles, params.filters, projectorders)
@@ -372,11 +370,7 @@ map(p -> p.comptime, posttraining) |> x -> reshape(x, :, 2) .|> x -> round(x; di
 # ## Plot a-posteriori training history
 
 with_theme(; palette) do
-    # Turn off for array jobs.
-    # If all the workers do this at the same time, one might
-    # error when saving the file at the same time
-    doplot = false
-    doplot || return
+    doplot() || return
     fig = Figure(; size = (950, 400))
     for (iorder, projectorder) in enumerate(projectorders)
         axes = []
@@ -448,6 +442,8 @@ smag = loadsmagorinsky(outdir, params.nles, params.filters, projectorders)
 # Extract coefficients
 θ_smag = getfield.(smag, :θ)
 
+θ_smag |> x -> reshape(x, :, 4)
+
 # Computational time
 getfield.(smag, :comptime)
 getfield.(smag, :comptime) |> sum
@@ -460,7 +456,7 @@ getfield.(smag, :comptime) |> sum
 #
 # Note that it is still interesting to compute the a-priori errors for the
 # a-posteriori trained CNN.
-eprior = let
+let
     eprior = (;
         nomodel = ones(T, length(params.nles)),
         prior = zeros(T, size(θ_cnn_prior)),
@@ -481,9 +477,11 @@ eprior = let
             eprior.post[ig, ifil, iorder] = err(device(θ_cnn_post[ig, ifil, iorder]))
         end
     end
-    eprior
+    jldsave(joinpath(outdir, "eprior.jld2"); eprior...)
 end
 clean()
+
+eprior = namedtupleload(joinpath(outdir, "eprior.jld2"))
 
 ########################################################################## #src
 
@@ -496,7 +494,7 @@ let
     sample.t[100]
 end
 
-epost = let
+let
     s = (length(params.nles), length(params.filters), length(projectorders))
     epost = (;
         nomodel = zeros(T, s),
@@ -550,8 +548,10 @@ epost = let
         epost.cnn_post[I] = err(device(θ_cnn_post[I]))
         clean()
     end
-    epost
+    jldsave(joinpath(outdir, "epost.jld2"); epost...)
 end
+
+epost = namedtupleload(joinpath(outdir, "epost.jld2"))
 
 epost.nomodel
 epost.smag
@@ -607,6 +607,7 @@ end
 CairoMakie.activate!()
 
 with_theme(; palette) do
+    doplot() || return
     fig = Figure(; size = (800, 300))
     linestyles = [:solid, :dash]
     for (iorder, projectorder) in enumerate(projectorders)
@@ -774,29 +775,32 @@ divergencehistory.cnn_post .|> extrema
 CairoMakie.activate!()
 
 with_theme(; palette) do
+    doplot() || return
     for (igrid, nles) in enumerate(params.nles)
         @info "Plotting energy evolution" nles
         fig = Figure(; size = (800, 450))
+        g = GridLayout(fig[1, 1])
         for (iorder, projectorder) in enumerate(projectorders),
             (ifil, Φ) in enumerate(params.filters)
 
             I = CartesianIndex(igrid, ifil, iorder)
-            subfig = fig[ifil, iorder]
+            subfig = g[ifil, iorder]
             ax = Axis(
                 subfig;
                 # xscale = log10,
                 # yscale = log10,
                 xlabel = "t",
-                ylabel = Φ isa FaceAverage ? "Face-average" : "Volume-average",
-                ylabelfont = :bold,
+                # ylabel = Φ isa FaceAverage ? "Face-average" : "Volume-average",
+                ylabel = "E(t)",
+                # ylabelfont = :bold,
                 title = projectorder == ProjectOrder.First ? "DIF" : "DCF",
                 titlevisible = ifil == 1,
                 xlabelvisible = ifil == 2,
                 xticksvisible = ifil == 2,
                 xticklabelsvisible = ifil == 2,
                 ylabelvisible = iorder == 1,
-                # yticksvisible = iorder == 1,
-                # yticklabelsvisible = iorder == 1,
+                yticksvisible = iorder == 1,
+                yticklabelsvisible = iorder == 1,
             )
             # xlims!(ax, (1e-2, 5.0))
             # xlims!(ax, (0.0, 1.0))
@@ -811,20 +815,21 @@ with_theme(; palette) do
             for (p, linestyle, i, label) in plots
                 lines!(ax, p[I]; color = Cycled(i), linestyle, label)
                 iorder == 1 && xlims!(-0.05, 1.05)
-                iorder == 1 && ylims!(1.1, 3.1)
-                # ylims!(1.1, 3.1)
+                # iorder == 1 && ylims!(1.1, 3.1)
+                ylims!(1.3, 3.0)
             end
 
             # Plot zoom-in box
             if iorder == 2
-                tlims = 0.8, 1.2
+                tlims = iorder == 1 ? (0.05, 0.2) : (0.8, 1.2)
                 i1 = findfirst(p -> p[1] > tlims[1], energyhistory.ref[I])
                 i2 = findfirst(p -> p[1] > tlims[2], energyhistory.ref[I])
                 tlims = energyhistory.ref[I][i1][1], energyhistory.ref[I][i2][1]
                 klims = energyhistory.ref[I][i1][2], energyhistory.ref[I][i2][2]
                 dk = klims[2] - klims[1]
                 # klims = klims[1] - 0.2 * dk, klims[2] + 0.2 * dk
-                klims = klims[1] + 0.1 * dk, klims[2] - 0.1 * dk
+                w = iorder == 1 ? 0.2 : 0.1
+                klims = klims[1] + w * dk, klims[2] - w * dk
                 box = [
                     Point2f(tlims[1], klims[1]),
                     Point2f(tlims[2], klims[1]),
@@ -858,9 +863,20 @@ with_theme(; palette) do
                     lines!(ax2, p[igrid, ifil, iorder]; color = Cycled(i), linestyle, label)
                 end
             end
+
+            Label(
+                g[ifil, 0],
+                # Φ isa FaceAverage ? "Face-average" : "Volume-average";
+                Φ isa FaceAverage ? "FA" : "VA";
+                # halign = :right,
+                font = :bold,
+                # rotation = pi/2,
+                tellheight = false,
+            )
         end
-        # colgap!(fig.layout, 10)
-        rowgap!(fig.layout, 10)
+        colgap!(g, 10)
+        rowgap!(g, 10)
+        # colsize!(g, 1, Relative(1 / 5))
         Legend(fig[:, end+1], filter(x -> x isa Axis, fig.content)[1])
         name = "$plotdir/energy_evolution/"
         ispath(name) || mkpath(name)
@@ -877,6 +893,7 @@ end
 CairoMakie.activate!()
 
 with_theme(; palette) do
+    doplot() || return
     islog = true
     for (igrid, nles) in enumerate(params.nles)
         @info "Plotting divergence" nles
@@ -1012,6 +1029,7 @@ solutions = namedtupleload("$outdir/solutions.jld2");
 # Plot kinetic energy spectra.
 
 with_theme(; palette) do
+    doplot() || return
     for (ifil, Φ) in enumerate(params.filters), (igrid, nles) in enumerate(params.nles)
         @info "Plotting spectra" Φ nles
         fig = Figure(; size = (800, 450))
@@ -1189,6 +1207,7 @@ end
 GLMakie.activate!()
 
 with_theme(; palette) do
+    doplot() || return
     ## Reference box for eddy comparison
     x1 = 0.3
     x2 = 0.5
@@ -1275,6 +1294,7 @@ end
 
 # Plot vorticity
 let
+    doplot() || return
     nles = 64
     sample = namedtupleload(getdatafile(outdir, nles, FaceAverage(), dns_seeds_test[1]))
     setup = getsetup(; params, nles)

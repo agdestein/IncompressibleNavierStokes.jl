@@ -194,7 +194,10 @@ case.D == 2 && with_theme() do
         lims = get_lims(w)
         xw = xp[1][Ip.indices[1]], xp[2][Ip.indices[2]]
         xw = Array.(xw)
-        heatmap(fig[i, j], xw..., w;
+        heatmap(
+            fig[i, j],
+            xw...,
+            w;
         colorrange = lims,
             axis = (;
                 title,
