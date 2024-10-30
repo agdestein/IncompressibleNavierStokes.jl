@@ -81,8 +81,7 @@ function trainepoch(;
     noisebuf = copy(x)
     batch = (x, y)
     for batch_cpu in dataloader
-        (; optstate, θ, rng, i) = trainstate
-        i += 1
+        (; optstate, θ, rng) = trainstate
         copyto!.(batch, batch_cpu)
         if !isnothing(noiselevel)
             # Add noise to input

@@ -167,6 +167,7 @@ function create_les_data(;
     (; u, t), outputs = solve_unsteady(;
         setup = dns,
         ustart,
+        docopy = false, # Overwrite initial conditions to save memory
         tlims = (T(0), tburn),
         Δt,
         method,
@@ -180,6 +181,7 @@ function create_les_data(;
     _, outputs = solve_unsteady(;
         setup = dns,
         ustart = u,
+        docopy = false, # Overwrite initial conditions to save memory
         tlims = (T(0), tsim),
         Δt,
         method,
@@ -195,10 +197,10 @@ function create_les_data(;
                 psolver_les;
                 nupdate = savefreq,
 
-                # Reuse arrays from cache.
+                # Reuse arrays from cache to save memory in 3D DNS.
                 # Since processors are called outside
                 # Runge-Kutta steps, there is no danger
-                # in overwriteng the arrays.
+                # in overwriting the arrays.
                 F = cache.u₀,
                 p = cache.p,
             ),

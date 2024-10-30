@@ -8,7 +8,7 @@ createdata(; params, seeds, outdir, taskid) =
             @info "Creating DNS trajectory for seed $(repr(seed))"
         else
             # Each task does one initial condition
-            @info "Skipping seed $seed for $taskid"
+            @info "Skipping seed $(repr(seed)) for task $taskid"
             continue
         end
         (; data, t, comptime) = create_les_data(; params..., rng = Xoshiro(seed))

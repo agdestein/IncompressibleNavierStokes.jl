@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --gpus=1
 #SBATCH --partition=gpu_h100
-#SBATCH --time=03:30:00
+#SBATCH --time=02:00:00
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=sda@cwi.nl
 # #SBATCH --array=1-1
@@ -24,6 +24,7 @@ export JULIA_DEPOT_PATH=/scratch-shared/$USER/.julia_h100:
 cd $HOME/projects/IncompressibleNavierStokes/lib/PaperDC
 
 # julia --project prioranalysis.jl
-julia --project postanalysis.jl
+# julia --project postanalysis.jl
+julia --project postanalysis3D.jl
 
 # julia --project -t auto -e 'using Pkg; Pkg.update()'
