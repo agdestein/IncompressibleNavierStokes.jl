@@ -71,11 +71,12 @@ case = let
     Re = T(1e4)
     kp = 20
     tlims = (T(0), T(1e0))
+    bodyforce = (dim, x, y, t) -> (dim == 1) * 5 * sinpi(8 * y)
     docopy = true
     nles = [32, 64, 128, 256]
     filterdefs = [FaceAverage(), VolumeAverage()]
     name = "D=$(D)_T=$(T)_Re=$(Re)_t=$(tlims[2])"
-    (; D, T, ndns, Re, kp, tlims, docopy, nles, filterdefs, name)
+    (; D, T, ndns, Re, kp, tlims, docopy, bodyforce, nles, filterdefs, name)
 end
 
 # 3D configuration
@@ -83,14 +84,15 @@ case = let
     D = 3
     T = Float32
     ndns = 1024 # Works on a 80GB H100 GPU. Use smaller n for less memory.
-    Re = T(1e4)
+    Re = T(6e3)
     kp = 20
     tlims = (T(0), T(1e0))
+    bodyforce = (dim, x, y, z, t) -> (dim == 1) * 5 * sinpi(8 * y)
     docopy = false
     nles = [32, 64, 128, 256]
     filterdefs = [FaceAverage(), VolumeAverage()]
     name = "D=$(D)_T=$(T)_Re=$(Re)_t=$(tlims[2])"
-    (; D, T, ndns, Re, kp, tlims, docopy, nles, filterdefs, name)
+    (; D, T, ndns, Re, kp, tlims, bodyforce, docopy, nles, filterdefs, name)
 end
 
 casedir = joinpath(output, case.name)
@@ -124,7 +126,12 @@ specstart = let
 end
 clean()
 
+# Save initial conditions
+@info "Saving initial conditions"
+save_object("$casedir/ustart.jld2", Array.(ustart))
+
 # Solve unsteady problem
+@info "Starting time stepping"
 state, outputs = let
     method = RKMethods.Wray3(; case.T)
     cache = ode_method_cache(method, dns.setup)
@@ -151,9 +158,14 @@ state, outputs = let
 end;
 clean()
 
+# Save final velocity
+@info "Starting final velocity"
+save_object("$casedir/uend.jld2", Array.(state.u))
+
 # ## Plot 2D fields
 
 case.D == 2 && with_theme() do
+    @info "Plotting 2D fields"
     (; T) = case
 
     ## Compute quantities
@@ -224,6 +236,7 @@ end
 # Make plots
 dovolumeplot = false && D == 3
 dovolumeplot && with_theme() do
+    @info "Plotting 3D fields"
     function makeplot(field, setup, name)
         name = "$casedir/$name.png"
         save(
