@@ -66,33 +66,40 @@ end
 # 2D configuration
 case = let
     T = Float64
-    D = 2
-    ndns = 4096
-    Re = T(1e4)
-    kp = 20
-    tlims = (T(0), T(1e0))
-    bodyforce = (dim, x, y, t) -> (dim == 1) * 5 * sinpi(8 * y)
-    docopy = true
-    nles = [32, 64, 128, 256]
-    filterdefs = [FaceAverage(), VolumeAverage()]
-    name = "D=$(D)_T=$(T)_Re=$(Re)_t=$(tlims[2])"
-    (; D, T, ndns, Re, kp, tlims, docopy, bodyforce, nles, filterdefs, name)
+    case = (;
+        T,
+        D = 2,
+        ndns = 4096,
+        Re = T(1e4),
+        kp = 20,
+        tlims = (T(0), T(1e0)),
+        docopy = true,
+        bodyforce = (dim, x, y, t) -> (dim == 1) * 5 * sinpi(8 * y),
+        issteadybodyforce = true,
+        nles = [32, 64, 128, 256],
+        filterdefs = [FaceAverage(), VolumeAverage()],
+        name,
+    )
+    (; case..., name = "D=$(case.D)_T=$(T)_Re=$(case.Re)_t=$(case.tlims[2])")
 end
 
 # 3D configuration
 case = let
-    D = 3
     T = Float32
-    ndns = 1024 # Works on a 80GB H100 GPU. Use smaller n for less memory.
-    Re = T(6e3)
-    kp = 20
-    tlims = (T(0), T(1e0))
-    bodyforce = (dim, x, y, z, t) -> (dim == 1) * 5 * sinpi(8 * y)
-    docopy = false
-    nles = [32, 64, 128, 256]
-    filterdefs = [FaceAverage(), VolumeAverage()]
-    name = "D=$(D)_T=$(T)_Re=$(Re)_t=$(tlims[2])"
-    (; D, T, ndns, Re, kp, tlims, bodyforce, docopy, nles, filterdefs, name)
+    case = (;
+        T,
+        D = 3,
+        ndns = 1024, # Works on a 80GB H100 GPU. Use smaller n for less memory.
+        Re = T(6e3),
+        kp = 20,
+        tlims = (T(0), T(1e0)),
+        bodyforce = (dim, x, y, z, t) -> (dim == 1) * 5 * sinpi(8 * y),
+        issteadybodyforce = true,
+        docopy = false,
+        nles = [32, 64, 128, 256],
+        filterdefs = [FaceAverage(), VolumeAverage()],
+    )
+    (; case..., name = "D=$(case.D)_T=$(case.T)_Re=$(case.Re)_t=$(case.tlims[2])")
 end
 
 casedir = joinpath(output, case.name)
@@ -101,14 +108,25 @@ ispath(casedir) || mkpath(casedir)
 # Setup
 lims = case.T(0), case.T(1)
 dns = let
-    setup = Setup(; x = ntuple(α -> range(lims..., case.ndns + 1), case.D), case.Re, ArrayType)
+    setup = Setup(;
+        x = ntuple(α -> range(lims..., case.ndns + 1), case.D),
+        case.Re,
+        case.bodyforce,
+        case.issteadybodyforce,
+        ArrayType,
+    )
     psolver = default_psolver(setup)
     (; setup, psolver)
 end;
 filters = map(Iterators.product(case.nles, case.filterdefs)) do (nles, Φ)
     compression = case.ndns ÷ nles
-    setup =
-        Setup(; x = ntuple(α -> range(lims..., nles + 1), case.D), case.Re, ArrayType)
+    setup = Setup(;
+        x = ntuple(α -> range(lims..., nles + 1), case.D),
+        case.Re,
+        case.bodyforce,
+        case.issteadybodyforce,
+        ArrayType,
+    )
     psolver = default_psolver(setup)
     (; setup, Φ, compression, psolver)
 end;
@@ -169,61 +187,62 @@ case.D == 2 && with_theme() do
     (; T) = case
 
     ## Compute quantities
-    fil = filters[3]
-    apply_bc_u!(state.u, T(0), dns.setup)
-    Φu = fil.Φ(state.u, fil.setup, fil.compression)
-    apply_bc_u!(Φu, T(0), fil.setup)
-    Fv = momentum(Φu, nothing, T(0), fil.setup)
-    apply_bc_u!(Fv, T(0), fil.setup)
-    PFv = project(Fv, fil.setup; psolver = fil.psolver)
-    apply_bc_u!(PFv, T(0), fil.setup)
-    F = momentum(state.u, nothing, T(0), dns.setup)
-    apply_bc_u!(F, T(0), dns.setup)
-    PF = project(F, dns.setup; dns.psolver)
-    apply_bc_u!(PF, T(0), dns.setup)
-    ΦPF = fil.Φ(PF, fil.setup, fil.compression)
-    apply_bc_u!(ΦPF, T(0), fil.setup)
-    c = ΦPF .- PFv
-    apply_bc_u!(c, T(0), fil.setup)
+    for fil in filters
+        apply_bc_u!(state.u, T(0), dns.setup)
+        Φu = fil.Φ(state.u, fil.setup, fil.compression)
+        apply_bc_u!(Φu, T(0), fil.setup)
+        Fv = momentum(Φu, nothing, T(0), fil.setup)
+        apply_bc_u!(Fv, T(0), fil.setup)
+        PFv = project(Fv, fil.setup; psolver = fil.psolver)
+        apply_bc_u!(PFv, T(0), fil.setup)
+        F = momentum(state.u, nothing, T(0), dns.setup)
+        apply_bc_u!(F, T(0), dns.setup)
+        PF = project(F, dns.setup; dns.psolver)
+        apply_bc_u!(PF, T(0), dns.setup)
+        ΦPF = fil.Φ(PF, fil.setup, fil.compression)
+        apply_bc_u!(ΦPF, T(0), fil.setup)
+        c = ΦPF .- PFv
+        apply_bc_u!(c, T(0), fil.setup)
 
-    ## Make plots
-    fields = [
-        (ustart, dns.setup, "u₀"),
-        (c, fil.setup, "c(u)"),
-        (state.u, dns.setup, "u"),
-        (PF, dns.setup, "PF(u)"),
-        (Φu, fil.setup, "ū"),
-        (PFv, fil.setup, "P̄F̄(ū)"),
-    ]
-    fig = Figure(; size = (600, 450))
-    for (I, field) in enumerate(fields)
-        f, setup, title = field
-        (; Ip, xp) = setup.grid
-        i, j = CartesianIndices((2, 3))[I].I
-        w = vorticity(f, setup)
-        # w = f[1] |> Array
-        w = w[Ip] |> Array
-        lims = get_lims(w)
-        xw = xp[1][Ip.indices[1]], xp[2][Ip.indices[2]]
-        xw = Array.(xw)
-        heatmap(
-            fig[i, j],
-            xw...,
-            w;
-        colorrange = lims,
-            axis = (;
-                title,
-                xticksvisible = false,
-                xticklabelsvisible = false,
-                yticksvisible = false,
-                yticklabelsvisible = false,
-                aspect = DataAspect(),
-            ),
-        )
+        ## Make plots
+        fields = [
+            (ustart, dns.setup, "u₀"),
+            (c, fil.setup, "c(u)"),
+            (state.u, dns.setup, "u"),
+            (PF, dns.setup, "PF(u)"),
+            (Φu, fil.setup, "ū"),
+            (PFv, fil.setup, "P̄F̄(ū)"),
+        ]
+        fig = Figure(; size = (600, 450))
+        for (I, field) in enumerate(fields)
+            f, setup, title = field
+            (; Ip, xp) = setup.grid
+            i, j = CartesianIndices((2, 3))[I].I
+            w = vorticity(f, setup)
+            # w = f[1] |> Array
+            w = w[Ip] |> Array
+            lims = get_lims(w)
+            xw = xp[1][Ip.indices[1]], xp[2][Ip.indices[2]]
+            xw = Array.(xw)
+            heatmap(
+                fig[i, j],
+                xw...,
+                w;
+                colorrange = lims,
+                axis = (;
+                    title,
+                    xticksvisible = false,
+                    xticklabelsvisible = false,
+                    yticksvisible = false,
+                    yticklabelsvisible = false,
+                    aspect = DataAspect(),
+                ),
+            )
+        end
+        display(fig)
+        name = "$casedir/fields_filter=$(fil.Φ)_nles=$(fil.setup.grid.Np[1]).png"
+        save(name, fig; px_per_unit = 2)
     end
-    display(fig)
-    name = "$casedir/fields.png"
-    save(name, fig; px_per_unit = 2)
 end
 
 # ## Plot 3D fields
@@ -315,9 +334,6 @@ end
 
 specs = load_object("$casedir/spectra.jld2")
 
-# Plot predicted spectra
-CairoMakie.activate!()
-
 with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])) do
     (; D, T) = case
 
@@ -375,7 +391,8 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
         ylims!(ax, T(1e-10), T(1e0))
     elseif D == 3
         xlims!(ax, 0.8, 290)
-        ylims!(ax, 1e-11, 3e-3)
+        xlims!(ax, 0.8, 200)
+        ylims!(ax, 1e-12, 3e-3)
     end
 
     # Add resolution numbers just below plots
@@ -385,7 +402,8 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
     elseif D == 3
         # text!(ax, "1024"; position = (241, 2.4e-8))
         # text!(ax, "1024"; position = (259, 2.4e-5))
-        text!(ax, "1024"; position = (110, 1.5e-11))
+        # text!(ax, "1024"; position = (110, 1.5e-11))
+        text!(ax, "1024"; position = (90, 1.3e-12))
         textk, texte = 1.55, 1.6
     end
     for (i, nles) in zip(VA, case.nles)
