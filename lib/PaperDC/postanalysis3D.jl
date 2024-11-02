@@ -377,8 +377,6 @@ let
     )
 end
 
-exit()
-
 # x = namedtupleload(getdatafile(outdir, params.nles[1], params.filters[1], dns_seeds_train[1]))
 # x.t[2] - x.t[1]
 
@@ -408,16 +406,16 @@ with_theme(; palette) do
                 fig[iorder, ig];
                 title = "n = $(nles)",
                 xlabel = "Iteration",
-                ylabel = projectorder == ProjectOrder.First ? "DIF" : "DCF",
-                ylabelvisible = ig == 1,
+                # ylabel = projectorder == ProjectOrder.First ? "DIF" : "DCF",
+                # ylabelvisible = ig == 1,
                 ylabelfont = :bold,
                 # yticksvisible = ig == 1,
                 # yticklabelsvisible = ig == 1,
                 # yscale = log10,
                 titlevisible = iorder == 1,
-                xlabelvisible = iorder == 2,
-                xticksvisible = iorder == 2,
-                xticklabelsvisible = iorder == 2,
+                # xlabelvisible = iorder == 2,
+                # xticksvisible = iorder == 2,
+                # xticklabelsvisible = iorder == 2,
             )
             for (ifil, Φ) in enumerate(params.filters)
                 postfile = PaperDC.getpostfile(outdir, nles, Φ, projectorder)
@@ -465,16 +463,17 @@ let
     )
 end
 
-# Load trained parameters
-smag = loadsmagorinsky(outdir, params.nles, params.filters, projectorders)
+# # Load trained parameters
+# smag = loadsmagorinsky(outdir, params.nles, params.filters, projectorders)
 
-# Extract coefficients
-θ_smag = getfield.(smag, :θ)
+# # Extract coefficients
+# θ_smag = getfield.(smag, :θ)
+
+# # Computational time
+# getfield.(smag, :comptime)
+# getfield.(smag, :comptime) |> sum
+
 θ_smag = fill(T(0.17), length(params.nles), length(params.filters), length(projectorders))
-
-# Computational time
-getfield.(smag, :comptime)
-getfield.(smag, :comptime) |> sum
 
 ########################################################################## #src
 
@@ -605,21 +604,20 @@ with_theme(; palette) do
             xlabel = "Resolution",
             # title = "Relative a-priori error $(ifil == 1 ? " (FA)" : " (VA)")",
             # title = "$(Φ isa FaceAverage ? "FA" : "VA")",
-            title = "$(Φ isa FaceAverage ? "Face-averaging" : "Volume-averaging")",
-            ylabel = "A-priori error",
-            ylabelvisible = ifil == 1,
-            yticksvisible = ifil == 1,
-            yticklabelsvisible = ifil == 1,
+            title = "A-priori error",
+            # ylabelvisible = ifil == 1,
+            # yticksvisible = ifil == 1,
+            # yticklabelsvisible = ifil == 1,
         )
         for (e, marker, label, color) in [
             (eprior.nomodel, :circle, "No closure", Cycled(1)),
             (eprior.prior[:, ifil], :utriangle, "CNN (prior)", Cycled(2)),
-            (eprior.post[:, ifil, 1], :diamond, "CNN (post, DCF)", Cycled(4)),
+            (eprior.post[:, ifil, 1], :diamond, "CNN (post, DCF)", Cycled(3)),
         ]
             scatterlines!(params.nles, e; marker, color, label)
         end
         # axislegend(; position = :lb)
-        ylims!(ax, (T(-0.05), T(1.05)))
+        # ylims!(ax, (T(-0.05), T(1.05)))
         push!(axes, ax)
     end
     Legend(fig[1, end+1], axes[1])
@@ -648,9 +646,7 @@ with_theme(; palette) do
             yscale = log10,
             xticks = nles,
             xlabel = "Resolution",
-            title = "$lesmodel",
-            ylabel = "A-posteriori error",
-            ylabelvisible = iorder == 1,
+            title = "A-posteriori error",
         )
         for (e, marker, label, color) in [
             (epost.nomodel, :circle, "No closure", Cycled(1)),
@@ -663,10 +659,11 @@ with_theme(; palette) do
                 scatterlines!(nles, e[:, ifil, iorder]; color, linestyle, marker, label)
             end
         end
+        # axislegend(ax; position = :lb)
         # ylims!(ax, (T(0.025), T(1.00)))
     end
-    g = GridLayout(fig[1, end+1])
-    Legend(g[1, 1], filter(x -> x isa Axis, fig.content)[1]; valign = :bottom)
+    # g = GridLayout(fig[1, end+1])
+    # Legend(g[1, 1], filter(x -> x isa Axis, fig.content)[1]; valign = :bottom)
     # Legend(
     #     g[2, 1],
     #     map(s -> LineElement(; color = :black, linestyle = s), linestyles),
@@ -674,9 +671,9 @@ with_theme(; palette) do
     #     orientation = :horizontal,
     #     valign = :top,
     # )
-    rowsize!(g, 1, Relative(1 / 2))
+    # rowsize!(g, 1, Relative(1 / 2))
     # rowgap!(g, 0)
-    # Legend(fig[1, end + 1], filter(x -> x isa Axis, fig.content)[1])
+    Legend(fig[1, end+1], filter(x -> x isa Axis, fig.content)[1])
     # Legend(
     #     fig[end+1, :],
     #     filter(x -> x isa Axis, fig.content)[1];
@@ -807,7 +804,7 @@ with_theme(; palette) do
     doplot() || return
     for (igrid, nles) in enumerate(params.nles)
         @info "Plotting energy evolution" nles
-        fig = Figure(; size = (800, 450))
+        fig = Figure(; size = (500, 300))
         g = GridLayout(fig[1, 1])
         for (iorder, projectorder) in enumerate(projectorders),
             (ifil, Φ) in enumerate(params.filters)
@@ -816,20 +813,10 @@ with_theme(; palette) do
             subfig = g[ifil, iorder]
             ax = Axis(
                 subfig;
-                # xscale = log10,
-                # yscale = log10,
                 xlabel = "t",
-                # ylabel = Φ isa FaceAverage ? "Face-average" : "Volume-average",
                 ylabel = "E(t)",
-                # ylabelfont = :bold,
-                title = projectorder == ProjectOrder.First ? "DIF" : "DCF",
+                title = "Kinetic energy",
                 titlevisible = ifil == 1,
-                # xlabelvisible = ifil == 2,
-                # xticksvisible = ifil == 2,
-                # xticklabelsvisible = ifil == 2,
-                ylabelvisible = iorder == 1,
-                yticksvisible = iorder == 1,
-                yticklabelsvisible = iorder == 1,
             )
             # xlims!(ax, (1e-2, 5.0))
             # xlims!(ax, (0.0, 1.0))
@@ -849,16 +836,17 @@ with_theme(; palette) do
             end
 
             # Plot zoom-in box
-            if iorder == 2
-                tlims = iorder == 1 ? (0.05, 0.2) : (0.8, 1.2)
+            dobox = false
+            if dobox
+                tlims = (0.3, 0.4)
                 i1 = findfirst(p -> p[1] > tlims[1], energyhistory.ref[I])
                 i2 = findfirst(p -> p[1] > tlims[2], energyhistory.ref[I])
                 tlims = energyhistory.ref[I][i1][1], energyhistory.ref[I][i2][1]
                 klims = energyhistory.ref[I][i1][2], energyhistory.ref[I][i2][2]
-                dk = klims[2] - klims[1]
+                dk = abs(klims[2] - klims[1])
                 # klims = klims[1] - 0.2 * dk, klims[2] + 0.2 * dk
-                w = iorder == 1 ? 0.2 : 0.1
-                klims = klims[1] + w * dk, klims[2] - w * dk
+                w = 0.2
+                klims = minimum(klims) + w * dk, maximum(klims) - w * dk
                 box = [
                     Point2f(tlims[1], klims[1]),
                     Point2f(tlims[2], klims[1]),
@@ -872,7 +860,7 @@ with_theme(; palette) do
                     # bbox = BBox(0.8, 0.9, 0.2, 0.3),
                     width = Relative(0.35),
                     height = Relative(0.35),
-                    halign = 0.05,
+                    halign = 0.95,
                     valign = 0.95,
                     limits = (tlims..., klims...),
                     xscale = log10,
@@ -893,18 +881,18 @@ with_theme(; palette) do
                 end
             end
 
-            Label(
-                g[ifil, 0],
-                # Φ isa FaceAverage ? "Face-average" : "Volume-average";
-                Φ isa FaceAverage ? "FA" : "VA";
-                # halign = :right,
-                font = :bold,
-                # rotation = pi/2,
-                tellheight = false,
-            )
+            # Label(
+            #     g[ifil, 0],
+            #     # Φ isa FaceAverage ? "Face-average" : "Volume-average";
+            #     Φ isa FaceAverage ? "FA" : "VA";
+            #     # halign = :right,
+            #     font = :bold,
+            #     # rotation = pi/2,
+            #     tellheight = false,
+            # )
         end
-        colgap!(g, 10)
-        rowgap!(g, 10)
+        # colgap!(g, 10)
+        # rowgap!(g, 10)
         # colsize!(g, 1, Relative(1 / 5))
         Legend(fig[:, end+1], filter(x -> x isa Axis, fig.content)[1])
         name = "$plotdir/energy_evolution/"
@@ -926,7 +914,7 @@ with_theme(; palette) do
     islog = true
     for (igrid, nles) in enumerate(params.nles)
         @info "Plotting divergence" nles
-        fig = Figure(; size = (800, 450))
+        fig = Figure(; size = (500, 300))
         for (iorder, projectorder) in enumerate(projectorders),
             (ifil, Φ) in enumerate(params.filters)
 
@@ -936,16 +924,16 @@ with_theme(; palette) do
                 subfig;
                 yscale = islog ? log10 : identity,
                 xlabel = "t",
-                ylabel = Φ isa FaceAverage ? "Face-average" : "Volume-average",
-                ylabelfont = :bold,
-                title = projectorder == ProjectOrder.First ? "DIF" : "DCF",
-                titlevisible = ifil == 1,
-                xlabelvisible = ifil == 2,
-                xticksvisible = ifil == 2,
-                xticklabelsvisible = ifil == 2,
-                ylabelvisible = iorder == 1,
-                yticksvisible = iorder == 1,
-                yticklabelsvisible = iorder == 1,
+                # ylabel = Φ isa FaceAverage ? "Face-average" : "Volume-average",
+                # ylabelfont = :bold,
+                title = "Divergence",
+                # titlevisible = ifil == 1,
+                # xlabelvisible = ifil == 2,
+                # xticksvisible = ifil == 2,
+                # xticklabelsvisible = ifil == 2,
+                # ylabelvisible = iorder == 1,
+                # yticksvisible = iorder == 1,
+                # yticklabelsvisible = iorder == 1,
             )
             lines!(ax, divergencehistory.nomodel[I]; label = "No closure")
             lines!(ax, divergencehistory.smag[I]; label = "Smagorinsky")
@@ -1062,7 +1050,6 @@ with_theme(; palette) do
     for (ifil, Φ) in enumerate(params.filters), (igrid, nles) in enumerate(params.nles)
         @info "Plotting spectra" Φ nles
         fig = Figure(; size = (800, 300))
-        fil = Φ isa FaceAverage ? "face-average" : "volume-average"
         setup = getsetup(; params, nles)
         (; Ip) = setup.grid
         (; inds, κ, K) = IncompressibleNavierStokes.spectral_stuff(setup)
@@ -1071,6 +1058,7 @@ with_theme(; palette) do
         for (iorder, projectorder) in enumerate(projectorders)
             rowaxes = []
             for (itime, t) in enumerate(solutions.t)
+                itime == 1 && continue # Skip first time
                 # Only first time for First
                 projectorder == ProjectOrder.First &&
                     itime > solutions.itime_max_DIF &&
@@ -1086,11 +1074,12 @@ with_theme(; palette) do
                     spec.ehat[]
                 end
                 ## Build inertial slope above energy
-                logkrange = [0.45 * log(kmax), 0.85 * log(kmax)]
+                logkrange = [0.55 * log(kmax), 0.85 * log(kmax)]
                 krange = exp.(logkrange)
-                slope, slopelabel = -T(3), L"$\kappa^{-3}$"
+                # slope, slopelabel = -T(3), L"$\kappa^{-3}$"
+                slope, slopelabel = -T(5 / 3), L"$\kappa^{-5/3}$"
                 slopeconst = maximum(specs[1] ./ κ .^ slope)
-                offset = 3
+                offset = 0.4
                 inertia = offset .* slopeconst .* krange .^ slope
                 ## Nice ticks
                 logmax = round(Int, log2(kmax + 1))
@@ -1102,21 +1091,16 @@ with_theme(; palette) do
                 end
                 ## Make plot
                 irow = projectorder == ProjectOrder.First ? 2 : 1
-                subfig = fig[irow, itime]
+                icol = itime - 1
+                subfig = fig[irow, icol]
                 ax = Axis(
                     subfig;
                     xticks,
                     xlabel = "κ",
-                    # xlabelvisible = irow == 2,
-                    # xticksvisible = irow == 2,
-                    # xticklabelsvisible = irow == 2,
-                    ylabel = projectorder == ProjectOrder.First ? "DIF" : "DCF",
-                    ylabelfont = :bold,
-                    ylabelvisible = itime == 1,
-                    yticksvisible = itime == 1,
-                    yticklabelsvisible = itime == 1,
                     xscale = log2,
                     yscale = log10,
+                    yticksvisible = icol == 1,
+                    yticklabelsvisible = icol == 1,
                     limits = (1, kmax, T(1e-8), T(1)),
                     title = irow == 1 ? "t = $(round(t; digits = 1))" : "",
                 )
@@ -1209,12 +1193,7 @@ with_theme(; palette) do
             # halign = :left,
             # framevisible = false,
         )
-        Label(
-            fig[0, 1:end],
-            "Energy spectra ($fil, n = $nles)";
-            valign = :bottom,
-            font = :bold,
-        )
+        Label(fig[0, 1:end], "Energy spectra"; valign = :bottom, font = :bold)
         rowgap!(fig.layout, 10)
         colgap!(fig.layout, 10)
         # ylims!(ax, (T(1e-3), T(0.35)))
