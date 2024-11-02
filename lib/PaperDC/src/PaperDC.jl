@@ -3,6 +3,8 @@ Utility functions for scripts.
 """
 module PaperDC
 
+using Accessors
+using Adapt
 using Dates
 using DocStringExtensions
 using EnumX
@@ -12,8 +14,11 @@ using IncompressibleNavierStokes:
     momentum!, divergence!, project!, apply_bc_u!, kinetic_energy!, scalewithvolume!
 using JLD2
 using LoggingExtras
+using Lux
+using MLUtils
 using NeuralClosure
 using Observables
+using Optimisers
 using Random
 
 "Write output to file, as the default SLURM file is not updated often enough."
@@ -44,12 +49,40 @@ function namedtupleload(file)
     (; pairs...)
 end
 
+"""
+Make file name from parts.
+
+```@example
+julia> splatfileparts("toto", 23; haha = 1e3, hehe = "hihi")
+"toto_23_haha=1000.0_hehe=hihi"
+```
+"""
+function splatfileparts(args...; kwargs...)
+    sargs = string.(args)
+    skwargs = map((k, v) -> string(k) * "=" * string(v), keys(kwargs), values(kwargs))
+    s = [sargs..., skwargs...]
+    join(s, "_")
+end
+
+getsetup(; params, nles) = Setup(;
+    x = ntuple(α -> range(params.lims..., nles + 1), params.D),
+    params.Re,
+    params.ArrayType,
+    params.bodyforce,
+    params.issteadybodyforce,
+)
+
 include("observe.jl")
 include("rk.jl")
+include("train.jl")
 
 export setsnelliuslogger
-export namedtupleload
+export namedtupleload, splatfileparts
 export observe_u, observe_v
 export ProjectOrder, RKProject
+export getdatafile, createdata, getsetup
+export trainprior, loadprior
+export trainpost, loadpost
+export trainsmagorinsky, loadsmagorinsky
 
 end # module PaperDC

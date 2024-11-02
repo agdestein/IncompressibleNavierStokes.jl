@@ -123,3 +123,19 @@ function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup, V, p) wher
         Z,
     )
 end
+
+function ode_method_cache(method::LMWray3, setup)
+    ustart = vectorfield(setup)
+    ku = vectorfield(setup)
+    p = scalarfield(setup)
+    if isnothing(setup.temperature)
+        tempstart = nothing
+        ktemp = nothing
+        diff = nothing
+    else
+        tempstart = scalarfield(setup)
+        ktemp = scalarfield(setup)
+        diff = vectorfield(setup)
+    end
+    (; ustart, ku, p, tempstart, ktemp, diff)
+end

@@ -4,7 +4,7 @@ Solve unsteady problem using `method`.
 If `Δt` is a real number, it is rounded such that `(t_end - t_start) / Δt` is
 an integer.
 If `Δt = nothing`, the time step is chosen every `n_adapt_Δt` iteration with
-CFL-number `cfl` .
+CFL-number `cfl`. If `Δt_min` is given, the adaptive time step never goes below it.
 
 The `processors` are called after every time step.
 
@@ -23,6 +23,7 @@ function solve_unsteady(;
     method = RKMethods.RK44(; T = eltype(ustart[1])),
     psolver = default_psolver(setup),
     Δt = nothing,
+    Δt_min = nothing,
     cfl = eltype(ustart[1])(0.9),
     n_adapt_Δt = 1,
     docopy = true,
@@ -54,6 +55,7 @@ function solve_unsteady(;
                 # Change timestep based on operators
                 # Δt = get_timestep(stepper, cfl)
                 Δt = cfl * get_cfl_timestep!(cflbuf, stepper.u, setup)
+                Δt = isnothing(Δt_min) ? Δt : max(Δt, Δt_min)
             end
 
             # Make sure not to step past `t_end`

@@ -80,7 +80,7 @@
         for (im, m) in enumerate(models)
             dataloader = create_dataloader_prior(sample; batchsize = 10)
             θ = m.θ₀
-            loss = create_loss_prior(mean_squared_error, m.closure)
+            loss = create_loss_prior(m.closure)
             opt = Adam(1.0e-3)
             optstate = Optimisers.setup(opt, θ)
             it = rand(rng, 1:size(sample.u, 4), 5)
@@ -111,10 +111,17 @@
         for m in models
             setup = setups[ig]
             psolver = psolver_spectral(setup)
-            loss = create_loss_post(; setup, psolver, m.closure, nupdate = 1)
+            loss = create_loss_post(;
+                setup,
+                psolver,
+                method = RKMethods.RK44(),
+                m.closure,
+                nsubstep = 1,
+            )
             dataloader = create_dataloader_post(
                 map(d -> (; d.u, d.t), data[ig, ifil, :]);
                 nunroll = 5,
+                ntrajectory = 2,
             )
             θ = m.θ₀
             opt = Adam(1.0e-3)
@@ -127,8 +134,9 @@
                     data = snap,
                     setup,
                     psolver,
+                    method = RKMethods.RK44(),
                     closure_model = wrappedclosure(m.closure, setup),
-                    nupdate = 2,
+                    nsubstep = 2,
                 );
                 θ,
                 displayref = false,
@@ -173,8 +181,9 @@
                 data = snaps,
                 setup,
                 psolver,
+                method = RKMethods.RK44(),
                 closure_model = wrappedclosure(m.closure, setup),
-                nupdate = 1,
+                nsubstep = 1,
             )
             e[im] = err(m.θ₀)
         end

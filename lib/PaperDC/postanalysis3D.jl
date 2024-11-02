@@ -20,7 +20,7 @@ palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"])
 
 # Choose where to put output
 basedir = haskey(ENV, "DEEPDIP") ? ENV["DEEPDIP"] : @__DIR__
-outdir = joinpath(basedir, "output", "kolmogorov")
+outdir = joinpath(basedir, "output", "kolmogorov3D")
 plotdir = joinpath(outdir, "plots")
 logdir = joinpath(outdir, "logs")
 ispath(outdir) || mkpath(outdir)
@@ -52,7 +52,7 @@ end
 logfile = joinpath(logdir, logfile)
 setsnelliuslogger(logfile)
 
-@info "# A-posteriori analysis: Forced turbulence (2D)"
+@info "# A-posteriori analysis: Forced turbulence (3D)"
 
 # ## Load packages
 
@@ -132,33 +132,48 @@ end
 
 # Parameters
 params = (;
-    D = 2,
+    D = 3,
     lims = (T(0), T(1)),
-    Re = T(6e3),
+    Re = T(2e3),
     tburn = T(0.5),
-    tsim = T(5),
+    tsim = T(3),
     savefreq = 50,
-    ndns = 4096,
-    nles = [32, 64, 128, 256],
-    filters = (FaceAverage(), VolumeAverage()),
+    ndns = 1024,
+    nles = [32, 64],
+    # filters = (FaceAverage(), VolumeAverage()),
+    filters = (FaceAverage(),),
     ArrayType,
     icfunc = (setup, psolver, rng) -> random_field(setup, T(0); kp = 20, psolver, rng),
     method = RKMethods.Wray3(; T),
-    bodyforce = (dim, x, y, t) -> (dim == 1) * 5 * sinpi(8 * y),
+    bodyforce = (dim, x, y, z, t) -> (dim == 1) * 5 * sinpi(8 * y),
     issteadybodyforce = true,
     processors = (; log = timelogger(; nupdate = 100)),
 )
 
 # DNS seeds
-ntrajectory = 8
+ntrajectory = 10
 dns_seeds = splitseed(seeds.dns, ntrajectory)
-dns_seeds_train = dns_seeds[1:ntrajectory-2]
-dns_seeds_valid = dns_seeds[ntrajectory-1:ntrajectory-1]
-dns_seeds_test = dns_seeds[ntrajectory:ntrajectory]
+dns_seeds_test = dns_seeds[1:1]
+# dns_seeds_valid = dns_seeds[2:2]
+# dns_seeds_train = dns_seeds[3:end]
+dns_seeds_valid = dns_seeds[2:2]
+dns_seeds_train = dns_seeds[2:end]
 
 # Create data
 docreatedata = false
-docreatedata && createdata(; params, seeds = dns_seeds, outdir, taskid)
+docreatedata && createdata(;
+    params = (;
+        params...,
+        # Allocating a full vector field is too expensive for DNS
+        issteadybodyforce = false,
+    ),
+    seeds = dns_seeds,
+    outdir,
+    taskid,
+)
+
+# 185 * 10 = 1850 snapshots
+# 1850 / 64 = 28.9 batches
 
 # Computational time
 docomp = false
@@ -207,7 +222,7 @@ closure.chain
 let
     @info "CNN warm up run"
     using NeuralClosure.Zygote
-    u = randn(T, 32, 32, 2, 10) |> device
+    u = randn(T, 32, 32, 32, 3, 10) |> device
     θ = θ_start |> device
     closure(u, θ)
     gradient(θ -> sum(closure(u, θ)), θ)
@@ -227,10 +242,13 @@ end
 
 # Parameter save files
 
+# 200 * 50 = 10_000
+# 28 * 400 = 11_200
+
 # Train
 let
     dotrain = false
-    nepoch = 50
+    nepoch = 100
     # niter = 200
     niter = nothing
     dotrain && trainprior(;
@@ -252,7 +270,7 @@ let
         batchsize = 64,
         displayref = true,
         displayupdates = true, # Set to `true` if using CairoMakie
-        nupdate_callback = 20,
+        nupdate_callback = 10,
         loadcheckpoint = false,
         nepoch,
         niter,
@@ -272,6 +290,9 @@ map(p -> p.comptime, priortraining) |> sum |> x -> x / 60 # Minutes
 # ## Plot training history
 
 with_theme(; palette) do
+    # Turn off for array jobs.
+    # If all the workers do this at the same time, one might
+    # error when saving the file at the same time
     doplot() || return
     fig = Figure(; size = (950, 250))
     for (ig, nles) in enumerate(params.nles)
@@ -323,7 +344,7 @@ end
 #
 # The time stepper `RKProject` allows for choosing when to project.
 
-projectorders = ProjectOrder.First, ProjectOrder.Last
+projectorders = [ProjectOrder.Last]
 
 # Train
 let
@@ -338,9 +359,9 @@ let
         postseed = seeds.post,
         dns_seeds_train,
         dns_seeds_valid,
-        nsubstep = 5,
-        nunroll = 10,
-        ntrajectory = 5,
+        nsubstep = 4,
+        nunroll = 3,
+        ntrajectory = 1,
         closure,
         θ_start = θ_cnn_prior,
         opt = Adam(T(1e-4)),
@@ -352,9 +373,14 @@ let
         displayupdates = true,
         loadcheckpoint = false,
         nepoch,
-        niter = 100,
+        niter = 10,
     )
 end
+
+exit()
+
+# x = namedtupleload(getdatafile(outdir, params.nles[1], params.filters[1], dns_seeds_train[1]))
+# x.t[2] - x.t[1]
 
 # Load learned parameters and training times
 
@@ -370,6 +396,9 @@ map(p -> p.comptime, posttraining) |> x -> reshape(x, :, 2) .|> x -> round(x; di
 # ## Plot a-posteriori training history
 
 with_theme(; palette) do
+    # Turn off for array jobs.
+    # If all the workers do this at the same time, one might
+    # error when saving the file at the same time
     doplot() || return
     fig = Figure(; size = (950, 400))
     for (iorder, projectorder) in enumerate(projectorders)
@@ -441,8 +470,7 @@ smag = loadsmagorinsky(outdir, params.nles, params.filters, projectorders)
 
 # Extract coefficients
 θ_smag = getfield.(smag, :θ)
-
-θ_smag |> x -> reshape(x, :, 4)
+θ_smag = fill(T(0.17), length(params.nles), length(params.filters), length(projectorders))
 
 # Computational time
 getfield.(smag, :comptime)
@@ -469,7 +497,7 @@ let
         data = map(s -> namedtupleload(getdatafile(outdir, nles, Φ, s)), dns_seeds_test)
         testset = create_io_arrays(data, setup)
         i = 1:100
-        u, c = testset.u[:, :, :, i], testset.c[:, :, :, i]
+        u, c = testset.u[:, :, :, :, i], testset.c[:, :, :, :, i]
         testset = (u, c) |> device
         err = create_relerr_prior(closure, testset...)
         eprior.prior[ig, ifil] = err(device(θ_cnn_prior[ig, ifil]))
@@ -491,7 +519,7 @@ let
     sample = namedtupleload(
         getdatafile(outdir, params.nles[1], params.filters[1], dns_seeds_test[1]),
     )
-    sample.t[100]
+    sample.t[20]
 end
 
 let
@@ -511,7 +539,7 @@ let
         setup = getsetup(; params, nles)
         psolver = psolver_spectral(setup)
         sample = namedtupleload(getdatafile(outdir, nles, Φ, dns_seeds_test[1]))
-        it = 1:100
+        it = 1:20
         data = (; u = device.(sample.u[it]), t = sample.t[it])
         nsubstep = 5
         method = RKProject(params.method, projectorder)
@@ -566,7 +594,8 @@ epost.cnn_post
 CairoMakie.activate!()
 
 with_theme(; palette) do
-    fig = Figure(; size = (800, 300))
+    doplot() || return
+    fig = Figure(; size = (500, 300))
     axes = []
     for (ifil, Φ) in enumerate(params.filters)
         ax = Axis(
@@ -585,8 +614,7 @@ with_theme(; palette) do
         for (e, marker, label, color) in [
             (eprior.nomodel, :circle, "No closure", Cycled(1)),
             (eprior.prior[:, ifil], :utriangle, "CNN (prior)", Cycled(2)),
-            (eprior.post[:, ifil, 1], :rect, "CNN (post, DIF)", Cycled(3)),
-            (eprior.post[:, ifil, 2], :diamond, "CNN (post, DCF)", Cycled(4)),
+            (eprior.post[:, ifil, 1], :diamond, "CNN (post, DCF)", Cycled(4)),
         ]
             scatterlines!(params.nles, e; marker, color, label)
         end
@@ -608,10 +636,11 @@ CairoMakie.activate!()
 
 with_theme(; palette) do
     doplot() || return
-    fig = Figure(; size = (800, 300))
-    linestyles = [:solid, :dash]
+    fig = Figure(; size = (500, 300))
+    # linestyles = [:solid, :dash]
+    linestyles = [:solid]
     for (iorder, projectorder) in enumerate(projectorders)
-        lesmodel = iorder == 1 ? "DIF" : "DCF"
+        lesmodel = projectorder == ProjectOrder.First ? "DIF" : "DCF"
         (; nles) = params
         ax = Axis(
             fig[1, iorder];
@@ -638,13 +667,13 @@ with_theme(; palette) do
     end
     g = GridLayout(fig[1, end+1])
     Legend(g[1, 1], filter(x -> x isa Axis, fig.content)[1]; valign = :bottom)
-    Legend(
-        g[2, 1],
-        map(s -> LineElement(; color = :black, linestyle = s), linestyles),
-        ["FA", "VA"];
-        orientation = :horizontal,
-        valign = :top,
-    )
+    # Legend(
+    #     g[2, 1],
+    #     map(s -> LineElement(; color = :black, linestyle = s), linestyles),
+    #     ["FA", "VA"];
+    #     orientation = :horizontal,
+    #     valign = :top,
+    # )
     rowsize!(g, 1, Relative(1 / 2))
     # rowgap!(g, 0)
     # Legend(fig[1, end + 1], filter(x -> x isa Axis, fig.content)[1])
@@ -682,12 +711,13 @@ let
 
         # Shorter time for DIF
         t_DIF = T(1)
+        nupdate = 1
 
         # Reference trajectories
         divergencehistory.ref[I] = let
             div = scalarfield(setup)
             udev = vectorfield(setup)
-            map(sample.t[1:5:end], sample.u[1:5:end]) do t, u
+            map(sample.t[1:nupdate:end], sample.u[1:nupdate:end]) do t, u
                 copyto!.(udev, u)
                 IncompressibleNavierStokes.divergence!(div, udev, setup)
                 d = view(div, setup.grid.Ip)
@@ -698,11 +728,10 @@ let
         end
         energyhistory.ref[I] = map(
             (t, u) -> Point2f(t, total_kinetic_energy(device(u), setup)),
-            sample.t[1:5:end],
-            sample.u[1:5:end],
+            sample.t[1:nupdate:end],
+            sample.u[1:nupdate:end],
         )
 
-        nupdate = 5
         writer = processor() do state
             div = scalarfield(setup)
             dhist = Point2f[]
@@ -795,9 +824,9 @@ with_theme(; palette) do
                 # ylabelfont = :bold,
                 title = projectorder == ProjectOrder.First ? "DIF" : "DCF",
                 titlevisible = ifil == 1,
-                xlabelvisible = ifil == 2,
-                xticksvisible = ifil == 2,
-                xticklabelsvisible = ifil == 2,
+                # xlabelvisible = ifil == 2,
+                # xticksvisible = ifil == 2,
+                # xticklabelsvisible = ifil == 2,
                 ylabelvisible = iorder == 1,
                 yticksvisible = iorder == 1,
                 yticklabelsvisible = iorder == 1,
@@ -814,9 +843,9 @@ with_theme(; palette) do
             ]
             for (p, linestyle, i, label) in plots
                 lines!(ax, p[I]; color = Cycled(i), linestyle, label)
-                iorder == 1 && xlims!(-0.05, 1.05)
+                # iorder == 1 && xlims!(-0.05, 1.05)
                 # iorder == 1 && ylims!(1.1, 3.1)
-                ylims!(1.3, 3.0)
+                # ylims!(1.3, 3.0)
             end
 
             # Plot zoom-in box
@@ -950,7 +979,7 @@ let
     s = length(params.nles), length(params.filters), length(projectorders)
     temp = ntuple(Returns(zeros(T, ntuple(Returns(0), params.D))), params.D)
     keys = [:ref, :nomodel, :smag, :cnn_prior, :cnn_post]
-    times = T[0.1, 0.5, 1.0, 5.0]
+    times = T[0.1, 0.5, 1.0, 3.0]
     itime_max_DIF = 3
     times_exact = copy(times)
     utimes = map(t -> (; map(k -> k => fill(temp, s), keys)...), times)
@@ -1016,8 +1045,8 @@ let
         clean()
     end
     jldsave("$outdir/solutions.jld2"; u = utimes, t = times_exact, itime_max_DIF)
+    clean()
 end;
-clean();
 
 # Load solution
 solutions = namedtupleload("$outdir/solutions.jld2");
@@ -1032,7 +1061,7 @@ with_theme(; palette) do
     doplot() || return
     for (ifil, Φ) in enumerate(params.filters), (igrid, nles) in enumerate(params.nles)
         @info "Plotting spectra" Φ nles
-        fig = Figure(; size = (800, 450))
+        fig = Figure(; size = (800, 300))
         fil = Φ isa FaceAverage ? "face-average" : "volume-average"
         setup = getsetup(; params, nles)
         (; Ip) = setup.grid
@@ -1078,9 +1107,9 @@ with_theme(; palette) do
                     subfig;
                     xticks,
                     xlabel = "κ",
-                    xlabelvisible = irow == 2,
-                    xticksvisible = irow == 2,
-                    xticklabelsvisible = irow == 2,
+                    # xlabelvisible = irow == 2,
+                    # xticksvisible = irow == 2,
+                    # xticklabelsvisible = irow == 2,
                     ylabel = projectorder == ProjectOrder.First ? "DIF" : "DCF",
                     ylabelfont = :bold,
                     ylabelvisible = itime == 1,
@@ -1171,7 +1200,7 @@ with_theme(; palette) do
         # linkaxes!(allaxes...)
         # linkaxes!(filter(x -> x isa Axis, fig.content)...)
         Legend(
-            fig[2, solutions.itime_max_DIF+1:end],
+            fig[1, end+1],
             fig.content[1];
             tellwidth = false,
             tellheight = false,

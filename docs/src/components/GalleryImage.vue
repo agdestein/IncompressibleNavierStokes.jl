@@ -17,7 +17,7 @@ defineProps<Props>();
 <template>
     <div class="img-box">
         <a :href="href">
-            <img :src="withBase(src)" heigth="100px" alt="">
+            <img :src="withBase(src)" height="100px" alt="">
             <div class="transparent-box1">
                 <div class="caption">
                     <h2>{{ caption }}</h2>

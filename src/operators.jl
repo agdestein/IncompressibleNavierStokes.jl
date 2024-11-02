@@ -827,11 +827,13 @@ function applybodyforce!(F, u, t, setup)
         if issteadybodyforce
             F[α] .+= bodyforce[α]
         else
-            xin = ntuple(
-                β -> reshape(xu[α][β][Iu[α].indices[β]], ntuple(Returns(1), β - 1)..., :),
-                D,
-            )
-            @. F[α][Iu[α]] += bodyforce(α, xin..., t)
+            # xin = ntuple(
+            #     β -> reshape(xu[α][β][Iu[α].indices[β]], ntuple(Returns(1), β - 1)..., :),
+            #     D,
+            # )
+            # @. F[α][Iu[α]] += bodyforce(α, xin..., t)
+            xin = ntuple(β -> reshape(xu[α][β], ntuple(Returns(1), β - 1)..., :), D)
+            F[α] .+= bodyforce.(α, xin..., t)
         end
     end
     F

@@ -3,27 +3,38 @@ Create dataloader that uses a batch of `batchsize` random samples from
 `data` at each evaluation.
 The batch is moved to `device`.
 """
-create_dataloader_prior(data; batchsize = 50, device = identity) = function dataloader(rng)
+function create_dataloader_prior(data; batchsize = 50, device = identity)
     x, y = data
     nsample = size(x)[end]
     d = ndims(x)
-    i = sort(shuffle(rng, 1:nsample)[1:batchsize])
-    xuse = device(Array(selectdim(x, d, i)))
-    yuse = device(Array(selectdim(y, d, i)))
-    (xuse, yuse), rng
+    xcpu = Array(selectdim(x, d, 1:batchsize))
+    ycpu = Array(selectdim(y, d, 1:batchsize))
+    xuse = xcpu |> device
+    yuse = ycpu |> device
+    function dataloader(rng)
+        i = sort(shuffle(rng, 1:nsample)[1:batchsize])
+        copyto!(xcpu, selectdim(x, d, i))
+        copyto!(ycpu, selectdim(y, d, i))
+        copyto!(xuse, xcpu)
+        copyto!(yuse, ycpu)
+        (xuse, yuse), rng
+    end
 end
 
 """
 Create trajectory dataloader.
 """
-create_dataloader_post(trajectories; nunroll = 10, device = identity) =
+create_dataloader_post(trajectories; ntrajectory, nunroll, device = identity) =
     function dataloader(rng)
-        (; u, t) = rand(rng, trajectories)
-        nt = length(t)
-        @assert nt ≥ nunroll
-        istart = rand(rng, 1:nt-nunroll)
-        it = istart:istart+nunroll
-        (; u = device.(u[it]), t = t[it]), rng
+        batch = shuffle(rng, trajectories)[1:ntrajectory] # Select a subset of trajectories
+        data = map(batch) do (; u, t)
+            nt = length(t)
+            @assert nt ≥ nunroll "Trajectory too short for nunroll = $nunroll"
+            istart = rand(rng, 1:nt-nunroll)
+            it = istart:istart+nunroll
+            (; u = device.(u[it]), t = t[it])
+        end
+        data, rng
     end
 
 """
@@ -33,11 +44,12 @@ optimiser `opt` for `niter` iterations.
 Return the a new named tuple `(; opt, θ, callbackstate)` with
 updated state and parameters.
 """
-function train(; dataloader, loss, trainstate, niter = 100, callback, callbackstate)
-    for i = 1:niter
+function train(; dataloader, loss, trainstate, niter, callback, callbackstate, λ = nothing)
+    for _ = 1:niter
         (; optstate, θ, rng) = trainstate
         batch, rng = dataloader(rng)
         g, = gradient(θ -> loss(batch, θ), θ)
+        isnothing(λ) || @.(g += λ * θ) # Weight decay
         optstate, θ = Optimisers.update!(optstate, θ, g)
         trainstate = (; optstate, θ, rng)
         callbackstate = callback(callbackstate, trainstate)
@@ -46,11 +58,51 @@ function train(; dataloader, loss, trainstate, niter = 100, callback, callbackst
 end
 
 """
-Wrap loss function `loss(batch, θ)`.
+Update parameters `θ` to minimize `loss(dataloader(), θ)` using the
+optimiser `opt` for `niter` iterations.
 
-The function `loss` should take inputs like `loss(f, x, y, θ)`.
+Return the a new named tuple `(; opt, θ, callbackstate)` with
+updated state and parameters.
 """
-create_loss_prior(loss, f) = ((x, y), θ) -> loss(f, x, y, θ)
+function trainepoch(;
+    dataloader,
+    loss,
+    trainstate,
+    callback,
+    callbackstate,
+    device,
+    noiselevel,
+    λ = nothing,
+)
+    (; batchsize, data) = dataloader
+    x = data[1]
+    x = selectdim(x, ndims(x), 1:batchsize) |> Array |> device
+    y = copy(x)
+    noisebuf = copy(x)
+    batch = (x, y)
+    for batch_cpu in dataloader
+        (; optstate, θ, rng) = trainstate
+        copyto!.(batch, batch_cpu)
+        if !isnothing(noiselevel)
+            # Add noise to input
+            x, y = batch
+            randn!(rng, noisebuf)
+            @. x += noiselevel * noisebuf
+            batch = x, y
+        end
+        g, = gradient(θ -> loss(batch, θ), θ)
+        isnothing(λ) || @.(g += λ * θ) # Weight decay
+        optstate, θ = Optimisers.update!(optstate, θ, g)
+        trainstate = (; optstate, θ, rng)
+        callbackstate = callback(callbackstate, trainstate)
+    end
+    (; trainstate, callbackstate)
+end
+
+"Return mean squared error loss for the predictor `f`."
+function create_loss_prior(f, normalize = y -> sum(abs2, y))
+    loss_prior((x, y), θ) = sum(abs2, f(x, θ) - y) / normalize(y)
+end
 
 """
 Create a-priori error.
@@ -58,60 +110,40 @@ Create a-priori error.
 create_relerr_prior(f, x, y) = θ -> norm(f(x, θ) - y) / norm(y)
 
 """
-Compute MSE between `f(x, θ)` and `y`.
-
-The MSE is further divided by `normalize(y)`.
-"""
-mean_squared_error(f, x, y, θ; normalize = y -> sum(abs2, y), λ = sqrt(eltype(x)(1e-8))) =
-    sum(abs2, f(x, θ) - y) / normalize(y) + λ * sum(abs2, θ)
-
-"""
 Create a-posteriori loss function.
 """
-function create_loss_post(;
-    setup,
-    method = RKMethods.RK44(; T = eltype(setup.grid.x[1])),
-    psolver,
-    closure,
-    nupdate = 1,
-)
+function create_loss_post(; setup, method, psolver, closure, nsubstep = 1)
     closure_model = wrappedclosure(closure, setup)
     setup = (; setup..., closure_model)
-    (; dimension, Iu) = setup.grid
+    (; dimension, Iu, x) = setup.grid
     D = dimension()
-    function loss_post(data, θ)
-        T = eltype(θ)
-        (; u, t) = data
-        v = u[1]
-        stepper = create_stepper(method; setup, psolver, u = v, temp = nothing, t = t[1])
-        loss = zero(eltype(v[1]))
-        for it = 2:length(t)
-            Δt = (t[it] - t[it-1]) / nupdate
-            for isub = 1:nupdate
-                stepper = timestep(method, stepper, Δt; θ)
+    loss_post(data, θ) =
+        sum(data) do (; u, t)
+            T = eltype(θ)
+            v = u[1]
+            stepper =
+                create_stepper(method; setup, psolver, u = v, temp = nothing, t = t[1])
+            loss = zero(T)
+            for it = 2:length(t)
+                Δt = (t[it] - t[it-1]) / nsubstep
+                for isub = 1:nsubstep
+                    stepper = timestep(method, stepper, Δt; θ)
+                end
+                a, b = T(0), T(0)
+                for α = 1:length(u[1])
+                    a += sum(abs2, (stepper.u[α]-u[it][α])[Iu[α]])
+                    b += sum(abs2, u[it][α][Iu[α]])
+                end
+                loss += a / b
             end
-            a, b = T(0), T(0)
-            for α = 1:length(u[1])
-                a += sum(abs2, (stepper.u[α]-u[it][α])[Iu[α]])
-                b += sum(abs2, u[it][α][Iu[α]])
-            end
-            loss += a / b
-        end
-        loss / (length(t) - 1)
-    end
+            loss / (length(t) - 1)
+        end / length(data)
 end
 
 """
 Create a-posteriori relative error.
 """
-function create_relerr_post(;
-    data,
-    setup,
-    method = RKMethods.RK44(; T = eltype(setup.grid.x[1])),
-    psolver,
-    closure_model,
-    nupdate = 1,
-)
+function create_relerr_post(; data, setup, method, psolver, closure_model, nsubstep = 1)
     setup = (; setup..., closure_model)
     (; dimension, Iu) = setup.grid
     D = dimension()
@@ -124,8 +156,8 @@ function create_relerr_post(;
         stepper = create_stepper(method; setup, psolver, u = v, temp = nothing, t = t[1])
         e = zero(T)
         for it = 2:length(t)
-            Δt = (t[it] - t[it-1]) / nupdate
-            for isub = 1:nupdate
+            Δt = (t[it] - t[it-1]) / nsubstep
+            for isub = 1:nsubstep
                 stepper =
                     IncompressibleNavierStokes.timestep!(method, stepper, Δt; θ, cache)
             end
@@ -240,7 +272,6 @@ function create_callback(
     obs[] = callbackstate.hist
     displayfig && display(fig)
     function callback(callbackstate, trainstate)
-        @reset callbackstate.n += 1
         (; n, hist) = callbackstate
         if n % nupdate == 0
             (; θ) = trainstate
@@ -248,7 +279,15 @@ function create_callback(
             newtime = time()
             itertime = (newtime - callbackstate.ctime) / nupdate
             @reset callbackstate.ctime = newtime
-            @info "Iteration $n \t relative error: $e \t sec/iter: $itertime"
+            @info join(
+                [
+                    "Iteration $n",
+                    @sprintf("relative error: %.4g", e),
+                    @sprintf("sec/iter: %.4g", itertime),
+                    @sprintf("eta: %.4g", getlearningrate(trainstate.optstate.rule)),
+                ],
+                "\t",
+            )
             hist = push!(copy(hist), Point2f(n, e))
             @reset callbackstate.hist = hist
             obs[] = hist
@@ -261,7 +300,12 @@ function create_callback(
                 @reset callbackstate.emin = e
             end
         end
+        @reset callbackstate.n += 1
         callbackstate
     end
     (; callbackstate, callback)
 end
+
+getlearningrate(r::Adam) = r.eta
+getlearningrate(r::OptimiserChain{Tuple{Adam,WeightDecay}}) = r.opts[1].eta
+getlearningrate(r) = -1

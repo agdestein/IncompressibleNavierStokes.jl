@@ -233,7 +233,7 @@ The `kwargs` are passed to [`snapshotsaver`](@ref).
 function save_vtk(state; setup, filename = "output/solution", kwargs...)
     path = dirname(filename)
     isdir(path) || mkpath(path)
-    savesnapshot! = snapshotsaver(state; setup)
+    savesnapshot! = snapshotsaver(state; setup, kwargs...)
     savesnapshot!(filename)
 end
 
@@ -629,8 +629,13 @@ function energy_spectrum_plot(
     krange = kmax .^ sloperange
     slope, slopelabel = D == 2 ? (-T(3), L"$k^{-3}$") : (-T(5 / 3), L"$k^{-5/3}$")
     inertia = lift(ehat) do ehat
-        slopeconst = maximum(ehat ./ κ .^ slope)
-        slopeoffset .* slopeconst .* krange .^ slope
+        (m, i) = findmax(ehat ./ κ .^ slope)
+        slopeconst = m
+        dk = exp(log(kmax) * 0.5)
+        # kpoints = κ[i] / dk, κ[i] * dk
+        kpoints = κ[i] / (dk / 3), min(κ[i] * dk, kmax)
+        slopepoints = @. slopeoffset * slopeconst * kpoints^slope
+        [Point2f(kpoints[1], slopepoints[1]), Point2f(kpoints[2], slopepoints[2])]
     end
 
     # Nice ticks
@@ -648,7 +653,7 @@ function energy_spectrum_plot(
         limits = (1, kmax, T(1e-8), T(1)),
     )
     lines!(ax, κ, ehat; label = "Kinetic energy")
-    lines!(ax, krange, inertia; label = slopelabel, linestyle = :dash)
+    lines!(ax, inertia; label = slopelabel, linestyle = :dash, color = Cycled(2))
     axislegend(ax; position = :lb)
     # autolimits!(ax)
     on(e -> autolimits!(ax), ehat)
