@@ -832,10 +832,7 @@ function applybodyforce!(F, u, t, setup)
             #     D,
             # )
             # @. F[α][Iu[α]] += bodyforce(α, xin..., t)
-            xin = ntuple(
-                β -> reshape(xu[α][β], ntuple(Returns(1), β - 1)..., :),
-                D,
-            )
+            xin = ntuple(β -> reshape(xu[α][β], ntuple(Returns(1), β - 1)..., :), D)
             F[α] .+= bodyforce.(α, xin..., t)
         end
     end
