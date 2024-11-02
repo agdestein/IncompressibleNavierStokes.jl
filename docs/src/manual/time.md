@@ -76,6 +76,7 @@ AbstractRungeKuttaMethod
 ExplicitRungeKuttaMethod
 ImplicitRungeKuttaMethod
 RKMethods
+LMWray3
 ```
 
 ### Explicit Methods
