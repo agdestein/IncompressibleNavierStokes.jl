@@ -84,7 +84,7 @@ filtersaver(
         #     # Overwrite LES body force field with filtered DNS bodyforce.
         #     # In principle, they should be very similar, but the original LES
         #     # body force field is obtained with pointwise evaluation,
-        #     # while the one appearing in the filterd DNS equation is
+        #     # while the one appearing in the filtered DNS equation is
         #     # discretely filtered.
         #     @assert les.issteadybodyforce
         #     Φ(les.bodyforce, dns.bodyforce, les, compression)

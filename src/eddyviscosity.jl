@@ -111,7 +111,7 @@ end
     ex, ey = unit_cartesian_indices(2)
     Δpx, Δpy = Δ[1][I[1]], Δ[2][I[2]]
     Δux, Δuy = Δu[1][I[1]], Δu[2][I[2]]
-    # TODO: Add interpolation weigths here
+    # TODO: Add interpolation weights here
     visc_xy = (visc[I] + visc[I+ex] + visc[I+ey] + visc[I+ex+ey]) / 4
     σ.xx[I] = 2 * visc[I] * σ.xx[I]
     σ.yy[I] = 2 * visc[I] * σ.yy[I]
@@ -124,7 +124,7 @@ end
     ex, ey, ez = unit_cartesian_indices(3)
     Δpx, Δpy, Δpz = Δ[1][I[1]], Δ[2][I[2]], Δ[3][I[3]]
     Δux, Δuy, Δuz = Δu[1][I[1]], Δu[2][I[2]], Δu[3][I[3]]
-    # TODO: Add interpolation weigths here
+    # TODO: Add interpolation weights here
     visc_xy = (visc[I] + visc[I+ex] + visc[I+ey] + visc[I+ex+ey]) / 4
     visc_xz = (visc[I] + visc[I+ex] + visc[I+ez] + visc[I+ex+ez]) / 4
     visc_yz = (visc[I] + visc[I+ey] + visc[I+ez] + visc[I+ey+ez]) / 4
