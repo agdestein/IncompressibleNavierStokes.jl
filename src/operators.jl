@@ -482,32 +482,54 @@ ChainRulesCore.rrule(::typeof(diffusion), u, setup) = (
     ),
 )
 
+@kernel function diffusion_kernel!(
+    F,
+    u,
+    visc,
+    e,
+    Δ,
+    Δu,
+    ::Val{α},
+    ::Val{βrange},
+    I0,
+) where {α,βrange}
+    I = @index(Global, Cartesian)
+    I = I + I0
+    KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+        Δuαβ = α == β ? Δu[β] : Δ[β]
+        Δa = β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]
+        Δb = β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]
+        ∂a = (u[α][I] - u[α][I-e(β)]) / Δa
+        ∂b = (u[α][I+e(β)] - u[α][I]) / Δb
+        F[α][I] += visc * (∂b - ∂a) / Δuαβ[I[β]]
+    end
+end
+
 """
 Compute diffusive term (in-place version).
 Add the result to `F`.
 """
 function diffusion!(F, u, setup)
-    (; grid, workgroupsize, Re) = setup
+    (; grid, workgroupsize, Re, backend) = setup
     (; dimension, Δ, Δu, Nu, Iu) = grid
     D = dimension()
     e = Offset{D}()
-    ν = 1 / Re
-    @kernel function diff!(F, u, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
-        I = @index(Global, Cartesian)
-        I = I + I0
-        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
-            Δuαβ = α == β ? Δu[β] : Δ[β]
-            Δa = β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]
-            Δb = β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]
-            ∂a = (u[α][I] - u[α][I-e(β)]) / Δa
-            ∂b = (u[α][I+e(β)] - u[α][I]) / Δb
-            F[α][I] += ν * (∂b - ∂a) / Δuαβ[I[β]]
-        end
-    end
+    visc = 1 / Re
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        diff!(get_backend(F[1]), workgroupsize)(F, u, Val(α), Val(1:D), I0; ndrange = Nu[α])
+        diffusion_kernel!(backend, workgroupsize)(
+            F,
+            u,
+            visc,
+            e,
+            Δ,
+            Δu,
+            Val(α),
+            Val(1:D),
+            I0;
+            ndrange = Nu[α],
+        )
     end
     F
 end

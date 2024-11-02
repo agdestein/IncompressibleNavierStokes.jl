@@ -1,0 +1,12 @@
+[deps]
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+AllocCheck = "9b6a8646-10ed-4001-bbdc-1d2f46dfbb1a"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+Cthulhu = "f68482b8-f384-11e8-15f7-abe071a5a75f"
+DispatchDoctor = "8d63f2c5-f18a-4cf2-ba9d-b3f60fc568c8"
+IncompressibleNavierStokes = "5e318141-6589-402b-868d-77d7df8c442e"
+JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
+
+[sources]
+IncompressibleNavierStokes = {path = "../.."}
