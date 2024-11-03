@@ -15,6 +15,7 @@ using DocStringExtensions
 using FFTW
 using IterativeSolvers
 using KernelAbstractions
+using KernelAbstractions.Extras.LoopInfo: @unroll
 using LinearAlgebra
 using Makie
 using NNlib

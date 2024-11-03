@@ -29,3 +29,32 @@ IncompressibleNavierStokes.convection!(f, u, setup)
 f[1]
 
 @descend IncompressibleNavierStokes.diffusion!(f, u, setup)
+
+f = vectorfield(setup)
+g = vectorfield(setup)
+let
+    fill!.(f, 0)
+    fill!.(g, 0)
+    @benchmark IncompressibleNavierStokes.convection_adjoint!($f, $g, $u, $setup)
+end
+
+f = vectorfield(setup)
+let
+    fill!.(f, 0)
+    @benchmark IncompressibleNavierStokes.convectiondiffusion!($f, $u, $setup)
+end
+
+uu = stack(u)
+uu = permutedims(uu, (4, 1, 2, 3))
+ff = copy(uu)
+let
+    fill!(ff, 0)
+    @benchmark IncompressibleNavierStokes.cd2!($ff, $uu, $setup)
+end
+
+f = vectorfield(setup)
+p = scalarfield(setup)
+let
+    fill!.(f, 0)
+    @benchmark IncompressibleNavierStokes.pressuregradient!($f, $p, $setup)
+end

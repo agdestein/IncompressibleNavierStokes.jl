@@ -136,6 +136,11 @@ function Grid(; x, boundary_conditions, backend)
         N[α] - na - nb
     end
 
+    # # Cartesian index range of inner components, regardless
+    # # of whether they are DOFS or ghosts
+    # # (only exclude outermost boundary)
+    # I_inside = CartesianIndices(map(n -> 2:n-1, N))
+
     # Cartesian index ranges of velocity DOFs
     Iu = ntuple(D) do α
         Iuα = ntuple(D) do β
