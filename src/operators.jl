@@ -168,7 +168,7 @@ function pressuregradient!(G, p, setup)
     e = Offset(D)
     D = dimension()
     kernel = pressuregradient_kernel!(backend, workgroupsize)
-    I0 = one(CartesianIndex{D})
+    I0 = oneunit(CartesianIndex{D})
     kernel(G, p, Δu, Iu, e, Val(1:D), I0; ndrange = N .- 2)
     G
 end
@@ -218,7 +218,7 @@ function applypressure!(u, p, setup)
     D = dimension()
     e = Offset(D)
     kernel = applypressure_kernel!(backend, workgroupsize)
-    I0 = one(CartesianIndex{D})
+    I0 = oneunit(CartesianIndex{D})
     kernel(u, p, Δu, e, Val(1:D), I0; ndrange = N .- 2)
     u
 end
@@ -347,7 +347,7 @@ function convection!(F, u, setup)
     D = dimension()
     e = Offset(D)
     kernel = convection_kernel!(backend, workgroupsize)
-    I0 = one(CartesianIndex{D})
+    I0 = oneunit(CartesianIndex{D})
     kernel(F, u, Δ, Δu, A, Iu, e, Val(1:D), I0; ndrange = N .- 2)
     F
 end
@@ -507,7 +507,7 @@ function diffusion!(F, u, setup)
     e = Offset(D)
     visc = 1 / Re
     kernel = diffusion_kernel!(backend, workgroupsize)
-    I0 = one(CartesianIndex{D})
+    I0 = oneunit(CartesianIndex{D})
     kernel(F, u, visc, e, Δ, Δu, Iu, Val(1:D), I0; ndrange = N .- 2)
     F
 end
@@ -599,7 +599,7 @@ function convectiondiffusion!(F, u, setup)
     @assert all(==(N), size.(F))
     @assert all(==(N), size.(u))
     visc = 1 / Re
-    I0 = one(CartesianIndex{D})
+    I0 = oneunit(CartesianIndex{D})
     kernel = convection_diffusion_kernel!(backend, workgroupsize)
     kernel(F, u, visc, Δ, Δu, A, Iu, e, Val(1:D), I0; ndrange = N .- 2)
     F
