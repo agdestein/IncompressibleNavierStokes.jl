@@ -20,12 +20,9 @@ outdir = joinpath(@__DIR__, "output", "Actuator3D")
 # Floating point type
 T = Float64
 
-# Array type
-ArrayType = Array
-## using CUDA; ArrayType = CuArray
-## using AMDGPU; ArrayType = ROCArray
-## using oneAPI; ArrayType = oneArray
-## using Metal; ArrayType = MtlArray
+# Backend
+backend = CPU()
+## using CUDA; backend = CUDABackend()
 
 # Reynolds number
 Re = T(100)
@@ -63,7 +60,7 @@ inside(x, y, z) = abs(x - cx) ≤ δ / 2 && (y - cy)^2 + (z - cz)^2 ≤ (D / 2)^
 bodyforce(dim, x, y, z) = dim == 1 ? -cₜ * inside(x, y, z) : zero(x)
 
 # Build setup and assemble operators
-setup = Setup(; x, Re, boundary_conditions, bodyforce, ArrayType);
+setup = Setup(; x, Re, boundary_conditions, bodyforce, backend);
 
 # Initial conditions (extend inflow)
 ustart = velocityfield(setup, (dim, x, y, z) -> dim == 1 ? one(x) : zero(x));

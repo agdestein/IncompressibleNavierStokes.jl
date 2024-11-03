@@ -15,6 +15,7 @@ using DocStringExtensions
 using FFTW
 using IterativeSolvers
 using KernelAbstractions
+using KernelAbstractions.Extras.LoopInfo: @unroll
 using LinearAlgebra
 using Makie
 using NNlib
@@ -95,6 +96,7 @@ export fieldplot, energy_history_plot, energy_spectrum_plot
 
 # Setup
 export Setup, temperature_equation, scalarfield, vectorfield
+export CPU # TODO: This annoys Documenter, need to include this docstring somehow
 
 # 1D grids
 export stretched_grid, cosine_grid, tanh_grid

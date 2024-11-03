@@ -9,24 +9,21 @@ using IncompressibleNavierStokes
 # Floating point precision
 T = Float64
 
-# ## Array type
+# ## Backend
 #
 # Running in 3D is heavier than in 2D.
 # If you are running this on a CPU, consider using multiple threads by
 # starting Julia with `julia -t auto`, or
 # add `"julia.NumThreads": "auto"` to the settings in VSCode.
 
-ArrayType = Array
-## using CUDA; ArrayType = CuArray
-## using AMDGPU; ArrayType = ROCArray
-## using oneAPI; ArrayType = oneArray
-## using Metal; ArrayType = MtlArray
+backend = CPU()
+## using CUDA; backend = CUDABackend()
 
 # ## Setup
 
 n = 32
 r = range(T(0), T(1), n + 1)
-setup = Setup(; x = (r, r, r), Re = T(1e3), ArrayType);
+setup = Setup(; x = (r, r, r), Re = T(1e3), backend);
 psolver = psolver_spectral(setup);
 
 # Initial conditions

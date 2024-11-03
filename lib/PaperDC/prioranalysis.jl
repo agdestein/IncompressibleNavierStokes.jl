@@ -53,11 +53,11 @@ using Random
 if CUDA.functional()
     ## For running on GPU
     CUDA.allowscalar(false)
-    ArrayType = CuArray
+    backend = CUDABackend()
     clean() = (GC.gc(); CUDA.reclaim()) # This seems to be needed to free up memory
 else
     ## For running on CPU
-    ArrayType = Array
+    backend = CPU()
     clean() = nothing
 end
 
@@ -113,7 +113,7 @@ dns = let
         case.Re,
         case.bodyforce,
         case.issteadybodyforce,
-        ArrayType,
+        backend,
     )
     psolver = default_psolver(setup)
     (; setup, psolver)
@@ -125,7 +125,7 @@ filters = map(Iterators.product(case.nles, case.filterdefs)) do (nles, Φ)
         case.Re,
         case.bodyforce,
         case.issteadybodyforce,
-        ArrayType,
+        backend,
     )
     psolver = default_psolver(setup)
     (; setup, Φ, compression, psolver)
@@ -342,10 +342,10 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
         [T(8), T(50)], -T(3), L"$\kappa^{-3}$"
     elseif D == 3
         # [T(80), T(256)], -T(5 / 3), L"$\kappa^{-5/3}$"
-        [T(5), T(32)], -T(5 / 3), L"$\kappa^{-5/3}$"
+        [T(8), T(46)], -T(5 / 3), L"$\kappa^{-5/3}$"
     end
     slopeconst = maximum(specs[2].ehat ./ specs[2].κ .^ slope)
-    offset = D == 2 ? 3 : 2
+    offset = D == 2 ? 3 : 0.7
     inertia = offset .* slopeconst .* krange .^ slope
 
     ## Nice ticks
@@ -390,9 +390,9 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
         xlims!(ax, T(0.8), T(460))
         ylims!(ax, T(1e-10), T(1e0))
     elseif D == 3
-        xlims!(ax, 0.8, 290)
-        xlims!(ax, 0.8, 200)
-        ylims!(ax, 1e-12, 3e-3)
+        # xlims!(ax, 0.8, 290)
+        xlims!(ax, 0.8, 460)
+        ylims!(ax, T(1e-11), T(2e-1))
     end
 
     # Add resolution numbers just below plots
@@ -403,8 +403,8 @@ with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ff9900"]))
         # text!(ax, "1024"; position = (241, 2.4e-8))
         # text!(ax, "1024"; position = (259, 2.4e-5))
         # text!(ax, "1024"; position = (110, 1.5e-11))
-        text!(ax, "1024"; position = (90, 1.3e-12))
-        textk, texte = 1.55, 1.6
+        text!(ax, "1024"; position = (208, 1.3e-11))
+        textk, texte = 1.50, 2.3
     end
     for (i, nles) in zip(VA, case.nles)
         κ, e = plotparts(i)

@@ -15,12 +15,9 @@ outdir = joinpath(@__DIR__, "output", "MultiActuator")
 # Floating point precision
 T = Float64
 
-# Array type
-ArrayType = Array
-## using CUDA; ArrayType = CuArray
-## using AMDGPU; ArrayType = ROCArray
-## using oneAPI; ArrayType = oneArray
-## using Metal; ArrayType = MtlArray
+# Backend
+backend = CPU()
+## using CUDA; backend = CUDABackend()
 
 # Boundary conditions
 boundary_conditions = (
@@ -66,7 +63,7 @@ setup = Setup(;
     boundary_conditions,
     bodyforce,
     issteadybodyforce = true,
-    ArrayType,
+    backend,
 );
 
 # Initial conditions (extend inflow)

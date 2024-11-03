@@ -4,7 +4,7 @@ using IncompressibleNavierStokes
 # For running on GPU
 using CUDA;
 CUDA.allowscalar(false);
-ArrayType = CuArray;
+backend = CUDABackend();
 T = Float32
 
 # Setup
@@ -12,7 +12,7 @@ Re = T(10_000)
 n = 1024
 lims = T(0), T(1)
 x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
-setup = Setup(; x, Re, ArrayType);
+setup = Setup(; x, Re, backend);
 u₀ = random_field(setup, T(0));
 
 u = u₀

@@ -10,10 +10,10 @@ using IncompressibleNavierStokes
 outdir = joinpath(@__DIR__, "output", "RayleighTaylor2D")
 
 # Hardware
-ArrayType = Array
+backend = CPU()
 
 ## using CUDA, CUDSS
-## ArrayType = CuArray
+## backend = CUDABackend()
 
 # Precision
 T = Float64

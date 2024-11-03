@@ -1,3 +1,12 @@
+"Get value contained in `Val`."
+getval(::Val{x}) where {x} = x
+
+"Get offset from `CartesianIndices` `I`."
+function getoffset(I)
+    I0 = first(I)
+    I0 - oneunit(I0)
+end
+
 "Split random number generator seed into `n` new seeds."
 splitseed(seed, n) = rand(Xoshiro(seed), UInt32, n)
 

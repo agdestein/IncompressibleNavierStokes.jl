@@ -5,25 +5,24 @@ function Setup(;
     bodyforce = nothing,
     issteadybodyforce = true,
     closure_model = nothing,
-    ArrayType = Array,
+    backend = CPU(),
     workgroupsize = 64,
     temperature = nothing,
     Re = isnothing(temperature) ? convert(eltype(x[1]), 1_000) : 1 / temperature.α1,
 )
     setup = (;
-        grid = Grid(x, boundary_conditions; ArrayType),
+        grid = Grid(; x, boundary_conditions, backend),
         boundary_conditions,
         Re,
         bodyforce,
         issteadybodyforce = false,
         closure_model,
-        ArrayType,
-        T = eltype(x[1]),
+        backend,
         workgroupsize,
         temperature,
     )
     if !isnothing(bodyforce) && issteadybodyforce
-        (; dimension, x, N) = setup.grid
+        (; x) = setup.grid
         T = eltype(x[1])
         u = vectorfield(setup)
         F = vectorfield(setup)

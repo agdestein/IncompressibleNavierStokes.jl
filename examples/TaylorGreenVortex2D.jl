@@ -26,13 +26,13 @@ ispath(outdir) || mkpath(outdir)
 """
 Compare numerical solution with analytical solution at final time.
 """
-function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, ArrayType = Array)
+function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, backend = CPU())
     T = typeof(lims[1])
     e = zeros(T, length(nlist))
     for (i, n) in enumerate(nlist)
         @info "Computing error for n = $n"
         x = ntuple(α -> LinRange(lims..., n + 1), D)
-        setup = Setup(; x, Re, ArrayType)
+        setup = Setup(; x, Re, backend)
         psolver = psolver_spectral(setup)
         ustart = velocityfield(
             setup,

@@ -238,9 +238,10 @@ parameters and `closure(u, θ)` predicts the commutator error.
 """
 function gcnn(; setup, radii, channels, activations, use_bias, rng = Random.default_rng())
     r, c, σ, b = radii, channels, activations, use_bias
-    (; T, grid, boundary_conditions) = setup
-    (; dimension) = grid
+    (; grid) = setup
+    (; dimension, x) = grid
     D = dimension()
+    T = eltype(x[1])
 
     # Weight initializer
     glorot_uniform_T(rng::AbstractRNG, dims...) = glorot_uniform(rng, T, dims...)

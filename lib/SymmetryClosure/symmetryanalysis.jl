@@ -71,7 +71,7 @@ seeds = (;
 # Consider reducing the sizes of DNS, LES, and CNN layers if
 # you want to test run on a laptop.
 T = Float32
-ArrayType = Array
+backend = CPU()
 device = identity
 clean() = nothing
 
@@ -79,7 +79,7 @@ clean() = nothing
 using LuxCUDA
 using CUDA;
 T = Float32;
-ArrayType = CuArray;
+backend = CUDABackend();
 CUDA.allowscalar(false);
 device = x -> adapt(CuArray, x)
 clean() = (GC.gc(); CUDA.reclaim())
@@ -107,7 +107,7 @@ get_params(nlesscalar) = (;
     ndns = (n -> (n, n))(4096), # DNS resolution
     ## ndns = (n -> (n, n))(1024), # DNS resolution
     filters = (FaceAverage(),),
-    ArrayType,
+    backend,
     create_psolver = psolver_spectral,
     icfunc = (setup, psolver, rng) ->
         random_field(setup, zero(eltype(setup.grid.x[1])); kp = 20, psolver, rng),
@@ -153,7 +153,7 @@ getsetups(params) =
         Setup(;
             x = ntuple(α -> LinRange(T(0), T(1), nles[α] + 1), params.D),
             params.Re,
-            params.ArrayType,
+            params.backend,
         )
     end
 

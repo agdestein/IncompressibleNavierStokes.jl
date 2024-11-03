@@ -58,7 +58,7 @@ function trainprior(;
     nepoch,
     niter,
 )
-    device(x) = adapt(params.ArrayType, x)
+    device(x) = adapt(params.backend, x)
     itotal = 0
     for Φ in params.filters, nles in params.nles
         itotal += 1
@@ -191,7 +191,7 @@ function trainpost(;
     nepoch,
     niter,
 )
-    device(x) = adapt(params.ArrayType, x)
+    device(x) = adapt(params.backend, x)
     itotal = 0
     for projectorder in projectorders,
         (ifil, Φ) in enumerate(params.filters),
@@ -302,7 +302,7 @@ function trainsmagorinsky(;
     ninfo,
     θrange,
 )
-    device(x) = adapt(params.ArrayType, x)
+    device(x) = adapt(params.backend, x)
     itotal = 0
     for projectorder in projectorders, Φ in params.filters, nles in params.nles
         itotal += 1

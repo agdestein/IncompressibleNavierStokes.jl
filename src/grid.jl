@@ -97,9 +97,9 @@ Return a named tuple (`[α]` denotes a tuple index) with the following fields:
 Note that the memory footprint of the redundant 1D-arrays above is negligible
 compared to the memory footprint of the 2D/3D-fields used in the code.
 """
-function Grid(x, boundary_conditions; ArrayType = Array)
+function Grid(; x, boundary_conditions, backend)
     # Kill all LinRanges etc.
-    x = Array.(x)
+    x = collect.(x)
     xlims = extrema.(x)
 
     D = length(x)
@@ -136,6 +136,11 @@ function Grid(x, boundary_conditions; ArrayType = Array)
         N[α] - na - nb
     end
 
+    # # Cartesian index range of inner components, regardless
+    # # of whether they are DOFS or ghosts
+    # # (only exclude outermost boundary)
+    # I_inside = CartesianIndices(map(n -> 2:n-1, N))
+
     # Cartesian index ranges of velocity DOFs
     Iu = ntuple(D) do α
         Iuα = ntuple(D) do β
@@ -170,22 +175,22 @@ function Grid(x, boundary_conditions; ArrayType = Array)
     # Volume widths
     # Infinitely thin widths are set to `eps(T)` to avoid division by zero
     Δ = map(x) do x
-        Δ = diff(x)
-        Δ[Δ.==0] .= eps(eltype(Δ))
-        Δ
+        Δx = diff(x)
+        Δx = max.(Δx, eps(eltype(x)))
+        Δx
     end
 
     Δu = ntuple(D) do d
-        Δu = push!(diff(xp[d]), Δ[d][end] / 2)
-        Δu[Δu.==0] .= eps(eltype(Δu))
-        Δu
+        Δx = push!(diff(xp[d]), Δ[d][end] / 2)
+        Δx = max.(Δx, eps(eltype(Δx)))
+        Δx
     end
 
     # Δu = ntuple(D) do α
     #     ntuple(D) do β
     #         if α == β
     #             Δu = push!(diff(xp[β]), Δ[β][end] / 2)
-    #             Δu[Δu.==0] .= eps(eltype(Δu))
+    #             Δu[Δu.==0] .= eps(T)
     #             Δu
     #         else
     #             Δ[β]
@@ -235,7 +240,7 @@ function Grid(x, boundary_conditions; ArrayType = Array)
                     pushfirst!(Aαβ1, 1)
                     push!(Aαβ2, 1)
                 end
-                (ArrayType(Aαβ1), ArrayType(Aαβ2))
+                Aαβ1, Aαβ2
             end,
             D,
         ),
@@ -243,7 +248,7 @@ function Grid(x, boundary_conditions; ArrayType = Array)
     )
 
     # Store quantities
-    grid = (;
+    (;
         xlims,
         dimension,
         N,
@@ -255,7 +260,7 @@ function Grid(x, boundary_conditions; ArrayType = Array)
         Ip,
 
         # Put arrays on GPU, if requested
-        adapt(ArrayType, (;
+        adapt(backend, (;
             x,
             xu,
             xp,
