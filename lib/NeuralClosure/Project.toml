@@ -27,7 +27,7 @@ IncompressibleNavierStokes = {path = "../.."}
 Accessors = "0.1"
 ComponentArrays = "0.15"
 DocStringExtensions = "0.9"
-IncompressibleNavierStokes = "1"
+IncompressibleNavierStokes = "2"
 KernelAbstractions = "0.9"
 LinearAlgebra = "1"
 Lux = "1"
