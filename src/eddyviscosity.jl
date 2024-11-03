@@ -1,45 +1,42 @@
 function strain_natural!(S, u, setup)
-    (; grid, workgroupsize) = setup
-    (; dimension, Np, Ip, Δ, Δu) = grid
-    I0 = first(Ip)
-    I0 -= oneunit(I0)
-    strain_natural_kernel!(get_backend(u[1]), workgroupsize)(S, u, I0, Δ, Δu; ndrange = Np)
+    (; grid, backend, workgroupsize) = setup
+    (; Np, Ip, Δ, Δu) = grid
+    I0 = getoffset(Ip)
+    strain_natural_kernel!(backend, workgroupsize)(S, u, I0, Δ, Δu; ndrange = Np)
     S
 end
 
-@kernel function strain_natural_kernel!(S, uu, I0::CartesianIndex{2}, Δ, Δu)
+@kernel function strain_natural_kernel!(S, u, I0::CartesianIndex{2}, Δ, Δu)
     I = @index(Global, Cartesian)
     I = I + I0
-    u, v = uu[1], uu[2]
     ex, ey = unit_cartesian_indices(2)
     Δux, Δuy = Δu[1][I[1]], Δ[2][I[2]]
     Δvx, Δvy = Δ[1][I[1]], Δu[2][I[2]]
-    ∂u∂x = (u[I] - u[I-ex]) / Δux
-    ∂u∂y = (u[I+ey] - u[I]) / Δuy
-    ∂v∂x = (v[I+ex] - v[I]) / Δvx
-    ∂v∂y = (v[I] - v[I-ey]) / Δvy
+    ∂u∂x = (u[I, 1] - u[I-ex, 1]) / Δux
+    ∂u∂y = (u[I+ey, 1] - u[I, 1]) / Δuy
+    ∂v∂x = (u[I+ex, 2] - u[I, 2]) / Δvx
+    ∂v∂y = (u[I, 2] - u[I-ey, 2]) / Δvy
     S.xx[I] = ∂u∂x
     S.yy[I] = ∂v∂y
     S.xy[I] = (∂u∂y + ∂v∂x) / 2
 end
 
-@kernel function strain_natural_kernel!(S, uu, I0::CartesianIndex{3}, Δ, Δu)
+@kernel function strain_natural_kernel!(S, u, I0::CartesianIndex{3}, Δ, Δu)
     I = @index(Global, Cartesian)
     I = I + I0
-    u, v, w = uu[1], uu[2], uu[3]
     ex, ey, ez = unit_cartesian_indices(3)
     Δux, Δuy, Δuz = Δu[1][I[1]], Δ[2][I[2]], Δ[3][I[3]]
     Δvx, Δvy, Δvz = Δ[1][I[1]], Δu[2][I[2]], Δ[3][I[3]]
     Δwx, Δwy, Δwz = Δ[1][I[1]], Δ[2][I[2]], Δu[3][I[3]]
-    ∂u∂x = (u[I] - u[I-ex]) / Δux
-    ∂u∂y = (u[I+ey] - u[I]) / Δuy
-    ∂u∂z = (u[I+ez] - u[I]) / Δuz
-    ∂v∂x = (v[I+ex] - v[I]) / Δvx
-    ∂v∂y = (v[I] - v[I-ey]) / Δvy
-    ∂v∂z = (v[I+ez] - v[I]) / Δvz
-    ∂w∂x = (w[I+ex] - w[I]) / Δwx
-    ∂w∂y = (w[I+ey] - w[I]) / Δwy
-    ∂w∂z = (w[I] - w[I-ez]) / Δwz
+    ∂u∂x = (u[I, 1] - u[I-ex, 1]) / Δux
+    ∂u∂y = (u[I+ey, 1] - u[I, 1]) / Δuy
+    ∂u∂z = (u[I+ez, 1] - u[I, 1]) / Δuz
+    ∂v∂x = (u[I+ex, 2] - u[I, 2]) / Δvx
+    ∂v∂y = (u[I, 2] - u[I-ey, 2]) / Δvy
+    ∂v∂z = (u[I+ez, 2] - u[I, 2]) / Δvz
+    ∂w∂x = (u[I+ex, 3] - u[I, 3]) / Δwx
+    ∂w∂y = (u[I+ey, 3] - u[I, 3]) / Δwy
+    ∂w∂z = (u[I, 3] - u[I-ez, 3]) / Δwz
     S.xx[I] = ∂u∂x
     S.yy[I] = ∂v∂y
     S.zz[I] = ∂w∂z
@@ -49,18 +46,10 @@ end
 end
 
 function smagorinsky_viscosity!(visc, S, θ, setup)
-    (; grid, workgroupsize) = setup
-    (; dimension, Np, Ip, Δ) = grid
-    I0 = first(Ip)
-    I0 -= oneunit(I0)
-    smagorinsky_viscosity_kernel!(get_backend(visc), workgroupsize)(
-        visc,
-        S,
-        I0,
-        Δ,
-        θ;
-        ndrange = Np,
-    )
+    (; grid, backend, workgroupsize) = setup
+    (; Np, Ip, Δ) = grid
+    I0 = getoffset(Ip)
+    smagorinsky_viscosity_kernel!(backend, workgroupsize)(visc, S, I0, Δ, θ; ndrange = Np)
     visc
 end
 
@@ -90,18 +79,10 @@ end
 end
 
 function apply_eddy_viscosity!(σ, visc, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; Np, Ip, Δ, Δu) = grid
-    I0 = first(Ip)
-    I0 -= oneunit(I0)
-    apply_eddy_viscosity_kernel!(get_backend(visc), workgroupsize)(
-        σ,
-        visc,
-        I0,
-        Δ,
-        Δu;
-        ndrange = Np,
-    )
+    I0 = getoffset(Ip)
+    apply_eddy_viscosity_kernel!(backend, workgroupsize)(σ, visc, I0, Δ, Δu; ndrange = Np)
     σ
 end
 
@@ -109,8 +90,6 @@ end
     I = @index(Global, Cartesian)
     I = I + I0
     ex, ey = unit_cartesian_indices(2)
-    Δpx, Δpy = Δ[1][I[1]], Δ[2][I[2]]
-    Δux, Δuy = Δu[1][I[1]], Δu[2][I[2]]
     # TODO: Add interpolation weights here
     visc_xy = (visc[I] + visc[I+ex] + visc[I+ey] + visc[I+ex+ey]) / 4
     σ.xx[I] = 2 * visc[I] * σ.xx[I]
@@ -122,8 +101,6 @@ end
     I = @index(Global, Cartesian)
     I = I + I0
     ex, ey, ez = unit_cartesian_indices(3)
-    Δpx, Δpy, Δpz = Δ[1][I[1]], Δ[2][I[2]], Δ[3][I[3]]
-    Δux, Δuy, Δuz = Δu[1][I[1]], Δu[2][I[2]], Δu[3][I[3]]
     # TODO: Add interpolation weights here
     visc_xy = (visc[I] + visc[I+ex] + visc[I+ey] + visc[I+ex+ey]) / 4
     visc_xz = (visc[I] + visc[I+ex] + visc[I+ez] + visc[I+ex+ez]) / 4
@@ -137,18 +114,10 @@ end
 end
 
 function divoftensor_natural!(c, σ, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; Np, Ip, Δ, Δu) = grid
-    I0 = first(Ip)
-    I0 -= oneunit(I0)
-    divoftensor_natural_kernel!(get_backend(c[1]), workgroupsize)(
-        c,
-        σ,
-        I0,
-        Δ,
-        Δu;
-        ndrange = Np,
-    )
+    I0 = getoffset(Ip)
+    divoftensor_natural_kernel!(backend, workgroupsize)(c, σ, I0, Δ, Δu; ndrange = Np)
     c
 end
 
@@ -162,8 +131,8 @@ end
     ∂σxy∂y = (σ.xy[I] - σ.xy[I-ey]) / Δpy
     ∂σyx∂x = (σ.xy[I] - σ.xy[I-ex]) / Δpx
     ∂σyy∂y = (σ.yy[I+ey] - σ.yy[I]) / Δuy
-    c[1][I] = ∂σxx∂x + ∂σxy∂y
-    c[2][I] = ∂σyx∂x + ∂σyy∂y
+    c[I, 1] = ∂σxx∂x + ∂σxy∂y
+    c[I, 2] = ∂σyx∂x + ∂σyy∂y
 end
 
 @kernel function divoftensor_natural_kernel!(c, σ, I0::CartesianIndex{3}, Δ, Δu)
@@ -181,9 +150,9 @@ end
     ∂σzx∂x = (σ.xz[I] - σ.xz[I-ex]) / Δpx
     ∂σzy∂y = (σ.yz[I] - σ.yz[I-ey]) / Δpy
     ∂σzz∂z = (σ.zz[I+ez] - σ.zz[I]) / Δuz
-    c[1][I] = ∂σxx∂x + ∂σxy∂y + ∂σxz∂z
-    c[2][I] = ∂σyx∂x + ∂σyy∂y + ∂σyz∂z
-    c[3][I] = ∂σzx∂x + ∂σzy∂y + ∂σzz∂z
+    c[I, 1] = ∂σxx∂x + ∂σxy∂y + ∂σxz∂z
+    c[I, 2] = ∂σyx∂x + ∂σyy∂y + ∂σyz∂z
+    c[I, 3] = ∂σzx∂x + ∂σzy∂y + ∂σzz∂z
 end
 
 function smagorinsky_closure_natural(setup)

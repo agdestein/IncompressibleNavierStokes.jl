@@ -43,13 +43,13 @@
 
     @testset "Field saver" begin
         @test length(outputs.field) == nprocess
-        @test outputs.field[1].u isa Tuple
+        @test outputs.field[1].u isa Array
         @test outputs.field[1].t isa Float64
         # Test that different copies are stored
         i = 1
         ii = setup.grid.Iu[i]
-        a = outputs.field[1].u[i][ii]
-        b = outputs.field[end].u[i][ii]
+        a = outputs.field[1].u[ii, i]
+        b = outputs.field[end].u[ii, i]
         @test norm(a - b) / norm(b) > 0.05
     end
 

@@ -3,7 +3,7 @@ scalarfield(setup) = fill!(similar(setup.grid.x[1], setup.grid.N), 0)
 
 "Create empty vector field."
 vectorfield(setup) =
-    ntuple(α -> fill!(similar(setup.grid.x[1], setup.grid.N), 0), setup.grid.dimension())
+    fill!(similar(setup.grid.x[1], setup.grid.N..., setup.grid.dimension()), 0)
 
 """
 Create divergence free velocity field `u` with boundary conditions at time `t`.
@@ -31,7 +31,7 @@ function velocityfield(
             β -> reshape(xu[α][β][Iu[α].indices[β]], ntuple(Returns(1), β - 1)..., :),
             D,
         )
-        u[α][Iu[α]] .= ufunc.(α, xin...)
+        u[Iu[α], α] .= ufunc.(α, xin...)
     end
 
     # Make velocity field divergence free
@@ -177,6 +177,7 @@ function create_spectrum(; setup, kp, rng = Random.default_rng())
         # end
         a .* eα
     end
+    stack(uhat)
 end
 
 """
@@ -206,11 +207,11 @@ function random_field(
 
     # Create random velocity field
     uhat = create_spectrum(; setup, kp, rng)
-    u = ifft.(uhat)
-    u = map(u -> A .* real.(u), u)
+    u = ifft(uhat, 1:D)
+    u = @. A * real(u)
 
     # Add ghost volumes (one on each side for periodic)
-    u = pad_circular.(u, 1; dims = 1:D)
+    u = pad_circular(u, 1; dims = 1:D)
 
     # # Interpolate to staggered grid
     # interpolate_p_u!(u, setup)

@@ -5,7 +5,7 @@ using Cthulhu
 using KernelAbstractions
 
 T = Float32
-n = 512
+n = 128
 ax = range(T(0), T(1), n + 1)
 setup = Setup(; x = (ax, ax, ax), Re = T(1e3), backend = CUDABackend())
 u = random_field(setup)
@@ -38,18 +38,17 @@ let
     @benchmark IncompressibleNavierStokes.convection_adjoint!($f, $g, $u, $setup)
 end
 
-f = vectorfield(setup)
+f = vectorfield(setup);
 let
     fill!.(f, 0)
     @benchmark IncompressibleNavierStokes.convectiondiffusion!($f, $u, $setup)
 end
 
-uu = stack(u)
-uu = permutedims(uu, (4, 1, 2, 3))
-ff = copy(uu)
+uu = stack(u);
+ff = copy(uu);
 let
     fill!(ff, 0)
-    @benchmark IncompressibleNavierStokes.cd2!($ff, $uu, $setup)
+    @benchmark IncompressibleNavierStokes.arrayconvectiondiffusion!($ff, $uu, $setup)
 end
 
 f = vectorfield(setup)

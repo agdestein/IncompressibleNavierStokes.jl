@@ -34,9 +34,9 @@ end
 @testitem "Pressure gradient" setup = [Setup2D, Setup3D] begin
     using Random
     for setup in (Setup2D.setup, Setup3D.setup)
-        (; Iu, Ip, dimension) = setup.grid
+        (; Iu, Ip, Δu, Δ, dimension) = setup.grid
         D = dimension()
-        v = randn!.(vectorfield(setup))
+        v = randn!(vectorfield(setup))
         p = randn!(scalarfield(setup))
         T = eltype(p)
         v = apply_bc_u(v, T(0), setup)
@@ -46,23 +46,19 @@ end
         ΩDv = scalewithvolume(Dv, setup)
         pDv = sum((p.*ΩDv)[Ip])
         vGp = if D == 2
-            vGpx = v[1] .* setup.grid.Δu[1] .* setup.grid.Δ[2]' .* Gp[1]
-            vGpy = v[2] .* setup.grid.Δ[1] .* setup.grid.Δu[2]' .* Gp[2]
+            vGpx = v[:, :, 1] .* Δu[1] .* Δ[2]' .* Gp[:, :, 1]
+            vGpy = v[:, :, 2] .* Δ[1] .* Δu[2]' .* Gp[:, :, 2]
             sum(vGpx[Iu[1]]) + sum(vGpy[Iu[2]])
         elseif D == 3
             vGpx =
-                v[1] .* setup.grid.Δu[1] .* reshape(setup.grid.Δ[2], 1, :) .*
-                reshape(setup.grid.Δ[3], 1, 1, :) .* Gp[1]
+                v[:, :, :, 1] .* Δu[1] .* reshape(Δ[2], 1, :) .* reshape(Δ[3], 1, 1, :) .* Gp[:, :, :, 1]
             vGpy =
-                v[2] .* setup.grid.Δ[1] .* reshape(setup.grid.Δu[2], 1, :) .*
-                reshape(setup.grid.Δ[3], 1, 1, :) .* Gp[2]
+                v[:, :, :, 2] .* Δ[1] .* reshape(Δu[2], 1, :) .* reshape(Δ[3], 1, 1, :) .* Gp[:, :, :, 2]
             vGpz =
-                v[3] .* setup.grid.Δ[1] .* reshape(setup.grid.Δ[2], 1, :) .*
-                reshape(setup.grid.Δu[3], 1, 1, :) .* Gp[3]
+                v[:, :, :, 3] .* Δ[1] .* reshape(Δ[2], 1, :) .* reshape(Δu[3], 1, 1, :) .* Gp[:, :, :, 3]
             sum(vGpx[Iu[1]]) + sum(vGpy[Iu[2]]) + sum(vGpz[Iu[3]])
         end
-        @test Gp isa Tuple
-        @test Gp[1] isa Array{T}
+        @test Gp isa Array{T}
         @test pDv ≈ -vGp # Check that D = -G'
     end
 end
@@ -87,23 +83,22 @@ end
 @testitem "Convection" setup = [Setup2D, Setup3D] begin
     for (u, setup) in ((Setup2D.u, Setup2D.setup), (Setup3D.u, Setup3D.setup))
         (; Iu, Δ, Δu) = setup.grid
-        T = eltype(u[1])
+        T = eltype(u)
         c = convection(u, setup)
-        D = length(u)
+        D = length(Δ)
         uCu = if D == 2
-            uCux = u[1] .* Δu[1] .* Δ[2]' .* c[1]
-            uCuy = u[2] .* Δ[1] .* Δu[2]' .* c[2]
+            uCux = u[:, :, 1] .* Δu[1] .* Δ[2]' .* c[:, :, 1]
+            uCuy = u[:, :, 2] .* Δ[1] .* Δu[2]' .* c[:, :, 2]
             sum(uCux[Iu[1]]) + sum(uCuy[Iu[2]])
         elseif D == 3
             Δu1, Δu2, Δu3 = Δu[1], reshape(Δu[2], 1, :), reshape(Δu[3], 1, 1, :)
             Δp1, Δp2, Δp3 = Δ[1], reshape(Δ[2], 1, :), reshape(Δ[3], 1, 1, :)
-            uCux = @. u[1] * Δu1 * Δp2 * Δp3 .* c[1]
-            uCuy = @. u[2] * Δp1 * Δu2 * Δp3 .* c[2]
-            uCuz = @. u[3] * Δp1 * Δp2 * Δu3 .* c[3]
+            uCux = @. u[:, :, :, 1] * Δu1 * Δp2 * Δp3 .* c[:, :, :, 1]
+            uCuy = @. u[:, :, :, 2] * Δp1 * Δu2 * Δp3 .* c[:, :, :, 2]
+            uCuz = @. u[:, :, :, 3] * Δp1 * Δp2 * Δu3 .* c[:, :, :, 3]
             sum(uCux[Iu[1]]) + sum(uCuy[Iu[2]]) + sum(uCuz[Iu[3]])
         end
-        @test c isa Tuple
-        @test c[1] isa Array{T}
+        @test c isa Array{T}
         @test uCu ≈ 0 atol = 1e-12 # Check skew-symmetry
     end
 end
@@ -111,60 +106,58 @@ end
 @testitem "Diffusion" setup = [Setup2D, Setup3D] begin
     for (u, setup) in ((Setup2D.u, Setup2D.setup), (Setup3D.u, Setup3D.setup))
         T = eltype(u[1])
-        (; Iu, Δ, Δu) = setup.grid
+        (; dimension, Iu, Δ, Δu) = setup.grid
         d = diffusion(u, setup)
-        D = length(u)
+        D = dimension()
         uDu = if D == 2
-            uDux = u[1] .* Δu[1] .* Δ[2]' .* d[1]
-            uDuy = u[2] .* Δ[1] .* Δu[2]' .* d[2]
+            uDux = u[:, :, 1] .* Δu[1] .* Δ[2]' .* d[:, :, 1]
+            uDuy = u[:, :, 2] .* Δ[1] .* Δu[2]' .* d[:, :, 2]
             sum(uDux[Iu[1]]) + sum(uDuy[Iu[2]])
         elseif D == 3
             Δu1, Δu2, Δu3 = Δu[1], reshape(Δu[2], 1, :), reshape(Δu[3], 1, 1, :)
             Δp1, Δp2, Δp3 = Δ[1], reshape(Δ[2], 1, :), reshape(Δ[3], 1, 1, :)
-            uDux = @. u[1] * Δu1 * Δp2 * Δp3 .* d[1]
-            uDuy = @. u[2] * Δp1 * Δu2 * Δp3 .* d[2]
-            uDuz = @. u[3] * Δp1 * Δp2 * Δu3 .* d[3]
+            uDux = @. u[:, :, :, 1] * Δu1 * Δp2 * Δp3 .* d[:, :, :, 1]
+            uDuy = @. u[:, :, :, 2] * Δp1 * Δu2 * Δp3 .* d[:, :, :, 2]
+            uDuz = @. u[:, :, :, 3] * Δp1 * Δp2 * Δu3 .* d[:, :, :, 3]
             sum(uDux[Iu[1]]) + sum(uDuy[Iu[2]]) + sum(uDuz[Iu[3]])
         end
-        @test d isa Tuple
-        @test d[1] isa Array{T}
+        @test d isa Array{T}
         @test uDu ≤ 0 # Check negativity (dissipation)
     end
 end
 
 @testitem "Convection-Diffusion" setup = [Setup2D, Setup3D] begin
     for (u, setup) in ((Setup2D.u, Setup2D.setup), (Setup3D.u, Setup3D.setup))
-        cd = IncompressibleNavierStokes.convectiondiffusion!(zero.(u), u, setup)
+        cd = IncompressibleNavierStokes.convectiondiffusion!(zero(u), u, setup)
         c = convection(u, setup)
         d = diffusion(u, setup)
-        @test all(cd .≈ c .+ d)
+        @test cd ≈ c + d
     end
 end
 
 @testitem "Momentum" setup = [Setup2D, Setup3D] begin
     for (u, setup) in ((Setup2D.u, Setup2D.setup), (Setup3D.u, Setup3D.setup))
-        T = eltype(u[1])
+        T = eltype(u)
         m = momentum(u, nothing, T(1), setup)
-        @test m isa Tuple
-        @test m[1] isa Array{T}
-        @test all(all.(!isnan, m))
+        @test m isa Array{T}
+        @test all(!isnan, m)
     end
 end
 
 @testitem "Other fields" setup = [Setup2D, Setup3D] begin
     using Random
     for (u, setup) in ((Setup2D.u, Setup2D.setup), (Setup3D.u, Setup3D.setup))
-        T = eltype(u[1])
-        D = length(u)
+        T = eltype(u)
+        D = setup.grid.dimension()
         p = randn!(scalarfield(setup))
         ω = vorticity(u, setup)
         D == 2 && @test ω isa Array{T}
-        D == 3 && @test ω isa Tuple
-        @test smagorinsky_closure(setup)(u, 0.1) isa Tuple
+        D == 3 && @test ω isa Array{T}
+        @test smagorinsky_closure(setup)(u, 0.1) isa Array{T}
         @test tensorbasis(u, setup) isa Tuple
-        @test interpolate_u_p(u, setup) isa Tuple
+        @test interpolate_u_p(u, setup) isa Array{T}
         D == 2 && @test interpolate_ω_p(ω, setup) isa Array{T}
-        D == 3 && @test interpolate_ω_p(ω, setup) isa Tuple
+        D == 3 && @test interpolate_ω_p(ω, setup) isa Array{T}
         @test Dfield(p, setup) isa Array{T}
         @test Qfield(u, setup) isa Array{T}
         D == 2 && @test_throws AssertionError eig2field(u, setup)

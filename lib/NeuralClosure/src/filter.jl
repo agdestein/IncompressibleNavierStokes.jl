@@ -51,7 +51,7 @@ function reconstruct!(u, v, setup_dns, setup_les, comp)
     (; grid, boundary_conditions, workgroupsize) = setup_les
     (; N, Iu) = grid
     D = length(u)
-    e = Offset{D}()
+    e = Offset(D)
     @assert all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions)
     @kernel function R!(u, v, ::Val{α}, volume) where {α}
         J = @index(Global, Cartesian)

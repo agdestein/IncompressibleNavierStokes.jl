@@ -3,18 +3,16 @@ create_stepper(::ExplicitRungeKuttaMethod; setup, psolver, u, temp, t, n = 0) =
 
 function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing, cache)
     (; setup, psolver, u, temp, t, n) = stepper
-    (; grid, closure_model, temperature) = setup
-    (; dimension, Iu) = grid
+    (; closure_model, temperature) = setup
     (; A, b, c) = method
-    (; u₀, ku, p, temp₀, ktemp, diff) = cache
-    D = dimension()
+    (; uprev, ku, p, tempprev, ktemp, diff) = cache
     nstage = length(b)
     m = closure_model
 
     # Update current solution
-    t₀ = t
-    copyto!.(u₀, u)
-    isnothing(temp) || copyto!(temp₀, temp)
+    tprev = t
+    copyto!(uprev, u)
+    isnothing(temp) || copyto!(tempprev, temp)
 
     for i = 1:nstage
         # Compute force at current stage i
@@ -28,21 +26,18 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
         end
 
         # Add closure term
-        isnothing(m) || map((k, m) -> k .+= m, ku[i], m(u, θ))
+        isnothing(m) || (ku[i] .+= m(u, θ))
 
         # Intermediate time step
-        t = t₀ + c[i] * Δt
+        t = tprev + c[i] * Δt
 
         # Apply stage forces
-        for α = 1:D
-            u[α] .= u₀[α]
-            for j = 1:i
-                @. u[α] += Δt * A[i, j] * ku[j][α]
-                # @. u[α][Iu[α]] += Δt * A[i, j] * ku[j][α][Iu[α]]
-            end
+        u .= uprev
+        for j = 1:i
+            @. u += Δt * A[i, j] * ku[j]
         end
         if !isnothing(temp)
-            temp .= temp₀
+            temp .= tempprev
             for j = 1:i
                 @. temp += Δt * A[i, j] * ktemp[j]
             end
@@ -65,16 +60,14 @@ end
 
 function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     (; setup, psolver, u, temp, t, n) = stepper
-    (; grid, closure_model, temperature) = setup
-    (; dimension) = grid
+    (; closure_model, temperature) = setup
     (; A, b, c) = method
-    D = dimension()
     nstage = length(b)
     m = closure_model
 
     # Update current solution (does not depend on previous step size)
-    t₀ = t
-    u₀ = u
+    tprev = t
+    uprev = u
     ku = ()
     ktemp = ()
 
@@ -96,16 +89,15 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
         isnothing(temp) || (ktemp = (ktemp..., Ftemp))
 
         # Intermediate time step
-        t = t₀ + c[i] * Δt
+        t = tprev + c[i] * Δt
 
         # Apply stage forces
-        u = u₀
+        u = uprev
         for j = 1:i
             u = @. u + Δt * A[i, j] * ku[j]
-            # u = tupleadd(u, @.(Δt * A[i, j] * ku[j]))
         end
         if !isnothing(temp)
-            temp = temp₀
+            temp = tempprev
             for j = 1:i
                 temp = @. temp + Δt * A[i, j] * ktemp[j]
             end
