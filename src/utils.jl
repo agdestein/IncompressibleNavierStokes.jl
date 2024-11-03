@@ -1,4 +1,4 @@
-"Get value conained in `Val`."
+"Get value contained in `Val`."
 getval(::Val{x}) where {x} = x
 
 "Get offset from `CartesianIndices` `I`."
