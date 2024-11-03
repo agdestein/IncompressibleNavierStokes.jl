@@ -38,7 +38,7 @@
 
 """
 Cartesian index unit vector in `D = 2` or `D = 3` dimensions.
-Calling `Offset{D}()(α)` returns a Cartesian index with `1` in the dimension `α` and zeros
+Calling `Offset(D)(α)` returns a Cartesian index with `1` in the dimension `α` and zeros
 elsewhere.
 
 See <https://b-fg.github.io/2023/05/07/waterlily-on-gpu.html>
@@ -46,16 +46,18 @@ for writing kernel loops using Cartesian indices.
 """
 struct Offset{D} end
 
+Offset(D) = Offset{D}()
+
 @inline (::Offset{D})(α) where {D} = CartesianIndex(ntuple(β -> β == α ? 1 : 0, D))
 
 "Get tuple of all unit vectors as Cartesian indices."
-unit_cartesian_indices(D) = ntuple(α -> Offset{D}()(α), D)
+unit_cartesian_indices(D) = ntuple(α -> Offset(D)(α), D)
 
 """
 Average scalar field `ϕ` in the `α`-direction.
 """
 @inline function avg(ϕ, Δ, I, α)
-    e = Offset{length(I.I)}()
+    e = Offset(length(I.I))
     (Δ[α][I[α]+1] * ϕ[I] + Δ[α][I[α]] * ϕ[I+e(α)]) / (Δ[α][I[α]] + Δ[α][I[α]+1])
 end
 
@@ -64,11 +66,11 @@ function scalewithvolume(p, setup)
     (; grid) = setup
     (; dimension, Δ) = grid
     if dimension() == 2
-        Δx = Δ[1]
-        Δy = Δ[2]'
+        Δx = reshape(Δ[1], :)
+        Δy = reshape(Δ[2], 1, :)
         @. p * Δx * Δy
     else
-        Δx = Δ[1]
+        Δx = reshape(Δ[1], :)
         Δy = reshape(Δ[2], 1, :)
         Δz = reshape(Δ[3], 1, 1, :)
         @. p * Δx * Δy * Δz
@@ -80,11 +82,11 @@ function scalewithvolume!(p, setup)
     (; grid) = setup
     (; dimension, Δ) = grid
     if dimension() == 2
-        Δx = Δ[1]
-        Δy = Δ[2]'
+        Δx = reshape(Δ[1], :)
+        Δy = reshape(Δ[2], 1, :)
         @. p *= Δx * Δy
-    else
-        Δx = Δ[1]
+    elseif dimension() == 3
+        Δx = reshape(Δ[1], :)
         Δy = reshape(Δ[2], 1, :)
         Δz = reshape(Δ[3], 1, 1, :)
         @. p *= Δx * Δy * Δz
@@ -106,45 +108,47 @@ ChainRulesCore.rrule(::typeof(divergence), u, setup) = (
 
 "Compute divergence of velocity field (in-place version)."
 function divergence!(div, u, setup)
-    (; grid, workgroupsize) = setup
-    (; Δ, N, Ip, Np) = grid
+    (; grid, backend, workgroupsize) = setup
+    (; Δ, Ip, Np) = grid
     D = length(u)
-    e = Offset{D}()
-    @kernel function div!(div, u, I0)
-        I = @index(Global, Cartesian)
-        I = I + I0
-        d = zero(eltype(div))
-        for α = 1:D
-            d += (u[α][I] - u[α][I-e(α)]) / Δ[α][I[α]]
-        end
-        div[I] = d
-    end
-    I0 = first(Ip)
-    I0 -= oneunit(I0)
-    div!(get_backend(div), workgroupsize)(div, u, I0; ndrange = Np)
+    e = Offset(D)
+    I0 = getoffset(Ip)
+    kernel = divergence_kernel!(backend, workgroupsize)
+    kernel(div, u, Δ, e, I0; ndrange = Np)
+    # kernel(div, u, Δ, e, Val(1:D), true, I0; ndrange = Np)
     div
 end
 
+@kernel function divergence_kernel!(div, u, Δ, e, I0)
+    I = @index(Global, Cartesian)
+    I = I + I0
+    d = zero(eltype(div))
+    for α in eachindex(u)
+        d += (u[α][I] - u[α][I-e(α)]) / Δ[α][I[α]]
+    end
+    div[I] = d
+end
+
 function divergence_adjoint!(u, φ, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; Δ, N, Ip) = grid
     D = length(u)
-    e = Offset{D}()
-    @kernel function adj!(u, φ)
-        I = @index(Global, Cartesian)
-        for α = 1:D
-            u[α][I] = zero(eltype(u[1]))
-            I ∈ Ip && (u[α][I] += φ[I] / Δ[α][I[α]])
-            I + e(α) ∈ Ip && (u[α][I] -= φ[I+e(α)] / Δ[α][I[α]+1])
-        end
-    end
-    adj!(get_backend(u[1]), workgroupsize)(u, φ; ndrange = N)
+    e = Offset(D)
+    divergence_adjoint_kernel!(backend, workgroupsize)(u, φ, Δ, Ip, e; ndrange = N)
     u
 end
 
+@kernel function divergence_adjoint_kernel!(u, φ, Δ, Ip, e)
+    I = @index(Global, Cartesian)
+    for α in eachindex(Δ)
+        u[α][I] = zero(eltype(u[1]))
+        I ∈ Ip && (u[α][I] += φ[I] / Δ[α][I[α]])
+        I + e(α) ∈ Ip && (u[α][I] -= φ[I+e(α)] / Δ[α][I[α]+1])
+    end
+end
+
 "Compute pressure gradient (differentiable version)."
-pressuregradient(p, setup) =
-    pressuregradient!(ntuple(α -> zero(p), setup.grid.dimension()), p, setup)
+pressuregradient(p, setup) = pressuregradient!(vectorfield(setup), p, setup)
 
 ChainRulesCore.rrule(::typeof(pressuregradient), p, setup) = (
     pressuregradient(p, setup),
@@ -157,39 +161,43 @@ ChainRulesCore.rrule(::typeof(pressuregradient), p, setup) = (
 
 "Compute pressure gradient (in-place version)."
 function pressuregradient!(G, p, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Δu, Nu, Iu) = grid
     D = dimension()
-    e = Offset{D}()
-    @kernel function G!(G, p, ::Val{α}, I0) where {α}
-        I = @index(Global, Cartesian)
-        I = I0 + I
-        G[α][I] = (p[I+e(α)] - p[I]) / Δu[α][I[α]]
-    end
+    e = Offset(D)
     D = dimension()
+    kernel = pressuregradient_kernel!(backend, workgroupsize)
     for α = 1:D
-        I0 = first(Iu[α])
-        I0 -= oneunit(I0)
-        G!(get_backend(G[1]), workgroupsize)(G, p, Val(α), I0; ndrange = Nu[α])
+        I0 = getoffset(Iu[α])
+        kernel(G, p, Δu, e, Val(α), I0; ndrange = Nu[α])
     end
     G
 end
 
+@kernel function pressuregradient_kernel!(G, p, Δu, e, valα, I0)
+    α = getval(valα)
+    I = @index(Global, Cartesian)
+    I = I0 + I
+    G[α][I] = (p[I+e(α)] - p[I]) / Δu[α][I[α]]
+end
+
 function pressuregradient_adjoint!(pbar, φ, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Δu, N, Iu) = grid
     D = dimension()
-    e = Offset{D}()
-    @kernel function adj!(p, φ)
-        I = @index(Global, Cartesian)
-        p[I] = zero(eltype(p))
-        for α = 1:D
-            I - e(α) ∈ Iu[α] && (p[I] += φ[α][I-e(α)] / Δu[α][I[α]-1])
-            I ∈ Iu[α] && (p[I] -= φ[α][I] / Δu[α][I[α]])
-        end
-    end
-    adj!(get_backend(pbar), workgroupsize)(pbar, φ; ndrange = N)
+    e = Offset(D)
+    kernel = pressuregradient_adjoint_kernel!(backend, workgroupsize)
+    kernel(pbar, φ, Δu, Iu, e, Val(1:D); ndrange = N)
     pbar
+end
+
+@kernel function pressuregradient_adjoint_kernel!(p, φ, Δu, Iu, e, valdims)
+    I = @index(Global, Cartesian)
+    p[I] = zero(eltype(p))
+    for α in getval(valdims)
+        I - e(α) ∈ Iu[α] && (p[I] += φ[α][I-e(α)] / Δu[α][I[α]-1])
+        I ∈ Iu[α] && (p[I] -= φ[α][I] / Δu[α][I[α]])
+    end
 end
 
 # "Subtract pressure gradient (differentiable version)."
@@ -202,30 +210,31 @@ end
 
 "Subtract pressure gradient (in-place version)."
 function applypressure!(u, p, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Δu, Nu, Iu) = grid
     D = dimension()
-    e = Offset{D}()
-    @kernel function apply!(u, p, ::Val{α}, I0) where {α}
-        I = @index(Global, Cartesian)
-        I = I0 + I
-        u[α][I] -= (p[I+e(α)] - p[I]) / Δu[α][I[α]]
-    end
-    D = dimension()
+    e = Offset(D)
+    kernel = applypressure_kernel!(backend, workgroupsize)
     for α = 1:D
-        I0 = first(Iu[α])
-        I0 -= oneunit(I0)
-        apply!(get_backend(u[1]), workgroupsize)(u, p, Val(α), I0; ndrange = Nu[α])
+        I0 = getoffset(Iu[α])
+        kernel(u, p, Δu, e, Val(α), I0; ndrange = Nu[α])
     end
     u
 end
 
+@kernel function applypressure_kernel!(u, p, Δu, e, valα, I0)
+    α = getval(valα)
+    I = @index(Global, Cartesian)
+    I = I0 + I
+    u[α][I] -= (p[I+e(α)] - p[I]) / Δu[α][I[α]]
+end
+
 # function applypressure_adjoint!(pbar, φ, u, setup)
-#     (; grid, workgroupsize) = setup
+#     (; grid, backend, workgroupsize) = setup
 #     (; dimension, Δu, N, Iu) = grid
 #     D = dimension()
-#     e = Offset{D}()
-#     @kernel function adj!(p, φ)
+#     e = Offset(D)
+#     @kernel function applypressure_adjoint_kernel!(p, φ)
 #         I = @index(Global, Cartesian)
 #         p[I] = zero(eltype(p))
 #         for α = 1:D
@@ -233,7 +242,7 @@ end
 #             I ∈ Iu[α] && (p[I] -= φ[α][I] / Δu[α][I[α]])
 #         end
 #     end
-#     adj!(get_backend(pbar), workgroupsize)(pbar, φ; ndrange = N)
+#     applypressure_adjoint_kernel!(backend, workgroupsize)(pbar, φ; ndrange = N)
 #     pbar
 # end
 
@@ -245,10 +254,10 @@ ChainRulesCore.rrule(::typeof(laplacian), p, setup) =
 
 "Compute Laplacian of pressure field (in-place version)."
 function laplacian!(L, p, setup)
-    (; grid, workgroupsize, boundary_conditions) = setup
+    (; grid, backend, workgroupsize, boundary_conditions) = setup
     (; dimension, Δ, Δu, N, Np, Ip) = grid
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     # @kernel function lap!(L, p, I0)
     #     I = @index(Global, Cartesian)
     #     I = I + I0
@@ -306,17 +315,10 @@ function laplacian!(L, p, setup)
     ndrange = Np
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    # lap!(get_backend(L), workgroupsize)(L, p, I0; ndrange)
+    # lap!(backend, workgroupsize)(L, p, I0; ndrange)
     L .= 0
     for α = 1:D
-        lapα!(get_backend(L), workgroupsize)(
-            L,
-            p,
-            I0,
-            Val(α),
-            boundary_conditions[α];
-            ndrange,
-        )
+        lapα!(backend, workgroupsize)(L, p, I0, Val(α), boundary_conditions[α]; ndrange)
     end
     L
 end
@@ -338,136 +340,150 @@ Compute convective term (in-place version).
 Add the result to `F`.
 """
 function convection!(F, u, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Δ, Δu, Nu, Iu, A) = grid
     D = dimension()
-    e = Offset{D}()
-    @kernel function conv!(F, u, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
-        I = @index(Global, Cartesian)
-        I = I + I0
-        # for β = 1:D
-        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
-            Δuαβ = α == β ? Δu[β] : Δ[β]
-
-            # Half for u[α], (reverse!) interpolation for u[β]
-            # Note:
-            #     In matrix version, uses
-            #     1*u[α][I-e(β)] + 0*u[α][I]
-            #     instead of 1/2 when u[α][I-e(β)] is at Dirichlet boundary.
-            uαβ1 = (u[α][I-e(β)] + u[α][I]) / 2
-            uαβ2 = (u[α][I] + u[α][I+e(β)]) / 2
-            uβα1 =
-                A[β][α][2][I[α]-(α==β)] * u[β][I-e(β)] +
-                A[β][α][1][I[α]+(α!=β)] * u[β][I-e(β)+e(α)]
-            uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+e(α)]
-            F[α][I] -= (uαβ2 * uβα2 - uαβ1 * uβα1) / Δuαβ[I[β]]
-        end
-    end
+    e = Offset(D)
+    kernel = convection_kernel!(backend, workgroupsize)
     for α = 1:D
-        I0 = first(Iu[α])
-        I0 -= oneunit(I0)
-        conv!(get_backend(F[1]), workgroupsize)(F, u, Val(α), Val(1:D), I0; ndrange = Nu[α])
+        I0 = getoffset(Iu[α])
+        kernel(F, u, Δ, Δu, A, e, Val(1:D), Val(α), I0; ndrange = Nu[α])
     end
     F
 end
 
+@kernel function convection_kernel!(F, u, Δ, Δu, A, e, valdims, valα, I0)
+    dims, α = getval(valdims), getval(valα)
+    I = @index(Global, Cartesian)
+    I = I + I0
+    KernelAbstractions.Extras.LoopInfo.@unroll for β in dims
+        Δuαβ = α == β ? Δu[β] : Δ[β]
+
+        # Half for u[α], (reverse!) interpolation for u[β]
+        # Note:
+        #     In matrix version, uses
+        #     1*u[α][I-e(β)] + 0*u[α][I]
+        #     instead of 1/2 when u[α][I-e(β)] is at Dirichlet boundary.
+        uαβ1 = (u[α][I-e(β)] + u[α][I]) / 2
+        uαβ2 = (u[α][I] + u[α][I+e(β)]) / 2
+        uβα1 =
+            A[β][α][2][I[α]-(α==β)] * u[β][I-e(β)] +
+            A[β][α][1][I[α]+(α!=β)] * u[β][I-e(β)+e(α)]
+        uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+e(α)]
+        F[α][I] -= (uαβ2 * uβα2 - uαβ1 * uβα1) / Δuαβ[I[β]]
+    end
+end
+
 function convection_adjoint!(ubar, φbar, u, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Δ, Δu, N, Iu, A) = grid
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     T = eltype(u[1])
     h = T(1) / 2
-    @kernel function adj!(ubar, φbar, u, ::Val{γ}, ::Val{looprange}) where {γ,looprange}
-        J = @index(Global, Cartesian)
-        KernelAbstractions.Extras.LoopInfo.@unroll for α in looprange
-            KernelAbstractions.Extras.LoopInfo.@unroll for β in looprange
-                Δuαβ = α == β ? Δu[β] : Δ[β]
-                Aβα1 = A[β][α][1]
-                Aβα2 = A[β][α][2]
+    kernel = convection_adjoint_kernel!(backend, workgroupsize)
+    for γ = 1:D
+        kernel(ubar, φbar, u, Δ, Δu, Iu, A, h, e, Val(1:D), Val(γ); ndrange = N)
+    end
+    ubar
+end
 
-                # 1
-                I = J
-                if α == γ && I in Iu[α]
-                    uαβ2 = h
-                    uβα2 = Aβα2[I[α]] * u[β][I] + Aβα1[I[α]+1] * u[β][I+e(α)]
-                    dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
-                    ubar[γ][J] += φbar[α][I] * dφdu
-                end
+@kernel function convection_adjoint_kernel!(
+    ubar,
+    φbar,
+    u,
+    Δ,
+    Δu,
+    Iu,
+    A,
+    h,
+    e,
+    valdims,
+    valγ,
+)
+    dims, γ = getval(valdims), getval(valγ)
+    J = @index(Global, Cartesian)
+    KernelAbstractions.Extras.LoopInfo.@unroll for α in dims
+        KernelAbstractions.Extras.LoopInfo.@unroll for β in dims
+            Δuαβ = α == β ? Δu[β] : Δ[β]
+            Aβα1 = A[β][α][1]
+            Aβα2 = A[β][α][2]
 
-                # 2
-                I = J - e(β)
-                if α == γ && I in Iu[α]
-                    uαβ2 = h
-                    uβα2 = Aβα2[I[α]] * u[β][I] + Aβα1[I[α]+1] * u[β][I+e(α)]
-                    dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
-                    ubar[γ][J] += φbar[α][I] * dφdu
-                end
+            # 1
+            I = J
+            if α == γ && I in Iu[α]
+                uαβ2 = h
+                uβα2 = Aβα2[I[α]] * u[β][I] + Aβα1[I[α]+1] * u[β][I+e(α)]
+                dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
+                ubar[γ][J] += φbar[α][I] * dφdu
+            end
 
-                # 3
-                I = J
-                if β == γ && I in Iu[α]
-                    uαβ2 = h * u[α][I] + h * u[α][I+e(β)]
-                    uβα2 = Aβα2[I[α]]
-                    dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
-                    ubar[γ][J] += φbar[α][I] * dφdu
-                end
+            # 2
+            I = J - e(β)
+            if α == γ && I in Iu[α]
+                uαβ2 = h
+                uβα2 = Aβα2[I[α]] * u[β][I] + Aβα1[I[α]+1] * u[β][I+e(α)]
+                dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
+                ubar[γ][J] += φbar[α][I] * dφdu
+            end
 
-                # 4
-                I = J - e(α)
-                if β == γ && I in Iu[α]
-                    uαβ2 = h * u[α][I] + h * u[α][I+e(β)]
-                    uβα2 = Aβα1[I[α]+1]
-                    dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
-                    ubar[γ][J] += φbar[α][I] * dφdu
-                end
+            # 3
+            I = J
+            if β == γ && I in Iu[α]
+                uαβ2 = h * u[α][I] + h * u[α][I+e(β)]
+                uβα2 = Aβα2[I[α]]
+                dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
+                ubar[γ][J] += φbar[α][I] * dφdu
+            end
 
-                # 5
-                I = J + e(β)
-                if α == γ && I in Iu[α]
-                    uαβ1 = h
-                    uβα1 =
-                        Aβα2[I[α]-(α==β)] * u[β][I-e(β)] +
-                        Aβα1[I[α]+(α!=β)] * u[β][I-e(β)+e(α)]
-                    dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
-                    ubar[γ][J] += φbar[α][I] * dφdu
-                end
+            # 4
+            I = J - e(α)
+            if β == γ && I in Iu[α]
+                uαβ2 = h * u[α][I] + h * u[α][I+e(β)]
+                uβα2 = Aβα1[I[α]+1]
+                dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
+                ubar[γ][J] += φbar[α][I] * dφdu
+            end
 
-                # 6
-                I = J
-                if α == γ && I in Iu[α]
-                    uαβ1 = h
-                    uβα1 =
-                        Aβα2[I[α]-(α==β)] * u[β][I-e(β)] +
-                        Aβα1[I[α]+(α!=β)] * u[β][I-e(β)+e(α)]
-                    dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
-                    ubar[γ][J] += φbar[α][I] * dφdu
-                end
+            # 5
+            I = J + e(β)
+            if α == γ && I in Iu[α]
+                uαβ1 = h
+                uβα1 =
+                    Aβα2[I[α]-(α==β)] * u[β][I-e(β)] + Aβα1[I[α]+(α!=β)] * u[β][I-e(β)+e(α)]
+                dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
+                ubar[γ][J] += φbar[α][I] * dφdu
+            end
 
-                # 7
-                I = J + e(β)
-                if β == γ && I in Iu[α]
-                    uαβ1 = h * u[α][I-e(β)] + h * u[α][I]
-                    uβα1 = Aβα2[I[α]-(α==β)]
-                    dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
-                    ubar[γ][J] += φbar[α][I] * dφdu
-                end
+            # 6
+            I = J
+            if α == γ && I in Iu[α]
+                uαβ1 = h
+                uβα1 =
+                    Aβα2[I[α]-(α==β)] * u[β][I-e(β)] + Aβα1[I[α]+(α!=β)] * u[β][I-e(β)+e(α)]
+                dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
+                ubar[γ][J] += φbar[α][I] * dφdu
+            end
 
-                # 8
-                I = J + e(β) - e(α)
-                if β == γ && I in Iu[α]
-                    uαβ1 = h * u[α][I-e(β)] + h * u[α][I]
-                    uβα1 = Aβα1[I[α]+(α!=β)]
-                    dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
-                    ubar[γ][J] += φbar[α][I] * dφdu
-                end
+            # 7
+            I = J + e(β)
+            if β == γ && I in Iu[α]
+                uαβ1 = h * u[α][I-e(β)] + h * u[α][I]
+                uβα1 = Aβα2[I[α]-(α==β)]
+                dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
+                ubar[γ][J] += φbar[α][I] * dφdu
+            end
+
+            # 8
+            I = J + e(β) - e(α)
+            if β == γ && I in Iu[α]
+                uαβ1 = h * u[α][I-e(β)] + h * u[α][I]
+                uβα1 = Aβα1[I[α]+(α!=β)]
+                dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
+                ubar[γ][J] += φbar[α][I] * dφdu
             end
         end
     end
-    for γ = 1:D
-        adj!(get_backend(u[1]), workgroupsize)(ubar, φbar, u, Val(γ), Val(1:D); ndrange = N)
-    end
-    ubar
 end
 
 "Compute diffusive term (differentiable version)."
@@ -482,17 +498,26 @@ ChainRulesCore.rrule(::typeof(diffusion), u, setup) = (
     ),
 )
 
-@kernel function diffusion_kernel!(
-    F,
-    u,
-    visc,
-    e,
-    Δ,
-    Δu,
-    ::Val{α},
-    ::Val{βrange},
-    I0,
-) where {α,βrange}
+"""
+Compute diffusive term (in-place version).
+Add the result to `F`.
+"""
+function diffusion!(F, u, setup)
+    (; grid, backend, workgroupsize, Re) = setup
+    (; dimension, Δ, Δu, Nu, Iu) = grid
+    D = dimension()
+    e = Offset(D)
+    visc = 1 / Re
+    kernel = diffusion_kernel!(backend, workgroupsize)
+    for α = 1:D
+        I0 = getoffset(Iu[α])
+        kernel(F, u, visc, e, Δ, Δu, Val(1:D), Val(α), I0; ndrange = Nu[α])
+    end
+    F
+end
+
+@kernel function diffusion_kernel!(F, u, visc, e, Δ, Δu, valβrange, valα, I0)
+    βrange, α = getval(valβrange), getval(valα)
     I = @index(Global, Cartesian)
     I = I + I0
     KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
@@ -505,71 +530,45 @@ ChainRulesCore.rrule(::typeof(diffusion), u, setup) = (
     end
 end
 
-"""
-Compute diffusive term (in-place version).
-Add the result to `F`.
-"""
-function diffusion!(F, u, setup)
-    (; grid, workgroupsize, Re, backend) = setup
-    (; dimension, Δ, Δu, Nu, Iu) = grid
-    D = dimension()
-    e = Offset{D}()
-    visc = 1 / Re
-    for α = 1:D
-        I0 = first(Iu[α])
-        I0 -= oneunit(I0)
-        diffusion_kernel!(backend, workgroupsize)(
-            F,
-            u,
-            visc,
-            e,
-            Δ,
-            Δu,
-            Val(α),
-            Val(1:D),
-            I0;
-            ndrange = Nu[α],
-        )
-    end
-    F
-end
-
 function diffusion_adjoint!(u, φ, setup)
-    (; grid, workgroupsize, Re) = setup
+    (; grid, backend, workgroupsize, Re) = setup
     (; dimension, N, Δ, Δu, Iu) = grid
     D = dimension()
-    e = Offset{D}()
-    ν = 1 / Re
-    @kernel function adj!(u, φ, ::Val{α}, ::Val{βrange}) where {α,βrange}
-        I = @index(Global, Cartesian)
-        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
-            Δuαβ = α == β ? Δu[β] : Δ[β]
-            # F[α][I] += ν * u[α][I+e(β)] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
-            # F[α][I] -= ν * u[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
-            # F[α][I] -= ν * u[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
-            # F[α][I] += ν * u[α][I-e(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
-            val = zero(eltype(u[1]))
-            if I - e(β) ∈ Iu[α]
-                val +=
-                    ν * φ[α][I-e(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]-1]
-            end
-            if I ∈ Iu[α]
-                val -= ν * φ[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]]
-            end
-            if I ∈ Iu[α]
-                val -= ν * φ[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]]
-            end
-            if I + e(β) ∈ Iu[α]
-                val +=
-                    ν * φ[α][I+e(β)] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]+1]
-            end
-            u[α][I] += val
-        end
-    end
+    e = Offset(D)
+    visc = 1 / Re
+    kernel = diffusion_adjoint_kernel!(backend, workgroupsize)
     for α = 1:D
-        adj!(get_backend(u[1]), workgroupsize)(u, φ, Val(α), Val(1:D); ndrange = N)
+        kernel(u, φ, visc, e, Δ, Δu, Iu, Val(1:D), Val(α); ndrange = N)
     end
     u
+end
+
+@kernel function diffusion_adjoint_kernel!(u, φ, visc, e, Δ, Δu, Iu, valβrange, valα)
+    βrange, α = getval(valβrange), getval(valα)
+    I = @index(Global, Cartesian)
+    KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
+        Δuαβ = α == β ? Δu[β] : Δ[β]
+        # F[α][I] += visc * u[α][I+e(β)] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
+        # F[α][I] -= visc * u[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
+        # F[α][I] -= visc * u[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
+        # F[α][I] += visc * u[α][I-e(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
+        val = zero(eltype(u[1]))
+        if I - e(β) ∈ Iu[α]
+            val +=
+                visc * φ[α][I-e(β)] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]-1]
+        end
+        if I ∈ Iu[α]
+            val -= visc * φ[α][I] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]]
+        end
+        if I ∈ Iu[α]
+            val -= visc * φ[α][I] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]]
+        end
+        if I + e(β) ∈ Iu[α]
+            val +=
+                visc * φ[α][I+e(β)] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]+1]
+        end
+        u[α][I] += val
+    end
 end
 
 # "Compute convective and diffusive terms (differentiable version)."
@@ -589,35 +588,37 @@ Compute convective and diffusive terms (in-place version).
 Add the result to `F`.
 """
 function convectiondiffusion!(F, u, setup)
-    (; grid, workgroupsize, Re) = setup
+    (; grid, backend, workgroupsize, Re) = setup
     (; dimension, Δ, Δu, Nu, Iu, A) = grid
     D = dimension()
-    e = Offset{D}()
-    ν = 1 / Re
-    @kernel function cd!(F, u, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
-        I = @index(Global, Cartesian)
-        I = I + I0
-        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
-            Δuαβ = α == β ? Δu[β] : Δ[β]
-            uαβ1 = (u[α][I-e(β)] + u[α][I]) / 2
-            uαβ2 = (u[α][I] + u[α][I+e(β)]) / 2
-            uβα1 =
-                A[β][α][2][I[α]-(α==β)] * u[β][I-e(β)] +
-                A[β][α][1][I[α]+(α!=β)] * u[β][I-e(β)+e(α)]
-            uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+e(α)]
-            uαuβ1 = uαβ1 * uβα1
-            uαuβ2 = uαβ2 * uβα2
-            ∂βuα1 = (u[α][I] - u[α][I-e(β)]) / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
-            ∂βuα2 = (u[α][I+e(β)] - u[α][I]) / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
-            F[α][I] += (ν * (∂βuα2 - ∂βuα1) - (uαuβ2 - uαuβ1)) / Δuαβ[I[β]]
-        end
-    end
+    e = Offset(D)
+    visc = 1 / Re
+    kernel = convection_diffusion_kernel!(backend, workgroupsize)
     for α = 1:D
-        I0 = first(Iu[α])
-        I0 -= oneunit(I0)
-        cd!(get_backend(F[1]), workgroupsize)(F, u, Val(α), Val(1:D), I0; ndrange = Nu[α])
+        I0 = getoffset(Iu[α])
+        kernel(F, u, visc, Δ, Δu, A, e, Val(1:D), Val(α), I0; ndrange = Nu[α])
     end
     F
+end
+
+@kernel function convection_diffusion_kernel!(F, u, visc, Δ, Δu, A, e, valdims, valα, I0)
+    I = @index(Global, Cartesian)
+    I = I + I0
+    α = getval(valα)
+    KernelAbstractions.Extras.LoopInfo.@unroll for β in getval(valdims)
+        Δuαβ = α == β ? Δu[β] : Δ[β]
+        uαβ1 = (u[α][I-e(β)] + u[α][I]) / 2
+        uαβ2 = (u[α][I] + u[α][I+e(β)]) / 2
+        uβα1 =
+            A[β][α][2][I[α]-(α==β)] * u[β][I-e(β)] +
+            A[β][α][1][I[α]+(α!=β)] * u[β][I-e(β)+e(α)]
+        uβα2 = A[β][α][2][I[α]] * u[β][I] + A[β][α][1][I[α]+1] * u[β][I+e(α)]
+        uαuβ1 = uαβ1 * uβα1
+        uαuβ2 = uαβ2 * uβα2
+        ∂βuα1 = (u[α][I] - u[α][I-e(β)]) / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
+        ∂βuα2 = (u[α][I+e(β)] - u[α][I]) / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
+        F[α][I] += (visc * (∂βuα2 - ∂βuα1) - (uαuβ2 - uαuβ1)) / Δuαβ[I[β]]
+    end
 end
 
 """
@@ -639,36 +640,37 @@ Compute convection-diffusion term for the temperature equation.
 Add result to `c`.
 """
 function convection_diffusion_temp!(c, u, temp, setup)
-    (; grid, workgroupsize, temperature) = setup
+    (; grid, backend, workgroupsize, temperature) = setup
     (; dimension, Δ, Δu, Np, Ip) = grid
     (; α4) = temperature
     D = dimension()
-    e = Offset{D}()
-    @kernel function conv!(c, u, temp, ::Val{βrange}, I0) where {βrange}
-        I = @index(Global, Cartesian)
-        I = I + I0
-        cI = zero(eltype(c))
-        KernelAbstractions.Extras.LoopInfo.@unroll for β in βrange
-            ∂T∂x1 = (temp[I] - temp[I-e(β)]) / Δu[β][I[β]-1]
-            ∂T∂x2 = (temp[I+e(β)] - temp[I]) / Δu[β][I[β]]
-            uT1 = u[β][I-e(β)] * avg(temp, Δ, I - e(β), β)
-            uT2 = u[β][I] * avg(temp, Δ, I, β)
-            cI += (-(uT2 - uT1) + α4 * (∂T∂x2 - ∂T∂x1)) / Δ[β][I[β]]
-        end
-        c[I] += cI
-    end
-    I0 = first(Ip)
-    I0 -= oneunit(I0)
-    conv!(get_backend(c), workgroupsize)(c, u, temp, Val(1:D), I0; ndrange = Np)
+    e = Offset(D)
+    I0 = getoffset(Ip)
+    kernel = convection_diffusion_temp_kernel!(backend, workgroupsize)
+    kernel(c, u, temp, α4, Δ, Δu, e, Val(1:D), I0; ndrange = Np)
     c
 end
 
+@kernel function convection_diffusion_temp_kernel!(c, u, temp, α4, Δ, Δu, e, valdims, I0)
+    I = @index(Global, Cartesian)
+    I = I + I0
+    cI = zero(eltype(c))
+    KernelAbstractions.Extras.LoopInfo.@unroll for β in getval(valdims)
+        ∂T∂x1 = (temp[I] - temp[I-e(β)]) / Δu[β][I[β]-1]
+        ∂T∂x2 = (temp[I+e(β)] - temp[I]) / Δu[β][I[β]]
+        uT1 = u[β][I-e(β)] * avg(temp, Δ, I - e(β), β)
+        uT2 = u[β][I] * avg(temp, Δ, I, β)
+        cI += (-(uT2 - uT1) + α4 * (∂T∂x2 - ∂T∂x1)) / Δ[β][I[β]]
+    end
+    c[I] += cI
+end
+
 # function convection_diffusion_temp_pullback(u, temp, setup)
-#     (; grid, workgroupsize, temperature) = setup
+#     (; grid, backend, workgroupsize, temperature) = setup
 #     (; dimension, Δ, Δu, Np, Ip) = grid
 #     (; α4) = temperature
 #     D = dimension()
-#     e = Offset{D}()
+#     e = Offset(D)
 #     @kernel function pullback_u!(du, φ, u, temp, ::Val{βrange}, I0) where {βrange}
 #         I = @index(Global, Cartesian)
 #         I = I + I0
@@ -684,7 +686,7 @@ end
 #     end
 #     I0 = first(Ip)
 #     I0 -= oneunit(I0)
-#     conv!(get_backend(c), workgroupsize)(c, u, temp, Val(1:D), I0; ndrange = Np)
+#     conv!(backend, workgroupsize)(c, u, temp, Val(1:D), I0; ndrange = Np)
 #     function pullback(φ)
 #         (NoTangent(), du, dtemp, NoTangent())
 #     end
@@ -694,7 +696,7 @@ end
 #     (; grid, workgroupsize, temperature) = setup
 #     (; dimension, Δ, Np, Ip) = grid
 #     D = dimension()
-#     e = Offset{D}()
+#     e = Offset(D)
 #     @inline ∂2(u, α, β, I) = ((u[α][I+e(β)] - u[α][I]) / Δ[β][I])^2 / 2
 #     @inline Φ(u, α, β, I) = -∂2(u, α, β, I) - ∂2(u, α, β, I+e(β))
 #     @kernel function diss!(d, u, ::Val{βrange}, I0) where {βrange}
@@ -712,12 +714,11 @@ end
 dissipation(u, setup) = dissipation!(zero(u[1]), zero.(u), u, setup)
 
 function ChainRulesCore.rrule(::typeof(dissipation), u, setup)
-    (; grid, workgroupsize, Re, temperature) = setup
+    (; grid, backend, workgroupsize, Re, temperature) = setup
     (; dimension, Δ, N, Np, Ip) = grid
     (; α1, γ) = temperature
     D = dimension()
-    e = Offset{D}()
-    backend = get_backend(u[1])
+    e = Offset(D)
     d, d_pb = ChainRulesCore.rrule(diffusion, u, setup)
     φ = dissipation!(zero(u[1]), d, u, setup)
     @kernel function ∂φ!(ubar, dbar, φbar, d, u, ::Val{βrange}) where {βrange}
@@ -761,11 +762,11 @@ Compute dissipation term for the temperature equation (in-place version).
 Add result to `diss`.
 """
 function dissipation!(diss, diff, u, setup)
-    (; grid, workgroupsize, Re, temperature) = setup
+    (; grid, backend, workgroupsize, Re, temperature) = setup
     (; dimension, Δ, Np, Ip) = grid
     (; α1, γ) = temperature
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     fill!.(diff, 0)
     diffusion!(diff, u, setup)
     @kernel function interpolate!(diss, diff, u, I0, ::Val{βrange}) where {βrange}
@@ -779,14 +780,7 @@ function dissipation!(diss, diff, u, setup)
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    interpolate!(get_backend(diss), workgroupsize)(
-        diss,
-        diff,
-        u,
-        I0,
-        Val(1:D);
-        ndrange = Np,
-    )
+    interpolate!(backend, workgroupsize)(diss, diff, u, I0, Val(1:D); ndrange = Np)
     diss
 end
 
@@ -802,21 +796,20 @@ ChainRulesCore.rrule(::typeof(dissipation_from_strain), u, setup) =
 
 "Compute dissipation term from strain-rate tensor (in-place version)."
 function dissipation_from_strain!(ϵ, u, setup)
-    (; grid, workgroupsize, Re) = setup
-    (; dimension, Δ, Δu, Np, Ip) = grid
-    D = dimension()
-    e = Offset{D}()
-    ν = 1 / Re
-    @kernel function diss!(ϵ, u, I0)
-        I = @index(Global, Cartesian)
-        I = I + I0
-        S = strain(u, I, Δ, Δu)
-        ϵ[I] = 2 * ν * sum(S .* S)
-    end
-    I0 = first(Ip)
-    I0 -= oneunit(I0)
-    diss!(get_backend(u[1]), workgroupsize)(ϵ, u, I0; ndrange = Np)
+    (; grid, backend, workgroupsize, Re) = setup
+    (; Δ, Δu, Np, Ip) = grid
+    visc = 1 / Re
+    I0 = getoffset(Ip)
+    kernel = dissipation_from_strain_kernel!(backend, workgroupsize)
+    kernel(ϵ, u, visc, Δ, Δu, I0; ndrange = Np)
     ϵ
+end
+
+@kernel function dissipation_from_strain_kernel!(ϵ, u, visc, Δ, Δu, I0)
+    I = @index(Global, Cartesian)
+    I = I + I0
+    S = strain(u, I, Δ, Δu)
+    ϵ[I] = 2 * visc * sum(S .* S)
 end
 
 "Compute body force (differentiable version)."
@@ -866,12 +859,12 @@ gravity(temp, setup) =
     gravity!(ntuple(α -> zero(temp), setup.grid.dimension()), temp, setup)
 
 function ChainRulesCore.rrule(::typeof(gravity), temp, setup)
-    (; grid, workgroupsize, temperature) = setup
+    (; grid, backend, workgroupsize, temperature) = setup
     (; dimension, Δ, N, Iu) = grid
     (; gdir, α2) = temperature
     backend = get_backend(temp)
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     g = gravity(temp, setup)
     function gravity_pullback(φ)
         @kernel function g!(tempbar, φbar, ::Val{α}) where {α}
@@ -897,11 +890,11 @@ Compute gravity term (in-place version).
 add the result to `F`.
 """
 function gravity!(F, temp, setup)
-    (; grid, workgroupsize, temperature) = setup
+    (; grid, backend, workgroupsize, temperature) = setup
     (; dimension, Δ, Nu, Iu) = grid
     (; gdir, α2) = temperature
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     @kernel function g!(F, temp, ::Val{gdir}, I0) where {gdir}
         I = @index(Global, Cartesian)
         I = I + I0
@@ -909,7 +902,7 @@ function gravity!(F, temp, setup)
     end
     I0 = first(Iu[gdir])
     I0 -= oneunit(I0)
-    g!(get_backend(F[1]), workgroupsize)(F, temp, Val(gdir), I0; ndrange = Nu[gdir])
+    g!(backend, workgroupsize)(F, temp, Val(gdir), I0; ndrange = Nu[gdir])
     F
 end
 
@@ -979,10 +972,10 @@ vorticity!(ω, u, setup) = vorticity!(setup.grid.dimension, ω, u, setup)
 
 # 2D version
 function vorticity!(::Dimension{2}, ω, u, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Δu, N) = grid
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     @kernel function ω!(ω, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
@@ -991,16 +984,16 @@ function vorticity!(::Dimension{2}, ω, u, setup)
     end
     I0 = CartesianIndex(ntuple(Returns(1), D))
     I0 -= oneunit(I0)
-    ω!(get_backend(ω), workgroupsize)(ω, u, I0; ndrange = N .- 1)
+    ω!(backend, workgroupsize)(ω, u, I0; ndrange = N .- 1)
     ω
 end
 
 # 3D version
 function vorticity!(::Dimension{3}, ω, u, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Δu, N) = grid
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     @kernel function ω!(ω, u, I0)
         T = eltype(ω)
         I = @index(Global, Cartesian)
@@ -1015,11 +1008,11 @@ function vorticity!(::Dimension{3}, ω, u, setup)
     end
     I0 = CartesianIndex(ntuple(Returns(1), D))
     I0 -= oneunit(I0)
-    ω!(get_backend(ω[1]), workgroupsize)(ω, u, I0; ndrange = N .- 1)
+    ω!(backend, workgroupsize)(ω, u, I0; ndrange = N .- 1)
     ω
 end
 
-@inline ∂x(uα, I::CartesianIndex{D}, α, β, Δβ, Δuβ; e = Offset{D}()) where {D} =
+@inline ∂x(uα, I::CartesianIndex{D}, α, β, Δβ, Δuβ; e = Offset(D)) where {D} =
     α == β ? (uα[I] - uα[I-e(β)]) / Δβ[I[β]] :
     (
         (uα[I+e(β)] - uα[I]) / Δuβ[I[β]] +
@@ -1048,19 +1041,19 @@ The Smagorinsky constant `θ` should be a scalar between `0` and `1`.
 """
 function smagtensor!(σ, u, θ, setup)
     # TODO: Combine with normal diffusion tensor
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; Np, Ip, Δ, Δu) = grid
     @kernel function σ!(σ, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
         S = strain(u, I, Δ, Δu)
         d = gridsize(Δ, I)
-        νt = θ^2 * d^2 * sqrt(2 * sum(S .* S))
-        σ[I] = 2 * νt * S
+        eddyvisc = θ^2 * d^2 * sqrt(2 * sum(S .* S))
+        σ[I] = 2 * eddyvisc * S
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    σ!(get_backend(u[1]), workgroupsize)(σ, u, I0; ndrange = Np)
+    σ!(backend, workgroupsize)(σ, u, I0; ndrange = Np)
     σ
 end
 
@@ -1070,10 +1063,10 @@ in the pressure points (in-place version).
 The stress tensors should be precomputed and stored in `σ`.
 """
 function divoftensor!(s, σ, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Nu, Iu, Δ, Δu, A) = grid
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     @kernel function s!(s, σ, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
         I = @index(Global, Cartesian)
         I = I + I0
@@ -1107,7 +1100,7 @@ function divoftensor!(s, σ, setup)
     for α = 1:D
         I0 = first(Iu[α])
         I0 -= oneunit(I0)
-        s!(get_backend(s[1]), workgroupsize)(s, σ, Val(α), Val(1:D), I0; ndrange = Nu[α])
+        s!(backend, workgroupsize)(s, σ, Val(α), Val(1:D), I0; ndrange = Nu[α])
     end
     s
 end
@@ -1151,7 +1144,7 @@ as specified in [Silvis2017](@cite) in equations (9) and (11).
 Note that `B[1]` corresponds to ``T_0`` in the paper, and `V` to ``I``.
 """
 function tensorbasis!(B, V, u, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; Np, Ip, Δ, Δu, dimension) = grid
     D = dimension()
     @kernel function basis2!(B, V, u, I0)
@@ -1192,7 +1185,7 @@ function tensorbasis!(B, V, u, setup)
     I0 = first(Ip)
     I0 -= oneunit(I0)
     basis! = D == 2 ? basis2! : basis3!
-    basis!(get_backend(u[1]), workgroupsize)(B, V, u, I0; ndrange = Np)
+    basis!(backend, workgroupsize)(B, V, u, I0; ndrange = Np)
     B, V
 end
 
@@ -1201,10 +1194,10 @@ interpolate_u_p(u, setup) = interpolate_u_p!(vectorfield(setup), u, setup)
 
 "Interpolate velocity to pressure points (in-place version)."
 function interpolate_u_p!(up, u, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     @kernel function int!(up, u, ::Val{α}, I0) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
@@ -1213,7 +1206,7 @@ function interpolate_u_p!(up, u, setup)
     for α = 1:D
         I0 = first(Ip)
         I0 -= oneunit(I0)
-        int!(get_backend(up[1]), workgroupsize)(up, u, Val(α), I0; ndrange = Np)
+        int!(backend, workgroupsize)(up, u, Val(α), I0; ndrange = Np)
     end
     up
 end
@@ -1230,10 +1223,10 @@ interpolate_ω_p!(ωp, ω, setup) = interpolate_ω_p!(setup.grid.dimension, ωp,
 
 # 2D version
 function interpolate_ω_p!(::Dimension{2}, ωp, ω, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     @kernel function int!(ωp, ω, I0)
         I = @index(Global, Cartesian)
         I = I + I0
@@ -1241,16 +1234,16 @@ function interpolate_ω_p!(::Dimension{2}, ωp, ω, setup)
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    int!(get_backend(ωp), workgroupsize)(ωp, ω, I0; ndrange = Np)
+    int!(backend, workgroupsize)(ωp, ω, I0; ndrange = Np)
     ωp
 end
 
 # 3D version
 function interpolate_ω_p!(::Dimension{3}, ωp, ω, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     @kernel function int!(ωp, ω, ::Val{α}, I0) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
@@ -1261,7 +1254,7 @@ function interpolate_ω_p!(::Dimension{3}, ωp, ω, setup)
     I0 = first(Ip)
     I0 -= oneunit(I0)
     for α = 1:D
-        int!(get_backend(ωp[1]), workgroupsize)(ωp, ω, Val(α), I0; ndrange = Np)
+        int!(backend, workgroupsize)(ωp, ω, Val(α), I0; ndrange = Np)
     end
     ωp
 end
@@ -1283,11 +1276,11 @@ ChainRulesCore.rrule(::typeof(Dfield), p, setup; kwargs...) =
 
 "Compute the ``D``-field (in-place version)."
 function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Np, Ip, Δ) = grid
     T = eltype(p)
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     @kernel function D!(d, G, p, I0)
         I = @index(Global, Cartesian)
         I = I + I0
@@ -1314,7 +1307,7 @@ function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
     pressuregradient!(G, p, setup)
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    D!(get_backend(p), workgroupsize)(d, G, p, I0; ndrange = Np)
+    D!(backend, workgroupsize)(d, G, p, I0; ndrange = Np)
     d
 end
 
@@ -1335,10 +1328,10 @@ ChainRulesCore.rrule(::typeof(Qfield), u, setup) =
 
 "Compute the ``Q``-field (in-place version)."
 function Qfield!(Q, u, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Np, Ip, Δ) = grid
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     @kernel function Q!(Q, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
@@ -1352,7 +1345,7 @@ function Qfield!(Q, u, setup)
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    Q!(get_backend(u[1]), workgroupsize)(Q, u, I0; ndrange = Np)
+    Q!(backend, workgroupsize)(Q, u, I0; ndrange = Np)
     Q
 end
 
@@ -1366,7 +1359,7 @@ eig2field(u, setup) = eig2field!(scalarfield(setup), u, setup)
 
 "Compute the second eigenvalue of ``S^2 + R^2`` (in-place version)."
 function eig2field!(λ, u, setup)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Np, Ip, Δ, Δu) = grid
     D = dimension()
     @assert D == 3 "eig2 only implemented in 3D"
@@ -1381,7 +1374,7 @@ function eig2field!(λ, u, setup)
     end
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    λ!(get_backend(u[1]), workgroupsize)(λ, u, I0; ndrange = Np)
+    λ!(backend, workgroupsize)(λ, u, I0; ndrange = Np)
     λ
 end
 
@@ -1411,10 +1404,10 @@ ChainRulesCore.rrule(::typeof(kinetic_energy), u, setup; kwargs...) =
 
 "Compute kinetic energy field (in-place version)."
 function kinetic_energy!(ke, u, setup; interpolate_first = false)
-    (; grid, workgroupsize) = setup
+    (; grid, backend, workgroupsize) = setup
     (; dimension, Np, Ip) = grid
     D = dimension()
-    e = Offset{D}()
+    e = Offset(D)
     @kernel function efirst!(ke, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
@@ -1438,7 +1431,7 @@ function kinetic_energy!(ke, u, setup; interpolate_first = false)
     ke! = interpolate_first ? efirst! : elast!
     I0 = first(Ip)
     I0 -= oneunit(I0)
-    ke!(get_backend(u[1]), workgroupsize)(ke, u, I0; ndrange = Np)
+    ke!(backend, workgroupsize)(ke, u, I0; ndrange = Np)
     ke
 end
 
@@ -1469,7 +1462,7 @@ function get_scale_numbers(u, setup)
     (; dimension, Iu, Ip, Δ, Δu) = grid
     D = dimension()
     T = eltype(u[1])
-    ν = 1 / Re
+    visc = 1 / Re
     Ω = scalewithvolume!(fill!(scalarfield(setup), 1), setup)
     uavg =
         sum(1:D) do α
@@ -1483,9 +1476,9 @@ function get_scale_numbers(u, setup)
         end |> sqrt
     ϵ = dissipation_from_strain(u, setup)
     ϵ = sum((Ω.*ϵ)[Ip]) / sum(Ω[Ip])
-    η = (ν^3 / ϵ)^T(1 / 4)
-    λ = sqrt(5ν / ϵ) * uavg
-    Reλ = λ * uavg / sqrt(T(3)) / ν
+    η = (visc^3 / ϵ)^T(1 / 4)
+    λ = sqrt(5 * visc / ϵ) * uavg
+    Reλ = λ * uavg / sqrt(T(3)) / visc
     # TODO: L and τ
     L = nothing
     τ = nothing
