@@ -21,12 +21,9 @@ outdir = joinpath(@__DIR__, "output", "PlaneJets2D")
 # Floating point type
 T = Float64
 
-# Array type
-ArrayType = Array
-## using CUDA; ArrayType = CuArray
-## using AMDGPU; ArrayType = ROCArray
-## using oneAPI; ArrayType = oneArray
-## using Metal; ArrayType = MtlArray
+# Backend
+backend = CPU()
+## using CUDA; backend = CUDABackend()
 
 # Reynolds number
 Re = T(6_000)
@@ -82,8 +79,8 @@ x = LinRange(T(0), T(16), 4n + 1), LinRange(-T(10), T(10), 5n + 1)
 plotgrid(x...)
 
 # Build setup and assemble operators
-setup = Setup(x, Re, ArrayType);
-## setup = Setup(; x, Re, boundary_conditions, ArrayType);
+setup = Setup(x, Re, backend);
+## setup = Setup(; x, Re, boundary_conditions, backend);
 
 # Initial conditions
 ustart = velocityfield(setup, (dim, x, y) -> dim == 1 ? U(x, y) : zero(x));

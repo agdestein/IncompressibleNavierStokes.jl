@@ -110,7 +110,7 @@ T = Float32
 if CUDA.functional()
     ## For running on a CUDA compatible GPU
     @info "Running on CUDA"
-    ArrayType = CuArray
+    backend = CUDABackend()
     CUDA.allowscalar(false)
     device = x -> adapt(CuArray, x)
     clean() = (GC.gc(); CUDA.reclaim())
@@ -119,7 +119,7 @@ else
     ## Consider reducing the sizes of DNS, LES, and CNN layers if
     ## you want to test run on a laptop.
     @warn "Running on CPU"
-    ArrayType = Array
+    backend = CPU()
     device = identity
     clean() = nothing
 end
@@ -141,7 +141,7 @@ params = (;
     ndns = 4096,
     nles = [32, 64, 128, 256],
     filters = (FaceAverage(), VolumeAverage()),
-    ArrayType,
+    backend,
     icfunc = (setup, psolver, rng) -> random_field(setup, T(0); kp = 20, psolver, rng),
     method = RKMethods.Wray3(; T),
     bodyforce = (dim, x, y, t) -> (dim == 1) * 5 * sinpi(8 * y),

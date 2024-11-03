@@ -67,7 +67,7 @@ end
 getsetup(; params, nles) = Setup(;
     x = ntuple(α -> range(params.lims..., nles + 1), params.D),
     params.Re,
-    params.ArrayType,
+    params.backend,
     params.bodyforce,
     params.issteadybodyforce,
 )

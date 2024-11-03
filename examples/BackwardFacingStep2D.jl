@@ -21,12 +21,9 @@ outdir = joinpath(@__DIR__, "output", "BackwardFacingStep2D")
 # Floating point type
 T = Float64
 
-# Array type
-ArrayType = Array
-## using CUDA; ArrayType = CuArray
-## using AMDGPU; ArrayType = ROCArray
-## using oneAPI; ArrayType = oneArray
-## using Metal; ArrayType = MtlArray
+# Backend
+backend = CPU()
+## using CUDA; backend = CUDABackend()
 
 # Reynolds number
 Re = T(3_000)
@@ -48,7 +45,7 @@ x = LinRange(T(0), T(10), 301), cosine_grid(-T(0.5), T(0.5), 51)
 plotgrid(x...; figure = (; size = (600, 150)))
 
 # Build setup and assemble operators
-setup = Setup(; x, Re, boundary_conditions, ArrayType);
+setup = Setup(; x, Re, boundary_conditions, backend);
 
 # Initial conditions (extend inflow)
 ustart = velocityfield(setup, (dim, x, y) -> U(dim, x, y, zero(x)));

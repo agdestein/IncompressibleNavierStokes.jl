@@ -124,7 +124,7 @@ function create_les_data(;
     Δt = nothing,
     method = RKMethods.RK44(; T = typeof(Re)),
     create_psolver = default_psolver,
-    ArrayType = Array,
+    backend = CPU(),
     icfunc = (setup, psolver, rng) -> random_field(setup, typeof(Re)(0); psolver, rng),
     processors = (; log = timelogger(; nupdate = 10)),
     rng,
@@ -136,12 +136,12 @@ function create_les_data(;
     @assert all(==(ndns), compression .* nles)
 
     # Build setup and assemble operators
-    dns = Setup(; x = ntuple(α -> LinRange(lims..., ndns + 1), D), Re, ArrayType, kwargs...)
+    dns = Setup(; x = ntuple(α -> LinRange(lims..., ndns + 1), D), Re, backend, kwargs...)
     les = map(
         nles -> Setup(;
             x = ntuple(α -> LinRange(lims..., nles + 1), D),
             Re,
-            ArrayType,
+            backend,
             kwargs...,
         ),
         nles,

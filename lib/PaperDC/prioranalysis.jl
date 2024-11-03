@@ -53,11 +53,11 @@ using Random
 if CUDA.functional()
     ## For running on GPU
     CUDA.allowscalar(false)
-    ArrayType = CuArray
+    backend = CUDABackend()
     clean() = (GC.gc(); CUDA.reclaim()) # This seems to be needed to free up memory
 else
     ## For running on CPU
-    ArrayType = Array
+    backend = CPU()
     clean() = nothing
 end
 
@@ -113,7 +113,7 @@ dns = let
         case.Re,
         case.bodyforce,
         case.issteadybodyforce,
-        ArrayType,
+        backend,
     )
     psolver = default_psolver(setup)
     (; setup, psolver)
@@ -125,7 +125,7 @@ filters = map(Iterators.product(case.nles, case.filterdefs)) do (nles, Φ)
         case.Re,
         case.bodyforce,
         case.issteadybodyforce,
-        ArrayType,
+        backend,
     )
     psolver = default_psolver(setup)
     (; setup, Φ, compression, psolver)

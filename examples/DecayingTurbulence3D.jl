@@ -12,12 +12,12 @@ using IncompressibleNavierStokes
 
 # ## Problem setup
 
-ArrayType = Array
-## using CUDA; ArrayType = CuArray
+backend = CPU()
+## using CUDA; backend = CUDABackend()
 T = Float32
 n = 128
 ax = range(T(0), T(1), n + 1)
-setup = Setup(; x = (ax, ax, ax), Re = T(4e3), ArrayType);
+setup = Setup(; x = (ax, ax, ax), Re = T(4e3), backend);
 psolver = default_psolver(setup);
 ustart = random_field(setup; psolver);
 

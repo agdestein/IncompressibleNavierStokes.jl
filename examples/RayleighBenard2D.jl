@@ -10,10 +10,10 @@ using IncompressibleNavierStokes
 outdir = joinpath(@__DIR__, "output", "RayleighBenard2D")
 
 # Hardware
-ArrayType = Array
+backend = CPU()
 
 ## using CUDA, CUDSS
-## ArrayType = CuArray
+## backend = CUDABackend()
 
 # Define observer function to track Nusselt numbers
 # on top and bottom plates.
@@ -95,7 +95,7 @@ setup = Setup(;
     boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
     Re = 1 / temperature.α1,
     temperature,
-    ArrayType,
+    backend,
 );
 
 # Initial conditions

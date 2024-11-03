@@ -6,12 +6,12 @@ using SymmetryClosure
 using LinearAlgebra
 
 T = Float64
-ArrayType = Array
+backend = CPU()
 n = 64
 setup = Setup(;
     x = (LinRange(T(0), T(1), n + 1), LinRange(T(0), T(1), n + 1)),
     Re = T(2000),
-    ArrayType,
+    backend,
 );
 psolver = psolver_spectral(setup);
 ustart = random_field(setup, T(0); psolver);

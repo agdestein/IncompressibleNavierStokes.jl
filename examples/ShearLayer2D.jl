@@ -18,12 +18,9 @@ outdir = joinpath(@__DIR__, "output", "ShearLayer2D")
 # Floating point type
 T = Float64
 
-# Array type
-ArrayType = Array
-## using CUDA; ArrayType = CuArray
-## using AMDGPU; ArrayType = ROCArray
-## using oneAPI; ArrayType = oneArray
-## using Metal; ArrayType = MtlArray
+# Backend
+backend = CPU()
+## using CUDA; backend = CUDABackend()
 
 # Reynolds number
 Re = T(2000)
@@ -35,7 +32,7 @@ x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
 plotgrid(x...)
 
 # Build setup and assemble operators
-setup = Setup(; x, Re, ArrayType);
+setup = Setup(; x, Re, backend);
 
 # Initial conditions: We add 1 to u in order to make global momentum
 # conservation less trivial

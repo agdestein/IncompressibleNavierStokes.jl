@@ -1,11 +1,11 @@
 # GPU Support
 
-IncompressibleNavierStokes supports various array types. The desired array type
+IncompressibleNavierStokes supports various array types. The desired backend
 only has to be passed to the [`Setup`](@ref) function:
 
 ```julia
 using CUDA
-setup = Setup(; kwargs..., ArrayType = CuArray)
+setup = Setup(; kwargs..., backend = CUDABackend())
 ```
 
 All operators have been

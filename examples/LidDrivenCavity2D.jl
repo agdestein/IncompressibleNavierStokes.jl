@@ -35,16 +35,13 @@ T = Float32
 ## T = Float16
 
 # We can also choose to do the computations on a different device. By default,
-# the computations are performed on the host (CPU). An optional `ArrayType`
+# the computations are performed on the host (CPU). An optional `backend`
 # allows for moving arrays to a different device such as a GPU.
 #
 # Note: For GPUs, single precision is preferred.
 
-ArrayType = Array
-## using CUDA; ArrayType = CuArray
-## using AMDGPU; ArrayType = ROCArray
-## using oneAPI; ArrayType = oneArray
-## using Metal; ArrayType = MtlArray
+backend = CPU()
+## using CUDA; backend = CUDABackend()
 
 # Here we choose a moderate Reynolds number. Note how we pass the floating point type.
 Re = T(1_000)
@@ -69,7 +66,7 @@ plotgrid(x...)
 
 # We can now build the setup and assemble operators.
 # A 3D setup is built if we also provide a vector of z-coordinates.
-setup = Setup(; x, boundary_conditions, Re, ArrayType);
+setup = Setup(; x, boundary_conditions, Re, backend);
 
 # The initial conditions are provided in function. The value `dim()` determines
 # the velocity component.
