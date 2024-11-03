@@ -2,6 +2,7 @@
     using ChainRulesCore
     using ChainRulesTestUtils
 
+    # Test chain rule correctness by comparing with finite differences
     "Use function name only as test set name"
     test_rrule_named(f, args...; kwargs...) =
         test_rrule(f, args...; testset_name = string(f), kwargs...)
@@ -70,43 +71,45 @@ end
     end
 end
 
-@testitem "divergence" setup = [Case, ChainRulesStuff] begin
+@testitem "Divergence" setup = [Case, ChainRulesStuff] begin
     test_rrule_named(divergence, Case.D2.u, Case.D2.setup ⊢ NoTangent())
     test_rrule_named(divergence, Case.D3.u, Case.D3.setup ⊢ NoTangent())
 end
 
-@testitem "pressuregradient" setup = [Case, ChainRulesStuff] begin
+@testitem "Pressuregradient" setup = [Case, ChainRulesStuff] begin
     test_rrule_named(pressuregradient, Case.D2.p, Case.D2.setup ⊢ NoTangent())
     test_rrule_named(pressuregradient, Case.D3.p, Case.D3.setup ⊢ NoTangent())
 end
 
-@testitem "poisson" setup = [Case, ChainRulesStuff] begin
+@testitem "Poisson" setup = [Case, ChainRulesStuff] begin
     test_rrule_named(poisson, Case.D2.psolver ⊢ NoTangent(), Case.D2.p)
     test_rrule_named(poisson, Case.D3.psolver ⊢ NoTangent(), Case.D3.p)
 end
 
-@testitem "convection" setup = [Case, ChainRulesStuff] begin
+@testitem "Convection" setup = [Case, ChainRulesStuff] begin
     test_rrule_named(convection, Case.D2.u, Case.D2.setup ⊢ NoTangent())
     test_rrule_named(convection, Case.D3.u, Case.D3.setup ⊢ NoTangent())
 end
 
-@testitem "diffusion" setup = [Case, ChainRulesStuff] begin
+@testitem "Diffusion" setup = [Case, ChainRulesStuff] begin
     test_rrule_named(diffusion, Case.D2.u, Case.D2.setup ⊢ NoTangent())
     test_rrule_named(diffusion, Case.D3.u, Case.D3.setup ⊢ NoTangent())
 end
 
-@testitem "Chain rules (operators)" setup = [Case, ChainRulesStuff] begin
-    # Test chain rule correctness by comparing with finite differences
+@testitem "Temperature" setup = [Case, ChainRulesStuff] begin
+    for case in (Case.D2, Case.D3)
+        (; u, temp, setup) = case
 
-    @test_broken 1 == 2 # Just to identify location for broken rrule test
-    # test_rrule_named(bodyforce, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
+        @test_broken 1 == 2 # Just to identify location for broken rrule test
+        # test_rrule_named(bodyforce, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
 
-    test_rrule_named(gravity, temp, setup ⊢ NoTangent())
+        test_rrule_named(gravity, temp, setup ⊢ NoTangent())
 
-    @test_broken 1 == 2 # Just to identify location for broken rrule test
-    # test_rrule_named(dissipation, u, setup ⊢ NoTangent())
-    # ChainRulesCore.rrule(dissipation, u, setup)[2](temp)[2][2]
+        @test_broken 1 == 2 # Just to identify location for broken rrule test
+        # test_rrule_named(dissipation, u, setup ⊢ NoTangent())
+        # ChainRulesCore.rrule(dissipation, u, setup)[2](temp)[2][2]
 
-    @test_broken 1 == 2 # Just to identify location for broken rrule test
-    # test_rrule_named(convection_diffusion_temp, u, temp, setup ⊢ NoTangent())
+        @test_broken 1 == 2 # Just to identify location for broken rrule test
+        # test_rrule_named(convection_diffusion_temp, u, temp, setup ⊢ NoTangent())
+    end
 end
