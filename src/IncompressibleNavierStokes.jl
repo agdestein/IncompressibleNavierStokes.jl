@@ -73,8 +73,6 @@ include("utils.jl")
 include("time_steppers/methods.jl")
 include("time_steppers/time_stepper_caches.jl")
 include("time_steppers/step.jl")
-include("time_steppers/isexplicit.jl")
-include("time_steppers/lambda_max.jl")
 include("time_steppers/RKMethods.jl")
 
 # Precompile workflow
