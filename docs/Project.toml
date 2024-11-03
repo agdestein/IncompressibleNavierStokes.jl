@@ -7,14 +7,10 @@ IncompressibleNavierStokes = "5e318141-6589-402b-868d-77d7df8c442e"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 NeuralClosure = "099dac27-d7f2-4047-93d5-0baee36b9c25"
 
-[sources.Examples]
-path = "../examples"
-
-[sources.IncompressibleNavierStokes]
-path = ".."
-
-[sources.NeuralClosure]
-path = "../lib/NeuralClosure"
+[sources]
+Examples = {path = "../examples"}
+IncompressibleNavierStokes = {path = ".."}
+NeuralClosure = {path = "../lib/NeuralClosure"}
 
 [compat]
 Documenter = "1"
