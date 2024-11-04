@@ -73,6 +73,14 @@ function collocate(u)
     #     v = (v + circshift(v, ntuple(β -> α == β ? -1 : 0, D + 1))) / 2
     # end
     if D == 2
+        # TODO: Check if this is more efficient as
+        #   a convolution with the two channel kernels
+        #   [1 1; 0 0] / 2
+        #   and
+        #   [0 1; 0 1] / 2
+        # TODO: Maybe skip this step entirely and learn the
+        #   collocation function subject to the skewness
+        #   constraint (left-skewed kernel from staggered right face to center)
         a = selectdim(u, 3, 1)
         b = selectdim(u, 3, 2)
         a = (a .+ circshift(a, (1, 0, 0))) ./ 2
