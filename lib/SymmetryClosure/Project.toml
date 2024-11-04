@@ -23,10 +23,10 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
-[sources.IncompressibleNavierStokes] 
+[sources.IncompressibleNavierStokes]
 path = "../.."
 
-[sources.NeuralClosure] 
+[sources.NeuralClosure]
 path = "../NeuralClosure"
 
 [compat]
@@ -36,7 +36,7 @@ CairoMakie = "0.12"
 ComponentArrays = "0.15"
 FFTW = "1.8"
 GLMakie = "0.10"
-IncompressibleNavierStokes = "2"
+IncompressibleNavierStokes = "1"
 JLD2 = "0.5"
 LinearAlgebra = "1"
 Lux = "1"
