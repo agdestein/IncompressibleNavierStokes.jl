@@ -15,6 +15,7 @@ using DocStringExtensions
 using FFTW
 using IterativeSolvers
 using KernelAbstractions
+using KernelAbstractions.Extras.LoopInfo: @unroll
 using LinearAlgebra
 using Makie
 using NNlib
@@ -72,8 +73,6 @@ include("utils.jl")
 include("time_steppers/methods.jl")
 include("time_steppers/time_stepper_caches.jl")
 include("time_steppers/step.jl")
-include("time_steppers/isexplicit.jl")
-include("time_steppers/lambda_max.jl")
 include("time_steppers/RKMethods.jl")
 
 # Precompile workflow
@@ -95,6 +94,7 @@ export fieldplot, energy_history_plot, energy_spectrum_plot
 
 # Setup
 export Setup, temperature_equation, scalarfield, vectorfield
+export CPU # TODO: This annoys Documenter, need to include this docstring somehow
 
 # 1D grids
 export stretched_grid, cosine_grid, tanh_grid
