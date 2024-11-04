@@ -38,7 +38,7 @@ function lesdatagen(dnsobs, Φ, les, compression, psolver)
     FΦ = vectorfield(les)
     ΦF = vectorfield(les)
     c = vectorfield(les)
-    results = (; u = fill(Array.(Φu), 0), c = fill(Array.(c), 0))
+    results = (; u = fill(Array(Φu), 0), c = fill(Array(c), 0))
     temp = nothing
     on(dnsobs) do (; u, F, t)
         Φ(Φu, u, les, compression)
@@ -47,11 +47,9 @@ function lesdatagen(dnsobs, Φ, les, compression, psolver)
         momentum!(FΦ, Φu, temp, t, les)
         apply_bc_u!(FΦ, t, les; dudt = true)
         project!(FΦ, les; psolver, p)
-        for α = 1:length(u)
-            c[α] .= ΦF[α] .- FΦ[α]
-        end
-        push!(results.u, Array.(Φu))
-        push!(results.c, Array.(c))
+        @. c = ΦF - FΦ
+        push!(results.u, Array(Φu))
+        push!(results.c, Array(c))
     end
     results
 end
@@ -226,7 +224,7 @@ function create_io_arrays(data, setup)
             for it = 1:nt, α = 1:D
                 copyto!(
                     view(u, colons..., α, it),
-                    view(getfield(trajectory, usym)[it][α], Iu[α]),
+                    view(getfield(trajectory, usym)[it], Iu[α], α),
                 )
             end
             u

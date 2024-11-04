@@ -1,37 +1,14 @@
 """
 Wrap closure model and parameters so that it can be used in the solver.
 """
-function wrappedclosure(m, setup)
-    (; dimension, Iu) = setup.grid
-    D = dimension()
-    # function neuralclosure(u)
-    #     u = stack(ntuple(α -> u[α][Iu[α]], D))
-    #     u = reshape(u, size(u)..., 1) # One sample
-    #     mu = m(u, θ)
-    #     mu = pad_circular(mu, 1)
-    #     sz..., _ = size(mu)
-    #     i = ntuple(Returns(:), D)
-    #     mu = ntuple(α -> mu[i..., α, 1], D)
-    # end
-    neuralclosure(u, θ) =
-        if D == 2
-            u = cat(u[1][Iu[1]], u[2][Iu[2]]; dims = 3)
-            u = reshape(u, size(u)..., 1) # One sample
-            # u = collocate(u)
-            mu = m(u, θ)
-            # mu = decollocate(mu)
-            mu = pad_circular(mu, 1)
-            mu = (mu[:, :, 1, 1], mu[:, :, 2, 1])
-        elseif D == 3
-            u = cat(u[1][Iu[1]], u[2][Iu[2]], u[3][Iu[3]]; dims = 4)
-            u = reshape(u, size(u)..., 1) # One sample
-            # u = collocate(u)
-            mu = m(u, θ)
-            # mu = decollocate(mu)
-            mu = pad_circular(mu, 1)
-            mu = (mu[:, :, :, 1, 1], mu[:, :, :, 2, 1], mu[:, :, :, 3, 1])
-        end
-end
+wrappedclosure(m) =
+    function neuralclosure(u, θ)
+        s = size(u)
+        u = reshape(u, s..., 1) # Add sample dim
+        mu = m(u, θ)
+        mu = pad_circular(mu, 1)
+        mu = reshape(mu, s) # Remove sample dim
+    end
 
 """
 Create neural closure model from layers.

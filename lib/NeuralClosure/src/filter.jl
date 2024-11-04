@@ -24,32 +24,31 @@ struct VolumeAverage <: AbstractFilter end
     Φ(vectorfield(setup_les), u, setup_les, compression)
 
 function (::FaceAverage)(v, u, setup_les, comp)
-    (; grid, workgroupsize) = setup_les
+    (; grid, backend, workgroupsize) = setup_les
     (; Nu, Iu) = grid
     D = length(u)
     @kernel function Φ!(v, u, ::Val{α}, face, I0) where {α}
         I = @index(Global, Cartesian)
         J = I0 + comp * (I - oneunit(I))
-        s = zero(eltype(v[α]))
+        s = zero(eltype(v))
         for i in face
-            s += u[α][J+i]
+            s += u[J+i, α]
         end
-        v[α][I0+I] = s / comp^(D - 1)
+        v[I0+I, α] = s / comp^(D - 1)
     end
     for α = 1:D
         ndrange = Nu[α]
-        I0 = first(Iu[α])
-        I0 -= oneunit(I0)
+        I0 = getoffset(Iu[α])
         face = CartesianIndices(ntuple(β -> β == α ? (comp:comp) : (1:comp), D))
-        Φ!(get_backend(v[1]), workgroupsize)(v, u, Val(α), face, I0; ndrange)
+        Φ!(backend, workgroupsize)(v, u, Val(α), face, I0; ndrange)
     end
     v
 end
 
 "Reconstruct DNS velocity `u` from LES velocity `v`."
 function reconstruct!(u, v, setup_dns, setup_les, comp)
-    (; grid, boundary_conditions, workgroupsize) = setup_les
-    (; N, Iu) = grid
+    (; grid, boundary_conditions, backend, workgroupsize) = setup_les
+    (; N) = grid
     D = length(u)
     e = Offset(D)
     @assert all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions)
@@ -61,15 +60,15 @@ function reconstruct!(u, v, setup_dns, setup_les, comp)
         Jleft.I[α] == 1 && (Jleft += (N[α] - 2) * e(α))
         for i in volume
             s = zero(eltype(v[α]))
-            s += (comp - i.I[α]) * v[α][J]
-            s += i.I[α] * v[α][Jleft]
-            u[α][I-i] = s / comp
+            s += (comp - i.I[α]) * v[J, α]
+            s += i.I[α] * v[Jleft, α]
+            u[I-i, α] = s / comp
         end
     end
     for α = 1:D
         ndrange = N .- 2
         volume = CartesianIndices(ntuple(β -> 0:comp-1, D))
-        R!(get_backend(v[1]), workgroupsize)(u, v, Val(α), volume; ndrange)
+        R!(backend, workgroupsize)(u, v, Val(α), volume; ndrange)
     end
     u
 end
@@ -79,7 +78,7 @@ reconstruct(v, setup_dns, setup_les, comp) =
     reconstruct!(vectorfield(setup_dns), v, setup_dns, setup_les, comp)
 
 function (::VolumeAverage)(v, u, setup_les, comp)
-    (; grid, boundary_conditions, workgroupsize) = setup_les
+    (; grid, boundary_conditions, backend, workgroupsize) = setup_les
     (; N, Nu, Iu) = grid
     D = length(u)
     @assert all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions)
@@ -93,16 +92,15 @@ function (::VolumeAverage)(v, u, setup_les, comp)
             K = J + i
             K = mod1.(K.I, comp .* (N .- 2))
             K = CartesianIndex(K)
-            s += u[α][K]
+            s += u[K, α]
             # n += 1
         end
         n = (iseven(comp) ? comp + 1 : comp) * comp^(D - 1)
-        v[α][I0+I] = s / n
+        v[I0+I, α] = s / n
     end
     for α = 1:D
         ndrange = Nu[α]
-        I0 = first(Iu[α])
-        I0 -= oneunit(I0)
+        I0 = getoffset(Iu[α])
         volume = CartesianIndices(
             ntuple(
                 β ->
@@ -112,7 +110,7 @@ function (::VolumeAverage)(v, u, setup_les, comp)
                 D,
             ),
         )
-        Φ!(get_backend(v[1]), workgroupsize)(v, u, Val(α), volume, I0; ndrange)
+        Φ!(backend, workgroupsize)(v, u, Val(α), volume, I0; ndrange)
     end
     v
 end
