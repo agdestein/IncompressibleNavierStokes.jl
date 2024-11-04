@@ -82,7 +82,7 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
         end
 
         # Add closure term
-        isnothing(m) || (F = F .+ m(u, θ))
+        isnothing(m) || (F = F + m(u, θ))
 
         # Store right-hand side of stage i
         ku = (ku..., F)

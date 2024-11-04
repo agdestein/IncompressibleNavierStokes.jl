@@ -46,19 +46,17 @@ function IncompressibleNavierStokes.timestep!(
     cache,
 )
     (; setup, psolver, u, temp, t, n) = stepper
-    (; grid, closure_model) = setup
-    (; dimension, Iu) = grid
+    (; closure_model) = setup
     (; rk, projectorder) = method
     (; A, b, c) = rk
-    (; u₀, ku, p) = cache
-    D = dimension()
+    (; ustart, ku, p) = cache
     nstage = length(b)
     m = closure_model
     @assert projectorder ∈ instances(ProjectOrder.T) "Unknown projectorder: $projectorder"
 
     # Update current solution
-    t₀ = t
-    copyto!.(u₀, u)
+    tstart = t
+    copyto!(ustart, u)
 
     for i = 1:nstage
         # Compute force at current stage i
@@ -72,7 +70,7 @@ function IncompressibleNavierStokes.timestep!(
         end
 
         # Add closure term
-        isnothing(m) || map((k, m) -> k .+= m, ku[i], m(u, θ))
+        isnothing(m) || (ku[i] .+= m(u, θ))
 
         # Project F second
         if projectorder == ProjectOrder.Second
@@ -81,15 +79,12 @@ function IncompressibleNavierStokes.timestep!(
         end
 
         # Intermediate time step
-        t = t₀ + c[i] * Δt
+        t = tstart + c[i] * Δt
 
         # Apply stage forces
-        for α = 1:D
-            u[α] .= u₀[α]
-            for j = 1:i
-                @. u[α] += Δt * A[i, j] * ku[j][α]
-                # @. u[α][Iu[α]] += Δt * A[i, j] * ku[j][α][Iu[α]]
-            end
+        u .= ustart
+        for j = 1:i
+            @. u += Δt * A[i, j] * ku[j]
         end
 
         # Project stage u directly
@@ -110,18 +105,16 @@ end
 
 function IncompressibleNavierStokes.timestep(method::RKProject, stepper, Δt; θ = nothing)
     (; setup, psolver, u, temp, t, n) = stepper
-    (; grid, closure_model) = setup
-    (; dimension) = grid
+    (; closure_model) = setup
     (; rk, projectorder) = method
     (; A, b, c) = rk
-    D = dimension()
     nstage = length(b)
     m = closure_model
     @assert projectorder ∈ instances(ProjectOrder.T) "Unknown projectorder: $projectorder"
 
     # Update current solution (does not depend on previous step size)
-    t₀ = t
-    u₀ = u
+    tstart = t
+    ustart = u
     ku = ()
 
     for i = 1:nstage
@@ -136,7 +129,7 @@ function IncompressibleNavierStokes.timestep(method::RKProject, stepper, Δt; θ
         end
 
         # Add closure term
-        isnothing(m) || (F = F .+ m(u, θ))
+        isnothing(m) || (F = F + m(u, θ))
 
         # Project F second
         if projectorder == ProjectOrder.Second
@@ -148,13 +141,12 @@ function IncompressibleNavierStokes.timestep(method::RKProject, stepper, Δt; θ
         ku = (ku..., F)
 
         # Intermediate time step
-        t = t₀ + c[i] * Δt
+        t = tstart + c[i] * Δt
 
         # Apply stage forces
-        u = u₀
+        u = ustart
         for j = 1:i
             u = @. u + Δt * A[i, j] * ku[j]
-            # u = tupleadd(u, @.(Δt * A[i, j] * ku[j]))
         end
 
         # Project stage u directly

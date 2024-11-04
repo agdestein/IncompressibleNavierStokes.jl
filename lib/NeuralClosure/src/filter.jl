@@ -25,8 +25,8 @@ struct VolumeAverage <: AbstractFilter end
 
 function (::FaceAverage)(v, u, setup_les, comp)
     (; grid, backend, workgroupsize) = setup_les
-    (; Nu, Iu) = grid
-    D = length(u)
+    (; dimension, Nu, Iu) = grid
+    D = dimension()
     @kernel function Φ!(v, u, ::Val{α}, face, I0) where {α}
         I = @index(Global, Cartesian)
         J = I0 + comp * (I - oneunit(I))
@@ -48,8 +48,8 @@ end
 "Reconstruct DNS velocity `u` from LES velocity `v`."
 function reconstruct!(u, v, setup_dns, setup_les, comp)
     (; grid, boundary_conditions, backend, workgroupsize) = setup_les
-    (; N) = grid
-    D = length(u)
+    (; dimension, N) = grid
+    D = dimension()
     e = Offset(D)
     @assert all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions)
     @kernel function R!(u, v, ::Val{α}, volume) where {α}
@@ -79,13 +79,13 @@ reconstruct(v, setup_dns, setup_les, comp) =
 
 function (::VolumeAverage)(v, u, setup_les, comp)
     (; grid, boundary_conditions, backend, workgroupsize) = setup_les
-    (; N, Nu, Iu) = grid
-    D = length(u)
+    (; dimension, N, Nu, Iu) = grid
+    D = dimension()
     @assert all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions)
     @kernel function Φ!(v, u, ::Val{α}, volume, I0) where {α}
         I = @index(Global, Cartesian)
         J = I0 + comp * (I - oneunit(I))
-        s = zero(eltype(v[α]))
+        s = zero(eltype(v))
         # n = 0
         for i in volume
             # Periodic extension

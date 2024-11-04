@@ -8,6 +8,7 @@ using ComponentArrays: ComponentArray
 using DocStringExtensions
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: Dimension, momentum!, apply_bc_u!, project!
+using JLD2
 using KernelAbstractions
 using LinearAlgebra
 using Lux

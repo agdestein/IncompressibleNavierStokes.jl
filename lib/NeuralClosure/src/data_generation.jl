@@ -57,7 +57,7 @@ end
 """
 Save filtered DNS data.
 """
-filtersaver(
+function filtersaver(
     dns,
     les,
     filters,
@@ -65,12 +65,12 @@ filtersaver(
     psolver_dns,
     psolver_les;
     nupdate = 1,
+    filenames,
     F = vectorfield(dns),
     p = scalarfield(dns),
-) =
-    processor(
-        (results, state) -> (; results..., comptime = time() - results.comptime),
-    ) do state
+)
+    @assert isnothing(filenames) || length(filenames) == length(les) * length(filters)
+    function initialize(state)
         comptime = time()
         t = fill(state[].t, 0)
         dnsobs = Observable((; state[].u, F, state[].t))
@@ -105,6 +105,20 @@ filtersaver(
         state[] = state[] # Save initial conditions
         results
     end
+    function finalize(results, state)
+        comptime = time() - results.comptime
+        (; data, t) = results
+        map(enumerate(data)) do (i, data)
+            (; u, c) = data
+            u = stack(u)
+            c = stack(c)
+            results = (; u, c, t, comptime)
+            isnothing(filenames) || jldsave(filenames[i]; results...)
+            results
+        end
+    end
+    processor(initialize, finalize)
+end
 
 """
 Create filtered DNS data.
@@ -126,6 +140,7 @@ function create_les_data(;
     icfunc = (setup, psolver, rng) -> random_field(setup, typeof(Re)(0); psolver, rng),
     processors = (; log = timelogger(; nupdate = 10)),
     rng,
+    filenames = nothing,
     kwargs...,
 )
     T = typeof(Re)
@@ -194,6 +209,7 @@ function create_les_data(;
                 psolver,
                 psolver_les;
                 nupdate = savefreq,
+                filenames,
 
                 # Reuse arrays from cache to save memory in 3D DNS.
                 # Since processors are called outside
@@ -224,7 +240,7 @@ function create_io_arrays(data, setup)
             for it = 1:nt, α = 1:D
                 copyto!(
                     view(u, colons..., α, it),
-                    view(getfield(trajectory, usym)[it], Iu[α], α),
+                    view(getfield(trajectory, usym), Iu[α], α, it),
                 )
             end
             u

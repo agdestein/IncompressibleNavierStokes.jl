@@ -3,14 +3,14 @@ function observe_v(dnsobs, Φ, les, compression, psolver)
     (; dimension, N, Iu, Ip) = grid
     D = dimension()
     Mα = N[1] - 2
-    v = zero.(Φ(dnsobs[].u, les, compression))
-    Pv = zero.(v)
-    p = zero(v[1])
-    div = zero(p)
-    ΦPF = zero.(v)
-    PFΦ = zero.(v)
-    c = zero.(v)
-    T = eltype(v[1])
+    v = vectorfield(les)
+    Pv = vectorfield(les)
+    p = scalarfield(les)
+    div = scalarfield(les)
+    ΦPF = vectorfield(les)
+    PFΦ = vectorfield(les)
+    c = vectorfield(les)
+    T = eltype(v)
     results = (;
         Φ,
         Mα,
@@ -30,28 +30,28 @@ function observe_v(dnsobs, Φ, les, compression, psolver)
         momentum!(PFΦ, v, nothing, t, les)
         apply_bc_u!(PFΦ, t, les; dudt = true)
         project!(PFΦ, les; psolver, p)
-        foreach(α -> c[α] .= ΦPF[α] .- PFΦ[α], 1:D)
+        @. c = ΦPF - PFΦ
         apply_bc_u!(c, t, les)
         divergence!(div, v, les)
         norm_Du = norm(div[Ip])
-        norm_v = sqrt(sum(α -> sum(abs2, v[α][Iu[α]]), 1:D))
+        norm_v = sqrt(sum(α -> sum(abs2, v[Iu[α], α]), 1:D))
         push!(results.Dv, norm_Du / norm_v)
 
-        copyto!.(Pv, v)
+        copyto!(Pv, v)
         project!(Pv, les; psolver, p)
-        foreach(α -> Pv[α] .= Pv[α] .- v[α], 1:D)
-        norm_vmPv = sqrt(sum(α -> sum(abs2, Pv[α][Iu[α]]), 1:D))
+        @. Pv = Pv - v
+        norm_vmPv = sqrt(sum(α -> sum(abs2, Pv[Iu[α], α]), 1:D))
         push!(results.Pv, norm_vmPv / norm_v)
 
         Pc = Pv
-        copyto!.(Pc, c)
+        copyto!(Pc, c)
         project!(Pc, les; psolver, p)
-        foreach(α -> Pc[α] .= Pc[α] .- c[α], 1:D)
-        norm_cmPc = sqrt(sum(α -> sum(abs2, Pc[α][Iu[α]]), 1:D))
-        norm_c = sqrt(sum(α -> sum(abs2, c[α][Iu[α]]), 1:D))
+        @. Pc = Pc - c
+        norm_cmPc = sqrt(sum(α -> sum(abs2, Pc[Iu[α], α]), 1:D))
+        norm_c = sqrt(sum(α -> sum(abs2, c[Iu[α], α]), 1:D))
         push!(results.Pc, norm_cmPc / norm_c)
 
-        norm_ΦPF = sqrt(sum(α -> sum(abs2, ΦPF[α][Iu[α]]), 1:D))
+        norm_ΦPF = sqrt(sum(α -> sum(abs2, ΦPF[Iu[α], α]), 1:D))
         push!(results.c, norm_c / norm_ΦPF)
 
         kinetic_energy!(p, v, les)

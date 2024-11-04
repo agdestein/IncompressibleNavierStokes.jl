@@ -539,7 +539,10 @@ let
         psolver = psolver_spectral(setup)
         sample = namedtupleload(getdatafile(outdir, nles, Φ, dns_seeds_test[1]))
         it = 1:20
-        data = (; u = device.(sample.u[it]), t = sample.t[it])
+        data = (;
+            u = selectdim(sample.u, ndims(sample.u), it) |> collect |> device,
+            t = sample.t[it],
+        )
         nsubstep = 5
         method = RKProject(params.method, projectorder)
         ## No model
@@ -703,7 +706,7 @@ let
         setup = getsetup(; params, nles)
         psolver = default_psolver(setup)
         sample = namedtupleload(getdatafile(outdir, nles, Φ, dns_seeds_test[1]))
-        ustart = sample.u[1] |> device
+        ustart = selectdim(sample.u, ndims(sample.u), 1) |> collect |> device
         T = eltype(ustart[1])
 
         # Shorter time for DIF
@@ -714,8 +717,11 @@ let
         divergencehistory.ref[I] = let
             div = scalarfield(setup)
             udev = vectorfield(setup)
-            map(sample.t[1:nupdate:end], sample.u[1:nupdate:end]) do t, u
-                copyto!.(udev, u)
+            it = 1:nupdate:length(sample.t)
+            map(it) do it
+                t = sample.t[it]
+                u = selectdim(sample.u, ndims(sample.u), it)
+                copyto!(udev, u)
                 IncompressibleNavierStokes.divergence!(div, udev, setup)
                 d = view(div, setup.grid.Ip)
                 d = sum(abs2, d) / length(d)
@@ -723,11 +729,16 @@ let
                 Point2f(t, d)
             end
         end
-        energyhistory.ref[I] = map(
-            (t, u) -> Point2f(t, total_kinetic_energy(device(u), setup)),
-            sample.t[1:nupdate:end],
-            sample.u[1:nupdate:end],
-        )
+        energyhistory.ref[I] = let
+            it = 1:nupdate:length(sample.t)
+            udev = vectorfield(setup)
+            map(it) do it
+                t = sample.t[it]
+                u = selectdim(sample.u, ndims(sample.u), it)
+                copyto!(udev, u)
+                Point2f(t, total_kinetic_energy(udev, setup))
+            end
+        end
 
         writer = processor() do state
             div = scalarfield(setup)
@@ -965,7 +976,7 @@ end
 
 let
     s = length(params.nles), length(params.filters), length(projectorders)
-    temp = ntuple(Returns(zeros(T, ntuple(Returns(0), params.D))), params.D)
+    temp = zeros(T, ntuple(Returns(0), params.D + 1))
     keys = [:ref, :nomodel, :smag, :cnn_prior, :cnn_post]
     times = T[0.1, 0.5, 1.0, 3.0]
     itime_max_DIF = 3
@@ -981,6 +992,7 @@ let
         psolver = default_psolver(setup)
         sample = namedtupleload(getdatafile(outdir, nles, Φ, dns_seeds_test[1]))
         ustart = sample.u[1]
+        ustart = selectdim(sample.u, ndims(sample.u), 1) |> collect
         t = sample.t
         solve(ustart, tlims, closure_model, θ) =
             solve_unsteady(;
@@ -1013,7 +1025,7 @@ let
             getprev(i, sym) = i == 1 ? ustart : utimes[i-1][sym][I]
 
             # Compute fields
-            utimes[i].ref[I] = sample.u[it]
+            utimes[i].ref[I] = selectdim(sample.u, ndims(sample.u), it) |> collect
             utimes[i].nomodel[I] = solve(getprev(i, :nomodel), tlims, nothing, nothing)
             utimes[i].smag[I] =
                 solve(getprev(i, :smag), tlims, smagorinsky_closure(setup), θ_smag[I])

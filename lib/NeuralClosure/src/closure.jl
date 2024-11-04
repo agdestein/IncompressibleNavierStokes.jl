@@ -1,14 +1,20 @@
 """
 Wrap closure model and parameters so that it can be used in the solver.
 """
-wrappedclosure(m) =
+function wrappedclosure(m, setup)
+    (; Iu) = setup.grid
+    inside = Iu[1]
+    @assert all(==(inside), Iu) "Only periodic grids are supported"
     function neuralclosure(u, θ)
         s = size(u)
-        u = reshape(u, s..., 1) # Add sample dim
+        # u = view(u, inside, :)
+        u = u[inside, :]
+        u = reshape(u, size(u)..., 1) # Add sample dim
         mu = m(u, θ)
         mu = pad_circular(mu, 1)
         mu = reshape(mu, s) # Remove sample dim
     end
+end
 
 """
 Create neural closure model from layers.
