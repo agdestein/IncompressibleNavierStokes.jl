@@ -73,8 +73,6 @@ include("utils.jl")
 include("time_steppers/methods.jl")
 include("time_steppers/time_stepper_caches.jl")
 include("time_steppers/step.jl")
-include("time_steppers/isexplicit.jl")
-include("time_steppers/lambda_max.jl")
 include("time_steppers/RKMethods.jl")
 
 # Precompile workflow
@@ -111,7 +109,7 @@ export solve_unsteady, timestep, create_stepper
 export velocityfield, temperaturefield, random_field
 
 # Utils
-export splitseed, plotgrid, save_vtk, get_lims
+export getoffset, splitseed, plotgrid, save_vtk, get_lims
 
 # ODE methods
 export AdamsBashforthCrankNicolsonMethod, OneLegMethod, RKMethods, LMWray3

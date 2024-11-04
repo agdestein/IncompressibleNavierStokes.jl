@@ -19,12 +19,8 @@
         filters = (FaceAverage(), VolumeAverage()),
     )
 
-    data = stack(splitseed(123, 3)) do seed
-        (; data, t, comptime) = create_les_data(; params..., rng = Xoshiro(seed))
-        map(data) do (; u, c)
-            (; u, c, t, comptime)
-        end
-    end
+    data =
+        stack(seed -> create_les_data(; params..., rng = Xoshiro(seed)), splitseed(123, 3))
 
     # Build LES setups and assemble operators
     setups = map(
@@ -37,9 +33,10 @@
 
     # Create input/output arrays for a-priori training (ubar vs c)
     io = map(
-        I -> create_io_arrays(data[I[1], I[2], :], setups[I[1]]),
         Iterators.product(eachindex(params.nles), eachindex(params.filters)),
-    )
+    ) do (igrid, ifil)
+        create_io_arrays(data[igrid, ifil, :], setups[igrid])
+    end
 
     m_cnn = let
         rng = Xoshiro(123)
@@ -128,7 +125,7 @@
             optstate = Optimisers.setup(opt, θ)
             d = data[ig, ifil, 1]
             it = 1:5
-            snap = (; u = d.u[it], t = d.t[it])
+            snap = (; u = selectdim(d.u, ndims(d.u), it), t = d.t[it])
             (; callbackstate, callback) = create_callback(
                 create_relerr_post(;
                     data = snap,
@@ -175,7 +172,7 @@
         psolver = psolver_spectral(setup)
         traj = data[ig, ifil, itraj]
         it = 1:5
-        snaps = (; u = traj.u[it], t = traj.t[it])
+        snaps = (; u = selectdim(traj.u, ndims(traj.u), it), t = traj.t[it])
         for (im, m) in enumerate(models)
             err = create_relerr_post(;
                 data = snaps,
@@ -212,7 +209,7 @@
             setup = (; setup..., closure_model = wrappedclosure(m.closure, setup))
             traj = data[ig, ifil, itraj]
             err = create_relerr_symmetry_post(;
-                u = traj.u[1],
+                u = selectdim(traj.u, ndims(traj.u), 1),
                 setup,
                 psolver = psolver_spectral(setup),
                 Δt = (traj.t[2] - traj.t[1]),

@@ -12,7 +12,7 @@ function cnn(;
     rng = Random.default_rng(),
 )
     r, c, σ, b = radii, channels, activations, use_bias
-    (; grid, boundary_conditions) = setup
+    (; grid) = setup
     (; dimension, x) = grid
     D = dimension()
     T = eltype(x[1])

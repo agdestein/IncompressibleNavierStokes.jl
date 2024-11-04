@@ -28,9 +28,6 @@ field, resulting in same order pressure as velocity.
 Differentiable version.
 """
 function pressure(u, temp, t, setup; psolver)
-    (; grid) = setup
-    (; dimension, Iu, Ip) = grid
-    D = dimension()
     F = momentum(u, temp, t, setup)
     F = apply_bc_u(F, t, setup; dudt = true)
     div = divergence(F, setup)
@@ -42,9 +39,6 @@ end
 
 "Compute pressure from velocity field (in-place version)."
 function pressure!(p, u, temp, t, setup; psolver, F)
-    (; grid) = setup
-    (; dimension, Iu, Ip) = grid
-    D = dimension()
     momentum!(F, u, temp, t, setup)
     apply_bc_u!(F, t, setup; dudt = true)
     divergence!(p, F, setup)
@@ -56,7 +50,7 @@ end
 
 "Project velocity field onto divergence-free space (differentiable version)."
 function project(u, setup; psolver)
-    T = eltype(u[1])
+    T = eltype(u)
 
     # Divergence of tentative velocity field
     div = divergence(u, setup)
@@ -73,7 +67,7 @@ end
 
 "Project velocity field onto divergence-free space (in-place version)."
 function project!(u, setup; psolver, p)
-    T = eltype(u[1])
+    T = eltype(u)
 
     # Divergence of tentative velocity field
     divergence!(p, u, setup)
@@ -193,9 +187,7 @@ end
 # Preconditioner
 function create_laplace_diag(setup)
     (; grid, workgroupsize) = setup
-    (; dimension, Δ, Δu, N, Np, Ip) = grid
-    D = dimension()
-    δ = Offset{D}()
+    (; Δ, Δu, Np, Ip) = grid
     @kernel function _laplace_diag!(z, p, I0)
         I = @index(Global, Cartesian)
         I = I + I0

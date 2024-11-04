@@ -3,12 +3,10 @@ create_stepper(::LMWray3; setup, psolver, u, temp, t, n = 0) =
 
 function timestep!(method::LMWray3, stepper, Δt; θ = nothing, cache)
     (; setup, psolver, u, temp, t, n) = stepper
-    (; grid, closure_model, temperature) = setup
-    (; dimension, Iu) = grid
+    (; closure_model, temperature) = setup
     (; ustart, ku, p, tempstart, ktemp, diff) = cache
-    D = dimension()
     m = closure_model
-    T = eltype(u[1])
+    T = eltype(u)
 
     # We wrap the state in x = (; u, temp), and define some
     # functions that operate on x
@@ -26,7 +24,7 @@ function timestep!(method::LMWray3, stepper, Δt; θ = nothing, cache)
         end
 
         # Add closure term
-        isnothing(m) || map((du, m) -> du .+= m, dx.u, m(u, θ))
+        isnothing(m) || (dx.u .+= m(u, θ))
 
         dx
     end
@@ -42,16 +40,14 @@ function timestep!(method::LMWray3, stepper, Δt; θ = nothing, cache)
 
     # Copy state x to y
     function state_copyto!(y, x)
-        copyto!.(y.u, x.u)
+        copyto!(y.u, x.u)
         isnothing(temp) || copyto!(y.temp, x.temp)
         y
     end
 
     # Compute y = a * x + y for states x, y
     function state_axpy!(a, x, y)
-        for α = 1:D
-            @. y.u[α] += a * x.u[α]
-        end
+        @. y.u += a * x.u
         if !isnothing(temp)
             @. y.temp += a * x.temp
         end

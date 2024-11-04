@@ -32,7 +32,7 @@ function solve_unsteady(;
     # Cache arrays for intermediate computations
     cache = ode_method_cache(method, setup),
 )
-    docopy && (ustart = copy.(ustart))
+    docopy && (ustart = copy(ustart))
     docopy && !isnothing(tempstart) && (tempstart = copy(tempstart))
 
     tstart, tend = tlims
@@ -107,14 +107,14 @@ function get_cfl_timestep!(buf, u, setup)
     Δt = eltype(u[1])(Inf)
 
     # Check maximum step size in each dimension
-    for α = 1:D
+    for (α, uα) in enumerate(eachslice(u; dims = D + 1))
         # Diffusion
         Δαmin = minimum(view(Δu[α], Iu[α].indices[α]))
         Δt_diff = Re * Δαmin^2 / 2
 
         # Convection
         Δα = reshape(Δu[α], ntuple(Returns(1), α - 1)..., :)
-        @. buf = Δα / abs(u[α])
+        @. buf = Δα / abs(uα)
         Δt_conv = minimum(view(buf, Iu[α]))
 
         # Update time step

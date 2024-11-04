@@ -201,7 +201,7 @@ case.D == 2 && with_theme() do
         apply_bc_u!(PF, T(0), dns.setup)
         ΦPF = fil.Φ(PF, fil.setup, fil.compression)
         apply_bc_u!(ΦPF, T(0), fil.setup)
-        c = ΦPF .- PFv
+        c = ΦPF - PFv
         apply_bc_u!(c, T(0), fil.setup)
 
         ## Make plots

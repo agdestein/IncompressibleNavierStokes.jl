@@ -64,7 +64,7 @@ timelogger(;
             showiter && push!(msg, "Iteration $n")
             showt && push!(msg, @sprintf("t = %g", t))
             showdt && push!(msg, @sprintf("Δt = %.2g", Δt))
-            showmax && push!(msg, @sprintf("umax = %.2g", maximum(maximum.(abs, u))))
+            showmax && push!(msg, @sprintf("umax = %.2g", maximum(abs, u)))
             showspeed && push!(msg, @sprintf("itertime = %.2g", itertime))
             @info join(msg, "\t")
         end
@@ -84,12 +84,11 @@ function observefield(
     (; dimension, Ip) = setup.grid
     (; u, temp, t) = state[]
     D = dimension()
-    T = eltype(u[1])
 
     # Initialize buffers
     _f = if fieldname in (1, 2, 3)
         up = interpolate_u_p(u, setup)
-        up[fieldname]
+        upf = selectdim(up, ndims(up), fieldname)
     elseif fieldname == :velocity
         up = interpolate_u_p(u, setup)
     elseif fieldname == :velocitynorm
@@ -131,22 +130,30 @@ function observefield(
     else
         error("Unknown fieldname")
     end
-    _f = _f isa Tuple ? map(f -> Array(f)[Ip], _f) : Array(_f)[Ip]
+    if ndims(_f) == D + 1
+        _f = Array(_f)[Ip, :]
+    elseif ndims(_f) == D
+        _f = Array(_f)[Ip]
+    else
+        error()
+    end
 
     # Observe field
     field = lift(state) do (; u, temp, t)
         f = if fieldname in (1, 2, 3)
             interpolate_u_p!(up, u, setup)
-            up[fieldname]
+            upf
         elseif fieldname == :velocity
             interpolate_u_p!(up, u, setup)
         elseif fieldname == :velocitynorm
             interpolate_u_p!(up, u, setup)
             # map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
             if D == 2
-                @. upnorm = sqrt(up[1]^2 + up[2]^2)
+                uptuple = eachslice(up; dims = ndims(up))
+                @. upnorm = sqrt(uptuple[1]^2 + uptuple[2]^2)
             elseif D == 3
-                @. upnorm = sqrt(up[1]^2 + up[2]^2 + up[3]^2)
+                uptuple = eachslice(up; dims = ndims(up))
+                @. upnorm = sqrt(uptuple[1]^2 + uptuple[2]^2 + uptuple[3]^2)
             end
         elseif fieldname == :vorticity
             apply_bc_u!(u, t, setup)
@@ -179,12 +186,12 @@ function observefield(
         elseif fieldname == :temperature
             temp
         end
-        if _f isa Tuple
-            for (_f, f) in zip(_f, f)
-                copyto!(_f, view(f, Ip))
-            end
-        else
+        if ndims(f) == D + 1
+            copyto!(_f, view(f, Ip, :))
+        elseif ndims(f) == D
             copyto!(_f, view(f, Ip))
+        else
+            error()
         end
         _f
     end
@@ -198,7 +205,6 @@ function snapshotsaver(state; setup, fieldnames = (:velocity,), psolver = nothin
     state isa Observable || (state = Observable(state))
     (; grid) = setup
     (; dimension, xp, Ip) = grid
-    D = dimension()
     xparr = getindex.(Array.(xp), Ip.indices)
     fields = map(fieldname -> observefield(state; setup, fieldname, psolver), fieldnames)
 
@@ -273,7 +279,7 @@ fieldsaver(; setup, nupdate = 1) =
         on(state) do state
             state.n % nupdate == 0 || return
             state = adapt(Array, state)
-            state.u[1] isa Array && (state = deepcopy(state))
+            state.u isa Array && (state = deepcopy(state))
             push!(states, state)
         end
         states
@@ -546,7 +552,7 @@ Create energy history plot.
 """
 function energy_history_plot(state; setup)
     @assert state isa Observable "Energy history requires observable state."
-    (; Δ, Ip) = setup.grid
+    (; Ip) = setup.grid
     e = scalarfield(setup)
     _points = Point2f[]
     points = lift(state) do (; u, t)
@@ -578,7 +584,7 @@ function observespectrum(state; setup, npoint = 100, a = typeof(setup.Re)(1 + sq
         # interpolate_u_p!(up, u, setup)
         up = u
         # TODO: Maybe preallocate e and A * e
-        e = sum(up) do u
+        e = sum(eachslice(up; dims = D + 1)) do u
             copyto!(uhat, view(u, Ip))
             fft!(uhat)
             uhathalf = view(uhat, ntuple(α -> 1:K[α], D)...)

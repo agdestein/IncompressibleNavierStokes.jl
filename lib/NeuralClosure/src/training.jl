@@ -32,7 +32,8 @@ create_dataloader_post(trajectories; ntrajectory, nunroll, device = identity) =
             @assert nt ≥ nunroll "Trajectory too short for nunroll = $nunroll"
             istart = rand(rng, 1:nt-nunroll)
             it = istart:istart+nunroll
-            (; u = device.(u[it]), t = t[it])
+            u = selectdim(u, ndims(u), it) |> Array |> device # convert view to array first
+            (; u, t = t[it])
         end
         data, rng
     end
@@ -115,25 +116,25 @@ Create a-posteriori loss function.
 function create_loss_post(; setup, method, psolver, closure, nsubstep = 1)
     closure_model = wrappedclosure(closure, setup)
     setup = (; setup..., closure_model)
-    (; dimension, Iu, x) = setup.grid
-    D = dimension()
+    (; Iu) = setup.grid
+    inside = Iu[1]
+    @assert all(==(inside), Iu)
     loss_post(data, θ) =
         sum(data) do (; u, t)
             T = eltype(θ)
-            v = u[1]
+            ules = selectdim(u, ndims(u), 1) |> collect
             stepper =
-                create_stepper(method; setup, psolver, u = v, temp = nothing, t = t[1])
+                create_stepper(method; setup, psolver, u = ules, temp = nothing, t = t[1])
             loss = zero(T)
             for it = 2:length(t)
                 Δt = (t[it] - t[it-1]) / nsubstep
                 for isub = 1:nsubstep
                     stepper = timestep(method, stepper, Δt; θ)
                 end
-                a, b = T(0), T(0)
-                for α = 1:length(u[1])
-                    a += sum(abs2, (stepper.u[α]-u[it][α])[Iu[α]])
-                    b += sum(abs2, u[it][α][Iu[α]])
-                end
+                uref = view(u, inside, :, it)
+                ules = view(stepper.u, inside, :)
+                a = sum(abs2, ules - uref)
+                b = sum(abs2, uref)
                 loss += a / b
             end
             loss / (length(t) - 1)
@@ -145,14 +146,15 @@ Create a-posteriori relative error.
 """
 function create_relerr_post(; data, setup, method, psolver, closure_model, nsubstep = 1)
     setup = (; setup..., closure_model)
-    (; dimension, Iu) = setup.grid
-    D = dimension()
+    (; Iu) = setup.grid
+    inside = Iu[1]
+    @assert all(==(inside), Iu)
     (; u, t) = data
-    v = copy.(u[1])
+    v = selectdim(u, ndims(u), 1) |> collect
     cache = IncompressibleNavierStokes.ode_method_cache(method, setup)
     function relerr_post(θ)
-        T = eltype(u[1][1])
-        copyto!.(v, u[1])
+        T = eltype(u)
+        copyto!(v, selectdim(u, ndims(u), 1))
         stepper = create_stepper(method; setup, psolver, u = v, temp = nothing, t = t[1])
         e = zero(T)
         for it = 2:length(t)
@@ -161,13 +163,10 @@ function create_relerr_post(; data, setup, method, psolver, closure_model, nsubs
                 stepper =
                     IncompressibleNavierStokes.timestep!(method, stepper, Δt; θ, cache)
             end
-            a, b = T(0), T(0)
-            for α = 1:D
-                # a += sum(abs2, (stepper.u[α]-u[it][α])[Iu[α]])
-                # b += sum(abs2, u[it][α][Iu[α]])
-                a += sum(abs2, view(stepper.u[α] - u[it][α], Iu[α]))
-                b += sum(abs2, view(u[it][α], Iu[α]))
-            end
+            uref = view(u, inside, :, it)
+            ules = view(stepper.u, inside, :)
+            a = sum(abs2, ules - uref)
+            b = sum(abs2, uref)
             e += sqrt(a) / sqrt(b)
         end
         e / (length(t) - 1)
@@ -189,15 +188,17 @@ function create_relerr_symmetry_post(;
     (; dimension, Iu) = setup.grid
     D = dimension()
     T = eltype(u[1])
+    inside = Iu[1]
+    @assert all(==(inside), Iu)
     cache = IncompressibleNavierStokes.ode_method_cache(method, setup)
     function err(θ)
         stepper =
-            create_stepper(method; setup, psolver, u = copy.(u), temp = nothing, t = T(0))
+            create_stepper(method; setup, psolver, u = copy(u), temp = nothing, t = T(0))
         stepper_rot = create_stepper(
             method;
             setup,
             psolver,
-            u = rot2stag(copy.(u), g),
+            u = rot2stag(copy(u), g),
             temp = nothing,
             t = T(0),
         )
@@ -207,11 +208,8 @@ function create_relerr_symmetry_post(;
             stepper_rot =
                 IncompressibleNavierStokes.timestep!(method, stepper_rot, Δt; θ, cache)
             u_rot = rot2stag(stepper.u, g)
-            a, b = T(0), T(0)
-            for α = 1:D
-                a += sum(abs2, view(stepper_rot.u[α] - u_rot[α], Iu[α]))
-                b += sum(abs2, view(u_rot[α], Iu[α]))
-            end
+            a = sum(abs2, view(stepper_rot.u - u_rot, inside, :))
+            b = sum(abs2, view(u_rot, inside, :))
             e += sqrt(a) / sqrt(b)
         end
         e / nstep
@@ -225,16 +223,17 @@ function create_relerr_symmetry_prior(; u, setup, g = 1)
     (; grid, closure_model) = setup
     (; dimension, Iu) = grid
     D = dimension()
-    T = eltype(u[1][1])
+    T = eltype(u[1])
+    inside = Iu[1]
+    @assert all(==(inside), Iu)
     function err(θ)
-        e = sum(u) do u
+        e = sum(eachslice(u; dims = ndims(u))) do u
             cr = closure_model(rot2stag(u, g), θ)
             rc = rot2stag(closure_model(u, θ), g)
-            a, b = T(0), T(0)
-            for α = 1:D
-                a += sum(abs2, view(rc[α] - cr[α], Iu[α]))
-                b += sum(abs2, view(cr[α], Iu[α]))
-            end
+            cr = view(cr, inside, :)
+            rc = view(rc, inside, :)
+            a = sum(abs2, rc - cr)
+            b = sum(abs2, cr)
             sqrt(a) / sqrt(b)
         end
         e / length(u)
@@ -306,6 +305,6 @@ function create_callback(
     (; callbackstate, callback)
 end
 
+getlearningrate(r) = -1 # Fallback
 getlearningrate(r::Adam) = r.eta
 getlearningrate(r::OptimiserChain{Tuple{Adam,WeightDecay}}) = r.opts[1].eta
-getlearningrate(r) = -1

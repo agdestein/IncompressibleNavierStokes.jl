@@ -11,18 +11,19 @@ createdata(; params, seeds, outdir, taskid) =
             @info "Skipping seed $(repr(seed)) for task $taskid"
             continue
         end
-        (; data, t, comptime) = create_les_data(; params..., rng = Xoshiro(seed))
-        @info("Trajectory info:", comptime / 60, length(t), Base.summarysize(data) * 1e-9,)
-        for (ifilter, Φ) in enumerate(params.filters),
-            (igrid, nles) in enumerate(params.nles)
-
-            (; u, c) = data[igrid, ifilter]
+        filenames = map(Iterators.product(params.nles, params.filters)) do nles, Φ
             f = getdatafile(outdir, nles, Φ, seed)
             datadir = dirname(f)
             ispath(datadir) || mkpath(datadir)
-            @info "Saving data to $f"
-            jldsave(f; u, c, t, comptime)
+            f
         end
+        data = create_les_data(; params..., rng = Xoshiro(seed), filenames)
+        @info(
+            "Trajectory info:",
+            data[1].comptime / 60,
+            length(data[1].t),
+            Base.summarysize(data) * 1e-9,
+        )
     end
 
 getpriorfile(outdir, nles, filter) =
@@ -236,7 +237,8 @@ function trainpost(;
         (; callbackstate, callback) = let
             d = data_valid[1]
             it = 1:nunroll_valid
-            data = (; u = device.(d.u[it]), t = d.t[it])
+            data =
+                (; u = selectdim(d.u, ndims(d.u), it) |> collect |> device, t = d.t[it])
             create_callback(
                 create_relerr_post(;
                     data,
@@ -322,7 +324,7 @@ function trainsmagorinsky(;
         psolver = default_psolver(setup)
         d = namedtupleload(getdatafile(outdir, nles, Φ, dns_seeds_train[1]))
         it = 1:nunroll
-        data = (; u = device.(d.u[it]), t = d.t[it])
+        data = (; u = selectdim(d.u, ndims(d.u), it) |> collect |> device, t = d.t[it])
         θmin = T(0)
         emin = T(Inf)
         err = create_relerr_post(;

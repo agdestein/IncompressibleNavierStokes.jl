@@ -41,20 +41,42 @@ function rot2(u, r)
     u[I, chans...]
 end
 
-# For vector fields (u, v)
+"Rotate vector fields `[ux;;; uy]`"
 function rot2(u::Tuple{T,T}, r) where {T}
+    # ux, uy = eachslice(u; dims = ndims(u))
+    ux, uy = u
     r = mod(r, 4)
-    ru = rot2(u[1], r)
-    rv = rot2(u[2], r)
-    if r == 0
-        (ru, rv)
+    rx = rot2(ux, r)
+    ry = rot2(uy, r)
+    ru = if r == 0
+        (rx, ry)
     elseif r == 1
-        (-rv, ru)
+        (-ry, rx)
     elseif r == 2
-        (-ru, -rv)
+        (-rx, -ry)
     elseif r == 3
-        (rv, -ru)
+        (ry, -rx)
     end
+    ru
+end
+
+"Rotate vector fields `[ux;;; uy]`"
+function vecrot2(u, r)
+    # ux, uy = eachslice(u; dims = ndims(u))
+    ux, uy = u[:, :, 1], u[:, :, 2]
+    r = mod(r, 4)
+    rx = rot2(ux, r)
+    ry = rot2(uy, r)
+    ru = if r == 0
+        (rx, ry)
+    elseif r == 1
+        (-ry, rx)
+    elseif r == 2
+        (-rx, -ry)
+    elseif r == 3
+        (ry, -rx)
+    end
+    stack(ru)
 end
 
 # # For augmented vector fields (u, v, -u, -v)
@@ -77,8 +99,9 @@ end
 "Rotate staggered grid velocity field. See also [`rot2`](@ref)."
 function rot2stag(u, g)
     g = mod(g, 4)
-    u = rot2(u, g)
-    ux, uy = u
+    u = vecrot2(u, g)
+    # ux, uy = eachslice(u; dims = ndims(u))
+    ux, uy = u[:, :, 1], u[:, :, 2]
     if g in (1, 2)
         ux = circshift(ux, -1)
         ux[end, :] .= ux[2, :]
@@ -87,7 +110,7 @@ function rot2stag(u, g)
         uy = circshift(uy, (0, -1))
         uy[:, end] .= uy[:, 2]
     end
-    (ux, uy)
+    cat(ux, uy; dims = 3)
 end
 
 """

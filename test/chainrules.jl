@@ -18,14 +18,14 @@ end
     lims = T(0), T(1)
     x = range(lims..., n + 1), range(lims..., n + 1)
     for bc in (PeriodicBC(), DirichletBC(), SymmetricBC(), PressureBC())
-        boundary_conditions = ((bc, bc), (bc, bc))
+        boundary_conditions = (bc, bc), (bc, bc)
         setup = Setup(;
             x,
             Re,
             boundary_conditions,
             temperature = temperature_equation(; Pr, Ra, Ge, boundary_conditions),
         )
-        u = randn(T, setup.grid.N), randn(T, setup.grid.N)
+        u = randn(T, setup.grid.N..., 2)
         p = randn(T, setup.grid.N)
         temp = randn(T, setup.grid.N)
         test_rrule_named(apply_bc_u, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
@@ -64,7 +64,7 @@ end
         )
         setup = Setup(; x, boundary_conditions, Re, temperature)
         psolver = default_psolver(setup)
-        u = ntuple(α -> randn(T, setup.grid.N), D)
+        u = randn(T, setup.grid.N..., D)
         p = randn(T, setup.grid.N)
         temp = randn(T, setup.grid.N)
         (; setup, psolver, u, p, temp)
