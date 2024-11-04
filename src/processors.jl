@@ -149,9 +149,11 @@ function observefield(
             interpolate_u_p!(up, u, setup)
             # map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
             if D == 2
-                @. upnorm = sqrt(up[1]^2 + up[2]^2)
+                uptuple = eachslice(up; dims = ndims(up))
+                @. upnorm = sqrt(uptuple[1]^2 + uptuple[2]^2)
             elseif D == 3
-                @. upnorm = sqrt(up[1]^2 + up[2]^2 + up[3]^2)
+                uptuple = eachslice(up; dims = ndims(up))
+                @. upnorm = sqrt(uptuple[1]^2 + uptuple[2]^2 + uptuple[3]^2)
             end
         elseif fieldname == :vorticity
             apply_bc_u!(u, t, setup)

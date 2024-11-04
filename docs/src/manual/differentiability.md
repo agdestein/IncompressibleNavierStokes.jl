@@ -9,7 +9,7 @@ IncompressibleNavierStokes is
 which means that you can back-propagate gradients through the code.
 This comes at a cost however, as intermediate velocity fields need to be stored
 in memory for use in the backward pass. For this reason, many of the operators
-come in two versions:oa slow differentiable allocating non-mutating variant (e.g.
+come in two versions: a slow differentiable allocating non-mutating variant (e.g.
 [`divergence`](@ref)) and fast non-differentiable non-allocating mutating
 variant (e.g. [`divergence!`](@ref).)
 
@@ -26,7 +26,8 @@ make a time stepping loop composed of differentiable operations:
 
 ```julia
 import IncompressibleNavierStokes as INS
-setup = INS.Setup(; x = (0:0.01:1, 0:0.01:1), Re = 500.0)
+ax = range(0, 1, 101)
+setup = INS.Setup(; x = (ax, ax), Re = 500.0)
 psolver = INS.default_psolver(setup)
 method = INS.RKMethods.RK44P2()
 Δt = 0.01
@@ -38,7 +39,7 @@ function final_energy(u)
         stepper = INS.timestep(method, stepper, Δt)
     end
     (; u) = stepper
-    sum(abs2, u[1][Iu[1]]) / 2 + sum(abs2, u[2][Iu[2]]) / 2
+    sum(abs2, u[Iu[1], 1]) / 2 + sum(abs2, u[Iu[2], 2]) / 2
 end
 
 u = INS.random_field(setup)
@@ -46,8 +47,7 @@ u = INS.random_field(setup)
 using Zygote
 g, = Zygote.gradient(final_energy, u)
 
-@show size.(u)
-@show size.(g)
+@show size(u) size(g)
 ```
 
 Now `g` is the gradient of `final_energy` with respect to the initial conditions

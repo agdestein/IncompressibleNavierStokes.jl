@@ -1157,8 +1157,7 @@ function interpolate_u_p!(up, u, setup)
         up[I, α] = (u[I-e(α), α] + u[I, α]) / 2
     end
     for α = 1:D
-        I0 = first(Ip)
-        I0 -= oneunit(I0)
+        I0 = getoffset(Ip)
         int!(backend, workgroupsize)(up, u, Val(α), I0; ndrange = Np)
     end
     up

@@ -39,7 +39,7 @@ ustart = random_field(setup, 0.0; A = 1e-2);
 #
 # Since the force is steady, it is just stored as a field.
 
-heatmap(setup.bodyforce[1])
+heatmap(setup.bodyforce[:, :, 1])
 
 # ## Solve unsteady problem
 
