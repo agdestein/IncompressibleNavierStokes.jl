@@ -201,7 +201,7 @@ function create_les_data(;
                 # Since processors are called outside
                 # Runge-Kutta steps, there is no danger
                 # in overwriting the arrays.
-                F = cache.u₀,
+                F = cache.ustart,
                 p = cache.p,
             ),
         ),

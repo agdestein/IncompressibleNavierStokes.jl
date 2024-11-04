@@ -5,14 +5,14 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
     (; setup, psolver, u, temp, t, n) = stepper
     (; closure_model, temperature) = setup
     (; A, b, c) = method
-    (; uprev, ku, p, tempprev, ktemp, diff) = cache
+    (; ustart, ku, p, tempstart, ktemp, diff) = cache
     nstage = length(b)
     m = closure_model
 
     # Update current solution
-    tprev = t
-    copyto!(uprev, u)
-    isnothing(temp) || copyto!(tempprev, temp)
+    tstart = t
+    copyto!(ustart, u)
+    isnothing(temp) || copyto!(tempstart, temp)
 
     for i = 1:nstage
         # Compute force at current stage i
@@ -29,15 +29,15 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
         isnothing(m) || (ku[i] .+= m(u, θ))
 
         # Intermediate time step
-        t = tprev + c[i] * Δt
+        t = tstart + c[i] * Δt
 
         # Apply stage forces
-        u .= uprev
+        u .= ustart
         for j = 1:i
             @. u += Δt * A[i, j] * ku[j]
         end
         if !isnothing(temp)
-            temp .= tempprev
+            temp .= tempstart
             for j = 1:i
                 @. temp += Δt * A[i, j] * ktemp[j]
             end
@@ -66,8 +66,8 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     m = closure_model
 
     # Update current solution (does not depend on previous step size)
-    tprev = t
-    uprev = u
+    tstart = t
+    ustart = u
     ku = ()
     ktemp = ()
 
@@ -89,15 +89,15 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
         isnothing(temp) || (ktemp = (ktemp..., Ftemp))
 
         # Intermediate time step
-        t = tprev + c[i] * Δt
+        t = tstart + c[i] * Δt
 
         # Apply stage forces
-        u = uprev
+        u = ustart
         for j = 1:i
             u = @. u + Δt * A[i, j] * ku[j]
         end
         if !isnothing(temp)
-            temp = tempprev
+            temp = tempstart
             for j = 1:i
                 temp = @. temp + Δt * A[i, j] * ktemp[j]
             end

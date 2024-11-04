@@ -32,20 +32,20 @@ function ode_method_cache(::OneLegMethod, setup)
 end
 
 function ode_method_cache(method::ExplicitRungeKuttaMethod, setup)
-    uprev = vectorfield(setup)
+    ustart = vectorfield(setup)
     ns = length(method.b)
     ku = map(i -> vectorfield(setup), 1:ns)
     p = scalarfield(setup)
     if isnothing(setup.temperature)
-        tempprev = nothing
+        tempstart = nothing
         ktemp = nothing
         diff = nothing
     else
-        tempprev = scalarfield(setup)
+        tempstart = scalarfield(setup)
         ktemp = map(i -> scalarfield(setup), 1:ns)
         diff = vectorfield(setup)
     end
-    (; uprev, ku, p, tempprev, ktemp, diff)
+    (; ustart, ku, p, tempstart, ktemp, diff)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup, V, p) where {T}
