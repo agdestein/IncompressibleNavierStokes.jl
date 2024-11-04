@@ -29,9 +29,11 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
-[sources]
-IncompressibleNavierStokes = {path = "../.."}
-NeuralClosure = {path = "../NeuralClosure"}
+[sources.IncompressibleNavierStokes]
+path = "../.."
+
+[sources.NeuralClosure]
+path = "../NeuralClosure"
 
 [compat]
 Accessors = "0.1"
@@ -42,7 +44,7 @@ Dates = "1.11"
 DocStringExtensions = "0.9"
 EnumX = "1"
 FFTW = "1"
-IncompressibleNavierStokes = "2"
+IncompressibleNavierStokes = "1"
 JLD2 = "0.5"
 LaTeXStrings = "1"
 LinearAlgebra = "1"
