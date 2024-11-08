@@ -686,6 +686,50 @@ with_theme(; palette) do
     display(fig)
 end
 
+# ## Plot both
+
+with_theme(; palette) do
+    doplot() || return
+    fig = Figure(; size = (800, 300))
+    axes = []
+    ifil = 1
+    iorder = 1
+    axprior = Axis(
+        fig[1, ifil];
+        xscale = log10,
+        xticks = params.nles,
+        xlabel = "Resolution",
+        title = "A-priori error",
+    )
+    for (e, marker, label, color) in [
+        (eprior.nomodel, :circle, "No closure", Cycled(1)),
+        (eprior.prior[:, ifil], :rect, "CNN (prior)", Cycled(3)),
+        (eprior.post[:, ifil, 1], :diamond, "CNN (post)", Cycled(4)),
+    ]
+        scatterlines!(axprior, params.nles, e; marker, color, label)
+    end
+    axpost = Axis(
+        fig[1, 2];
+        xscale = log10,
+        # yscale = log10,
+        xticks = params.nles,
+        xlabel = "Resolution",
+        title = "A-posteriori error",
+    )
+    for (e, marker, label, color) in [
+        (epost.nomodel, :circle, "No closure", Cycled(1)),
+        (epost.smag, :utriangle, "Smagorinsky", Cycled(2)),
+        (epost.cnn_prior, :rect, "CNN (Lprior)", Cycled(3)),
+        (epost.cnn_post, :diamond, "CNN (Lpost)", Cycled(4)),
+    ]
+        scatterlines!(axpost, params.nles, e[:, ifil, iorder]; color, marker, label)
+    end
+    # linkaxes!(axprior, axpost)
+    Legend(fig[1, end+1], axpost)
+    save("$plotdir/epriorandpost.pdf", fig)
+    display(fig)
+end
+
 ########################################################################## #src
 
 # ## Energy evolution
@@ -707,7 +751,7 @@ let
         psolver = default_psolver(setup)
         sample = namedtupleload(getdatafile(outdir, nles, Φ, dns_seeds_test[1]))
         ustart = selectdim(sample.u, ndims(sample.u), 1) |> collect |> device
-        T = eltype(ustart[1])
+        T = eltype(ustart)
 
         # Shorter time for DIF
         t_DIF = T(1)
