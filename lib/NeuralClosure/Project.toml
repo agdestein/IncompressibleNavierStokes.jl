@@ -21,8 +21,8 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
-[sources]
-IncompressibleNavierStokes = {path = "../.."}
+[sources.IncompressibleNavierStokes]
+path = "../.."
 
 [compat]
 Accessors = "0.1"
@@ -37,7 +37,7 @@ MLUtils = "0.4"
 Makie = "0.21"
 NNlib = "0.9"
 Observables = "0.5"
-Optimisers = "0.3"
+Optimisers = "0.4"
 Printf = "1"
 Random = "1"
 Zygote = "0.6"
