@@ -774,12 +774,12 @@ end
 "Compute body force (differentiable version)."
 function applybodyforce(u, t, setup)
     (; grid, bodyforce, issteadybodyforce) = setup
-    (; dimension, x) = grid
+    (; dimension, xu) = grid
     D = dimension()
     if issteadybodyforce
         bodyforce
     else
-        stack(map(α -> bodyforce.(α, x[α]..., t), 1:D))
+        stack(map(α -> bodyforce.(α, xu[α]..., t), 1:D))
     end
 end
 
