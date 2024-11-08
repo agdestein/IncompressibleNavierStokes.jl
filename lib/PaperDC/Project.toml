@@ -29,9 +29,11 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
-[sources]
-IncompressibleNavierStokes = {path = "../.."}
-NeuralClosure = {path = "../NeuralClosure"}
+[sources.IncompressibleNavierStokes]
+path = "../.."
+
+[sources.NeuralClosure]
+path = "../NeuralClosure"
 
 [compat]
 Accessors = "0.1"
@@ -53,7 +55,7 @@ MLUtils = "0.4.4"
 NNlib = "0.9"
 NeuralClosure = "1"
 Observables = "0.5"
-Optimisers = "0.3"
+Optimisers = "0.4"
 ParameterSchedulers = "0.4.2"
 SparseArrays = "1"
 julia = "1.9"
