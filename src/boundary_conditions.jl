@@ -349,7 +349,7 @@ function apply_bc_u!(bc::DirichletBC, u, β, t, setup; isright, dudt = false, kw
         (α, args...) -> dudt ? zero(bc.u[α]) : bc.u[α]
     elseif dudt
         # Use central difference to approximate dudt
-        h = sqrt(eps(eltype(u[1]))) / 2
+        h = sqrt(eps(eltype(u))) / 2
         function (args...)
             args..., t = args
             (bc.u(args..., t + h) - bc.u(args..., t - h)) / 2h

@@ -532,7 +532,7 @@ end
     dims = getval(valdims)
     I = @index(Global, Cartesian)
     @unroll for α in dims
-        val = zero(eltype(u[1]))
+        val = zero(eltype(u))
         @unroll for β in dims
             Δuαβ = α == β ? Δu[β] : Δ[β]
             # F[α][I] += visc * u[I+e(β), α] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
