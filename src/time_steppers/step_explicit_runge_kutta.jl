@@ -68,6 +68,7 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     # Update current solution (does not depend on previous step size)
     tstart = t
     ustart = u
+    tempstart = temp
     ku = ()
     ktemp = ()
 
