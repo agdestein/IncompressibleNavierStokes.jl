@@ -17,7 +17,12 @@ using Observables
 
 # We will extend these functions
 import IncompressibleNavierStokes:
-    animator, realtimeplotter, fieldplot, energy_history_plot, energy_spectrum_plot
+    plotgrid,
+    animator,
+    realtimeplotter,
+    fieldplot,
+    energy_history_plot,
+    energy_spectrum_plot
 
 # Inherit docstring templates
 @template (MODULES, FUNCTIONS, METHODS, TYPES) = IncompressibleNavierStokes
