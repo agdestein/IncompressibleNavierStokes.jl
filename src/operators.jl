@@ -870,15 +870,13 @@ Right hand side of momentum equations, excluding pressure gradient
 (differentiable version).
 """
 function momentum(u, temp, t, setup)
-    (; grid, bodyforce, closure_model) = setup
-    (; dimension) = grid
-    D = dimension()
+    (; bodyforce) = setup
     d = diffusion(u, setup)
     c = convection(u, setup)
     F = @. d + c
     if !isnothing(bodyforce)
         f = applybodyforce(u, t, setup)
-        F = F .+ f
+        F = @. F + f
     end
     if !isnothing(temp)
         g = gravity(temp, setup)
@@ -902,25 +900,15 @@ Right hand side of momentum equations, excluding pressure gradient
 (in-place version).
 """
 function momentum!(F, u, temp, t, setup)
-    (; grid, closure_model, bodyforce, temperature) = setup
+    (; grid, bodyforce) = setup
     (; dimension) = grid
     D = dimension()
     fill!(F, 0)
-    # diffusion!(F, u, setup)
-    # convection!(F, u, setup)
     convectiondiffusion!(F, u, setup)
     isnothing(bodyforce) || applybodyforce!(F, u, t, setup)
     isnothing(temp) || gravity!(F, temp, setup)
     F
 end
-
-# monitor(u) = (@info("Forward", typeof(u)); u)
-# ChainRulesCore.rrule(::typeof(monitor), u) =
-#     (monitor(u), φ -> (@info("Reverse", typeof(φ)); (NoTangent(), φ)))
-
-# tupleadd(u...) = ntuple(α -> sum(u -> u[α], u), length(u[1]))
-# ChainRulesCore.rrule(::typeof(tupleadd), u...) =
-#     (tupleadd(u...), φ -> (NoTangent(), map(u -> φ, u)...))
 
 "Compute vorticity field (differentiable version)."
 vorticity(u, setup) = vorticity!(
@@ -979,9 +967,9 @@ end
     @SMatrix [∂x(u, I, α, β, Δ[β], Δu[β]) for α = 1:2, β = 1:2]
 @inline ∇(u, I::CartesianIndex{3}, Δ, Δu) =
     @SMatrix [∂x(u, I, α, β, Δ[β], Δu[β]) for α = 1:3, β = 1:3]
-@inline idtensor(u, I::CartesianIndex{2}) =
+@inline idtensor(u, ::CartesianIndex{2}) =
     @SMatrix [(α == β) * oneunit(eltype(u)) for α = 1:2, β = 1:2]
-@inline idtensor(u, I::CartesianIndex{3}) =
+@inline idtensor(u, ::CartesianIndex{3}) =
     @SMatrix [(α == β) * oneunit(eltype(u)) for α = 1:3, β = 1:3]
 @inline function strain(u, I, Δ, Δu)
     ∇u = ∇(u, I, Δ, Δu)
