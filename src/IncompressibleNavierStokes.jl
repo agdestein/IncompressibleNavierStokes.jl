@@ -17,8 +17,8 @@ using IterativeSolvers
 using KernelAbstractions
 using KernelAbstractions.Extras.LoopInfo: @unroll
 using LinearAlgebra
-using Makie
 using NNlib
+using Observables
 using PrecompileTools
 using Printf
 using Random
