@@ -625,6 +625,8 @@ with_theme(; palette) do
             title = "$lesmodel",
             ylabel = "A-posteriori error",
             ylabelvisible = iorder == 1,
+            yticksvisible = iorder == 1,
+            yticklabelsvisible = iorder == 1,
         )
         for (e, marker, label, color) in [
             (epost.nomodel, :circle, "No closure", Cycled(1)),
@@ -639,6 +641,7 @@ with_theme(; palette) do
         end
         # ylims!(ax, (T(0.025), T(1.00)))
     end
+    linkaxes!(filter(x -> x isa Axis, fig.content)...)
     g = GridLayout(fig[1, end+1])
     Legend(g[1, 1], filter(x -> x isa Axis, fig.content)[1]; valign = :bottom)
     Legend(

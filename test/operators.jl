@@ -105,7 +105,7 @@ end
 
 @testitem "Diffusion" setup = [Setup2D, Setup3D] begin
     for (u, setup) in ((Setup2D.u, Setup2D.setup), (Setup3D.u, Setup3D.setup))
-        T = eltype(u[1])
+        T = eltype(u)
         (; dimension, Iu, Δ, Δu) = setup.grid
         d = diffusion(u, setup)
         D = dimension()

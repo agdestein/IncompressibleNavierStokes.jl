@@ -20,11 +20,11 @@ function solve_unsteady(;
     tlims,
     ustart,
     tempstart = nothing,
-    method = RKMethods.RK44(; T = eltype(ustart[1])),
+    method = RKMethods.RK44(; T = eltype(ustart)),
     psolver = default_psolver(setup),
     Δt = nothing,
     Δt_min = nothing,
-    cfl = eltype(ustart[1])(0.9),
+    cfl = eltype(ustart)(0.9),
     n_adapt_Δt = 1,
     docopy = true,
     processors = (;),
@@ -104,7 +104,7 @@ function get_cfl_timestep!(buf, u, setup)
     D = dimension()
 
     # Initial maximum step size
-    Δt = eltype(u[1])(Inf)
+    Δt = eltype(u)(Inf)
 
     # Check maximum step size in each dimension
     for (α, uα) in enumerate(eachslice(u; dims = D + 1))

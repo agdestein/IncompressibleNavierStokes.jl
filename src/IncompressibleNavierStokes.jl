@@ -13,12 +13,15 @@ using Adapt
 using ChainRulesCore
 using DocStringExtensions
 using FFTW
+using Enzyme
+import .EnzymeRules: reverse, augmented_primal
+using .EnzymeRules
 using IterativeSolvers
 using KernelAbstractions
 using KernelAbstractions.Extras.LoopInfo: @unroll
 using LinearAlgebra
-using Makie
 using NNlib
+using Observables
 using PrecompileTools
 using Printf
 using Random
@@ -26,6 +29,7 @@ using SparseArrays
 using StaticArrays
 using Statistics
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
+using Zygote
 
 # Docstring templates
 @template MODULES = """
@@ -66,6 +70,7 @@ include("eddyviscosity.jl")
 include("matrices.jl")
 include("initializers.jl")
 include("processors.jl")
+include("sciml.jl")
 include("solver.jl")
 include("utils.jl")
 
@@ -144,5 +149,9 @@ export apply_bc_u,
     vorticity,
     Dfield,
     Qfield
+
+# SciML operations
+export create_right_hand_side,
+    right_hand_side!
 
 end
