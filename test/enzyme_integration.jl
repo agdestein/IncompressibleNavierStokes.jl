@@ -7,7 +7,7 @@
     rng = Random.default_rng();
 end
 
-@testmodule Case begin
+@testmodule Info begin
     using IncompressibleNavierStokes
     T = Float64
     ArrayType = Array
@@ -22,8 +22,8 @@ end
     psolver = default_psolver(setup)
 end
 
-@testitem "Enzyme one force pullback" setup = [Case, EnzymeStuff] begin
-    for (setup, psolver, T, N) in ((Case.setup, Case.psolver, Case.T, Case.N), )
+@testitem "Enzyme one force pullback" setup = [Info, EnzymeStuff] begin
+    for (setup, psolver, T, N) in ((Info.setup, Info.psolver, Info.T, Info.N), )
         dudt = zeros(T, (N, N, 2))  ;
         u = rand(T, (N, N, 2));
         u0 = copy(u);
@@ -65,8 +65,8 @@ end
     end
 end
 
-@testitem "Enzyme RHS pullback" setup = [Case, EnzymeStuff] begin
-    for (setup, psolver, T, N) in ((Case.setup, Case.psolver, Case.T, Case.N), )
+@testitem "Enzyme RHS pullback" setup = [Info, EnzymeStuff] begin
+    for (setup, psolver, T, N) in ((Info.setup, Info.psolver, Info.T, Info.N), )
         F_out = create_right_hand_side(setup, psolver)
         dudt = zeros(T, (N, N, 2))  ;
         u = rand(T, (N, N, 2));
