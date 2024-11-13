@@ -1,5 +1,3 @@
-
-
 @testsnippet ChainRulesStuff begin
     using ChainRulesCore
     using ChainRulesTestUtils
@@ -8,6 +6,7 @@
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     import .EnzymeRules: reverse, augmented_primal
     using .EnzymeRules
+    ENABLE_LOGGING = false
 end
 
 @testmodule Case begin
@@ -94,12 +93,14 @@ end
         y = Enzyme.make_zero(u)
         dy = Enzyme.make_zero(u) .+1
         eg, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(y, dy), Duplicated(u0, du), Const(nothing), Const(setup))
-        if e_time < z_time
-            @info "Enzyme is faster (bc_u): ", e_time, " vs ", z_time
-        else
-            @info "Zygote is faster (bc_u): ", z_time, " vs ", e_time
+        if ENABLE_LOGGING
+            if e_time < z_time
+                @info "Enzyme is faster (bc_u): ", e_time, " vs ", z_time
+            else
+                @info "Zygote is faster (bc_u): ", z_time, " vs ", e_time
+            end
         end
-        @test du == zpull
+        @test du == zpull 
 
         # --- bc_p
         Zygote.pullback(apply_bc_p, p, nothing, setup)[2](p0)[1]
@@ -113,10 +114,12 @@ end
         y = Enzyme.make_zero(p)
         dy = Enzyme.make_zero(p) .+1
         eg, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(y, dy), Duplicated(p0, dp), Const(nothing), Const(setup))
-        if e_time < z_time
-            @info "Enzyme is faster (bc_p): ", e_time, " vs ", z_time
-        else
-            @info "Zygote is faster (bc_p): ", z_time, " vs ", e_time
+        if ENABLE_LOGGING
+            if e_time < z_time
+                @info "Enzyme is faster (bc_p): ", e_time, " vs ", z_time
+            else
+                @info "Zygote is faster (bc_p): ", z_time, " vs ", e_time
+            end
         end
         @test dp == zpull
 
@@ -134,10 +137,12 @@ end
         dy = Enzyme.make_zero(temp) .+1
         f = INS.enzyme_wrap(INS.apply_bc_temp!)
         eg, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(y, dy), Duplicated(temp0, dtemp), Const(nothing), Const(setup))
-        if e_time < z_time
-            @info "Enzyme is faster (bc_temp): ", e_time, " vs ", z_time
-        else
-            @info "Zygote is faster (bc_temp): ", z_time, " vs ", e_time
+        if ENABLE_LOGGING
+            if e_time < z_time
+                @info "Enzyme is faster (bc_temp): ", e_time, " vs ", z_time
+            else
+                @info "Zygote is faster (bc_temp): ", z_time, " vs ", e_time
+            end
         end
         @test dtemp == zpull
 
@@ -159,10 +164,12 @@ end
         dd = Enzyme.make_zero(d) .+1
         du = Enzyme.make_zero(u)
         eg, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(d0, dd), Duplicated(u0, du), Const(setup))
-        if e_time < z_time
-            @info "Enzyme is faster (divergence): ", e_time, " vs ", z_time
-        else
-            @info "Zygote is faster (divergence): ", z_time, " vs ", e_time
+        if ENABLE_LOGGING
+            if e_time < z_time
+                @info "Enzyme is faster (divergence): ", e_time, " vs ", z_time
+            else
+                @info "Zygote is faster (divergence): ", z_time, " vs ", e_time
+            end
         end
         @test du == zpull
     end
@@ -182,10 +189,12 @@ end
         dpg = Enzyme.make_zero(pg) .+1
         dp = Enzyme.make_zero(p)
         eg, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(pg0, dpg), Duplicated(p0, dp), Const(setup))
-        if e_time < z_time
-            @info "Enzyme is faster (pressuregradient): ", e_time, " vs ", z_time
-        else
-            @info "Zygote is faster (pressuregradient): ", z_time, " vs ", e_time
+        if ENABLE_LOGGING
+            if e_time < z_time
+                @info "Enzyme is faster (pressuregradient): ", e_time, " vs ", z_time
+            else
+                @info "Zygote is faster (pressuregradient): ", z_time, " vs ", e_time
+            end
         end
         @test dp == zpull
     end
@@ -206,10 +215,12 @@ end
 
         Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(p, dp), Const(psolver), Duplicated(d, dd))
         ep, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(p0, dp), Const(psolver), Duplicated(d, dd))
-        if e_time < z_time
-            @info "Enzyme is faster (poisson): ", e_time, " vs ", z_time
-        else
-            @info "Zygote is faster (poisson): ", z_time, " vs ", e_time
+        if ENABLE_LOGGING
+            if e_time < z_time
+                @info "Enzyme is faster (poisson): ", e_time, " vs ", z_time
+            else
+                @info "Zygote is faster (poisson): ", z_time, " vs ", e_time
+            end
         end
         @test dd == zpull
     end
@@ -233,10 +244,12 @@ end
         dc = Enzyme.make_zero(c) .+1
         du = Enzyme.make_zero(u)
         ec, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(c, dc), Duplicated(u, du), Const(setup))
-        if e_time < z_time
-            @info "Enzyme is faster (convection): ", e_time, " vs ", z_time
-        else
-            @info "Zygote is faster (convection): ", z_time, " vs ", e_time
+        if ENABLE_LOGGING
+            if e_time < z_time
+                @info "Enzyme is faster (convection): ", e_time, " vs ", z_time
+            else
+                @info "Zygote is faster (convection): ", z_time, " vs ", e_time
+            end
         end
         @test du == zpull
     end
@@ -259,10 +272,12 @@ end
         dd = Enzyme.make_zero(d) .+1
         du = Enzyme.make_zero(u)
         ec, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(d, dd), Duplicated(u, du), Const(setup))
-        if e_time < z_time
-            @info "Enzyme is faster (diffusion): ", e_time, " vs ", z_time
-        else
-            @info "Zygote is faster (diffusion): ", z_time, " vs ", e_time
+        if ENABLE_LOGGING
+            if e_time < z_time
+                @info "Enzyme is faster (diffusion): ", e_time, " vs ", z_time
+            else
+                @info "Zygote is faster (diffusion): ", z_time, " vs ", e_time
+            end
         end
         @test du == zpull
     end
@@ -290,10 +305,12 @@ end
         dbf = Enzyme.make_zero(bf) .+1
         du = Enzyme.make_zero(u)
         eb, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(bf, dbf), Duplicated(u, du), Const(t), Const(setup))
-        if e_time < z_time
-            @info "Enzyme is faster (bodyforce): ", e_time, " vs ", z_time
-        else
-            @info "Zygote is faster (bodyforce): ", z_time, " vs ", e_time
+        if ENABLE_LOGGING
+            if e_time < z_time
+                @info "Enzyme is faster (bodyforce): ", e_time, " vs ", z_time
+            else
+                @info "Zygote is faster (bodyforce): ", z_time, " vs ", e_time
+            end
         end
         @test du == zpull
     end
@@ -315,10 +332,12 @@ end
         dg = Enzyme.make_zero(g) .+1
         dt = Enzyme.make_zero(t)
         gb, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(g, dg), Duplicated(t, dt), Const(setup))
-        if e_time < z_time
-            @info "Enzyme is faster (gravity): ", e_time, " vs ", z_time
-        else
-            @info "Zygote is faster (gravity): ", z_time, " vs ", e_time
+        if ENABLE_LOGGING
+            if e_time < z_time
+                @info "Enzyme is faster (gravity): ", e_time, " vs ", z_time
+            else
+                @info "Zygote is faster (gravity): ", z_time, " vs ", e_time
+            end
         end
         @test dt == zpull
         
@@ -345,10 +364,12 @@ end
         diff = Enzyme.make_zero(diff)
         du = Enzyme.make_zero(u)
         ed, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(diss, ddiss), Duplicated(diff, ddiff), Duplicated(u,du), Const(setup))
-        if e_time < z_time
-            @info "Enzyme is faster (dissipation): ", e_time, " vs ", z_time
-        else
-            @info "Zygote is faster (dissipation): ", z_time, " vs ", e_time
+        if ENABLE_LOGGING
+            if e_time < z_time
+                @info "Enzyme is faster (dissipation): ", e_time, " vs ", z_time
+            else
+                @info "Zygote is faster (dissipation): ", z_time, " vs ", e_time
+            end
         end
         @test du == zpull
         

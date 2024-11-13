@@ -29,7 +29,6 @@ using SparseArrays
 using StaticArrays
 using Statistics
 using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
-using Zygote
 
 # Docstring templates
 @template MODULES = """

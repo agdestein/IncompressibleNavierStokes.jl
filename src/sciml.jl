@@ -1,22 +1,39 @@
+"""
+    create_right_hand_side(setup, psolver)
 
+Creates a function that computes the right-hand side of the Navier-Stokes equations for a given setup and pressure solver.
+
+# Arguments
+- `setup`: The simulation setup containing grid and boundary conditions.
+- `psolver`: The pressure solver to be used.
+
+# Returns
+A function that computes the right-hand side of the Navier-Stokes equations.
+"""
 function create_right_hand_side(setup, psolver) 
     function right_hand_side(u, param, t)
         F = zeros(size(u))
         u = apply_bc_u(u, t, setup)
-        #F = convection(u, setup) .+ diffusion(u, setup)
         F = momentum(u, nothing, t, setup)
         F = apply_bc_u(F, t, setup; dudt = true)
         FP = project(F, setup; psolver)
-        #p = divergence(F, setup)
-        #p = scalewithvolume(p, setup)
-        #p = poisson(psolver, p)
-        #p = apply_bc_p(p, t, setup)
-        #G = pressuregradient(p, setup)
-        #F .- G
     end
 end
 
+"""
+    right_hand_side!(dudt, u, params_ref, t)
 
+Computes the right-hand side of the Navier-Stokes equations in-place.
+
+# Arguments
+- `dudt`: The array to store the computed right-hand side.
+- `u`: The current velocity field.
+- `params_ref`: A reference to the parameters containing the setup and pressure solver.
+- `t`: The current time.
+
+# Returns
+Nothing. The result is stored in `dudt`.
+"""
 function right_hand_side!(dudt, u, params_ref, t)
     params = params_ref[]
     setup = params[1]
@@ -26,22 +43,12 @@ function right_hand_side!(dudt, u, params_ref, t)
     temp_vector = copy(u)
     apply_bc_u!(temp_vector, t, setup)
     momentum!(dudt, temp_vector, nothing, t, setup)
-    #fill!(dudt, 0)
-    #convectiondiffusion!(dudt, temp_vector, setup)
     apply_bc_u!(dudt, t, setup)
     project!(dudt, setup; psolver, p)
-    #divergence!(p, dudt, setup)
-    #scalewithvolume!(p, setup)
-    #poisson!(psolver, p)
-    #apply_bc_p!(p, t, setup)
-    #applypressure!(dudt, p, setup)
     return nothing
 end
 
 
-using Enzyme
-import .EnzymeRules: reverse, augmented_primal
-using .EnzymeRules
 function EnzymeRules.augmented_primal(config::RevConfigWidth{1}, func::Const{typeof(right_hand_side!)}, ::Type{<:Const}, dudt::Duplicated, u::Duplicated, params_ref::Any, t::Const)
     # this runs function to modify dudt and store the intermediates
     params = params_ref.val[]
@@ -51,15 +58,8 @@ function EnzymeRules.augmented_primal(config::RevConfigWidth{1}, func::Const{typ
     u_bc = copy(u.val)
     apply_bc_u!(u_bc, t.val, setup)
     momentum!(dudt.val, u_bc, nothing, t, setup)
-    #fill!(dudt.val, 0)
-    #convectiondiffusion!(dudt.val, u_bc, setup)
     apply_bc_u!(dudt.val, t.val, setup)
     project!(dudt.val, setup; psolver, p)
-    #divergence!(p, dudt.val, setup)
-    #scalewithvolume!(p, setup)
-    #poisson!(psolver, p)
-    #apply_bc_p!(p, t.val, setup)
-    #applypressure!(dudt.val, p, setup)
     return AugmentedReturn(nothing, nothing, u_bc)
 end
 function EnzymeRules.reverse(config::RevConfigWidth{1}, func::Const{typeof(right_hand_side!)}, dret, u_bc, dudt::Duplicated, u::Duplicated, params_ref::Const, t::Const)

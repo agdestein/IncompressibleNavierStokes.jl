@@ -52,14 +52,14 @@ end
         end
         @test all([list_z[i] ≈ list_e[i] for i in 1:niter])
         if te < tz
-            @info "One F in-place is faster by a factor of $(tz/te)"
+            @info "Right-hand side in-place is faster by a factor of $(tz/te)"
         else
-            @info "One F out-of-place is faster by a factor of $(te/tz)"
+            @info "Right-hand side out-of-place is faster by a factor of $(te/tz)"
         end
         if me < mz
-            @info "One F in-place is more memory efficient by a factor of $(mz/me)"
+            @info "Right-hand side in-place is more memory efficient by a factor of $(mz/me)"
         else
-            @info "One F out-of-place is more memory efficient by a factor of $(me/mz)"
+            @info "Right-hand side out-of-place is more memory efficient by a factor of $(me/mz)"
         end
 
     end
