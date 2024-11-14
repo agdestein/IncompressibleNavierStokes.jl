@@ -30,8 +30,8 @@ outdir = joinpath(@__DIR__, "output", "LidDrivenCavity2D")
 # Note how floating point type hygiene is enforced in the following using `T`
 # to avoid mixing different precisions.
 
-# T = Float64
-T = Float32
+T = Float64
+#T = Float32
 ## T = Float16
 
 # We can also choose to do the computations on a different device. By default,
@@ -44,7 +44,7 @@ backend = CPU()
 ## using CUDA; backend = CUDABackend()
 
 # Here we choose a moderate Reynolds number. Note how we pass the floating point type.
-Re = T(1_000)
+Re = T(10_000)
 
 # Non-zero Dirichlet boundary conditions are specified as plain Julia functions.
 U = (T(1), T(0))
@@ -61,12 +61,16 @@ boundary_conditions = (
 # the walls.
 n = 32
 lims = T(0), T(1)
-x = cosine_grid(lims..., n), cosine_grid(lims..., n)
+ax = LinRange(0., 1., n+1)
+x = (ax, ax)
+#x = cosine_grid(lims..., n), cosine_grid(lims..., n)
 plotgrid(x...)
 
 # We can now build the setup and assemble operators.
 # A 3D setup is built if we also provide a vector of z-coordinates.
-setup = Setup(; x, boundary_conditions, Re, backend);
+delta = 1e-3
+chi = 1.
+setup = Setup(; x, boundary_conditions, Re, backend, filter_radius=delta, relax_parameter=chi);
 
 # The initial conditions are provided in function. The value `dim()` determines
 # the velocity component.
@@ -77,10 +81,10 @@ ustart = velocityfield(setup, (dim, x, y) -> zero(x));
 # later returned by `solve_unsteady`.
 
 processors = (
-    ## rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 50),
+    rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 50),
     ## ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 10),
     ## espec = realtimeplotter(; setup, plot = energy_spectrum_plot, nupdate = 10),
-    ## anim = animator(; setup, path = "$outdir/solution.mkv", nupdate = 20),
+    ##anim = animator(; setup, path = "$outdir/solution.mkv", nupdate = 20),
     ## vtk = vtk_writer(; setup, nupdate = 100, dir = outdir, filename = "solution"),
     ## field = fieldsaver(; setup, nupdate = 10),
     log = timelogger(; nupdate = 1000),
@@ -88,8 +92,9 @@ processors = (
 
 # By default, a standard fourth order Runge-Kutta method is used. If we don't
 # provide the time step explicitly, an adaptive time step is used.
-tlims = (T(0), T(10))
-state, outputs = solve_unsteady(; setup, ustart, tlims, Δt = T(1e-3), processors);
+tlims = (T(0), T(20))
+state, outputs = solve_unsteady(; setup, ustart, tlims, #Δt = T(1e-3)
+								processors);
 
 # ## Post-process
 #
@@ -101,14 +106,14 @@ state, outputs = solve_unsteady(; setup, ustart, tlims, Δt = T(1e-3), processor
 save_vtk(state; setup, filename = joinpath(outdir, "solution"))
 
 # Plot pressure
-fieldplot(state; setup, fieldname = :pressure)
+#fieldplot(state; setup, fieldname = :pressure)
 
 # Plot velocity. Note the time stamp used for computing boundary conditions, if
 # any.
 fieldplot(state; setup, fieldname = :velocitynorm)
 
 # Plot vorticity
-fieldplot(state; setup, fieldname = :vorticity)
+#fieldplot(state; setup, fieldname = :vorticity)
 
 # In addition, the named tuple `outputs` contains quantities from our
 # processors.

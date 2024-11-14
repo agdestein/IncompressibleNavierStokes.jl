@@ -19,9 +19,12 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 
 # Setup
-n = 256
+n = 32
 ax = LinRange(0.0, 1.0, n + 1)
-setup = Setup(; x = (ax, ax), Re = 4e3);
+delta = 1.
+chi = 1.
+setup = Setup(; x = (ax, ax), Re = 4e3, filter_radius=delta,
+			 relax_parameter=chi);
 ustart = random_field(setup, 0.0);
 
 # Solve unsteady problem
@@ -37,12 +40,12 @@ state, outputs = solve_unsteady(;
             nupdate = 10,
             displayfig = false,
         ),
-        espec = realtimeplotter(;
-            setup,
-            plot = energy_spectrum_plot,
-            nupdate = 10,
-            displayfig = false,
-        ),
+#        espec = realtimeplotter(;
+#            setup,
+#            plot = energy_spectrum_plot,
+#            nupdate = 10,
+#            displayfig = false,
+#        ),
         log = timelogger(; nupdate = 100),
     ),
 );
@@ -59,7 +62,7 @@ state, outputs = solve_unsteady(;
 outputs.ehist
 
 # Energy spectrum
-outputs.espec
+#outputs.espec
 
 # Plot field
 fieldplot(state; setup)

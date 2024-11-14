@@ -68,6 +68,7 @@ include("initializers.jl")
 include("processors.jl")
 include("solver.jl")
 include("utils.jl")
+include("efr.jl")
 
 # Time steppers
 include("time_steppers/methods.jl")
@@ -133,12 +134,14 @@ export apply_bc_u,
     interpolate_ω_p,
     laplacian,
     laplacian_mat,
+    diffusion_mat_velocity,
     momentum,
     poisson,
     pressuregradient,
     project,
     scalewithvolume,
     smagorinsky_closure,
+	differential_filter,
     tensorbasis,
     total_kinetic_energy,
     vorticity,

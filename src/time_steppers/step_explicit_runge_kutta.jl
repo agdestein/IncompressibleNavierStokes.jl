@@ -3,7 +3,8 @@ create_stepper(::ExplicitRungeKuttaMethod; setup, psolver, u, temp, t, n = 0) =
 
 function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing, cache)
     (; setup, psolver, u, temp, t, n) = stepper
-    (; closure_model, temperature) = setup
+    (; closure_model, filter_radius, relax_parameter,
+	 temperature) = setup
     (; A, b, c) = method
     (; ustart, ku, p, tempstart, ktemp, diff) = cache
     nstage = length(b)
@@ -53,6 +54,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
     # since we divide by an infinitely thin (eps(T)) volume width in the
     # diffusion term
     apply_bc_u!(u, t, setup)
+	isnothing(filter_radius) || differential_filter!(u, setup, filter_radius, relax_parameter)
     isnothing(temp) || apply_bc_temp!(temp, t, setup)
 
     create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
@@ -60,7 +62,8 @@ end
 
 function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     (; setup, psolver, u, temp, t, n) = stepper
-    (; closure_model, temperature) = setup
+    (; closure_model, filter_radius, relax_parameter,
+	 temperature) = setup
     (; A, b, c) = method
     nstage = length(b)
     m = closure_model
@@ -114,6 +117,7 @@ function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
     # since we divide by an infinitely thin (eps(T)) volume width in the
     # diffusion term
     u = apply_bc_u(u, t, setup)
+	isnothing(filter_radius) || (u = differential_filter(u, setup, filter_radius, relax_parameter))
     isnothing(temp) || (temp = apply_bc_temp(temp, t, setup))
 
     create_stepper(method; setup, psolver, u, temp, t, n = n + 1)

@@ -89,3 +89,103 @@ function laplacian_mat(setup)
     L
     # Ω isa CuArray ? cu(L) : L
 end
+
+
+"Get matrix for the diffusion operator for a specific component of the velocity."
+function diffusion_mat_velocity(setup, component)
+    (; grid, boundary_conditions) = setup
+    (; dimension, x, xp, xu, N, Nu, Np, Ip, Iu, Δ, Δu) = grid
+    backend = get_backend(x[1])
+	Inew = Iu[component]
+	Nnew = Nu[component]
+    T = eltype(x[1])
+    D = dimension()
+    e = Offset{D}()
+    Ia = first(Inew)
+    Ib = last(Inew)
+    I = similar(x[1], CartesianIndex{D}, 0)
+    J = similar(x[1], CartesianIndex{D}, 0)
+    val = similar(x[1], 0)
+    I0 = Ia - oneunit(Ia)
+    Ω = scalewithvolume!(fill!(scalarfield(setup), 1), setup)
+
+    for α = 1:D
+        a, b = boundary_conditions[α]
+        i = Inew[ntuple(β -> α == β ? (2:Nnew[α]-1) : (:), D)...][:]
+        ia = Inew[ntuple(β -> α == β ? (1:1) : (:), D)...][:]
+        ib = Inew[ntuple(β -> α == β ? (Nnew[α]:Nnew[α]) : (:), D)...][:]
+        for (aa, bb, j) in [(a, nothing, ia), (nothing, nothing, i), (nothing, b, ib)]
+
+			Δa = component == α ? Δ[α][getindex.(j, α)] : Δ[α][getindex.(j, α).-1]
+			Δu_a = Δu[α][getindex.(j, α)]
+			vala = @.(1 / Δu_a / Δa)
+
+            if isnothing(aa)
+
+                J = [J; j .- [e(α)]; j]
+                I = [I; j; j]
+                val = [val; vala; -vala]
+            elseif aa isa PressureBC
+
+                J = [J; j]
+                I = [I; j]
+                val = [val; -vala]
+            elseif aa isa PeriodicBC
+
+                J = [J; ib; j]
+                I = [I; j; j]
+                val = [val; vala; -vala]
+            elseif aa isa SymmetricBC
+
+                J = [J; ia; j]
+                I = [I; j; j]
+                val = [val; vala; -vala]
+            elseif aa isa DirichletBC
+            end
+
+
+			Δb = component == α ? Δu[α][getindex.(j, α).+1] : Δu[α][getindex.(j, α)]
+			Δu_b = Δ[α][getindex.(j, α)]
+			valb = @.(1 / Δu_b / Δb)
+
+            if isnothing(bb)
+
+                J = [J; j; j .+ [e(α)]]
+                I = [I; j; j]
+                val = [val; -valb; valb]
+            elseif bb isa PressureBC
+
+                # The weight of the "right" BC is zero, but still needs a J inside Ip, so
+                # just set it to ib
+                J = [J; j]
+                I = [I; j]
+                val = [val; -valb]
+            elseif bb isa PeriodicBC
+
+                J = [J; j; ia]
+                I = [I; j; j]
+                val = [val; -valb; valb]
+            elseif bb isa SymmetricBC
+
+                J = [J; j; ib]
+                I = [I; j; j]
+                val = [val; -valb; valb]
+            elseif bb isa DirichletBC
+            end
+        end
+    end
+    # Go back to CPU, otherwise get following error:
+    # ERROR: CUDA error: an illegal memory access was encountered (code 700, ERROR_ILLEGAL_ADDRESS)
+    I = Array(I)
+    J = Array(J)
+    I = I .- [I0]
+    J = J .- [I0]
+    linear = LinearIndices(Inew)
+    I = linear[I]
+    J = linear[J]
+
+    # Assemble on CPU, since CUDA overwrites instead of adding
+    L = sparse(I, J, Array(val))
+    L
+end
+
