@@ -90,7 +90,7 @@ function laplacian_mat(setup)
     # Ω isa CuArray ? cu(L) : L
 end
 
-
+#
 "Get matrix for the diffusion operator for a specific component of the velocity."
 function diffusion_mat_velocity(setup, component)
     (; grid, boundary_conditions) = setup
@@ -188,4 +188,3 @@ function diffusion_mat_velocity(setup, component)
     L = sparse(I, J, Array(val))
     L
 end
-
