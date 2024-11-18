@@ -32,6 +32,7 @@ function ode_method_cache(::OneLegMethod, setup)
 end
 
 function ode_method_cache(method::ExplicitRungeKuttaMethod, setup)
+    (; relax_parameter, filter_radius) = setup
     ustart = vectorfield(setup)
     ns = length(method.b)
     ku = map(i -> vectorfield(setup), 1:ns)
@@ -45,7 +46,15 @@ function ode_method_cache(method::ExplicitRungeKuttaMethod, setup)
         ktemp = map(i -> scalarfield(setup), 1:ns)
         diff = vectorfield(setup)
     end
-    (; ustart, ku, p, tempstart, ktemp, diff)
+
+    # Pre-compute LU decomposition before time-stepping
+    lu_filter_mats = if isnothing(relax_parameter)
+        nothing
+    else
+        decompose_filter_mat(setup, filter_radius)
+    end
+
+    (; ustart, ku, p, tempstart, ktemp, diff, lu_filter_mats)
 end
 
 function ode_method_cache(method::ImplicitRungeKuttaMethod{T}, setup, V, p) where {T}
