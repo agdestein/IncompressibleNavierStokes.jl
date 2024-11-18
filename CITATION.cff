@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: IncompressibleNavierStokes.jl
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Syver Døving
+    family-names: Agdestein
+    affiliation: Centrum Wiskunde & Informatica
+    orcid: 'https://orcid.org/0000-0002-1589-2916'
+  - given-names: "Benjamin"
+    family-names: "Sanderse"
+    affiliation: Centrum Wiskunde & Informatica
+    orcid: "https://orcid.org/0000-0001-9483-1988"
+repository-code: 'https://github.com/agdestein/IncompressibleNavierStokes.jl'
+url: 'https://agdestein.github.io/IncompressibleNavierStokes.jl/'
+abstract: >-
+  Incompressible Navier-Stokes solver written in
+  Julia, running on GPUs and compatible with
+  reverse mode automatic differentiation.
+license: MIT
+commit: 81c57ed9a4b366c2192610268564e8dfa26b43c8
+version: 2.0.1
+date-released: '2024-11-09'
