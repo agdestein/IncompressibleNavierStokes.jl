@@ -75,37 +75,39 @@ The downside is that restricts the user's defined f function to not do things li
 
 In this example we differentiate the right-hand side of the Navier-Stokes equations with respect to the velocity field `u`:
 
-```julia
+```@example
 import IncompressibleNavierStokes as INS
+using Enzyme
 ax = range(0, 1, 101)
 setup = INS.Setup(; x = (ax, ax), Re = 500.0)
 psolver = INS.default_psolver(setup)
 u = INS.random_field(setup)
+dudt = similar(u)
 t = 0.0
 f! = INS.right_hand_side!
 ```
 Notice that we are using the mutating (in-place) version of the right-hand side function. This function can not be differentiate by Zygote, which requires the slower non-mutating version of the right-hand side.
 
 We then define the `Dual` part of the input and output, required to store the adjoint values: 
-```julia
+```@example
 ddudt = Enzyme.make_zero(dudt) .+ 1;
 du = Enzyme.make_zero(u);
 ```
 Remember that the derivative of the output (also called the *seed*) has to be set to $1$ in order to compute the gradient. In this case the output is the force, that we store mutating the value of `dudt` inside `right_hand_side!`.
 
 Then we pack the parameters to be passed to `right_hand_side!`:
-```julia
+```@example
 params = [setup, psolver];
 params_ref = Ref(params);
 ```
 Now, we call the `autodiff` function from Enzyme:
-```julia
-Enzyme.autodiff(Enzyme.Reverse, f!, Duplicated(dudt,dd), Duplicated(u,du), Const(params_ref), Const(t))
+```@example
+Enzyme.autodiff(Enzyme.Reverse, f!, Duplicated(dudt,ddudt), Duplicated(u,du), Const(params_ref), Const(t))
 ```
 Since we have passed a `Duplicated` object, the gradient of `u` is stored in `du`. 
 
 Finally, we can also compare its value with the one obtained by Zygote differentiating the out-of-place (non-mutating) version of the right-hand side:
-```julia
+```@example
 using Zygote
 f = create_right_hand_side(setup, psolver)
 _, zpull = Zygote.pullback(f, u, nothing, T(0));
