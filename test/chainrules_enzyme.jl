@@ -44,7 +44,15 @@ end
             bodyforce = (dim, x, y, z, t) -> (dim == 1) * 5 * sinpi(8 * y)
             dbodyforce = (dim, x, y, z, t) -> (dim == 1) * 5 * pi * 8 * cos(pi * 8 * y)
         end
-        setup = Setup(; x, boundary_conditions, Re, temperature, bodyforce, dbodyforce, issteadybodyforce = true)
+        setup = Setup(;
+            x,
+            boundary_conditions,
+            Re,
+            temperature,
+            bodyforce,
+            dbodyforce,
+            issteadybodyforce = true,
+        )
         psolver = default_psolver(setup)
         u = randn(T, setup.grid.N..., D)
         p = randn(T, setup.grid.N)
@@ -65,7 +73,7 @@ end
     n = 7
     lims = T(0), T(1)
     x = range(lims..., n + 1), range(lims..., n + 1)
-    
+
     for bc in (PeriodicBC(), DirichletBC(), SymmetricBC(), PressureBC())
         boundary_conditions = (bc, bc), (bc, bc)
         setup = Setup(;
@@ -86,13 +94,27 @@ end
         zpull, z_time = @timed Zygote.pullback(apply_bc_u, u, nothing, setup)[2](u0)[1]
         du = Enzyme.make_zero(u)
         y = Enzyme.make_zero(u)
-        dy = Enzyme.make_zero(u) .+1
+        dy = Enzyme.make_zero(u) .+ 1
         f = INS.enzyme_wrap(INS.apply_bc_u!)
-        Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(y, dy), Duplicated(u, du), Const(nothing), Const(setup))
+        Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(y, dy),
+            Duplicated(u, du),
+            Const(nothing),
+            Const(setup),
+        )
         du = Enzyme.make_zero(u)
         y = Enzyme.make_zero(u)
-        dy = Enzyme.make_zero(u) .+1
-        eg, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(y, dy), Duplicated(u0, du), Const(nothing), Const(setup))
+        dy = Enzyme.make_zero(u) .+ 1
+        eg, e_time = @timed Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(y, dy),
+            Duplicated(u0, du),
+            Const(nothing),
+            Const(setup),
+        )
         if ENABLE_LOGGING
             if e_time < z_time
                 @info "Enzyme is faster (bc_u): ", e_time, " vs ", z_time
@@ -100,20 +122,34 @@ end
                 @info "Zygote is faster (bc_u): ", z_time, " vs ", e_time
             end
         end
-        @test du == zpull 
+        @test du == zpull
 
         # --- bc_p
         Zygote.pullback(apply_bc_p, p, nothing, setup)[2](p0)[1]
         zpull, z_time = @timed Zygote.pullback(apply_bc_p, p, nothing, setup)[2](p0)[1]
         dp = Enzyme.make_zero(p)
         y = Enzyme.make_zero(p)
-        dy = Enzyme.make_zero(p) .+1
+        dy = Enzyme.make_zero(p) .+ 1
         f = INS.enzyme_wrap(INS.apply_bc_p!)
-        Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(y, dy), Duplicated(p0, dp), Const(nothing), Const(setup))
+        Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(y, dy),
+            Duplicated(p0, dp),
+            Const(nothing),
+            Const(setup),
+        )
         dp = Enzyme.make_zero(p)
         y = Enzyme.make_zero(p)
-        dy = Enzyme.make_zero(p) .+1
-        eg, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(y, dy), Duplicated(p0, dp), Const(nothing), Const(setup))
+        dy = Enzyme.make_zero(p) .+ 1
+        eg, e_time = @timed Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(y, dy),
+            Duplicated(p0, dp),
+            Const(nothing),
+            Const(setup),
+        )
         if ENABLE_LOGGING
             if e_time < z_time
                 @info "Enzyme is faster (bc_p): ", e_time, " vs ", z_time
@@ -123,20 +159,34 @@ end
         end
         @test dp == zpull
 
-
         # --- bc_temp
         Zygote.pullback(apply_bc_temp, temp, nothing, setup)[2](temp0)[1]
-        zpull, z_time = @timed Zygote.pullback(apply_bc_temp, temp, nothing, setup)[2](temp0)[1]
+        zpull, z_time =
+            @timed Zygote.pullback(apply_bc_temp, temp, nothing, setup)[2](temp0)[1]
         dtemp = Enzyme.make_zero(temp)
         y = Enzyme.make_zero(temp)
-        dy = Enzyme.make_zero(temp) .+1
+        dy = Enzyme.make_zero(temp) .+ 1
         f = INS.enzyme_wrap(INS.apply_bc_temp!)
-        Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(y, dy), Duplicated(temp0, dtemp), Const(nothing), Const(setup))
+        Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(y, dy),
+            Duplicated(temp0, dtemp),
+            Const(nothing),
+            Const(setup),
+        )
         dtemp = Enzyme.make_zero(temp)
         y = Enzyme.make_zero(temp)
-        dy = Enzyme.make_zero(temp) .+1
+        dy = Enzyme.make_zero(temp) .+ 1
         f = INS.enzyme_wrap(INS.apply_bc_temp!)
-        eg, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(y, dy), Duplicated(temp0, dtemp), Const(nothing), Const(setup))
+        eg, e_time = @timed Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(y, dy),
+            Duplicated(temp0, dtemp),
+            Const(nothing),
+            Const(setup),
+        )
         if ENABLE_LOGGING
             if e_time < z_time
                 @info "Enzyme is faster (bc_temp): ", e_time, " vs ", z_time
@@ -145,25 +195,35 @@ end
             end
         end
         @test dtemp == zpull
-
     end
 end
 
-
 @testitem "Divergence" setup = [Case, ChainRulesStuff] begin
-
-    for (u,setup,d) in ((Case.D2.u, Case.D2.setup, Case.D2.div), (Case.D3.u, Case.D3.setup, Case.D3.div))
+    for (u, setup, d) in
+        ((Case.D2.u, Case.D2.setup, Case.D2.div), (Case.D3.u, Case.D3.setup, Case.D3.div))
         d0 = copy(d)
         u0 = copy(u)
         Zygote.pullback(INS.divergence, u, setup)[2](d0)[1]
         zpull, z_time = @timed Zygote.pullback(INS.divergence, u, setup)[2](d0)[1]
-        dd = Enzyme.make_zero(d) .+1
+        dd = Enzyme.make_zero(d) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.divergence!)
-        Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(d, dd), Duplicated(u, du), Const(setup))
-        dd = Enzyme.make_zero(d) .+1
+        Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(d, dd),
+            Duplicated(u, du),
+            Const(setup),
+        )
+        dd = Enzyme.make_zero(d) .+ 1
         du = Enzyme.make_zero(u)
-        eg, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(d0, dd), Duplicated(u0, du), Const(setup))
+        eg, e_time = @timed Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(d0, dd),
+            Duplicated(u0, du),
+            Const(setup),
+        )
         if ENABLE_LOGGING
             if e_time < z_time
                 @info "Enzyme is faster (divergence): ", e_time, " vs ", z_time
@@ -176,19 +236,31 @@ end
 end
 
 @testitem "Pressuregradient" setup = [Case, ChainRulesStuff] begin
-    for (p,setup) in ((Case.D2.p, Case.D2.setup), (Case.D3.p, Case.D3.setup))
+    for (p, setup) in ((Case.D2.p, Case.D2.setup), (Case.D3.p, Case.D3.setup))
         p0 = copy(p)
         pg = INS.pressuregradient(p, setup)
         pg0 = copy(pg)
         Zygote.pullback(INS.pressuregradient, p, setup)[2](pg0)[1]
         zpull, z_time = @timed Zygote.pullback(INS.pressuregradient, p, setup)[2](pg0)[1]
-        dpg = Enzyme.make_zero(pg) .+1
+        dpg = Enzyme.make_zero(pg) .+ 1
         dp = Enzyme.make_zero(p)
         f = INS.enzyme_wrap(INS.pressuregradient!)
-        Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(pg, dpg), Duplicated(p, dp), Const(setup))
-        dpg = Enzyme.make_zero(pg) .+1
+        Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(pg, dpg),
+            Duplicated(p, dp),
+            Const(setup),
+        )
+        dpg = Enzyme.make_zero(pg) .+ 1
         dp = Enzyme.make_zero(p)
-        eg, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(pg0, dpg), Duplicated(p0, dp), Const(setup))
+        eg, e_time = @timed Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(pg0, dpg),
+            Duplicated(p0, dp),
+            Const(setup),
+        )
         if ENABLE_LOGGING
             if e_time < z_time
                 @info "Enzyme is faster (pressuregradient): ", e_time, " vs ", z_time
@@ -198,23 +270,36 @@ end
         end
         @test dp == zpull
     end
-
 end
 
 @testitem "Poisson" setup = [Case, ChainRulesStuff] begin
-    for (psolver,d,setup) in ((Case.D2.psolver, Case.D2.div, Case.D2.setup), (Case.D3.psolver, Case.D3.div, Case.D3.setup))
-
+    for (psolver, d, setup) in (
+        (Case.D2.psolver, Case.D2.div, Case.D2.setup),
+        (Case.D3.psolver, Case.D3.div, Case.D3.setup),
+    )
         p0 = INS.poisson(psolver, d)
         Zygote.pullback(INS.poisson, psolver, d)[2](p0)[1]
         zpull, z_time = @timed Zygote.pullback(INS.poisson, psolver, d)[2](p0)[2]
 
-        dd = Enzyme.make_zero(d) 
-        p = Enzyme.make_zero(p0) 
-        dp = Enzyme.make_zero(p) .+1
+        dd = Enzyme.make_zero(d)
+        p = Enzyme.make_zero(p0)
+        dp = Enzyme.make_zero(p) .+ 1
         f = INS.enzyme_wrap(INS.poisson!)
 
-        Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(p, dp), Const(psolver), Duplicated(d, dd))
-        ep, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(p0, dp), Const(psolver), Duplicated(d, dd))
+        Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(p, dp),
+            Const(psolver),
+            Duplicated(d, dd),
+        )
+        ep, e_time = @timed Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(p0, dp),
+            Const(psolver),
+            Duplicated(d, dd),
+        )
         if ENABLE_LOGGING
             if e_time < z_time
                 @info "Enzyme is faster (poisson): ", e_time, " vs ", z_time
@@ -224,11 +309,10 @@ end
         end
         @test dd == zpull
     end
-
 end
 
 @testitem "Convection" setup = [Case, ChainRulesStuff] begin
-    for (u,setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
+    for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
         c = INS.convection(u, setup)
         u0 = copy(u)
         Zygote.pullback(INS.convection, u, setup)[2](u)[1]
@@ -236,14 +320,26 @@ end
 
         # [!] convection! wants to start from 0 initialized field
         Enzyme.make_zero!(c)
-        dc = Enzyme.make_zero(c) .+1
+        dc = Enzyme.make_zero(c) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.convection!)
-        Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(c, dc), Duplicated(u, du), Const(setup))
+        Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(c, dc),
+            Duplicated(u, du),
+            Const(setup),
+        )
         Enzyme.make_zero!(c)
-        dc = Enzyme.make_zero(c) .+1
+        dc = Enzyme.make_zero(c) .+ 1
         du = Enzyme.make_zero(u)
-        ec, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(c, dc), Duplicated(u, du), Const(setup))
+        ec, e_time = @timed Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(c, dc),
+            Duplicated(u, du),
+            Const(setup),
+        )
         if ENABLE_LOGGING
             if e_time < z_time
                 @info "Enzyme is faster (convection): ", e_time, " vs ", z_time
@@ -256,7 +352,7 @@ end
 end
 
 @testitem "Diffusion" setup = [Case, ChainRulesStuff] begin
-    for (u,setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
+    for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
         d = INS.diffusion(u, setup)
         u0 = copy(u)
         Zygote.pullback(INS.diffusion, u, setup)[2](d)[1]
@@ -264,14 +360,26 @@ end
 
         # [!] diffusion! wants to start from 0 initialized field
         Enzyme.make_zero!(d)
-        dd = Enzyme.make_zero(d) .+1
+        dd = Enzyme.make_zero(d) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.diffusion!)
-        Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(d, dd), Duplicated(u, du), Const(setup))
+        Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(d, dd),
+            Duplicated(u, du),
+            Const(setup),
+        )
         Enzyme.make_zero!(d)
-        dd = Enzyme.make_zero(d) .+1
+        dd = Enzyme.make_zero(d) .+ 1
         du = Enzyme.make_zero(u)
-        ec, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(d, dd), Duplicated(u, du), Const(setup))
+        ec, e_time = @timed Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(d, dd),
+            Duplicated(u, du),
+            Const(setup),
+        )
         if ENABLE_LOGGING
             if e_time < z_time
                 @info "Enzyme is faster (diffusion): ", e_time, " vs ", z_time
@@ -285,26 +393,41 @@ end
 
 @testitem "Bodyforce" setup = [Case, ChainRulesStuff] begin
     @warn "bodyforce is tested only in the static case"
-    for (u,setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
+    for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
         t = 0.5
         bf = INS.applybodyforce(u, t, setup)
         bf0 = copy(bf)
         setup0 = deepcopy(setup)
         Zygote.pullback(INS.applybodyforce, u, t, setup)[2](bf0)
-        zpull, z_time = @timed Zygote.pullback(INS.applybodyforce, u, t, setup)[2](bf0)[3].bodyforce
-       
+        zpull, z_time =
+            @timed Zygote.pullback(INS.applybodyforce, u, t, setup)[2](bf0)[3].bodyforce
+
         # We can also test Zygote autodiff
         @test zpull == setup.bodyforce
 
-        bf = bf .*0
-        dbf = Enzyme.make_zero(bf) .+1
+        bf = bf .* 0
+        dbf = Enzyme.make_zero(bf) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.applybodyforce!)
-        Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(bf, dbf), Duplicated(u, du), Const(t), Const(setup))
-        bf = bf .*0
-        dbf = Enzyme.make_zero(bf) .+1
+        Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(bf, dbf),
+            Duplicated(u, du),
+            Const(t),
+            Const(setup),
+        )
+        bf = bf .* 0
+        dbf = Enzyme.make_zero(bf) .+ 1
         du = Enzyme.make_zero(u)
-        eb, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(bf, dbf), Duplicated(u, du), Const(t), Const(setup))
+        eb, e_time = @timed Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(bf, dbf),
+            Duplicated(u, du),
+            Const(t),
+            Const(setup),
+        )
         if ENABLE_LOGGING
             if e_time < z_time
                 @info "Enzyme is faster (bodyforce): ", e_time, " vs ", z_time
@@ -317,21 +440,32 @@ end
 end
 
 @testitem "Gravity" setup = [Case, ChainRulesStuff] begin
-    for (t,setup) in ((Case.D2.temp, Case.D2.setup), (Case.D3.temp, Case.D3.setup))
-        
+    for (t, setup) in ((Case.D2.temp, Case.D2.setup), (Case.D3.temp, Case.D3.setup))
         g = INS.gravity(t, setup)
         Zygote.pullback(INS.gravity, t, setup)[2](g)
         zpull, z_time = @timed Zygote.pullback(INS.gravity, t, setup)[2](g)[1]
 
         g = vectorfield(setup)
-        dg = Enzyme.make_zero(g) .+1
+        dg = Enzyme.make_zero(g) .+ 1
         dt = Enzyme.make_zero(t)
         f = INS.enzyme_wrap(INS.gravity!)
-        Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(g, dg), Duplicated(t, dt), Const(setup))
+        Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(g, dg),
+            Duplicated(t, dt),
+            Const(setup),
+        )
         g = vectorfield(setup)
-        dg = Enzyme.make_zero(g) .+1
+        dg = Enzyme.make_zero(g) .+ 1
         dt = Enzyme.make_zero(t)
-        gb, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(g, dg), Duplicated(t, dt), Const(setup))
+        gb, e_time = @timed Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(g, dg),
+            Duplicated(t, dt),
+            Const(setup),
+        )
         if ENABLE_LOGGING
             if e_time < z_time
                 @info "Enzyme is faster (gravity): ", e_time, " vs ", z_time
@@ -340,30 +474,42 @@ end
             end
         end
         @test dt == zpull
-        
     end
 end
 
 @testitem "Dissipation" setup = [Case, ChainRulesStuff] begin
-    for (u,setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
-        
+    for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
         diss = INS.dissipation(u, setup)
         Zygote.pullback(INS.dissipation, u, setup)[2](diss)
         zpull, z_time = @timed Zygote.pullback(INS.dissipation, u, setup)[2](diss)[1]
 
         diss = scalarfield(setup)
         diff = vectorfield(setup)
-        ddiss = Enzyme.make_zero(diss) .+1
+        ddiss = Enzyme.make_zero(diss) .+ 1
         ddiff = Enzyme.make_zero(diff)
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.dissipation!)
-        Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(diss, ddiss), Duplicated(diff, ddiff), Duplicated(u,du), Const(setup))
+        Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(diss, ddiss),
+            Duplicated(diff, ddiff),
+            Duplicated(u, du),
+            Const(setup),
+        )
         diss = scalarfield(setup)
         diff = vectorfield(setup)
-        diss = Enzyme.make_zero(diss) .+1
+        diss = Enzyme.make_zero(diss) .+ 1
         diff = Enzyme.make_zero(diff)
         du = Enzyme.make_zero(u)
-        ed, e_time = @timed Enzyme.autodiff(Enzyme.Reverse, f, Duplicated(diss, ddiss), Duplicated(diff, ddiff), Duplicated(u,du), Const(setup))
+        ed, e_time = @timed Enzyme.autodiff(
+            Enzyme.Reverse,
+            f,
+            Duplicated(diss, ddiss),
+            Duplicated(diff, ddiff),
+            Duplicated(u, du),
+            Const(setup),
+        )
         if ENABLE_LOGGING
             if e_time < z_time
                 @info "Enzyme is faster (dissipation): ", e_time, " vs ", z_time
@@ -372,7 +518,6 @@ end
             end
         end
         @test du == zpull
-        
     end
 end
 @testitem "Convection_diffusion_temp" setup = [Case, ChainRulesStuff] begin
@@ -380,6 +525,6 @@ end
 end
 
 @testitem "Convectiondiffusion" setup = [Case, ChainRulesStuff] begin
-# the pullback rule is missing for this one
+    # the pullback rule is missing for this one
     @test_broken 1 == 2
 end

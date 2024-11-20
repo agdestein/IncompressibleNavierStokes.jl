@@ -150,7 +150,6 @@ export apply_bc_u,
     Qfield
 
 # SciML operations
-export create_right_hand_side,
-    right_hand_side!
+export create_right_hand_side, right_hand_side!
 
 end

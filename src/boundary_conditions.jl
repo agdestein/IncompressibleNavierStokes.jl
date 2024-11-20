@@ -528,9 +528,10 @@ apply_bc_temp!(bc::PressureBC, temp, β, t, setup; isright, kwargs...) =
 apply_bc_temp_pullback!(bc::PressureBC, φbar, β, t, setup; isright, kwargs...) =
     apply_bc_p_pullback!(SymmetricBC(), φbar, β, t, setup; isright, kwargs...)
 
-
 # Wrap a function to return `nothing`, because Enzyme can not handle vector return values.
-function enzyme_wrap(f::Union{typeof(apply_bc_u!), typeof(apply_bc_p!), typeof(apply_bc_temp!)})
+function enzyme_wrap(
+    f::Union{typeof(apply_bc_u!),typeof(apply_bc_p!),typeof(apply_bc_temp!)},
+)
     # the boundary condition modifies x which is usually the field that we want to differentiate, so we need to introduce a copy of it and modify it instead
     function wrapped_f(y, x, args...)
         y .= x
@@ -540,25 +541,64 @@ function enzyme_wrap(f::Union{typeof(apply_bc_u!), typeof(apply_bc_p!), typeof(a
     return wrapped_f
 end
 
-function EnzymeRules.augmented_primal(config::RevConfigWidth{1}, func::Union{Const{typeof(enzyme_wrap(apply_bc_u!))}, Const{typeof(enzyme_wrap(apply_bc_p!))}, Const{typeof(enzyme_wrap(apply_bc_temp!))}}, ::Type{<:Const}, y::Duplicated, x::Duplicated, t::Const, setup::Const)
+function EnzymeRules.augmented_primal(
+    config::RevConfigWidth{1},
+    func::Union{
+        Const{typeof(enzyme_wrap(apply_bc_u!))},
+        Const{typeof(enzyme_wrap(apply_bc_p!))},
+        Const{typeof(enzyme_wrap(apply_bc_temp!))},
+    },
+    ::Type{<:Const},
+    y::Duplicated,
+    x::Duplicated,
+    t::Const,
+    setup::Const,
+)
     primal = func.val(y.val, x.val, t.val, setup.val)
     return AugmentedReturn(primal, nothing, nothing)
 end
-function EnzymeRules.reverse(config::RevConfigWidth{1}, func::Const{typeof(enzyme_wrap(apply_bc_u!))}, dret, tape, y::Duplicated, x::Duplicated, t::Const, setup::Const)
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(apply_bc_u!))},
+    dret,
+    tape,
+    y::Duplicated,
+    x::Duplicated,
+    t::Const,
+    setup::Const,
+)
     adj = apply_bc_u_pullback!(x.val, t.val, setup.val)
     x.dval .+= adj
     y.dval .= x.dval # y is a copy of x
     return (nothing, nothing, nothing, nothing)
 end
-function EnzymeRules.reverse(config::RevConfigWidth{1}, func::Const{typeof(enzyme_wrap(apply_bc_p!))}, dret, tape, y::Duplicated, x::Duplicated, t::Const, setup::Const)
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(apply_bc_p!))},
+    dret,
+    tape,
+    y::Duplicated,
+    x::Duplicated,
+    t::Const,
+    setup::Const,
+)
     adj = apply_bc_p_pullback!(x.val, t.val, setup.val)
     x.dval .+= adj
     y.dval .= x.dval # y is a copy of x
     return (nothing, nothing, nothing, nothing)
 end
-function EnzymeRules.reverse(config::RevConfigWidth{1}, func::Const{typeof(enzyme_wrap(apply_bc_temp!))}, dret, tape, y::Duplicated, x::Duplicated, t::Const, setup::Const)
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(apply_bc_temp!))},
+    dret,
+    tape,
+    y::Duplicated,
+    x::Duplicated,
+    t::Const,
+    setup::Const,
+)
     adj = apply_bc_temp_pullback!(x.val, t.val, setup.val)
-    x.dval .+= adj 
+    x.dval .+= adj
     y.dval .= x.dval # y is a copy of x
     return (nothing, nothing, nothing, nothing)
 end

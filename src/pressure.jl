@@ -361,18 +361,33 @@ end
 # Wrap a function to return `nothing`, because Enzyme can not handle vector return values.
 function enzyme_wrap(f::typeof(poisson!))
     function wrapped_f(y, args...)
-        y.= f(args...)
+        y .= f(args...)
         return nothing
     end
     return wrapped_f
 end
-function EnzymeRules.augmented_primal(config::RevConfigWidth{1}, func::Const{typeof(enzyme_wrap(poisson!))}, ::Type{<:Const}, y::Duplicated, psolver::Const, div::Duplicated)
+function EnzymeRules.augmented_primal(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(poisson!))},
+    ::Type{<:Const},
+    y::Duplicated,
+    psolver::Const,
+    div::Duplicated,
+)
     primal = func.val(y.val, psolver.val, div.val)
     return AugmentedReturn(primal, nothing, nothing)
 end
-function EnzymeRules.reverse(config::RevConfigWidth{1}, func::Const{typeof(enzyme_wrap(poisson!))}, dret, tape, y::Duplicated, psolver::Const, div::Duplicated)
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(poisson!))},
+    dret,
+    tape,
+    y::Duplicated,
+    psolver::Const,
+    div::Duplicated,
+)
     auto_adj = copy(y.val)
-    func.val(auto_adj, psolver.val, y.val )
+    func.val(auto_adj, psolver.val, y.val)
     div.dval .+= auto_adj .* y.dval
     make_zero!(y.dval)
     return (nothing, nothing, nothing)
