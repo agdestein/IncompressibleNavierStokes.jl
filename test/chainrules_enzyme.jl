@@ -319,7 +319,7 @@ end
         zpull, z_time = @timed Zygote.pullback(INS.convection, u, setup)[2](c)[1]
 
         # [!] convection! wants to start from 0 initialized field
-        Enzyme.make_zero!(c)
+        EnzymeCore.make_zero!(c)
         dc = Enzyme.make_zero(c) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.convection!)
@@ -330,7 +330,7 @@ end
             Duplicated(u, du),
             Const(setup),
         )
-        Enzyme.make_zero!(c)
+        EnzymeCore.make_zero!(c)
         dc = Enzyme.make_zero(c) .+ 1
         du = Enzyme.make_zero(u)
         ec, e_time = @timed Enzyme.autodiff(
@@ -359,7 +359,7 @@ end
         zpull, z_time = @timed Zygote.pullback(INS.diffusion, u, setup)[2](d)[1]
 
         # [!] diffusion! wants to start from 0 initialized field
-        Enzyme.make_zero!(d)
+        EnzymeCore.make_zero!(d)
         dd = Enzyme.make_zero(d) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.diffusion!)
@@ -370,7 +370,7 @@ end
             Duplicated(u, du),
             Const(setup),
         )
-        Enzyme.make_zero!(d)
+        EnzymeCore.make_zero!(d)
         dd = Enzyme.make_zero(d) .+ 1
         du = Enzyme.make_zero(u)
         ec, e_time = @timed Enzyme.autodiff(

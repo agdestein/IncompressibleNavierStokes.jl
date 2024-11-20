@@ -389,6 +389,6 @@ function EnzymeRules.reverse(
     auto_adj = copy(y.val)
     func.val(auto_adj, psolver.val, y.val)
     div.dval .+= auto_adj .* y.dval
-    make_zero!(y.dval)
+    EnzymeCore.make_zero!(y.dval)
     return (nothing, nothing, nothing)
 end

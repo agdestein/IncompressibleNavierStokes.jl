@@ -1520,7 +1520,7 @@ function EnzymeRules.reverse(
     adj = vectorfield(setup.val)
     divergence_adjoint!(adj, y.val, setup.val)
     u.dval .+= adj
-    make_zero!(y.dval)
+    EnzymeCore.make_zero!(y.dval)
     return (nothing, nothing, nothing)
 end
 function EnzymeRules.reverse(
@@ -1535,7 +1535,7 @@ function EnzymeRules.reverse(
     adj = scalarfield(setup.val)
     pressuregradient_adjoint!(adj, y.val, setup.val)
     p.dval .+= adj
-    make_zero!(y.dval)
+    EnzymeCore.make_zero!(y.dval)
     return (nothing, nothing, nothing)
 end
 function EnzymeRules.reverse(
@@ -1550,7 +1550,7 @@ function EnzymeRules.reverse(
     adj = zero(u.val)
     convection_adjoint!(adj, y.val, u.val, setup.val)
     u.dval .+= adj
-    make_zero!(y.dval)
+    EnzymeCore.make_zero!(y.dval)
     return (nothing, nothing, nothing)
 end
 function EnzymeRules.reverse(
@@ -1565,7 +1565,7 @@ function EnzymeRules.reverse(
     adj = zero(u.val)
     diffusion_adjoint!(adj, y.val, setup.val)
     u.dval .+= adj
-    make_zero!(y.dval)
+    EnzymeCore.make_zero!(y.dval)
     return (nothing, nothing, nothing)
 end
 
@@ -1599,7 +1599,7 @@ function EnzymeRules.reverse(
     @warn "bodyforce Enzyme-AD tested only for issteadybodyforce=true"
     adj = setup.val.bodyforce
     u.dval .+= adj .* y.dval
-    make_zero!(y.dval)
+    EnzymeCore.make_zero!(y.dval)
     return (nothing, nothing, nothing, nothing)
 end
 
@@ -1637,7 +1637,7 @@ function EnzymeRules.reverse(
     end
     adj = gravity_pullback(y.val)
     temp.dval .+= adj
-    make_zero!(y.dval)
+    EnzymeCore.make_zero!(y.dval)
     return (nothing, nothing, nothing)
 end
 
@@ -1710,7 +1710,7 @@ function EnzymeRules.reverse(
     end
     adj = dissipation_pullback(y.val)
     u.dval .+= adj
-    make_zero!(y.dval)
+    EnzymeCore.make_zero!(y.dval)
     return (nothing, nothing, nothing, nothing)
 end
 
