@@ -13,9 +13,8 @@ using Adapt
 using ChainRulesCore
 using DocStringExtensions
 using FFTW
-using Enzyme
-import .EnzymeRules: reverse, augmented_primal
-using .EnzymeRules
+using EnzymeCore
+using EnzymeCore.EnzymeRules
 using IterativeSolvers
 using KernelAbstractions
 using KernelAbstractions.Extras.LoopInfo: @unroll
