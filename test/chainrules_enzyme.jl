@@ -1,12 +1,8 @@
-@testsnippet ChainRulesStuff begin
-    using ChainRulesCore
-    using ChainRulesTestUtils
+@testsnippet EnzymeSnip begin
     using Enzyme
+    using EnzymeCore
     using Zygote
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    using EnzymeCore
-    import .EnzymeRules: reverse, augmented_primal
-    using .EnzymeRules
     ENABLE_LOGGING = false
 end
 
@@ -63,9 +59,8 @@ end
     end
 end
 
-@testitem "Chain rules (boundary conditions)" setup = [ChainRulesStuff] begin
-    import .EnzymeRules: reverse, augmented_primal
-    using .EnzymeRules
+@testitem "Chain rules (boundary conditions)" setup = [EnzymeSnip] begin
+    using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     T = Float64
     Re = T(1_000)
     Pr = T(0.71)
@@ -199,7 +194,8 @@ end
     end
 end
 
-@testitem "Divergence" setup = [Case, ChainRulesStuff] begin
+@testitem "Divergence" setup = [Case, EnzymeSnip] begin
+    using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     for (u, setup, d) in
         ((Case.D2.u, Case.D2.setup, Case.D2.div), (Case.D3.u, Case.D3.setup, Case.D3.div))
         d0 = copy(d)
@@ -236,7 +232,8 @@ end
     end
 end
 
-@testitem "Pressuregradient" setup = [Case, ChainRulesStuff] begin
+@testitem "Pressuregradient" setup = [Case, EnzymeSnip] begin
+    using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     for (p, setup) in ((Case.D2.p, Case.D2.setup), (Case.D3.p, Case.D3.setup))
         p0 = copy(p)
         pg = INS.pressuregradient(p, setup)
@@ -273,7 +270,8 @@ end
     end
 end
 
-@testitem "Poisson" setup = [Case, ChainRulesStuff] begin
+@testitem "Poisson" setup = [Case, EnzymeSnip] begin
+    using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     for (psolver, d, setup) in (
         (Case.D2.psolver, Case.D2.div, Case.D2.setup),
         (Case.D3.psolver, Case.D3.div, Case.D3.setup),
@@ -312,7 +310,8 @@ end
     end
 end
 
-@testitem "Convection" setup = [Case, ChainRulesStuff] begin
+@testitem "Convection" setup = [Case, EnzymeSnip] begin
+    using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
         c = INS.convection(u, setup)
         u0 = copy(u)
@@ -352,7 +351,8 @@ end
     end
 end
 
-@testitem "Diffusion" setup = [Case, ChainRulesStuff] begin
+@testitem "Diffusion" setup = [Case, EnzymeSnip] begin
+    using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
         d = INS.diffusion(u, setup)
         u0 = copy(u)
@@ -392,7 +392,8 @@ end
     end
 end
 
-@testitem "Bodyforce" setup = [Case, ChainRulesStuff] begin
+@testitem "Bodyforce" setup = [Case, EnzymeSnip] begin
+    using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     @warn "bodyforce is tested only in the static case"
     for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
         t = 0.5
@@ -440,7 +441,8 @@ end
     end
 end
 
-@testitem "Gravity" setup = [Case, ChainRulesStuff] begin
+@testitem "Gravity" setup = [Case, EnzymeSnip] begin
+    using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     for (t, setup) in ((Case.D2.temp, Case.D2.setup), (Case.D3.temp, Case.D3.setup))
         g = INS.gravity(t, setup)
         Zygote.pullback(INS.gravity, t, setup)[2](g)
@@ -478,7 +480,8 @@ end
     end
 end
 
-@testitem "Dissipation" setup = [Case, ChainRulesStuff] begin
+@testitem "Dissipation" setup = [Case, EnzymeSnip] begin
+    using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
         diss = INS.dissipation(u, setup)
         Zygote.pullback(INS.dissipation, u, setup)[2](diss)
@@ -521,11 +524,11 @@ end
         @test du == zpull
     end
 end
-@testitem "Convection_diffusion_temp" setup = [Case, ChainRulesStuff] begin
+@testitem "Convection_diffusion_temp" setup = [Case, EnzymeSnip] begin
     @test_broken 1 == 2
 end
 
-@testitem "Convectiondiffusion" setup = [Case, ChainRulesStuff] begin
+@testitem "Convectiondiffusion" setup = [Case, EnzymeSnip] begin
     # the pullback rule is missing for this one
     @test_broken 1 == 2
 end

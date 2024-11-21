@@ -1,5 +1,5 @@
 
-@testsnippet EnzymeStuff begin
+@testsnippet EnzymeSnipPull begin
     using IncompressibleNavierStokes
     using Enzyme
     using Zygote
@@ -22,7 +22,7 @@ end
     psolver = default_psolver(setup)
 end
 
-@testitem "Enzyme one force pullback" setup = [Info, EnzymeStuff] begin
+@testitem "Enzyme one force pullback" setup = [Info, EnzymeSnipPull] begin
     for (setup, psolver, T, N) in ((Info.setup, Info.psolver, Info.T, Info.N),)
         dudt = zeros(T, (N, N, 2))
         u = rand(T, (N, N, 2))
@@ -64,7 +64,7 @@ end
     end
 end
 
-@testitem "Enzyme RHS pullback" setup = [Info, EnzymeStuff] begin
+@testitem "Enzyme RHS pullback" setup = [Info, EnzymeSnipPull] begin
     for (setup, psolver, T, N) in ((Info.setup, Info.psolver, Info.T, Info.N),)
         F_out = create_right_hand_side(setup, psolver)
         dudt = zeros(T, (N, N, 2))
