@@ -4,6 +4,7 @@
     using Enzyme
     using Zygote
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
+    using EnzymeCore
     import .EnzymeRules: reverse, augmented_primal
     using .EnzymeRules
     ENABLE_LOGGING = false
