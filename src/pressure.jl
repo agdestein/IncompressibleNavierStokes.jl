@@ -360,8 +360,9 @@ end
 
 # Wrap a function to return `nothing`, because Enzyme can not handle vector return values.
 function enzyme_wrap(f::typeof(poisson!))
-    function wrapped_f(y, args...)
-        y .= f(args...)
+    function wrapped_f(p, psolve, d)
+        p .= d
+        f(psolve, p)
         return nothing
     end
     return wrapped_f

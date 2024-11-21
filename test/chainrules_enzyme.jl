@@ -92,6 +92,9 @@ end
         y = Enzyme.make_zero(u)
         dy = Enzyme.make_zero(u) .+ 1
         f = INS.enzyme_wrap(INS.apply_bc_u!)
+        f(y, u, nothing, setup)
+        @test y != u
+        @test any(!iszero, y)
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -127,6 +130,9 @@ end
         y = Enzyme.make_zero(p)
         dy = Enzyme.make_zero(p) .+ 1
         f = INS.enzyme_wrap(INS.apply_bc_p!)
+        f(y, p, nothing, setup)
+        @test y != p
+        @test any(!iszero, y)
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -163,6 +169,9 @@ end
         y = Enzyme.make_zero(temp)
         dy = Enzyme.make_zero(temp) .+ 1
         f = INS.enzyme_wrap(INS.apply_bc_temp!)
+        f(y, temp, nothing, setup)
+        @test y != temp
+        @test any(!iszero, y)
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -205,6 +214,8 @@ end
         dd = Enzyme.make_zero(d) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.divergence!)
+        f(d, u, setup)
+        @test d == d0
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -243,6 +254,8 @@ end
         dpg = Enzyme.make_zero(pg) .+ 1
         dp = Enzyme.make_zero(p)
         f = INS.enzyme_wrap(INS.pressuregradient!)
+        f(pg, p, setup)
+        @test pg == pg0
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -284,6 +297,9 @@ end
         p = Enzyme.make_zero(p0)
         dp = Enzyme.make_zero(p) .+ 1
         f = INS.enzyme_wrap(INS.poisson!)
+        f(p, psolver, d)
+        @test p == p0
+        dp = Enzyme.make_zero(p) .+ 1
 
         Enzyme.autodiff(
             Enzyme.Reverse,
@@ -314,7 +330,7 @@ end
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
         c = INS.convection(u, setup)
-        u0 = copy(u)
+        c0 = copy(c)
         Zygote.pullback(INS.convection, u, setup)[2](u)[1]
         zpull, z_time = @timed Zygote.pullback(INS.convection, u, setup)[2](c)[1]
 
@@ -323,6 +339,8 @@ end
         dc = Enzyme.make_zero(c) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.convection!)
+        f(c, u, setup)
+        @test c == c0
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -355,7 +373,7 @@ end
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
         d = INS.diffusion(u, setup)
-        u0 = copy(u)
+        d0 = copy(d)
         Zygote.pullback(INS.diffusion, u, setup)[2](d)[1]
         zpull, z_time = @timed Zygote.pullback(INS.diffusion, u, setup)[2](d)[1]
 
@@ -364,6 +382,8 @@ end
         dd = Enzyme.make_zero(d) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.diffusion!)
+        f(d, u, setup)
+        @test d == d0
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -411,6 +431,8 @@ end
         dbf = Enzyme.make_zero(bf) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.applybodyforce!)
+        f(bf, u, t, setup)
+        @test bf == bf0
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -452,6 +474,8 @@ end
         dg = Enzyme.make_zero(g) .+ 1
         dt = Enzyme.make_zero(t)
         f = INS.enzyme_wrap(INS.gravity!)
+        f(g, t, setup)
+        @test g != 0
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -484,6 +508,7 @@ end
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
         diss = INS.dissipation(u, setup)
+        diss0 = copy(diss)
         Zygote.pullback(INS.dissipation, u, setup)[2](diss)
         zpull, z_time = @timed Zygote.pullback(INS.dissipation, u, setup)[2](diss)[1]
 
@@ -493,6 +518,8 @@ end
         ddiff = Enzyme.make_zero(diff)
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.dissipation!)
+        f(diss, diff, u, setup)
+        @test diss == diss0
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
