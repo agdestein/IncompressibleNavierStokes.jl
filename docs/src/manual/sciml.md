@@ -23,8 +23,13 @@ The derivation and the drawbacks of this approach are discussed in the [document
 
 This projected right-hand side can be used in the SciML solvers to solve the Navier-Stokes equations. The following example shows how to use the SciML solvers to solve the ODEs obtained from the Navier-Stokes equations.
 
+!!! note "OrdinaryDiffEqTsit5"
+    We here use the explicit solver `Tsit5` from OrdinaryDiffEqTsit5 directly to
+    skip loading all the toolchains for implicit solvers, which takes a while to
+    install on GitHub.
+
 ```@example
-using DifferentialEquations
+using OrdinaryDiffEqTsit5
 using IncompressibleNavierStokes
 ax = range(0, 1, 101)
 setup = Setup(; x = (ax, ax), Re = 500.0)
