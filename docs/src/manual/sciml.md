@@ -25,6 +25,10 @@ This projected right-hand side can be used in the SciML solvers to solve the Nav
 
 ```@example
 using DifferentialEquations
+using IncompressibleNavierStokes
+ax = range(0, 1, 101)
+setup = Setup(; x = (ax, ax), Re = 500.0)
+psolver = default_psolver(setup)
 f(u, p, t) = create_right_hand_side(setup, psolver)
 u0 = random_field(setup)
 tspan = (0.0, 1.0)     # time span where to solve.
