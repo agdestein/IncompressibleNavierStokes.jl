@@ -198,12 +198,17 @@ end
 end
 
 # "Subtract pressure gradient (differentiable version)."
-# applypressure(u, p, setup) = applypressure!(copy.(u), p, setup)
-#
-# ChainRulesCore.rrule(::typeof(applypressure), p, setup) = (
-#     applypressure(u, p, setup),
-#     φ -> (NoTangent(), applypressure_adjoint!(scalarfield(setup), (φ...,), setup), NoTangent()),
-# )
+applypressure(u, p, setup) = applypressure!(copy.(u), p, setup)
+
+ChainRulesCore.rrule(::typeof(applypressure), u, p, setup) = (
+    applypressure(u, p, setup),
+    φ -> (
+        NoTangent(),
+        NoTangent(),
+        applypressure_adjoint!(scalarfield(setup), φ, nothing, setup),
+        NoTangent(),
+    ),
+)
 
 "Subtract pressure gradient (in-place version)."
 function applypressure!(u, p, setup)
@@ -225,22 +230,60 @@ end
     end
 end
 
-# function applypressure_adjoint!(pbar, φ, u, setup)
-#     (; grid, backend, workgroupsize) = setup
-#     (; dimension, Δu, N, Iu) = grid
-#     D = dimension()
-#     e = Offset(D)
-#     @kernel function applypressure_adjoint_kernel!(p, φ)
-#         I = @index(Global, Cartesian)
-#         p[I] = zero(eltype(p))
-#         for α = 1:D
-#             I - e(α) ∈ Iu[α] && (p[I] += φ[α][I-e(α)] / Δu[α][I[α]-1])
-#             I ∈ Iu[α] && (p[I] -= φ[α][I] / Δu[α][I[α]])
-#         end
-#     end
-#     applypressure_adjoint_kernel!(backend, workgroupsize)(pbar, φ; ndrange = N)
-#     pbar
-# end
+#function applypressure_adjoint!(pbar, φ, u, setup)
+#    (; grid, backend, workgroupsize) = setup
+#    (; dimension, Δu, N, Iu) = grid
+#    D = dimension()
+#    e = Offset(D)
+#    @kernel function applypressure_adjoint_kernel!(p, φ)
+#        I = @index(Global, Cartesian)
+#        p[I] = zero(eltype(p))
+#        for α = 1:D
+#            I - e(α) ∈ Iu[α] && (p[I] += φ[I-e(α),α] / Δu[α][I[α]-1])
+#            I ∈ Iu[α] && (p[I] -= φ[I,α] / Δu[α][I[α]])
+#        end
+#    end
+#    applypressure_adjoint_kernel!(backend, workgroupsize)(pbar, φ; ndrange = N)
+#    pbar
+#end
+function applypressure_adjoint!(pbar, φ, u, setup)
+    # Extract necessary components from the setup structure
+    (; grid, backend, workgroupsize) = setup
+    (; dimension, Δu, N, Iu) = grid
+    D = dimension()  # Get the spatial dimension
+    e = Offset(D)    # Offset function for indexing neighbors
+
+    # Kernel definition for computing the adjoint
+    @kernel function applypressure_adjoint_kernel!(p, φ)
+        # Get the global index for the current thread
+        I = @index(Global, Cartesian)
+
+        # Initialize the adjoint value at the current index to zero
+        local p_I = zero(eltype(p))
+
+        # Loop over each dimension to compute adjoint contributions
+        for α = 1:D
+            # Contribution from φ[I - e(α)] / Δu[α][I[α] - 1]
+            if I - e(α) ∈ Iu[α]
+                p_I += φ[I-e(α), α] / Δu[α][I[α]-1]
+            end
+
+            # Contribution from -φ[I, α] / Δu[α][I[α]]
+            if I ∈ Iu[α]
+                p_I -= φ[I, α] / Δu[α][I[α]]
+            end
+        end
+
+        # Assign the computed value back to p
+        p[I] = p_I
+    end
+
+    # Run the adjoint kernel on the backend, with specified workgroup size
+    applypressure_adjoint_kernel!(backend, workgroupsize)(pbar, φ; ndrange = N)
+
+    # Return the adjoint result for p
+    return pbar
+end
 
 "Compute Laplacian of pressure field (differentiable version)."
 laplacian(p, setup) = laplacian!(scalarfield(setup), p, setup)
@@ -636,6 +679,7 @@ convection_diffusion_temp(u, temp, setup) =
 function ChainRulesCore.rrule(::typeof(convection_diffusion_temp), u, temp, setup)
     conv = convection_diffusion_temp(u, temp, setup)
     convection_diffusion_temp_pullback(φ) = (NoTangent(), du, dtemp, NoTangent())
+    @warn "Check if convection_diffusion_temp pullback behaves as expected"
     (conv, pullback)
 end
 
@@ -797,10 +841,10 @@ function applybodyforce!(F, u, t, setup)
     (; grid, bodyforce, issteadybodyforce) = setup
     (; dimension, Iu, xu) = grid
     D = dimension()
-    for (α, Fα) in enumerate(eachslice(F; dims = D + 1))
-        if issteadybodyforce
-            F .+= bodyforce
-        else
+    if issteadybodyforce
+        F .+= bodyforce
+    else
+        for (α, Fα) in enumerate(eachslice(F; dims = D + 1))
             # xin = ntuple(
             #     β -> reshape(xu[α][β][Iu[α].indices[β]], ntuple(Returns(1), β - 1)..., :),
             #     D,
@@ -1420,3 +1464,294 @@ function get_scale_numbers(u, setup)
     τ = nothing
     (; uavg, ϵ, η, λ, Reλ, L, τ)
 end
+
+# COV_EXCL_START
+# Wrap a function to return `nothing`, because Enzyme can not handle vector return values.
+function enzyme_wrap(
+    f::Union{
+        typeof(divergence!),
+        typeof(pressuregradient!),
+        typeof(convection!),
+        typeof(diffusion!),
+        typeof(applybodyforce!),
+        typeof(gravity!),
+        typeof(dissipation!),
+        typeof(convection_diffusion_temp!),
+        typeof(momentum!),
+    },
+)
+    function wrapped_f(args...)
+        f(args...)
+        return nothing
+    end
+    return wrapped_f
+end
+
+function EnzymeRules.augmented_primal(
+    config::RevConfigWidth{1},
+    func::Union{
+        Const{typeof(enzyme_wrap(divergence!))},
+        Const{typeof(enzyme_wrap(pressuregradient!))},
+        Const{typeof(enzyme_wrap(convection!))},
+        Const{typeof(enzyme_wrap(diffusion!))},
+        Const{typeof(enzyme_wrap(gravity!))},
+    },
+    ::Type{<:Const},
+    y::Duplicated,
+    u::Duplicated,
+    setup::Const,
+)
+    primal = func.val(y.val, u.val, setup.val)
+    if overwritten(config)[3]
+        tape = copy(u.val)
+    else
+        tape = nothing
+    end
+    return AugmentedReturn(primal, nothing, tape)
+end
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(divergence!))},
+    dret,
+    tape,
+    y::Duplicated,
+    u::Duplicated,
+    setup::Const,
+)
+    adj = vectorfield(setup.val)
+    divergence_adjoint!(adj, y.val, setup.val)
+    u.dval .+= adj
+    EnzymeCore.make_zero!(y.dval)
+    return (nothing, nothing, nothing)
+end
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(pressuregradient!))},
+    dret,
+    tape,
+    y::Duplicated,
+    p::Duplicated,
+    setup::Const,
+)
+    adj = scalarfield(setup.val)
+    pressuregradient_adjoint!(adj, y.val, setup.val)
+    p.dval .+= adj
+    EnzymeCore.make_zero!(y.dval)
+    return (nothing, nothing, nothing)
+end
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(convection!))},
+    dret,
+    tape,
+    y::Duplicated,
+    u::Duplicated,
+    setup::Const,
+)
+    adj = zero(u.val)
+    convection_adjoint!(adj, y.val, u.val, setup.val)
+    u.dval .+= adj
+    EnzymeCore.make_zero!(y.dval)
+    return (nothing, nothing, nothing)
+end
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(diffusion!))},
+    dret,
+    tape,
+    y::Duplicated,
+    u::Duplicated,
+    setup::Const,
+)
+    adj = zero(u.val)
+    diffusion_adjoint!(adj, y.val, setup.val)
+    u.dval .+= adj
+    EnzymeCore.make_zero!(y.dval)
+    return (nothing, nothing, nothing)
+end
+
+function EnzymeRules.augmented_primal(
+    config::RevConfigWidth{1},
+    func::Union{Const{typeof(enzyme_wrap(applybodyforce!))}},
+    ::Type{<:Const},
+    y::Duplicated,
+    u::Duplicated,
+    t::Const,
+    setup::Const,
+)
+    primal = func.val(y.val, u.val, t.val, setup.val)
+    if overwritten(config)[3]
+        tape = copy(u.val)
+    else
+        tape = nothing
+    end
+    return AugmentedReturn(primal, nothing, tape)
+end
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(applybodyforce!))},
+    dret,
+    tape,
+    y::Duplicated,
+    u::Duplicated,
+    t::Const,
+    setup::Const,
+)
+    @warn "bodyforce Enzyme-AD tested only for issteadybodyforce=true"
+    adj = setup.val.bodyforce
+    u.dval .+= adj .* y.dval
+    EnzymeCore.make_zero!(y.dval)
+    return (nothing, nothing, nothing, nothing)
+end
+
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(gravity!))},
+    dret,
+    tape,
+    y::Duplicated,
+    temp::Duplicated,
+    setup::Const,
+)
+    (; grid, backend, workgroupsize, temperature) = setup.val
+    (; dimension, Δ, N, Iu) = grid
+    (; gdir, α2) = temperature
+    backend = get_backend(temp.val)
+    D = dimension()
+    e = Offset(D)
+    function gravity_pullback(φ)
+        @kernel function g!(tempbar, φbar, valα)
+            α = getval(valα)
+            J = @index(Global, Cartesian)
+            t = zero(eltype(tempbar))
+            # 1
+            I = J
+            I ∈ Iu[α] && (t += α2 * Δ[α][I[α]+1] * φbar[I, α] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
+            # 2
+            I = J - e(α)
+            I ∈ Iu[α] && (t += α2 * Δ[α][I[α]] * φbar[I, α] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
+            tempbar[J] = t
+        end
+        tempbar = zero(temp.val)
+        g!(backend, workgroupsize)(tempbar, φ, Val(gdir); ndrange = N)
+        tempbar
+    end
+    adj = gravity_pullback(y.val)
+    temp.dval .+= adj
+    EnzymeCore.make_zero!(y.dval)
+    return (nothing, nothing, nothing)
+end
+
+function EnzymeRules.augmented_primal(
+    config::RevConfigWidth{1},
+    func::Union{
+        Const{typeof(enzyme_wrap(dissipation!))},
+        Const{typeof(enzyme_wrap(convection_diffusion_temp!))},
+    },
+    ::Type{<:Const},
+    y::Duplicated,
+    x1::Duplicated,
+    x2::Duplicated,
+    setup::Const,
+)
+    primal = func.val(y.val, x1.val, x2.val, setup.val)
+    if overwritten(config)[3]
+        tape = copy(x2.val)
+    else
+        tape = nothing
+    end
+    return AugmentedReturn(primal, nothing, tape)
+end
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(dissipation!))},
+    dret,
+    tape,
+    y::Duplicated,
+    d::Duplicated,
+    u::Duplicated,
+    setup::Const,
+)
+    (; grid, backend, workgroupsize, Re, temperature) = setup.val
+    (; dimension, N, Ip) = grid
+    (; α1, γ) = temperature
+    D = dimension()
+    e = Offset(D)
+    @kernel function ∂φ!(ubar, dbar, φbar, d, u, valdims)
+        J = @index(Global, Cartesian)
+        @unroll for β in getval(valdims)
+            # Compute ubar
+            a = zero(eltype(u))
+            # 1
+            I = J + e(β)
+            I ∈ Ip && (a += Re * α1 / γ * d[I-e(β), β] / 2)
+            # 2
+            I = J
+            I ∈ Ip && (a += Re * α1 / γ * d[I, β] / 2)
+            ubar[J, β] += a
+
+            # Compute dbar
+            b = zero(eltype(u))
+            # 1
+            I = J + e(β)
+            I ∈ Ip && (b += Re * α1 / γ * u[I-e(β), β] / 2)
+            # 2
+            I = J
+            I ∈ Ip && (b += Re * α1 / γ * u[I, β] / 2)
+            dbar[J, β] += b
+        end
+    end
+    function dissipation_pullback(φbar)
+        # Dφ/Du = ∂φ(u, d)/∂u + ∂φ(u, d)/∂d ⋅ ∂d(u)/∂u
+        dbar = zero(u.val)
+        ubar = zero(u.val)
+        ∂φ!(backend, workgroupsize)(ubar, dbar, φbar, d.val, u.val, Val(1:D); ndrange = N)
+        diffusion_adjoint!(ubar, dbar, setup.val)
+        ubar
+    end
+    adj = dissipation_pullback(y.val)
+    u.dval .+= adj
+    EnzymeCore.make_zero!(y.dval)
+    return (nothing, nothing, nothing, nothing)
+end
+
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(convection_diffusion_temp!))},
+    dret,
+    tape,
+    y::Duplicated,
+    temp::Duplicated,
+    u::Duplicated,
+    setup::Const,
+)
+    @error "convection_diffusion_temp Enzyme-AD not yet implemented"
+end
+
+function EnzymeRules.augmented_primal(
+    config::RevConfigWidth{1},
+    func::Union{Const{typeof(enzyme_wrap(momentum!))}},
+    ::Type{<:Const},
+    y::Duplicated,
+    x1::Duplicated,
+    x2::Duplicated,
+    x3::Duplicated,
+    t::Const,
+    setup::Const,
+)
+    @error "momentum Enzyme-AD not yet implemented"
+end
+function EnzymeRules.reverse(
+    config::RevConfigWidth{1},
+    func::Const{typeof(enzyme_wrap(momentum!))},
+    dret,
+    tape,
+    y::Duplicated,
+    u::Duplicated,
+    temp::Duplicated,
+    t::Const,
+    setup::Const,
+)
+    @error "momentum Enzyme-AD not yet implemented"
+end
+# COV_EXCL_STOP

@@ -6,7 +6,19 @@
     lims = T(0), T(1)
     x = tanh_grid(lims..., n), tanh_grid(lims..., n, 1.3)
     bc = DirichletBC(), DirichletBC()
-    setup = Setup(; x, Re, boundary_conditions = (bc, bc))
+    boundary_conditions = (bc, bc)
+    temperature =
+        temperature_equation(; Pr = T(0.71), Ra = T(1e6), Ge = T(1.0), boundary_conditions)
+    bodyforce = (dim, x, y, t) -> (dim == 1) * 5 * sinpi(8 * y)
+    setup = Setup(;
+        x,
+        boundary_conditions,
+        Re,
+        temperature,
+        bodyforce,
+        issteadybodyforce = true,
+    )
+    psolver = default_psolver(setup)
     uref(dim, x, y, args...) = -(dim == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
     u = velocityfield(setup, uref, T(0))
 end
@@ -19,7 +31,19 @@ end
     lims = T(0), T(1)
     x = tanh_grid(lims..., n, 1.2), tanh_grid(lims..., n, 1.1), cosine_grid(lims..., n)
     bc = DirichletBC(), DirichletBC(), DirichletBC()
-    setup = Setup(; x, Re, boundary_conditions = (bc, bc, bc))
+    boundary_conditions = (bc, bc, bc)
+    temperature =
+        temperature_equation(; Pr = T(0.71), Ra = T(1e6), Ge = T(1.0), boundary_conditions)
+    bodyforce = (dim, x, y, z, t) -> (dim == 1) * 5 * sinpi(8 * y)
+    setup = Setup(;
+        x,
+        boundary_conditions,
+        Re,
+        temperature,
+        bodyforce,
+        issteadybodyforce = true,
+    )
+    psolver = default_psolver(setup)
     uref(dim, x, y, args...) = -(dim == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
     u = velocityfield(setup, uref, T(0))
 end
@@ -141,6 +165,33 @@ end
         m = momentum(u, nothing, T(1), setup)
         @test m isa Array{T}
         @test all(!isnan, m)
+    end
+end
+
+@testitem "Apply body force" setup = [Setup2D, Setup3D] begin
+    using Random
+    for (u, setup) in ((Setup2D.u, Setup2D.setup), (Setup3D.u, Setup3D.setup))
+        T = eltype(u)
+        F = applybodyforce(u, T(0), setup)
+        @test F isa Array{T}
+        @test all(!isnan, F)
+    end
+end
+
+@testitem "Pressure" setup = [Setup2D, Setup3D] begin
+    using Random
+    for (u, setup, psolver) in (
+        (Setup2D.u, Setup2D.setup, Setup2D.psolver),
+        (Setup3D.u, Setup3D.setup, Setup3D.psolver),
+    )
+        T = eltype(u)
+        temp = randn(T, setup.grid.N)
+        p = pressure(u, temp, T(0), setup; psolver = psolver)
+        @test p isa Array{T}
+        @test all(!isnan, p)
+        F = applypressure(u, p, setup)
+        @test F isa Array{T}
+        @test all(!isnan, F)
     end
 end
 

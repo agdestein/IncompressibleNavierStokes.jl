@@ -13,6 +13,8 @@ using Adapt
 using ChainRulesCore
 using DocStringExtensions
 using FFTW
+using EnzymeCore
+using EnzymeCore.EnzymeRules
 using IterativeSolvers
 using KernelAbstractions
 using KernelAbstractions.Extras.LoopInfo: @unroll
@@ -66,6 +68,7 @@ include("eddyviscosity.jl")
 include("matrices.jl")
 include("initializers.jl")
 include("processors.jl")
+include("sciml.jl")
 include("solver.jl")
 include("utils.jl")
 
@@ -119,6 +122,7 @@ export apply_bc_u,
     apply_bc_p,
     apply_bc_temp,
     applybodyforce,
+    applypressure,
     convection_diffusion_temp,
     convection,
     diffusion,
@@ -135,6 +139,7 @@ export apply_bc_u,
     laplacian_mat,
     momentum,
     poisson,
+    pressure,
     pressuregradient,
     project,
     scalewithvolume,
@@ -144,5 +149,8 @@ export apply_bc_u,
     vorticity,
     Dfield,
     Qfield
+
+# SciML operations
+export create_right_hand_side, right_hand_side!
 
 end

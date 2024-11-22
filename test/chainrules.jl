@@ -4,8 +4,9 @@
 
     # Test chain rule correctness by comparing with finite differences
     "Use function name only as test set name"
-    test_rrule_named(f, args...; kwargs...) =
+    function test_rrule_named(f, args...; kwargs...)
         test_rrule(f, args...; testset_name = string(f), kwargs...)
+    end
 end
 
 @testitem "Chain rules (boundary conditions)" setup = [ChainRulesStuff] begin

@@ -3,6 +3,7 @@ function Setup(;
     x,
     boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
     bodyforce = nothing,
+    dbodyforce = nothing,
     issteadybodyforce = true,
     closure_model = nothing,
     backend = CPU(),
@@ -28,6 +29,18 @@ function Setup(;
         F = vectorfield(setup)
         bodyforce = applybodyforce!(F, u, T(0), setup)
         setup = (; setup..., issteadybodyforce = true, bodyforce)
+    end
+    if !isnothing(dbodyforce)
+        @warn "dbodyforce is not used at the moment. No need to define it."
+        if issteadybodyforce
+            dsetup = (; setup..., bodyforce = dbodyforce, issteadybodyforce = false)
+            (; x) = setup.grid
+            T = eltype(x[1])
+            u = vectorfield(setup)
+            F = vectorfield(setup)
+            dbodyforce = applybodyforce!(F, u, T(0), dsetup)
+        end
+        setup = (; setup..., dbodyforce)
     end
     setup
 end
