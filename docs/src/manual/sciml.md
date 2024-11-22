@@ -23,7 +23,7 @@ The derivation and the drawbacks of this approach are discussed in the [document
 
 This projected right-hand side can be used in the SciML solvers to solve the Navier-Stokes equations. The following example shows how to use the SciML solvers to solve the ODEs obtained from the Navier-Stokes equations.
 
-```julia
+```@example
 using DifferentialEquations
 f(u, p, t) = create_right_hand_side(setup, psolver)
 u0 = random_field(setup)
