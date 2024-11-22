@@ -83,6 +83,7 @@ export default defineConfig({
               { text: 'Pressure solvers', link: '/manual/pressure' },
               { text: 'Solver', link: '/manual/solver' },
               { text: 'Utils', link: '/manual/utils' },
+              { text: 'SciML', link: '/manual/sciml' },
               { text: 'Neural closure models', link: '/manual/closure' },
             ],
           },
