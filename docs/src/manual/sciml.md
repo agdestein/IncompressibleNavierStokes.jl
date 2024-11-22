@@ -28,7 +28,7 @@ This projected right-hand side can be used in the SciML solvers to solve the Nav
     skip loading all the toolchains for implicit solvers, which takes a while to
     install on GitHub.
 
-```@example
+```@example SciML
 using OrdinaryDiffEqTsit5
 using IncompressibleNavierStokes
 ax = range(0, 1, 101)
@@ -43,10 +43,13 @@ sol = solve(problem, Tsit5(), reltol = 1e-8, abstol = 1e-8) # sol: SciMLBase.ODE
 
 Alternatively, it is also possible to use an [in-place formulation](https://docs.sciml.ai/DiffEqDocs/stable/basics/problem/#In-place-vs-Out-of-Place-Function-Definition-Forms)
 
-```@example
-du = similar(u)
-t = 0.0
+```@example SciML
 f!(du,u,p,t) = right_hand_side!(du, u, Ref([setup, psolver]), t)
+u = similar(u0)
+du = similar(u0)
+p = nothing
+t = 0.0
+f!(du,u,p,t)
 ```
 that is usually faster than the out-of-place formulation.
 
