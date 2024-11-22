@@ -38,7 +38,9 @@ sol = solve(problem, Tsit5(), reltol = 1e-8, abstol = 1e-8) # sol: SciMLBase.ODE
 
 Alternatively, it is also possible to use an [in-place formulation](https://docs.sciml.ai/DiffEqDocs/stable/basics/problem/#In-place-vs-Out-of-Place-Function-Definition-Forms)
 
-```julia
+```@example
+du = similar(u)
+t = 0.0
 f(du,u,p,t) = right_hand_side!(du, u, Ref([setup, psolver]), t)
 ```
 that is usually faster than the out-of-place formulation.
