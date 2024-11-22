@@ -70,19 +70,6 @@ function plotgrid(x, y, z)
     fig
 end
 
-"""
-Animate a plot of the solution every `update` iteration.
-The animation is saved to `path`, which should have one
-of the following extensions:
-
-- ".mkv"
-- ".mp4"
-- ".webm"
-- ".gif"
-
-The plot is determined by a `plotter` processor.
-Additional `kwargs` are passed to `plot`.
-"""
 animator(;
     setup,
     path,
@@ -108,23 +95,6 @@ animator(;
         stream
     end
 
-"""
-Processor for plotting the solution in real time.
-
-Keyword arguments:
-
-- `plot`: Plot function.
-- `nupdate`: Show solution every `nupdate` time step.
-- `displayfig`: Display the figure at the start.
-- `screen`: If `nothing`, use default display.
-    If `GLMakie.screen()` multiple plots can be displayed in separate
-    windows like in MATLAB (see also `GLMakie.closeall()`).
-- `displayupdates`: Display the figure at every update (if using CairoMakie).
-- `sleeptime`: The `sleeptime` is slept at every update, to give Makie
-    time to update the plot. Set this to `nothing` to skip sleeping.
-
-Additional `kwargs` are passed to the `plot` function.
-"""
 realtimeplotter(;
     setup,
     plot = fieldplot,
@@ -149,30 +119,6 @@ realtimeplotter(;
         fig
     end
 
-"""
-Plot `state` field in pressure points.
-If `state` is `Observable`, then the plot is interactive.
-
-Available fieldnames are:
-
-- `:velocity`,
-- `:vorticity`,
-- `:streamfunction`,
-- `:pressure`.
-
-Available plot `type`s for 2D are:
-
-- `heatmap` (default),
-- `image`,
-- `contour`,
-- `contourf`.
-
-Available plot `type`s for 3D are:
-
-- `contour` (default).
-
-The `alpha` value gets passed to `contour` in 3D.
-"""
 fieldplot(state; setup, kwargs...) = fieldplot(
     setup.grid.dimension,
     state isa Observable ? state : Observable(state);
@@ -332,9 +278,6 @@ function fieldplot(
     fig
 end
 
-"""
-Create energy history plot.
-"""
 function energy_history_plot(state; setup)
     @assert state isa Observable "Energy history requires observable state."
     (; Ip) = setup.grid
@@ -351,22 +294,6 @@ function energy_history_plot(state; setup)
     fig
 end
 
-"""
-Create energy spectrum plot.
-The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is defined by
-
-```math
-\\hat{e}(\\kappa) = \\int_{\\kappa \\leq \\| k \\|_2 < \\kappa + 1} | \\hat{e}(k) | \\mathrm{d} k,
-```
-
-as in San and Staples [San2012](@cite).
-
-Keyword arguments:
-
-- `sloperange = [0.6, 0.9]`: Percentage (between 0 and 1) of x-axis where the slope is plotted.
-- `slopeoffset = 1.3`: How far above the energy spectrum the inertial slope is plotted.
-- `kwargs...`: They are passed to [`observespectrum`](@ref).
-"""
 function energy_spectrum_plot(
     state;
     setup,

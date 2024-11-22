@@ -197,7 +197,7 @@ end
     p[I] += adjoint
 end
 
-# "Subtract pressure gradient (differentiable version)."
+"Subtract pressure gradient (differentiable version)."
 applypressure(u, p, setup) = applypressure!(copy.(u), p, setup)
 
 ChainRulesCore.rrule(::typeof(applypressure), u, p, setup) = (

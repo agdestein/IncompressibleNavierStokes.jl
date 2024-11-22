@@ -17,29 +17,45 @@ Using IncompressibleNavierStokes it is possible to write the momentum equations 
 \end{align*}
 ```
 
-The derivation and the drawbacks of this approach are discussed in the [documentation](/docs/src/manual/spatial.md).
+<!-- There is an issue with linking to other MD pages: -->
+<!-- https://github.com/LuxDL/DocumenterVitepress.jl/issues/172 -->
+The derivation and the drawbacks of this approach are discussed in the [documentation](spatial.md).
 
 This projected right-hand side can be used in the SciML solvers to solve the Navier-Stokes equations. The following example shows how to use the SciML solvers to solve the ODEs obtained from the Navier-Stokes equations.
 
-```julia
-using DifferentialEquations 
-f(u, p, t) = create_right_hand_side(setup, psolver) 
-u0 = INITIAL_CONDITION
+!!! note "OrdinaryDiffEqTsit5"
+    We here use the explicit solver `Tsit5` from OrdinaryDiffEqTsit5 directly to
+    skip loading all the toolchains for implicit solvers, which takes a while to
+    install on GitHub.
+
+```@example SciML
+using OrdinaryDiffEqTsit5
+using IncompressibleNavierStokes
+ax = range(0, 1, 101)
+setup = Setup(; x = (ax, ax), Re = 500.0)
+psolver = default_psolver(setup)
+f = create_right_hand_side(setup, psolver)
+u0 = random_field(setup)
 tspan = (0.0, 1.0)     # time span where to solve.
 problem = ODEProblem(f, u0, tspan) #SciMLBase.ODEProblem
 sol = solve(problem, Tsit5(), reltol = 1e-8, abstol = 1e-8) # sol: SciMLBase.ODESolution
 ```
 
-Alternatively, it is also possible to use an [in-place formulation](https://docs.sciml.ai/DiffEqDocs/stable/basics/problem/#In-place-vs-Out-of-Place-Function-Definition-Forms) 
+Alternatively, it is also possible to use an [in-place formulation](https://docs.sciml.ai/DiffEqDocs/stable/basics/problem/#In-place-vs-Out-of-Place-Function-Definition-Forms)
 
-```julia
-f(du,u,p,t) = right_hand_side!(du, u, Ref([setup, psolver]), t)
+```@example SciML
+f!(du,u,p,t) = right_hand_side!(du, u, Ref([setup, psolver]), t)
+u = similar(u0)
+du = similar(u0)
+p = nothing
+t = 0.0
+f!(du,u,p,t)
 ```
 that is usually faster than the out-of-place formulation.
 
 You can look [here](https://docs.sciml.ai/DiffEqDocs/stable/basics/overview/) for more information on how to use the SciML solvers and all the options available.
 
-## API 
+## API
 ```@autodocs
 Modules = [IncompressibleNavierStokes]
 Pages = ["sciml.jl"]

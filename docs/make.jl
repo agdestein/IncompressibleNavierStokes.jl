@@ -2,6 +2,7 @@
 localdev = haskey(ENV, "LOCALDEV")
 
 # Get access to example dependencies
+# Those are required for running the examples and generating output
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 
 using IncompressibleNavierStokes
@@ -92,7 +93,7 @@ makedocs(;
     # draft = true,
     # clean = !localdev,
     modules = [IncompressibleNavierStokes, NeuralClosure],
-    warnonly = true, # Reexporting KernelAbstractions.CPU fails otherwise
+    # warnonly = true, # Reexporting KernelAbstractions.CPU fails otherwise
     plugins = [bib],
     authors = "Syver Døving Agdestein, Benjamin Sanderse, and contributors",
     repo = Remotes.GitHub("agdestein", "IncompressibleNavierStokes.jl"),
