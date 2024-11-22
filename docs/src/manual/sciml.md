@@ -17,6 +17,8 @@ Using IncompressibleNavierStokes it is possible to write the momentum equations 
 \end{align*}
 ```
 
+<!-- There is an issue with linking to other MD pages: -->
+<!-- https://github.com/LuxDL/DocumenterVitepress.jl/issues/172 -->
 The derivation and the drawbacks of this approach are discussed in the [documentation](spatial.md).
 
 This projected right-hand side can be used in the SciML solvers to solve the Navier-Stokes equations. The following example shows how to use the SciML solvers to solve the ODEs obtained from the Navier-Stokes equations.
