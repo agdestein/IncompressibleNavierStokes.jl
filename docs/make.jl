@@ -2,6 +2,7 @@
 localdev = haskey(ENV, "LOCALDEV")
 
 # Get access to example dependencies
+# Those are required for running the examples and generating output
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 
 using IncompressibleNavierStokes

@@ -1,6 +1,6 @@
 # Neural closure models
 
-!!! note "`NeuralClorusure`"
+!!! note "`NeuralClosure`"
     These features are experimental, and require cloning
     IncompressibleNavierStokes from GitHub:
     ```sh

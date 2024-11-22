@@ -34,7 +34,7 @@ using IncompressibleNavierStokes
 ax = range(0, 1, 101)
 setup = Setup(; x = (ax, ax), Re = 500.0)
 psolver = default_psolver(setup)
-f(u, p, t) = create_right_hand_side(setup, psolver)
+f = create_right_hand_side(setup, psolver)
 u0 = random_field(setup)
 tspan = (0.0, 1.0)     # time span where to solve.
 problem = ODEProblem(f, u0, tspan) #SciMLBase.ODEProblem
@@ -46,7 +46,7 @@ Alternatively, it is also possible to use an [in-place formulation](https://docs
 ```@example
 du = similar(u)
 t = 0.0
-f(du,u,p,t) = right_hand_side!(du, u, Ref([setup, psolver]), t)
+f!(du,u,p,t) = right_hand_side!(du, u, Ref([setup, psolver]), t)
 ```
 that is usually faster than the out-of-place formulation.
 
