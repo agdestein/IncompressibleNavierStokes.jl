@@ -1,6 +1,6 @@
 # # A-posteriori analysis: Large Eddy Simulation (2D)
 #
-# This script is used to generate results for the the paper [Agdestein2024](@citet).
+# This script is used to generate results for the the paper [Agdestein2025](@citet).
 #
 # - Generate filtered DNS data
 # - Train closure models

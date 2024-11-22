@@ -1,6 +1,6 @@
 # # A-priori analysis: Filtered DNS (2D or 3D)
 #
-# This script is used to generate results for the the paper [Agdestein2024](@citet).
+# This script is used to generate results for the the paper [Agdestein2025](@citet).
 #
 # - Generate filtered DNS data
 # - Compute quantities for different filters
