@@ -1465,6 +1465,7 @@ function get_scale_numbers(u, setup)
     (; uavg, ϵ, η, λ, Reλ, L, τ)
 end
 
+# COV_EXCL_START
 # Wrap a function to return `nothing`, because Enzyme can not handle vector return values.
 function enzyme_wrap(
     f::Union{
@@ -1753,3 +1754,4 @@ function EnzymeRules.reverse(
 )
     @error "momentum Enzyme-AD not yet implemented"
 end
+# COV_EXCL_STOP

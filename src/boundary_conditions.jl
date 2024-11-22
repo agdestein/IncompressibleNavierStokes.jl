@@ -528,6 +528,7 @@ apply_bc_temp!(bc::PressureBC, temp, β, t, setup; isright, kwargs...) =
 apply_bc_temp_pullback!(bc::PressureBC, φbar, β, t, setup; isright, kwargs...) =
     apply_bc_p_pullback!(SymmetricBC(), φbar, β, t, setup; isright, kwargs...)
 
+# COV_EXCL_START
 # Wrap a function to return `nothing`, because Enzyme can not handle vector return values.
 function enzyme_wrap(
     f::Union{typeof(apply_bc_u!),typeof(apply_bc_p!),typeof(apply_bc_temp!)},
@@ -602,3 +603,4 @@ function EnzymeRules.reverse(
     y.dval .= x.dval # y is a copy of x
     return (nothing, nothing, nothing, nothing)
 end
+# COV_EXCL_STOP

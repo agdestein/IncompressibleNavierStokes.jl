@@ -358,6 +358,7 @@ function psolver_spectral(setup)
     end
 end
 
+# COV_EXCL_START
 # Wrap a function to return `nothing`, because Enzyme can not handle vector return values.
 function enzyme_wrap(f::typeof(poisson!))
     function wrapped_f(p, psolve, d)
@@ -393,3 +394,4 @@ function EnzymeRules.reverse(
     EnzymeCore.make_zero!(y.dval)
     return (nothing, nothing, nothing)
 end
+# COV_EXCL_STOP

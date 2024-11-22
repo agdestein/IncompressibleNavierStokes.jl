@@ -46,6 +46,7 @@ function right_hand_side!(dudt, u, params_ref, t)
     return nothing
 end
 
+# COV_EXCL_START
 function EnzymeRules.augmented_primal(
     config::RevConfigWidth{1},
     func::Const{typeof(right_hand_side!)},
@@ -109,3 +110,4 @@ function EnzymeRules.reverse(
 
     return (nothing, nothing, nothing, nothing)
 end
+# COV_EXCL_STOP
