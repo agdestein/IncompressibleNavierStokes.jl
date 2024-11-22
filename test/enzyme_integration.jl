@@ -30,7 +30,9 @@ end
         params = [setup, psolver]
         params_ref = Ref(params)
         right_hand_side!(dudt, u, params_ref, T(0))
+        @test all(!isnan, dudt)
         F_out = create_right_hand_side(setup, psolver)
+        @test all(!isnan, F_out(u, nothing, T(0)))
         @test dudt ≈ F_out(u, nothing, T(0))
         @test u == u0
         @test sum(dudt) != 0
@@ -82,6 +84,10 @@ end
             Const(params_ref),
             Const(T(0)),
         )
+        @test all(!isnan, u)
+        @test all(!isnan, du)
+        @test all(!isnan, dudt)
+        @test all(!isnan, dd)
         @test u0 == u
         @test dudt ≈ F_out(u, nothing, T(0))
         zpull = Zygote.pullback(F_out, u, nothing, T(0))

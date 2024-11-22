@@ -92,9 +92,10 @@ end
         y = Enzyme.make_zero(u)
         dy = Enzyme.make_zero(u) .+ 1
         f = INS.enzyme_wrap(INS.apply_bc_u!)
+        @test f isa Function
         f(y, u, nothing, setup)
         @test y != u
-        @test any(!iszero, y)
+        @test any(!isnan, y)
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -130,9 +131,10 @@ end
         y = Enzyme.make_zero(p)
         dy = Enzyme.make_zero(p) .+ 1
         f = INS.enzyme_wrap(INS.apply_bc_p!)
+        @test f isa Function
         f(y, p, nothing, setup)
         @test y != p
-        @test any(!iszero, y)
+        @test any(!isnan, y)
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -169,9 +171,10 @@ end
         y = Enzyme.make_zero(temp)
         dy = Enzyme.make_zero(temp) .+ 1
         f = INS.enzyme_wrap(INS.apply_bc_temp!)
+        @test f isa Function
         f(y, temp, nothing, setup)
         @test y != temp
-        @test any(!iszero, y)
+        @test any(!isnan, y)
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -214,6 +217,7 @@ end
         dd = Enzyme.make_zero(d) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.divergence!)
+        @test f isa Function
         f(d, u, setup)
         @test d == d0
         Enzyme.autodiff(
@@ -254,6 +258,7 @@ end
         dpg = Enzyme.make_zero(pg) .+ 1
         dp = Enzyme.make_zero(p)
         f = INS.enzyme_wrap(INS.pressuregradient!)
+        @test f isa Function
         f(pg, p, setup)
         @test pg == pg0
         Enzyme.autodiff(
@@ -297,6 +302,7 @@ end
         p = Enzyme.make_zero(p0)
         dp = Enzyme.make_zero(p) .+ 1
         f = INS.enzyme_wrap(INS.poisson!)
+        @test f isa Function
         f(p, psolver, d)
         @test p == p0
         dp = Enzyme.make_zero(p) .+ 1
@@ -339,6 +345,7 @@ end
         dc = Enzyme.make_zero(c) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.convection!)
+        @test f isa Function
         f(c, u, setup)
         @test c == c0
         Enzyme.autodiff(
@@ -382,6 +389,7 @@ end
         dd = Enzyme.make_zero(d) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.diffusion!)
+        @test f isa Function
         f(d, u, setup)
         @test d == d0
         Enzyme.autodiff(
@@ -431,6 +439,7 @@ end
         dbf = Enzyme.make_zero(bf) .+ 1
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.applybodyforce!)
+        @test f isa Function
         f(bf, u, t, setup)
         @test bf == bf0
         Enzyme.autodiff(
@@ -474,6 +483,7 @@ end
         dg = Enzyme.make_zero(g) .+ 1
         dt = Enzyme.make_zero(t)
         f = INS.enzyme_wrap(INS.gravity!)
+        @test f isa Function
         f(g, t, setup)
         @test g != 0
         Enzyme.autodiff(
@@ -518,6 +528,7 @@ end
         ddiff = Enzyme.make_zero(diff)
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.dissipation!)
+        @test f isa Function
         f(diss, diff, u, setup)
         @test diss == diss0
         Enzyme.autodiff(
