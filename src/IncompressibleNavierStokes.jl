@@ -55,6 +55,12 @@ using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 "$LICENSE"
 license = "MIT"
 
+# We are reexporting KernelAbstractions.CPU, but
+# Documenter cannot find the docstring and complains.
+# Reapply the docstring here to keep Documenter happy.
+s = @doc(KernelAbstractions.CPU)
+@doc s.text[1] KernelAbstractions.CPU
+
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
 
