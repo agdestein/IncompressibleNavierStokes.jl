@@ -26,7 +26,7 @@ This projected right-hand side can be used in the SciML solvers to solve the Nav
 ```julia
 using DifferentialEquations
 f(u, p, t) = create_right_hand_side(setup, psolver)
-u0 = INITIAL_CONDITION
+u0 = random_field(setup)
 tspan = (0.0, 1.0)     # time span where to solve.
 problem = ODEProblem(f, u0, tspan) #SciMLBase.ODEProblem
 sol = solve(problem, Tsit5(), reltol = 1e-8, abstol = 1e-8) # sol: SciMLBase.ODESolution
