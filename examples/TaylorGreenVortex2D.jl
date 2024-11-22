@@ -49,11 +49,8 @@ function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, backend = C
         )
         (; u, t), outputs = solve_unsteady(; setup, ustart, tlims, Δt, psolver)
         (; Ip) = setup.grid
-        a, b = T(0), T(0)
-        for α = 1:D
-            a += sum(abs2, u[α][Ip] - ut[α][Ip])
-            b += sum(abs2, ut[α][Ip])
-        end
+        a = sum(abs2, u[Ip, :] - ut[Ip, :])
+        b = sum(abs2, ut[Ip, :])
         e[i] = sqrt(a) / sqrt(b)
     end
     e
