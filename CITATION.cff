@@ -27,3 +27,7 @@ license: MIT
 commit: 7cfbbf24784288cd85e4dd6f0423f2cf709f5183
 version: 2.1.0
 date-released: '2024-11-09'
+identifiers:
+  - description: This is the collection of archived snapshots of all versions of My Research Software
+    type: doi
+    value: "10.5281/zenodo.14217342"
