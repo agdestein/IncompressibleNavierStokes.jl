@@ -24,6 +24,6 @@ abstract: >-
   Julia, running on GPUs and compatible with
   reverse mode automatic differentiation.
 license: MIT
-commit: 81c57ed9a4b366c2192610268564e8dfa26b43c8
-version: 2.0.1
+commit: 7cfbbf24784288cd85e4dd6f0423f2cf709f5183
+version: 2.1.0
 date-released: '2024-11-09'
