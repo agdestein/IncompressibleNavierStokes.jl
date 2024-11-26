@@ -11,11 +11,12 @@ createdata(; params, seeds, outdir, taskid) =
             @info "Skipping seed $(repr(seed)) for task $taskid"
             continue
         end
-        filenames = map(Iterators.product(params.nles, params.filters)) do nles, Φ
+        filenames = []
+        for (nles, Φ) in Iterators.product(params.nles, params.filters)
             f = getdatafile(outdir, nles, Φ, seed)
             datadir = dirname(f)
             ispath(datadir) || mkpath(datadir)
-            f
+            push!(filenames, f)
         end
         data = create_les_data(; params..., rng = Xoshiro(seed), filenames)
         @info(
