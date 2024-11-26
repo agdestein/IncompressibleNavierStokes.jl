@@ -18,7 +18,7 @@ function velocityfield(
     doproject = true,
 )
     (; grid) = setup
-    (; dimension, N, Iu, x, xu) = grid
+    (; dimension, Iu, xu) = grid
 
     D = dimension()
 
