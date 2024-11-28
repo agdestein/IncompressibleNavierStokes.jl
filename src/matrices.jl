@@ -300,9 +300,9 @@ function diffusion_mat(setup)
     j = zeros(Int, 0) # Input indices
     v = zeros(eltype(x[1]), 0) # Values v_ij
 
-    for α in 1:D # Velocity components
+    for α = 1:D # Velocity components
         I = Iu[α] # These are the indices looped over in the original kernel
-        for β in 1:D # Differentiation directions
+        for β = 1:D # Differentiation directions
             Δuαβ = map(I -> α == β ? Δu[β][I[β]] : Δ[β][I[β]], I)
             Δa = map(I -> β == α ? Δ[β][I[β]] : Δu[β][I[β]-1], I)
             Δb = map(I -> β == α ? Δ[β][I[β]+1] : Δu[β][I[β]], I)
@@ -326,8 +326,8 @@ function diffusion_mat(setup)
             append!(i, ilin[I, α][:])
             append!(i, ilin[I, α][:])
             append!(i, ilin[I, α][:])
-            append!(j, ilin[I .- eβ, α][:])
-            append!(j, ilin[I .+ eβ, α][:])
+            append!(j, ilin[I.-eβ, α][:])
+            append!(j, ilin[I.+eβ, α][:])
             append!(j, ilin[I, α][:])
             append!(v, @. 1 / Δa / Δuαβ)
             append!(v, @. 1 / Δb / Δuαβ)

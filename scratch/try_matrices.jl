@@ -5,7 +5,6 @@ using Random
 ax = range(0, 1, 101)
 setup = Setup(; x = (ax, ax), Re = 1e3)
 
-
 m = IncompressibleNavierStokes.apply_bc_p_mat(PeriodicBC(), setup, 1, false)
 m |> collect
 p = scalarfield(setup)
