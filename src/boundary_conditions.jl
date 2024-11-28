@@ -278,8 +278,8 @@ function apply_bc_u!(::PeriodicBC, u, β, t, setup; isright, kwargs...)
     (; dimension, N, Iu) = setup.grid
     D = dimension()
     eβ = Offset(D)(β)
-    Ia = boundary(β, N, Iu[1], false)
-    Ib = boundary(β, N, Iu[1], true)
+    Ia = boundary(β, N, Ip, false)
+    Ib = boundary(β, N, Ip, true)
     Ja = Ia .+ eβ
     Jb = Ib .- eβ
     @. u[Ia, :] = u[Jb, :]
@@ -292,8 +292,8 @@ function apply_bc_u_pullback!(::PeriodicBC, φbar, β, t, setup; isright, kwargs
     (; dimension, N, Iu) = setup.grid
     D = dimension()
     eβ = Offset(D)(β)
-    Ia = boundary(β, N, Iu[1], false)
-    Ib = boundary(β, N, Iu[1], true)
+    Ia = boundary(β, N, Ip, false)
+    Ib = boundary(β, N, Ip, true)
     Ja = Ia .+ eβ
     Jb = Ib .- eβ
     @. φbar[Jb, :] += φbar[Ia, :]
