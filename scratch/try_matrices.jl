@@ -55,5 +55,4 @@ setup = Setup(;
 L1 = IncompressibleNavierStokes.laplacian_mat(setup)
 L2 = IncompressibleNavierStokes.poisson_mat(setup)
 
-
 L1 - L2 |> maximum

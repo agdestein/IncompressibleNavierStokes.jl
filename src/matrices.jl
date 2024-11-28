@@ -154,6 +154,23 @@ function pad_scalarfield_mat(setup)
     sparse(i, j, v, n, np)
 end
 
+"Pad inner vector field with boundary volumes."
+function pad_vectorfield_mat(setup)
+    (; dimension, N, Nu, Iu, x) = setup.grid
+    D = dimension()
+    n = prod(N) * D
+    nu = sum(prod.(Nu))
+    ilin = reshape(1:n, N..., D)
+    i = zeros(Int, 0)
+    for α = 1:D
+        I = Iu[α]
+        append!(i, ilin[I, α][:])
+    end
+    j = 1:nu
+    v = ones(eltype(x[1]), nu)
+    sparse(i, j, v, n, nu)
+end
+
 # Apply boundary conditions
 function bc_u_mat end
 function bc_p_mat end
@@ -380,7 +397,7 @@ function divergence_mat(setup)
         append!(i, ilin_p[I][:])
         append!(i, ilin_p[I][:])
         append!(j, ilin_u[I, α][:])
-        append!(j, ilin_u[I .- e(α), α][:])
+        append!(j, ilin_u[I.-e(α), α][:])
         append!(v, @. 1 / ΔI)
         append!(v, @. -1 / ΔI)
     end
@@ -394,7 +411,7 @@ function pressuregradient_mat(setup)
     (; grid) = setup
     (; dimension, N, Iu, Δ, Δu, x) = grid
     D = dimension()
-e = Offset(D)
+    e = Offset(D)
     n = prod(N)
     ilin_u = reshape(1:n*D, N..., D)
     ilin_p = reshape(1:n, N...)
@@ -419,7 +436,7 @@ e = Offset(D)
         ΔI = map(I -> Δu[α][I[α]], I)
         append!(i, ilin_u[I, α][:])
         append!(i, ilin_u[I, α][:])
-        append!(j, ilin_p[I .+ e(α)][:])
+        append!(j, ilin_p[I.+e(α)][:])
         append!(j, ilin_p[I][:])
         append!(v, @. 1 / ΔI)
         append!(v, @. -1 / ΔI)
@@ -438,8 +455,11 @@ function volume_mat(setup)
     sparse(1:n, 1:n, v[:], n, n)
 end
 
-"Get matrix for the Laplacian operator."
-function poisson_mat(setup)
+"""
+Get matrix for the Laplacian operator (for the pressure-Poisson equation).
+This matrix takes scalar field inputs restricted to the actual degrees of freedom.
+"""
+function laplacian_mat(setup)
     P = pad_scalarfield_mat(setup)
     Bp = bc_p_mat(setup)
     Bu = bc_u_mat(setup)
