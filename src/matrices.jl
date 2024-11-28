@@ -4,7 +4,7 @@
 # and `boundary_conditions.jl`. The matrices are used in exactly the same way as
 # the matrix-free operators, e.g.
 #
-#     u = apply_bc_u(u, setup, t) # u is a (D+1)-array
+#     u = apply_bc_u(u, t, setup) # u is a (D+1)-array
 #     d = diffusion(u, setup) # d is a (D+1)-array
 #
 # becomes
@@ -18,14 +18,14 @@
 # matrix-free operators on empty fields:
 #
 #     uzero = vectorfield(setup) # zero everywhere
-#     yu = apply_bc_u(uzero, setup, t) # must be redone if BC depend on t and t changes
+#     yu = apply_bc_u(uzero, t, setup) # must be redone if BC depend on t and t changes
 #     yd = diffusion(yu, setup)
 #     yd = yd[:] # yd is now the "BC vector"
 #
 # Now `yd` can be used together with the diffusion matrix. These two are now equivalent:
 #
 # Matrix-free version with combined BC and BC constants:
-#   d = diffusion(apply_bc_u(u, setup, t), setup)
+#   d = diffusion(apply_bc_u(u, t, setup), setup)
 #
 # Matrix-version with separate BC and BC constants
 #
@@ -44,7 +44,9 @@
 # now we should have
 #
 #   input ≈ yD + DB * result
-#         ≈ diffusion(apply_bc_u(result, setup, t), setup)
+#         ≈ diffusion(apply_bc_u(result, t, setup), setup)
+#
+# Note: Above example assumes Re = 1, the matrix-free diffusion divides by Re
 
 # TODO: Make proper doc page with the above
 
@@ -148,12 +150,12 @@ function bc_temp_mat end
 function bc_u_mat(setup)
     (; grid, boundary_conditions) = setup
     (; dimension) = grid
-    B = LinearAlgebra.I
+    B = LinearAlgebra.I # BC mat should preserve inputs
     for β = 1:dimension()
         bc_a, bc_b = boundary_conditions[β]
-        a = bc_u_mat(bc_a, setup, β, false)
-        b = bc_u_mat(bc_b, setup, β, true)
-        B = b * a * B
+        a = bc_u_mat(bc_a, setup, β, false) # Left BC
+        b = bc_u_mat(bc_b, setup, β, true) # Right BC
+        B = b * a * B # Apply left and right BC for given dimension
     end
     B
 end
@@ -189,22 +191,23 @@ function bc_u_mat(::PeriodicBC, setup, β, isright = false)
     (; dimension, N, Ip, x) = setup.grid
     T = eltype(x[1])
     D = dimension()
-    n = prod(N) * D
-    ilin = reshape(1:n, N..., D) # Converts to linear indices
-    i = zeros(Int, 0)
-    j = zeros(Int, 0)
+    n = prod(N) * D # Total number of points in vector fields
+    ilin = reshape(1:n, N..., D) # Maps Cartesian to linear indices
+    i = zeros(Int, 0) # Output indices
+    j = zeros(Int, 0) # Input indices
 
-    # Identity part
+    # Identity part: Make sure to zero out boundary outputs first, so
+    # that corner BC are not added twice since we do this in each dimension
     notboundary = ntuple(d -> d == β ? (2:N[d]-1) : (:), D)
     append!(i, ilin[notboundary..., :][:])
     append!(j, ilin[notboundary..., :][:])
 
     # Periodic part
     eβ = Offset(D)(β)
-    Ia = boundary(β, N, Ip, false)
-    Ib = boundary(β, N, Ip, true)
-    Ja = Ia .+ eβ
-    Jb = Ib .- eβ
+    Ia = boundary(β, N, Ip, false) # Left boundary
+    Ib = boundary(β, N, Ip, true) # Right boundary
+    Ja = Ia .+ eβ # Left points that should be copied to right boundary
+    Jb = Ib .- eβ # Right points that should be copied to left boundary
     append!(i, ilin[Ia, :][:])
     append!(i, ilin[Ib, :][:])
     append!(j, ilin[Jb, :][:])
@@ -221,7 +224,7 @@ function bc_p_mat(::PeriodicBC, setup, β, isright = false)
     (; dimension, N, Ip, x) = setup.grid
     T = eltype(x[1])
     D = dimension()
-    ilin = reshape(1:prod(N), N) # Converts to linear indices
+    ilin = reshape(1:prod(N), N)
     i = zeros(Int, 0)
     j = zeros(Int, 0)
 
@@ -280,4 +283,58 @@ bc_p_mat(::PressureBC, setup, β, isright = false) = error("PressureBC not imple
 
 function bc_temp_mat(::PressureBC, setup, β, isright = false)
     error("PressureBC not implemented yet")
+end
+
+"Diffusion matrix."
+function diffusion_mat(setup)
+    # Note: This matrix could also be implemented as
+    # sum of Dβ * Dβ (different versions of Dβ depending on staggered points)
+    (; grid) = setup
+    (; dimension, N, Iu, Δ, Δu, x) = grid
+    D = dimension()
+    n = prod(N) * D
+    ilin = reshape(1:n, N..., D)
+
+    # Initialize sparse matrix parts
+    i = zeros(Int, 0) # Output indices
+    j = zeros(Int, 0) # Input indices
+    v = zeros(eltype(x[1]), 0) # Values v_ij
+
+    for α in 1:D # Velocity components
+        I = Iu[α] # These are the indices looped over in the original kernel
+        for β in 1:D # Differentiation directions
+            Δuαβ = map(I -> α == β ? Δu[β][I[β]] : Δ[β][I[β]], I)
+            Δa = map(I -> β == α ? Δ[β][I[β]] : Δu[β][I[β]-1], I)
+            Δb = map(I -> β == α ? Δ[β][I[β]+1] : Δu[β][I[β]], I)
+            eβ = Offset(D)(β)
+
+            # Original
+            #
+            # ∂a = (u[I, α] - u[I-e(β), α]) / Δa
+            # ∂b = (u[I+e(β), α] - u[I, α]) / Δb
+            # F[I, α] += (∂b - ∂a) / Δuαβ
+            #
+            # becomes
+            #
+            # F[I, α] += u[I - e(β), α] / Δa / Δuαβ
+            # F[I, α] += u[I + e(β), α] / Δb / Δuαβ
+            # F[I, α] -= u[I, α] * (1 / Δa + 1 / Δb) / Δuαβ
+            #
+            # We want i, j, v such that F_i = v_ij * u_j
+            # They are defined below:
+
+            append!(i, ilin[I, α][:])
+            append!(i, ilin[I, α][:])
+            append!(i, ilin[I, α][:])
+            append!(j, ilin[I .- eβ, α][:])
+            append!(j, ilin[I .+ eβ, α][:])
+            append!(j, ilin[I, α][:])
+            append!(v, @. 1 / Δa / Δuαβ)
+            append!(v, @. 1 / Δb / Δuαβ)
+            append!(v, @. -(1 / Δa + 1 / Δb) / Δuαβ)
+        end
+    end
+
+    # Assemble matrix
+    sparse(i, j, v, n, n)
 end
