@@ -527,13 +527,17 @@ ChainRulesCore.rrule(::typeof(diffusion), u, setup) = (
 """
 Compute diffusive term (in-place version).
 Add the result to `F`.
+
+Keyword arguments:
+
+- `with_viscosity = true`: Include viscosity in the operator.
 """
-function diffusion!(F, u, setup)
+function diffusion!(F, u, setup; use_viscosity = true)
     (; grid, backend, workgroupsize, Re) = setup
     (; dimension, Δ, Δu, N, Iu) = grid
     D = dimension()
     e = Offset(D)
-    visc = 1 / Re
+    visc = use_viscosity ? 1 / Re : one(Re)
     kernel = diffusion_kernel!(backend, workgroupsize)
     I0 = oneunit(CartesianIndex{D})
     kernel(F, u, visc, e, Δ, Δu, Iu, Val(1:D), I0; ndrange = N .- 2)
