@@ -263,24 +263,147 @@ end
 bc_temp_mat(bc::DirichletBC, setup, β, isright = false) = bc_p_mat(bc, setup, β, isright)
 
 function bc_u_mat(::SymmetricBC, setup, β, isright = false)
-    error("SymmetricBC not implemented yet")
+    (; dimension, Nu, Iu, x) = setup.grid
+    D = dimension()
+    e = Offset(D)
+    ilin = reshape(1:n, N..., D)
+    i = zeros(Int, 0)
+    j = zeros(Int, 0)
+
+    # Identity part: Make sure not to include current boundary points
+    for α = 1:D
+        # Identity part
+        inside = Iu[α].indices[β]
+        inds = if isright
+            1:inside[end]
+        else
+            inside[1]:N[β]
+        end
+        notboundary = ntuple(d -> d == β ? inds : (:), D)
+        append!(i, ilin[notboundary..., α][:])
+        append!(j, ilin[notboundary..., α][:])
+
+        # Symmetric part
+        if α != β
+            I = boundary(β, Nu[α], Iu[α], isright)
+            J = isright ? I .- e(β) : I .+ e(β)
+            # Kernel: @. u[I, α] = u[J, α]
+            append!(i, ilin[I, α][:])
+            append!(j, ilin[J, α][:])
+        end
+    end
+
+    # All values are 1
+    v = ones(eltype(x[1]), length(i))
+
+    # Assemble matrix
+    sparse(i, j, v, n, n)
 end
 
 function bc_p_mat(::SymmetricBC, setup, β, isright = false)
-    error("SymmetricBC not implemented yet")
+    (; dimension, N, Ip, x) = setup.grid
+    T = eltype(x[1])
+    D = dimension()
+    n = prod(N)
+    ilin = reshape(1:n, N...)
+    i = zeros(Int, 0)
+    j = zeros(Int, 0)
+
+    # Identity part: Make sure not to include current boundary points
+    inside = Ip.indices[β]
+    inds = if isright
+        1:inside[end]
+    else
+        inside[1]:N[β]
+    end
+    notboundary = ntuple(d -> d == β ? inds : (:), D)
+    append!(i, ilin[notboundary...][:])
+    append!(j, ilin[notboundary...][:])
+
+    # Symmetric part
+    e = Offset(D)
+    I = boundary(β, N, Ip, isright)
+    J = isright ? I .- e(β) : I .+ e(β)
+    # Kernel: @. p[I] = p[J]
+    append!(i, ilin[I][:])
+    append!(j, ilin[J][:])
+
+    # All values are 1
+    v = ones(T, length(i))
+
+    # Assemble matrix
+    sparse(i, j, v, n, n)
 end
 
-function bc_temp_mat(::SymmetricBC, setup, β, isright = false)
-    error("SymmetricBC not implemented yet")
+bc_temp_mat(bc::SymmetricBC, setup, β, isright = false) = bc_p_mat(bc, setup, β, isright)
+
+function bc_u_mat(::PressureBC, setup, β, isright = false)
+    (; dimension, Nu, Iu, x) = setup.grid
+    D = dimension()
+    e = Offset(D)
+    ilin = reshape(1:n, N..., D)
+    i = zeros(Int, 0)
+    j = zeros(Int, 0)
+
+    # Identity part: Make sure not to include current boundary points
+    for α = 1:D
+        # Identity part
+        inside = Iu[α].indices[β]
+        inds = if isright
+            1:inside[end]
+        else
+            inside[1]:N[β]
+        end
+        notboundary = ntuple(d -> d == β ? inds : (:), D)
+        append!(i, ilin[notboundary..., α][:])
+        append!(j, ilin[notboundary..., α][:])
+
+        # Neumann part
+        I = boundary(β, Nu[α], Iu[α], isright)
+        J = isright ? I .- e(β) : I .+ e(β)
+        # Kernel: @. u[I, α] = u[J, α]
+        append!(i, ilin[I, α][:])
+        append!(j, ilin[J, α][:])
+    end
+
+    # All values are 1
+    v = ones(eltype(x[1]), length(i))
+
+    # Assemble matrix
+    sparse(i, j, v, n, n)
 end
 
-bc_u_mat(::PressureBC, setup, β, isright = false) = error("PressureBC not implemented yet")
+function bc_p_mat(::PressureBC, setup, β, isright = false)
+    (; dimension, N, Ip, x) = setup.grid
+    T = eltype(x[1])
+    D = dimension()
+    n = prod(N)
+    ilin = reshape(1:n, N...)
+    i = zeros(Int, 0)
+    j = zeros(Int, 0)
 
-bc_p_mat(::PressureBC, setup, β, isright = false) = error("PressureBC not implemented yet")
+    # Identity part: Make sure not to include current boundary points
+    inside = Ip.indices[β]
+    inds = if isright
+        1:inside[end]
+    else
+        inside[1]:N[β]
+    end
+    notboundary = ntuple(d -> d == β ? inds : (:), D)
+    append!(i, ilin[notboundary...][:])
+    append!(j, ilin[notboundary...][:])
 
-function bc_temp_mat(::PressureBC, setup, β, isright = false)
-    error("PressureBC not implemented yet")
+    # The boundary condition values do not depend on `p`, and are thus
+    # not part of the matrix.
+
+    # The only values are identity matrix at non-boundary output points
+    v = ones(T, length(i))
+
+    # Assemble matrix
+    sparse(i, j, v, n, n)
 end
+
+bc_temp_mat(bc::PressureBC, setup, β, isright = false) = bc_p_mat(bc, setup, β, isright)
 
 "Divergence matrix."
 function divergence_mat(setup)
