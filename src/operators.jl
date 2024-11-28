@@ -517,11 +517,11 @@ end
 end
 
 "Compute diffusive term (differentiable version)."
-diffusion(u, setup) = diffusion!(zero.(u), u, setup)
+diffusion(u, setup; kwargs...) = diffusion!(zero.(u), u, setup; kwargs...)
 
-ChainRulesCore.rrule(::typeof(diffusion), u, setup) = (
-    diffusion(u, setup),
-    φ -> (NoTangent(), diffusion_adjoint!(zero(u), φ, setup), NoTangent()),
+ChainRulesCore.rrule(::typeof(diffusion), u, setup; kwargs...) = (
+    diffusion(u, setup; kwargs...),
+    φ -> (NoTangent(), diffusion_adjoint!(zero(u), φ, setup; kwargs...), NoTangent()),
 )
 
 """
@@ -564,12 +564,12 @@ end
     end
 end
 
-function diffusion_adjoint!(u, φ, setup)
+function diffusion_adjoint!(u, φ, setup; use_viscosity = true)
     (; grid, backend, workgroupsize, Re) = setup
     (; dimension, N, Δ, Δu, Iu) = grid
     D = dimension()
     e = Offset(D)
-    visc = 1 / Re
+    visc = use_viscosity ? 1 / Re : one(Re)
     kernel = diffusion_adjoint_kernel!(backend, workgroupsize)
     kernel(u, φ, visc, e, Δ, Δu, Iu, Val(1:D); ndrange = N)
     u
