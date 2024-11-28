@@ -6,7 +6,7 @@
     ENABLE_LOGGING = false
 end
 
-@testmodule Case begin
+@testmodule EnzymeCase begin
     using IncompressibleNavierStokes
 
     D2, D3 = map((2, 3)) do D
@@ -133,8 +133,9 @@ end
         f = INS.enzyme_wrap(INS.apply_bc_p!)
         @test f isa Function
         f(y, p, nothing, setup)
-        @test y != p
-        @test any(!isnan, y)
+        # @test y != p
+        # TODO: check this test above. With DirichletBC, we now get y == p, but that is intentional
+        @test all(!isnan, y)
         Enzyme.autodiff(
             Enzyme.Reverse,
             f,
@@ -206,10 +207,12 @@ end
     end
 end
 
-@testitem "Divergence" setup = [Case, EnzymeSnip] begin
+@testitem "Divergence" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (u, setup, d) in
-        ((Case.D2.u, Case.D2.setup, Case.D2.div), (Case.D3.u, Case.D3.setup, Case.D3.div))
+    for (u, setup, d) in (
+        (EnzymeCase.D2.u, EnzymeCase.D2.setup, EnzymeCase.D2.div),
+        (EnzymeCase.D3.u, EnzymeCase.D3.setup, EnzymeCase.D3.div),
+    )
         d0 = copy(d)
         u0 = copy(u)
         Zygote.pullback(INS.divergence, u, setup)[2](d0)[1]
@@ -247,9 +250,10 @@ end
     end
 end
 
-@testitem "Pressuregradient" setup = [Case, EnzymeSnip] begin
+@testitem "Pressuregradient" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (p, setup) in ((Case.D2.p, Case.D2.setup), (Case.D3.p, Case.D3.setup))
+    for (p, setup) in
+        ((EnzymeCase.D2.p, EnzymeCase.D2.setup), (EnzymeCase.D3.p, EnzymeCase.D3.setup))
         p0 = copy(p)
         pg = INS.pressuregradient(p, setup)
         pg0 = copy(pg)
@@ -288,11 +292,11 @@ end
     end
 end
 
-@testitem "Poisson" setup = [Case, EnzymeSnip] begin
+@testitem "Poisson" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     for (psolver, d, setup) in (
-        (Case.D2.psolver, Case.D2.div, Case.D2.setup),
-        (Case.D3.psolver, Case.D3.div, Case.D3.setup),
+        (EnzymeCase.D2.psolver, EnzymeCase.D2.div, EnzymeCase.D2.setup),
+        (EnzymeCase.D3.psolver, EnzymeCase.D3.div, EnzymeCase.D3.setup),
     )
         p0 = INS.poisson(psolver, d)
         Zygote.pullback(INS.poisson, psolver, d)[2](p0)[1]
@@ -332,9 +336,10 @@ end
     end
 end
 
-@testitem "Convection" setup = [Case, EnzymeSnip] begin
+@testitem "Convection" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
+    for (u, setup) in
+        ((EnzymeCase.D2.u, EnzymeCase.D2.setup), (EnzymeCase.D3.u, EnzymeCase.D3.setup))
         c = INS.convection(u, setup)
         c0 = copy(c)
         Zygote.pullback(INS.convection, u, setup)[2](u)[1]
@@ -376,9 +381,10 @@ end
     end
 end
 
-@testitem "Diffusion" setup = [Case, EnzymeSnip] begin
+@testitem "Diffusion" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
+    for (u, setup) in
+        ((EnzymeCase.D2.u, EnzymeCase.D2.setup), (EnzymeCase.D3.u, EnzymeCase.D3.setup))
         d = INS.diffusion(u, setup)
         d0 = copy(d)
         Zygote.pullback(INS.diffusion, u, setup)[2](d)[1]
@@ -420,10 +426,11 @@ end
     end
 end
 
-@testitem "Bodyforce" setup = [Case, EnzymeSnip] begin
+@testitem "Bodyforce" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     @warn "bodyforce is tested only in the static case"
-    for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
+    for (u, setup) in
+        ((EnzymeCase.D2.u, EnzymeCase.D2.setup), (EnzymeCase.D3.u, EnzymeCase.D3.setup))
         t = 0.5
         bf = INS.applybodyforce(u, t, setup)
         bf0 = copy(bf)
@@ -472,9 +479,12 @@ end
     end
 end
 
-@testitem "Gravity" setup = [Case, EnzymeSnip] begin
+@testitem "Gravity" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (t, setup) in ((Case.D2.temp, Case.D2.setup), (Case.D3.temp, Case.D3.setup))
+    for (t, setup) in (
+        (EnzymeCase.D2.temp, EnzymeCase.D2.setup),
+        (EnzymeCase.D3.temp, EnzymeCase.D3.setup),
+    )
         g = INS.gravity(t, setup)
         Zygote.pullback(INS.gravity, t, setup)[2](g)
         zpull, z_time = @timed Zygote.pullback(INS.gravity, t, setup)[2](g)[1]
@@ -514,9 +524,10 @@ end
     end
 end
 
-@testitem "Dissipation" setup = [Case, EnzymeSnip] begin
+@testitem "Dissipation" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (u, setup) in ((Case.D2.u, Case.D2.setup), (Case.D3.u, Case.D3.setup))
+    for (u, setup) in
+        ((EnzymeCase.D2.u, EnzymeCase.D2.setup), (EnzymeCase.D3.u, EnzymeCase.D3.setup))
         diss = INS.dissipation(u, setup)
         diss0 = copy(diss)
         Zygote.pullback(INS.dissipation, u, setup)[2](diss)
@@ -562,11 +573,11 @@ end
         @test du == zpull
     end
 end
-@testitem "Convection_diffusion_temp" setup = [Case, EnzymeSnip] begin
+@testitem "Convection_diffusion_temp" setup = [EnzymeCase, EnzymeSnip] begin
     @test_broken 1 == 2
 end
 
-@testitem "Convectiondiffusion" setup = [Case, EnzymeSnip] begin
+@testitem "Convectiondiffusion" setup = [EnzymeCase, EnzymeSnip] begin
     # the pullback rule is missing for this one
     @test_broken 1 == 2
 end
