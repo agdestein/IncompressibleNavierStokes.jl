@@ -545,6 +545,7 @@ function diffusion!(F, u, setup; use_viscosity = true)
 end
 
 @kernel function diffusion_kernel!(F, u, visc, e, Δ, Δu, Iu, valdims, I0)
+    T = typeof(visc)
     dims = getval(valdims)
     I = @index(Global, Cartesian)
     I = I + I0
@@ -557,6 +558,11 @@ end
                 Δb = β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]
                 ∂a = (u[I, α] - u[I-e(β), α]) / Δa
                 ∂b = (u[I+e(β), α] - u[I, α]) / Δb
+                # For some Neumann BC, Δa or Δb are zero (eps),
+                # and (right - left) / Δa blows up even if right = left according to BC.
+                # Here we manually set the derivatives to zero in such cases.
+                ∂a = (Δa > 2 * eps(T)) * ∂a
+                ∂b = (Δb > 2 * eps(T)) * ∂b
                 f += visc * (∂b - ∂a) / Δuαβ[I[β]]
             end
         end
@@ -648,6 +654,7 @@ end
     valdims,
     I0,
 )
+    T = typeof(visc)
     I = @index(Global, Cartesian)
     I = I + I0
     dims = getval(valdims)
@@ -656,6 +663,8 @@ end
         if I ∈ Iu[α]
             @unroll for β in dims
                 Δuαβ = α == β ? Δu[β] : Δ[β]
+                Δa = (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
+                Δb = (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
                 uαβ1 = (u[I-e(β), α] + u[I, α]) / 2
                 uαβ2 = (u[I, α] + u[I+e(β), α]) / 2
                 uβα1 =
@@ -664,8 +673,13 @@ end
                 uβα2 = A[β][α][2][I[α]] * u[I, β] + A[β][α][1][I[α]+1] * u[I+e(α), β]
                 uαuβ1 = uαβ1 * uβα1
                 uαuβ2 = uαβ2 * uβα2
-                ∂βuα1 = (u[I, α] - u[I-e(β), α]) / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
-                ∂βuα2 = (u[I+e(β), α] - u[I, α]) / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
+                ∂βuα1 = (u[I, α] - u[I-e(β), α]) / Δa
+                ∂βuα2 = (u[I+e(β), α] - u[I, α]) / Δb
+                # For some Neumann BC, Δa or Δb are zero (eps),
+                # and (right - left) / Δa blows up even if right = left according to BC.
+                # Here we manually set the derivatives to zero in such cases.
+                ∂βuα1 = (Δa > 2 * eps(T)) * ∂βuα1
+                ∂βuα2 = (Δb > 2 * eps(T)) * ∂βuα2
                 f += (visc * (∂βuα2 - ∂βuα1) - (uαuβ2 - uαuβ1)) / Δuαβ[I[β]]
             end
         end
