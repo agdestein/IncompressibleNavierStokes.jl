@@ -142,7 +142,6 @@ export apply_bc_u,
     interpolate_u_p,
     interpolate_ω_p,
     laplacian,
-    laplacian_mat,
     momentum,
     poisson,
     pressure,
@@ -155,6 +154,9 @@ export apply_bc_u,
     vorticity,
     Dfield,
     Qfield
+
+# Matrices
+export bc_u_mat, bc_p_mat, bc_temp_mat, laplacian_mat
 
 # SciML operations
 export create_right_hand_side, right_hand_side!

@@ -89,3 +89,149 @@ function laplacian_mat(setup)
     L
     # Ω isa CuArray ? cu(L) : L
 end
+
+# Apply boundary conditions
+function bc_u_mat end
+function bc_p_mat end
+function bc_temp_mat end
+
+function bc_u_mat(setup)
+    (; grid, boundary_conditions) = setup
+    (; dimension) = grid
+    B = LinearAlgebra.I
+    for β = 1:dimension()
+        bc_a, bc_b = boundary_conditions[β]
+        a = bc_u_mat(bc_a, setup, β, false)
+        b = bc_u_mat(bc_b, setup, β, true)
+        B = b * a * B
+    end
+    B
+end
+
+function bc_p_mat(setup)
+    (; grid, boundary_conditions) = setup
+    (; dimension) = grid
+    B = LinearAlgebra.I
+    for β = 1:dimension()
+        bc_a, bc_b = boundary_conditions[β]
+        a = bc_p_mat(bc_a, setup, β, false)
+        b = bc_p_mat(bc_b, setup, β, true)
+        B = b * a * B
+    end
+    B
+end
+
+function bc_temp_mat(setup)
+    (; grid, boundary_conditions) = setup
+    (; dimension) = grid
+    B = LinearAlgebra.I
+    for β = 1:dimension()
+        bc_a, bc_b = boundary_conditions[β]
+        a = bc_temp_mat(bc_a, setup, β, false)
+        b = bc_temp_mat(bc_b, setup, β, true)
+        B = b * a * B
+    end
+    B
+end
+
+function bc_u_mat(::PeriodicBC, setup, β, isright = false)
+    isright && return LinearAlgebra.I # We do both in one go for "left"
+    (; dimension, N, Ip, x) = setup.grid
+    T = eltype(x[1])
+    D = dimension()
+    n = prod(N) * D
+    ilin = reshape(1:n, N..., D)
+    i = zeros(Int, 0)
+    j = zeros(Int, 0)
+
+    # Identity part
+    notboundary = ntuple(d -> d == β ? (2:N[d]-1) : (:), D)
+    append!(i, ilin[notboundary..., :][:])
+    append!(j, ilin[notboundary..., :][:])
+
+    # Periodic part
+    eβ = Offset(D)(β)
+    Ia = boundary(β, N, Ip, false)
+    Ib = boundary(β, N, Ip, true)
+    Ja = Ia .+ eβ
+    Jb = Ib .- eβ
+    append!(i, ilin[Ia, :][:])
+    append!(i, ilin[Ib, :][:])
+    append!(j, ilin[Jb, :][:])
+    append!(j, ilin[Ja, :][:])
+
+    # For periodic BC, all values are 1
+    v = ones(T, length(i))
+
+    sparse(i, j, v, n, n)
+end
+
+function bc_p_mat(::PeriodicBC, setup, β, isright = false)
+    isright && return LinearAlgebra.I # We do both in one go for "left"
+    (; dimension, N, Ip, x) = setup.grid
+    T = eltype(x[1])
+    D = dimension()
+    ilin = reshape(1:prod(N), N)
+    i = zeros(Int, 0)
+    j = zeros(Int, 0)
+
+    # Identity part
+    notboundary = ntuple(d -> d == β ? (2:N[d]-1) : (:), D)
+    append!(i, ilin[notboundary...][:])
+    append!(j, ilin[notboundary...][:])
+
+    # Periodic part
+    eβ = Offset(D)(β)
+    Ia = boundary(β, N, Ip, false)
+    Ib = boundary(β, N, Ip, true)
+    Ja = Ia .+ eβ
+    Jb = Ib .- eβ
+    append!(i, ilin[Ia][:])
+    append!(i, ilin[Ib][:])
+    append!(j, ilin[Jb][:])
+    append!(j, ilin[Ja][:])
+
+    # For periodic BC, all values are 1
+    v = ones(T, length(i))
+
+    sparse(i, j, v, prod(N), prod(N))
+end
+
+bc_temp_mat(bc::PeriodicBC, setup, β, isright = false) =
+    apply_bc_p_mat(bc, setup, β, isright)
+
+function bc_u_mat(::DirichletBC, setup, β, isright = false)
+    error("DirichletBC not implemented yet")
+end
+
+function bc_p_mat(::DirichletBC, setup, β, isright = false)
+    error("DirichletBC not implemented yet")
+end
+
+function bc_temp_mat(::DirichletBC, setup, β, isright = false)
+    error("DirichletBC not implemented yet")
+end
+
+function bc_u_mat(::SymmetricBC, setup, β, isright = false)
+    error("SymmetricBC not implemented yet")
+end
+
+function bc_p_mat(::SymmetricBC, setup, β, isright = false)
+    error("SymmetricBC not implemented yet")
+end
+
+function bc_temp_mat(::SymmetricBC, setup, β, isright = false)
+    error("SymmetricBC not implemented yet")
+end
+
+function bc_u_mat(::PressureBC, setup, β, isright = false)
+    error("PressureBC not implemented yet")
+end
+
+function bc_p_mat(::PressureBC, setup, β, isright = false)
+    error("PressureBC not implemented yet")
+end
+
+function bc_temp_mat(::PressureBC, setup, β, isright = false)
+    error("PressureBC not implemented yet")
+end
