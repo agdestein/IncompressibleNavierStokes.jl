@@ -142,6 +142,18 @@ function laplacian_mat(setup)
     # Ω isa CuArray ? cu(L) : L
 end
 
+"Pad inner scalar field with boundary volumes."
+function pad_scalarfield_mat(setup)
+    (; N, Np, Ip, x) = setup.grid
+    n = prod(N)
+    np = prod(Np)
+    ilin = reshape(1:n, N)
+    i = ilin[Ip][:]
+    j = 1:np
+    v = ones(eltype(x[1]), np)
+    sparse(i, j, v, n, np)
+end
+
 # Apply boundary conditions
 function bc_u_mat end
 function bc_p_mat end
@@ -254,16 +266,68 @@ bc_temp_mat(bc::PeriodicBC, setup, β, isright = false) =
     apply_bc_p_mat(bc, setup, β, isright)
 
 function bc_u_mat(::DirichletBC, setup, β, isright = false)
-    error("DirichletBC not implemented yet")
+    (; dimension, N, Iu, x) = setup.grid
+    T = eltype(x[1])
+    D = dimension()
+    n = prod(N) * D
+    ilin = reshape(1:n, N..., D)
+    i = zeros(Int, 0)
+    j = zeros(Int, 0)
+
+    # Identity part: Make sure not to include current boundary points
+    for α = 1:D
+        inside = Iu[α].indices[β]
+        inds = if isright
+            1:inside[end]
+        else
+            inside[1]:N[β]
+        end
+        notboundary = ntuple(d -> d == β ? inds : (:), D)
+        append!(i, ilin[notboundary..., α][:])
+        append!(j, ilin[notboundary..., α][:])
+    end
+
+    # The boundary condition values do not depend on `u`, and are thus
+    # not part of the matrix.
+
+    # The only values are identity matrix at non-boundary output points
+    v = ones(T, length(i))
+
+    # Assemble matrix
+    sparse(i, j, v, n, n)
 end
 
 function bc_p_mat(::DirichletBC, setup, β, isright = false)
-    error("DirichletBC not implemented yet")
+    (; dimension, N, Ip, x) = setup.grid
+    T = eltype(x[1])
+    D = dimension()
+    n = prod(N)
+    ilin = reshape(1:n, N...)
+    i = zeros(Int, 0)
+    j = zeros(Int, 0)
+
+    # Identity part: Make sure not to include current boundary points
+    inside = Ip.indices[β]
+    inds = if isright
+        1:inside[end]
+    else
+        inside[1]:N[β]
+    end
+    notboundary = ntuple(d -> d == β ? inds : (:), D)
+    append!(i, ilin[notboundary...][:])
+    append!(j, ilin[notboundary...][:])
+
+    # The boundary condition values do not depend on `p`, and are thus
+    # not part of the matrix.
+
+    # The only values are identity matrix at non-boundary output points
+    v = ones(T, length(i))
+
+    # Assemble matrix
+    sparse(i, j, v, n, n)
 end
 
-function bc_temp_mat(::DirichletBC, setup, β, isright = false)
-    error("DirichletBC not implemented yet")
-end
+bc_temp_mat(bc::DirichletBC, setup, β, isright = false) = bc_p_mat(bc, setup, β, isright)
 
 function bc_u_mat(::SymmetricBC, setup, β, isright = false)
     error("SymmetricBC not implemented yet")
@@ -283,6 +347,107 @@ bc_p_mat(::PressureBC, setup, β, isright = false) = error("PressureBC not imple
 
 function bc_temp_mat(::PressureBC, setup, β, isright = false)
     error("PressureBC not implemented yet")
+end
+
+"Divergence matrix."
+function divergence_mat(setup)
+    (; dimension, N, Ip, Δ, x) = setup.grid
+    D = dimension()
+    e = Offset(D)
+    n = prod(N)
+    ilin_p = reshape(1:n, N)
+    ilin_u = reshape(1:n*D, N..., D)
+
+    # Initialize sparse matrix parts
+    i = zeros(Int, 0)
+    j = zeros(Int, 0)
+    v = zeros(eltype(x[1]), 0)
+
+    # Add entries from each of the D velocity components
+    I = Ip # These are the indices looped over in the original kernel
+    for α = 1:D # Velocity components
+        # Original kernel:
+        #
+        # div[I]  += (u[I, α] - u[I-e(α), α]) / Δ[α][I[α]]
+        #
+        # becomes
+        #
+        # div[I] += u[I, α] / Δ[α][I[α]]
+        # div[I] += -u[I-e(α), α] / Δ[α][I[α]]
+        #
+        # We want i, j, v such that div_i = v_ij * u_j
+        ΔI = map(I -> Δ[α][I[α]], I)
+        append!(i, ilin_p[I][:])
+        append!(i, ilin_p[I][:])
+        append!(j, ilin_u[I, α][:])
+        append!(j, ilin_u[I .- e(α), α][:])
+        append!(v, @. 1 / ΔI)
+        append!(v, @. -1 / ΔI)
+    end
+
+    # Assemble matrix
+    sparse(i, j, v, n, n * D)
+end
+
+"Pressure gradient matrix."
+function pressuregradient_mat(setup)
+    (; grid) = setup
+    (; dimension, N, Iu, Δ, Δu, x) = grid
+    D = dimension()
+e = Offset(D)
+    n = prod(N)
+    ilin_u = reshape(1:n*D, N..., D)
+    ilin_p = reshape(1:n, N...)
+
+    # Initialize sparse matrix parts
+    i = zeros(Int, 0)
+    j = zeros(Int, 0)
+    v = zeros(eltype(x[1]), 0)
+
+    # Add entries for each of the D velocity components
+    for α = 1:D
+        I = Iu[α] # These are the indices looped over in the original kernel
+
+        # Original kernel:
+        #
+        # G[I, α] = (p[I+e(α)] - p[I]) / Δu[α][I[α]]
+        #
+        # becomes
+        #
+        # G[I, α] += p[I+e(α)] / Δu[α][I[α]]
+        # G[I, α] -= p[I] / Δu[α][I[α]]
+        ΔI = map(I -> Δu[α][I[α]], I)
+        append!(i, ilin_u[I, α][:])
+        append!(i, ilin_u[I, α][:])
+        append!(j, ilin_p[I .+ e(α)][:])
+        append!(j, ilin_p[I][:])
+        append!(v, @. 1 / ΔI)
+        append!(v, @. -1 / ΔI)
+    end
+
+    # Assemble matrix
+    sparse(i, j, v, n * D, n)
+end
+
+"Volume-size matrix."
+function volume_mat(setup)
+    (; grid) = setup
+    (; N) = grid
+    n = prod(N)
+    v = scalewithvolume!(fill!(scalarfield(setup), 1), setup)
+    sparse(1:n, 1:n, v[:], n, n)
+end
+
+"Get matrix for the Laplacian operator."
+function poisson_mat(setup)
+    P = pad_scalarfield_mat(setup)
+    Bp = bc_p_mat(setup)
+    Bu = bc_u_mat(setup)
+    G = pressuregradient_mat(setup)
+    M = divergence_mat(setup)
+    Ω = volume_mat(setup)
+    @show size(Ω) size(M)
+    P' * Ω * M * Bu * G * Bp * P
 end
 
 "Diffusion matrix."

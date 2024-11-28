@@ -1,11 +1,16 @@
+if false
+    include("../src/IncompressibleNavierStokes.jl")
+    using .IncompressibleNavierStokes
+end
+
 using IncompressibleNavierStokes
 using CairoMakie
 using Random
 
-ax = range(0, 1, 101)
-setup = Setup(; x = (ax, ax), Re = 1e3)
+x = tanh_grid(0.0, 5.0, 101), cosine_grid(0, 1, 61)
+setup = Setup(; x, Re = 1e3)
 
-m = IncompressibleNavierStokes.apply_bc_p_mat(PeriodicBC(), setup, 1, false)
+m = IncompressibleNavierStokes.apply_bc_p_mat(PeriodicBC(), setup, 1, false)jG
 m |> collect
 p = scalarfield(setup)
 
@@ -39,3 +44,16 @@ randn!(u)
 
 d1 = reshape(D * B * u[:], size(u)) / setup.Re
 d2 = diffusion(apply_bc_u(u, 0, setup), setup)
+
+ax = range(0, 1, 101)
+setup = Setup(;
+    x,
+    Re = 1e3,
+    boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
+)
+
+L1 = IncompressibleNavierStokes.laplacian_mat(setup)
+L2 = IncompressibleNavierStokes.poisson_mat(setup)
+
+
+L1 - L2 |> maximum
