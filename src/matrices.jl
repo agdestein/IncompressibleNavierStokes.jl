@@ -1,3 +1,53 @@
+# # Note
+#
+# This file contains "matrix versions" of linear operators from `operators.jl`
+# and `boundary_conditions.jl`. The matrices are used in exactly the same way as
+# the matrix-free operators, e.g.
+#
+#     u = apply_bc_u(u, setup, t) # u is a (D+1)-array
+#     d = diffusion(u, setup) # d is a (D+1)-array
+#
+# becomes
+#
+#     uvec = bc_u_mat(setup) * u[:] # flatten u to a vector first
+#     dvec = diffusion_mat(setup) * uvec # dvec is a vector
+#     d = reshape(dvec, size(u)) # Go back to (D+1)-array
+#
+# For some boundary conditions, there are constants in the matrix-free operators
+# that are not part of the matrices. To extract these BC vectors, use the
+# matrix-free operators on empty fields:
+#
+#     uzero = vectorfield(setup) # zero everywhere
+#     yu = apply_bc_u(uzero, setup, t) # must be redone if BC depend on t and t changes
+#     yd = diffusion(yu, setup)
+#     yd = yd[:] # yd is now the "BC vector"
+#
+# Now `yd` can be used together with the diffusion matrix. These two are now equivalent:
+#
+# Matrix-free version with combined BC and BC constants:
+#   d = diffusion(apply_bc_u(u, setup, t), setup)
+#
+# Matrix-version with separate BC and BC constants
+#
+#   d = yd + diffusion_mat(setup) * bc_u_mat(setup) * u[:] # vector
+#   d = reshape(d, size(u)) # array
+#
+# Now the part without the BC constants can be inverted:
+#
+#   yD = ... # Constant BC that do not depend on the input field
+#   B = bc_u_mat(setup) # periodic BC etc. that do depend on input field
+#   D = diffusion_mat(setup) # "raw" operator without BC
+#   DB = D * B # full operator, `DB * u` first applies periodic BC and then diffusion
+#   decomposition = lu(DB) # factorize matrix
+#   result = decomposition \ (input - yD) # Solve system for given input RHS
+#
+# now we should have
+#
+#   input ≈ yD + DB * result
+#         ≈ diffusion(apply_bc_u(result, setup, t), setup)
+
+# TODO: Make proper doc page with the above
+
 "Get matrix for the Laplacian operator."
 function laplacian_mat(setup)
     (; grid, boundary_conditions) = setup
@@ -140,7 +190,7 @@ function bc_u_mat(::PeriodicBC, setup, β, isright = false)
     T = eltype(x[1])
     D = dimension()
     n = prod(N) * D
-    ilin = reshape(1:n, N..., D)
+    ilin = reshape(1:n, N..., D) # Converts to linear indices
     i = zeros(Int, 0)
     j = zeros(Int, 0)
 
@@ -171,7 +221,7 @@ function bc_p_mat(::PeriodicBC, setup, β, isright = false)
     (; dimension, N, Ip, x) = setup.grid
     T = eltype(x[1])
     D = dimension()
-    ilin = reshape(1:prod(N), N)
+    ilin = reshape(1:prod(N), N) # Converts to linear indices
     i = zeros(Int, 0)
     j = zeros(Int, 0)
 
@@ -224,13 +274,9 @@ function bc_temp_mat(::SymmetricBC, setup, β, isright = false)
     error("SymmetricBC not implemented yet")
 end
 
-function bc_u_mat(::PressureBC, setup, β, isright = false)
-    error("PressureBC not implemented yet")
-end
+bc_u_mat(::PressureBC, setup, β, isright = false) = error("PressureBC not implemented yet")
 
-function bc_p_mat(::PressureBC, setup, β, isright = false)
-    error("PressureBC not implemented yet")
-end
+bc_p_mat(::PressureBC, setup, β, isright = false) = error("PressureBC not implemented yet")
 
 function bc_temp_mat(::PressureBC, setup, β, isright = false)
     error("PressureBC not implemented yet")
