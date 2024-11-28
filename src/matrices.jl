@@ -79,9 +79,17 @@ function pad_vectorfield_mat(setup)
     sparse(i, j, v, n, nu)
 end
 
-# Apply boundary conditions
+"""
+Matrix for applying boundary conditions to velocity fields `u`.
+This matrix only applies the boundary conditions depending on `u` itself (e.g. [`PeriodicBC`](@ref)).
+It does not apply constant boundary conditions (e.g. non-zero [`DirichletBC`](@ref)).
+"""
 function bc_u_mat end
+
+"Matrix for applying boundary conditions to pressure fields `p`."
 function bc_p_mat end
+
+"Matrix for applying boundary conditions to temperature fields `temp`."
 function bc_temp_mat end
 
 function bc_u_mat(setup)
