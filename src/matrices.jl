@@ -416,6 +416,7 @@ bc_temp_mat(bc::PressureBC, setup, β, isright = false) = bc_p_mat(bc, setup, β
 "Divergence matrix."
 function divergence_mat(setup)
     (; dimension, N, Ip, Δ, x) = setup.grid
+    Δ = adapt(Array, Δ) # Do assembly on CPU
     D = dimension()
     e = Offset(D)
     n = prod(N)
@@ -456,7 +457,8 @@ end
 "Pressure gradient matrix."
 function pressuregradient_mat(setup)
     (; grid) = setup
-    (; dimension, N, Iu, Δ, Δu, x) = grid
+    (; dimension, N, Iu, Δu, x) = grid
+    Δu = adapt(Array, Δu) # Do assembly on CPU
     D = dimension()
     e = Offset(D)
     n = prod(N)
@@ -499,6 +501,7 @@ function volume_mat(setup)
     (; N) = grid
     n = prod(N)
     v = scalewithvolume!(fill!(scalarfield(setup), 1), setup)
+    v = adapt(Array, v) # Do assembly on CPU
     sparse(1:n, 1:n, v[:], n, n)
 end
 
@@ -522,6 +525,8 @@ function diffusion_mat(setup)
     # sum of Dβ * Dβ (different versions of Dβ depending on staggered points)
     (; grid) = setup
     (; dimension, N, Iu, Δ, Δu, x) = grid
+    Δ = adapt(Array, Δ) # Do assembly on CPU
+    Δu = adapt(Array, Δu)
     D = dimension()
     T = eltype(x[1])
     n = prod(N) * D
