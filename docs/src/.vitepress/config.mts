@@ -14,7 +14,7 @@ export default defineConfig({
   outDir: 'REPLACE_ME_DOCUMENTER_VITEPRESS', // This is required for MarkdownVitepress to work correctly...
   // head: [['link', { rel: 'icon', href: 'REPLACE_ME_DOCUMENTER_VITEPRESS_FAVICON' }]],
 
-  ignoreDeadLinks: true, // Reexporting KernelAbstractions.CPU fails otherwise
+  ignoreDeadLinks: false,
 
   head: [
     ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }],
