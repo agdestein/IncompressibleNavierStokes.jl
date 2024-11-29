@@ -21,9 +21,9 @@ setup = Setup(; x = (ax, ax), Re = 1e3);
 ```
 
 The matrices for the linear operators are named by appending `_mat` to the function name, for example:
-`divergence`, `pressuregradient`, and `diffusion` becom `divergence_mat`, `pressuregradient_mat`, `diffusion_mat` etc.
+`divergence`, `pressuregradient`, and `diffusion` become `divergence_mat`, `pressuregradient_mat`, `diffusion_mat` etc.
 
-Let's assmble some matrices:
+Let's assemble some matrices:
 
 ```@example Matrices
 divergence_mat(setup)
@@ -37,12 +37,16 @@ pressuregradient_mat(setup)
 diffusion_mat(setup)
 ```
 
+Note the sparsity pattern with matrix
+concatenation of two scalar operators for operators acting on or producing vector fields.
+The `pressuregradient_mat` converts a scalar field to a vector field, and is thus the vertical concatenation of the matrices for ``\partial/\partial x`` and ``\partial/\partial y``,
+while the `divergence_mat` is a horizontal concatenation of two similar matrices.
+The periodic boundary conditions are not included in the operators above, and are implemented via their own matrix. The periodic extension is visible:
+
+
 ```@example Matrices
 bc_u_mat(setup)
 ```
-
-Note the sparsity pattern with the periodic boundary conditions and matrix
-concatenation for operators acting on vector fields.
 
 We can verify that the diffusion matrix gives the same results as the diffusion
 kernel (without viscosity):
@@ -57,7 +61,7 @@ d_matrix = reshape(D * B * u[:], size(u))
 maximum(abs, d_matrix - d_kernel)
 ```
 
-Note that matrices only work on flattened fields `u[:]`, while the kernels work
+Matrices only work on flattened fields `u[:]`, while the kernels work
 on ``(D+1)``-array-shaped  fields for a dimension ``D \in \{2, 3\}``.
 
 ## Boundary conditions and matrices
