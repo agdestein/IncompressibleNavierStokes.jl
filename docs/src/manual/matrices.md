@@ -2,13 +2,13 @@
 CurrentModule = IncompressibleNavierStokes
 ```
 
-# Matrices
+# Sparse matrices
 
 In IncompressibleNavierStokes, all operators are implemented as matrix-free kernels.
 However, access to the underlying matrices can sometimes be useful, for example
 to precompute matrix factorizations.
 We therefore provide sparse matrix versions of some of the linear operators (see
-full list [below](#API)).
+full list [below](#api)).
 
 ## Example
 

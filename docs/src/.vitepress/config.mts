@@ -90,9 +90,9 @@ export default defineConfig({
             text: 'Guide',
             items: [
               { text: 'Floating point precision', link: '/manual/precision' },
-              { text: 'GPU Support', link: '/manual/gpu' },
+              { text: 'GPU support', link: '/manual/gpu' },
               { text: 'Differentiating code', link: '/manual/differentiability' },
-              { text: 'Matrices', link: '/manual/matrices' },
+              { text: 'Sparse matrices', link: '/manual/matrices' },
               { text: 'Temperature equation', link: '/manual/temperature' },
               { text: 'Large eddy simulation', link: '/manual/les' },
               { text: 'SciML', link: '/manual/sciml' },
@@ -187,9 +187,9 @@ export default defineConfig({
             text: 'Guide',
             items: [
               { text: 'Floating point precision', link: '/manual/precision' },
-              { text: 'GPU Support', link: '/manual/gpu' },
+              { text: 'GPU support', link: '/manual/gpu' },
               { text: 'Differentiating code', link: '/manual/differentiability' },
-              { text: 'Matrices', link: '/manual/matrices' },
+              { text: 'Sparse matrices', link: '/manual/matrices' },
               { text: 'Temperature equation', link: '/manual/temperature' },
               { text: 'Large eddy simulation', link: '/manual/les' },
               { text: 'SciML', link: '/manual/sciml' },
