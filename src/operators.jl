@@ -213,20 +213,22 @@ ChainRulesCore.rrule(::typeof(applypressure), u, p, setup) = (
 "Subtract pressure gradient (in-place version)."
 function applypressure!(u, p, setup)
     (; grid, backend, workgroupsize) = setup
-    (; dimension, Δu, N) = grid
+    (; dimension, Δu, N, Iu) = grid
     D = dimension()
     e = Offset(D)
     kernel = applypressure_kernel!(backend, workgroupsize)
     I0 = oneunit(CartesianIndex{D})
-    kernel(u, p, Δu, e, Val(1:D), I0; ndrange = N .- 2)
+    kernel(u, p, Δu, Iu, e, Val(1:D), I0; ndrange = N .- 2)
     u
 end
 
-@kernel function applypressure_kernel!(u, p, Δu, e, valdims, I0)
+@kernel function applypressure_kernel!(u, p, Δu, Iu, e, valdims, I0)
     I = @index(Global, Cartesian)
     I = I0 + I
     @unroll for α in getval(valdims)
-        u[I, α] -= (p[I+e(α)] - p[I]) / Δu[α][I[α]]
+        if I ∈ Iu[α]
+            u[I, α] -= (p[I+e(α)] - p[I]) / Δu[α][I[α]]
+        end
     end
 end
 
