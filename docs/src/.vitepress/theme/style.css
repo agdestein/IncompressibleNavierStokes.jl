@@ -4,7 +4,7 @@ https://github.com/vuejs/vitepress/blob/main/src/client/theme-default/styles/var
 
   /* Layouts */
 
-/* 
+/*
  :root {
   --vp-layout-max-width: 1440px;
 } */
@@ -32,26 +32,29 @@ https://github.com/vuejs/vitepress/blob/main/src/client/theme-default/styles/var
 
 }
 
-/* 
-Disable contextual alternates (kind of like ligatures but different) in monospace, 
-which turns `/>` to an up arrow and `|>` (the Julia pipe symbol) to an up arrow as well.  
+/*
+Disable contextual alternates (kind of like ligatures but different) in monospace,
+which turns `/>` to an up arrow and `|>` (the Julia pipe symbol) to an up arrow as well.
 This is pretty bad for Julia folks reading even though copy+paste retains the same text.
 */
 /* Target elements with class 'mono' */
 .mono-no-substitutions {
-  font-family: "JuliaMono-Light", monospace;
+  /* font-family: "JuliaMono-Light", monospace; */
+  font-family: "JuliaMono-Regular", monospace;
   font-feature-settings: "calt" off;
 }
 
 /* Alternatively, you can use the following if you prefer: */
 .mono-no-substitutions-alt {
-  font-family: "JuliaMono-Light", monospace;
+  /* font-family: "JuliaMono-Light", monospace; */
+  font-family: "JuliaMono-Regular", monospace;
   font-variant-ligatures: none;
 }
 
 /* If you want to apply this globally to all monospace text: */
 pre, code {
-  font-family: "JuliaMono-Light", monospace;
+  /* font-family: "JuliaMono-Light", monospace; */
+  font-family: "JuliaMono-Regular", monospace;
   font-feature-settings: "calt" off;
 }
 
@@ -100,7 +103,7 @@ pre, code {
     -45deg,
     #9558B2 30%,
     #389826 30%,
-    #CB3C33 
+    #CB3C33
   );
   --vp-home-hero-image-filter: blur(40px);
 }
@@ -135,7 +138,7 @@ pre, code {
     --vp-c-gray-dark-3: hsl(220 12% 23%);
     --vp-c-gray-dark-4: hsl(220 14% 17%);
     --vp-c-gray-dark-5: hsl(220 16% 13%);
-  
+
     /* // Backgrounds */
     /* --vp-c-bg: hsl(240, 2%, 11%); */
     --vp-custom-block-info-bg: hsl(220 14% 17%);
@@ -237,7 +240,7 @@ mjx-container > svg {
 
 @media (max-width: 960px) {
   .VPDoc {
-    padding-left: 25px !important;  
+    padding-left: 25px !important;
   }
 }
 
