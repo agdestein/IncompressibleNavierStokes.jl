@@ -5,52 +5,21 @@
 # the matrix-free operators, e.g.
 #
 #     u = apply_bc_u(u, t, setup) # u is a (D+1)-array
-#     d = diffusion(u, setup) # d is a (D+1)-array
+#     d = diffusion(u, setup; use_viscosity = false) # d is a (D+1)-array
 #
 # becomes
 #
 #     uvec = bc_u_mat(setup) * u[:] # flatten u to a vector first
 #     dvec = diffusion_mat(setup) * uvec # dvec is a vector
 #     d = reshape(dvec, size(u)) # Go back to (D+1)-array
-#
-# For some boundary conditions, there are constants in the matrix-free operators
-# that are not part of the matrices. To extract these BC vectors, use the
-# matrix-free operators on empty fields:
-#
-#     uzero = vectorfield(setup) # zero everywhere
-#     yu = apply_bc_u(uzero, t, setup) # must be redone if BC depend on t and t changes
-#     yd = diffusion(yu, setup)
-#     yd = yd[:] # yd is now the "BC vector"
-#
-# Now `yd` can be used together with the diffusion matrix. These two are now equivalent:
-#
-# Matrix-free version with combined BC and BC constants:
-#   d = diffusion(apply_bc_u(u, t, setup), setup)
-#
-# Matrix-version with separate BC and BC constants
-#
-#   d = yd + diffusion_mat(setup) * bc_u_mat(setup) * u[:] # vector
-#   d = reshape(d, size(u)) # array
-#
-# Now the part without the BC constants can be inverted:
-#
-#   yD = ... # Constant BC that do not depend on the input field
-#   B = bc_u_mat(setup) # periodic BC etc. that do depend on input field
-#   D = diffusion_mat(setup) # "raw" operator without BC
-#   DB = D * B # full operator, `DB * u` first applies periodic BC and then diffusion
-#   decomposition = lu(DB) # factorize matrix
-#   result = decomposition \ (input - yD) # Solve system for given input RHS
-#
-# now we should have
-#
-#   input ≈ yD + DB * result
-#         ≈ diffusion(apply_bc_u(result, t, setup), setup)
-#
-# Note: Above example assumes Re = 1, the matrix-free diffusion divides by Re
 
-# TODO: Make proper doc page with the above
+"""
+Create matrix for padding inner scalar field with boundary volumes.
+This can be useful for algorithms that require vectors with degrees of freedom only,
+and not the ghost volumes. To go back, simply transpose the matrix.
 
-"Pad inner scalar field with boundary volumes."
+See also: [`pad_vectorfield_mat`](@ref).
+"""
 function pad_scalarfield_mat(setup)
     (; N, Np, Ip, x) = setup.grid
     n = prod(N)
@@ -62,7 +31,10 @@ function pad_scalarfield_mat(setup)
     sparse(i, j, v, n, np)
 end
 
-"Pad inner vector field with boundary volumes."
+"""
+Create matrix for padding inner vector field with boundary volumes,
+similar to [`pad_scalarfield_mat`](@ref).
+"""
 function pad_vectorfield_mat(setup)
     (; dimension, N, Nu, Iu, x) = setup.grid
     D = dimension()
@@ -80,7 +52,7 @@ function pad_vectorfield_mat(setup)
 end
 
 """
-Matrix for applying boundary conditions to velocity fields `u`.
+Create matrix for applying boundary conditions to velocity fields `u`.
 This matrix only applies the boundary conditions depending on `u` itself (e.g. [`PeriodicBC`](@ref)).
 It does not apply constant boundary conditions (e.g. non-zero [`DirichletBC`](@ref)).
 """
