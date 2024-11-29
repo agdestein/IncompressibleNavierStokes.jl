@@ -213,20 +213,22 @@ ChainRulesCore.rrule(::typeof(applypressure), u, p, setup) = (
 "Subtract pressure gradient (in-place version)."
 function applypressure!(u, p, setup)
     (; grid, backend, workgroupsize) = setup
-    (; dimension, Δu, N) = grid
+    (; dimension, Δu, N, Iu) = grid
     D = dimension()
     e = Offset(D)
     kernel = applypressure_kernel!(backend, workgroupsize)
     I0 = oneunit(CartesianIndex{D})
-    kernel(u, p, Δu, e, Val(1:D), I0; ndrange = N .- 2)
+    kernel(u, p, Δu, Iu, e, Val(1:D), I0; ndrange = N .- 2)
     u
 end
 
-@kernel function applypressure_kernel!(u, p, Δu, e, valdims, I0)
+@kernel function applypressure_kernel!(u, p, Δu, Iu, e, valdims, I0)
     I = @index(Global, Cartesian)
     I = I0 + I
     @unroll for α in getval(valdims)
-        u[I, α] -= (p[I+e(α)] - p[I]) / Δu[α][I[α]]
+        if I ∈ Iu[α]
+            u[I, α] -= (p[I+e(α)] - p[I]) / Δu[α][I[α]]
+        end
     end
 end
 
@@ -517,23 +519,27 @@ end
 end
 
 "Compute diffusive term (differentiable version)."
-diffusion(u, setup) = diffusion!(zero.(u), u, setup)
+diffusion(u, setup; kwargs...) = diffusion!(zero.(u), u, setup; kwargs...)
 
-ChainRulesCore.rrule(::typeof(diffusion), u, setup) = (
-    diffusion(u, setup),
-    φ -> (NoTangent(), diffusion_adjoint!(zero(u), φ, setup), NoTangent()),
+ChainRulesCore.rrule(::typeof(diffusion), u, setup; kwargs...) = (
+    diffusion(u, setup; kwargs...),
+    φ -> (NoTangent(), diffusion_adjoint!(zero(u), φ, setup; kwargs...), NoTangent()),
 )
 
 """
 Compute diffusive term (in-place version).
 Add the result to `F`.
+
+Keyword arguments:
+
+- `with_viscosity = true`: Include viscosity in the operator.
 """
-function diffusion!(F, u, setup)
+function diffusion!(F, u, setup; use_viscosity = true)
     (; grid, backend, workgroupsize, Re) = setup
     (; dimension, Δ, Δu, N, Iu) = grid
     D = dimension()
     e = Offset(D)
-    visc = 1 / Re
+    visc = use_viscosity ? 1 / Re : one(Re)
     kernel = diffusion_kernel!(backend, workgroupsize)
     I0 = oneunit(CartesianIndex{D})
     kernel(F, u, visc, e, Δ, Δu, Iu, Val(1:D), I0; ndrange = N .- 2)
@@ -541,6 +547,7 @@ function diffusion!(F, u, setup)
 end
 
 @kernel function diffusion_kernel!(F, u, visc, e, Δ, Δu, Iu, valdims, I0)
+    T = typeof(visc)
     dims = getval(valdims)
     I = @index(Global, Cartesian)
     I = I + I0
@@ -553,6 +560,11 @@ end
                 Δb = β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]
                 ∂a = (u[I, α] - u[I-e(β), α]) / Δa
                 ∂b = (u[I+e(β), α] - u[I, α]) / Δb
+                # For some Neumann BC, Δa or Δb are zero (eps),
+                # and (right - left) / Δa blows up even if right = left according to BC.
+                # Here we manually set the derivatives to zero in such cases.
+                ∂a = (Δa > 2 * eps(T)) * ∂a
+                ∂b = (Δb > 2 * eps(T)) * ∂b
                 f += visc * (∂b - ∂a) / Δuαβ[I[β]]
             end
         end
@@ -560,12 +572,12 @@ end
     end
 end
 
-function diffusion_adjoint!(u, φ, setup)
+function diffusion_adjoint!(u, φ, setup; use_viscosity = true)
     (; grid, backend, workgroupsize, Re) = setup
     (; dimension, N, Δ, Δu, Iu) = grid
     D = dimension()
     e = Offset(D)
-    visc = 1 / Re
+    visc = use_viscosity ? 1 / Re : one(Re)
     kernel = diffusion_adjoint_kernel!(backend, workgroupsize)
     kernel(u, φ, visc, e, Δ, Δu, Iu, Val(1:D); ndrange = N)
     u
@@ -644,6 +656,7 @@ end
     valdims,
     I0,
 )
+    T = typeof(visc)
     I = @index(Global, Cartesian)
     I = I + I0
     dims = getval(valdims)
@@ -652,6 +665,8 @@ end
         if I ∈ Iu[α]
             @unroll for β in dims
                 Δuαβ = α == β ? Δu[β] : Δ[β]
+                Δa = (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
+                Δb = (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
                 uαβ1 = (u[I-e(β), α] + u[I, α]) / 2
                 uαβ2 = (u[I, α] + u[I+e(β), α]) / 2
                 uβα1 =
@@ -660,8 +675,13 @@ end
                 uβα2 = A[β][α][2][I[α]] * u[I, β] + A[β][α][1][I[α]+1] * u[I+e(α), β]
                 uαuβ1 = uαβ1 * uβα1
                 uαuβ2 = uαβ2 * uβα2
-                ∂βuα1 = (u[I, α] - u[I-e(β), α]) / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
-                ∂βuα2 = (u[I+e(β), α] - u[I, α]) / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
+                ∂βuα1 = (u[I, α] - u[I-e(β), α]) / Δa
+                ∂βuα2 = (u[I+e(β), α] - u[I, α]) / Δb
+                # For some Neumann BC, Δa or Δb are zero (eps),
+                # and (right - left) / Δa blows up even if right = left according to BC.
+                # Here we manually set the derivatives to zero in such cases.
+                ∂βuα1 = (Δa > 2 * eps(T)) * ∂βuα1
+                ∂βuα2 = (Δb > 2 * eps(T)) * ∂βuα2
                 f += (visc * (∂βuα2 - ∂βuα1) - (uαuβ2 - uαuβ1)) / Δuαβ[I[β]]
             end
         end
