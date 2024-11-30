@@ -11,7 +11,7 @@ createdata(; params, seeds, outdir, taskid) =
             @info "Skipping seed $(repr(seed)) for task $taskid"
             continue
         end
-        filenames = map(Iterators.product(params.nles, params.filters)) do nles, Φ
+        filenames = map(Iterators.product(params.nles, params.filters)) do (nles, Φ)
             f = getdatafile(outdir, nles, Φ, seed)
             datadir = dirname(f)
             ispath(datadir) || mkpath(datadir)
@@ -333,7 +333,7 @@ function trainsmagorinsky(;
             psolver,
             method = RKProject(params.method, projectorder),
             closure_model = IncompressibleNavierStokes.smagorinsky_closure_natural(setup),
-            nupdate = nsubstep, # Number of time steps between t[i] and t[i + 1]
+            nsubstep, # Number of time steps between t[i] and t[i + 1]
         )
         for (iθ, θ) in enumerate(θrange)
             iθ % ninfo == 0 && @info "Testing θ = $θ"

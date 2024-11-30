@@ -122,7 +122,7 @@ function create_loss_post(; setup, method, psolver, closure, nsubstep = 1)
     loss_post(data, θ) =
         sum(data) do (; u, t)
             T = eltype(θ)
-            ules = selectdim(u, ndims(u), 1) |> collect
+            ules = selectdim(u, ndims(u), 1) |> copy
             stepper =
                 create_stepper(method; setup, psolver, u = ules, temp = nothing, t = t[1])
             loss = zero(T)
@@ -150,7 +150,7 @@ function create_relerr_post(; data, setup, method, psolver, closure_model, nsubs
     inside = Iu[1]
     @assert all(==(inside), Iu)
     (; u, t) = data
-    v = selectdim(u, ndims(u), 1) |> collect
+    v = selectdim(u, ndims(u), 1) |> copy
     cache = IncompressibleNavierStokes.ode_method_cache(method, setup)
     function relerr_post(θ)
         T = eltype(u)

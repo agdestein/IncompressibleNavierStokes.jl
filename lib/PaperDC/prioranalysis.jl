@@ -146,7 +146,7 @@ clean()
 
 # Save initial conditions
 @info "Saving initial conditions"
-save_object("$casedir/ustart.jld2", Array.(ustart))
+save_object("$casedir/ustart.jld2", Array(ustart))
 
 # Solve unsteady problem
 @info "Starting time stepping"
@@ -178,7 +178,7 @@ clean()
 
 # Save final velocity
 @info "Starting final velocity"
-save_object("$casedir/uend.jld2", Array.(state.u))
+save_object("$casedir/uend.jld2", Array(state.u))
 
 # ## Plot 2D fields
 

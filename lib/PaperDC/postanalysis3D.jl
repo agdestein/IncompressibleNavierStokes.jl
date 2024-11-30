@@ -459,7 +459,7 @@ let
         nunroll = 50,
         nsubstep = 5,
         ninfo = 50,
-        θrange = range(t(0), t(0.3), 301),
+        θrange = range(T(0), T(0.3), 301),
     )
 end
 
@@ -592,9 +592,6 @@ epost.cnn_post
 
 # ### Plot a-priori errors
 
-# Better for PDF export
-CairoMakie.activate!()
-
 with_theme(; palette) do
     doplot() || return
     fig = Figure(; size = (500, 300))
@@ -631,9 +628,6 @@ end
 ########################################################################## #src
 
 # ### Plot a-posteriori errors
-
-# Better for PDF export
-CairoMakie.activate!()
 
 with_theme(; palette) do
     doplot() || return
@@ -764,7 +758,7 @@ let
             it = 1:nupdate:length(sample.t)
             map(it) do it
                 t = sample.t[it]
-                u = selectdim(sample.u, ndims(sample.u), it)
+                u = selectdim(sample.u, ndims(sample.u), it) |> Array
                 copyto!(udev, u)
                 IncompressibleNavierStokes.divergence!(div, udev, setup)
                 d = view(div, setup.grid.Ip)
@@ -778,7 +772,7 @@ let
             udev = vectorfield(setup)
             map(it) do it
                 t = sample.t[it]
-                u = selectdim(sample.u, ndims(sample.u), it)
+                u = selectdim(sample.u, ndims(sample.u), it) |> Array
                 copyto!(udev, u)
                 Point2f(t, total_kinetic_energy(udev, setup))
             end
@@ -851,9 +845,6 @@ divergencehistory.cnn_post .|> extrema
 ########################################################################## #src
 
 # ### Plot energy evolution
-
-# Better for PDF export
-CairoMakie.activate!()
 
 with_theme(; palette) do
     doplot() || return
@@ -961,9 +952,6 @@ end
 
 # ### Plot Divergence
 
-# Better for PDF export
-CairoMakie.activate!()
-
 with_theme(; palette) do
     doplot() || return
     islog = true
@@ -1046,7 +1034,7 @@ let
                 method = RKProject(params.method, projectorder),
                 psolver,
                 θ,
-            )[1].u .|> Array
+            )[1].u |> Array
         t1 = t[1]
         for i in eachindex(times)
             # Only first times for First
@@ -1264,11 +1252,6 @@ end
 ########################################################################## #src
 
 # ### Plot fields
-
-# Export to PNG, otherwise each volume gets represented
-# as a separate rectangle in the PDF
-# (takes time to load in the article PDF)
-GLMakie.activate!()
 
 with_theme(; palette) do
     doplot() || return
