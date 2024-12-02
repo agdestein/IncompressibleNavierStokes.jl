@@ -11,7 +11,7 @@ Creates a function that computes the right-hand side of the Navier-Stokes equati
 A function that computes the right-hand side of the Navier-Stokes equations.
 """
 create_right_hand_side(setup, psolver) = function right_hand_side(u, param, t)
-    F = zeros(size(u))
+    # F = zeros(size(u))
     u = apply_bc_u(u, t, setup)
     F = momentum(u, nothing, t, setup)
     F = apply_bc_u(F, t, setup; dudt = true)
@@ -41,7 +41,7 @@ function right_hand_side!(dudt, u, params_ref, t)
     temp_vector = copy(u)
     apply_bc_u!(temp_vector, t, setup)
     momentum!(dudt, temp_vector, nothing, t, setup)
-    apply_bc_u!(dudt, t, setup)
+    apply_bc_u!(dudt, t, setup; dudt = true)
     project!(dudt, setup; psolver, p)
     return nothing
 end

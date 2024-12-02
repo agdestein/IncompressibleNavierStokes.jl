@@ -52,7 +52,7 @@ end
                 right_hand_side!(list_e[i], list_u[i], params_ref, T(0))
             end
         end
-        @test all([list_z[i] ≈ list_e[i] for i = 1:niter])
+        @test all(i -> list_z[i] ≈ list_e[i], 1:niter)
         if te < tz
             @info "Right-hand side in-place is faster by a factor of $(tz/te)"
         else
@@ -122,7 +122,7 @@ end
                 push!(list_e, du)
             end
         end
-        @test all([list_z[i] ≈ list_e[i] for i = 1:niter])
+        @test all(i -> list_z[i] ≈ list_e[i], 1:niter)
         if te < tz
             @info "Reverse AD using Enzyme is faster by a factor of $(tz/te)"
         else
