@@ -102,7 +102,7 @@ export processor,
 export fieldplot, energy_history_plot, energy_spectrum_plot
 
 # Setup
-export Setup, temperature_equation, scalarfield, vectorfield
+export Setup, temperature_equation
 export CPU
 
 # 1D grids
@@ -115,7 +115,7 @@ export default_psolver, psolver_direct, psolver_cg, psolver_cg_matrix, psolver_s
 export solve_unsteady, timestep, create_stepper
 
 # Field generation
-export velocityfield, temperaturefield, random_field
+export scalarfield, vectorfield, velocityfield, temperaturefield, random_field
 
 # Utils
 export getoffset, splitseed, plotgrid, save_vtk, get_lims

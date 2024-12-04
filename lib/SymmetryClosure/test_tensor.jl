@@ -1,46 +1,65 @@
+if false
+    include("src/SymmetryClosure.jl")
+    using .SymmetryClosure
+end
+
 using CairoMakie
 using IncompressibleNavierStokes
+using SymmetryClosure
+using CUDA
+using Zygote
 
-# For running on GPU
-using CUDA;
-CUDA.allowscalar(false);
-backend = CUDABackend();
-T = Float32
+lines(cumsum(randn(100)))
 
 # Setup
-Re = T(10_000)
-n = 1024
-lims = T(0), T(1)
-x = LinRange(lims..., n + 1), LinRange(lims..., n + 1)
-setup = Setup(; x, Re, backend);
-u₀ = random_field(setup, T(0));
+n = 32
+ax = range(0.0, 1.0, n + 1)
+setup = Setup(;
+    x = (ax, ax),
+    Re = 1e4,
+    # backend = CUDABackend(),
+);
+ustart = random_field(setup, 0.0)
 
-u = u₀
+u = ustart
 
-B, V = IncompressibleNavierStokes.tensorbasis(u, setup)
+B, V = tensorbasis(u, setup)
+
+tb, pb = SymmetryClosure.ChainRulesCore.rrule(tensorbasis, u, setup)
+
+ubar = pb(tb)[2]
+
+θ = 1e-5 * randn(5, 3)
+θ = θ |> CuArray
+s = tensorclosure(polynomial, ustart, θ, setup);
+
+gradient(u -> sum(tensorclosure(polynomial, u, θ, setup)), ustart);
+
+using StaticArrays
+tau = similar(setup.grid.x[1], SMatrix{2,2,Float64,4}, 10)
+zero(tau)
+
+s[2:end-1, 2:end-1, 1] |> heatmap
+s[2:end-1, 2:end-1, 1] .|> abs |> heatmap
+s[2:end-1, 2:end-1, 1] .|> abs .|> log |> heatmap
+
 B |> length
-CUDA.@allowscalar B[2][5, 10]
+B[2][5, 10]
 getindex.(B[2], 2)
 
-heatmap(Array(u[1]))
-u[1] |> Array |> heatmap
-getindex.(B[3], 1, 1) |> Array |> heatmap
-getindex.(B[3], 2, 1) |> Array |> heatmap
-getindex.(B[3], 2, 2) |> Array |> heatmap
-V[1] |> Array |> heatmap
-V[2] |> Array |> heatmap
-V[2] |> Array |> contourf
+u[:, :, 1] |> heatmap
+getindex.(B[3], 1, 1) |> heatmap
+getindex.(B[3], 2, 1) |> heatmap
+getindex.(B[3], 2, 2) |> heatmap
+V[1][2:end-1, 2:end-1] |> heatmap
+V[2][2:end-1, 2:end-1] |> heatmap
 
 # Solve unsteady problem
-state, outputs = solve_unsteady(
+state, outputs = solve_unsteady(;
     setup,
-    u₀,
-    (T(0), T(1));
-    Δt = T(1e-4),
-    processors = (
-        # rtp = realtimeplotter(; setup, nupdate = 1),
-        log = timelogger(; nupdate = 10),
-    ),
+    ustart,
+    tlims = (0.0, 1.0),
+    processors = (log = timelogger(; nupdate = 10),),
 );
 (; u) = state
 
@@ -49,9 +68,9 @@ makeplot(u, fieldname, time) = save(
     fieldplot((; u, t = T(0)); setup, fieldname, docolorbar = false, size = (500, 500)),
 )
 
-makeplot(u₀, :vorticity, 0)
-makeplot(u₀, :S2, 0)
-makeplot(u₀, :R2, 0)
+makeplot(ustart, :vorticity, 0)
+makeplot(ustart, :S2, 0)
+makeplot(ustart, :R2, 0)
 makeplot(u, :vorticity, 1)
 makeplot(u, :S2, 1)
 makeplot(u, :R2, 1)

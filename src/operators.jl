@@ -831,7 +831,8 @@ end
 @kernel function dissipation_from_strain_kernel!(ϵ, u, visc, Δ, Δu, I0)
     I = @index(Global, Cartesian)
     I = I + I0
-    S = strain(u, I, Δ, Δu)
+    ∇u = ∇(u, I, Δ, Δu)
+    S = (∇u + ∇u') / 2
     ϵ[I] = 2 * visc * sum(S .* S)
 end
 
@@ -1027,18 +1028,93 @@ end
         (u[I, α] - u[I-e(β), α]) / Δuβ[I[β]-1] +
         (u[I-e(α), α] - u[I-e(α)-e(β), α]) / Δuβ[I[β]-1]
     ) / 4
-@inline ∇(u, I::CartesianIndex{2}, Δ, Δu) =
-    @SMatrix [∂x(u, I, α, β, Δ[β], Δu[β]) for α = 1:2, β = 1:2]
-@inline ∇(u, I::CartesianIndex{3}, Δ, Δu) =
-    @SMatrix [∂x(u, I, α, β, Δ[β], Δu[β]) for α = 1:3, β = 1:3]
-@inline idtensor(u, ::CartesianIndex{2}) =
-    @SMatrix [(α == β) * oneunit(eltype(u)) for α = 1:2, β = 1:2]
-@inline idtensor(u, ::CartesianIndex{3}) =
-    @SMatrix [(α == β) * oneunit(eltype(u)) for α = 1:3, β = 1:3]
-@inline function strain(u, I, Δ, Δu)
-    ∇u = ∇(u, I, Δ, Δu)
-    (∇u + ∇u') / 2
+@inline function ∂x_adjoint!(
+    φ,
+    u,
+    I::CartesianIndex{D},
+    α,
+    β,
+    Δβ,
+    Δuβ;
+    e = Offset(D),
+) where {D}
+    if α == β
+        # φ = (u[I, α] - u[I-e(β), α]) / Δβ[I[β]]
+        u[I, α] += φ / Δβ[I[β]]
+        u[I-e(β), α] -= φ / Δβ[I[β]]
+    else
+        # φ =
+        #     (u[I+e(β), α] - u[I, α]) / 4Δuβ[I[β]] +
+        #     (u[I-e(α)+e(β), α] - u[I-e(α), α]) / 4Δuβ[I[β]] +
+        #     (u[I, α] - u[I-e(β), α]) / 4Δuβ[I[β]-1] +
+        #     (u[I-e(α), α] - u[I-e(α)-e(β), α]) / 4Δuβ[I[β]-1]
+        u[I+e(β), α] += φ / 4Δuβ[I[β]]
+        u[I, α] -= φ / 4Δuβ[I[β]]
+        u[I-e(α)+e(β), α] += φ / 4Δuβ[I[β]]
+        u[I-e(α), α] -= φ / 4Δuβ[I[β]]
+        u[I, α] += φ / 4Δuβ[I[β]-1]
+        u[I-e(β), α] -= φ / 4Δuβ[I[β]-1]
+        u[I-e(α), α] += φ / 4Δuβ[I[β]-1]
+        u[I-e(α)-e(β), α] -= φ / 4Δuβ[I[β]-1]
+    end
+    u
 end
+@inline ∇(u, I::CartesianIndex{2}, Δ, Δu) = SMatrix{2,2,eltype(u),4}(
+    ∂x(u, I, 1, 1, Δ[1], Δu[1]),
+    ∂x(u, I, 2, 1, Δ[1], Δu[1]),
+    ∂x(u, I, 1, 2, Δ[2], Δu[2]),
+    ∂x(u, I, 2, 2, Δ[2], Δu[2]),
+)
+@inline ∇(u, I::CartesianIndex{3}, Δ, Δu) = SMatrix{3,3,eltype(u),9}(
+    ∂x(u, I, 1, 1, Δ[1], Δu[1]),
+    ∂x(u, I, 2, 1, Δ[1], Δu[1]),
+    ∂x(u, I, 3, 1, Δ[1], Δu[1]),
+    ∂x(u, I, 1, 2, Δ[2], Δu[2]),
+    ∂x(u, I, 2, 2, Δ[2], Δu[2]),
+    ∂x(u, I, 3, 2, Δ[2], Δu[2]),
+    ∂x(u, I, 1, 3, Δ[3], Δu[3]),
+    ∂x(u, I, 2, 3, Δ[3], Δu[3]),
+    ∂x(u, I, 3, 3, Δ[3], Δu[3]),
+)
+@inline function ∇_adjoint!(∇u, u, I::CartesianIndex{2}, Δ, Δu)
+    ∂x_adjoint!(∇u[1, 1], u, I, 1, 1, Δ[1], Δu[1])
+    ∂x_adjoint!(∇u[2, 1], u, I, 2, 1, Δ[1], Δu[1])
+    ∂x_adjoint!(∇u[1, 2], u, I, 1, 2, Δ[2], Δu[2])
+    ∂x_adjoint!(∇u[2, 2], u, I, 2, 2, Δ[2], Δu[2])
+    u
+end
+@inline function ∇_adjoint!(∇u, u, I::CartesianIndex{3}, Δ, Δu)
+    ∂x_adjoint!(∇u, u, I, 1, 1, Δ[1], Δu[1])
+    ∂x_adjoint!(∇u, u, I, 2, 1, Δ[1], Δu[1])
+    ∂x_adjoint!(∇u, u, I, 3, 1, Δ[1], Δu[1])
+    ∂x_adjoint!(∇u, u, I, 1, 2, Δ[2], Δu[2])
+    ∂x_adjoint!(∇u, u, I, 2, 2, Δ[2], Δu[2])
+    ∂x_adjoint!(∇u, u, I, 3, 2, Δ[2], Δu[2])
+    ∂x_adjoint!(∇u, u, I, 1, 3, Δ[3], Δu[3])
+    ∂x_adjoint!(∇u, u, I, 2, 3, Δ[3], Δu[3])
+    ∂x_adjoint!(∇u, u, I, 3, 3, Δ[3], Δu[3])
+    u
+end
+@inline idtensor(u, ::CartesianIndex{2}) = SMatrix{2,2,eltype(u),4}(1, 0, 0, 1)
+@inline idtensor(u, ::CartesianIndex{3}) =
+    SMatrix{3,3,eltype(u),9}(1, 0, 0, 0, 1, 0, 0, 0, 1)
+@inline unittensor(u, ::CartesianIndex{2}, α, β) = SMatrix{2,2,eltype(u),4}(
+    (α, β) == (1, 1),
+    (α, β) == (2, 1),
+    (α, β) == (1, 2),
+    (α, β) == (2, 2),
+)
+@inline unittensor(u, ::CartesianIndex{3}, α, β) = SMatrix{3,3,eltype(u),9}(
+    (α, β) == (1, 1),
+    (α, β) == (2, 1),
+    (α, β) == (3, 1),
+    (α, β) == (1, 2),
+    (α, β) == (2, 2),
+    (α, β) == (3, 2),
+    (α, β) == (1, 3),
+    (α, β) == (2, 3),
+    (α, β) == (3, 3),
+)
 @inline gridsize(Δ, I::CartesianIndex{D}) where {D} =
     sqrt(sum(ntuple(α -> Δ[α][I[α]]^2, D)))
 
@@ -1053,7 +1129,8 @@ function smagtensor!(σ, u, θ, setup)
     @kernel function σ!(σ, u, I0)
         I = @index(Global, Cartesian)
         I = I + I0
-        S = strain(u, I, Δ, Δu)
+        ∇u = ∇(u, I, Δ, Δu)
+        S = (∇u + ∇u') / 2
         d = gridsize(Δ, I)
         eddyvisc = θ^2 * d^2 * sqrt(2 * sum(S .* S))
         σ[I] = 2 * eddyvisc * S
@@ -1063,6 +1140,14 @@ function smagtensor!(σ, u, θ, setup)
     σ
 end
 
+divoftensor(σ, setup) = divoftensor!(vectorfield(setup), σ, setup)
+
+ChainRulesCore.rrule(::typeof(divoftensor), σ, setup) = (
+    # (@show(typeof(σ));   divoftensor(σ, setup)),
+    divoftensor(σ, setup),
+    φ -> (NoTangent(), divoftensor_adjoint!(zero(σ), φ, setup), NoTangent()),
+)
+
 """
 Compute divergence of a tensor with all components
 in the pressure points (in-place version).
@@ -1070,44 +1155,125 @@ The stress tensors should be precomputed and stored in `σ`.
 """
 function divoftensor!(s, σ, setup)
     (; grid, backend, workgroupsize) = setup
-    (; dimension, Nu, Iu, Δ, Δu, A) = grid
+    (; dimension, N, Iu, Δ, Δu, A) = grid
     D = dimension()
     e = Offset(D)
-    @kernel function s!(s, σ, ::Val{α}, ::Val{βrange}, I0) where {α,βrange}
-        I = @index(Global, Cartesian)
-        I = I + I0
-        s[I, α] = zero(eltype(s[1]))
-        # for β = 1:D
-        @unroll for β in βrange
-            Δuαβ = α == β ? Δu[β] : Δ[β]
-            if α == β
-                σαβ2 = σ[I+e(β)][α, β]
-                σαβ1 = σ[I][α, β]
-            else
-                # TODO: Add interpolation weights for non-uniform case
-                σαβ2 =
-                    (
-                        σ[I][α, β] +
-                        σ[I+e(β)][α, β] +
-                        σ[I+e(α)+e(β)][α, β] +
-                        σ[I+e(α)][α, β]
-                    ) / 4
-                σαβ1 =
-                    (
-                        σ[I-e(β)][α, β] +
-                        σ[I][α, β] +
-                        σ[I+e(α)-e(β)][α, β] +
-                        σ[I+e(α)][α, β]
-                    ) / 4
+    # @show typeof(s) typeof(σ)
+    divoftensor_kernel!(backend, workgroupsize)(
+        s,
+        σ,
+        Δ,
+        Δu,
+        A,
+        e,
+        Val(1:D),
+        Iu;
+        ndrange = N,
+    )
+    s
+end
+
+function divoftensor_adjoint!(σbar, sbar, setup)
+    (; grid, backend, workgroupsize) = setup
+    (; dimension, N, Iu, Δ, Δu, A) = grid
+    D = dimension()
+    e = Offset(D)
+    divoftensor_adjoint_kernel!(backend, workgroupsize)(
+        σbar,
+        sbar,
+        Δ,
+        Δu,
+        A,
+        e,
+        Val(1:D),
+        Iu;
+        ndrange = N,
+    )
+    σbar
+end
+
+@kernel function divoftensor_kernel!(s, σ, Δ, Δu, A, e, valdims, Iu)
+    dims = getval(valdims)
+    I = @index(Global, Cartesian)
+    @unroll for α in dims
+        if I in Iu[α]
+            sI = zero(eltype(s))
+            @unroll for β in dims
+                Δuαβ = α == β ? Δu[β] : Δ[β]
+                if α == β
+                    σαβ2 = σ[I+e(β)][α, β]
+                    σαβ1 = σ[I][α, β]
+                else
+                    # TODO: Add interpolation weights for non-uniform case
+                    σαβ2 =
+                        (
+                            σ[I][α, β] +
+                            σ[I+e(β)][α, β] +
+                            σ[I+e(α)+e(β)][α, β] +
+                            σ[I+e(α)][α, β]
+                        ) / 4
+                    σαβ1 =
+                        (
+                            σ[I-e(β)][α, β] +
+                            σ[I][α, β] +
+                            σ[I+e(α)-e(β)][α, β] +
+                            σ[I+e(α)][α, β]
+                        ) / 4
+                end
+                sI += (σαβ2 - σαβ1) / Δuαβ[I[β]]
             end
-            s[I, α] += (σαβ2 - σαβ1) / Δuαβ[I[β]]
+            s[I, α] = sI
         end
     end
-    for α = 1:D
-        I0 = getoffset(Iu[α])
-        s!(backend, workgroupsize)(s, σ, Val(α), Val(1:D), I0; ndrange = Nu[α])
-    end
-    s
+end
+
+@kernel function divoftensor_adjoint_kernel!(σbar, sbar, Δ, Δu, A, e, valdims, Iu)
+    dims = getval(valdims)
+    I = @index(Global, Cartesian)
+    @unroll for α in dims
+        if I in Iu[α]
+            sIbar = sbar[I, α]
+            @unroll for β in dims
+                Δuαβ = α == β ? Δu[β] : Δ[β]
+                # sI += (σαβ2 - σαβ1) / Δuαβ[I[β]]
+                σαβ2bar = sIbar / Δuαβ[I[β]]
+                σαβ1bar = -sIbar / Δuαβ[I[β]]
+                ut = unittensor(sbar, I, α, β)
+                if α == β
+                    # σαβ2 = σ[I+e(β)][α, β]
+                    # σαβ1 = σ[I][α, β]
+                    σbar[I+e(β)] += σαβ2bar * ut
+                    σbar[I] += σαβ1bar * ut
+                else
+                    # TODO: Add interpolation weights for non-uniform case
+                    # σαβ2 =
+                    #     (
+                    #         σ[I][α, β] +
+                    #         σ[I+e(β)][α, β] +
+                    #         σ[I+e(α)+e(β)][α, β] +
+                    #         σ[I+e(α)][α, β]
+                    #     ) / 4
+                    # σαβ1 =
+                    #     (
+                    #         σ[I-e(β)][α, β] +
+                    #         σ[I][α, β] +
+                    #         σ[I+e(α)-e(β)][α, β] +
+                    #         σ[I+e(α)][α, β]
+                    #     ) / 4
+                    val2 = σαβ2bar / 4 * ut
+                    σbar[I] += val2
+                    σbar[I+e(β)] += val2
+                    σbar[I+e(α)+e(β)] += val2
+                    σbar[I+e(α)] += val2
+                    val1 = σαβ1bar / 4 * ut
+                    σbar[I-e(β)] += val1
+                    σbar[I] += val1
+                    σbar[I+e(α)-e(β)] += val1
+                    σbar[I+e(α)] += val1
+                end # center or corner
+            end # β
+        end # if inside
+    end # α
 end
 
 """
