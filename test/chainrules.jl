@@ -97,6 +97,23 @@ end
     test_rrule_named(diffusion, Case.D3.u, Case.D3.setup ⊢ NoTangent())
 end
 
+@testitem "Tensor basis" setup = [Case, ChainRulesStuff] begin
+    using IncompressibleNavierStokes.StaticArrays
+    using Random
+    test_rrule_named(tensorbasis, Case.D2.u, Case.D2.setup ⊢ NoTangent())
+    @test_broken false # TODO: 3D adjoint
+    # test_rrule_named(tensorbasis, Case.D3.u, Case.D3.setup ⊢ NoTangent())
+    T = eltype(Case.D2.u)
+    a = similar(Case.D2.u, size(Case.D2.u)..., 5) |> randn!
+    b = similar(Case.D2.u, SMatrix{2,2,T,4}, size(Case.D2.u)..., 5) |> randn!
+    test_rrule_named(
+        IncompressibleNavierStokes.lastdimcontract,
+        a,
+        b,
+        Case.D2.setup ⊢ NoTangent(),
+    )
+end
+
 @testitem "Temperature" setup = [Case, ChainRulesStuff] begin
     for case in (Case.D2, Case.D3)
         (; u, temp, setup) = case

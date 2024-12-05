@@ -77,9 +77,13 @@ end
 @kernel function tensorbasis_adjoint_kernel!(::Dimension{2}, ubar, Bbar, Vbar, u, Δ, Δu, I0)
     I = @index(Global, Cartesian)
     I = I + I0
+
+    # Forward pass
     ∇u = ∇(u, I, Δ, Δu)
     S = (∇u + ∇u') / 2
     R = (∇u - ∇u') / 2
+
+    # Reverse pass (requires S and R from forward pass)
     Sbar = Bbar[I, 2] + Bbar[I, 3] * R' - R' * Bbar[I, 3] + 2 * Vbar[I, 1] * S
     Rbar = S' * Bbar[I, 3] - Bbar[I, 3] * S' + 2 * Vbar[I, 2] * R
     ∇ubar = (Sbar + Sbar') / 2 + (Rbar - Rbar') / 2
@@ -88,7 +92,7 @@ end
 end
 
 @kernel function tensorbasis_adjoint_kernel!(::Dimension{3}, ubar, Bbar, Vbar, u, Δ, Δu, I0)
-    # TODO
+    # TODO: 3D adjoint
 end
 
 """
@@ -107,7 +111,7 @@ ChainRulesCore.rrule(::typeof(lastdimcontract), a, b, setup) = (
     function (cbar)
         abar = zero(a)
         bbar = zero(b)
-        lastdimcontract_adjoint!(abar, bbar, cbar, a, b, setup)
+        lastdimcontract_adjoint!(abar, bbar, cbar |> unthunk, a, b, setup)
         (NoTangent(), abar, bbar, NoTangent())
     end,
 )

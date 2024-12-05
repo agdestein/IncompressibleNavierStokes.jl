@@ -1021,13 +1021,16 @@ function vorticity!(::Dimension{3}, ω, u, setup)
 end
 
 @inline ∂x(u, I::CartesianIndex{D}, α, β, Δβ, Δuβ; e = Offset(D)) where {D} =
-    α == β ? (u[I, α] - u[I-e(β), α]) / Δβ[I[β]] :
-    (
-        (u[I+e(β), α] - u[I, α]) / Δuβ[I[β]] +
-        (u[I-e(α)+e(β), α] - u[I-e(α), α]) / Δuβ[I[β]] +
-        (u[I, α] - u[I-e(β), α]) / Δuβ[I[β]-1] +
-        (u[I-e(α), α] - u[I-e(α)-e(β), α]) / Δuβ[I[β]-1]
-    ) / 4
+    if α == β
+        (u[I, α] - u[I-e(β), α]) / Δβ[I[β]]
+    else
+        (
+            (u[I+e(β), α] - u[I, α]) / Δuβ[I[β]] +
+            (u[I-e(α)+e(β), α] - u[I-e(α), α]) / Δuβ[I[β]] +
+            (u[I, α] - u[I-e(β), α]) / Δuβ[I[β]-1] +
+            (u[I-e(α), α] - u[I-e(α)-e(β), α]) / Δuβ[I[β]-1]
+        ) / 4
+    end
 @inline function ∂x_adjoint!(
     φ,
     u,
@@ -1038,24 +1041,31 @@ end
     Δuβ;
     e = Offset(D),
 ) where {D}
+    # TODO:
+    # - Invert input/output indices
+    # - combine all output indices into one
+    # - Get rid of @atomic
     if α == β
         # φ = (u[I, α] - u[I-e(β), α]) / Δβ[I[β]]
-        u[I, α] += φ / Δβ[I[β]]
-        u[I-e(β), α] -= φ / Δβ[I[β]]
+        val = φ / Δβ[I[β]]
+        @atomic u[I, α] += val
+        @atomic u[I-e(β), α] -= val
     else
         # φ =
         #     (u[I+e(β), α] - u[I, α]) / 4Δuβ[I[β]] +
         #     (u[I-e(α)+e(β), α] - u[I-e(α), α]) / 4Δuβ[I[β]] +
         #     (u[I, α] - u[I-e(β), α]) / 4Δuβ[I[β]-1] +
         #     (u[I-e(α), α] - u[I-e(α)-e(β), α]) / 4Δuβ[I[β]-1]
-        u[I+e(β), α] += φ / 4Δuβ[I[β]]
-        u[I, α] -= φ / 4Δuβ[I[β]]
-        u[I-e(α)+e(β), α] += φ / 4Δuβ[I[β]]
-        u[I-e(α), α] -= φ / 4Δuβ[I[β]]
-        u[I, α] += φ / 4Δuβ[I[β]-1]
-        u[I-e(β), α] -= φ / 4Δuβ[I[β]-1]
-        u[I-e(α), α] += φ / 4Δuβ[I[β]-1]
-        u[I-e(α)-e(β), α] -= φ / 4Δuβ[I[β]-1]
+        val = φ / 4Δuβ[I[β]]
+        @atomic u[I+e(β), α] += val
+        @atomic u[I, α] -= val
+        @atomic u[I-e(α)+e(β), α] += val
+        @atomic u[I-e(α), α] -= val
+        val = φ / 4Δuβ[I[β]-1]
+        @atomic u[I, α] += val
+        @atomic u[I-e(β), α] -= val
+        @atomic u[I-e(α), α] += val
+        @atomic u[I-e(α)-e(β), α] -= val
     end
     u
 end
@@ -1084,15 +1094,15 @@ end
     u
 end
 @inline function ∇_adjoint!(∇u, u, I::CartesianIndex{3}, Δ, Δu)
-    ∂x_adjoint!(∇u, u, I, 1, 1, Δ[1], Δu[1])
-    ∂x_adjoint!(∇u, u, I, 2, 1, Δ[1], Δu[1])
-    ∂x_adjoint!(∇u, u, I, 3, 1, Δ[1], Δu[1])
-    ∂x_adjoint!(∇u, u, I, 1, 2, Δ[2], Δu[2])
-    ∂x_adjoint!(∇u, u, I, 2, 2, Δ[2], Δu[2])
-    ∂x_adjoint!(∇u, u, I, 3, 2, Δ[2], Δu[2])
-    ∂x_adjoint!(∇u, u, I, 1, 3, Δ[3], Δu[3])
-    ∂x_adjoint!(∇u, u, I, 2, 3, Δ[3], Δu[3])
-    ∂x_adjoint!(∇u, u, I, 3, 3, Δ[3], Δu[3])
+    ∂x_adjoint!(∇u[1, 1], u, I, 1, 1, Δ[1], Δu[1])
+    ∂x_adjoint!(∇u[2, 1], u, I, 2, 1, Δ[1], Δu[1])
+    ∂x_adjoint!(∇u[3, 1], u, I, 3, 1, Δ[1], Δu[1])
+    ∂x_adjoint!(∇u[1, 2], u, I, 1, 2, Δ[2], Δu[2])
+    ∂x_adjoint!(∇u[2, 2], u, I, 2, 2, Δ[2], Δu[2])
+    ∂x_adjoint!(∇u[3, 2], u, I, 3, 2, Δ[2], Δu[2])
+    ∂x_adjoint!(∇u[1, 3], u, I, 1, 3, Δ[3], Δu[3])
+    ∂x_adjoint!(∇u[2, 3], u, I, 2, 3, Δ[3], Δu[3])
+    ∂x_adjoint!(∇u[3, 3], u, I, 3, 3, Δ[3], Δu[3])
     u
 end
 @inline idtensor(u, ::CartesianIndex{2}) = SMatrix{2,2,eltype(u),4}(1, 0, 0, 1)

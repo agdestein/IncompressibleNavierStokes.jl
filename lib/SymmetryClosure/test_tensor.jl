@@ -8,18 +8,69 @@ using IncompressibleNavierStokes
 using SymmetryClosure
 using CUDA
 using Zygote
+using Random
+using LinearAlgebra
 
 lines(cumsum(randn(100)))
 
 # Setup
-n = 32
-ax = range(0.0, 1.0, n + 1)
-setup = Setup(; x = (ax, ax), Re = 1e4, backend = CUDABackend());
-ustart = random_field(setup, 0.0)
+n = 8
+# ax = range(0.0, 1.0, n + 1)
+# x = ax, ax
+x = tanh_grid(0.0, 1.0, n + 1), stretched_grid(-0.2, 1.2, n + 1)
+setup = Setup(;
+    x,
+    Re = 1e4,
+    backend = CUDABackend(),
+    boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
+);
+ustart = vectorfield(setup) |> randn!
 
 u = ustart
 
+let
+    B, V = tensorbasis(u, setup)
+    # B, V = randn!(B), randn!(V)
+    V = randn!(V)
+    function f(u)
+        Bi, Vi = tensorbasis(u, setup)
+        # dot(Bi, B) + dot(Vi, V)
+        # dot(getindex.(Bi, 1), getindex.(B, 1)) + dot(Vi, V)
+        dot(Vi, V)
+        # dot(Vi[:, :, 1], V[:, :, 1])
+    end
+
+    fd = map(eachindex(u)) do i
+        h = 1e-2
+        v1 = copy(u)
+        v2 = copy(u)
+        CUDA.@allowscalar v1[i] -= h / 2
+        CUDA.@allowscalar v2[i] += h / 2
+        (f(v2) - f(v1)) / h
+    end |> x -> reshape(x, size(u))
+
+    ad = Zygote.gradient(f, u)[1] |> Array
+
+    # mask = @. abs(fd - ad) > 1e-3
+
+    # i = 1
+    # V[:, :, i] |> display
+    # # (mask .* u)[:, :, i] |> display
+    # (mask .* fd)[:, :, i] |> display
+    # (mask .* ad)[:, :, i] |> display
+
+    # fd .- ad |> display
+    @show fd - ad .|> abs |> maximum
+    # @show f(u)
+    nothing
+end
+
 B, V = tensorbasis(u, setup)
+
+typeof(B)
+getindex.(B, 1)
+
+B[:, :, 1]
 
 tb, pb = SymmetryClosure.ChainRulesCore.rrule(tensorbasis, u, setup)
 

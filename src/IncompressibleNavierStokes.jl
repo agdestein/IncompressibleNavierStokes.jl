@@ -10,6 +10,7 @@ $(EXPORTS)
 module IncompressibleNavierStokes
 
 using Adapt
+using Atomix: @atomic
 using ChainRulesCore
 using DocStringExtensions
 using FFTW

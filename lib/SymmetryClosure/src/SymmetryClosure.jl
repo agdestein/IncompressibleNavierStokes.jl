@@ -7,7 +7,7 @@ using LinearAlgebra
 using IncompressibleNavierStokes
 using NeuralClosure
 
-include("tensor.jl")
+include("tensorclosure.jl")
 
 export tensorclosure, polynomial
 
