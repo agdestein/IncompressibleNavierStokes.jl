@@ -17,7 +17,7 @@ ax = range(0.0, 1.0, n + 1)
 setup = Setup(;
     x = (ax, ax),
     Re = 1e4,
-    # backend = CUDABackend(),
+    backend = CUDABackend(),
 );
 ustart = random_field(setup, 0.0)
 
@@ -33,7 +33,7 @@ ubar = pb(tb)[2]
 θ = θ |> CuArray
 s = tensorclosure(polynomial, ustart, θ, setup);
 
-gradient(u -> sum(tensorclosure(polynomial, u, θ, setup)), ustart);
+gradient(u -> sum(tensorclosure(polynomial, u, θ, setup)), ustart)[1];
 
 using StaticArrays
 tau = similar(setup.grid.x[1], SMatrix{2,2,Float64,4}, 10)

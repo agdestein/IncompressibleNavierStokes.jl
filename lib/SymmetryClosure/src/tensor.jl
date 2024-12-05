@@ -139,50 +139,52 @@ end
 function tensorclosure(model, u, θ, setup)
     B, V = tensorbasis(u, setup)
     x = model(V, θ)
-    τ = sum(x .* B; dims = ndims(B))
-    # τ = B[:, :, 1:1]
-    # τ = monitor(τ)
-    s..., _ = size(τ)
-    τ = reshape(τ, s) # Remove sigleton sum dimension
+    # τ = sum(x .* B; dims = ndims(B))
+    τ = lastdimcontract(x, B, setup)
     IncompressibleNavierStokes.divoftensor(τ, setup)
 end
 
 """
-Compute `c[I] = sum_i a[I, i] * b[I, i]`, where c and b are
-arrays of tensors (`SMatrix`).
+Compute `c[I] = sum_i a[I, i] * b[I, i]`, where `c[:, i]` and `b[:, i]` are
+tensor fields (elements are `SMatrix`es), `a[:, i]` is a scalar field,
+and the `i` dimension is contracted (multiple channels).
 """
 function lastdimcontract(a, b, setup)
     s..., n = size(a)
-    lastdimcontract!(similar(b, s), a, b, setup)
+    c = similar(b, s)
+    lastdimcontract!(c, a, b, setup)
 end
 
-ChainRulesCore.rrule(::typeof(lastdimcontract), a, b, setup) =
-    (lastdimcontract(a, b, setup), function (cbar)
+ChainRulesCore.rrule(::typeof(lastdimcontract), a, b, setup) = (
+    lastdimcontract(a, b, setup),
+    function (cbar)
         abar = zero(a)
         bbar = zero(b)
-        lastdimcontract_adjoint!(cbar, abar, bbar, setup)
+        lastdimcontract_adjoint!(abar, bbar, cbar, a, b, setup)
         (NoTangent(), abar, bbar, NoTangent())
-    end)
+    end,
+)
 
 function lastdimcontract!(c, a, b, setup)
     (; backend, workgroupsize) = setup
     s..., n = size(a)
     @assert size(a) == size(b)
     @assert size(c) == s
-    lastdimcontract_kernel!(backend, workgroupsize)(c, a, b, n)
+    lastdimcontract_kernel!(backend, workgroupsize)(c, a, b, n; ndrange = s)
     c
 end
 
-function lastdimcontract_adjoint!(cbar, abar, b, setup)
+function lastdimcontract_adjoint!(abar, bbar, cbar, a, b, setup)
     (; backend, workgroupsize) = setup
     s..., n = size(a)
-    @assert size(a) == size(b)
-    @assert size(c) == s
-    lastdimcontract_kernel!(backend, workgroupsize)(c, a, b, n)
-    c
+    @assert size(a) == size(b) == size(abar) == size(bbar)
+    @assert size(cbar) == s
+    kernel! = lastdimcontract_adjoint_kernel!(backend, workgroupsize)
+    kernel!(abar, bbar, cbar, a, b, n; ndrange = s)
+    abar, bbar
 end
 
-@kernel function lastdimcontract_kernel(c, a, b, n)
+@kernel function lastdimcontract_kernel!(c, a, b, n)
     I = @index(Global, Cartesian)
     cI = zero(eltype(c))
     i = 1
@@ -191,6 +193,17 @@ end
         i += 1
     end
     c[I] = cI
+end
+
+@kernel function lastdimcontract_adjoint_kernel!(abar, bbar, cbar, a, b, n)
+    I = @index(Global, Cartesian)
+    i = 1
+    while i <= n
+        # cI += a[I, i] * b[I, i]
+        abar[I, i] = dot(cbar[I], b[I, i])
+        bbar[I, i] = cbar[I] * a[I, i]
+        i += 1
+    end
 end
 
 function monitor(τ)
