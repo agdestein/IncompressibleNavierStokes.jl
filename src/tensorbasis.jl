@@ -67,11 +67,11 @@ end
     B[I, 9] = S * R * S * S - S * S * R * S
     B[I, 10] = S * S * R * R + R * R * S * S
     B[I, 11] = R * S * S * R * R - R * R * S * S * R
-    V[I, 1] = dot(S, S)
-    V[I, 2] = dot(R, R)
-    V[I, 3] = dot(S, S, S)
-    V[I, 4] = dot(S, R, R)
-    V[I, 5] = dot(S, S, R, R)
+    V[I, 1] = tr(S * S)
+    V[I, 2] = tr(R * R)
+    V[I, 3] = tr(S * S * S)
+    V[I, 4] = tr(S * R * R)
+    V[I, 5] = tr(S * S * R * R)
 end
 
 @kernel function tensorbasis_adjoint_kernel!(::Dimension{2}, ubar, Bbar, Vbar, u, Δ, Δu, I0)
