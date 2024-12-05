@@ -89,6 +89,8 @@ vitepress_kwargs = localdev ? (;
     build_vitepress = false
 ) : (;)
 
+# There is an issue with linking to other MD pages:
+# https://github.com/LuxDL/DocumenterVitepress.jl/issues/172
 makedocs(;
     # draft = true,
     # clean = !localdev,
