@@ -17,5 +17,5 @@ memory is expensive for large 3D problems.
 
 ```@autodocs
 Modules = [IncompressibleNavierStokes]
-Pages = ["operators.jl"]
+Pages = ["operators.jl", "tensorbasis.jl"]
 ```
