@@ -14,16 +14,12 @@ lines(cumsum(randn(100)))
 # Setup
 n = 32
 ax = range(0.0, 1.0, n + 1)
-setup = Setup(;
-    x = (ax, ax),
-    Re = 1e4,
-    backend = CUDABackend(),
-);
+setup = Setup(; x = (ax, ax), Re = 1e4, backend = CUDABackend());
 ustart = random_field(setup, 0.0)
 
 u = ustart
 
-B, V = tensorbasis(u, setup)
+B, V = IncompressibleNavierStokes.tensorbasis(u, setup)
 
 tb, pb = SymmetryClosure.ChainRulesCore.rrule(tensorbasis, u, setup)
 

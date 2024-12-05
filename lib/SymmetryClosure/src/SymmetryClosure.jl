@@ -9,6 +9,6 @@ using NeuralClosure
 
 include("tensor.jl")
 
-export tensorbasis, tensorclosure, polynomial
+export tensorclosure, polynomial
 
 end
