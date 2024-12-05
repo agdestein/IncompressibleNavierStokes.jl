@@ -155,6 +155,8 @@ export apply_bc_u,
     Dfield,
     Qfield
 
+export tensorbasis
+
 # Matrices
 export bc_u_mat,
     bc_p_mat,

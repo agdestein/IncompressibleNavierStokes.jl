@@ -19,7 +19,7 @@ ustart = random_field(setup, 0.0)
 
 u = ustart
 
-B, V = IncompressibleNavierStokes.tensorbasis(u, setup)
+B, V = tensorbasis(u, setup)
 
 tb, pb = SymmetryClosure.ChainRulesCore.rrule(tensorbasis, u, setup)
 

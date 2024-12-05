@@ -2,7 +2,7 @@ function tensorclosure(model, u, θ, setup)
     B, V = tensorbasis(u, setup)
     x = model(V, θ)
     # τ = sum(x .* B; dims = ndims(B))
-    τ = lastdimcontract(x, B, setup)
+    τ = IncompressibleNavierStokes.lastdimcontract(x, B, setup)
     IncompressibleNavierStokes.divoftensor(τ, setup)
 end
 
