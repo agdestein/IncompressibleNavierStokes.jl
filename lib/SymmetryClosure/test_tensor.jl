@@ -3,6 +3,7 @@ if false
     using .SymmetryClosure
 end
 
+# using CairoMakie
 using CairoMakie
 using IncompressibleNavierStokes
 using SymmetryClosure
@@ -10,21 +11,23 @@ using CUDA
 using Zygote
 using Random
 using LinearAlgebra
+using NeuralClosure
 
 lines(cumsum(randn(100)))
 
 # Setup
-n = 8
-# ax = range(0.0, 1.0, n + 1)
-# x = ax, ax
-x = tanh_grid(0.0, 1.0, n + 1), stretched_grid(-0.2, 1.2, n + 1)
+n = 128
+ax = range(0.0, 1.0, n + 1)
+x = ax, ax
+# x = tanh_grid(0.0, 1.0, n + 1), stretched_grid(-0.2, 1.2, n + 1)
 setup = Setup(;
     x,
     Re = 1e4,
     backend = CUDABackend(),
-    boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
+    # boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
 );
-ustart = vectorfield(setup) |> randn!
+ustart = random_field(setup)
+# ustart = vectorfield(setup) |> randn!
 
 u = ustart
 
@@ -65,7 +68,42 @@ let
     nothing
 end
 
+urot = NeuralClosure.rot2stag(u, 1)
 B, V = tensorbasis(u, setup)
+Brot, Vrot = tensorbasis(urot, setup)
+
+iV = 2
+# V[:, :, iV] |> Array |> heatmap
+Vrot[:, :, iV] |> Array |> heatmap
+rot2(V, 1)[:, :, iV] |> Array |> heatmap
+
+Vrot - rot2(V, 1) .|> abs |> maximum
+
+begin
+    θ = randn(5, 3)
+    # θ[:, 1] .= 0
+    # θ[:, 3] .= 0
+    # θ = zeros(5, 3)
+    # θ[3, :] .= 1e-3 * randn()
+    θ = θ |> CuArray
+    s = tensorclosure(polynomial, u, θ, setup) |> u -> apply_bc_u(u, zero(eltype(u)), setup)
+    srot =
+        tensorclosure(polynomial, urot, θ, setup) |>
+        u -> apply_bc_u(u, zero(eltype(u)), setup)
+    rots = NeuralClosure.rot2stag(s, 1)
+    (srot-rots)[2:end-1, 2:end-1, :] .|> abs |> maximum
+end
+
+i = 1
+srot[2:end-1, 2:end-1, i] |> Array |> heatmap
+rots[2:end-1, 2:end-1, i] |> Array |> heatmap
+# s[2:end-1, 2:end-1, 2] |> Array |> heatmap
+(srot-rots)[2:end-1, 2:end-1, i] |> Array |> heatmap
+(srot-rots)[2:end-1, 2:end-1, :] .|> abs |> maximum
+he = (srot-rots)[2:end-1, 2:end-1, :]
+he[125:128, 1:10, 1]
+
+x = randn(5, 5, 2)
 
 typeof(B)
 getindex.(B, 1)
