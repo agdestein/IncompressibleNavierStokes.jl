@@ -33,20 +33,6 @@ function create_closure(layers...; rng)
 end
 
 """
-Create tensor basis closure.
-"""
-function create_tensorclosure(layers...; setup, rng)
-    D = setup.grid.dimension()
-    cnn, θ = create_closure(layers...; rng)
-    function closure(u, θ)
-        B, V = tensorbasis(u, setup)
-        V = stack(V)
-        α = cnn(V, θ)
-        τ = sum(k -> α[ntuple(Returns(:), D)..., k] .* B[k], 1:length(B))
-    end
-end
-
-"""
 Interpolate velocity components to volume centers.
 """
 function collocate(u)
