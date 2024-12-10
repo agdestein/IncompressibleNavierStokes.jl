@@ -22,11 +22,10 @@ hardware() =
     if CUDA.functional()
         @info "Running on CUDA"
         CUDA.allowscalar(false)
-        (;
-            backend = CUDABackend(),
-            device = x -> adapt(backend, x),
-            clean = () -> (GC.gc(); CUDA.reclaim()),
-        )
+        backend = CUDABackend()
+        device = x -> adapt(backend, x)
+        clean = () -> (GC.gc(); CUDA.reclaim())
+        (; backend, device, clean)
     else
         @warn """
         Running on CPU.

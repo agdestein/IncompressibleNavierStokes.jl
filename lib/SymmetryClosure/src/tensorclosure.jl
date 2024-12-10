@@ -4,7 +4,7 @@ function tensorclosure(u, θ, model, setup)
     Δx = Array(Δ[1])[1]
     B, V = tensorbasis(u, setup)
     x = model(V, θ)
-    x .*= Δx^2
+    x = x .* (Δx^2)
     # τ = sum(x .* B; dims = ndims(B))
     τ = IncompressibleNavierStokes.lastdimcontract(x, B, setup)
     τ = apply_bc_p(τ, zero(eltype(u)), setup)
@@ -17,7 +17,7 @@ function polynomial(V, θ)
     s..., nV = size(V)
     V = eachslice(V; dims = ndims(V))
     basis = if nV == 2
-        cat(V[1], V[2], V[1] .* V[2], V[1] .^ 2, V[2] .^ 2; dims = length(s) + 1)
+        cat(V[1], V[2], V[1] .* V[2], V[1] .* V[1], V[2] .* V[2]; dims = length(s) + 1)
     elseif nV == 5
         cat(
             V[1],
@@ -25,21 +25,21 @@ function polynomial(V, θ)
             V[3],
             V[4],
             V[5],
+            V[1] .* V[1],
             V[1] .* V[2],
             V[1] .* V[3],
             V[1] .* V[4],
             V[1] .* V[5],
+            V[2] .* V[2],
             V[2] .* V[3],
             V[2] .* V[4],
             V[2] .* V[5],
+            V[3] .* V[3],
             V[3] .* V[4],
             V[3] .* V[5],
+            V[4] .* V[4],
             V[4] .* V[5],
-            V[1] .^ 2,
-            V[2] .^ 2,
-            V[3] .^ 2,
-            V[4] .^ 2,
-            V[5] .^ 2;
+            V[5] .* V[5],
             dims = length(s) + 1,
         )
     end
@@ -48,7 +48,7 @@ function polynomial(V, θ)
     reshape(x, s..., size(x, ndims(x)))
 end
 
-function create_cnn(setup, radii, channels, activations, use_bias, rng)
+function create_cnn(; setup, radii, channels, activations, use_bias, rng)
     r, c, σ, b = radii, channels, activations, use_bias
     (; grid) = setup
     (; dimension, x) = grid
@@ -76,8 +76,9 @@ function create_cnn(setup, radii, channels, activations, use_bias, rng)
     # Add input channel size
     c = [cin; c]
 
-    # Add padding so that output has same shape as commutator error
-    padder = ntuple(α -> (u -> pad_circular(u, sum(r); dims = α)), D)
+    # Add padding so that output has same shape as input
+    # padder = ntuple(α -> (u -> pad_circular(u, sum(r); dims = α)), D)
+    padder = u -> pad_circular(u, sum(r))
 
     # Some convolutional layers
     convs = map(
@@ -92,16 +93,18 @@ function create_cnn(setup, radii, channels, activations, use_bias, rng)
     )
 
     # Create convolutional closure model
-    model = NeuralClosure.create_closure(padder, convs...; rng)
+    m, θ_start = NeuralClosure.create_closure(padder, convs...; rng)
 
     inside = setup.grid.Ip
 
     function cnn_coeffs(V, θ)
-        s = size(V)
-        V = V[inside] # Remove boundaries
+        s..., nchan = size(V)
+        V = V[inside, :] # Remove boundaries
         V = reshape(V, size(V)..., 1) # Add sample dim
-        coeffs = model(V, θ)
+        coeffs = m(V, θ)
         coeffs = pad_circular(coeffs, 1) # Add boundaries
-        coeffs = reshape(coeffs, s) # Remove sample dim
+        coeffs = reshape(coeffs, s..., :) # Remove sample dim
     end
+
+    cnn_coeffs, θ_start
 end

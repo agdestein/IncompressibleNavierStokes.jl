@@ -27,6 +27,7 @@ using Accessors
 using CairoMakie
 using IncompressibleNavierStokes
 using Lux
+using LuxCUDA
 using Optimisers
 using ParameterSchedulers
 using NeuralClosure
@@ -62,35 +63,36 @@ dns_seeds_train = dns_seeds[3:end]
 
 setups = map(nles -> getsetup(; params, nles), params.nles)
 
-θ_start = zeros(5, 3)
-tensorcoeffs = polynomial
-# tensorcoeffs, θ_start = cnn(;
-#     setup = setups[1],
-#     radii = [2, 2, 2],
-#     channels = [12, 12, 3],
-#     activations = [tanh, tanh, identity],
-#     use_bias = [true, true, false],
-#     rng = Xoshiro(123),
-# );
+tensorcoeffs, θ_start = polynomial, zeros(5, 3)
+tensorcoeffs, θ_start = create_cnn(;
+    setup = setups[1],
+    radii = [2, 2, 2],
+    channels = [12, 12, 3],
+    activations = [tanh, tanh, identity],
+    use_bias = [true, true, false],
+    rng = Xoshiro(123),
+);
+tensorcoeffs.m.chain
 closure_models = map(s -> tensorclosure(tensorcoeffs, s), setups)
 
 # Test run
 let
     data_test = map(
         s -> namedtupleload(getdatafile(outdir, params.nles[1], params.filters[1], s)),
-        dns_seeds_train,
+        dns_seeds_test,
     )
     @show size(data_test[1].u)
     sample = data_test[1].u[:, :, :, 1] |> device
-    θ = θ_start |> device |> randn!
+    θ = θ_start |> device # |> randn! |> x -> x ./ 1e6
     closure_models[1](sample, θ)
-end;
+    gradient(θ -> sum(closure_models[1](sample, θ)), θ)[1]
+end
 
 # Train
 let
     nepoch = 10
     T = typeof(params.Re)
-    dotrain && trainpost(;
+    trainpost(;
         params,
         outdir,
         plotdir,

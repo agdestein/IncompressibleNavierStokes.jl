@@ -21,7 +21,7 @@ include("setup.jl")
 include("cases.jl")
 include("train.jl")
 
-export tensorclosure, polynomial
+export tensorclosure, polynomial, create_cnn
 export slurm_vars,
     time_info,
     hardware,
