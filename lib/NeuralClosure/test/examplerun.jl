@@ -112,7 +112,7 @@
                 setup,
                 psolver,
                 method = RKMethods.RK44(),
-                m.closure,
+                closure_model = wrappedclosure(m.closure, setup),
                 nsubstep = 1,
             )
             dataloader = create_dataloader_post(
