@@ -39,7 +39,7 @@ function polynomial(V, θ)
             V[3] .* V[5],
             V[4] .* V[4],
             V[4] .* V[5],
-            V[5] .* V[5],
+            V[5] .* V[5];
             dims = length(s) + 1,
         )
     end

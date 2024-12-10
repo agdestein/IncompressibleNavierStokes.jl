@@ -32,7 +32,7 @@ time_info()
 (; backend, device, clean) = hardware()
 
 # Test case
-(; params, outdir, seed_dns, ntrajectory) = testcase()
+(; params, outdir, plotdir, seed_dns, ntrajectory) = testcase(backend)
 
 # DNS seeds
 dns_seeds = splitseed(seed_dns, ntrajectory)
