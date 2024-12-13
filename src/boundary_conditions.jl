@@ -328,8 +328,10 @@ function apply_bc_p_pullback!(::PeriodicBC, φbar, β, t, setup; isright, kwargs
     Jb = Ib .- eβ
     @. φbar[Jb] += φbar[Ia]
     @. φbar[Ja] += φbar[Ib]
-    @. φbar[Ia] = 0
-    @. φbar[Ib] = 0
+    # @. φbar[Ia] = 0
+    # @. φbar[Ib] = 0
+    fill!(view(φbar, Ia), zero(eltype(φbar))) # For tensor-valued fields
+    fill!(view(φbar, Ib), zero(eltype(φbar)))
     φbar
 end
 

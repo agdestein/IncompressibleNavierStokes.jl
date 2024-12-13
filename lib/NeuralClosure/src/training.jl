@@ -113,8 +113,7 @@ create_relerr_prior(f, x, y) = θ -> norm(f(x, θ) - y) / norm(y)
 """
 Create a-posteriori loss function.
 """
-function create_loss_post(; setup, method, psolver, closure, nsubstep = 1)
-    closure_model = wrappedclosure(closure, setup)
+function create_loss_post(; setup, method, psolver, closure_model, nsubstep = 1)
     setup = (; setup..., closure_model)
     (; Iu) = setup.grid
     inside = Iu[1]

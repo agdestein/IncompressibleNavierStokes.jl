@@ -3,7 +3,7 @@ if false
     using .SymmetryClosure
 end
 
-# using CairoMakie
+# using GLMakie
 using CairoMakie
 using IncompressibleNavierStokes
 using SymmetryClosure
