@@ -220,7 +220,7 @@ function snapshotsaver(state; setup, fieldnames = (:velocity,), psolver = nothin
         vtk_grid(filename, xparr...) do vtk
             # Write fields to VTK file for current time
             for (fieldname, f) in zip(fieldnames, fields)
-                # Exctract scalar channels fx, fy, fz
+                # Extract scalar channels fx, fy, fz
                 g = f[]
                 field = if ndims(g) == D
                     # Scalar field
