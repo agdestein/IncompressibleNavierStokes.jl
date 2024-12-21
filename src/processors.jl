@@ -218,6 +218,7 @@ function snapshotsaver(state; setup, fieldnames = (:velocity,), psolver = nothin
 
     savesnapshot!(filename, pvd = nothing) =
         vtk_grid(filename, xparr...) do vtk
+            # Write fields to VTK file for current time
             for (fieldname, f) in zip(fieldnames, fields)
                 # Exctract scalar channels fx, fy, fz
                 g = f[]
@@ -235,6 +236,11 @@ function snapshotsaver(state; setup, fieldnames = (:velocity,), psolver = nothin
                 end
                 vtk[string(fieldname)] = field
             end
+
+            # This is a special ParaView variable for non-uniform time stamp
+            vtk["TimeValue"] = state[].t
+
+            # Add VTK file for current time to collection file
             isnothing(pvd) || setindex!(pvd, vtk, state[].t)
         end
 end
