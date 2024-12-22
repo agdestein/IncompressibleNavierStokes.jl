@@ -205,30 +205,44 @@ function snapshotsaver(state; setup, fieldnames = (:velocity,), psolver = nothin
     state isa Observable || (state = Observable(state))
     (; grid) = setup
     (; dimension, xp, Ip) = grid
+    D = dimension()
     xparr = getindex.(Array.(xp), Ip.indices)
     fields = map(fieldname -> observefield(state; setup, fieldname, psolver), fieldnames)
 
     # Only allocate z-component if there is a 2D vector field
-    z = if any(f -> f[] isa Tuple && length(f[]) == 2, fields)
-        zero(state[].u[1][Ip])
+    gz = if any(f -> ndims(f[]) == D + 1 && size(f[], D + 1) == 2, fields)
+        zero(state[].u[Ip, 1])
     else
         nothing
     end
 
-    function savesnapshot!(filename, pvd = nothing)
+    savesnapshot!(filename, pvd = nothing) =
         vtk_grid(filename, xparr...) do vtk
+            # Write fields to VTK file for current time
             for (fieldname, f) in zip(fieldnames, fields)
-                field = if f[] isa Tuple && length(f[]) == 2
-                    # ParaView prefers 3D vectors. Add zero z-component.
-                    (f[]..., z)
-                else
-                    f[]
+                # Extract scalar channels fx, fy, fz
+                g = f[]
+                field = if ndims(g) == D
+                    # Scalar field
+                    g
+                elseif ndims(g) == D + 1
+                    # Vector field
+                    if D == 2
+                        # ParaView prefers 3D vectors. Add zero z-component.
+                        g[:, :, 1], g[:, :, 2], gz
+                    else
+                        g[:, :, :, 1], g[:, :, :, 2], g[:, :, :, 3]
+                    end
                 end
                 vtk[string(fieldname)] = field
             end
+
+            # This is a special ParaView variable for non-uniform time stamp
+            vtk["TimeValue"] = state[].t
+
+            # Add VTK file for current time to collection file
             isnothing(pvd) || setindex!(pvd, vtk, state[].t)
         end
-    end
 end
 
 """

@@ -27,7 +27,6 @@ jobs:
                   "examples",
                   "lib/NeuralClosure",
                   "lib/NeuralClosure/test",
-                  "lib/SciMLCompat",
                   "lib/PaperDC",
                   "lib/SymmetryClosure",
               ],
