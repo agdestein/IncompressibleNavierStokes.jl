@@ -25,9 +25,11 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
-[sources]
-IncompressibleNavierStokes = {path = "../.."}
-NeuralClosure = {path = "../NeuralClosure"}
+[sources.IncompressibleNavierStokes]
+path = "../.."
+
+[sources.NeuralClosure]
+path = "../NeuralClosure"
 
 [compat]
 Adapt = "4"
@@ -47,5 +49,5 @@ NeuralClosure = "1"
 Observables = "0.5"
 Optimisers = "0.3, 0.4"
 StaticArrays = "1.9.8"
-Zygote = "0.6"
+Zygote = "0.7"
 julia = "1.9"
