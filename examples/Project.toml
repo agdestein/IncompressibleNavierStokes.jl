@@ -18,8 +18,8 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
-[sources]
-IncompressibleNavierStokes = {path = ".."}
+[sources.IncompressibleNavierStokes]
+path = ".."
 
 [compat]
 CairoMakie = "0.12"
@@ -33,5 +33,5 @@ LinearAlgebra = "1"
 Literate = "2"
 OrdinaryDiffEqTsit5 = "1"
 SparseArrays = "1"
-Zygote = "0.6"
+Zygote = "0.7"
 julia = "1.9"
