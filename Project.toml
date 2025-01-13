@@ -1,7 +1,7 @@
 name = "IncompressibleNavierStokes"
 uuid = "5e318141-6589-402b-868d-77d7df8c442e"
 authors = ["Syver Døving Agdestein, Benjamin Sanderse, and contributors"]
-version = "2.1.0"
+version = "2.2.0"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -36,7 +36,7 @@ IncompressibleNavierStokesMakieExt = ["Makie"]
 Adapt = "4"
 Atomix = "1"
 CUDA = "5"
-CUDSS = "0.3"
+CUDSS = "0.4"
 ChainRulesCore = "1"
 DocStringExtensions = "0.9"
 EnzymeCore = "0.8"
