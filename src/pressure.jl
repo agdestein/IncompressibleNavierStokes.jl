@@ -295,15 +295,7 @@ function psolver_spectral(setup)
 
     Δx = first.(Array.(Δ))
 
-    @assert(
-        all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions),
-        "Spectral psolver only implemented for periodic boundary conditions",
-    )
-
-    @assert(
-        all(α -> all(≈(Δx[α]), Δ[α]), 1:D),
-        "Spectral psolver requires uniform grid along each dimension",
-    )
+    assert_uniform_periodic(setup, "Spectral psolver")
 
     # Since we use rfft, the first dimension is halved
     kmax = ntuple(α -> α == 1 ? div(Np[α], 2) + 1 : Np[α], D)
