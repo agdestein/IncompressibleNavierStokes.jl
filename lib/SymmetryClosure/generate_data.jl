@@ -1,4 +1,4 @@
-# LSP hack                                             #src
+# LSP hack (to get "go to definition" etc. working)    #src
 if false                                               #src
     include("src/SymmetryClosure.jl")                  #src
     include("../NeuralClosure/src/NeuralClosure.jl")   #src
@@ -18,72 +18,33 @@ end                                                    #src
 
 ########################################################################## #src
 
-@info "Loading packages"
-flush(stdout)
+# ## Setup
 
-using Adapt
-using CUDA
-using Dates
-using JLD2
-using NeuralClosure
-using Random
 using SymmetryClosure
+using Random
+using NeuralClosure
+using JLD2
 
-########################################################################## #src
+# Get SLURM specific variables (if any)
+(; jobid, taskid) = slurm_vars()
 
-# SLURM specific variables
-jobid = haskey(ENV, "SLURM_JOB_ID") ? parse(Int, ENV["SLURM_JOB_ID"]) : nothing
-taskid =
-    haskey(ENV, "SLURM_ARRAY_TASK_ID") ? parse(Int, ENV["SLURM_ARRAY_TASK_ID"]) : nothing
+# Log info about current run
+time_info()
 
-isnothing(jobid) || @info "Running on SLURM (jobid = $jobid)"
-isnothing(taskid) || @info "Task id = $taskid)"
+# Hardware selection
+(; backend, device, clean) = hardware()
 
-########################################################################## #src
-
-@info "Starting at $(Dates.now())"
-@info """
-Last commit:
-
-$(cd(() -> read(`git log -n 1`, String), @__DIR__))
-"""
-
-########################################################################## #src
-
-# ## Hardware selection
-
-if CUDA.functional()
-    ## For running on a CUDA compatible GPU
-    @info "Running on CUDA"
-    backend = CUDABackend()
-    CUDA.allowscalar(false)
-    device = x -> adapt(CuArray, x)
-    clean() = (GC.gc(); CUDA.reclaim())
-else
-    ## For running on CPU.
-    ## Consider reducing the sizes of DNS, LES, and CNN layers if
-    ## you want to test run on a laptop.
-    @warn "Running on CPU"
-    backend = CPU()
-    device = identity
-    clean() = nothing
-end
-
-########################################################################## #src
-
-# ## Data generation
-#
-# Create filtered DNS data for training, validation, and testing.
-
-# Parameters
-case = SymmetryClosure.testcase()
+# Test case
+(; params, outdir, plotdir, seed_dns, ntrajectory) = testcase(backend)
 
 # DNS seeds
-ntrajectory = 8
-seeds = splitseed(case.seed_dns, ntrajectory)
+dns_seeds = splitseed(seed_dns, ntrajectory)
 
-# Create data
-for (iseed, seed) in enumerate(seeds)
+########################################################################## #src
+
+# ## Create data
+
+for (iseed, seed) in enumerate(dns_seeds)
     if isnothing(taskid) || iseed == taskid
         @info "Creating DNS trajectory for seed $(repr(seed))"
     else
@@ -91,13 +52,13 @@ for (iseed, seed) in enumerate(seeds)
         @info "Skipping seed $(repr(seed)) for task $taskid"
         continue
     end
-    filenames = map(Iterators.product(params.nles, params.filters)) do nles, Φ
+    filenames = map(Iterators.product(params.nles, params.filters)) do (nles, Φ)
         f = getdatafile(outdir, nles, Φ, seed)
         datadir = dirname(f)
         ispath(datadir) || mkpath(datadir)
         f
     end
-    data = create_les_data(; case.params..., rng = Xoshiro(seed), filenames)
+    data = create_les_data(; params..., backend, rng = Xoshiro(seed), filenames)
     @info(
         "Trajectory info:",
         data[1].comptime / 60,
@@ -106,8 +67,11 @@ for (iseed, seed) in enumerate(seeds)
     )
 end
 
+########################################################################## #src
+
 # Computational time
-docomp = false
+
+docomp = true
 docomp && let
     comptime, datasize = 0.0, 0.0
     for seed in dns_seeds

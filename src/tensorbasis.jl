@@ -88,7 +88,6 @@ end
     Rbar = S' * Bbar[I, 3] - Bbar[I, 3] * S' + 2 * Vbar[I, 2] * R
     ∇ubar = (Sbar + Sbar') / 2 + (Rbar - Rbar') / 2
     ∇_adjoint!(∇ubar, ubar, I, Δ, Δu)
-    ubar
 end
 
 @kernel function tensorbasis_adjoint_kernel!(::Dimension{3}, ubar, Bbar, Vbar, u, Δ, Δu, I0)
