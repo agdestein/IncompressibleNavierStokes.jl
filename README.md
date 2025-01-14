@@ -36,8 +36,8 @@ for examples of some typical workflows. More examples can be found in the
 
 ## Source code for paper
 
-See [here](./lib/PaperDC) for the source code used in the paper
-[Discretize first, filter next: learning divergence-consistent closure models for large-eddy simulation](https://arxiv.org/abs/2403.18088).
+See [this repository](https://github.com/agdestein/DivergenceConsistency) for the source code used in the paper
+[Discretize first, filter next: learning divergence-consistent closure models for large-eddy simulation](https://www.sciencedirect.com/science/article/pii/S0021999124008258).
 
 ## Gallery
 
