@@ -1,3 +1,17 @@
+function assert_uniform_periodic(setup, string)
+    (; grid, boundary_conditions) = setup
+    (; Δ, N) = grid
+    @assert(
+        all(==((PeriodicBC(), PeriodicBC())), boundary_conditions),
+        string * " requires periodic boundary conditions.",
+    )
+    @assert(
+        all(Δ -> all(≈(Δ[1]), Δ), Array.(Δ)),
+        string * " requires uniform grid spacing.",
+    )
+    @assert(all(iseven, N), string * " requires even number of volumes.",)
+end
+
 "Get value contained in `Val`."
 getval(::Val{x}) where {x} = x
 

@@ -198,12 +198,7 @@ function random_field(
     (; dimension, N, Δ) = grid
     D = dimension()
 
-    @assert(
-        all(==((PeriodicBC(), PeriodicBC())), boundary_conditions),
-        "Random field requires periodic boundary conditions."
-    )
-    @assert all(Δ -> all(≈(Δ[1]), Δ), Array.(Δ)) "Random field requires uniform grid spacing."
-    @assert all(iseven, N) "Random field requires even number of volumes."
+    assert_uniform_periodic(setup, "Random field")
 
     # Create random velocity field
     uhat = create_spectrum(; setup, kp, rng)

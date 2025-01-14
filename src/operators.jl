@@ -1568,7 +1568,7 @@ Get the following dimensional scale numbers [Pope2000](@cite):
 """
 function get_scale_numbers(u, setup)
     (; grid, Re) = setup
-    (; dimension, Iu, Ip, Δ, Δu) = grid
+    (; dimension, Iu, Ip, Δ, Δu, Np) = grid
     D = dimension()
     T = eltype(u)
     visc = 1 / Re
@@ -1589,10 +1589,33 @@ function get_scale_numbers(u, setup)
     η = (visc^3 / ϵ)^T(1 / 4)
     λ = sqrt(5 * visc / ϵ) * uavg
     Reλ = λ * uavg / sqrt(T(3)) / visc
-    # TODO: L and τ
-    L = nothing
-    τ = nothing
-    (; uavg, ϵ, η, λ, Reλ, L, τ)
+    L = let
+        assert_uniform_periodic(setup, "Scale numbers")
+        K = div.(Np, 2)
+        up = view(u, Ip, :)
+        uhat = fft(up, 1:D)
+        uhat = uhat[ntuple(α -> 1:K[α], D)..., :]
+        e = abs2.(uhat) ./ (2 * prod(Np)^2)
+        if D == 2
+            kx = reshape(0:K[1]-1, :)
+            ky = reshape(0:K[2]-1, 1, :)
+            @. e = e / sqrt(kx^2 + ky^2)
+        elseif D == 3
+            kx = reshape(0:K[1]-1, :)
+            ky = reshape(0:K[2]-1, 1, :)
+            kz = reshape(0:K[3]-1, 1, 1, :)
+            @. e = e / sqrt(kx^2 + ky^2 + kz^2)
+        end
+        e = sum(e; dims = D + 1)
+        # Remove k=(0,...,0) component
+        # Note use of singleton range 1:1 instead of scalar index 1
+        # (otherwise CUDA gets annoyed)
+        e[1:1] .= 0
+        T(3π) / 2 / uavg^2 * sum(e)
+    end
+    τ = L / uavg
+    Re_int = L * uavg / visc
+    (; uavg, ϵ, η, λ, Reλ, L, τ, Re_int)
 end
 
 # COV_EXCL_START
