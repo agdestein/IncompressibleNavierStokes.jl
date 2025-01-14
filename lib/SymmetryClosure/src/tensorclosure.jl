@@ -99,7 +99,12 @@ function create_cnn(; setup, radii, channels, activations, use_bias, rng)
 
     function cnn_coeffs(V, θ)
         s..., nchan = size(V)
-        V = V[inside, :] # Remove boundaries
+        # Remove boundaries
+        if D == 2
+            V = V[2:end-1, 2:end-1, :]
+        else
+            V = V[2:end-1, 2:end-1, 2:end-1, :]
+        end
         V = reshape(V, size(V)..., 1) # Add sample dim
         coeffs = m(V, θ)
         coeffs = pad_circular(coeffs, 1) # Add boundaries

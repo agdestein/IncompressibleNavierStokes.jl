@@ -24,7 +24,7 @@ end                                                    #src
 flush(stdout)
 
 using Accessors
-using CairoMakie
+# using CairoMakie
 using IncompressibleNavierStokes
 using Lux
 using LuxCUDA
@@ -33,6 +33,7 @@ using ParameterSchedulers
 using NeuralClosure
 using Random
 using SymmetryClosure
+using WGLMakie
 using Zygote
 
 ########################################################################## #src
@@ -61,15 +62,15 @@ dns_seeds_train = dns_seeds[3:end]
 
 # ## Model definitions
 
-setups = map(nles -> getsetup(; params, nles), params.nles)
+setups = map(nles -> getsetup(; params, nles), params.nles);
 
 tensorcoeffs, θ_start = polynomial, zeros(5, 3)
 tensorcoeffs, θ_start = create_cnn(;
     setup = setups[1],
-    radii = [2, 2, 2],
-    channels = [12, 12, 3],
-    activations = [tanh, tanh, identity],
-    use_bias = [true, true, false],
+    radii = [0, 0, 0, 0], # Pointwise network
+    channels = [24, 24, 24, 3],
+    activations = [tanh, tanh, tanh, identity],
+    use_bias = [true, true, true, false],
     rng = Xoshiro(123),
 );
 tensorcoeffs.m.chain
@@ -90,8 +91,10 @@ end
 
 # Train
 let
-    nepoch = 10
     T = typeof(params.Re)
+    l0 = T(1e-4)
+    l1 = T(1e-6)
+    nepoch = 10
     trainpost(;
         params,
         outdir,
@@ -101,17 +104,17 @@ let
         dns_seeds_train,
         dns_seeds_valid,
         nsubstep = 5,
-        nunroll = 10,
-        ntrajectory = 5,
+        nunroll = 5,
+        ntrajectory = 3,
         closure_models,
         θ_start,
-        opt = Adam(T(1e-4)),
+        opt = Adam(l0),
         λ = T(5e-8),
-        scheduler = CosAnneal(; l0 = T(1e-6), l1 = T(1e-3), period = nepoch),
+        scheduler = CosAnneal(; l0, l1, period = nepoch),
         nunroll_valid = 50,
         nupdate_callback = 10,
         displayref = false,
-        displayupdates = true,
+        displayupdates = false,
         loadcheckpoint = false,
         nepoch,
         niter = 100,

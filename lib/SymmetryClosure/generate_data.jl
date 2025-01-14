@@ -21,6 +21,9 @@ end                                                    #src
 # ## Setup
 
 using SymmetryClosure
+using Random
+using NeuralClosure
+using JLD2
 
 # Get SLURM specific variables (if any)
 (; jobid, taskid) = slurm_vars()
