@@ -1,3 +1,0 @@
-# SymmetryClosure
-
-Symmetry closure scripts.
