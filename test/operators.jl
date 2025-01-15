@@ -216,6 +216,27 @@ end
         @test kinetic_energy(u, setup) isa Array{T}
         @test total_kinetic_energy(u, setup) isa T
         @test dissipation_from_strain(u, setup) isa Array{T}
+    end
+end
+
+@testitem "Turbulence statistics" begin
+    using Random
+    ax = range(0, 1, 19)
+    for x in ((ax, ax), (ax, ax, ax))
+        setup = Setup(; x, Re = 1e3)
+        u = randn!(vectorfield(setup))
         @test get_scale_numbers(u, setup) isa NamedTuple
     end
+
+    # Only works for uniform periodic
+    setup = Setup(;
+        x = (ax, ax),
+        Re = 1e3,
+        boundary_conditions = (
+            (DirichletBC(), DirichletBC()),
+            (DirichletBC(), DirichletBC()),
+        ),
+    )
+    u = randn!(vectorfield(setup))
+    @test_broken get_scale_numbers(u, setup) isa NamedTuple
 end
