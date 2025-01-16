@@ -19,7 +19,7 @@ jobs:
         run: |
           using CompatHelper
           CompatHelper.main(;
-              entry_type = DropEntry(),
+              entry_type = KeepEntry(),
               subdirs = [
                   "",
                   "docs",

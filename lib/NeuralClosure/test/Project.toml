@@ -18,7 +18,7 @@ path = ".."
 
 [compat]
 Aqua = "0.8"
-CairoMakie = "0.12"
+CairoMakie = "0.12, 0.13"
 IncompressibleNavierStokes = "2"
 Logging = "1"
 Optimisers = "0.3, 0.4"
