@@ -20,7 +20,7 @@ path = ".."
 
 [compat]
 Aqua = "0.8"
-CairoMakie = "0.12"
+CairoMakie = "0.12, 0.13"
 ChainRulesCore = "1"
 ChainRulesTestUtils = "1"
 Enzyme = "0.13"
