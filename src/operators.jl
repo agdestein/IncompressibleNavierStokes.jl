@@ -1433,7 +1433,7 @@ function qcrit!(q, u, setup)
         q[I] = -tr(G * G) / 2
     end
     kernel! = qcrit_kernel!(backend, workgroupsize)
-    kernel!(q, u, setup; ndrange = Np)
+    kernel!(q, u; ndrange = Np)
     q
 end
 
