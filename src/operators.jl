@@ -1422,6 +1422,23 @@ function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
     d
 end
 
+"Compute ``Q``, the second invariant of the velocity gradient tensor."
+qcrit(u, setup) = qcrit!(scalarfield(setup), u, setup)
+
+function qcrit!(q, u, setup)
+    (; grid, backend, workgroupsize) = setup
+    (; Np, Δ, Δu) = grid
+    @kernel function qcrit_kernel!(q, u)
+        I = @index(Global, Cartesian)
+        I += oneunit(I)
+        G = ∇(u, I, Δ, Δu)
+        q[I] = -tr(G * G) / 2
+    end
+    kernel! = qcrit_kernel!(backend, workgroupsize)
+    kernel!(q, u; ndrange = Np)
+    q
+end
+
 """
 Compute ``Q``-field [Jeong1995](@cite) given by
 

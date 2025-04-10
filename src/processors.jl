@@ -117,6 +117,8 @@ function observefield(
         d = scalarfield(setup)
     elseif fieldname == :Qfield
         Q = scalarfield(setup)
+    elseif fieldname == :qcrit
+        q = scalarfield(setup)
     elseif fieldname == :eig2field
         λ = scalarfield(setup)
     elseif fieldname in union(Symbol.(["B$i" for i = 1:11]), Symbol.(["V$i" for i = 1:5]))
@@ -174,6 +176,8 @@ function observefield(
             Qin = view(Q, Ip)
             @. Qin = log(max(logtol, Qin))
             Q
+        elseif fieldname == :qcrit
+            qcrit!(q, u, setup)
         elseif fieldname == :eig2field
             eig2field!(λ, u, setup)
             λin = view(λ, Ip)

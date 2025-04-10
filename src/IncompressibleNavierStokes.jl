@@ -154,7 +154,8 @@ export apply_bc_u,
     total_kinetic_energy,
     vorticity,
     Dfield,
-    Qfield
+    Qfield,
+    qcrit
 
 export tensorbasis
 
