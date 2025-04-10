@@ -71,7 +71,7 @@ function project!(u, setup; psolver, p)
 
     # Divergence of tentative velocity field
     divergence!(p, u, setup)
-    scalewithvolume!(p, setup)
+    scalewithvolume!(p, setup) # *Δx^D
 
     # Solve the Poisson equation
     poisson!(psolver, p)
