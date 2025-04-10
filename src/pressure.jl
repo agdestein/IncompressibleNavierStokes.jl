@@ -153,13 +153,17 @@ function psolver_direct(::Array, setup)
     end
 end
 
+sparseadapt(::CPU, A) = A
+
 """
 Conjugate gradients iterative Poisson solver.
 The `kwargs` are passed to the `cg!` function
 from IterativeSolvers.jl.
 """
 function psolver_cg_matrix(setup; kwargs...)
+    (; grid, boundary_conditions, backend) = setup
     (; x, Np, Ip) = grid
+    T = eltype(x[1])
     L = laplacian_mat(setup)
     isdefinite =
         any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
@@ -172,8 +176,9 @@ function psolver_cg_matrix(setup; kwargs...)
         # With extra DOF
         ftemp = fill!(similar(x[1], prod(Np) + 1), 0)
         ptemp = fill!(similar(x[1], prod(Np) + 1), 0)
-        e = fill!(similar(x[1], prod(Np)), 1)
+        e = fill(T(1), prod(Np))
         L = [L e; e' 0]
+        L = sparseadapt(backend, L)
         viewrange = 1:prod(Np)
     end
     function psolve!(p)
@@ -303,7 +308,7 @@ function psolver_spectral(setup)
     # Fourier transform of the discrete Laplacian
     # Assuming uniform grid, although Δx[1] and Δx[2] do not need to be the same
     ahat = ntuple(D) do α
-        k = 0:kmax[α]-1
+        k = 0:(kmax[α]-1)
         ahat = similar(x[1], kmax[α])
         Ω = prod(Δx)
         @. ahat = 4 * Ω * sinpi(k / Np[α])^2 / Δx[α]^2
