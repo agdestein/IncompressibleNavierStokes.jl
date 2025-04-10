@@ -139,7 +139,7 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
     # - multiply with weights mode-wise
     # - pad with zeros to restore original shape
     # - go back to real valued spatial representation
-    ikeep = ntuple(Returns([1:kmax+1; K-kmax:K]), D)
+    ikeep = ntuple(Returns([1:(kmax+1); (K-kmax):K]), D)
     # ikeep = ntuple(Returns(1:kmax+1), D)
     dims = ntuple(identity, D)
     xhat = fft(x, dims)
@@ -148,22 +148,22 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
         error("Replace Tullio")
         # @tullio z[k₁, k₂, b, s] := R[k₁, k₂, b, a] * xhat[k₁, k₂, a, s]
         z = cat(
-            z[1:kmax+1, :, :, :],
+            z[1:(kmax+1), :, :, :],
             zero(similar(z, K - 2 * (kmax + 1), 2 * (kmax + 1), cout, nsample)),
-            z[end-kmax:end, :, :, :];
+            z[(end-kmax):end, :, :, :];
             dims = 1,
         )
         z = cat(
-            z[:, 1:kmax+1, :, :],
+            z[:, 1:(kmax+1), :, :],
             zero(similar(z, K, K - 2 * (kmax + 1), cout, nsample)),
-            z[:, end-kmax:end, :, :];
+            z[:, (end-kmax):end, :, :];
             dims = 2,
         )
     elseif D == 3
         error("Replace Tullio")
         # @tullio z[k₁, k₂, k₃, b, s] := R[k₁, k₂, k₃, b, a] * xhat[k₁, k₂, k₃, a, s]
         z = cat(
-            z[1:kmax+1, :, :, :, :],
+            z[1:(kmax+1), :, :, :, :],
             zero(
                 similar(
                     z,
@@ -174,19 +174,19 @@ function ((; dimension, kmax, cout, cin, σ)::FourierLayer)(x, params, state)
                     nsample,
                 ),
             ),
-            z[end-kmax:end, :, :, :, :];
+            z[(end-kmax):end, :, :, :, :];
             dims = 1,
         )
         z = cat(
-            z[:, 1:kmax+1, :, :, :],
+            z[:, 1:(kmax+1), :, :, :],
             zero(similar(z, K, K - 2 * (kmax + 1), 2 * (kmax + 1), cout, nsample)),
-            z[:, end-kmax:end, :, :, :];
+            z[:, (end-kmax):end, :, :, :];
             dims = 2,
         )
         z = cat(
-            z[:, :, 1:kmax+1, :, :],
+            z[:, :, 1:(kmax+1), :, :],
             zero(similar(z, K, K, K - 2 * (kmax + 1), cout, nsample)),
-            z[:, :, end-kmax:end, :, :];
+            z[:, :, (end-kmax):end, :, :];
             dims = 3,
         )
     end

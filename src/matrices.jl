@@ -115,7 +115,7 @@ function bc_u_mat(::PeriodicBC, setup, β, isright = false)
 
     # Identity part: Make sure to zero out boundary outputs first, so
     # that corner BC are not added twice since we do this in each dimension
-    notboundary = ntuple(d -> d == β ? (2:N[d]-1) : (:), D)
+    notboundary = ntuple(d -> d == β ? (2:(N[d]-1)) : (:), D)
     append!(i, ilin[notboundary..., :][:])
     append!(j, ilin[notboundary..., :][:])
 
@@ -146,7 +146,7 @@ function bc_p_mat(::PeriodicBC, setup, β, isright = false)
     j = zeros(Int, 0)
 
     # Identity part
-    notboundary = ntuple(d -> d == β ? (2:N[d]-1) : (:), D)
+    notboundary = ntuple(d -> d == β ? (2:(N[d]-1)) : (:), D)
     append!(i, ilin[notboundary...][:])
     append!(j, ilin[notboundary...][:])
 
@@ -184,9 +184,9 @@ function bc_u_mat(::DirichletBC, setup, β, isright = false)
     for α = 1:D
         inside = Iu[α].indices[β]
         inds = if isright
-            vcat(1:inside[end], inside[end]+2:N[β])
+            vcat(1:inside[end], (inside[end]+2):N[β])
         else
-            vcat(1:inside[1]-2, inside[1]:N[β])
+            vcat(1:(inside[1]-2), inside[1]:N[β])
         end
         notboundary = ntuple(d -> d == β ? inds : (:), D)
         append!(i, ilin[notboundary..., α][:])
@@ -218,9 +218,9 @@ function bc_temp_mat(::DirichletBC, setup, β, isright = false)
     # but do include unused ghost volumes
     inside = Ip.indices[β]
     inds = if isright
-        vcat(1:inside[end], inside[end]+2:N[β])
+        vcat(1:inside[end], (inside[end]+2):N[β])
     else
-        vcat(1:inside[1]-2, inside[1]:N[β])
+        vcat(1:(inside[1]-2), inside[1]:N[β])
     end
     notboundary = ntuple(d -> d == β ? inds : (:), D)
     append!(i, ilin[notboundary...][:])
@@ -251,9 +251,9 @@ function bc_u_mat(::SymmetricBC, setup, β, isright = false)
         # Identity part
         inside = Iu[α].indices[β]
         inds = if isright
-            vcat(1:inside[end], inside[end]+2:N[β])
+            vcat(1:inside[end], (inside[end]+2):N[β])
         else
-            vcat(1:inside[1]-2, inside[1]:N[β])
+            vcat(1:(inside[1]-2), inside[1]:N[β])
         end
         notboundary = ntuple(d -> d == β ? inds : (:), D)
         append!(i, ilin[notboundary..., α][:])
@@ -289,9 +289,9 @@ function bc_p_mat(::SymmetricBC, setup, β, isright = false)
     # but do include unused ghost volumes
     inside = Ip.indices[β]
     inds = if isright
-        vcat(1:inside[end], inside[end]+2:N[β])
+        vcat(1:inside[end], (inside[end]+2):N[β])
     else
-        vcat(1:inside[1]-2, inside[1]:N[β])
+        vcat(1:(inside[1]-2), inside[1]:N[β])
     end
     notboundary = ntuple(d -> d == β ? inds : (:), D)
     append!(i, ilin[notboundary...][:])
@@ -329,9 +329,9 @@ function bc_u_mat(::PressureBC, setup, β, isright = false)
         # Identity part
         inside = Iu[α].indices[β]
         inds = if isright
-            vcat(1:inside[end], inside[end]+2:N[β])
+            vcat(1:inside[end], (inside[end]+2):N[β])
         else
-            vcat(1:inside[1]-2, inside[1]:N[β])
+            vcat(1:(inside[1]-2), inside[1]:N[β])
         end
         notboundary = ntuple(d -> d == β ? inds : (:), D)
         append!(i, ilin[notboundary..., α][:])
@@ -365,9 +365,9 @@ function bc_p_mat(::PressureBC, setup, β, isright = false)
     # but do include unused ghost volumes
     inside = Ip.indices[β]
     inds = if isright
-        vcat(1:inside[end], inside[end]+2:N[β])
+        vcat(1:inside[end], (inside[end]+2):N[β])
     else
-        vcat(1:inside[1]-2, inside[1]:N[β])
+        vcat(1:(inside[1]-2), inside[1]:N[β])
     end
     notboundary = ntuple(d -> d == β ? inds : (:), D)
     append!(i, ilin[notboundary...][:])
@@ -393,7 +393,7 @@ function divergence_mat(setup)
     e = Offset(D)
     n = prod(N)
     ilin_p = reshape(1:n, N)
-    ilin_u = reshape(1:n*D, N..., D)
+    ilin_u = reshape(1:(n*D), N..., D)
 
     # Initialize sparse matrix parts
     i = zeros(Int, 0)
@@ -417,7 +417,7 @@ function divergence_mat(setup)
         append!(i, ilin_p[I][:])
         append!(i, ilin_p[I][:])
         append!(j, ilin_u[I, α][:])
-        append!(j, ilin_u[I.-e(α), α][:])
+        append!(j, ilin_u[I .- e(α), α][:])
         append!(v, @. 1 / ΔI)
         append!(v, @. -1 / ΔI)
     end
@@ -434,7 +434,7 @@ function pressuregradient_mat(setup)
     D = dimension()
     e = Offset(D)
     n = prod(N)
-    ilin_u = reshape(1:n*D, N..., D)
+    ilin_u = reshape(1:(n*D), N..., D)
     ilin_p = reshape(1:n, N...)
 
     # Initialize sparse matrix parts
@@ -457,7 +457,7 @@ function pressuregradient_mat(setup)
         ΔI = map(I -> Δu[α][I[α]], I)
         append!(i, ilin_u[I, α][:])
         append!(i, ilin_u[I, α][:])
-        append!(j, ilin_p[I.+e(α)][:])
+        append!(j, ilin_p[I .+ e(α)][:])
         append!(j, ilin_p[I][:])
         append!(v, @. 1 / ΔI)
         append!(v, @. -1 / ΔI)
@@ -535,8 +535,8 @@ function diffusion_mat(setup)
             append!(i, ilin[I, α][:])
             append!(i, ilin[I, α][:])
             append!(i, ilin[I, α][:])
-            append!(j, ilin[I.-eβ, α][:])
-            append!(j, ilin[I.+eβ, α][:])
+            append!(j, ilin[I .- eβ, α][:])
+            append!(j, ilin[I .+ eβ, α][:])
             append!(j, ilin[I, α][:])
 
             # For some Neumann BC, Δa or Δb are zero (eps),

@@ -55,13 +55,13 @@ function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) /
 
     k = zeros(T, K)
     if D == 2
-        kx = reshape(0:K[1]-1, :)
-        ky = reshape(0:K[2]-1, 1, :)
+        kx = reshape(0:(K[1]-1), :)
+        ky = reshape(0:(K[2]-1), 1, :)
         @. k = sqrt(kx^2 + ky^2)
     elseif D == 3
-        kx = reshape(0:K[1]-1, :)
-        ky = reshape(0:K[2]-1, 1, :)
-        kz = reshape(0:K[3]-1, 1, 1, :)
+        kx = reshape(0:(K[1]-1), :)
+        ky = reshape(0:(K[2]-1), 1, :)
+        kz = reshape(0:(K[3]-1), 1, 1, :)
         @. k = sqrt(kx^2 + ky^2 + kz^2)
     end
     k = reshape(k, :)

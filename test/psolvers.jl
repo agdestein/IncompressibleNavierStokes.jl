@@ -7,10 +7,9 @@
     D = 2
 
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
-    p_exact =
-        initial_pressure.(
-            ntuple(α -> reshape(xp[α], ntuple(Returns(1), α - 1)..., :), D)...,
-        )
+    p_exact = initial_pressure.(
+        ntuple(α -> reshape(xp[α], ntuple(Returns(1), α - 1)..., :), D)...,
+    )
     IncompressibleNavierStokes.apply_bc_p!(p_exact, 0.0, setup)
     lap = IncompressibleNavierStokes.laplacian(p_exact, setup)
 

@@ -1602,7 +1602,7 @@ function get_scale_numbers(u, setup)
             sum(field[Iu[1], :]) / sum(Ωu[Iu[1]])
         end |> sqrt
     ϵ = dissipation_from_strain(u, setup)
-    ϵ = sum((Ω.*ϵ)[Ip]) / sum(Ω[Ip])
+    ϵ = sum((Ω .* ϵ)[Ip]) / sum(Ω[Ip])
     η = (visc^3 / ϵ)^T(1 / 4)
     λ = sqrt(5 * visc / ϵ) * uavg
     Reλ = λ * uavg / sqrt(T(3)) / visc
@@ -1611,16 +1611,16 @@ function get_scale_numbers(u, setup)
         K = div.(Np, 2)
         up = view(u, Ip, :)
         uhat = fft(up, 1:D)
-        uhat = uhat[ntuple(α -> 1:K[α], D)..., :]
+        uhat = uhat[ntuple(α->1:K[α], D)..., :]
         e = abs2.(uhat) ./ (2 * prod(Np)^2)
         if D == 2
-            kx = reshape(0:K[1]-1, :)
-            ky = reshape(0:K[2]-1, 1, :)
+            kx = reshape(0:(K[1]-1), :)
+            ky = reshape(0:(K[2]-1), 1, :)
             @. e = e / sqrt(kx^2 + ky^2)
         elseif D == 3
-            kx = reshape(0:K[1]-1, :)
-            ky = reshape(0:K[2]-1, 1, :)
-            kz = reshape(0:K[3]-1, 1, 1, :)
+            kx = reshape(0:(K[1]-1), :)
+            ky = reshape(0:(K[2]-1), 1, :)
+            kz = reshape(0:(K[3]-1), 1, 1, :)
             @. e = e / sqrt(kx^2 + ky^2 + kz^2)
         end
         e = sum(e; dims = D + 1)

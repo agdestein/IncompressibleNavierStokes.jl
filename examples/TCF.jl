@@ -14,16 +14,18 @@ using WGLMakie
 function sectionplot(state; setup, component)
     state isa Observable || (state = Observable(state))
     (; xu) = setup.grid
-    xplot = xu[component][1][2:end-1] |> Array
+    xplot = xu[component][1][2:(end-1)] |> Array
     yplot = xu[component][2] |> Array
-    zplot = xu[component][3][2:end-1] |> Array
+    zplot = xu[component][3][2:(end-1)] |> Array
     imid = div(setup.grid.N[1], 2)
     kmid = div(setup.grid.N[3], 2)
     u_xy = map(state) do (; u)
         # View u at y = 0.5
         # u[2:end-1, :, kmid, component] |> Array
         unorm = @. sqrt(
-            u[2:end-1, :, kmid, 1]^2 + u[2:end-1, :, kmid, 2]^2 + u[2:end-1, :, kmid, 3]^2,
+            u[2:(end-1), :, kmid, 1]^2 +
+            u[2:(end-1), :, kmid, 2]^2 +
+            u[2:(end-1), :, kmid, 3]^2,
         )
         unorm |> Array
     end
@@ -32,7 +34,9 @@ function sectionplot(state; setup, component)
         # u[imid, :, 2:end-1, component] |> Array
 
         unorm = @. sqrt(
-            u[imid, :, 2:end-1, 1]^2 + u[imid, :, 2:end-1, 2]^2 + u[imid, :, 2:end-1, 3]^2,
+            u[imid, :, 2:(end-1), 1]^2 +
+            u[imid, :, 2:(end-1), 2]^2 +
+            u[imid, :, 2:(end-1), 3]^2,
         )
         unorm |> Array
     end
@@ -117,9 +121,9 @@ plotgrid(setup.grid.x[2] |> Array, setup.grid.x[3] |> Array)
 function volplot(state; setup)
     state isa Observable || (state = Observable(state))
     (; x) = setup.grid
-    xplot = x[1][2:end-1] |> Array
-    yplot = x[2][2:end-1] |> Array
-    zplot = x[3][2:end-1] |> Array
+    xplot = x[1][2:(end-1)] |> Array
+    yplot = x[2][2:(end-1)] |> Array
+    zplot = x[3][2:(end-1)] |> Array
     uplot = observefield(state; setup, fieldname = :velocitynorm)
     # volume(xplot, yplot, zplot, uplot)
     volume(uplot)

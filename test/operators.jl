@@ -68,7 +68,7 @@ end
         Dv = divergence(v, setup)
         Gp = pressuregradient(p, setup)
         ΩDv = scalewithvolume(Dv, setup)
-        pDv = sum((p.*ΩDv)[Ip])
+        pDv = sum((p .* ΩDv)[Ip])
         vGp = if D == 2
             vGpx = v[:, :, 1] .* Δu[1] .* Δ[2]' .* Gp[:, :, 1]
             vGpy = v[:, :, 2] .* Δ[1] .* Δu[2]' .* Gp[:, :, 2]
@@ -97,7 +97,7 @@ end
         Lp = laplacian(p, setup)
         @test Lp isa Array{T}
         ΩLp = scalewithvolume(Lp, setup)
-        @test sum((p.*ΩLp)[Ip]) ≤ 0 # Check negativity
+        @test sum((p .* ΩLp)[Ip]) ≤ 0 # Check negativity
         L = laplacian_mat(setup)
         @test L isa SparseMatrixCSC
         @test sum(abs2, Lp[Ip][:] - L * p[Ip][:]) ≈ 0 atol = 1e-12

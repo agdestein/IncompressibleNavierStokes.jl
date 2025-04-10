@@ -30,8 +30,8 @@ create_dataloader_post(trajectories; ntrajectory, nunroll, device = identity) =
         data = map(batch) do (; u, t)
             nt = length(t)
             @assert nt ≥ nunroll "Trajectory too short for nunroll = $nunroll"
-            istart = rand(rng, 1:nt-nunroll)
-            it = istart:istart+nunroll
+            istart = rand(rng, 1:(nt-nunroll))
+            it = istart:(istart+nunroll)
             u = selectdim(u, ndims(u), it) |> Array |> device # convert view to array first
             (; u, t = t[it])
         end

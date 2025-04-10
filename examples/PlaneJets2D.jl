@@ -100,7 +100,7 @@ function meanplot(state; setup)
     n₀ = findmin(abs, xp[2])[2]
     E₀ = lift(state) do (; u, p, t)
         u_y = u[1][:, n₀]
-        abs.(fft(u_y .^ 2))[k.+1]
+        abs.(fft(u_y .^ 2))[k .+ 1]
     end
     y₀ = xp[2][n₀]
 
@@ -108,7 +108,7 @@ function meanplot(state; setup)
     n₁ = findmin(y -> abs(y - 1), xp[2])[2]
     E₁ = lift(state) do (; u, p, t)
         u_y = u[1][:, n₁]
-        abs.(fft(u_y .^ 2))[k.+1]
+        abs.(fft(u_y .^ 2))[k .+ 1]
     end
     y₁ = xp[2][n₁]
 
@@ -119,7 +119,7 @@ function meanplot(state; setup)
         xlabel = "y",
         ylabel = L"\langle u \rangle / U_0",
     )
-    lines!(ax, xp[2][2:end-1], umean)
+    lines!(ax, xp[2][2:(end-1)], umean)
     ax = Axis(
         fig[1, 2];
         title = "Streamwise energy spectrum",

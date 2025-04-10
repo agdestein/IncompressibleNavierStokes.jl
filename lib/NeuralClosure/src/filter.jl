@@ -67,7 +67,7 @@ function reconstruct!(u, v, setup_dns, setup_les, comp)
     end
     for α = 1:D
         ndrange = N .- 2
-        volume = CartesianIndices(ntuple(β -> 0:comp-1, D))
+        volume = CartesianIndices(ntuple(β -> 0:(comp-1), D))
         R!(backend, workgroupsize)(u, v, Val(α), volume; ndrange)
     end
     u
@@ -105,8 +105,8 @@ function (::VolumeAverage)(v, u, setup_les, comp)
             ntuple(
                 β ->
                     α == β ?
-                    iseven(comp) ? (div(comp, 2):div(comp, 2)+comp) :
-                    (div(comp, 2)+1:div(comp, 2)+comp) : (1:comp),
+                    iseven(comp) ? (div(comp, 2):(div(comp, 2)+comp)) :
+                    ((div(comp, 2)+1):(div(comp, 2)+comp)) : (1:comp),
                 D,
             ),
         )

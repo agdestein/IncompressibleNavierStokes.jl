@@ -146,7 +146,7 @@ function Grid(; x, boundary_conditions, backend)
         Iuα = ntuple(D) do β
             na = offset_u(boundary_conditions[β][1], false, α == β)
             nb = offset_u(boundary_conditions[β][2], true, α == β)
-            1+na:N[β]-nb
+            (1+na):(N[β]-nb)
         end
         CartesianIndices(Iuα)
     end
@@ -155,7 +155,7 @@ function Grid(; x, boundary_conditions, backend)
     Ip = CartesianIndices(ntuple(D) do α
         na = offset_p(boundary_conditions[α][1], false)
         nb = offset_p(boundary_conditions[α][2], true)
-        1+na:N[α]-nb
+        (1+na):(N[α]-nb)
     end)
 
     # Coordinates of velocity points
@@ -164,13 +164,13 @@ function Grid(; x, boundary_conditions, backend)
             if α == β
                 x[β][2:end]
             else
-                (x[β][1:end-1] .+ x[β][2:end]) ./ 2
+                (x[β][1:(end-1)] .+ x[β][2:end]) ./ 2
             end
         end
     end
 
     # Coordinates of pressure points
-    xp = map(x -> (x[1:end-1] .+ x[2:end]) ./ 2, x)
+    xp = map(x -> (x[1:(end-1)] .+ x[2:end]) ./ 2, x)
 
     # Volume widths
     # Infinitely thin widths are set to `eps(T)` to avoid division by zero

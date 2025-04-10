@@ -21,7 +21,7 @@ randn!(p)
 p1 = apply_bc_p(PeriodicBC(), setup, p, 1, false)
 
 p = scalarfield(setup)
-p[end-10:end-1, :] .= 1
+p[(end-10):(end-1), :] .= 1
 p |> heatmap
 
 p1 = reshape(m * p[:], size(p))

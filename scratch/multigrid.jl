@@ -179,7 +179,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     D = params_train.D
     sample = data_train[1]
     K = size(Ip) .÷ 2
-    kx = ntuple(α -> 0:K[α]-1, D)
+    kx = ntuple(α -> 0:(K[α]-1), D)
     k = fill!(similar(xp[1], length.(kx)), 0)
     for α = 1:D
         kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
@@ -206,7 +206,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         vals = [vals; fill!(similar(vals, j - jprev), val)]
         jprev = j
     end
-    ib = ib[2:jprev-1]
+    ib = ib[2:(jprev-1)]
     A = sparse(ia, ib, vals, kmax, length(k))
     # Build inertial slope above energy
     krange = [T(kmax)^(T(2) / 3), T(kmax)]
@@ -240,7 +240,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         u = device.(sample.u[ig][it])
         ke = IncompressibleNavierStokes.kinetic_energy(u, setup)
         e = ke[Ip]
-        e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
+        e = fft(e)[ntuple(α->kx[α] .+ 1, D)...]
         e = abs.(e) ./ size(e, 1)
         e = A * reshape(e, :)
         ehat = max.(e, eps(T)) # Avoid log(0)
@@ -500,7 +500,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     (; xp, Ip) = setup.grid
     D = params.D
     K = size(Ip) .÷ 2
-    kx = ntuple(α -> 0:K[α]-1, D)
+    kx = ntuple(α -> 0:(K[α]-1), D)
     k = fill!(similar(xp[1], length.(kx)), 0)
     for α = 1:D
         kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
@@ -528,7 +528,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         vals = [vals; fill!(similar(vals, j - jprev), val)]
         jprev = j
     end
-    ib = ib[2:jprev-1]
+    ib = ib[2:(jprev-1)]
     A = sparse(ia, ib, vals, kmax, length(k))
     # Build inertial slope above energy
     # krange = [cbrt(T(kmax)), T(kmax)]
@@ -561,7 +561,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     )
         ke = IncompressibleNavierStokes.kinetic_energy(u, setup)
         e = ke[Ip]
-        e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
+        e = fft(e)[ntuple(α->kx[α] .+ 1, D)...]
         e = abs.(e) ./ size(e, 1)
         e = A * reshape(e, :)
         ehat = max.(e, eps(T)) # Avoid log(0)
@@ -582,7 +582,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     (; xp, Ip) = setup.grid
     D = params.D
     K = size(Ip) .÷ 2
-    kx = ntuple(α -> 0:K[α]-1, D)
+    kx = ntuple(α -> 0:(K[α]-1), D)
     k = fill!(similar(xp[1], length.(kx)), 0)
     for α = 1:D
         kα = reshape(kx[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...)
@@ -609,7 +609,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
         vals = [vals; fill!(similar(vals, j - jprev), val)]
         jprev = j
     end
-    ib = ib[2:jprev-1]
+    ib = ib[2:(jprev-1)]
     A = sparse(ia, ib, vals, kmax, length(k))
     # Build inertial slope above energy
     # krange = [cbrt(T(kmax)), T(kmax)]
@@ -635,7 +635,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     )
     ke = IncompressibleNavierStokes.kinetic_energy(uref, setup)
     e = ke[Ip]
-    e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
+    e = fft(e)[ntuple(α->kx[α] .+ 1, D)...]
     e = abs.(e) ./ size(e, 1)
     e = A * reshape(e, :)
     eref = max.(e, eps(T)) # Avoid log(0)
@@ -646,7 +646,7 @@ fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc
     )
         ke = IncompressibleNavierStokes.kinetic_energy(u, setup)
         e = ke[Ip]
-        e = fft(e)[ntuple(α -> kx[α] .+ 1, D)...]
+        e = fft(e)[ntuple(α->kx[α] .+ 1, D)...]
         e = abs.(e) ./ size(e, 1)
         e = A * reshape(e, :)
         ehat = max.(e, eps(T)) # Avoid log(0)

@@ -13,18 +13,18 @@ using CUDSS
 function sectionplot(state; setup, component)
     state isa Observable || (state = Observable(state))
     (; xu) = setup.grid
-    xplot = xu[component][1][2:end-1] |> Array
-    yplot = xu[component][2][2:end-1] |> Array
+    xplot = xu[component][1][2:(end-1)] |> Array
+    yplot = xu[component][2][2:(end-1)] |> Array
     zplot = xu[component][3] |> Array
     imid = div(setup.grid.N[1], 2)
     jmid = div(setup.grid.N[2], 2)
     u_xz = map(state) do (; u)
         # View u at y = 0.5
-        u[2:end-1, jmid, :, component] |> Array
+        u[2:(end-1), jmid, :, component] |> Array
     end
     u_yz = map(state) do (; u)
         # View u at given x
-        u[imid, 2:end-1, :, component] |> Array
+        u[imid, 2:(end-1), :, component] |> Array
     end
     fig = Figure(; size = (800, 300))
     ax_yz = Axis(fig[1, 1]; title = "u$(component) at x = 2.5", xlabel = "y", ylabel = "z")

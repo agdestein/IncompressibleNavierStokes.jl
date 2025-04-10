@@ -173,15 +173,15 @@ function Lux.initialparameters(rng::AbstractRNG, gc::GroupConv2D)
     (; weight) = params
     if islifting || isprojecting
         weight = (;
-            w1 = weight[:, :, 0*cin+1:1*cin, 1:cout],
-            w2 = weight[:, :, 1*cin+1:2*cin, 1:cout],
+            w1 = weight[:, :, (0*cin+1):(1*cin), 1:cout],
+            w2 = weight[:, :, (1*cin+1):(2*cin), 1:cout],
         )
     else
         weight = (;
-            w1 = weight[:, :, 0*cin+1:1*cin, 1:cout],
-            w2 = weight[:, :, 1*cin+1:2*cin, 1:cout],
-            w3 = weight[:, :, 2*cin+1:3*cin, 1:cout],
-            w4 = weight[:, :, 3*cin+1:4*cin, 1:cout],
+            w1 = weight[:, :, (0*cin+1):(1*cin), 1:cout],
+            w2 = weight[:, :, (1*cin+1):(2*cin), 1:cout],
+            w3 = weight[:, :, (2*cin+1):(3*cin), 1:cout],
+            w4 = weight[:, :, (3*cin+1):(4*cin), 1:cout],
         )
     end
     if Lux.has_bias(conv)

@@ -92,7 +92,7 @@ function create_spectrum(; setup, kp, rng = Random.default_rng())
     # Wavenumber vectors
     kk = ntuple(
         α -> reshape(
-            0:K[α]-1,
+            0:(K[α]-1),
             ntuple(Returns(1), α - 1)...,
             :,
             ntuple(Returns(1), D - α)...,
@@ -131,7 +131,7 @@ function create_spectrum(; setup, kp, rng = Random.default_rng())
     KK = 2 .* K
     kkkk = ntuple(
         α -> reshape(
-            0:KK[α]-1,
+            0:(KK[α]-1),
             ntuple(Returns(1), α - 1)...,
             :,
             ntuple(Returns(1), D - α)...,

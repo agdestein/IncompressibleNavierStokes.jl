@@ -161,7 +161,7 @@ run(`mv $name ../SupervisedClosure/figures/channel/`)
 fig = with_theme(; palette = (; color = ["#3366cc", "#cc0000", "#669900", "#ffcc00"])) do
     fig = Figure()
     ax = Axis(fig[1, 1]; xlabel = "x")
-    lines!(ax, Array(xp[1][2:end-1]), u[2][Iu[2]][:, 32] |> Array)
+    lines!(ax, Array(xp[1][2:(end-1)]), u[2][Iu[2]][:, 32] |> Array)
     fig
 end
 name = "midline_10.pdf"
