@@ -110,7 +110,7 @@ function get_cfl_timestep!(buf, u, setup)
     for (α, uα) in enumerate(eachslice(u; dims = D + 1))
         # Diffusion
         Δαmin = minimum(view(Δu[α], Iu[α].indices[α]))
-        Δt_diff = Re * Δαmin^2 / 2
+        Δt_diff = Re * Δαmin^2 / 2D
 
         # Convection
         Δα = reshape(Δu[α], ntuple(Returns(1), α - 1)..., :)
