@@ -29,6 +29,7 @@ CUDSS = "45b445bb-4962-46a0-9369-b4df9d0f772e"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [extensions]
+IncompressibleNavierStokesAMGXExt = ["AMGX"]
 IncompressibleNavierStokesCUDSSExt = ["CUDSS"]
 IncompressibleNavierStokesMakieExt = ["Makie"]
 
