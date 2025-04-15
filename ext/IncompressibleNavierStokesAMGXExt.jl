@@ -9,7 +9,7 @@ using AMGX
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: PressureBC, laplacian_mat
 using SparseArrays
-using CUDA
+using AMGX.CUDA
 
 """
 amgx_setup

@@ -9,7 +9,7 @@ using IncompressibleNavierStokes
 using CairoMakie
 using CUDA
 using AMGX
-using WGLMakie
+#using WGLMakie
 
 function sectionplot(state; setup, component)
     state isa Observable || (state = Observable(state))
@@ -70,9 +70,9 @@ zlims = 0f, 4f / 3f * pi
 # nx = 48
 # ny = 24
 # nz = 24
-nx = 64
-ny = 32
-nz = 32
+nx = 128
+ny = 64
+nz = 64
 
 setup = Setup(;
     boundary_conditions = (
@@ -85,8 +85,10 @@ setup = Setup(;
     bodyforce = (dim, x, y, z, t) -> 1 * (dim == 1),
     issteadybodyforce = true,
     backend = CUDABackend(),
-)
-psolver = default_psolver(setup)
+);
+
+AMGX_stuff = amgx_setup();
+psolver = psolver_cg_AMGX(setup; stuff = AMGX_stuff);
 
 Re_tau = 180f
 Re_m = 2800f
@@ -112,7 +114,7 @@ ustartfunc = let
     end
 end
 
-ustart = velocityfield(setup, ustartfunc);
+ustart = velocityfield(setup, ustartfunc; psolver);
 
 plotgrid(setup.grid.x[1] |> Array, setup.grid.x[2] |> Array)
 plotgrid(setup.grid.x[1] |> Array, setup.grid.x[3] |> Array)
@@ -133,16 +135,16 @@ sol, outputs = solve_unsteady(;
     setup,
     psolver,
     ustart,
-    tlims = (0f, 10f),
+    tlims = (0f, 5f),
     processors = (;
-        logger = timelogger(; nupdate = 10),
+        logger = timelogger(; nupdate = 5),
         plotter = realtimeplotter(;
             plot = sectionplot,
             # plot = volplot,
             setup,
-            # displayupdates = true,
+            displayupdates = true,
             component = 1,
-            nupdate = 10,
+            nupdate = 2,
             # sleeptime = 0.2,
         ),
         # writer = vtk_writer(;
@@ -155,3 +157,4 @@ sol, outputs = solve_unsteady(;
 );
 
 sectionplot(sol; setup, component = 1)
+close_amgx(AMGX_stuff)
