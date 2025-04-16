@@ -27,8 +27,10 @@ WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 CUDSS = "45b445bb-4962-46a0-9369-b4df9d0f772e"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+AMGX = "c963dde9-0319-47f5-bf0c-b07d3c80ffa6"
 
 [extensions]
+IncompressibleNavierStokesAMGXExt = ["AMGX"]
 IncompressibleNavierStokesCUDSSExt = ["CUDSS"]
 IncompressibleNavierStokesMakieExt = ["Makie"]
 

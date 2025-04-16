@@ -392,3 +392,8 @@ function EnzymeRules.reverse(
     return (nothing, nothing, nothing)
 end
 # COV_EXCL_STOP
+
+# for fast cg solver with AMGX
+function psolver_cg_AMGX end
+function close_amgx end
+function amgx_setup end

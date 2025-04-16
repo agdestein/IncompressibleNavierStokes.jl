@@ -17,6 +17,10 @@ authors:
     family-names: "Sanderse"
     affiliation: Centrum Wiskunde & Informatica
     orcid: "https://orcid.org/0000-0001-9483-1988"
+  - given-names: "Rik"
+    family-names: "Hoekstra"
+    affiliation: Centrum Wiskunde & Informatica
+    orcid: "https://orcid.org/0009-0006-5531-632X"
 repository-code: 'https://github.com/agdestein/IncompressibleNavierStokes.jl'
 url: 'https://agdestein.github.io/IncompressibleNavierStokes.jl/'
 abstract: >-
