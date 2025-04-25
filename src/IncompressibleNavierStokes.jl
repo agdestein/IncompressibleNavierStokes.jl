@@ -175,8 +175,6 @@ export bc_u_mat,
 export create_right_hand_side, right_hand_side!
 
 # AMGX
-export  psolver_cg_AMGX,
-    close_amgx,
-    amgx_setup
+export psolver_cg_AMGX, close_amgx, amgx_setup
 
 end

@@ -17,12 +17,14 @@ amgx_setup
 """
 function IncompressibleNavierStokes.amgx_setup()
     AMGX.initialize()
-    config = AMGX.Config(Dict(
-         "config_version" => "2",
-         "solver" => "CG",
-         "cg:tolerance" => 0.0001,
-         "cg:max_iters" => 100,   
-    ))
+    config = AMGX.Config(
+        Dict(
+            "config_version" => "2",
+            "solver" => "CG",
+            "cg:tolerance" => 0.0001,
+            "cg:max_iters" => 100,
+        ),
+    )
     # config = AMGX.Config(Dict(
     #      "config_version" => "2",
     #      "solver" => "PCGF",
@@ -37,7 +39,7 @@ function IncompressibleNavierStokes.amgx_setup()
     matrix = AMGX.AMGXMatrix(resources, AMGX.dFFI)
     AMGXsolver = AMGX.Solver(resources, AMGX.dFFI, config)
     solution = AMGX.AMGXVector(resources, AMGX.dFFI)
-    stuff = (;config, resources, rhs, matrix, AMGXsolver, solution)
+    stuff = (; config, resources, rhs, matrix, AMGXsolver, solution)
 end
 
 """
@@ -66,7 +68,7 @@ function IncompressibleNavierStokes.psolver_cg_AMGX(setup; stuff, kwargs...)
     T = eltype(x[1])
     L = laplacian_mat(setup)
     isdefinite = true
-        #any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
+    #any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
     if isdefinite
         # No extra DOF
         ftemp = fill!(similar(x[1], prod(Np)), 0)
@@ -82,28 +84,27 @@ function IncompressibleNavierStokes.psolver_cg_AMGX(setup; stuff, kwargs...)
     end
     L = CUDA.CUSPARSE.CuSparseMatrixCSR(L)
 
-    AMGX.upload!(stuff.matrix,
-        ((L.rowPtr).-Int32(1)), # row_ptrs
-        ((L.colVal).-Int32(1)), # col_indices
-        (L.nzVal) # data
+    AMGX.upload!(
+        stuff.matrix,
+        ((L.rowPtr) .- Int32(1)), # row_ptrs
+        ((L.colVal) .- Int32(1)), # col_indices
+        (L.nzVal), # data
     )
-    
+
     AMGX.setup!(stuff.AMGXsolver, stuff.matrix)
-    
 
     function psolve!(p)
         copyto!(view(ftemp, viewrange), view(view(p, Ip), :))
 
         AMGX.upload!(stuff.rhs, ftemp) # Upload right-hand side
-        AMGX.set_zero!(stuff.solution,size(ftemp,1))
+        AMGX.set_zero!(stuff.solution, size(ftemp, 1))
         AMGX.solve!(stuff.solution, stuff.AMGXsolver, stuff.rhs)
-        AMGX.copy!(ptemp,stuff.solution)
+        AMGX.copy!(ptemp, stuff.solution)
 
         # cg!(ptemp, L, ftemp; kwargs...)
         copyto!(view(view(p, Ip), :), view(ptemp, viewrange))
         p
     end
-
 end
 
 end
