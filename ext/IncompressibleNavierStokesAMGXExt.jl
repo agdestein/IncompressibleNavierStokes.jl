@@ -11,10 +11,6 @@ using IncompressibleNavierStokes: PressureBC, laplacian_mat
 using SparseArrays
 using AMGX.CUDA
 
-"""
-amgx_setup
-    Initalizes AMGX, all needed objects are returned in a named tuple. Needs to be followed by `amgx_close` after use.
-"""
 function IncompressibleNavierStokes.amgx_setup()
     AMGX.initialize()
     config = AMGX.Config(
@@ -42,10 +38,6 @@ function IncompressibleNavierStokes.amgx_setup()
     stuff = (; config, resources, rhs, matrix, AMGXsolver, solution)
 end
 
-"""
-close_amgx
-    Close all objects created by `amgx_setup`.
-"""
 function IncompressibleNavierStokes.close_amgx(stuff)
     # need to finalize:
     close(stuff.rhs)
@@ -57,11 +49,6 @@ function IncompressibleNavierStokes.close_amgx(stuff)
     AMGX.finalize()
 end
 
-"""
-Conjugate gradients iterative Poisson solver.
-The `kwargs` are passed to the `cg!` function
-from IterativeSolvers.jl.
-"""
 function IncompressibleNavierStokes.psolver_cg_AMGX(setup; stuff, kwargs...)
     (; grid, boundary_conditions, backend) = setup
     (; x, Np, Ip) = grid
