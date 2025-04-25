@@ -3,3 +3,4 @@ remove_extra_newlines = true
 trailing_comma = true
 separate_kwargs_with_semicolon = true
 long_to_short_function_def = true
+normalize_line_endings = "unix"
