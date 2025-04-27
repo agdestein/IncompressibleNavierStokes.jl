@@ -397,7 +397,7 @@ end
 # Implemented as an extension
 
 """
-Poisson solver using conjugate graident method from [AMGX](https://github.com/NVIDIA/AMGX).
+Poisson solver using conjugate gradient method from [AMGX](https://github.com/NVIDIA/AMGX).
 
 Becomes available `using AMGX`.
 """
@@ -411,7 +411,7 @@ Becomes available `using AMGX`.
 function close_amgx end
 
 """
-Initalizes AMGX, all needed objects are returned in a named tuple.
+Initializes AMGX, all needed objects are returned in a named tuple.
 Needs to be followed by `amgx_close` after use.
 
 Becomes available `using AMGX`.
