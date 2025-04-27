@@ -22,7 +22,7 @@ outdir = joinpath(@__DIR__, "output", "BackwardFacingStep3D")
 T = Float32
 
 # Backend
-backend = CPU()
+backend = IncompressibleNavierStokes.CPU()
 ## using CUDA; backend = CUDABackend()
 
 # Reynolds number

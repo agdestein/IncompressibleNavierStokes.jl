@@ -10,7 +10,7 @@ using IncompressibleNavierStokes
 outdir = joinpath(@__DIR__, "output", "RayleighTaylor2D")
 
 # Hardware
-backend = CPU()
+backend = IncompressibleNavierStokes.CPU()
 
 ## using CUDA, CUDSS
 ## backend = CUDABackend()

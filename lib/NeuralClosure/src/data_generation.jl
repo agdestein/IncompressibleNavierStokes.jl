@@ -136,7 +136,7 @@ function create_les_data(;
     Δt = nothing,
     method = RKMethods.RK44(; T = typeof(Re)),
     create_psolver = default_psolver,
-    backend = CPU(),
+    backend = IncompressibleNavierStokes.CPU(),
     icfunc = (setup, psolver, rng) -> random_field(setup, typeof(Re)(0); psolver, rng),
     processors = (; log = timelogger(; nupdate = 10)),
     rng,

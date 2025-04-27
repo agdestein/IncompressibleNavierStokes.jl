@@ -7,7 +7,7 @@ using GLMakie #!md
 using IncompressibleNavierStokes
 
 # Hardware
-backend = CPU()
+backend = IncompressibleNavierStokes.CPU()
 
 ## using CUDA, CUDSS
 ## backend = CUDABackend()

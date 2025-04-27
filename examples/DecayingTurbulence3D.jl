@@ -12,7 +12,7 @@ using IncompressibleNavierStokes
 
 # ## Problem setup
 
-backend = CPU()
+backend = IncompressibleNavierStokes.CPU()
 ## using CUDA; backend = CUDABackend()
 T = Float32
 n = 128

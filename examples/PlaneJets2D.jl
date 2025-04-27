@@ -22,7 +22,7 @@ outdir = joinpath(@__DIR__, "output", "PlaneJets2D")
 T = Float64
 
 # Backend
-backend = CPU()
+backend = IncompressibleNavierStokes.CPU()
 ## using CUDA; backend = CUDABackend()
 
 # Reynolds number
