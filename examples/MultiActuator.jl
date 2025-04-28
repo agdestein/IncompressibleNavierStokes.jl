@@ -16,7 +16,7 @@ outdir = joinpath(@__DIR__, "output", "MultiActuator")
 T = Float64
 
 # Backend
-backend = CPU()
+backend = IncompressibleNavierStokes.CPU()
 ## using CUDA; backend = CUDABackend()
 
 # Boundary conditions

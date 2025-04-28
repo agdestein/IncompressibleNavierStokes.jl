@@ -40,7 +40,7 @@ T = Float32
 #
 # Note: For GPUs, single precision is preferred.
 
-backend = CPU()
+backend = IncompressibleNavierStokes.CPU()
 ## using CUDA; backend = CUDABackend()
 
 # Here we choose a moderate Reynolds number. Note how we pass the floating point type.

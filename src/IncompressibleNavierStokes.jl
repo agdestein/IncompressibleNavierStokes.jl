@@ -14,8 +14,6 @@ using Atomix: @atomic
 using ChainRulesCore
 using DocStringExtensions
 using FFTW
-using EnzymeCore
-using EnzymeCore.EnzymeRules
 using IterativeSolvers
 using KernelAbstractions
 using KernelAbstractions.Extras.LoopInfo: @unroll
@@ -55,12 +53,6 @@ using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 
 "$LICENSE"
 license = "MIT"
-
-# We are reexporting KernelAbstractions.CPU, but
-# Documenter cannot find the docstring and complains.
-# Reapply the docstring here to keep Documenter happy.
-s = @doc(KernelAbstractions.CPU)
-@doc s.text[1] KernelAbstractions.CPU
 
 # # Easily retrieve value from Val
 # (::Val{x})() where {x} = x
@@ -105,7 +97,6 @@ export fieldplot, energy_history_plot, energy_spectrum_plot
 
 # Setup
 export Setup, temperature_equation
-export CPU
 
 # 1D grids
 export stretched_grid, cosine_grid, tanh_grid

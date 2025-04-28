@@ -23,10 +23,6 @@ Pages   = ["grid.jl"]
 
 ## Setup
 
-```@docs
-CPU
-```
-
 ```@autodocs
 Modules = [IncompressibleNavierStokes]
 Pages   = ["setup.jl"]

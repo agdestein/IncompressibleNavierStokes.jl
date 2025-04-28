@@ -1,3 +1,6 @@
+"Wrap a function to return `nothing`, because Enzyme can not handle vector return values."
+function enzyme_wrap end
+
 function assert_uniform_periodic(setup, string)
     (; grid, boundary_conditions) = setup
     (; Δ, N) = grid
@@ -73,6 +76,9 @@ function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) /
 
     IntArray = typeof(similar(xp[1], Int, 0))
     inds = IntArray[]
+
+    # For Julia v1.10
+    logrange(a, b, n) = map(exp, range(log(a), log(b), n))
 
     # Output query points (evenly log-spaced, but only integer wavenumbers)
     # κ = logrange(T(1), T(kmax) - 1, npoint)

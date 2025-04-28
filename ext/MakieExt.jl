@@ -7,7 +7,7 @@ environment, through GLMakie or CairoMakie. This allows for installing
 IncompressibleNavierStokes without Makie on servers to reduce precompilation
 time.
 """
-module IncompressibleNavierStokesMakieExt
+module MakieExt
 
 using DocStringExtensions
 using IncompressibleNavierStokes

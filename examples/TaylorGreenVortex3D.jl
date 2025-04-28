@@ -16,7 +16,7 @@ T = Float64
 # starting Julia with `julia -t auto`, or
 # add `"julia.NumThreads": "auto"` to the settings in VSCode.
 
-backend = CPU()
+backend = IncompressibleNavierStokes.CPU()
 ## using CUDA; backend = CUDABackend()
 
 # ## Setup

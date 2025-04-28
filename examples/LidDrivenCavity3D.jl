@@ -15,7 +15,7 @@ outdir = joinpath(@__DIR__, "output", "LidDrivenCavity3D")
 T = Float64
 
 # Backend
-backend = CPU()
+backend = IncompressibleNavierStokes.CPU()
 ## using CUDA; backend = CUDABackend()
 
 # Reynolds number

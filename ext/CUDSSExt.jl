@@ -1,10 +1,10 @@
 """
-    IncompressibleNavierStokesCUDSSExt
+    CUDSSExt
 
 CUDSS extension for IncompressibleNavierStokes.
 This makes `psolver_direct` use a CUDSS decomposition for `CuArray`s.
 """
-module IncompressibleNavierStokesCUDSSExt
+module CUDSSExt
 
 using CUDSS
 using CUDSS.CUDA

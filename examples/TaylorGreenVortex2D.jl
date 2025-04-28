@@ -26,7 +26,16 @@ ispath(outdir) || mkpath(outdir)
 """
 Compare numerical solution with analytical solution at final time.
 """
-function compute_convergence(; D, nlist, lims, Re, tlims, Δt, uref, backend = CPU())
+function compute_convergence(;
+    D,
+    nlist,
+    lims,
+    Re,
+    tlims,
+    Δt,
+    uref,
+    backend = IncompressibleNavierStokes.CPU(),
+)
     T = typeof(lims[1])
     e = zeros(T, length(nlist))
     for (i, n) in enumerate(nlist)

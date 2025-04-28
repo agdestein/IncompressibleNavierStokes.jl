@@ -3,7 +3,7 @@
 
 Introduces fast CG method for Poisson solver using AMGX.
 """
-module IncompressibleNavierStokesAMGXExt
+module AMGXExt
 
 using AMGX
 using IncompressibleNavierStokes

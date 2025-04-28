@@ -9,7 +9,7 @@ ax = range(0, 1, 17)
 
 x = (ax, ax)
 boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x))
-backend = CPU()
+backend = IncompressibleNavierStokes.CPU()
 
 function g()
     x = 1
