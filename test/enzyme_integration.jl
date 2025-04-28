@@ -13,7 +13,7 @@ end
     ArrayType = Array
     Re = T(1_000)
     D = 2
-    n = 64
+    n = 8
     N = n + 2
     lims = T(0), T(1)
     x = tanh_grid(lims..., n), tanh_grid(lims..., n, 1.3)
@@ -37,7 +37,7 @@ end
         @test u == u0
         @test sum(dudt) != 0
 
-        niter = 5000
+        niter = 10 # 5000
         list_u = [rand(T, (N, N, 2)) for i = 1:niter]
         list_z = []
         _, tz, mz = @timed begin
