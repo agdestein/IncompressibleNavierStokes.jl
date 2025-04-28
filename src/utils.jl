@@ -77,6 +77,9 @@ function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) /
     IntArray = typeof(similar(xp[1], Int, 0))
     inds = IntArray[]
 
+    # For Julia v1.10
+    logrange(a, b, n) = map(exp, range(log(a), log(b), n))
+    
     # Output query points (evenly log-spaced, but only integer wavenumbers)
     # κ = logrange(T(1), T(kmax) - 1, npoint)
     # κ = logrange(T(1), T(kmax) / a, npoint)
