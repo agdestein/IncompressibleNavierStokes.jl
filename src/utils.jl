@@ -1,3 +1,6 @@
+"Wrap a function to return `nothing`, because Enzyme can not handle vector return values."
+function enzyme_wrap end
+
 function assert_uniform_periodic(setup, string)
     (; grid, boundary_conditions) = setup
     (; Δ, N) = grid

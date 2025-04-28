@@ -81,9 +81,6 @@ include("time_steppers/RKMethods.jl")
 # Precompile workflow
 include("precompile.jl")
 
-"Wrap a function to return `nothing`, because Enzyme can not handle vector return values."
-function enzyme_wrap end
-
 # Boundary conditions
 export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
 
