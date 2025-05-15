@@ -5,7 +5,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
     (; setup, psolver, u, temp, t, n) = stepper
     (; closure_model, temperature) = setup
     (; A, b, c) = method
-    (; ustart, ku, p, tempstart, ktemp, diff) = cache
+    (; ustart, ku, p, tempstart, ktemp, diff, closure_stuff) = cache
     nstage = length(b)
     m = closure_model
 
@@ -26,7 +26,7 @@ function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing,
         end
 
         # Add closure term
-        isnothing(m) || (ku[i] .+= m(u, θ))
+        isnothing(m) || (ku[i] .+= m(u, θ, closure_stuff, setup))
 
         # Intermediate time step
         t = tstart + c[i] * Δt

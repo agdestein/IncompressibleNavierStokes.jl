@@ -1125,30 +1125,15 @@ end
     (α, β) == (2, 3),
     (α, β) == (3, 3),
 )
-@inline gridsize(Δ, I::CartesianIndex{D}) where {D} =
+
+# @inline gridsize(Δ, I::CartesianIndex{2}) = sqrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2)
+# @inline gridsize(Δ, I::CartesianIndex{3}) = cbrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2 + Δ[3][I[3]]^2)
+@inline gridsize_vol(Δ, I::CartesianIndex{2}) = sqrt(Δ[1][I[1]] * Δ[2][I[2]])
+@inline gridsize_vol(Δ, I::CartesianIndex{3}) = cbrt(Δ[1][I[1]] * Δ[2][I[2]] * Δ[3][I[3]])
+@inline gridsize(Δ, I::CartesianIndex{D}) where {D} = # Gridsize based on the length of the diagonal of the cell
     sqrt(sum(ntuple(α -> Δ[α][I[α]]^2, D)))
 
-"""
-Compute Smagorinsky stress tensors `σ[I]` (in-place version).
-The Smagorinsky constant `θ` should be a scalar between `0` and `1`.
-"""
-function smagtensor!(σ, u, θ, setup)
-    # TODO: Combine with normal diffusion tensor
-    (; grid, backend, workgroupsize) = setup
-    (; Np, Ip, Δ, Δu) = grid
-    @kernel function σ!(σ, u, I0)
-        I = @index(Global, Cartesian)
-        I = I + I0
-        ∇u = ∇(u, I, Δ, Δu)
-        S = (∇u + ∇u') / 2
-        d = gridsize(Δ, I)
-        eddyvisc = θ^2 * d^2 * sqrt(2 * sum(S .* S))
-        σ[I] = 2 * eddyvisc * S
-    end
-    I0 = getoffset(Ip)
-    σ!(backend, workgroupsize)(σ, u, I0; ndrange = Np)
-    σ
-end
+
 
 divoftensor(σ, setup) = divoftensor!(vectorfield(setup), σ, setup)
 
@@ -1286,23 +1271,7 @@ end
     end # α
 end
 
-"""
-Create Smagorinsky closure model `m`.
-The model is called as `m(u, θ)`, where the Smagorinsky constant
-`θ` should be a scalar between `0` and `1` (for example `θ = 0.1`).
-"""
-function smagorinsky_closure(setup)
-    (; dimension, x, N) = setup.grid
-    D = dimension()
-    T = eltype(x[1])
-    σ = similar(x[1], SMatrix{D,D,T,D * D}, N)
-    s = vectorfield(setup)
-    function closure(u, θ)
-        smagtensor!(σ, u, θ, setup)
-        apply_bc_p!(σ, zero(T), setup)
-        divoftensor!(s, σ, setup)
-    end
-end
+
 
 "Interpolate velocity to pressure points (differentiable version)."
 interpolate_u_p(u, setup) = interpolate_u_p!(vectorfield(setup), u, setup)
