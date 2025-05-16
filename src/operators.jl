@@ -41,7 +41,7 @@ Cartesian index unit vector in `D = 2` or `D = 3` dimensions.
 Calling `Offset(D)(α)` returns a Cartesian index with `1` in the dimension `α` and zeros
 elsewhere.
 
-See <https://b-fg.github.io/2023/05/07/waterlily-on-gpu.html>
+See <https://b-fg.github.io/research/2023-07-05-waterlily-on-gpu.html>
 for writing kernel loops using Cartesian indices.
 """
 struct Offset{D} end
