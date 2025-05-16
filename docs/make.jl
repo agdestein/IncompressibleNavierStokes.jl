@@ -84,18 +84,10 @@ for (run, name) in examples
     end
 end
 
-vitepress_kwargs = localdev ? (;
-    # md_output_path = @__DIR__,
-    build_vitepress = false
-) : (;)
-
 # There is an issue with linking to other MD pages:
 # https://github.com/LuxDL/DocumenterVitepress.jl/issues/172
 makedocs(;
-    # draft = true,
-    # clean = !localdev,
     modules = [IncompressibleNavierStokes, NeuralClosure],
-    # warnonly = true, # Reexporting KernelAbstractions.CPU fails otherwise
     plugins = [bib],
     authors = "Syver Døving Agdestein, Benjamin Sanderse, and contributors",
     repo = Remotes.GitHub("agdestein", "IncompressibleNavierStokes.jl"),
@@ -103,15 +95,13 @@ makedocs(;
     format = DocumenterVitepress.MarkdownVitepress(;
         repo = "github.com/agdestein/IncompressibleNavierStokes.jl",
         devurl = "dev",
-        vitepress_kwargs...,
     ),
     pagesonly = true,
 )
 
-# Only deploy docs on CI
-get(ENV, "CI", "false") == "true" && deploydocs(;
+DocumenterVitepress.deploydocs(;
     repo = "github.com/agdestein/IncompressibleNavierStokes.jl",
-    target = "build",
+    target = joinpath(@__DIR__, "build"),
     devbranch = "main",
     push_preview = true,
 )

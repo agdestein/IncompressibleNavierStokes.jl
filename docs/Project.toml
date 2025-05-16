@@ -15,7 +15,7 @@ NeuralClosure = {path = "../lib/NeuralClosure"}
 [compat]
 Documenter = "1"
 DocumenterCitations = "1"
-DocumenterVitepress = "0.1"
+DocumenterVitepress = "0.2"
 Examples = "1"
 IncompressibleNavierStokes = "3"
 Literate = "2"
