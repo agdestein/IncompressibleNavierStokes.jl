@@ -9,6 +9,8 @@
 [![Coverage](https://codecov.io/gh/agdestein/IncompressibleNavierStokes.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/agdestein/IncompressibleNavierStokes.jl)
 [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14217342.svg)](https://doi.org/10.5281/zenodo.14217342)
+[![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Fmonthly_downloads%2FIncompressibleNavierStokes&query=total_requests&suffix=%2Fmonth&label=Downloads)](https://juliapkgstats.com/pkg/IncompressibleNavierStokes)
+[![Downloads](https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Ftotal_downloads%2FIncompressibleNavierStokes&query=total_requests&&label=Total%20Downloads)](https://juliapkgstats.com/pkg/IncompressibleNavierStokes)
 
 This package implements energy-conserving solvers for the incompressible Navier-Stokes
 equations on a staggered Cartesian grid. It is based on the Matlab package
