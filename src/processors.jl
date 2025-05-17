@@ -96,36 +96,8 @@ function observefield(
     elseif fieldname == :vorticity
         ω = vorticity(state[].u, setup)
         ωp = interpolate_ω_p(ω, setup)
-    elseif fieldname == :streamfunction
-        ψ = get_streamfunction(setup, state[].u, t)
-    elseif fieldname == :pressure
-        if isnothing(psolver)
-            @warn "Creating new pressure solver for observefield"
-            psolver = default_psolver(setup)
-        end
-        F = vectorfield(setup)
-        p = scalarfield(setup)
-    elseif fieldname == :Dfield
-        if isnothing(psolver)
-            @warn "Creating new pressure solver for observefield"
-            psolver = default_psolver(setup)
-        end
-        F = vectorfield(setup)
-        p = scalarfield(setup)
-        F = vectorfield(setup)
-        d = scalarfield(setup)
-    elseif fieldname == :Qfield
-        Q = scalarfield(setup)
     elseif fieldname == :qcrit
         q = scalarfield(setup)
-    elseif fieldname == :eig2field
-        λ = scalarfield(setup)
-    elseif fieldname in union(Symbol.(["B$i" for i = 1:11]), Symbol.(["V$i" for i = 1:5]))
-        sym = string(fieldname)[1]
-        sym = sym == 'B' ? 1 : 2
-        idx = parse(Int, string(fieldname)[2:end])
-        tb = tensorbasis(state[].u, setup)
-        tb[sym][idx]
     elseif fieldname == :temperature
         state[].temp
     else
@@ -160,32 +132,8 @@ function observefield(
             apply_bc_u!(state.u, state.t, setup)
             vorticity!(ω, state.u, setup)
             interpolate_ω_p!(ωp, ω, setup)
-        elseif fieldname == :streamfunction
-            get_streamfunction(setup, state.u, t)
-        elseif fieldname == :pressure
-            pressure!(p, state, t, setup; psolver, F)
-        elseif fieldname == :Dfield
-            pressure!(p, state, t, setup; psolver, F)
-            Dfield!(d, G, p, setup)
-            din = view(d, Ip)
-            @. din = log(max(logtol, din))
-            d
-        elseif fieldname == :Qfield
-            Qfield!(Q, state.u, setup)
-            Qin = view(Q, Ip)
-            @. Qin = log(max(logtol, Qin))
-            Q
         elseif fieldname == :qcrit
             qcrit!(q, state.u, setup)
-        elseif fieldname == :eig2field
-            eig2field!(λ, state.u, setup)
-            λin = view(λ, Ip)
-            @. λin .= log(max(logtol, -λin))
-            λ
-        elseif fieldname in
-               union(Symbol.(["B$i" for i = 1:11]), Symbol.(["V$i" for i = 1:5]))
-            tensorbasis!(tb..., state.u, setup)
-            tb[sym][idx]
         elseif fieldname == :temperature
             state.temp
         end

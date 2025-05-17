@@ -2,7 +2,6 @@
 Setup(;
     x,
     boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
-    closure_model = nothing,
     backend = CPU(),
     workgroupsize = 64,
     temperature = nothing,
@@ -11,7 +10,6 @@ Setup(;
     grid = Grid(; x, boundary_conditions, backend),
     boundary_conditions,
     Re,
-    closure_model,
     backend,
     workgroupsize,
     temperature,
