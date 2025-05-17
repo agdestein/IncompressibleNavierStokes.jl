@@ -65,9 +65,23 @@ for (run, name) in examples
     code = strip(read(script, String))
     codepair = "CODE_CONTENT" => code
     replacefunc(pairs...) = content -> replace(content, pairs...)
+    codecoda = """
+        # ## Copy-pasteable code
+        #
+        # Below is the full code for this example stripped of comments and output.
+        #
+        # ```julia
+        # CODE_CONTENT
+        # ```
+    """
     if run
         # With code execution blocks
-        Literate.markdown(inputfile, outputdir; postprocess = replacefunc(codepair))
+        Literate.markdown(
+            inputfile,
+            outputdir;
+            preprocess = content -> content * "\n\n" * codecoda,
+            postprocess = replacefunc(codepair),
+        )
     else
         # Turn off code execution.
         # Note: Literate has a `documenter = false` option, but this would also remove
@@ -77,9 +91,12 @@ for (run, name) in examples
             inputfile,
             outputdir;
             preprocess = content ->
-                "# *Note: Output is not generated for this example (to save resources on GitHub).*\n\n" *
-                content,
-            postprocess = replacefunc(codepair, r"@example.*" => "julia"),
+                "# *Note: Output is not generated for this example (to save resources on GitHub).*" *
+                "\n\n" *
+                content *
+                "\n\n" *
+                codecoda,
+            postprocess = replacefunc(r"@example.*" => "julia", codepair),
         )
     end
 end

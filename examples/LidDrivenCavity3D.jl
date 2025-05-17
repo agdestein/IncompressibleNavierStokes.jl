@@ -71,11 +71,3 @@ save_vtk(state; setup, filename = joinpath(outdir, "solution"))
 
 # Energy history
 outputs.ehist
-
-#md # ## Copy-pasteable code
-#md #
-#md # Below is the full code for this example stripped of comments and output.
-#md #
-#md # ```julia
-#md # CODE_CONTENT
-#md # ```
