@@ -7,7 +7,7 @@ end
 
 using IncompressibleNavierStokes
 using CairoMakie
-using WGLMakie
+using GLMakie
 using WriteVTK
 
 backend = IncompressibleNavierStokes.CPU()
@@ -106,8 +106,7 @@ setup = Setup(;
 function force!(f, state, t, params, setup, cache)
     navierstokes!(f, state, t, nothing, setup, nothing)
     f.u .+= cache.bodyforce
-    c = wale_closure(u, params, cache.wale, setup)
-    f.u .+= c
+    wale_closure!(f.u, u, params, cache.wale, setup)
 end
 
 # Tell IncompressibleNavierStokes how to prepare the cache for `force!`.

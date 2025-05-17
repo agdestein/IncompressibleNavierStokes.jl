@@ -54,6 +54,18 @@ Offset(D) = Offset{D}()
 unit_cartesian_indices(D) = ntuple(α -> Offset(D)(α), D)
 
 """
+Apply kernel to args with offset `I0`.
+By default, it is applied over `setup.grid.Ip`.
+"""
+function apply!(kernel, setup, args...)
+    (; grid, backend, workgroupsize) = setup
+    (; Ip, Np) = grid
+    O = getoffset(Ip)
+    kernel(backend, workgroupsize)(args..., O; ndrange = Np)
+    KernelAbstractions.synchronize(setup.backend)
+end
+
+"""
 Average scalar field `ϕ` in the `α`-direction.
 """
 @inline function avg(ϕ, Δ, I, α)
@@ -104,19 +116,15 @@ ChainRulesCore.rrule(::typeof(divergence), u, setup) = (
 
 "Compute divergence of velocity field (in-place version)."
 function divergence!(div, u, setup)
-    (; grid, backend, workgroupsize) = setup
-    (; Δ, Ip, Np) = grid
-    D = length(Δ)
-    e = Offset(D)
-    I0 = getoffset(Ip)
-    kernel = divergence_kernel!(backend, workgroupsize)
-    kernel(div, u, Δ, e, I0; ndrange = Np)
+    apply!(divergence_kernel!, setup, div, u, setup.grid)
     div
 end
 
-@kernel inbounds = true function divergence_kernel!(div, u, Δ, e, I0)
+@kernel inbounds = true function divergence_kernel!(div, u, grid, O)
     I = @index(Global, Cartesian)
-    I = I + I0
+    I = I + O
+    (; dimension, Δ) = grid
+    e = Offset(dimension())
     d = zero(eltype(div))
     for α in eachindex(Δ)
         d += (u[I, α] - u[I-e(α), α]) / Δ[α][I[α]]
