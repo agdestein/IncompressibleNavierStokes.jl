@@ -18,7 +18,7 @@
         ),
     )
     uref(dim, x, y, args...) = dim == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)
-    ustart = velocityfield(setup, uref, 0.0)
+    u = velocityfield(setup, uref, 0.0)
 
     nprocess = 20
     nupdate = 10
@@ -39,7 +39,7 @@
     )
 
     state, outputs =
-        solve_unsteady(; setup, ustart, tlims = (0.0, nstep * Δt), Δt, processors)
+        solve_unsteady(; setup, start = (; u), tlims = (0.0, nstep * Δt), Δt, processors)
 
     @testset "Field saver" begin
         @test length(outputs.field) == nprocess

@@ -64,7 +64,6 @@ include("setup.jl")
 include("pressure.jl")
 include("operators.jl")
 include("eddyviscosity.jl")
-include("tensorbasis.jl")
 include("matrices.jl")
 include("initializers.jl")
 include("processors.jl")
@@ -78,8 +77,8 @@ include("time_steppers/time_stepper_caches.jl")
 include("time_steppers/step.jl")
 include("time_steppers/RKMethods.jl")
 
-# Precompile workflow
-include("precompile.jl")
+# # Precompile workflow
+# include("precompile.jl")
 
 # Boundary conditions
 export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
@@ -105,6 +104,7 @@ export stretched_grid, cosine_grid, tanh_grid
 export default_psolver, psolver_direct, psolver_cg, psolver_cg_matrix, psolver_spectral
 
 # Solvers
+export navierstokes, navierstokes!, boussinesq, boussinesq!
 export solve_unsteady, timestep, create_stepper
 
 # Field generation
@@ -114,13 +114,13 @@ export scalarfield, vectorfield, velocityfield, temperaturefield, random_field
 export getoffset, splitseed, plotgrid, save_vtk, get_lims
 
 # ODE methods
-export AdamsBashforthCrankNicolsonMethod, OneLegMethod, RKMethods, LMWray3
+export get_cache
+export OneLegMethod, RKMethods, LMWray3
 
 # Operators
 export apply_bc_u,
     apply_bc_p,
     apply_bc_temp,
-    applybodyforce,
     applypressure,
     convection_diffusion_temp,
     convection,
@@ -135,20 +135,17 @@ export apply_bc_u,
     interpolate_u_p,
     interpolate_ω_p,
     laplacian,
-    momentum,
     poisson,
-    pressure,
     pressuregradient,
     project,
     scalewithvolume,
-    smagorinsky_closure,
+    smagorinsky_closure!,
+    wale_closure!,
     total_kinetic_energy,
     vorticity,
     Dfield,
     Qfield,
     qcrit
-
-export tensorbasis
 
 # Matrices
 export bc_u_mat,

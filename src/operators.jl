@@ -54,6 +54,18 @@ Offset(D) = Offset{D}()
 unit_cartesian_indices(D) = ntuple(α -> Offset(D)(α), D)
 
 """
+Apply kernel to args with offset `I0`.
+By default, it is applied over `setup.grid.Ip`.
+"""
+function apply!(kernel, setup, args...)
+    (; grid, backend, workgroupsize) = setup
+    (; Ip, Np) = grid
+    O = getoffset(Ip)
+    kernel(backend, workgroupsize)(args..., O; ndrange = Np)
+    KernelAbstractions.synchronize(setup.backend)
+end
+
+"""
 Average scalar field `ϕ` in the `α`-direction.
 """
 @inline function avg(ϕ, Δ, I, α)
@@ -104,19 +116,15 @@ ChainRulesCore.rrule(::typeof(divergence), u, setup) = (
 
 "Compute divergence of velocity field (in-place version)."
 function divergence!(div, u, setup)
-    (; grid, backend, workgroupsize) = setup
-    (; Δ, Ip, Np) = grid
-    D = length(Δ)
-    e = Offset(D)
-    I0 = getoffset(Ip)
-    kernel = divergence_kernel!(backend, workgroupsize)
-    kernel(div, u, Δ, e, I0; ndrange = Np)
+    apply!(divergence_kernel!, setup, div, u, setup.grid)
     div
 end
 
-@kernel inbounds = true function divergence_kernel!(div, u, Δ, e, I0)
+@kernel inbounds = true function divergence_kernel!(div, u, grid, O)
     I = @index(Global, Cartesian)
-    I = I + I0
+    I = I + O
+    (; dimension, Δ) = grid
+    e = Offset(dimension())
     d = zero(eltype(div))
     for α in eachindex(Δ)
         d += (u[I, α] - u[I-e(α), α]) / Δ[α][I[α]]
@@ -836,48 +844,6 @@ end
     ϵ[I] = 2 * visc * sum(S .* S)
 end
 
-"Compute body force (differentiable version)."
-function applybodyforce(u, t, setup)
-    (; grid, bodyforce, issteadybodyforce) = setup
-    (; dimension, xu) = grid
-    D = dimension()
-    if issteadybodyforce
-        bodyforce
-    else
-        stack(map(α -> bodyforce.(α, xu[α]..., t), 1:D))
-    end
-end
-
-# "Compute body force (differentiable version)."
-# applybodyforce(u, t, setup) = applybodyforce!(zero.(u), u, t, setup)
-
-# ChainRulesCore.rrule(::typeof(applybodyforce), u, t, setup) =
-#     (applybodyforce(u, t, setup), φ -> error("Not yet implemented"))
-
-"""
-Compute body force (in-place version).
-Add the result to `F`.
-"""
-function applybodyforce!(F, u, t, setup)
-    (; grid, bodyforce, issteadybodyforce) = setup
-    (; dimension, Iu, xu) = grid
-    D = dimension()
-    if issteadybodyforce
-        F .+= bodyforce
-    else
-        for (α, Fα) in enumerate(eachslice(F; dims = D + 1))
-            # xin = ntuple(
-            #     β -> reshape(xu[α][β][Iu[α].indices[β]], ntuple(Returns(1), β - 1)..., :),
-            #     D,
-            # )
-            # @. F[α][Iu[α]] += bodyforce(α, xin..., t)
-            xin = ntuple(β -> reshape(xu[α][β], ntuple(Returns(1), β - 1)..., :), D)
-            Fα .+= bodyforce.(α, xin..., t)
-        end
-    end
-    F
-end
-
 "Compute gravity term (differentiable version)."
 gravity(temp, setup) = gravity!(vectorfield(setup), temp, setup)
 
@@ -927,51 +893,6 @@ function gravity!(F, temp, setup)
     I0 = first(Iu[gdir])
     I0 -= oneunit(I0)
     g!(backend, workgroupsize)(F, temp, Val(gdir), I0; ndrange = Nu[gdir])
-    F
-end
-
-"""
-Right hand side of momentum equations, excluding pressure gradient
-(differentiable version).
-"""
-function momentum(u, temp, t, setup)
-    (; bodyforce) = setup
-    d = diffusion(u, setup)
-    c = convection(u, setup)
-    F = @. d + c
-    if !isnothing(bodyforce)
-        f = applybodyforce(u, t, setup)
-        F = @. F + f
-    end
-    if !isnothing(temp)
-        g = gravity(temp, setup)
-        F = @. F + g
-    end
-    F
-end
-
-# ChainRulesCore.rrule(::typeof(momentum), u, temp, t, setup) = (
-#     (error(); momentum(u, temp, t, setup)),
-#     φ -> (
-#         NoTangent(),
-#         Tangent{typeof(u)}(momentum_pullback!(zero.(φ), φ, u, temp, t, setup)...),
-#         NoTangent(),
-#         NoTangent(),
-#     ),
-# )
-
-"""
-Right hand side of momentum equations, excluding pressure gradient
-(in-place version).
-"""
-function momentum!(F, u, temp, t, setup)
-    (; grid, bodyforce) = setup
-    (; dimension) = grid
-    D = dimension()
-    fill!(F, 0)
-    convectiondiffusion!(F, u, setup)
-    isnothing(bodyforce) || applybodyforce!(F, u, t, setup)
-    isnothing(temp) || gravity!(F, temp, setup)
     F
 end
 
@@ -1126,152 +1047,13 @@ end
     (α, β) == (3, 3),
 )
 
-# @inline gridsize(Δ, I::CartesianIndex{2}) = sqrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2)
-# @inline gridsize(Δ, I::CartesianIndex{3}) = cbrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2 + Δ[3][I[3]]^2)
+"Gridsize based on the length of the diagonal of the cell."
+@inline gridsize(Δ, I::CartesianIndex{2}) = sqrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2)
+@inline gridsize(Δ, I::CartesianIndex{3}) = cbrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2 + Δ[3][I[3]]^2)
+
+"Grid size based on the volume of the cell."
 @inline gridsize_vol(Δ, I::CartesianIndex{2}) = sqrt(Δ[1][I[1]] * Δ[2][I[2]])
 @inline gridsize_vol(Δ, I::CartesianIndex{3}) = cbrt(Δ[1][I[1]] * Δ[2][I[2]] * Δ[3][I[3]])
-@inline gridsize(Δ, I::CartesianIndex{D}) where {D} = # Gridsize based on the length of the diagonal of the cell
-    sqrt(sum(ntuple(α -> Δ[α][I[α]]^2, D)))
-
-
-
-divoftensor(σ, setup) = divoftensor!(vectorfield(setup), σ, setup)
-
-ChainRulesCore.rrule(::typeof(divoftensor), σ, setup) = (
-    # (@show(typeof(σ));   divoftensor(σ, setup)),
-    divoftensor(σ, setup),
-    φ -> (NoTangent(), divoftensor_adjoint!(zero(σ), φ, setup), NoTangent()),
-)
-
-"""
-Compute divergence of a tensor with all components
-in the pressure points (in-place version).
-The stress tensors should be precomputed and stored in `σ`.
-"""
-function divoftensor!(s, σ, setup)
-    (; grid, backend, workgroupsize) = setup
-    (; dimension, N, Iu, Δ, Δu, A) = grid
-    D = dimension()
-    e = Offset(D)
-    # @show typeof(s) typeof(σ)
-    divoftensor_kernel!(backend, workgroupsize)(
-        s,
-        σ,
-        Δ,
-        Δu,
-        A,
-        e,
-        Val(1:D),
-        Iu;
-        ndrange = N,
-    )
-    s
-end
-
-function divoftensor_adjoint!(σbar, sbar, setup)
-    (; grid, backend, workgroupsize) = setup
-    (; dimension, N, Iu, Δ, Δu, A) = grid
-    D = dimension()
-    e = Offset(D)
-    divoftensor_adjoint_kernel!(backend, workgroupsize)(
-        σbar,
-        sbar,
-        Δ,
-        Δu,
-        A,
-        e,
-        Val(1:D),
-        Iu;
-        ndrange = N,
-    )
-    σbar
-end
-
-@kernel function divoftensor_kernel!(s, σ, Δ, Δu, A, e, valdims, Iu)
-    dims = getval(valdims)
-    I = @index(Global, Cartesian)
-    @unroll for α in dims
-        if I in Iu[α]
-            sI = zero(eltype(s))
-            @unroll for β in dims
-                Δuαβ = α == β ? Δu[β] : Δ[β]
-                if α == β
-                    σαβ2 = σ[I+e(β)][α, β]
-                    σαβ1 = σ[I][α, β]
-                else
-                    # TODO: Add interpolation weights for non-uniform case
-                    σαβ2 =
-                        (
-                            σ[I][α, β] +
-                            σ[I+e(β)][α, β] +
-                            σ[I+e(α)+e(β)][α, β] +
-                            σ[I+e(α)][α, β]
-                        ) / 4
-                    σαβ1 =
-                        (
-                            σ[I-e(β)][α, β] +
-                            σ[I][α, β] +
-                            σ[I+e(α)-e(β)][α, β] +
-                            σ[I+e(α)][α, β]
-                        ) / 4
-                end
-                sI += (σαβ2 - σαβ1) / Δuαβ[I[β]]
-            end
-            s[I, α] = sI
-        end
-    end
-end
-
-@kernel function divoftensor_adjoint_kernel!(σbar, sbar, Δ, Δu, A, e, valdims, Iu)
-    dims = getval(valdims)
-    I = @index(Global, Cartesian)
-    @unroll for α in dims
-        if I in Iu[α]
-            sIbar = sbar[I, α]
-            @unroll for β in dims
-                Δuαβ = α == β ? Δu[β] : Δ[β]
-                # sI += (σαβ2 - σαβ1) / Δuαβ[I[β]]
-                σαβ2bar = sIbar / Δuαβ[I[β]]
-                σαβ1bar = -sIbar / Δuαβ[I[β]]
-                ut = unittensor(sbar, I, α, β)
-                if α == β
-                    # σαβ2 = σ[I+e(β)][α, β]
-                    # σαβ1 = σ[I][α, β]
-                    σbar[I+e(β)] += σαβ2bar * ut
-                    σbar[I] += σαβ1bar * ut
-                else
-                    # TODO: Add interpolation weights for non-uniform case
-                    # σαβ2 =
-                    #     (
-                    #         σ[I][α, β] +
-                    #         σ[I+e(β)][α, β] +
-                    #         σ[I+e(α)+e(β)][α, β] +
-                    #         σ[I+e(α)][α, β]
-                    #     ) / 4
-                    # σαβ1 =
-                    #     (
-                    #         σ[I-e(β)][α, β] +
-                    #         σ[I][α, β] +
-                    #         σ[I+e(α)-e(β)][α, β] +
-                    #         σ[I+e(α)][α, β]
-                    #     ) / 4
-                    val2 = σαβ2bar / 4 * ut
-                    σbar[I] += val2
-                    σbar[I+e(β)] += val2
-                    σbar[I+e(α)+e(β)] += val2
-                    σbar[I+e(α)] += val2
-                    val1 = σαβ1bar / 4 * ut
-                    σbar[I-e(β)] += val1
-                    σbar[I] += val1
-                    σbar[I+e(α)-e(β)] += val1
-                    σbar[I+e(α)] += val1
-                end # center or corner
-            end # β
-        end # if inside
-    end # α
-end
-
-
 
 "Interpolate velocity to pressure points (differentiable version)."
 interpolate_u_p(u, setup) = interpolate_u_p!(vectorfield(setup), u, setup)
@@ -1340,57 +1122,6 @@ function interpolate_ω_p!(::Dimension{3}, ωp, ω, setup)
     ωp
 end
 
-"""
-Compute the ``D``-field [LiJiajia2019](@cite) given by
-
-```math
-D = \\frac{2 | \\nabla p |}{\\nabla^2 p}.
-```
-
-Differentiable version.
-"""
-Dfield(p, setup; kwargs...) =
-    Dfield!(scalarfield(setup), vectorfield(setup), p, setup; kwargs...)
-
-ChainRulesCore.rrule(::typeof(Dfield), p, setup; kwargs...) =
-    (Dfield(p, setup; kwargs...), φ -> error("Not yet implemented"))
-
-"Compute the ``D``-field (in-place version)."
-function Dfield!(d, G, p, setup; ϵ = eps(eltype(p)))
-    (; grid, backend, workgroupsize) = setup
-    (; dimension, Np, Ip, Δ) = grid
-    T = eltype(p)
-    D = dimension()
-    e = Offset(D)
-    @kernel function D!(d, G, p, I0)
-        I = @index(Global, Cartesian)
-        I = I + I0
-        g = zero(eltype(p))
-        for α = 1:D
-            g += (G[I-e(α), α] + G[I, α])^2
-        end
-        lap = zero(eltype(p))
-        # for α = 1:D
-        #     lap += (G[I, α] - G[I-e(α), α]) / Δ[α][I[α]]
-        # end
-        if D == 2
-            lap += (G[I, 1] - G[I-e(1), 1]) / Δ[1][I[1]]
-            lap += (G[I, 2] - G[I-e(2), 2]) / Δ[2][I[2]]
-        elseif D == 3
-            lap += (G[I, 1] - G[I-e(1), 1]) / Δ[1][I[1]]
-            lap += (G[I, 2] - G[I-e(2), 2]) / Δ[2][I[2]]
-            lap += (G[I, 3] - G[I-e(3), 3]) / Δ[3][I[3]]
-        end
-        lap = lap > 0 ? max(lap, ϵ) : min(lap, -ϵ)
-        # lap = abs(lap)
-        d[I] = sqrt(g) / 2 / lap
-    end
-    pressuregradient!(G, p, setup)
-    I0 = getoffset(Ip)
-    D!(backend, workgroupsize)(d, G, p, I0; ndrange = Np)
-    d
-end
-
 "Compute ``Q``, the second invariant of the velocity gradient tensor."
 qcrit(u, setup) = qcrit!(scalarfield(setup), u, setup)
 
@@ -1406,72 +1137,6 @@ function qcrit!(q, u, setup)
     kernel! = qcrit_kernel!(backend, workgroupsize)
     kernel!(q, u; ndrange = Np)
     q
-end
-
-"""
-Compute ``Q``-field [Jeong1995](@cite) given by
-
-```math
-Q = - \\frac{1}{2} \\sum_{α, β} \\frac{\\partial u^α}{\\partial x^β}
-\\frac{\\partial u^β}{\\partial x^α}.
-```
-
-Differentiable version.
-"""
-Qfield(u, setup) = Qfield!(scalarfield(setup), u, setup)
-
-ChainRulesCore.rrule(::typeof(Qfield), u, setup) =
-    (Qfield(u, setup), φ -> error("Not yet implemented"))
-
-"Compute the ``Q``-field (in-place version)."
-function Qfield!(Q, u, setup)
-    (; grid, backend, workgroupsize) = setup
-    (; dimension, Np, Ip, Δ) = grid
-    D = dimension()
-    e = Offset(D)
-    @kernel function Q!(Q, u, I0)
-        I = @index(Global, Cartesian)
-        I = I + I0
-        q = zero(eltype(Q))
-        for α = 1:D, β = 1:D
-            q -=
-                (u[I, α] - u[I-e(β), α]) / Δ[β][I[β]] * (u[I, β] - u[I-e(α), β]) /
-                Δ[α][I[α]] / 2
-        end
-        Q[I] = q
-    end
-    I0 = getoffset(Ip)
-    Q!(backend, workgroupsize)(Q, u, I0; ndrange = Np)
-    Q
-end
-
-"""
-Compute the second eigenvalue of ``S^2 + R^2``,
-as proposed by Jeong and Hussain [Jeong1995](@cite).
-
-Differentiable version.
-"""
-eig2field(u, setup) = eig2field!(scalarfield(setup), u, setup)
-
-"Compute the second eigenvalue of ``S^2 + R^2`` (in-place version)."
-function eig2field!(λ, u, setup)
-    (; grid, backend, workgroupsize) = setup
-    (; dimension, Np, Ip, Δ, Δu) = grid
-    D = dimension()
-    @assert D == 3 "eig2 only implemented in 3D"
-    @kernel function λ!(λ, u, I0)
-        I = @index(Global, Cartesian)
-        I = I + I0
-        ∇u = ∇(u, I, Δ, Δu)
-        S = @. (∇u + ∇u') / 2
-        R = @. (∇u - ∇u') / 2
-        # FIXME: Is not recognized as hermitian with Float64 on CPU
-        λ[I] = eigvals(S^2 + R^2)[2]
-    end
-    I0 = first(Ip)
-    I0 -= oneunit(I0)
-    λ!(backend, workgroupsize)(λ, u, I0; ndrange = Np)
-    λ
 end
 
 """

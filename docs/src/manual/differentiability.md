@@ -32,24 +32,26 @@ make a time stepping loop composed of differentiable operations:
 ```@example Differentiability
 using IncompressibleNavierStokes
 
-ax = range(0, 1, 101)
+n = 100
+ax = range(0, 1, n + 1)
 setup = Setup(; x = (ax, ax), Re = 500.0)
 psolver = default_psolver(setup)
-method = RKMethods.RK44P2()
-Δt = 0.01
+method = LMWray3()
+Δt = 0.001
 nstep = 100
 (; Iu) = setup.grid
 function final_energy(u)
-    stepper = create_stepper(method; setup, psolver, u, temp = nothing, t = 0.0)
+    state = (; u)
+    stepper = create_stepper(method; setup, psolver, state, t = 0.0)
     for it = 1:nstep
-        stepper = timestep(method, stepper, Δt)
+        stepper = timestep(method, navierstokes, stepper, Δt)
     end
-    (; u) = stepper
-    sum(abs2, u[Iu[1], 1]) / 2 + sum(abs2, u[Iu[2], 2]) / 2
+    (; u) = stepper.state
+    E = sum(abs2, u[Iu[1], 1]) / 2n^2 + sum(abs2, u[Iu[2], 2]) / 2n^2
 end
 
 u = random_field(setup)
-
+final_energy(u)
 using Zygote
 g, = Zygote.gradient(final_energy, u)
 

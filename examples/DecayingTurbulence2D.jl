@@ -22,12 +22,12 @@ using IncompressibleNavierStokes
 n = 256
 ax = LinRange(0.0, 1.0, n + 1)
 setup = Setup(; x = (ax, ax), Re = 4e3);
-ustart = random_field(setup, 0.0);
+u = random_field(setup, 0.0);
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(;
     setup,
-    ustart,
+    start = (; u),
     tlims = (0.0, 1.0),
     processors = (
         rtp = realtimeplotter(; setup, nupdate = 10),

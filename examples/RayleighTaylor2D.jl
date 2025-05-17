@@ -41,16 +41,16 @@ setup = Setup(;
 );
 
 # Initial conditions
-ustart = velocityfield(setup, (dim, x, y) -> zero(x));
-tempstart = temperaturefield(setup, (x, y) -> one(x) * (1 + sinpi(x) / 50 > y));
+start = (;
+    u = velocityfield(setup, (dim, x, y) -> zero(x)),
+    temp = temperaturefield(setup, (x, y) -> one(x) * (1 + sinpi(x) / 50 > y)),
+)
 
 # Solve equation
 state, outputs = solve_unsteady(;
     setup,
-    ustart,
-    tempstart,
+    start,
     tlims = (T(0), T(10)),
-    Δt = T(5e-3),
     processors = (;
         rtp = realtimeplotter(;
             setup,

@@ -32,7 +32,6 @@ function compute_convergence(;
     lims,
     Re,
     tlims,
-    Δt,
     uref,
     backend = IncompressibleNavierStokes.CPU(),
 )
@@ -56,7 +55,7 @@ function compute_convergence(;
             psolver,
             doproject = false,
         )
-        (; u, t), outputs = solve_unsteady(; setup, ustart, tlims, Δt, psolver)
+        (; u, t), outputs = solve_unsteady(; setup, start = (; u = ustart), tlims, psolver)
         (; Ip) = setup.grid
         a = sum(abs2, u[Ip, :] - ut[Ip, :])
         b = sum(abs2, ut[Ip, :])
@@ -78,24 +77,23 @@ e = compute_convergence(;
     lims = (0.0, 2π),
     Re,
     tlims = (0.0, 2.0),
-    Δt = 0.01,
     uref = solution(Re),
 )
 
 # Plot convergence
-fig = Figure()
-ax = Axis(
-    fig[1, 1];
-    xscale = log10,
-    yscale = log10,
-    xticks = nlist,
-    xlabel = "n",
-    title = "Relative error",
-)
-scatterlines!(ax, nlist, e; label = "Data")
-lines!(ax, collect(extrema(nlist)), n -> n^-2.0; linestyle = :dash, label = "n^-2")
-axislegend(ax)
-fig
-
-# Save figure
-save(joinpath(outdir, "convergence.png"), fig)
+let
+    fig = Figure()
+    ax = Axis(
+        fig[1, 1];
+        xscale = log10,
+        yscale = log10,
+        xticks = nlist,
+        xlabel = "n",
+        title = "Relative error",
+    )
+    scatterlines!(ax, nlist, e; label = "Data")
+    lines!(ax, collect(extrema(nlist)), n -> n^-2.0; linestyle = :dash, label = "n^-2")
+    axislegend(ax)
+    save(joinpath(outdir, "convergence.png"), fig)
+    fig
+end

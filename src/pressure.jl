@@ -21,33 +21,6 @@ ChainRulesCore.rrule(::typeof(poisson), psolver, f) =
 "Solve the Poisson equation for the pressure (in-place version)."
 poisson!(psolver, f) = psolver(f)
 
-"""
-Compute pressure from velocity field. This makes the pressure compatible with the velocity
-field, resulting in same order pressure as velocity.
-
-Differentiable version.
-"""
-function pressure(u, temp, t, setup; psolver)
-    F = momentum(u, temp, t, setup)
-    F = apply_bc_u(F, t, setup; dudt = true)
-    div = divergence(F, setup)
-    div = scalewithvolume(div, setup)
-    p = poisson(psolver, div)
-    p = apply_bc_p(p, t, setup)
-    p
-end
-
-"Compute pressure from velocity field (in-place version)."
-function pressure!(p, u, temp, t, setup; psolver, F)
-    momentum!(F, u, temp, t, setup)
-    apply_bc_u!(F, t, setup; dudt = true)
-    divergence!(p, F, setup)
-    scalewithvolume!(p, setup)
-    poisson!(psolver, p)
-    apply_bc_p!(p, t, setup)
-    p
-end
-
 "Project velocity field onto divergence-free space (differentiable version)."
 function project(u, setup; psolver)
     T = eltype(u)
@@ -127,7 +100,7 @@ function psolver_direct(::Array, setup)
         ftemp = zeros(Ttemp, prod(Np))
         ptemp = zeros(Ttemp, prod(Np))
         viewrange = (:)
-        fact = factorize(L)
+        fact = lu(L)
     else
         # With extra DOF
         ftemp = zeros(T, prod(Np) + 1)
