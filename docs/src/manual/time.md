@@ -54,11 +54,6 @@ timestep
 timestep!
 ```
 
-## Adams-Bashforth Crank-Nicolson method
-
-```@docs
-AdamsBashforthCrankNicolsonMethod
-```
 
 ## One-leg beta method
 
@@ -71,7 +66,6 @@ OneLegMethod
 ```@docs
 AbstractRungeKuttaMethod
 ExplicitRungeKuttaMethod
-ImplicitRungeKuttaMethod
 RKMethods
 LMWray3
 ```

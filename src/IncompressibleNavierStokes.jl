@@ -114,7 +114,7 @@ export scalarfield, vectorfield, velocityfield, temperaturefield, random_field
 export getoffset, splitseed, plotgrid, save_vtk, get_lims
 
 # ODE methods
-export AdamsBashforthCrankNicolsonMethod, OneLegMethod, RKMethods, LMWray3
+export OneLegMethod, RKMethods, LMWray3
 
 # Operators
 export apply_bc_u,
