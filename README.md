@@ -16,9 +16,6 @@ This package implements energy-conserving solvers for the incompressible Navier-
 equations on a staggered Cartesian grid. It is based on the Matlab package
 [INS2D](https://github.com/bsanderse/INS2D)/[INS3D](https://github.com/bsanderse/INS3D). The simulations can be run on the single/multithreaded CPUs or Nvidia GPUs.
 
-This package also provides experimental support for neural closure models for
-large eddy simulation.
-
 ## Installation
 
 To install IncompressibleNavierStokes, open up a Julia-REPL, type `]` to get
