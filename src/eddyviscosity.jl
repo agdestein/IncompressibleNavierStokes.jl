@@ -2,21 +2,20 @@
 #### Contains:
 #### - Wale                                 wale_closure                    only for 3D
 #### - Smagorinsky                          smagorinsky_closure             only for 3D
-#### - old Smagorinsky for periodic domains smagorinsky_closure_natural     2D and 3D
-#### Use these models in INS, by including them in the setup:
-#### setup = (; setup..., closure_model = IncompressibleNavierStokes.wale_closure)
-#### provide θ as a parameter to solve_unsteady() !!!
+#### Use these models in INS, by including them in the right hand side function.
+#### See `examples/ChannelFlow.jl` for an example.
+#### provide `params` as a parameter to solve_unsteady() !!!
 
-function strain_natural!(S, u, setup)
+function strain!(S, u, setup)
     (; grid, backend, workgroupsize) = setup
     (; Np, Ip, Δ, Δu) = grid
     I0 = getoffset(Ip)
-    strain_natural_kernel!(backend, workgroupsize)(S, u, I0, Δ, Δu; ndrange = Np)
+    strain_kernel!(backend, workgroupsize)(S, u, I0, Δ, Δu; ndrange = Np)
     KernelAbstractions.synchronize(setup.backend)
     S
 end
 
-@kernel function strain_natural_kernel!(S, u, I0::CartesianIndex{2}, Δ, Δu)
+@kernel function strain_kernel!(S, u, I0::CartesianIndex{2}, Δ, Δu)
     I = @index(Global, Cartesian)
     I = I + I0
     ex, ey = unit_cartesian_indices(2)
@@ -31,7 +30,7 @@ end
     S.xy[I] = (∂u∂y + ∂v∂x) / 2
 end
 
-@kernel function strain_natural_kernel!(S, u, I0::CartesianIndex{3}, Δ, Δu)
+@kernel function strain_kernel!(S, u, I0::CartesianIndex{3}, Δ, Δu)
     I = @index(Global, Cartesian)
     I = I + I0
     ex, ey, ez = unit_cartesian_indices(3)
@@ -82,6 +81,10 @@ end
     G.zz[I] = (u[I, 3] - u[I-ez, 3]) / Δwz
 end
 
+"""
+Compute symmetric part of gradient.
+Overwrite the gradient itself.
+"""
 function strain_from_gradient!(G)
     G.xy .= (G.xy .+ G.yx) ./ 2
     G.xz .= (G.xz .+ G.zx) ./ 2
@@ -137,9 +140,9 @@ end
     ex, ey = unit_cartesian_indices(2)
     # TODO: Add interpolation weights here
     visc_xy = (visc[I] + visc[I+ex] + visc[I+ey] + visc[I+ex+ey]) / 4
-    σ.xx[I] = 2 * visc[I] * σ.xx[I]
-    σ.yy[I] = 2 * visc[I] * σ.yy[I]
-    σ.xy[I] = 2 * visc_xy * σ.xy[I]
+    σ.xx[I] = -2 * visc[I] * σ.xx[I]
+    σ.yy[I] = -2 * visc[I] * σ.yy[I]
+    σ.xy[I] = -2 * visc_xy * σ.xy[I]
 end
 
 @kernel function apply_eddy_viscosity_kernel!(σ, visc, I0::CartesianIndex{3}, Δ, Δu)
@@ -150,24 +153,24 @@ end
     visc_xy = (visc[I] + visc[I+ex] + visc[I+ey] + visc[I+ex+ey]) / 4
     visc_xz = (visc[I] + visc[I+ex] + visc[I+ez] + visc[I+ex+ez]) / 4
     visc_yz = (visc[I] + visc[I+ey] + visc[I+ez] + visc[I+ey+ez]) / 4
-    σ.xx[I] = 2 * visc[I] * σ.xx[I]
-    σ.yy[I] = 2 * visc[I] * σ.yy[I]
-    σ.zz[I] = 2 * visc[I] * σ.zz[I]
-    σ.xy[I] = 2 * visc_xy * σ.xy[I]
-    σ.xz[I] = 2 * visc_xz * σ.xz[I]
-    σ.yz[I] = 2 * visc_yz * σ.yz[I]
+    σ.xx[I] = -2 * visc[I] * σ.xx[I]
+    σ.yy[I] = -2 * visc[I] * σ.yy[I]
+    σ.zz[I] = -2 * visc[I] * σ.zz[I]
+    σ.xy[I] = -2 * visc_xy * σ.xy[I]
+    σ.xz[I] = -2 * visc_xz * σ.xz[I]
+    σ.yz[I] = -2 * visc_yz * σ.yz[I]
 end
 
-function divoftensor_natural!(c, σ, setup)
+function divoftensor!(c, σ, setup)
     (; grid, backend, workgroupsize) = setup
     (; Np, Ip, Δ, Δu) = grid
     I0 = getoffset(Ip)
-    divoftensor_natural_kernel!(backend, workgroupsize)(c, σ, I0, Δ, Δu; ndrange = Np)
+    divoftensor_kernel!(backend, workgroupsize)(c, σ, I0, Δ, Δu; ndrange = Np)
     KernelAbstractions.synchronize(setup.backend)
     c
 end
 
-@kernel function divoftensor_natural_kernel!(c, σ, I0::CartesianIndex{2}, Δ, Δu)
+@kernel function divoftensor_kernel!(f, σ, I0::CartesianIndex{2}, Δ, Δu)
     I = @index(Global, Cartesian)
     I = I + I0
     ex, ey = unit_cartesian_indices(2)
@@ -177,11 +180,11 @@ end
     ∂σxy∂y = (σ.xy[I] - σ.xy[I-ey]) / Δpy
     ∂σyx∂x = (σ.xy[I] - σ.xy[I-ex]) / Δpx
     ∂σyy∂y = (σ.yy[I+ey] - σ.yy[I]) / Δuy
-    c[I, 1] = ∂σxx∂x + ∂σxy∂y
-    c[I, 2] = ∂σyx∂x + ∂σyy∂y
+    f[I, 1] -= ∂σxx∂x + ∂σxy∂y
+    f[I, 2] -= ∂σyx∂x + ∂σyy∂y
 end
 
-@kernel function divoftensor_natural_kernel!(c, σ, I0::CartesianIndex{3}, Δ, Δu)
+@kernel function divoftensor_kernel!(c, σ, I0::CartesianIndex{3}, Δ, Δu)
     I = @index(Global, Cartesian)
     I = I + I0
     ex, ey, ez = unit_cartesian_indices(3)
@@ -196,9 +199,9 @@ end
     ∂σzx∂x = (σ.xz[I] - σ.xz[I-ex]) / Δpx
     ∂σzy∂y = (σ.yz[I] - σ.yz[I-ey]) / Δpy
     ∂σzz∂z = (σ.zz[I+ez] - σ.zz[I]) / Δuz
-    c[I, 1] = ∂σxx∂x + ∂σxy∂y + ∂σxz∂z
-    c[I, 2] = ∂σyx∂x + ∂σyy∂y + ∂σyz∂z
-    c[I, 3] = ∂σzx∂x + ∂σzy∂y + ∂σzz∂z
+    c[I, 1] -= ∂σxx∂x + ∂σxy∂y + ∂σxz∂z
+    c[I, 2] -= ∂σyx∂x + ∂σyy∂y + ∂σyz∂z
+    c[I, 3] -= ∂σzx∂x + ∂σzy∂y + ∂σzz∂z
 end
 
 function wale_viscosity!(visc, G_split, θ, setup)
@@ -233,15 +236,15 @@ end
         (dot(S, S)^T(5 / 2) + dot(Sd, Sd)^T(5/4) + eps(T))
 end
 
-function smagvisc!(visc, G, θ, setup)
+function smagorinsky_viscosity!(visc, G, θ, setup)
     (; grid, backend, workgroupsize) = setup
     (; Np, Ip, Δ) = grid
     I0 = getoffset(Ip)
-    smagvisc_kernel!(backend, workgroupsize)(visc, G, I0, Δ, θ; ndrange = Np)
+    smagorinsky_viscosity_kernel!(backend, workgroupsize)(visc, G, I0, Δ, θ; ndrange = Np)
     KernelAbstractions.synchronize(setup.backend)
 end
 
-@kernel function smagvisc_kernel!(visc, G_split, I0::CartesianIndex{3}, Δ, θ)
+@kernel function smagorinsky_viscosity_kernel!(visc, G_split, I0::CartesianIndex{3}, Δ, θ)
     I = @index(Global, Cartesian)
     I = I + I0
     T = eltype(G_split.xx)
@@ -294,7 +297,7 @@ function wale_closure(u, θ, stuff, setup)
         zero_out_wall!(g, setup)
         apply_bc_p!(g, zero(eltype(u)), setup)
     end
-    divoftensor_natural!(c, G, setup)
+    divoftensor!(c, G, setup)
     KernelAbstractions.synchronize(setup.backend)
     c
 end
@@ -312,7 +315,7 @@ function smagorinsky_closure(u, θ, stuff, setup)
         zero_out_wall!(g, setup)
         apply_bc_p!(g, zero(eltype(u)), setup)
     end
-    smagvisc!(visc, G, θ, setup)
+    smagorinsky_viscosity!(visc, G, θ, setup)
     zero_out_wall!(visc, setup)
 
     apply_bc_p!(visc, zero(eltype(u)), setup)
@@ -322,29 +325,12 @@ function smagorinsky_closure(u, θ, stuff, setup)
         zero_out_wall!(g, setup)
         apply_bc_p!(g, zero(eltype(u)), setup)
     end
-    divoftensor_natural!(c, G, setup)
+    divoftensor!(c, G, setup)
     KernelAbstractions.synchronize(setup.backend)
     c
 end
 
-"Smagorinsky closure."
-function smagorinsky_closure_natural(u, θ, stuff, setup)
-    (; c, visc, G) = stuff
-    strain_natural!(G, u, setup)
-    smagorinsky_viscosity!(visc, G, θ, setup)
-    apply_eddy_viscosity!(G, visc, setup)
-    divoftensor_natural!(c, G, setup)
-    c
-end
-
-function get_cache(
-    ::Union{
-        typeof(wale_closure),
-        typeof(smagorinsky_closure),
-        typeof(smagorinsky_closure_natural),
-    },
-    setup,
-)
+function get_cache(::Union{typeof(wale_closure),typeof(smagorinsky_closure)}, setup)
     (; dimension, x, N) = setup.grid
     D = dimension()
     T = eltype(x[1])
@@ -369,6 +355,5 @@ function get_cache(
             zz = scalarfield(setup),
         )
     end
-    c = vectorfield(setup)
-    (; c, visc, G)
+    (; visc, G)
 end
