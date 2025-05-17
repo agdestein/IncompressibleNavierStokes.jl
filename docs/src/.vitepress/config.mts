@@ -76,15 +76,13 @@ const sidebar = {
     items: [
       { text: 'Examples gallery', link: '/examples/' },
       {
-        text: 'Simple flows',
+        text: 'Periodic box',
         items: [
           { text: 'Decaying Turbulunce (2D)', link: '/examples/generated/DecayingTurbulence2D' },
           { text: 'Decaying Turbulunce (3D)', link: '/examples/generated/DecayingTurbulence3D' },
           { text: 'Taylor-Green Vortex (2D)', link: '/examples/generated/TaylorGreenVortex2D' },
           { text: 'Taylor-Green Vortex (3D)', link: '/examples/generated/TaylorGreenVortex3D' },
           { text: 'Kolmogorov flow (2D)', link: '/examples/generated/Kolmogorov2D' },
-          { text: 'Shear Layer (2D)', link: '/examples/generated/ShearLayer2D' },
-          { text: 'Plane jets (2D)', link: '/examples/generated/PlaneJets2D' },
         ],
       },
       {
@@ -95,9 +93,7 @@ const sidebar = {
           { text: 'Backward Facing Step (2D)', link: '/examples/generated/BackwardFacingStep2D' },
           { text: 'Backward Facing Step (3D)', link: '/examples/generated/BackwardFacingStep3D' },
           { text: 'Lid-Driven Cavity (2D)', link: '/examples/generated/LidDrivenCavity2D' },
-          { text: 'Lid-Driven Cavity (3D)', link: '/examples/generated/LidDrivenCavity3D' },
           { text: 'Multiple actuators (2D)', link: '/examples/generated/MultiActuator' },
-          { text: 'Planar Mixing (2D)', link: '/examples/generated/PlanarMixing2D' },
         ],
       },
       {
@@ -106,7 +102,6 @@ const sidebar = {
           { text: 'Rayleigh-Bénard (2D)', link: '/examples/generated/RayleighBenard2D' },
           { text: 'Rayleigh-Bénard (3D)', link: '/examples/generated/RayleighBenard3D' },
           { text: 'Rayleigh-Taylor (2D)', link: '/examples/generated/RayleighTaylor2D' },
-          { text: 'Rayleigh-Taylor (3D)', link: '/examples/generated/RayleighTaylor3D' },
         ],
       },
     ],

@@ -33,8 +33,7 @@ boundary_conditions = (
 # created as a Cartesian product between two vectors. We add a refinement near
 # the walls.
 n = 32
-lims = 0.0, 1.0
-ax = cosine_grid(lims..., n)
+ax = tanh_grid(0.0, 1.0, n)
 plotgrid(ax, ax)
 
 # We can now build the setup and assemble operators.
@@ -67,7 +66,9 @@ state, outputs = solve_unsteady(; setup, start = (; u), tlims = (0.0, 10.0), pro
 # Export fields to VTK. The file `outdir/solution.vti` may be opened for
 # visualization in [ParaView](https://www.paraview.org/). This is particularly
 # useful for inspecting results from 3D simulations.
-save_vtk(state; setup, filename = joinpath(outdir, "solution"))
+
+filenmae = joinpath(@__DIR__, "output", "solution")
+## save_vtk(state; setup, filename)
 
 # Plot velocity
 fieldplot(state; setup, fieldname = :velocitynorm)
