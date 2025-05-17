@@ -1,3 +1,46 @@
+"Navier-Stokes momentum forcing (convection + diffusion)."
+function navierstokes!(f, state, t, params, setup, cache)
+    (; u) = state
+    fill!(f.u, 0)
+    convectiondiffusion!(f.u, state.u, setup)
+end
+
+"Navier-Stokes momentum forcing (convection + diffusion)."
+function navierstokes(state, t, params, setup)
+    c = convection(state.u, setup)
+    d = diffusion(state.u, setup)
+    (; u = c + d)
+end
+
+"Boussinesq forcing (Navier-Stokes + gravity for `u`, convection-diffusion for `temp`)."
+function boussinesq!(f, state, t, params, setup, cache)
+    (; temperature) = setup
+    (; u, temp) = state
+    (; diff) = cache
+    fill!(f.u, 0)
+    fill!(f.temp, 0)
+    convectiondiffusion!(f.u, u, setup)
+    gravity!(f.u, temp, setup)
+    convection_diffusion_temp!(f.temp, u, temp, setup)
+    temperature.dodissipation && dissipation!(f.temp, diff, u, setup)
+end
+
+"Boussinesq forcing (Navier-Stokes + gravity for `u`, convection-diffusion for `temp`)."
+function boussinesq(state, t, params, setup)
+    (; temperature) = setup
+    (; u, temp) = state
+    d = diffusion(u, setup)
+    c = convection(u, setup)
+    g = gravity(temp, setup)
+    fu = @. c + d + g
+    ftemp = convection_diffusion_temp(u, temp, setup)
+    temperature.dodissipation && (ftemp += dissipation(u, setup))
+    (; u = fu, temp = ftemp)
+end
+
+get_cache(::typeof(navierstokes!), setup) = nothing
+get_cache(::typeof(boussinesq!), setup) = (; diff = vectorfield(setup))
+
 """
 Solve unsteady problem using `method`.
 
@@ -17,41 +60,32 @@ outputs of `processors` with the same field names.
 """
 function solve_unsteady(;
     setup,
+    force! = isnothing(setup.temperature) ? navierstokes! : boussinesq!,
     tlims,
-    ustart,
-    tempstart = nothing,
-    method = RKMethods.RK44(; T = eltype(ustart)),
+    start,
+    docopy = true,
+    method = LMWray3(; T = eltype(start.u)),
     psolver = default_psolver(setup),
     Δt = nothing,
     Δt_min = nothing,
-    cfl = eltype(ustart)(0.9),
+    cfl = eltype(start.u)(0.9),
     n_adapt_Δt = 1,
-    docopy = true,
     processors = (;),
-    θ = nothing,
+    params = nothing,
     # Cache arrays for intermediate computations
-    cache = ode_method_cache(method, setup),
+    ode_cache = get_cache(method, setup),
+    force_cache = get_cache(force!, setup),
 )
-    docopy && (ustart = copy(ustart))
-    docopy && !isnothing(tempstart) && (tempstart = copy(tempstart))
-
     tstart, tend = tlims
     isadaptive = isnothing(Δt)
     if isadaptive
         cflbuf = scalarfield(setup)
     end
 
-    # Get cache for closure model
-    if isnothing(setup.closure_model)
-        closure_stuff = nothing
-    else
-        closure_stuff = get_closure_stuff(setup.closure_model, setup)
-    end
-    cache = (; cache..., closure_stuff)
+    state = docopy ? deepcopy(start) : start
 
     # Time stepper
-    stepper =
-        create_stepper(method; setup, psolver, u = ustart, temp = tempstart, t = tstart)
+    stepper = create_stepper(method; setup, psolver, state, t = tstart)
 
     # Initialize processors for iteration results
     state = Observable(get_state(stepper))
@@ -61,8 +95,7 @@ function solve_unsteady(;
         while stepper.t < tend
             if stepper.n % n_adapt_Δt == 0
                 # Change timestep based on operators
-                # Δt = get_timestep(stepper, cfl)
-                Δt = cfl * get_cfl_timestep!(cflbuf, stepper.u, setup)
+                Δt = cfl * get_cfl_timestep!(cflbuf, stepper.state, setup)
                 Δt = isnothing(Δt_min) ? Δt : max(Δt, Δt_min)
             end
 
@@ -70,7 +103,7 @@ function solve_unsteady(;
             Δt = min(Δt, tend - stepper.t)
 
             # Perform a single time step with the time integration method
-            stepper = timestep!(method, stepper, Δt; θ, cache)
+            stepper = timestep!(method, force!, stepper, Δt; params, ode_cache, force_cache)
 
             # Process iteration results with each processor
             state[] = get_state(stepper)
@@ -80,15 +113,12 @@ function solve_unsteady(;
         Δt = (tend - tstart) / nstep
         for it = 1:nstep
             # Perform a single time step with the time integration method
-            stepper = timestep!(method, stepper, Δt; θ, cache)
+            stepper = timestep!(method, force!, stepper, Δt; params, ode_cache, force_cache)
 
             # Process iteration results with each processor
             state[] = get_state(stepper)
         end
     end
-
-    # Final state
-    (; u, temp, t) = stepper
 
     # Processor outputs
     outputs = (;
@@ -96,20 +126,21 @@ function solve_unsteady(;
     )
 
     # Return state and outputs
-    (; u, temp, t), outputs
+    (; stepper.state..., stepper.t), outputs
 end
 
 "Get state `(; u, temp, t, n)` from stepper."
 function get_state(stepper)
-    (; u, temp, t, n) = stepper
-    (; u, temp, t, n)
+    (; state, t, n) = stepper
+    (; state..., t, n)
 end
 
 "Get proposed maximum time step for convection and diffusion terms."
-function get_cfl_timestep!(buf, u, setup)
+function get_cfl_timestep!(buf, state, setup)
     (; Re, grid) = setup
     (; dimension, Δ, Δu, Iu) = grid
     D = dimension()
+    (; u) = state
 
     # Initial maximum step size
     Δt = eltype(u)(Inf)

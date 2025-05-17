@@ -836,48 +836,6 @@ end
     ϵ[I] = 2 * visc * sum(S .* S)
 end
 
-"Compute body force (differentiable version)."
-function applybodyforce(u, t, setup)
-    (; grid, bodyforce, issteadybodyforce) = setup
-    (; dimension, xu) = grid
-    D = dimension()
-    if issteadybodyforce
-        bodyforce
-    else
-        stack(map(α -> bodyforce.(α, xu[α]..., t), 1:D))
-    end
-end
-
-# "Compute body force (differentiable version)."
-# applybodyforce(u, t, setup) = applybodyforce!(zero.(u), u, t, setup)
-
-# ChainRulesCore.rrule(::typeof(applybodyforce), u, t, setup) =
-#     (applybodyforce(u, t, setup), φ -> error("Not yet implemented"))
-
-"""
-Compute body force (in-place version).
-Add the result to `F`.
-"""
-function applybodyforce!(F, u, t, setup)
-    (; grid, bodyforce, issteadybodyforce) = setup
-    (; dimension, Iu, xu) = grid
-    D = dimension()
-    if issteadybodyforce
-        F .+= bodyforce
-    else
-        for (α, Fα) in enumerate(eachslice(F; dims = D + 1))
-            # xin = ntuple(
-            #     β -> reshape(xu[α][β][Iu[α].indices[β]], ntuple(Returns(1), β - 1)..., :),
-            #     D,
-            # )
-            # @. F[α][Iu[α]] += bodyforce(α, xin..., t)
-            xin = ntuple(β -> reshape(xu[α][β], ntuple(Returns(1), β - 1)..., :), D)
-            Fα .+= bodyforce.(α, xin..., t)
-        end
-    end
-    F
-end
-
 "Compute gravity term (differentiable version)."
 gravity(temp, setup) = gravity!(vectorfield(setup), temp, setup)
 
@@ -927,51 +885,6 @@ function gravity!(F, temp, setup)
     I0 = first(Iu[gdir])
     I0 -= oneunit(I0)
     g!(backend, workgroupsize)(F, temp, Val(gdir), I0; ndrange = Nu[gdir])
-    F
-end
-
-"""
-Right hand side of momentum equations, excluding pressure gradient
-(differentiable version).
-"""
-function momentum(u, temp, t, setup)
-    (; bodyforce) = setup
-    d = diffusion(u, setup)
-    c = convection(u, setup)
-    F = @. d + c
-    if !isnothing(bodyforce)
-        f = applybodyforce(u, t, setup)
-        F = @. F + f
-    end
-    if !isnothing(temp)
-        g = gravity(temp, setup)
-        F = @. F + g
-    end
-    F
-end
-
-# ChainRulesCore.rrule(::typeof(momentum), u, temp, t, setup) = (
-#     (error(); momentum(u, temp, t, setup)),
-#     φ -> (
-#         NoTangent(),
-#         Tangent{typeof(u)}(momentum_pullback!(zero.(φ), φ, u, temp, t, setup)...),
-#         NoTangent(),
-#         NoTangent(),
-#     ),
-# )
-
-"""
-Right hand side of momentum equations, excluding pressure gradient
-(in-place version).
-"""
-function momentum!(F, u, temp, t, setup)
-    (; grid, bodyforce) = setup
-    (; dimension) = grid
-    D = dimension()
-    fill!(F, 0)
-    convectiondiffusion!(F, u, setup)
-    isnothing(bodyforce) || applybodyforce!(F, u, t, setup)
-    isnothing(temp) || gravity!(F, temp, setup)
     F
 end
 
@@ -1133,8 +1046,6 @@ end
 @inline gridsize(Δ, I::CartesianIndex{D}) where {D} = # Gridsize based on the length of the diagonal of the cell
     sqrt(sum(ntuple(α -> Δ[α][I[α]]^2, D)))
 
-
-
 divoftensor(σ, setup) = divoftensor!(vectorfield(setup), σ, setup)
 
 ChainRulesCore.rrule(::typeof(divoftensor), σ, setup) = (
@@ -1270,8 +1181,6 @@ end
         end # if inside
     end # α
 end
-
-
 
 "Interpolate velocity to pressure points (differentiable version)."
 interpolate_u_p(u, setup) = interpolate_u_p!(vectorfield(setup), u, setup)

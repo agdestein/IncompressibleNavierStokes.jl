@@ -50,33 +50,45 @@ boundary_conditions = (
     (PressureBC(), PressureBC()),
 )
 
-# Actuator body force: A thrust coefficient `Cₜ` distributed over a short cylinder
-cx, cy, cz = T(2), T(0), T(0) # Disk center
-D = T(1)                      # Disk diameter
-δ = T(0.11)                   # Disk thickness
-Cₜ = T(0.2)                  # Thrust coefficient
-cₜ = Cₜ / (π * (D / 2)^2 * δ)
-inside(x, y, z) = abs(x - cx) ≤ δ / 2 && (y - cy)^2 + (z - cz)^2 ≤ (D / 2)^2
-bodyforce(dim, x, y, z) = dim == 1 ? -cₜ * inside(x, y, z) : zero(x)
+# This is the right-hand side force in the momentum equation
+# By default, it is just `navierstokes!`. Here we add a
+# pre-computed body force.
+function force!(f, state, t, params, setup, cache)
+    navierstokes!(f, state, t, nothing, setup, nothing)
+    f.u .+= cache.bodyforce
+end
+
+# Tell IncompressibleNavierStokes how to prepare the cache for `force!`.
+# The cache is created before time stepping begins.
+function IncompressibleNavierStokes.get_cache(::typeof(force!), setup)
+    # Actuator body force: A thrust coefficient `Cₜ` distributed over a short cylinder
+    cx, cy, cz = T(2), T(0), T(0) # Disk center
+    D = T(1)                      # Disk diameter
+    δ = T(0.11)                   # Disk thickness
+    Cₜ = T(0.2)                  # Thrust coefficient
+    cₜ = Cₜ / (π * (D / 2)^2 * δ)
+    inside(x, y, z) = abs(x - cx) ≤ δ / 2 && (y - cy)^2 + (z - cz)^2 ≤ (D / 2)^2
+    f(dim, x, y, z) = dim == 1 ? -cₜ * inside(x, y, z) : zero(x)
+    bodyforce = velocityfield(setup, f; doproject = false)
+    (; bodyforce)
+end
 
 # Build setup and assemble operators
-setup = Setup(; x, Re, boundary_conditions, bodyforce, backend);
+setup = Setup(; x, Re, boundary_conditions, backend);
 
 # Initial conditions (extend inflow)
-ustart = velocityfield(setup, (dim, x, y, z) -> dim == 1 ? one(x) : zero(x));
+u = velocityfield(setup, (dim, x, y, z) -> dim == 1 ? one(x) : zero(x));
 
 # Solve unsteady problem
-(; u, t), outputs = solve_unsteady(;
+state, outputs = solve_unsteady(;
     setup,
-    ustart,
+    force!,
+    start = (; u),
     tlims = (T(0), T(3)),
-    method = RKMethods.RK44P2(),
-    Δt = T(0.05),
     processors = (
         rtp = realtimeplotter(;
             setup,
-            plot = fieldplot,
-            ## plot = energy_history_plot,
+            plot = energy_history_plot,
             ## plot = energy_spectrum_plot,
             nupdate = 1,
         ),

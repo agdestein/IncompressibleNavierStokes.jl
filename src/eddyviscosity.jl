@@ -12,7 +12,7 @@ function strain_natural!(S, u, setup)
     (; Np, Ip, Δ, Δu) = grid
     I0 = getoffset(Ip)
     strain_natural_kernel!(backend, workgroupsize)(S, u, I0, Δ, Δu; ndrange = Np)
-        KernelAbstractions.synchronize(setup.backend)
+    KernelAbstractions.synchronize(setup.backend)
     S
 end
 
@@ -224,23 +224,24 @@ end
         (G_split.yz[I] + G_split.yz[I-ey] + G_split.yz[I-ez] + G_split.yz[I-ey-ez]) / 4,
         G_split.zz[I],
     )
-    
     d = gridsize_vol(Δ, I)
     S = (G + G') / 2
     G2 = G * G
     Sd = (G2 + G2') / 2 - tr(G2) * one(G2) / 3
-    visc[I] = (θ * d)^2 * dot(Sd, Sd)^T(3 / 2) / (dot(S, S)^T(5 / 2) + dot(Sd, Sd)^T(5/4) + eps(T))
+    visc[I] =
+        (θ * d)^2 * dot(Sd, Sd)^T(3 / 2) /
+        (dot(S, S)^T(5 / 2) + dot(Sd, Sd)^T(5/4) + eps(T))
 end
 
-function smagvisc2!(visc, G, θ, setup)
+function smagvisc!(visc, G, θ, setup)
     (; grid, backend, workgroupsize) = setup
     (; Np, Ip, Δ) = grid
     I0 = getoffset(Ip)
-    smagvisc2_kernel!(backend, workgroupsize)(visc, G, I0, Δ, θ; ndrange = Np)
+    smagvisc_kernel!(backend, workgroupsize)(visc, G, I0, Δ, θ; ndrange = Np)
     KernelAbstractions.synchronize(setup.backend)
 end
 
-@kernel function smagvisc2_kernel!(visc, G_split, I0::CartesianIndex{3}, Δ, θ)
+@kernel function smagvisc_kernel!(visc, G_split, I0::CartesianIndex{3}, Δ, θ)
     I = @index(Global, Cartesian)
     I = I + I0
     T = eltype(G_split.xx)
@@ -261,16 +262,17 @@ end
     visc[I] = θ^2 * d^2 * sqrt(2 * dot(S, S))
 end
 
-
 function zero_out_wall!(p, setup)
     d = setup.grid.dimension()
     for i = 1:d
         bc = setup.boundary_conditions[i]
         bc[1] isa DirichletBC && fill!(view(p, ntuple(j -> i == j ? 1 : (:), d)...), 0)
-        bc[2] isa DirichletBC && fill!(view(p, ntuple(j -> i == j ? size(p, i) : (:), d)...), 0)
+        bc[2] isa DirichletBC &&
+            fill!(view(p, ntuple(j -> i == j ? size(p, i) : (:), d)...), 0)
     end
 end
 
+"Apply WALE closure model."
 function wale_closure(u, θ, stuff, setup)
     (; c, visc, G) = stuff
     fill!(visc, 0)
@@ -297,6 +299,7 @@ function wale_closure(u, θ, stuff, setup)
     c
 end
 
+"Apply Smagorinsky closure model."
 function smagorinsky_closure(u, θ, stuff, setup)
     (; c, visc, G) = stuff
     fill!(visc, 0)
@@ -309,7 +312,7 @@ function smagorinsky_closure(u, θ, stuff, setup)
         zero_out_wall!(g, setup)
         apply_bc_p!(g, zero(eltype(u)), setup)
     end
-    smagvisc2!(visc, G, θ, setup)
+    smagvisc!(visc, G, θ, setup)
     zero_out_wall!(visc, setup)
 
     apply_bc_p!(visc, zero(eltype(u)), setup)
@@ -333,7 +336,14 @@ function smagorinsky_closure_natural(u, θ, stuff, setup)
     c
 end
 
-function get_closure_stuff(::Union{typeof(wale_closure), typeof(smagorinsky_closure), typeof(smagorinsky_closure_natural)}, setup)
+function get_closure_stuff(
+    ::Union{
+        typeof(wale_closure),
+        typeof(smagorinsky_closure),
+        typeof(smagorinsky_closure_natural),
+    },
+    setup,
+)
     (; dimension, x, N) = setup.grid
     D = dimension()
     T = eltype(x[1])

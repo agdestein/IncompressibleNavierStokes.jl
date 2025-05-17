@@ -1,120 +1,96 @@
-create_stepper(::ExplicitRungeKuttaMethod; setup, psolver, u, temp, t, n = 0) =
-    (; setup, psolver, u, temp, t, n)
+create_stepper(::ExplicitRungeKuttaMethod; setup, psolver, state, t, n = 0) =
+    (; setup, psolver, state, t, n)
 
-function timestep!(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing, cache)
-    (; setup, psolver, u, temp, t, n) = stepper
-    (; closure_model, temperature) = setup
+function timestep!(
+    method::ExplicitRungeKuttaMethod,
+    force!,
+    stepper,
+    Δt;
+    params = nothing,
+    ode_cache,
+    force_cache,
+)
+    (; setup, psolver, state, t, n) = stepper
+    (; temperature) = setup
     (; A, b, c) = method
-    (; ustart, ku, p, tempstart, ktemp, diff, closure_stuff) = cache
+    (; statestart, k, p) = ode_cache
+    dotemp = !isnothing(temperature)
     nstage = length(b)
-    m = closure_model
 
     # Update current solution
     tstart = t
-    copyto!(ustart, u)
-    isnothing(temp) || copyto!(tempstart, temp)
+    copyto!(statestart.u, state.u)
+    dotemp && copyto!(statestart.temp, state.temp)
 
     for i = 1:nstage
         # Compute force at current stage i
-        apply_bc_u!(u, t, setup)
-        isnothing(temp) || apply_bc_temp!(temp, t, setup)
-        momentum!(ku[i], u, temp, t, setup)
-        if !isnothing(temp)
-            ktemp[i] .= 0
-            convection_diffusion_temp!(ktemp[i], u, temp, setup)
-            temperature.dodissipation && dissipation!(ktemp[i], diff, u, setup)
-        end
+        force!(k[i], state, t, params, setup, force_cache)
 
-        # Add closure term
-        isnothing(m) || (ku[i] .+= m(u, θ, closure_stuff, setup))
+        # Apply stage forces
+        copyto!(state.u, statestart.u)
+        dotemp && copyto!(state.temp, statestart.temp)
+        for j = 1:i
+            @. state.u += Δt * A[i, j] * k[j].u
+            dotemp && @. state.temp += Δt * A[i, j] * k[j].temp
+        end
 
         # Intermediate time step
         t = tstart + c[i] * Δt
-
-        # Apply stage forces
-        u .= ustart
-        for j = 1:i
-            @. u += Δt * A[i, j] * ku[j]
-        end
-        if !isnothing(temp)
-            temp .= tempstart
-            for j = 1:i
-                @. temp += Δt * A[i, j] * ktemp[j]
-            end
-        end
 
         # Project stage u directly
         # Make velocity divergence free at time t
-        apply_bc_u!(u, t, setup)
-        project!(u, setup; psolver, p)
+        apply_bc_u!(state.u, t, setup)
+        project!(state.u, setup; psolver, p)
+
+        # Fill boundary values at new time
+        apply_bc_u!(state.u, t, setup)
+        dotemp && apply_bc_temp!(state.temp, t, setup)
     end
 
-    # This is redundant, but Neumann BC need to have _exact_ copies
-    # since we divide by an infinitely thin (eps(T)) volume width in the
-    # diffusion term
-    apply_bc_u!(u, t, setup)
-    isnothing(temp) || apply_bc_temp!(temp, t, setup)
-
-    create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
+    create_stepper(method; setup, psolver, state, t, n = n + 1)
 end
 
-function timestep(method::ExplicitRungeKuttaMethod, stepper, Δt; θ = nothing)
-    (; setup, psolver, u, temp, t, n) = stepper
-    (; closure_model, temperature) = setup
+function timestep(method::ExplicitRungeKuttaMethod, force, stepper, Δt; params = nothing)
+    (; setup, psolver, state, t, n) = stepper
     (; A, b, c) = method
+    (; temperature) = setup
+    dotemp = !isnothing(temperature)
     nstage = length(b)
-    m = closure_model
 
     # Update current solution (does not depend on previous step size)
     tstart = t
-    ustart = u
-    tempstart = temp
-    ku = ()
-    ktemp = ()
+    statestart = deepcopy(state)
+    k = ()
 
     for i = 1:nstage
         # Compute force at current stage i
-        u = apply_bc_u(u, t, setup)
-        isnothing(temp) || (temp = apply_bc_temp(temp, t, setup))
-        F = momentum(u, temp, t, setup)
-        if !isnothing(temp)
-            Ftemp = convection_diffusion_temp(u, temp, setup)
-            temperature.dodissipation && (Ftemp += dissipation(u, setup))
-        end
-
-        # Add closure term
-        isnothing(m) || (F = F + m(u, θ))
+        f = force(state, t, params, setup)
 
         # Store right-hand side of stage i
-        ku = (ku..., F)
-        isnothing(temp) || (ktemp = (ktemp..., Ftemp))
-
-        # Intermediate time step
-        t = tstart + c[i] * Δt
+        k = (k..., f)
 
         # Apply stage forces
-        u = ustart
+        u = statestart.u
+        dotemp && (temp = statestart.temp)
         for j = 1:i
-            u = @. u + Δt * A[i, j] * ku[j]
+            u = @. u + Δt * A[i, j] * k[j].u
+            dotemp && (temp = @. temp + Δt * A[i, j] * k[j].temp)
         end
-        if !isnothing(temp)
-            temp = tempstart
-            for j = 1:i
-                temp = @. temp + Δt * A[i, j] * ktemp[j]
-            end
-        end
+
+        # New time step
+        t = tstart + c[i] * Δt
 
         # Project stage u directly
         # Make velocity divergence free at time t
         u = apply_bc_u(u, t, setup)
         u = project(u, setup; psolver)
+
+        # Fill boundary values at new time
+        u = apply_bc_u(u, t, setup)
+        dotemp && (temp = apply_bc_temp(temp, t, setup))
+
+        state = dotemp ? (; u, temp) : (; u)
     end
 
-    # This is redundant, but Neumann BC need to have _exact_ copies
-    # since we divide by an infinitely thin (eps(T)) volume width in the
-    # diffusion term
-    u = apply_bc_u(u, t, setup)
-    isnothing(temp) || (temp = apply_bc_temp(temp, t, setup))
-
-    create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
+    create_stepper(method; setup, psolver, state, t, n = n + 1)
 end

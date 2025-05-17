@@ -46,8 +46,8 @@ The code is currently not adapted to time steppers from
 but they may be integrated in the future.
 
 ```@docs
+get_cache
 AbstractODEMethod
-ode_method_cache
 runge_kutta_method
 create_stepper
 timestep

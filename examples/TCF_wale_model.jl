@@ -116,7 +116,6 @@ end
 
 ustart = velocityfield(setup, ustartfunc; psolver);
 
-
 function volplot(state; setup)
     state isa Observable || (state = Observable(state))
     (; x) = setup.grid

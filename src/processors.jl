@@ -82,23 +82,22 @@ function observefield(
     psolver = nothing,
 )
     (; dimension, Ip) = setup.grid
-    (; u, temp, t) = state[]
     D = dimension()
 
     # Initialize buffers
     _f = if fieldname in (1, 2, 3)
-        up = interpolate_u_p(u, setup)
+        up = interpolate_u_p(state[].u, setup)
         upf = selectdim(up, ndims(up), fieldname)
     elseif fieldname == :velocity
-        up = interpolate_u_p(u, setup)
+        up = interpolate_u_p(state[].u, setup)
     elseif fieldname == :velocitynorm
-        up = interpolate_u_p(u, setup)
+        up = interpolate_u_p(state[].u, setup)
         upnorm = scalarfield(setup)
     elseif fieldname == :vorticity
-        ω = vorticity(u, setup)
+        ω = vorticity(state[].u, setup)
         ωp = interpolate_ω_p(ω, setup)
     elseif fieldname == :streamfunction
-        ψ = get_streamfunction(setup, u, t)
+        ψ = get_streamfunction(setup, state[].u, t)
     elseif fieldname == :pressure
         if isnothing(psolver)
             @warn "Creating new pressure solver for observefield"
@@ -125,10 +124,10 @@ function observefield(
         sym = string(fieldname)[1]
         sym = sym == 'B' ? 1 : 2
         idx = parse(Int, string(fieldname)[2:end])
-        tb = tensorbasis(u, setup)
+        tb = tensorbasis(state[].u, setup)
         tb[sym][idx]
     elseif fieldname == :temperature
-        temp
+        state[].temp
     else
         error("Unknown fieldname")
     end
@@ -141,14 +140,14 @@ function observefield(
     end
 
     # Observe field
-    field = map(state) do (; u, temp, t)
+    field = map(state) do state
         f = if fieldname in (1, 2, 3)
-            interpolate_u_p!(up, u, setup)
+            interpolate_u_p!(up, state.u, setup)
             upf
         elseif fieldname == :velocity
-            interpolate_u_p!(up, u, setup)
+            interpolate_u_p!(up, state.u, setup)
         elseif fieldname == :velocitynorm
-            interpolate_u_p!(up, u, setup)
+            interpolate_u_p!(up, state.u, setup)
             # map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
             if D == 2
                 uptuple = eachslice(up; dims = ndims(up))
@@ -158,37 +157,37 @@ function observefield(
                 @. upnorm = sqrt(uptuple[1]^2 + uptuple[2]^2 + uptuple[3]^2)
             end
         elseif fieldname == :vorticity
-            apply_bc_u!(u, t, setup)
-            vorticity!(ω, u, setup)
+            apply_bc_u!(state.u, state.t, setup)
+            vorticity!(ω, state.u, setup)
             interpolate_ω_p!(ωp, ω, setup)
         elseif fieldname == :streamfunction
-            get_streamfunction(setup, u, t)
+            get_streamfunction(setup, state.u, t)
         elseif fieldname == :pressure
-            pressure!(p, u, temp, t, setup; psolver, F)
+            pressure!(p, state, t, setup; psolver, F)
         elseif fieldname == :Dfield
-            pressure!(p, u, temp, t, setup; psolver, F)
+            pressure!(p, state, t, setup; psolver, F)
             Dfield!(d, G, p, setup)
             din = view(d, Ip)
             @. din = log(max(logtol, din))
             d
         elseif fieldname == :Qfield
-            Qfield!(Q, u, setup)
+            Qfield!(Q, state.u, setup)
             Qin = view(Q, Ip)
             @. Qin = log(max(logtol, Qin))
             Q
         elseif fieldname == :qcrit
-            qcrit!(q, u, setup)
+            qcrit!(q, state.u, setup)
         elseif fieldname == :eig2field
-            eig2field!(λ, u, setup)
+            eig2field!(λ, state.u, setup)
             λin = view(λ, Ip)
             @. λin .= log(max(logtol, -λin))
             λ
         elseif fieldname in
                union(Symbol.(["B$i" for i = 1:11]), Symbol.(["V$i" for i = 1:5]))
-            tensorbasis!(tb..., u, setup)
+            tensorbasis!(tb..., state.u, setup)
             tb[sym][idx]
         elseif fieldname == :temperature
-            temp
+            state.temp
         end
         if ndims(f) == D + 1
             copyto!(_f, view(f, Ip, :))

@@ -19,25 +19,31 @@
                 method;
                 setup,
                 psolver,
-                u = copy(u),
-                temp = copy(temp),
+                state = (; u = copy(u), temp = copy(temp)),
                 t = 0.0,
             )
-            timestep(method, stepper, Δt)
+            timestep(method, boussinesq, stepper, Δt)
         end
         stepper_inplace = let
-            cache = IncompressibleNavierStokes.ode_method_cache(method, setup)
+            force_cache = IncompressibleNavierStokes.get_cache(boussinesq!, setup)
+            ode_cache = IncompressibleNavierStokes.get_cache(method, setup)
             stepper = create_stepper(
                 method;
                 setup,
                 psolver,
-                u = copy(u),
-                temp = copy(temp),
+                state = (; u = copy(u), temp = copy(temp)),
                 t = 0.0,
             )
-            IncompressibleNavierStokes.timestep!(method, stepper, Δt; cache)
+            IncompressibleNavierStokes.timestep!(
+                method,
+                boussinesq!,
+                stepper,
+                Δt;
+                ode_cache,
+                force_cache,
+            )
         end
-        @test stepper_inplace.u ≈ stepper_outplace.u
-        @test stepper_inplace.temp ≈ stepper_outplace.temp
+        @test stepper_inplace.state.u ≈ stepper_outplace.state.u
+        @test stepper_inplace.state.temp ≈ stepper_outplace.state.temp
     end
 end

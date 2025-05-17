@@ -1,49 +1,21 @@
 "Create problem setup (stored in a named tuple)."
-function Setup(;
+Setup(;
     x,
     boundary_conditions = ntuple(d -> (PeriodicBC(), PeriodicBC()), length(x)),
-    bodyforce = nothing,
-    dbodyforce = nothing,
-    issteadybodyforce = true,
     closure_model = nothing,
     backend = CPU(),
     workgroupsize = 64,
     temperature = nothing,
     Re = isnothing(temperature) ? convert(eltype(x[1]), 1_000) : 1 / temperature.α1,
+) = (;
+    grid = Grid(; x, boundary_conditions, backend),
+    boundary_conditions,
+    Re,
+    closure_model,
+    backend,
+    workgroupsize,
+    temperature,
 )
-    setup = (;
-        grid = Grid(; x, boundary_conditions, backend),
-        boundary_conditions,
-        Re,
-        bodyforce,
-        issteadybodyforce = false,
-        closure_model,
-        backend,
-        workgroupsize,
-        temperature,
-    )
-    if !isnothing(bodyforce) && issteadybodyforce
-        (; x) = setup.grid
-        T = eltype(x[1])
-        u = vectorfield(setup)
-        F = vectorfield(setup)
-        bodyforce = applybodyforce!(F, u, T(0), setup)
-        setup = (; setup..., issteadybodyforce = true, bodyforce)
-    end
-    if !isnothing(dbodyforce)
-        @warn "dbodyforce is not used at the moment. No need to define it."
-        if issteadybodyforce
-            dsetup = (; setup..., bodyforce = dbodyforce, issteadybodyforce = false)
-            (; x) = setup.grid
-            T = eltype(x[1])
-            u = vectorfield(setup)
-            F = vectorfield(setup)
-            dbodyforce = applybodyforce!(F, u, T(0), dsetup)
-        end
-        setup = (; setup..., dbodyforce)
-    end
-    setup
-end
 
 """
 Create temperature equation setup (stored in a named tuple).

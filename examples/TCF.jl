@@ -1,4 +1,4 @@
-## Turbulent channel flow
+# # Turbulent channel flow
 
 if false
     include("../src/IncompressibleNavierStokes.jl")
@@ -82,11 +82,26 @@ setup = Setup(;
     ),
     x = (range(xlims..., nx + 1), tanh_grid(ylims..., ny + 1), range(zlims..., nz + 1)),
     Re = 180f,
-    bodyforce = (dim, x, y, z, t) -> 1 * (dim == 1),
-    issteadybodyforce = true,
-    backend = CUDABackend(),
-)
-psolver = default_psolver(setup)
+    # backend = CUDABackend(),
+);
+
+@time psolver = default_psolver(setup);
+
+# This is the right-hand side force in the momentum equation
+# By default, it is just `navierstokes!`. Here we add a
+# pre-computed body force.
+function force!(f, state, t, params, setup, cache)
+    navierstokes!(f, state, t, nothing, setup, nothing)
+    f.u .+= cache.bodyforce
+end
+
+# Tell IncompressibleNavierStokes how to prepare the cache for `force!`.
+# The cache is created before time stepping begins.
+function IncompressibleNavierStokes.get_cache(::typeof(force!), setup)
+    f(dim, x, y) = (dim == 1) * one(x)
+    bodyforce = velocityfield(setup, f; doproject = false)
+    (; bodyforce)
+end
 
 Re_tau = 180f
 Re_m = 2800f
@@ -112,45 +127,26 @@ ustartfunc = let
     end
 end
 
-ustart = velocityfield(setup, ustartfunc);
+u = velocityfield(setup, ustartfunc; psolver);
 
 plotgrid(setup.grid.x[1] |> Array, setup.grid.x[2] |> Array)
 plotgrid(setup.grid.x[1] |> Array, setup.grid.x[3] |> Array)
 plotgrid(setup.grid.x[2] |> Array, setup.grid.x[3] |> Array)
 
-function volplot(state; setup)
-    state isa Observable || (state = Observable(state))
-    (; x) = setup.grid
-    xplot = x[1][2:(end-1)] |> Array
-    yplot = x[2][2:(end-1)] |> Array
-    zplot = x[3][2:(end-1)] |> Array
-    uplot = observefield(state; setup, fieldname = :velocitynorm)
-    # volume(xplot, yplot, zplot, uplot)
-    volume(uplot)
-end
-
 sol, outputs = solve_unsteady(;
     setup,
     psolver,
-    ustart,
-    tlims = (0f, 10f),
+    start = (; u),
+    tlims = (0f, 1f),
     processors = (;
         logger = timelogger(; nupdate = 10),
-        plotter = realtimeplotter(;
-            plot = sectionplot,
-            # plot = volplot,
-            setup,
-            # displayupdates = true,
-            component = 1,
-            nupdate = 10,
-            # sleeptime = 0.2,
-        ),
-        # writer = vtk_writer(;
-        #     setup,
-        #     dir = joinpath(@__DIR__, "output", "TCF_INS3"),
-        #     fieldnames = (:eig2field, :velocity),
-        #     nupdate = 10,
-        # ),
+        plotter = realtimeplotter(; plot = sectionplot, setup, component = 1, nupdate = 10),
+        ## writer = vtk_writer(;
+        ##     setup,
+        ##     dir = joinpath(@__DIR__, "output", "TCF_INS3"),
+        ##     fieldnames = (:eig2field, :velocity),
+        ##     nupdate = 10,
+        ## ),
     ),
 );
 

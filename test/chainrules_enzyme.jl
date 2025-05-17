@@ -34,22 +34,7 @@ end
             Ge = T(1.0),
             boundary_conditions,
         )
-        if D == 2
-            bodyforce = (dim, x, y, t) -> (dim == 1) * 5 * sinpi(8 * y)
-            dbodyforce = (dim, x, y, t) -> (dim == 1) * 5 * pi * 8 * cos(pi * 8 * y)
-        elseif D == 3
-            bodyforce = (dim, x, y, z, t) -> (dim == 1) * 5 * sinpi(8 * y)
-            dbodyforce = (dim, x, y, z, t) -> (dim == 1) * 5 * pi * 8 * cos(pi * 8 * y)
-        end
-        setup = Setup(;
-            x,
-            boundary_conditions,
-            Re,
-            temperature,
-            bodyforce,
-            dbodyforce,
-            issteadybodyforce = true,
-        )
+        setup = Setup(; x, boundary_conditions, Re, temperature)
         psolver = default_psolver(setup)
         u = randn(T, setup.grid.N..., D)
         p = randn(T, setup.grid.N)
@@ -420,59 +405,6 @@ end
                 @info "Enzyme is faster (diffusion): ", e_time, " vs ", z_time
             else
                 @info "Zygote is faster (diffusion): ", z_time, " vs ", e_time
-            end
-        end
-        @test du == zpull
-    end
-end
-
-@testitem "Bodyforce" setup = [EnzymeCase, EnzymeSnip] begin
-    using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    @warn "bodyforce is tested only in the static case"
-    for (u, setup) in
-        ((EnzymeCase.D2.u, EnzymeCase.D2.setup), (EnzymeCase.D3.u, EnzymeCase.D3.setup))
-        t = 0.5
-        bf = INS.applybodyforce(u, t, setup)
-        bf0 = copy(bf)
-        setup0 = deepcopy(setup)
-        Zygote.pullback(INS.applybodyforce, u, t, setup)[2](bf0)
-        zpull, z_time =
-            @timed Zygote.pullback(INS.applybodyforce, u, t, setup)[2](bf0)[3].bodyforce
-
-        # We can also test Zygote autodiff
-        @test zpull == setup.bodyforce
-
-        bf = bf .* 0
-        dbf = Enzyme.make_zero(bf) .+ 1
-        du = Enzyme.make_zero(u)
-        f = INS.enzyme_wrap(INS.applybodyforce!)
-        @test f isa Function
-        f(bf, u, t, setup)
-        @test bf == bf0
-        Enzyme.autodiff(
-            Enzyme.Reverse,
-            f,
-            Duplicated(bf, dbf),
-            Duplicated(u, du),
-            Const(t),
-            Const(setup),
-        )
-        bf = bf .* 0
-        dbf = Enzyme.make_zero(bf) .+ 1
-        du = Enzyme.make_zero(u)
-        eb, e_time = @timed Enzyme.autodiff(
-            Enzyme.Reverse,
-            f,
-            Duplicated(bf, dbf),
-            Duplicated(u, du),
-            Const(t),
-            Const(setup),
-        )
-        if ENABLE_LOGGING
-            if e_time < z_time
-                @info "Enzyme is faster (bodyforce): ", e_time, " vs ", z_time
-            else
-                @info "Zygote is faster (bodyforce): ", z_time, " vs ", e_time
             end
         end
         @test du == zpull

@@ -48,18 +48,13 @@ plotgrid(x...; figure = (; size = (600, 150)))
 setup = Setup(; x, Re, boundary_conditions, backend);
 
 # Initial conditions (extend inflow)
-ustart = velocityfield(setup, (dim, x, y) -> U(dim, x, y, zero(x)));
-
-# Solve steady state problem
-## u, p = solve_steady_state(setup, u₀, p₀);
-nothing
+u = velocityfield(setup, (dim, x, y) -> U(dim, x, y, zero(x)));
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(;
     setup,
-    ustart,
+    start = (; u),
     tlims = (T(0), T(7)),
-    Δt = T(0.002),
     processors = (
         rtp = realtimeplotter(;
             setup,
@@ -83,9 +78,6 @@ state, outputs = solve_unsteady(;
 
 # Export to VTK
 save_vtk(state; setup, filename = joinpath(outdir, "solution"))
-
-# Plot pressure
-fieldplot(state; setup, size = (600, 150), fieldname = :pressure)
 
 # Plot velocity
 fieldplot(state; setup, size = (600, 150), fieldname = :velocitynorm)

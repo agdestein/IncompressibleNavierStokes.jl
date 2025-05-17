@@ -3,9 +3,9 @@
 
 Get time stepper cache for the given ODE method.
 """
-function ode_method_cache end
+function get_cache end
 
-function ode_method_cache(::OneLegMethod, setup)
+function get_cache(::OneLegMethod, setup)
     unew = vectorfield(setup)
     F = vectorfield(setup)
     pnew = scalarfield(setup)
@@ -14,35 +14,22 @@ function ode_method_cache(::OneLegMethod, setup)
     (; unew, pnew, F, div, Δp)
 end
 
-function ode_method_cache(method::ExplicitRungeKuttaMethod, setup)
-    ustart = vectorfield(setup)
+function get_cache(method::ExplicitRungeKuttaMethod, setup)
+    dotemp = !isnothing(setup.temperature)
     ns = length(method.b)
-    ku = map(i -> vectorfield(setup), 1:ns)
+    statestart = (; u = vectorfield(setup), temp = dotemp ? scalarfield(setup) : nothing)
+    k = map(
+        i -> (; u = vectorfield(setup), temp = dotemp ? scalarfield(setup) : nothing),
+        1:ns,
+    )
     p = scalarfield(setup)
-    if isnothing(setup.temperature)
-        tempstart = nothing
-        ktemp = nothing
-        diff = nothing
-    else
-        tempstart = scalarfield(setup)
-        ktemp = map(i -> scalarfield(setup), 1:ns)
-        diff = vectorfield(setup)
-    end
-    (; ustart, ku, p, tempstart, ktemp, diff)
+    (; statestart, k, p)
 end
 
-function ode_method_cache(::LMWray3, setup)
-    ustart = vectorfield(setup)
-    ku = vectorfield(setup)
+function get_cache(::LMWray3, setup)
+    dotemp = !isnothing(setup.temperature)
+    statestart = (; u = vectorfield(setup), temp = dotemp ? scalarfield(setup) : nothing)
+    k = (; u = vectorfield(setup), temp = dotemp ? scalarfield(setup) : nothing)
     p = scalarfield(setup)
-    if isnothing(setup.temperature)
-        tempstart = nothing
-        ktemp = nothing
-        diff = nothing
-    else
-        tempstart = scalarfield(setup)
-        ktemp = scalarfield(setup)
-        diff = vectorfield(setup)
-    end
-    (; ustart, ku, p, tempstart, ktemp, diff)
+    (; statestart, k, p)
 end

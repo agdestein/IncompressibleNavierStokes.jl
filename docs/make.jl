@@ -54,6 +54,7 @@ outputdir = joinpath(@__DIR__, "src", output)
 ## rm(outputdir; recursive = true)
 scriptdir = mktempdir()
 for (run, name) in examples
+    run = false
     inputfile = joinpath(@__DIR__, "..", name * ".jl")
     script = Literate.script(inputfile, scriptdir; config = Dict("credit" => false))
     code = strip(read(script, String))
