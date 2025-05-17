@@ -6,7 +6,6 @@ localdev = haskey(ENV, "LOCALDEV")
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 
 using IncompressibleNavierStokes
-using NeuralClosure
 using Literate
 using Documenter
 using DocumenterCitations
@@ -47,11 +46,6 @@ examples = [
     (false, "examples/RayleighBenard3D"),
     (true, "examples/RayleighTaylor2D"),
     (false, "examples/RayleighTaylor3D"),
-
-    # # Neural closure models
-    # (false, "lib/PaperDC/prioranalysis"),
-    # (false, "lib/PaperDC/postanalysis"),
-    # (false, "lib/SymmetryClosure/symmetryanalysis"),
 ]
 
 # Convert scripts to executable markdown files
@@ -104,7 +98,7 @@ end
 # There is an issue with linking to other MD pages:
 # https://github.com/LuxDL/DocumenterVitepress.jl/issues/172
 makedocs(;
-    modules = [IncompressibleNavierStokes, NeuralClosure],
+    modules = [IncompressibleNavierStokes],
     plugins = [bib],
     authors = "Syver Døving Agdestein, Benjamin Sanderse, and contributors",
     repo = Remotes.GitHub("agdestein", "IncompressibleNavierStokes.jl"),

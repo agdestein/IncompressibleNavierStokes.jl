@@ -38,7 +38,6 @@ const nav = [
           { text: 'Pressure solvers', link: '/manual/pressure' },
           { text: 'Solver', link: '/manual/solver' },
           { text: 'Utils', link: '/manual/utils' },
-          { text: 'Neural closure models', link: '/manual/closure' },
         ],
       },
       {
@@ -110,14 +109,6 @@ const sidebar = {
           { text: 'Rayleigh-Taylor (3D)', link: '/examples/generated/RayleighTaylor3D' },
         ],
       },
-      // {
-      //   text: 'Neural closure models',
-      //   items: [
-      //     { text: 'Filter analysis', link: '/examples/generated/prioranalysis' },
-      //     { text: 'CNN closures', link: '/examples/generated/postanalysis' },
-      //     { text: 'Equivariant closures', link: '/examples/generated/symmetryanalysis' },
-      //   ],
-      // },
     ],
   },
   "/manual/": {
@@ -139,7 +130,6 @@ const sidebar = {
           { text: 'Pressure solvers', link: '/manual/pressure' },
           { text: 'Solver', link: '/manual/solver' },
           { text: 'Utils', link: '/manual/utils' },
-          { text: 'Neural closure models', link: '/manual/closure' },
         ],
       },
       {
