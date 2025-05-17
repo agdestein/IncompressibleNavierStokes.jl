@@ -41,6 +41,14 @@ function solve_unsteady(;
         cflbuf = scalarfield(setup)
     end
 
+    # Get cache for closure model
+    if isnothing(setup.closure_model)
+        closure_stuff = nothing
+    else
+        closure_stuff = get_closure_stuff(setup.closure_model, setup)
+    end
+    cache = (; cache..., closure_stuff)
+
     # Time stepper
     stepper =
         create_stepper(method; setup, psolver, u = ustart, temp = tempstart, t = tstart)
