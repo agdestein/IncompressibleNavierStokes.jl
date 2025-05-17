@@ -114,6 +114,7 @@ export scalarfield, vectorfield, velocityfield, temperaturefield, random_field
 export getoffset, splitseed, plotgrid, save_vtk, get_lims
 
 # ODE methods
+export get_cache
 export OneLegMethod, RKMethods, LMWray3
 
 # Operators
@@ -139,6 +140,8 @@ export apply_bc_u,
     project,
     scalewithvolume,
     smagorinsky_closure,
+    smagorinsky_closure_natural,
+    wale_closure,
     total_kinetic_energy,
     vorticity,
     Dfield,

@@ -327,6 +327,7 @@ function smagorinsky_closure(u, θ, stuff, setup)
     c
 end
 
+"Smagorinsky closure."
 function smagorinsky_closure_natural(u, θ, stuff, setup)
     (; c, visc, G) = stuff
     strain_natural!(G, u, setup)
@@ -336,7 +337,7 @@ function smagorinsky_closure_natural(u, θ, stuff, setup)
     c
 end
 
-function get_closure_stuff(
+function get_cache(
     ::Union{
         typeof(wale_closure),
         typeof(smagorinsky_closure),
