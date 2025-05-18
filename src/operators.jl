@@ -65,6 +65,8 @@ function apply!(kernel, setup, args...)
     KernelAbstractions.synchronize(setup.backend)
 end
 
+@inline δ_stag(grid, u, i, j, I) = (u[I] - u[I-grid.e(i, j)]) / grid.Δ[I[j]]
+
 """
 Average scalar field `ϕ` in the `α`-direction.
 """
@@ -385,16 +387,33 @@ Add the result to `F`.
 """
 function convection!(F, u, setup)
     (; grid, backend, workgroupsize) = setup
-    (; dimension, Δ, Δu, N, A, Iu) = grid
+    (; dimension, N) = grid
     D = dimension()
     e = Offset(D)
     kernel = convection_kernel!(backend, workgroupsize)
     I0 = oneunit(CartesianIndex{D})
-    kernel(F, u, Δ, Δu, A, Iu, e, Val(1:D), I0; ndrange = N .- 2)
+    kernel(F, u, grid, Val(1:D), I0; ndrange = N .- 2)
+    KernelAbstractions.synchronize(backend)
     F
 end
 
-@kernel function convection_kernel!(F, u, Δ, Δu, A, Iu, e, valdims, I0)
+@inline function interpolate_reverse(grid, u, i, j, I)
+    (; A_coll, A_stag) = grid
+    e = Offset(length(I.I))
+    if i == j
+        # A_coll[j][2][I[j]-1] * u[I-e(j), i] + A_coll[j][1][I[j]] * u[I, i]
+        # a1 = ifelse(I[j] == 1, T(1), T(1/2))
+        # a2 = ifelse(I[j] == 1, T(1), T(1/2))
+        # a2 * u[I-e(j), i] + a1 * u[I, i]
+        u[I-e(j), i] / 2 + u[I, i] / 2
+    else
+        A_stag[j][2][I[j]] * u[I, i] + A_stag[j][1][I[j]+1] * u[I+e(j), i]
+    end
+end
+
+@kernel function convection_kernel!(F, u, grid, valdims, I0)
+    (; Δ, Δu, Iu) = grid
+    e = Offset(length(I0.I))
     dims = getval(valdims)
     I = @index(Global, Cartesian)
     I = I + I0
@@ -411,10 +430,8 @@ end
                 #     instead of 1/2 when u[α][I-e(β)] is at Dirichlet boundary.
                 uαβ1 = (u[I-e(β), α] + u[I, α]) / 2
                 uαβ2 = (u[I, α] + u[I+e(β), α]) / 2
-                uβα1 =
-                    A[β][α][2][I[α]-(α==β)] * u[I-e(β), β] +
-                    A[β][α][1][I[α]+(α!=β)] * u[I-e(β)+e(α), β]
-                uβα2 = A[β][α][2][I[α]] * u[I, β] + A[β][α][1][I[α]+1] * u[I+e(α), β]
+                uβα1 = interpolate_reverse(grid, u, β, α, I - (α != β) * e(β))
+                uβα2 = interpolate_reverse(grid, u, β, α, I + (α == β) * e(β))
                 f -= (uαβ2 * uβα2 - uαβ1 * uβα1) / Δuαβ[I[β]]
             end
         end
@@ -424,32 +441,34 @@ end
 
 function convection_adjoint!(ubar, φbar, u, setup)
     (; grid, backend, workgroupsize) = setup
-    (; dimension, Δ, Δu, N, Iu, A) = grid
+    (; dimension, N) = grid
     D = dimension()
     e = Offset(D)
     T = eltype(u)
-    h = T(1) / 2
     kernel = convection_adjoint_kernel!(backend, workgroupsize)
-    kernel(ubar, φbar, u, Δ, Δu, Iu, A, h, e, Val(1:D); ndrange = N)
+    kernel(ubar, φbar, u, grid, Val(1:D); ndrange = N)
     ubar
 end
 
-@kernel function convection_adjoint_kernel!(ubar, φbar, u, Δ, Δu, Iu, A, h, e, valdims)
+@kernel function convection_adjoint_kernel!(ubar, φbar, u, grid, valdims)
+    h = eltype(u)(1 / 2)
+    e = Offset(grid.dimension())
     dims = getval(valdims)
+    (; Δ, Δu, Iu, A_coll, A_stag) = grid
     J = @index(Global, Cartesian)
     @unroll for γ in dims
         adjoint = zero(eltype(u))
         @unroll for α in dims
             @unroll for β in dims
                 Δuαβ = α == β ? Δu[β] : Δ[β]
-                Aβα1 = A[β][α][1]
-                Aβα2 = A[β][α][2]
+                AAβα1 = α == β ? A_coll[α][1] : A_stag[α][1]
+                AAβα2 = α == β ? A_coll[α][2] : A_stag[α][2]
 
                 # 1
                 I = J
                 if α == γ && I in Iu[α]
                     uαβ2 = h
-                    uβα2 = Aβα2[I[α]] * u[I, β] + Aβα1[I[α]+1] * u[I+e(α), β]
+                    uβα2 = interpolate_reverse(grid, u, β, α, I + (α == β) * e(β))
                     dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
                     adjoint += φbar[I, α] * dφdu
                 end
@@ -458,7 +477,7 @@ end
                 I = J - e(β)
                 if α == γ && I in Iu[α]
                     uαβ2 = h
-                    uβα2 = Aβα2[I[α]] * u[I, β] + Aβα1[I[α]+1] * u[I+e(α), β]
+                    uβα2 = interpolate_reverse(grid, u, β, α, I + (α == β) * e(β))
                     dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
                     adjoint += φbar[I, α] * dφdu
                 end
@@ -467,7 +486,7 @@ end
                 I = J
                 if β == γ && I in Iu[α]
                     uαβ2 = h * u[I, α] + h * u[I+e(β), α]
-                    uβα2 = Aβα2[I[α]]
+                    uβα2 = AAβα2[I[α]+(α==β)]
                     dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
                     adjoint += φbar[I, α] * dφdu
                 end
@@ -476,7 +495,8 @@ end
                 I = J - e(α)
                 if β == γ && I in Iu[α]
                     uαβ2 = h * u[I, α] + h * u[I+e(β), α]
-                    uβα2 = Aβα1[I[α]+1]
+                    uαβ2 = h * u[I, α] + h * u[I+e(β), α]
+                    uβα2 = AAβα1[I[α]+1+(α==β)]
                     dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
                     adjoint += φbar[I, α] * dφdu
                 end
@@ -485,9 +505,7 @@ end
                 I = J + e(β)
                 if α == γ && I in Iu[α]
                     uαβ1 = h
-                    uβα1 =
-                        Aβα2[I[α]-(α==β)] * u[I-e(β), β] +
-                        Aβα1[I[α]+(α!=β)] * u[I-e(β)+e(α), β]
+                    uβα1 = interpolate_reverse(grid, u, β, α, I - (α != β) * e(β))
                     dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
                     adjoint += φbar[I, α] * dφdu
                 end
@@ -496,9 +514,7 @@ end
                 I = J
                 if α == γ && I in Iu[α]
                     uαβ1 = h
-                    uβα1 =
-                        Aβα2[I[α]-(α==β)] * u[I-e(β), β] +
-                        Aβα1[I[α]+(α!=β)] * u[I-e(β)+e(α), β]
+                    uβα1 = interpolate_reverse(grid, u, β, α, I - (α != β) * e(β))
                     dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
                     adjoint += φbar[I, α] * dφdu
                 end
@@ -507,7 +523,7 @@ end
                 I = J + e(β)
                 if β == γ && I in Iu[α]
                     uαβ1 = h * u[I-e(β), α] + h * u[I, α]
-                    uβα1 = Aβα2[I[α]-(α==β)]
+                    uβα1 = AAβα2[I[α]-(α==β)]
                     dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
                     adjoint += φbar[I, α] * dφdu
                 end
@@ -516,7 +532,7 @@ end
                 I = J + e(β) - e(α)
                 if β == γ && I in Iu[α]
                     uαβ1 = h * u[I-e(β), α] + h * u[I, α]
-                    uβα1 = Aβα1[I[α]+(α!=β)]
+                    uβα1 = AAβα1[I[α]+(α!=β)]
                     dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
                     adjoint += φbar[I, α] * dφdu
                 end
@@ -641,29 +657,19 @@ Add the result to `F`.
 """
 function convectiondiffusion!(F, u, setup)
     (; grid, backend, workgroupsize, Re) = setup
-    (; dimension, Δ, Δu, N, A, Iu) = grid
+    (; dimension, N) = grid
     D = dimension()
-    e = Offset(D)
     @assert size(u) == size(F) == (N..., D)
     visc = 1 / Re
     I0 = oneunit(CartesianIndex{D})
     kernel = convection_diffusion_kernel!(backend, workgroupsize)
-    kernel(F, u, visc, Δ, Δu, A, Iu, e, Val(1:D), I0; ndrange = N .- 2)
+    kernel(F, u, visc, grid, Val(1:D), I0; ndrange = N .- 2)
     F
 end
 
-@kernel inbounds = true function convection_diffusion_kernel!(
-    F,
-    u,
-    visc,
-    Δ,
-    Δu,
-    A,
-    Iu,
-    e,
-    valdims,
-    I0,
-)
+@kernel inbounds = true function convection_diffusion_kernel!(F, u, visc, grid, valdims, I0)
+    (; Δ, Δu, Iu) = grid
+    e = Offset(D)
     T = typeof(visc)
     I = @index(Global, Cartesian)
     I = I + I0
@@ -677,10 +683,8 @@ end
                 Δb = (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
                 uαβ1 = (u[I-e(β), α] + u[I, α]) / 2
                 uαβ2 = (u[I, α] + u[I+e(β), α]) / 2
-                uβα1 =
-                    A[β][α][2][I[α]-(α==β)] * u[I-e(β), β] +
-                    A[β][α][1][I[α]+(α!=β)] * u[I-e(β)+e(α), β]
-                uβα2 = A[β][α][2][I[α]] * u[I, β] + A[β][α][1][I[α]+1] * u[I+e(α), β]
+                uβα1 = interpolate_reverse(grid, u, β, α, I - (α != β) * e(β))
+                uβα2 = interpolate_reverse(grid, u, β, α, I + (α == β) * e(β))
                 uαuβ1 = uαβ1 * uβα1
                 uαuβ2 = uαβ2 * uβα2
                 ∂βuα1 = (u[I, α] - u[I-e(β), α]) / Δa
@@ -1048,12 +1052,14 @@ end
 )
 
 "Gridsize based on the length of the diagonal of the cell."
-@inline gridsize(Δ, I::CartesianIndex{2}) = sqrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2)
-@inline gridsize(Δ, I::CartesianIndex{3}) = cbrt(Δ[1][I[1]]^2 + Δ[2][I[2]]^2 + Δ[3][I[3]]^2)
+@inline gridsize(grid, I::CartesianIndex{2}) = sqrt(grid[1][I[1]]^2 + grid[2][I[2]]^2)
+@inline gridsize(grid, I::CartesianIndex{3}) =
+    cbrt(grid[1][I[1]]^2 + grid[2][I[2]]^2 + grid[3][I[3]]^2)
 
 "Grid size based on the volume of the cell."
-@inline gridsize_vol(Δ, I::CartesianIndex{2}) = sqrt(Δ[1][I[1]] * Δ[2][I[2]])
-@inline gridsize_vol(Δ, I::CartesianIndex{3}) = cbrt(Δ[1][I[1]] * Δ[2][I[2]] * Δ[3][I[3]])
+@inline gridsize_vol(grid, I::CartesianIndex{2}) = sqrt(grid.Δ[1][I[1]] * grid.Δ[2][I[2]])
+@inline gridsize_vol(grid, I::CartesianIndex{3}) =
+    cbrt(grid.Δ[1][I[1]] * grid.Δ[2][I[2]] * grid.Δ[3][I[3]])
 
 "Interpolate velocity to pressure points (differentiable version)."
 interpolate_u_p(u, setup) = interpolate_u_p!(vectorfield(setup), u, setup)
