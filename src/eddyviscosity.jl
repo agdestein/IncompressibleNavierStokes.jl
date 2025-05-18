@@ -71,10 +71,11 @@ gradient_tensor!(G, u, setup) = apply!(gradient_tensor_kernel!, setup, G, u, set
 end
 
 """
-Compute symmetric part of gradient.
-Overwrite the gradient itself.
+Compute symmetric part of tensor.
+Overwrite the upper diagonal of the tensor itself.
+The lower diagonal is not modified - don't use it!
 """
-function strain_from_gradient!(G)
+function symmetrize!(G)
     G.xy .= (G.xy .+ G.yx) ./ 2
     G.xz .= (G.xz .+ G.zx) ./ 2
     G.yz .= (G.yz .+ G.zy) ./ 2
@@ -251,7 +252,7 @@ function wale_closure!(f, u, θ, cache, setup)
     wale_viscosity!(visc, G, θ, setup)
     zero_out_wall!(visc, setup)
     apply_bc_p!(visc, zero(eltype(u)), setup)
-    strain_from_gradient!(G)
+    symmetrize!(G)
     apply_eddy_viscosity!(G, visc, setup)
     for g in G
         zero_out_wall!(g, setup)
