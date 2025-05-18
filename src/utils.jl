@@ -147,3 +147,110 @@ function get_spectrum(setup; npoint = 100, a = typeof(e.setup.Re)(1 + sqrt(5)) /
     masks = adapt.(BoolArray, masks)
     (; κ, masks, K)
 end
+
+"Get permutation indices for DCT."
+function get_perminds(N, i)
+    n = div(N, 2)
+    @assert 2 * n == N "Only even grids supported"
+    x = zeros(Int, N)
+    xinv = zeros(Int, N)
+    for k = 1:n
+        x[k] = 2 * k - 1
+        x[end-k+1] = 2 * k
+        xinv[2*k-1] = k
+        xinv[2*k] = N - k + 1
+    end
+    x, xinv
+end
+
+function manual_dct_stuff(u)
+    uhat = complex(u)
+    T = eltype(u)
+    w = ntuple(ndims(u)) do i
+        N = size(u, i)
+        k = (0:(N-1)) .|> T
+        p = T(π) # Don't promote Irrational to Float64
+        ww = @. exp(-2 * p * im * k / 4N) / sqrt(T(2) * N)
+        ww[1] = ww[1] / sqrt(T(2))
+        ww
+    end
+    winv = ntuple(ndims(u)) do i
+        N = size(u, i)
+        k = (0:(N-1)) .|> T
+        p = T(π) # Don't promote Irrational to Float64
+        ww = @. exp(2 * p * im * k / 4N) * sqrt(T(2) * N)
+        ww[1] = ww[1] * sqrt(T(2)) / 2
+        ww
+    end
+    perm = ntuple(i -> get_perminds(size(u, i), i)[1], ndims(u))
+    perminv = ntuple(i -> get_perminds(size(u, i), i)[2], ndims(u))
+    adapt(get_backend(u), (; uhat, w, winv, perm, perminv))
+end
+
+function manual_dct!(u, i, stuff)
+    (; uhat, w, perm, perminv) = stuff
+    # Permute u
+    if ndims(u) == 1
+        @. u = u[perm[1]]
+    elseif ndims(u) == 2
+        if i == 1
+            @. u = u[perm[1], :]
+        else
+            @. u = u[:, perm[2]]
+        end
+    else
+        if i == 1
+            @. u = u[perm[1], :, :]
+        elseif i == 2
+            @. u = u[:, perm[2], :]
+        else
+            @. u = u[:, :, perm[3]]
+        end
+    end
+
+    # FFT in direction i
+    copyto!(uhat, u)
+    fft!(uhat, i)
+
+    # Convert to DCT
+    w = reshape(w[i], ntuple(Returns(1), i - 1)..., :)
+    @. u = 2 * real(w * uhat)
+end
+
+function manual_idct!(u, i, stuff)
+    (; uhat, w, winv, perm, perminv) = stuff
+    # # IFFT in direction i
+    # copyto!(uhat, u)
+    # ifft!(uhat, i)
+    #
+    # # Convert to DCT
+    # winv = reshape(winv[i], ntuple(Returns(1), i - 1)..., :)
+    # @. u = real(winv * uhat)
+
+    copyto!(uhat, u)
+    winv = reshape(winv[i], ntuple(Returns(1), i - 1)..., :)
+    @. uhat = winv * uhat
+    ifft!(uhat, i)
+    @. u = real(uhat)
+
+    # Permute back
+    if ndims(u) == 1
+        @. u = u[perminv[1]]
+    elseif ndims(u) == 2
+        if i == 1
+            @. u = u[perminv[1], :]
+        else
+            @. u = u[:, perminv[2]]
+        end
+    else
+        if i == 1
+            @. u = u[perminv[1], :, :]
+        elseif i == 2
+            @. u = u[:, perminv[2], :]
+        else
+            @. u = u[:, :, perminv[3]]
+        end
+    end
+
+    u
+end

@@ -269,6 +269,9 @@ This solver does FFT in periodic directions, and DCT in Dirichlet directions.
 Only works on uniform grids, with periodic/dirichtlet BC.
 If there is only Periodic BC, then [`psolver_spectral`](@ref) is faster,
 and uses half as much memory.
+
+Warning: This does transform one dimension at a time.
+With `Float32` precision, this can lead to large errors.
 """
 function psolver_transform(setup)
     (; grid, boundary_conditions) = setup
@@ -305,18 +308,31 @@ function psolver_transform(setup)
     end
 
     # Placeholders for intermediate results
-    phat = similar(x[1], Complex{T}, Np)
+    # phat = similar(x[1], Complex{T}, Np)
+    p = similar(x[1], Np)
 
-    function psolve!(p)
+    stuff = manual_dct_stuff(p)
+    phat = stuff.uhat
+
+    function psolve!(pfull)
         # Buffer of the right size (cannot work on view directly)
-        copyto!(phat, view(p, Ip))
+        copyto!(p, view(pfull, Ip))
 
         # Transform of right hand side
+        # Do DCTs first, then FFTs
+        for i in eachindex(ahat)
+            if perdirs[i]
+            else
+                # dct!(phat, i)
+                # dct!(phat, i)
+                manual_dct!(p, i, stuff)
+            end
+        end
+        copyto!(phat, p)
         for i in eachindex(ahat)
             if perdirs[i]
                 fft!(phat, i)
             else
-                dct!(phat, i)
             end
         end
 
@@ -338,20 +354,28 @@ function psolver_transform(setup)
         # (otherwise CUDA gets annoyed)
         phat[1:1] .= 0
 
-        # Inverse transform
+        # Inverse transform: FFTs first, then DCTs
         for i in ahat |> eachindex |> reverse
             if perdirs[i]
                 ifft!(phat, i)
             else
-                idct!(phat, i)
+            end
+        end
+        @. p = real(phat)
+        for i in ahat |> eachindex |> reverse
+            if perdirs[i]
+            else
+                # idct!(phat, i)
+                manual_idct!(p, i, stuff)
             end
         end
 
         # Put results in full size array
         # copyto!(view(p, Ip), phat)
-        view(p, Ip) .= real.(phat)
+        # view(p, Ip) .= real.(phat)
+        copyto!(view(pfull, Ip), p)
 
-        p
+        pfull
     end
 end
 
