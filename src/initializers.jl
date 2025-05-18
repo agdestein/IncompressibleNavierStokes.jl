@@ -5,6 +5,39 @@ scalarfield(setup) = fill!(similar(setup.grid.x[1], setup.grid.N), 0)
 vectorfield(setup) =
     fill!(similar(setup.grid.x[1], setup.grid.N..., setup.grid.dimension()), 0)
 
+"Non-symmetric tensor field, stored as a named tuple `σ.ij`."
+tensorfield(setup) = tensorfield(setup.grid.dimension, setup)
+tensorfield(::Dimension{2}, setup) = (;
+    xx = scalarfield(setup),
+    yx = scalarfield(setup),
+    xy = scalarfield(setup),
+    yy = scalarfield(setup),
+)
+tensorfield(::Dimension{3}, setup) = (;
+    xx = scalarfield(setup),
+    yx = scalarfield(setup),
+    zx = scalarfield(setup),
+    xy = scalarfield(setup),
+    yy = scalarfield(setup),
+    zy = scalarfield(setup),
+    xz = scalarfield(setup),
+    yz = scalarfield(setup),
+    zz = scalarfield(setup),
+)
+
+"Symmetric tensor field, stored as a named tuple `σ.ij`."
+symmetric_tensorfield(setup) = symmetric_tensorfield(setup.grid.dimension, setup)
+symmetric_tensorfield(::Dimension{2}, setup) =
+    (; xx = scalarfield(setup), xy = scalarfield(setup), yy = scalarfield(setup))
+symmetric_tensorfield(::Dimension{3}, setup) = (;
+    xx = scalarfield(setup),
+    xy = scalarfield(setup),
+    xz = scalarfield(setup),
+    yy = scalarfield(setup),
+    yz = scalarfield(setup),
+    zz = scalarfield(setup),
+)
+
 """
 Create divergence free velocity field `u` with boundary conditions at time `t`.
 The initial conditions of `u[α]` are specified by the function

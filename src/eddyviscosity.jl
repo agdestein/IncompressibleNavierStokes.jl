@@ -1,10 +1,10 @@
 #### Implementations of eddy viscosity closure models
 #### Contains:
-#### - Wale                                 wale_closure                    only for 3D
-#### - Smagorinsky                          smagorinsky_closure             only for 3D
+#### - WALE (only 3D):          `wale_closure!`
+#### - Smagorinsky (2D and 3D): `smagorinsky_closure!`
 #### Use these models in INS, by including them in the right hand side function.
 #### See `examples/ChannelFlow3D.jl` for an example.
-#### provide `params` as a parameter to solve_unsteady() !!!
+#### provide model coefficients in `params` as a parameter to solve_unsteady() !!!
 
 strain!(S, u, setup) = apply!(strain_kernel!, setup, S, u, setup.grid)
 
@@ -88,7 +88,7 @@ smagorinsky_viscosity!(visc, S, θ, setup) =
     I = I + O
     (; Δ) = grid
     ex, ey = unit_cartesian_indices(2)
-    d = gridsize(Δ, I)
+    d = gridsize_vol(grid, I)
     Sxx2 = S.xx[I]^2
     Syy2 = S.yy[I]^2
     Sxy2 = (S.xy[I]^2 + S.xy[I-ex]^2 + S.xy[I-ey]^2 + S.xy[I-ex-ey]^2) / 4
@@ -100,7 +100,7 @@ end
     I = I + O
     (; Δ) = grid
     ex, ey, ez = unit_cartesian_indices(3)
-    d = gridsize(Δ, I)
+    d = gridsize_vol(grid, I)
     Sxx2 = S.xx[I]^2
     Syy2 = S.yy[I]^2
     Szz2 = S.zz[I]^2
@@ -177,8 +177,38 @@ end
     f[I, 3] -= ∂σzx∂x + ∂σzy∂y + ∂σzz∂z
 end
 
+"Apply WAL viscosity."
 wale_viscosity!(visc, G_split, θ, setup) =
     apply!(wale_viscosity_kernel!, setup, visc, G_split, θ, setup.grid)
+
+"""
+Collocate staggered tensor to the center of the cell.
+Put the tensor in a statically sized `SMatrix`.
+"""
+function collocate_tensor end
+function collocate_tensor(σ, I::CartesianIndex{2})
+    ex, ey = unit_cartesian_indices(2)
+    SMatrix{2,2,eltype(σ.xx),4}(
+        σ.xx[I],
+        (σ.yx[I] + σ.yx[I-ex] + σ.yx[I-ey] + σ.yx[I-ex-ey]) / 4,
+        (σ.xy[I] + σ.xy[I-ex] + σ.xy[I-ey] + σ.xy[I-ex-ey]) / 4,
+        σ.yy[I],
+    )
+end
+function collocate_tensor(σ, I::CartesianIndex{3})
+    ex, ey, ez = unit_cartesian_indices(3)
+    SMatrix{3,3,eltype(σ.xx),9}(
+        σ.xx[I],
+        (σ.yx[I] + σ.yx[I-ex] + σ.yx[I-ey] + σ.yx[I-ex-ey]) / 4,
+        (σ.zx[I] + σ.zx[I-ex] + σ.zx[I-ez] + σ.zx[I-ex-ez]) / 4,
+        (σ.xy[I] + σ.xy[I-ex] + σ.xy[I-ey] + σ.xy[I-ex-ey]) / 4,
+        σ.yy[I],
+        (σ.zy[I] + σ.zy[I-ey] + σ.zy[I-ez] + σ.zy[I-ey-ez]) / 4,
+        (σ.xz[I] + σ.xz[I-ex] + σ.xz[I-ez] + σ.xz[I-ex-ez]) / 4,
+        (σ.yz[I] + σ.yz[I-ey] + σ.yz[I-ez] + σ.yz[I-ey-ez]) / 4,
+        σ.zz[I],
+    )
+end
 
 @kernel function wale_viscosity_kernel!(visc, G_split, θ, grid, O::CartesianIndex{3})
     I = @index(Global, Cartesian)
@@ -186,55 +216,14 @@ wale_viscosity!(visc, G_split, θ, setup) =
     (; Δ) = grid
     T = eltype(G_split.xx)
     ex, ey, ez = unit_cartesian_indices(3)
-    G = SMatrix{3,3,eltype(G_split.xx),9}(
-        G_split.xx[I],
-        (G_split.yx[I] + G_split.yx[I-ex] + G_split.yx[I-ey] + G_split.yx[I-ex-ey]) / 4,
-        (G_split.zx[I] + G_split.zx[I-ex] + G_split.zx[I-ez] + G_split.zx[I-ex-ez]) / 4,
-        (G_split.xy[I] + G_split.xy[I-ex] + G_split.xy[I-ey] + G_split.xy[I-ex-ey]) / 4,
-        G_split.yy[I],
-        (G_split.zy[I] + G_split.zy[I-ey] + G_split.zy[I-ez] + G_split.zy[I-ey-ez]) / 4,
-        (G_split.xz[I] + G_split.xz[I-ex] + G_split.xz[I-ez] + G_split.xz[I-ex-ez]) / 4,
-        (G_split.yz[I] + G_split.yz[I-ey] + G_split.yz[I-ez] + G_split.yz[I-ey-ez]) / 4,
-        G_split.zz[I],
-    )
-    d = gridsize_vol(Δ, I)
+    G = collocate_tensor(G_split, I)
+    d = gridsize_vol(grid, I)
     S = (G + G') / 2
     G2 = G * G
     Sd = (G2 + G2') / 2 - tr(G2) * one(G2) / 3
     visc[I] =
         (θ * d)^2 * dot(Sd, Sd)^T(3 / 2) /
         (dot(S, S)^T(5 / 2) + dot(Sd, Sd)^T(5/4) + eps(T))
-end
-
-smagorinsky_viscosity!(visc, G, θ, setup) =
-    apply!(smagorinsky_viscosity_kernel!, setup, visc, G, θ, setup.grid)
-
-@kernel function smagorinsky_viscosity_kernel!(
-    visc,
-    G_split,
-    θ,
-    grid,
-    I0::CartesianIndex{3},
-)
-    I = @index(Global, Cartesian)
-    I = I + I0
-    (; Δ) = grid
-    T = eltype(G_split.xx)
-    ex, ey, ez = unit_cartesian_indices(3)
-    G = SMatrix{3,3,eltype(G_split.xx),9}(
-        G_split.xx[I],
-        (G_split.yx[I] + G_split.yx[I-ex] + G_split.yx[I-ey] + G_split.yx[I-ex-ey]) / 4,
-        (G_split.zx[I] + G_split.zx[I-ex] + G_split.zx[I-ez] + G_split.zx[I-ex-ez]) / 4,
-        (G_split.xy[I] + G_split.xy[I-ex] + G_split.xy[I-ey] + G_split.xy[I-ex-ey]) / 4,
-        G_split.yy[I],
-        (G_split.zy[I] + G_split.zy[I-ey] + G_split.zy[I-ez] + G_split.zy[I-ey-ez]) / 4,
-        (G_split.xz[I] + G_split.xz[I-ex] + G_split.xz[I-ez] + G_split.xz[I-ex-ez]) / 4,
-        (G_split.yz[I] + G_split.yz[I-ey] + G_split.yz[I-ez] + G_split.yz[I-ey-ez]) / 4,
-        G_split.zz[I],
-    )
-    S = (G + G') / 2
-    d = gridsize_vol(Δ, I)
-    visc[I] = θ^2 * d^2 * sqrt(2 * dot(S, S))
 end
 
 function zero_out_wall!(p, setup)
@@ -273,53 +262,29 @@ end
 
 "Apply Smagorinsky closure model."
 function smagorinsky_closure!(f, u, θ, cache, setup)
-    (; visc, G) = cache
+    (; visc, S) = cache
     fill!(visc, 0)
-    for g in G
-        fill!(g, 0)
+    for s in S
+        fill!(S, 0)
     end
-    gradient_tensor!(G, u, setup)
-    for g in G
-        zero_out_wall!(g, setup)
-        apply_bc_p!(g, zero(eltype(u)), setup)
+    strain!(S, u, setup)
+    for s in S
+        zero_out_wall!(s, setup)
+        apply_bc_p!(s, zero(eltype(u)), setup)
     end
-    smagorinsky_viscosity!(visc, G, θ, setup)
+    smagorinsky_viscosity!(visc, S, θ, setup)
     zero_out_wall!(visc, setup)
-
     apply_bc_p!(visc, zero(eltype(u)), setup)
-    strain_from_gradient!(G)
-    apply_eddy_viscosity!(G, visc, setup)
-    for g in G
-        zero_out_wall!(g, setup)
-        apply_bc_p!(g, zero(eltype(u)), setup)
+    apply_eddy_viscosity!(S, visc, setup)
+    for s in S
+        zero_out_wall!(s, setup)
+        apply_bc_p!(s, zero(eltype(u)), setup)
     end
-    divoftensor!(f, G, setup)
+    divoftensor!(f, S, setup)
 end
 
-function get_cache(::Union{typeof(wale_closure),typeof(smagorinsky_closure)}, setup)
-    (; dimension, x, N) = setup.grid
-    D = dimension()
-    T = eltype(x[1])
-    visc = scalarfield(setup)
-    G = if D == 2
-        (;
-            xx = scalarfield(setup),
-            yx = scalarfield(setup),
-            xy = scalarfield(setup),
-            yy = scalarfield(setup),
-        )
-    elseif D == 3
-        (;
-            xx = scalarfield(setup),
-            yx = scalarfield(setup),
-            zx = scalarfield(setup),
-            xy = scalarfield(setup),
-            yy = scalarfield(setup),
-            zy = scalarfield(setup),
-            xz = scalarfield(setup),
-            yz = scalarfield(setup),
-            zz = scalarfield(setup),
-        )
-    end
-    (; visc, G)
-end
+get_cache(::typeof(wale_closure!), setup) =
+    (; visc = scalarfield(setup), G = tensorfield(setup))
+
+get_cache(::typeof(smagorinsky_closure!), setup) =
+    (; visc = scalarfield(setup), S = symmetric_tensorfield(setup))
