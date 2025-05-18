@@ -129,7 +129,6 @@ export apply_bc_u,
     dissipation,
     dissipation_from_strain,
     divergence,
-    eig2field,
     get_scale_numbers,
     gravity,
     kinetic_energy,
@@ -144,8 +143,6 @@ export apply_bc_u,
     wale_closure!,
     total_kinetic_energy,
     vorticity,
-    Dfield,
-    Qfield,
     qcrit
 
 # Matrices

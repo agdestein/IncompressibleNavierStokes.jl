@@ -155,10 +155,6 @@ end
         @test interpolate_u_p(u, setup) isa Array{T}
         D == 2 && @test interpolate_ω_p(ω, setup) isa Array{T}
         D == 3 && @test interpolate_ω_p(ω, setup) isa Array{T}
-        @test Dfield(p, setup) isa Array{T}
-        @test Qfield(u, setup) isa Array{T}
-        D == 2 && @test_throws AssertionError eig2field(u, setup)
-        D == 3 && @test eig2field(u, setup) isa Array{T} broken = D == 3
         @test kinetic_energy(u, setup) isa Array{T}
         @test total_kinetic_energy(u, setup) isa T
         @test dissipation_from_strain(u, setup) isa Array{T}
