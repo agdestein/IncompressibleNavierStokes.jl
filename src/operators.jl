@@ -669,7 +669,7 @@ end
 
 @kernel inbounds = true function convection_diffusion_kernel!(F, u, visc, grid, valdims, I0)
     (; Δ, Δu, Iu) = grid
-    e = Offset(D)
+    e = Offset(length(Δ))
     T = typeof(visc)
     I = @index(Global, Cartesian)
     I = I + I0

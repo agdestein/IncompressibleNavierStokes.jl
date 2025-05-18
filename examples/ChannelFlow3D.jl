@@ -88,7 +88,8 @@ setup = Setup(;
         (DirichletBC(), DirichletBC()),
         (PeriodicBC(), PeriodicBC()),
     ),
-    x = (range(xlims..., nx + 1), tanh_grid(ylims..., ny + 1), range(zlims..., nz + 1)),
+    # x = (range(xlims..., nx + 1), tanh_grid(ylims..., ny + 1), range(zlims..., nz + 1)),
+    x = (range(xlims..., nx + 1), range(ylims..., ny + 1), range(zlims..., nz + 1)),
     Re = 180f,
     backend,
 );
@@ -98,7 +99,10 @@ setup = Setup(;
 ## psolver = psolver_cg_AMGX(setup; stuff = AMGX_stuff);
 
 # Direct pressure solver
-@time psolver = default_psolver(setup);
+## @time psolver = default_psolver(setup);
+
+# Discrete transform solver (FFT/DCT)
+psolver = psolver_transform(setup);
 
 # This is the right-hand side force in the momentum equation
 # By default, it is just `navierstokes!`. Here we add a

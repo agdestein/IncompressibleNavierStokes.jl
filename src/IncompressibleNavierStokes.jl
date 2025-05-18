@@ -101,7 +101,8 @@ export Setup, temperature_equation
 export stretched_grid, cosine_grid, tanh_grid
 
 # Pressure solvers
-export default_psolver, psolver_direct, psolver_cg, psolver_cg_matrix, psolver_spectral
+export default_psolver,
+    psolver_direct, psolver_cg, psolver_cg_matrix, psolver_transform, psolver_spectral
 
 # Solvers
 export navierstokes, navierstokes!, boussinesq, boussinesq!
