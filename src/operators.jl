@@ -765,7 +765,7 @@ function ChainRulesCore.rrule(::typeof(dissipation), u, setup)
             I ∈ Ip && (a += α1 / visc / γ * d[I-e(β), β] / 2)
             # 2
             I = J
-            I ∈ Ip && (a += visc / γ * d[I, β] / 2)
+            I ∈ Ip && (a += α1 / visc / γ * d[I, β] / 2)
             ubar[J, β] += a
 
             # Compute dbar
