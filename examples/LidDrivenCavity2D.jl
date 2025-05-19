@@ -38,7 +38,7 @@ plotgrid(ax, ax)
 
 # We can now build the setup and assemble operators.
 # A 3D setup is built if we also provide a vector of z-coordinates.
-setup = Setup(; x = (ax, ax), boundary_conditions, Re = 1e3, backend);
+setup = Setup(; x = (ax, ax), boundary_conditions, visc = 1e-3, backend);
 
 # Initial conditions
 u = velocityfield(setup, (dim, x, y) -> zero(x));

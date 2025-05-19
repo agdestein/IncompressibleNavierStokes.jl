@@ -1,8 +1,7 @@
 @testitem "Pressure solvers" begin
     n = 32
     x = LinRange(0, 2π, n + 1), LinRange(0, 2π, n + 1)
-    Re = 1e3
-    setup = Setup(; x, Re)
+    setup = Setup(; x, visc = 1e-3)
     (; Ip, xp) = setup.grid
     D = 2
 

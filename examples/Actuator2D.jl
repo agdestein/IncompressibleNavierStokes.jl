@@ -27,7 +27,7 @@ inflow(dim, x, y, t) = sinpi(sinpi(t / 6) / 6 + (dim == 1) / 2)
 boundary_conditions = ((DirichletBC(inflow), PressureBC()), (PressureBC(), PressureBC()))
 
 # Build setup
-setup = Setup(; x, Re = 100.0, boundary_conditions);
+setup = Setup(; x, visc = 1e-2, boundary_conditions);
 
 # This is the right-hand side force in the momentum equation
 # By default, it is just `navierstokes!`. Here we add a

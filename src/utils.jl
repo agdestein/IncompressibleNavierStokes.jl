@@ -49,7 +49,7 @@ Plot nonuniform Cartesian grid.
 function plotgrid end
 
 "Get utilities to compute energy spectrum."
-function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) / 2)
+function spectral_stuff(setup; npoint = 100, a = typeof(setup.visc)(1 + sqrt(5)) / 2)
     (; dimension, xp, Np) = setup.grid
     T = eltype(xp[1])
     D = dimension()
@@ -114,7 +114,7 @@ function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) /
 end
 
 "Get energy spectrum of velocity field."
-function get_spectrum(setup; npoint = 100, a = typeof(e.setup.Re)(1 + sqrt(5)) / 2)
+function get_spectrum(setup; npoint = 100, a = typeof(setup.visc)(1 + sqrt(5)) / 2)
     (; dimension, xp, Ip) = setup.grid
     T = eltype(xp[1])
     D = dimension()

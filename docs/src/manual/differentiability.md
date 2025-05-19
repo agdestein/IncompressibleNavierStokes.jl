@@ -34,7 +34,7 @@ using IncompressibleNavierStokes
 
 n = 100
 ax = range(0, 1, n + 1)
-setup = Setup(; x = (ax, ax), Re = 500.0)
+setup = Setup(; x = (ax, ax), visc = 2e-3)
 psolver = default_psolver(setup)
 method = LMWray3()
 Δt = 0.001
@@ -80,7 +80,7 @@ In this example we differentiate the right-hand side of the Navier-Stokes equati
 ```@example Differentiability
 using Enzyme
 ax = range(0, 1, 101)
-setup = Setup(; x = (ax, ax), Re = 500.0)
+setup = Setup(; x = (ax, ax), visc = 2e-3)
 psolver = default_psolver(setup)
 u = random_field(setup)
 dudt = similar(u)

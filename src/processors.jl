@@ -244,7 +244,12 @@ fieldsaver(; setup, nupdate = 1) =
     end
 
 "Observe energy spectrum of `state`."
-function observespectrum(state; setup, npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) / 2)
+function observespectrum(
+    state;
+    setup,
+    npoint = 100,
+    a = typeof(setup.visc)(1 + sqrt(5)) / 2,
+)
     state isa Observable || (state = Observable(state))
 
     (; dimension, xp, Ip, Np) = setup.grid

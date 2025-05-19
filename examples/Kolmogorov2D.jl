@@ -27,7 +27,7 @@ using IncompressibleNavierStokes
 
 n = 256
 axis = range(0.0, 1.0, n + 1)
-setup = Setup(; x = (axis, axis), Re = 2e3);
+setup = Setup(; x = (axis, axis), visc = 5e-4);
 u = random_field(setup, 0.0; A = 1e-2);
 
 # This is the right-hand side force in the momentum equation

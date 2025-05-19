@@ -62,7 +62,7 @@ end
 #     for D in (2, 3), T in (Float32, Float64)
 #         # Periodic
 #         x = ntuple(d -> range(T(0), T(1), 5), D)
-#         setup = Setup(; x, Re = T(1000), backend = CUDABackend())
+#         setup = Setup(; x, visc = T(1e-3), backend = CUDABackend())
 #         u = velocityfield(setup, (dim, x...) -> zero(x[1]))
 #         solve_unsteady(; start = (; u), setup, tlims = (T(0), T(1e-2)))
 #         # Boundaries, temperature
@@ -76,7 +76,7 @@ end
 #         )
 #         setup = Setup(;
 #             x,
-#             Re = T(1000),
+#             visc = T(1e-3),
 #             temperature,
 #             boundary_conditions,
 #             backend = CUDABackend(),

@@ -558,11 +558,11 @@ Keyword arguments:
 - `with_viscosity = true`: Include viscosity in the operator.
 """
 function diffusion!(F, u, setup; use_viscosity = true)
-    (; grid, backend, workgroupsize, Re) = setup
+    (; grid, backend, workgroupsize, visc) = setup
     (; dimension, Δ, Δu, N, Iu) = grid
     D = dimension()
     e = Offset(D)
-    visc = use_viscosity ? 1 / Re : one(Re)
+    visc = use_viscosity ? visc : one(visc)
     kernel = diffusion_kernel!(backend, workgroupsize)
     I0 = oneunit(CartesianIndex{D})
     kernel(F, u, visc, e, Δ, Δu, Iu, Val(1:D), I0; ndrange = N .- 2)
@@ -596,11 +596,11 @@ end
 end
 
 function diffusion_adjoint!(u, φ, setup; use_viscosity = true)
-    (; grid, backend, workgroupsize, Re) = setup
+    (; grid, backend, workgroupsize, visc) = setup
     (; dimension, N, Δ, Δu, Iu) = grid
     D = dimension()
     e = Offset(D)
-    visc = use_viscosity ? 1 / Re : one(Re)
+    visc = use_viscosity ? visc : one(visc)
     kernel = diffusion_adjoint_kernel!(backend, workgroupsize)
     kernel(u, φ, visc, e, Δ, Δu, Iu, Val(1:D); ndrange = N)
     u
@@ -655,11 +655,10 @@ Compute convective and diffusive terms (in-place version).
 Add the result to `F`.
 """
 function convectiondiffusion!(F, u, setup)
-    (; grid, backend, workgroupsize, Re) = setup
+    (; grid, backend, workgroupsize, visc) = setup
     (; dimension, N) = grid
     D = dimension()
     @assert size(u) == size(F) == (N..., D)
-    visc = 1 / Re
     I0 = oneunit(CartesianIndex{D})
     kernel = convection_diffusion_kernel!(backend, workgroupsize)
     kernel(F, u, visc, grid, Val(1:D), I0; ndrange = N .- 2)
@@ -749,7 +748,7 @@ end
 dissipation(u, setup) = dissipation!(scalarfield(setup), vectorfield(setup), u, setup)
 
 function ChainRulesCore.rrule(::typeof(dissipation), u, setup)
-    (; grid, backend, workgroupsize, Re, temperature) = setup
+    (; grid, backend, workgroupsize, visc, temperature) = setup
     (; dimension, Δ, N, Np, Ip) = grid
     (; α1, γ) = temperature
     D = dimension()
@@ -763,20 +762,20 @@ function ChainRulesCore.rrule(::typeof(dissipation), u, setup)
             a = zero(eltype(u))
             # 1
             I = J + e(β)
-            I ∈ Ip && (a += Re * α1 / γ * d[I-e(β), β] / 2)
+            I ∈ Ip && (a += α1 / visc / γ * d[I-e(β), β] / 2)
             # 2
             I = J
-            I ∈ Ip && (a += Re * α1 / γ * d[I, β] / 2)
+            I ∈ Ip && (a += visc / γ * d[I, β] / 2)
             ubar[J, β] += a
 
             # Compute dbar
             b = zero(eltype(u))
             # 1
             I = J + e(β)
-            I ∈ Ip && (b += Re * α1 / γ * u[I-e(β), β] / 2)
+            I ∈ Ip && (b += α1 / visc / γ * u[I-e(β), β] / 2)
             # 2
             I = J
-            I ∈ Ip && (b += Re * α1 / γ * u[I, β] / 2)
+            I ∈ Ip && (b += α1 / visc / γ * u[I, β] / 2)
             dbar[J, β] += b
         end
     end
@@ -796,7 +795,7 @@ Compute dissipation term for the temperature equation (in-place version).
 Add result to `diss`.
 """
 function dissipation!(diss, diff, u, setup)
-    (; grid, backend, workgroupsize, Re, temperature) = setup
+    (; grid, backend, workgroupsize, visc, temperature) = setup
     (; dimension, Δ, Np, Ip) = grid
     (; α1, γ) = temperature
     D = dimension()
@@ -808,7 +807,7 @@ function dissipation!(diss, diff, u, setup)
         I += I0
         d = zero(eltype(diss))
         @unroll for β in getval(valdims)
-            d += Re * α1 / γ * (u[I-e(β), β] * diff[I-e(β), β] + u[I, β] * diff[I, β]) / 2
+            d += α1 / visc / γ * (u[I-e(β), β] * diff[I-e(β), β] + u[I, β] * diff[I, β]) / 2
         end
         diss[I] += d
     end
@@ -830,9 +829,8 @@ ChainRulesCore.rrule(::typeof(dissipation_from_strain), u, setup) =
 
 "Compute dissipation term from strain-rate tensor (in-place version)."
 function dissipation_from_strain!(ϵ, u, setup)
-    (; grid, backend, workgroupsize, Re) = setup
+    (; grid, backend, workgroupsize, visc) = setup
     (; Δ, Δu, Np, Ip) = grid
-    visc = 1 / Re
     I0 = getoffset(Ip)
     kernel = dissipation_from_strain_kernel!(backend, workgroupsize)
     kernel(ϵ, u, visc, Δ, Δu, I0; ndrange = Np)
@@ -1223,11 +1221,10 @@ Get the following dimensional scale numbers [Pope2000](@cite):
 - Large-eddy turnover time ``\\tau = \\frac{L}{u_\\text{avg}}``
 """
 function get_scale_numbers(u, setup)
-    (; grid, Re) = setup
+    (; grid, visc) = setup
     (; dimension, Iu, Ip, Δ, Δu, Np) = grid
     D = dimension()
     T = eltype(u)
-    visc = 1 / Re
     Ω = scalewithvolume!(fill!(scalarfield(setup), 1), setup)
     uavg =
         sum(1:D) do α

@@ -92,7 +92,7 @@ setup = Setup(;
     ),
     ## x = (range(xlims..., nx + 1), tanh_grid(ylims..., ny + 1), range(zlims..., nz + 1)),
     x = (range(xlims..., nx + 1), range(ylims..., ny + 1), range(zlims..., nz + 1)),
-    ## Re = 180 |> T,
+    visc = T(1 / 180),
     backend,
 );
 
@@ -185,7 +185,7 @@ sol, outputs = solve_unsteady(;
 xp1 = setup.grid.xp[1][2:(end-1)] |> Array
 xp2 = setup.grid.xp[2][2:(end-1)] |> Array
 xp3 = setup.grid.xp[3][2:(end-1)] |> Array
-vtk_grid("output/channel_Re=$(round(Int, setup.Re))", xp1, xp2, xp3) do vtk
+vtk_grid("output/channel_visc=$(setup.visc)", xp1, xp2, xp3) do vtk
     q = qcrit(sol.u, setup);
     # uin = sol.u[2:(end-1), 2:(end-1), 2:(end-1), :]
     unorm = kinetic_energy(sol.u, setup)

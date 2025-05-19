@@ -11,7 +11,7 @@
     x = LinRange(0.0, 1.0, n + 1), LinRange(0.0, 1.0, n + 1)
     setup = Setup(;
         x,
-        Re = 100.0,
+        visc = 1e-2,
         boundary_conditions = (
             (DirichletBC(), DirichletBC()),
             (DirichletBC(), DirichletBC()),

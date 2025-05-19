@@ -143,7 +143,7 @@ end
 
 "Get proposed maximum time step for convection and diffusion terms."
 function get_cfl_timestep!(buf, state, setup)
-    (; Re, grid) = setup
+    (; visc, grid) = setup
     (; dimension, Δ, Δu, Iu) = grid
     D = dimension()
     (; u) = state
@@ -155,7 +155,7 @@ function get_cfl_timestep!(buf, state, setup)
     for (α, uα) in enumerate(eachslice(u; dims = D + 1))
         # Diffusion
         Δαmin = minimum(view(Δu[α], Iu[α].indices[α]))
-        Δt_diff = Re * Δαmin^2 / 2D
+        Δt_diff = Δαmin^2 / visc / 2D
 
         # Convection
         Δα = reshape(Δu[α], ntuple(Returns(1), α - 1)..., :)

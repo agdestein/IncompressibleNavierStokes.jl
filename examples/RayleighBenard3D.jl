@@ -47,7 +47,6 @@ setup = Setup(;
         (DirichletBC(), DirichletBC()),
         (DirichletBC(), DirichletBC()),
     ),
-    Re = 1 / temperature.α1,
     temperature,
     backend,
 );

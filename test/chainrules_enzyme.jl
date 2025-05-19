@@ -11,7 +11,7 @@ end
 
     D2, D3 = map((2, 3)) do D
         T = Float64
-        Re = T(1_000)
+        visc = T(1e-3)
         n = if D == 2
             8
         elseif D == 3
@@ -34,7 +34,7 @@ end
             Ge = T(1.0),
             boundary_conditions,
         )
-        setup = Setup(; x, boundary_conditions, Re, temperature)
+        setup = Setup(; x, boundary_conditions, visc, temperature)
         psolver = default_psolver(setup)
         u = randn(T, setup.grid.N..., D)
         p = randn(T, setup.grid.N)
@@ -47,7 +47,7 @@ end
 @testitem "Chain rules (boundary conditions)" setup = [EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     T = Float64
-    Re = T(1_000)
+    visc = T(1e-3)
     Pr = T(0.71)
     Ra = T(1e6)
     Ge = T(1.0)
@@ -59,7 +59,7 @@ end
         boundary_conditions = (bc, bc), (bc, bc)
         setup = Setup(;
             x,
-            Re,
+            visc,
             boundary_conditions,
             temperature = temperature_equation(; Pr, Ra, Ge, boundary_conditions),
         )

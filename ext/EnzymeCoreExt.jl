@@ -324,7 +324,7 @@ function EnzymeRules.reverse(
     u::Duplicated,
     setup::Const,
 )
-    (; grid, backend, workgroupsize, Re, temperature) = setup.val
+    (; grid, backend, workgroupsize, visc, temperature) = setup.val
     (; dimension, N, Ip) = grid
     (; α1, γ) = temperature
     D = dimension()
@@ -336,20 +336,20 @@ function EnzymeRules.reverse(
             a = zero(eltype(u))
             # 1
             I = J + e(β)
-            I ∈ Ip && (a += Re * α1 / γ * d[I-e(β), β] / 2)
+            I ∈ Ip && (a += α1 / visc / γ * d[I-e(β), β] / 2)
             # 2
             I = J
-            I ∈ Ip && (a += Re * α1 / γ * d[I, β] / 2)
+            I ∈ Ip && (a += α1 / visc / γ * d[I, β] / 2)
             ubar[J, β] += a
 
             # Compute dbar
             b = zero(eltype(u))
             # 1
             I = J + e(β)
-            I ∈ Ip && (b += Re * α1 / γ * u[I-e(β), β] / 2)
+            I ∈ Ip && (b += α1 / visc / γ * u[I-e(β), β] / 2)
             # 2
             I = J
-            I ∈ Ip && (b += Re * α1 / γ * u[I, β] / 2)
+            I ∈ Ip && (b += α1 / visc / γ * u[I, β] / 2)
             dbar[J, β] += b
         end
     end

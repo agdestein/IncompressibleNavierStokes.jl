@@ -3,7 +3,7 @@
     x = tanh_grid(0.0, 5.0, 11), cosine_grid(0.0, 1.0, 7), tanh_grid(0.0, 0.8, 5)
     setup = Setup(;
         x,
-        Re = 1e3,
+        visc = 1e-3,
         boundary_conditions = (
             (PeriodicBC(), PeriodicBC()),
             (DirichletBC(), PressureBC()),

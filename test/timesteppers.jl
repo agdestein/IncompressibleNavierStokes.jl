@@ -7,7 +7,7 @@
         Ge = 1.0,
         boundary_conditions = ((PeriodicBC(), PeriodicBC()), (PeriodicBC(), PeriodicBC())),
     )
-    setup = Setup(; x = (ax, ax), Re = 1e3, temperature)
+    setup = Setup(; x = (ax, ax), visc = 1e-3, temperature)
     psolver = default_psolver(setup)
     u = random_field(setup, psolver)
     temp = randn!(scalarfield(setup))

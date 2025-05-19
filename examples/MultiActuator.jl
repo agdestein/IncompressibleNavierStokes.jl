@@ -65,7 +65,7 @@ x = LinRange(0.0, 10.0, 5n + 1), LinRange(-2.0, 2.0, 2n + 1)
 plotgrid(x...; figure = (; size = (600, 300)))
 
 # Build setup and assemble operators
-setup = Setup(; x, Re = 2e2, boundary_conditions);
+setup = Setup(; x, visc = 5e-3, boundary_conditions);
 
 # Initial conditions (extend inflow)
 u = velocityfield(setup, (dim, x, y) -> (dim == 1) * one(x));

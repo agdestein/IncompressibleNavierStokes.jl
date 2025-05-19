@@ -30,7 +30,7 @@ This projected right-hand side can be used in the SciML solvers to solve the Nav
 using OrdinaryDiffEqTsit5
 using IncompressibleNavierStokes
 ax = range(0, 1, 101)
-setup = Setup(; x = (ax, ax), Re = 500.0)
+setup = Setup(; x = (ax, ax), visc = 2e-3)
 psolver = default_psolver(setup)
 f = create_right_hand_side(setup, psolver)
 u0 = random_field(setup)

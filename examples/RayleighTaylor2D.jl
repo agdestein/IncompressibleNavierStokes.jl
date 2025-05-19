@@ -36,7 +36,6 @@ temperature = temperature_equation(;
 setup = Setup(;
     x,
     boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
-    Re = 1 / temperature.α1,
     temperature,
 );
 

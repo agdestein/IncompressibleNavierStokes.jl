@@ -5,11 +5,11 @@ Setup(;
     backend = CPU(),
     workgroupsize = 64,
     temperature = nothing,
-    Re = isnothing(temperature) ? convert(eltype(x[1]), 1_000) : 1 / temperature.α1,
+    visc = isnothing(temperature) ? convert(eltype(x[1]), 1e-3) : temperature.α1,
 ) = (;
     grid = Grid(; x, boundary_conditions, backend),
     boundary_conditions,
-    Re,
+    visc,
     backend,
     workgroupsize,
     temperature,

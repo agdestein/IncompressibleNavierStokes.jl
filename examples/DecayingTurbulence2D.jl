@@ -21,7 +21,7 @@ using IncompressibleNavierStokes
 # Setup
 n = 256
 ax = LinRange(0.0, 1.0, n + 1)
-setup = Setup(; x = (ax, ax), Re = 4e3);
+setup = Setup(; x = (ax, ax), visc = 2.5e-4)
 u = random_field(setup, 0.0);
 
 # Solve unsteady problem

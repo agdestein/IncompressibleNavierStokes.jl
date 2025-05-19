@@ -17,7 +17,7 @@ Consider a simple setup
 ```@example Matrices
 using IncompressibleNavierStokes
 ax = range(0, 1, 17);
-setup = Setup(; x = (ax, ax), Re = 1e3);
+setup = Setup(; x = (ax, ax), visc = 1e-3);
 ```
 
 The matrices for the linear operators are named by appending `_mat` to the function name, for example:

@@ -26,7 +26,7 @@ backend = IncompressibleNavierStokes.CPU()
 ## using CUDA; backend = CUDABackend()
 
 # Reynolds number
-Re = T(1000)
+visc = T(1e-3)
 
 # A 3D grid is a Cartesian product of three vectors
 x = LinRange(T(0), T(10), 129),
@@ -48,7 +48,7 @@ boundary_conditions = (
 )
 
 # Build setup and assemble operators
-setup = Setup(; x, Re, boundary_conditions, backend);
+setup = Setup(; x, visc, boundary_conditions, backend);
 
 # This will factorize the Laplace matrix
 @time psolver = default_psolver(setup)

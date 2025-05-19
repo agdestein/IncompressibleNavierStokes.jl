@@ -25,7 +25,7 @@ backend = IncompressibleNavierStokes.CPU()
 ## using CUDA; backend = CUDABackend()
 
 # Reynolds number
-Re = T(100)
+visc = T(1e-2)
 
 # A 3D grid is a Cartesian product of three vectors
 x = LinRange(0.0, 6.0, 31), LinRange(-2.0, 2.0, 41), LinRange(-2.0, 2.0, 41)
@@ -74,7 +74,7 @@ function IncompressibleNavierStokes.get_cache(::typeof(force!), setup)
 end
 
 # Build setup and assemble operators
-setup = Setup(; x, Re, boundary_conditions, backend);
+setup = Setup(; x, visc, boundary_conditions, backend);
 
 # Initial conditions (extend inflow)
 u = velocityfield(setup, (dim, x, y, z) -> dim == 1 ? one(x) : zero(x));

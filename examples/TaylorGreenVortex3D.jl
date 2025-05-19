@@ -23,7 +23,7 @@ backend = IncompressibleNavierStokes.CPU()
 
 n = 32
 r = range(T(0), T(1), n + 1)
-setup = Setup(; x = (r, r, r), Re = T(1e3), backend);
+setup = Setup(; x = (r, r, r), visc = T(1e-3), backend);
 psolver = psolver_spectral(setup);
 
 # Initial conditions

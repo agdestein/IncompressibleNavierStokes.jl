@@ -1,7 +1,7 @@
 @testmodule Setup2D begin
     using IncompressibleNavierStokes
     T = Float64
-    Re = T(1_000)
+    visc = T(1e-3)
     n = 16
     lims = T(0), T(1)
     x = tanh_grid(lims..., n), tanh_grid(lims..., n, 1.3)
@@ -9,7 +9,7 @@
     boundary_conditions = (bc, bc)
     temperature =
         temperature_equation(; Pr = T(0.71), Ra = T(1e6), Ge = T(1.0), boundary_conditions)
-    setup = Setup(; x, boundary_conditions, Re, temperature)
+    setup = Setup(; x, boundary_conditions, visc, temperature)
     psolver = default_psolver(setup)
     uref(dim, x, y, args...) = -(dim == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
     u = velocityfield(setup, uref, T(0))
@@ -18,7 +18,7 @@ end
 @testmodule Setup3D begin
     using IncompressibleNavierStokes
     T = Float64
-    Re = T(1_000)
+    visc = T(1e-3)
     n = 16
     lims = T(0), T(1)
     x = tanh_grid(lims..., n, 1.2), tanh_grid(lims..., n, 1.1), cosine_grid(lims..., n)
@@ -26,7 +26,7 @@ end
     boundary_conditions = (bc, bc, bc)
     temperature =
         temperature_equation(; Pr = T(0.71), Ra = T(1e6), Ge = T(1.0), boundary_conditions)
-    setup = Setup(; x, boundary_conditions, Re, temperature)
+    setup = Setup(; x, boundary_conditions, visc, temperature)
     psolver = default_psolver(setup)
     uref(dim, x, y, args...) = -(dim == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
     u = velocityfield(setup, uref, T(0))
@@ -165,7 +165,7 @@ end
     using Random
     ax = range(0, 1, 19)
     for x in ((ax, ax), (ax, ax, ax))
-        setup = Setup(; x, Re = 1e3)
+        setup = Setup(; x, visc = 1e-3)
         u = randn!(vectorfield(setup))
         @test get_scale_numbers(u, setup) isa NamedTuple
     end
@@ -173,7 +173,7 @@ end
     # Only works for uniform periodic
     setup = Setup(;
         x = (ax, ax),
-        Re = 1e3,
+        visc = 1e-3,
         boundary_conditions = (
             (DirichletBC(), DirichletBC()),
             (DirichletBC(), DirichletBC()),
