@@ -7,7 +7,8 @@ end
 
 using IncompressibleNavierStokes
 using CairoMakie
-using GLMakie
+using WGLMakie
+## using WGLMakie
 using WriteVTK
 
 backend = IncompressibleNavierStokes.CPU()
@@ -68,12 +69,11 @@ end
 
 # Precision
 T = Float64
-f = one(T)
 
 # Domain
-xlims = 0f, 4f * pi
-ylims = 0f, 2f
-zlims = 0f, 4f / 3f * pi
+xlims = T(0), T(4 * π)
+ylims = T(0), T(2)
+zlims = T(0), T(4 / 3 * π)
 
 # Grid
 ## nx, ny, nz = 32, 16, 16
@@ -81,6 +81,8 @@ nx, ny, nz = 48, 24, 24
 ## nx, ny, nz = 64, 32, 32
 ## nx, ny, nz = 128, 64, 64
 ## nx, ny, nz = 200, 100, 100
+## nx, ny, nz = 256, 128, 128
+## nx, ny, nz = 512, 512, 256
 
 setup = Setup(;
     boundary_conditions = (
@@ -88,9 +90,9 @@ setup = Setup(;
         (DirichletBC(), DirichletBC()),
         (PeriodicBC(), PeriodicBC()),
     ),
-    # x = (range(xlims..., nx + 1), tanh_grid(ylims..., ny + 1), range(zlims..., nz + 1)),
+    ## x = (range(xlims..., nx + 1), tanh_grid(ylims..., ny + 1), range(zlims..., nz + 1)),
     x = (range(xlims..., nx + 1), range(ylims..., ny + 1), range(zlims..., nz + 1)),
-    Re = 180f,
+    ## Re = 180 |> T,
     backend,
 );
 
@@ -104,34 +106,47 @@ setup = Setup(;
 # Discrete transform solver (FFT/DCT)
 psolver = psolver_transform(setup);
 
+## using Random
+## let
+##     u = randn!(vectorfield(setup))
+##     IncompressibleNavierStokes.apply_bc_u!(u, 0.0, setup)
+##     up = project(u, setup; psolver)
+##     IncompressibleNavierStokes.apply_bc_u!(up, 0.0, setup)
+##     divergence(u, setup) |> extrema
+##     divergence(up, setup) |> extrema
+##     # divergence(up, setup) |> x -> sum(abs, x) / length(x)
+## end
+
 # This is the right-hand side force in the momentum equation
 # By default, it is just `navierstokes!`. Here we add a
 # pre-computed body force.
 function force!(f, state, t, params, setup, cache)
     navierstokes!(f, state, t, nothing, setup, nothing)
-    f.u .+= cache.bodyforce
-    wale_closure!(f.u, u, params, cache.wale, setup)
+    @. f.u[:, :, :, 1] += 1 # Force is 1 in direction x
+    ## wale_closure!(f.u, u, params, cache.wale, setup)
 end
 
 # Tell IncompressibleNavierStokes how to prepare the cache for `force!`.
 # The cache is created before time stepping begins.
 function IncompressibleNavierStokes.get_cache(::typeof(force!), setup)
-    f(dim, x, y, z) = (dim == 1) * one(x)
-    bodyforce = velocityfield(setup, f; psolver, doproject = false)
-    wale = get_cache(wale_closure, setup)
-    (; bodyforce, wale)
+    ## f(dim, x, y, z) = (dim == 1) * one(x)
+    ## bodyforce = velocityfield(setup, f; psolver, doproject = false)
+    ## (; bodyforce)
+    ## wale = get_cache(wale_closure, setup)
+    ## (; bodyforce, wale)
+    nothing
 end
 
-Re_tau = 180f
-Re_m = 2800f
+Re_tau = 180 |> T
+Re_m = 2800 |> T
 Re_ratio = Re_m / Re_tau
 
 u = let
     Lx = xlims[2] - xlims[1]
     Ly = ylims[2] - ylims[1]
     Lz = zlims[2] - zlims[1]
-    C = 9f / 8 * Re_ratio
-    E = 1f / 10 * Re_ratio # 10% of average mean velocity
+    C = T(9 / 8) * Re_ratio
+    E = T(1 / 10) * Re_ratio ## 10% of average mean velocity
     function U(dim, x, y, z)
         ux =
             C * (1 - (y - Ly / 2)^8) +
@@ -140,7 +155,7 @@ u = let
         uz = -E * Lz / 2 * sinpi(4 * x / Lx) * sinpi(y) * cospi(2 * z / Lz)
         (dim == 1) * ux + (dim == 2) * uy + (dim == 3) * uz
     end
-    velocityfield(setup, U; psolver);
+    velocityfield(setup, U; psolver)
 end;
 
 plotgrid(setup.grid.x[1] |> Array, setup.grid.x[2] |> Array)
@@ -150,30 +165,34 @@ plotgrid(setup.grid.x[2] |> Array, setup.grid.x[3] |> Array)
 sol, outputs = solve_unsteady(;
     setup,
     force!,
-    params = 0.6, # WALE constant
+    ## params = 0.6, # WALE constant
     psolver,
-    start = (; u),
-    tlims = (0f, 5f),
+    start = (; sol.u),
+    tlims = (0 |> T, 1 |> T),
     processors = (;
-        logger = timelogger(; nupdate = 10),
-        plotter = realtimeplotter(; plot = sectionplot, setup, component = 1, nupdate = 10),
+        logger = timelogger(; nupdate = 1),
+        ## plotter = realtimeplotter(; plot = sectionplot, setup, component = 1, nupdate = 5),
         ## writer = vtk_writer(;
         ##     setup,
         ##     dir = joinpath(@__DIR__, "output", "TCF_INS3"),
-        ##     fieldnames = (:eig2field, :velocity),
-        ##     nupdate = 10,
+        ##     fieldnames = (:qcrit, :velocitynorm),
+        ##     # fieldnames = (:qcrit,),
+        ##     nupdate = 15,
         ## ),
     ),
 );
 
-q = qcrit(sol.u, setup)
 xp1 = setup.grid.xp[1][2:(end-1)] |> Array
 xp2 = setup.grid.xp[2][2:(end-1)] |> Array
 xp3 = setup.grid.xp[3][2:(end-1)] |> Array
-vtk_grid("uniform", xp1, xp2, xp3) do vtk
-    uin = sol.u[2:(end-1), 2:(end-1), 2:(end-1), :]
-    vtk["u"] = (eachslice(uin; dims = 4)...,) .|> Array
-    vtk["q"] = q[2:(end-1), 2:(end-1), 2:(end-1)] |> Array
+vtk_grid("output/channel_Re=$(round(Int, setup.Re))", xp1, xp2, xp3) do vtk
+    q = qcrit(sol.u, setup);
+    # uin = sol.u[2:(end-1), 2:(end-1), 2:(end-1), :]
+    unorm = kinetic_energy(sol.u, setup)
+    @. unorm = sqrt(2 * unorm)
+    # vtk["u"] = (eachslice(uin; dims = 4)...,) .|> Array
+    vtk["u"] = view(unorm, setup.grid.Ip) |> Array
+    vtk["q"] = view(q, setup.grid.Ip) |> Array
 end
 
 # The AMGX solver needs to be closed after use.

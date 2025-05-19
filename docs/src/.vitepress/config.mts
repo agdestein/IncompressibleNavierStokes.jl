@@ -94,6 +94,7 @@ const sidebar = {
           { text: 'Backward Facing Step (3D)', link: '/examples/generated/BackwardFacingStep3D' },
           { text: 'Lid-Driven Cavity (2D)', link: '/examples/generated/LidDrivenCavity2D' },
           { text: 'Multiple actuators (2D)', link: '/examples/generated/MultiActuator' },
+          { text: 'Turbulent channel flow (3D)', link: '/examples/generated/ChannelFlow3D' },
         ],
       },
       {

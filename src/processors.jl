@@ -91,7 +91,6 @@ function observefield(
     elseif fieldname == :velocity
         up = interpolate_u_p(state[].u, setup)
     elseif fieldname == :velocitynorm
-        up = interpolate_u_p(state[].u, setup)
         upnorm = scalarfield(setup)
     elseif fieldname == :vorticity
         ω = vorticity(state[].u, setup)
@@ -119,15 +118,9 @@ function observefield(
         elseif fieldname == :velocity
             interpolate_u_p!(up, state.u, setup)
         elseif fieldname == :velocitynorm
-            interpolate_u_p!(up, state.u, setup)
-            # map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
-            if D == 2
-                uptuple = eachslice(up; dims = ndims(up))
-                @. upnorm = sqrt(uptuple[1]^2 + uptuple[2]^2)
-            elseif D == 3
-                uptuple = eachslice(up; dims = ndims(up))
-                @. upnorm = sqrt(uptuple[1]^2 + uptuple[2]^2 + uptuple[3]^2)
-            end
+            kinetic_energy!(upnorm, state.u, setup)
+            @. upnorm = sqrt(2 * upnorm)
+            upnorm
         elseif fieldname == :vorticity
             apply_bc_u!(state.u, state.t, setup)
             vorticity!(ω, state.u, setup)

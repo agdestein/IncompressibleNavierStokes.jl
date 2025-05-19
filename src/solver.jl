@@ -76,6 +76,8 @@ function solve_unsteady(;
     ode_cache = get_cache(method, setup),
     force_cache = get_cache(force!, setup),
 )
+    timing = time()
+
     tstart, tend = tlims
     isadaptive = isnothing(Δt)
     if isadaptive
@@ -124,6 +126,10 @@ function solve_unsteady(;
     outputs = (;
         (k => processors[k].finalize(initialized[k], state) for k in keys(processors))...
     )
+
+    timing = time() - timing
+
+    @info "Finished after $(stepper.n) time steps and $(round(timing; digits = 2)) seconds"
 
     # Return state and outputs
     (; stepper.state..., stepper.t), outputs

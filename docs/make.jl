@@ -36,6 +36,7 @@ examples = [
     (false, "examples/BackwardFacingStep3D"),
     (true, "examples/LidDrivenCavity2D"),
     (false, "examples/MultiActuator"),
+    (false, "examples/ChannelFlow3D"),
 
     # With temperature field
     (true, "examples/RayleighBenard2D"),

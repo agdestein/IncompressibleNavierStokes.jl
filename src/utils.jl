@@ -189,6 +189,7 @@ end
 
 function manual_dct!(u, i, stuff)
     (; uhat, w, perm, perminv) = stuff
+
     # Permute u
     if ndims(u) == 1
         @. u = u[perm[1]]
