@@ -495,8 +495,7 @@ end
                 I = J - e(α)
                 if β == γ && I in Iu[α]
                     uαβ2 = h * u[I, α] + h * u[I+e(β), α]
-                    uαβ2 = h * u[I, α] + h * u[I+e(β), α]
-                    uβα2 = AAβα1[I[α]+1+(α==β)]
+                    uβα2 = AAβα1[I[α]+1]
                     dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
                     adjoint += φbar[I, α] * dφdu
                 end
