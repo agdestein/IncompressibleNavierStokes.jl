@@ -1,8 +1,8 @@
 "Navier-Stokes momentum forcing (convection + diffusion)."
-function navierstokes!(f, state, t, params, setup, cache)
+function navierstokes!(force, state, t, params, setup, cache)
     (; u) = state
-    fill!(f.u, 0)
-    convectiondiffusion!(f.u, state.u, setup)
+    fill!(force.u, 0)
+    convectiondiffusion!(force.u, state.u, setup)
 end
 
 "Navier-Stokes momentum forcing (convection + diffusion)."
@@ -13,16 +13,16 @@ function navierstokes(state, t, params, setup)
 end
 
 "Boussinesq forcing (Navier-Stokes + gravity for `u`, convection-diffusion for `temp`)."
-function boussinesq!(f, state, t, params, setup, cache)
+function boussinesq!(force, state, t, params, setup, cache)
     (; temperature) = setup
     (; u, temp) = state
     (; diff) = cache
-    fill!(f.u, 0)
-    fill!(f.temp, 0)
-    convectiondiffusion!(f.u, u, setup)
-    gravity!(f.u, temp, setup)
-    convection_diffusion_temp!(f.temp, u, temp, setup)
-    temperature.dodissipation && dissipation!(f.temp, diff, u, setup)
+    fill!(force.u, 0)
+    fill!(force.temp, 0)
+    convectiondiffusion!(force.u, u, setup)
+    gravity!(force.u, temp, setup)
+    convection_diffusion_temp!(force.temp, u, temp, setup)
+    temperature.dodissipation && dissipation!(force.temp, diff, u, setup)
 end
 
 "Boussinesq forcing (Navier-Stokes + gravity for `u`, convection-diffusion for `temp`)."
@@ -73,7 +73,7 @@ function solve_unsteady(;
     processors = (;),
     params = nothing,
     # Cache arrays for intermediate computations
-    ode_cache = get_cache(method, setup),
+    ode_cache = get_cache(method, start, setup),
     force_cache = get_cache(force!, setup),
 )
     timing = time()
