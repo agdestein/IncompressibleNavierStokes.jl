@@ -92,7 +92,7 @@ function timestep(method::ExplicitRungeKuttaMethod, force, stepper, Δt; params 
 
         # Project stage u directly
         # Make velocity divergence free at time t
-        u = apply_bc_u(u, t, setup)
+        u = apply_bc_u(state.u, t, setup)
         u = project(u, setup; psolver)
 
         # Fill boundary values at new time

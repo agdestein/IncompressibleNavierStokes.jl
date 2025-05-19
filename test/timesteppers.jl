@@ -15,25 +15,15 @@
     Δt = 0.1
     for method in [LMWray3(), RKMethods.RK44()]
         stepper_outplace = let
-            stepper = create_stepper(
-                method;
-                setup,
-                psolver,
-                state = (; u = copy(u), temp = copy(temp)),
-                t = 0.0,
-            )
+            state = (; u = copy(u), temp = copy(temp))
+            stepper = create_stepper(method; setup, psolver, state, t = 0.0)
             timestep(method, boussinesq, stepper, Δt)
         end
         stepper_inplace = let
+            state = (; u = copy(u), temp = copy(temp))
             force_cache = IncompressibleNavierStokes.get_cache(boussinesq!, setup)
-            ode_cache = IncompressibleNavierStokes.get_cache(method, setup)
-            stepper = create_stepper(
-                method;
-                setup,
-                psolver,
-                state = (; u = copy(u), temp = copy(temp)),
-                t = 0.0,
-            )
+            ode_cache = IncompressibleNavierStokes.get_cache(method, state, setup)
+            stepper = create_stepper(method; setup, psolver, state, t = 0.0)
             IncompressibleNavierStokes.timestep!(
                 method,
                 boussinesq!,
