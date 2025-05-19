@@ -50,7 +50,16 @@ timelogger(;
     showspeed = true,
     nupdate = 1,
 ) =
-    processor() do state
+    processor(
+        (timing, state) -> @info(
+            @sprintf(
+                "Finished after %d time steps and %.2g seconds",
+                state[].n,
+                time() - timing,
+            ),
+        ),
+    ) do state
+        globaltime = time()
         told = Ref(state[].t)
         oldtime = time()
         on(state) do (; u, t, n)
@@ -68,7 +77,7 @@ timelogger(;
             showspeed && push!(msg, @sprintf("itertime = %.2g", itertime))
             @info join(msg, "\t")
         end
-        nothing
+        globaltime
     end
 
 """
