@@ -69,14 +69,14 @@ const boundaries = [
   {
     href: "generated/MultiActuator",
     src: "../logo.svg",
-    desc: "Multi-actuator (2D)",
-    caption: "Unsteady inflow around multiple actuator disks",
+    caption: "Multi-actuator (2D)",
+    desc: "Unsteady inflow around multiple actuator disks",
   },
   {
     href: "generated/ChannelFlow3D",
     src: "../logo.svg",
-    desc: "Turbulent channel flow (3D)",
-    caption: "Turbulence in a periodic channel with two walls",
+    caption: "Turbulent channel flow (3D)",
+    desc: "Turbulence in a periodic channel with two walls",
   },
 ];
 

@@ -62,7 +62,7 @@ function sectionplot(state; setup, component, qrange = (0, 500))
     heatmap!(ax_xy, xplot, yplot, u_xy; colorrange)
     hm = heatmap!(ax_zy, zplot, yplot, u_zy; colorrange)
     Colorbar(fig[1, 3], hm)
-    # linkyaxes!(ax_xy, ax_yz)
+    ## linkyaxes!(ax_xy, ax_yz)
     colsize!(fig.layout, 1, Relative(1 / 4))
     fig
 end
