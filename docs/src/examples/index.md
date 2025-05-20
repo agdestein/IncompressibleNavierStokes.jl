@@ -74,7 +74,7 @@ const boundaries = [
   },
   {
     href: "generated/ChannelFlow3D",
-    src: "../logo.svg",
+    src: "../ChannelFlow3D.webp",
     caption: "Turbulent channel flow (3D)",
     desc: "Turbulence in a periodic channel with two walls",
   },

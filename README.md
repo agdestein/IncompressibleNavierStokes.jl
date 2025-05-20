@@ -47,46 +47,48 @@ snapshot files using the `save_vtk` function, or the full time series using the
 `VTKWriter` processor.
 
 <table>
-    <tbody>
-        <tr>
-            <td style="width: 25%;"><img src="docs/src/public/Actuator2D.gif"></td>
-            <td style="width: 25%;"><img src="docs/src/public/BackwardFacingStep2D.png"></td>
-            <td style="width: 25%;"><img src="docs/src/public/DecayingTurbulence2D.gif"></td>
-            <td style="width: 25%;"><img src="docs/src/public/TaylorGreenVortex2D.png"></td>
-        </tr>
-        <tr>
-            <td align="center"><a href="examples/Actuator2D.jl">Actuator (2D)</a></td>
-            <td align="center"><a href="examples/BackwardFacingStep2D.jl">Backward facing step (2D)</a></td>
-            <td align="center"><a href="examples/DecayingTurbulence2D.jl">Decaying turbulence (2D)</a></td>
-            <td align="center"><a href="examples/TaylorGreenVortex2D.jl">Taylor-Green vortex (2D)</a></td>
-        </tr>
-        <tr>
-            <td style="width: 25%;"><img src="docs/src/public/Actuator3D.png"></td>
-            <td style="width: 25%;"><img src="docs/src/public/BackwardFacingStep3D.png"></td>
-            <td style="width: 25%;"><img src="docs/src/public/DecayingTurbulence3D.png"></td>
-            <td style="width: 25%;"><img src="docs/src/public/TaylorGreenVortex3D.png"></td>
-        </tr>
-        <tr>
-            <td align="center"><a href="examples/Actuator3D.jl">Actuator (3D)</a></td>
-            <td align="center"><a href="examples/BackwardFacingStep3D.jl">Backward facing step (3D)</a></td>
-            <td align="center"><a href="examples/DecayingTurbulence3D.jl">Decaying turbulence (3D)</a></td>
-            <td align="center"><a href="examples/TaylorGreenVortex3D.jl"> Taylor-Green vortex (3D)</a></td>
-        </tr>
-        <tr>
-            <td style="width: 25%;"><img src="docs/src/public/RayleighBenard2D.gif"></td>
-            <td style="width: 25%;"><img src="docs/src/public/RayleighBenard3D.gif"></td>
-            <td style="width: 25%;"><img src="docs/src/public/RayleighTaylor2D.gif"></td>
-            <td style="width: 25%;">
-              <!-- <img src="docs/src/public/RayleighTaylor3D.png"> -->
-            </td>
-        </tr>
-        <tr>
-            <td align="center"><a href="examples/RayleighBenard2D.jl">Rayleigh-Bénard (2D)</a></td>
-            <td align="center"><a href="examples/RayleighBenard3D.jl">Rayleigh-Bénard (3D)</a></td>
-            <td align="center"><a href="examples/RayleighTaylor2D.jl">Rayleigh-Taylor (2D)</a></td>
-            <!-- <td align="center"><a href="examples/RayleighTaylor3D.jl">Rayleigh-Taylor (3D)</a></td> -->
-        </tr>
-    </tbody>
+<tbody>
+<tr>
+<td style="width: 25%;"><img src="docs/src/public/Actuator2D.gif"></td>
+<td style="width: 25%;"><img src="docs/src/public/BackwardFacingStep2D.png"></td>
+<td style="width: 25%;"><img src="docs/src/public/DecayingTurbulence2D.gif"></td>
+<td style="width: 25%;"><img src="docs/src/public/TaylorGreenVortex2D.png"></td>
+</tr>
+<tr>
+<td align="center"><a href="examples/Actuator2D.jl">Actuator (2D)</a></td>
+<td align="center"><a href="examples/BackwardFacingStep2D.jl">Backward facing step (2D)</a></td>
+<td align="center"><a href="examples/DecayingTurbulence2D.jl">Decaying turbulence (2D)</a></td>
+<td align="center"><a href="examples/TaylorGreenVortex2D.jl">Taylor-Green vortex (2D)</a></td>
+</tr>
+<tr>
+<td style="width: 25%;"><img src="docs/src/public/Actuator3D.png"></td>
+<td style="width: 25%;"><img src="docs/src/public/BackwardFacingStep3D.png"></td>
+<td style="width: 25%;"><img src="docs/src/public/DecayingTurbulence3D.png"></td>
+<td style="width: 25%;"><img src="docs/src/public/TaylorGreenVortex3D.png"></td>
+</tr>
+<tr>
+<td align="center"><a href="examples/Actuator3D.jl">Actuator (3D)</a></td>
+<td align="center"><a href="examples/BackwardFacingStep3D.jl">Backward facing step (3D)</a></td>
+<td align="center"><a href="examples/DecayingTurbulence3D.jl">Decaying turbulence (3D)</a></td>
+<td align="center"><a href="examples/TaylorGreenVortex3D.jl"> Taylor-Green vortex (3D)</a></td>
+</tr>
+<tr>
+<td style="width: 25%;"><img src="docs/src/public/RayleighBenard2D.gif"></td>
+<td style="width: 25%;"><img src="docs/src/public/RayleighBenard3D.gif"></td>
+<td style="width: 25%;"><img src="docs/src/public/RayleighTaylor2D.gif"></td>
+<td style="width: 25%;">
+
+![ChannelFlow3D](docs/src/public/ChannelFlow3D.webp)
+
+</td>
+</tr>
+<tr>
+<td align="center"><a href="examples/RayleighBenard2D.jl">Rayleigh-Bénard (2D)</a></td>
+<td align="center"><a href="examples/RayleighBenard3D.jl">Rayleigh-Bénard (3D)</a></td>
+<td align="center"><a href="examples/RayleighTaylor2D.jl">Rayleigh-Taylor (2D)</a></td>
+<td align="center"><a href="examples/ChannelFlow3D.jl">Turbulent channel flow (3D)</a></td>
+</tr>
+</tbody>
 </table>
 
 ## Demo
