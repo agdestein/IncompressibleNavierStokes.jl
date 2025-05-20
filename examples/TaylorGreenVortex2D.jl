@@ -5,8 +5,8 @@
 #
 # ```math
 # \begin{split}
-#     u^1(x, y, t) & = - \sin(x) \cos(y) \mathrm{e}^{-2 t / Re} \\
-#     u^2(x, y, t) & = + \cos(x) \sin(y) \mathrm{e}^{-2 t / Re}
+#     u^1(x, y, t) & = - \sin(x) \cos(y) \mathrm{e}^{-2 t \nu} \\
+#     u^2(x, y, t) & = + \cos(x) \sin(y) \mathrm{e}^{-2 t \nu}
 # \end{split}
 # ```
 #
@@ -30,9 +30,8 @@ function compute_convergence(;
     D,
     nlist,
     lims,
-    Re,
+    visc,
     tlims,
-    Δt,
     uref,
     backend = IncompressibleNavierStokes.CPU(),
 )
@@ -41,7 +40,7 @@ function compute_convergence(;
     for (i, n) in enumerate(nlist)
         @info "Computing error for n = $n"
         x = ntuple(α -> LinRange(lims..., n + 1), D)
-        setup = Setup(; x, Re, backend)
+        setup = Setup(; x, visc, backend)
         psolver = psolver_spectral(setup)
         ustart = velocityfield(
             setup,
@@ -56,7 +55,7 @@ function compute_convergence(;
             psolver,
             doproject = false,
         )
-        (; u, t), outputs = solve_unsteady(; setup, ustart, tlims, Δt, psolver)
+        (; u, t), outputs = solve_unsteady(; setup, start = (; u = ustart), tlims, psolver)
         (; Ip) = setup.grid
         a = sum(abs2, u[Ip, :] - ut[Ip, :])
         b = sum(abs2, ut[Ip, :])
@@ -66,36 +65,35 @@ function compute_convergence(;
 end
 
 # Analytical solution for 2D Taylor-Green vortex
-solution(Re) =
-    (dim, x, y, t) -> (dim == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)) * exp(-2t / Re)
+solution(visc) =
+    (dim, x, y, t) -> (dim == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)) * exp(-2t * visc)
 
 # Compute error for different resolutions
-Re = 2.0e3
+visc = 5e-4
 nlist = [2, 4, 8, 16, 32, 64, 128, 256]
 e = compute_convergence(;
     D = 2,
     nlist,
     lims = (0.0, 2π),
-    Re,
+    visc,
     tlims = (0.0, 2.0),
-    Δt = 0.01,
-    uref = solution(Re),
+    uref = solution(visc),
 )
 
 # Plot convergence
-fig = Figure()
-ax = Axis(
-    fig[1, 1];
-    xscale = log10,
-    yscale = log10,
-    xticks = nlist,
-    xlabel = "n",
-    title = "Relative error",
-)
-scatterlines!(ax, nlist, e; label = "Data")
-lines!(ax, collect(extrema(nlist)), n -> n^-2.0; linestyle = :dash, label = "n^-2")
-axislegend(ax)
-fig
-
-# Save figure
-save(joinpath(outdir, "convergence.png"), fig)
+let
+    fig = Figure()
+    ax = Axis(
+        fig[1, 1];
+        xscale = log10,
+        yscale = log10,
+        xticks = nlist,
+        xlabel = "n",
+        title = "Relative error",
+    )
+    scatterlines!(ax, nlist, e; label = "Data")
+    lines!(ax, collect(extrema(nlist)), n -> n^-2.0; linestyle = :dash, label = "n^-2")
+    axislegend(ax)
+    save(joinpath(outdir, "convergence.png"), fig)
+    fig
+end

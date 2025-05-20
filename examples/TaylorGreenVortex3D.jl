@@ -23,7 +23,7 @@ backend = IncompressibleNavierStokes.CPU()
 
 n = 32
 r = range(T(0), T(1), n + 1)
-setup = Setup(; x = (r, r, r), Re = T(1e3), backend);
+setup = Setup(; x = (r, r, r), visc = T(1e-3), backend);
 psolver = psolver_spectral(setup);
 
 # Initial conditions
@@ -35,15 +35,14 @@ U(dim, x, y, z) =
     else
         zero(x)
     end
-ustart = velocityfield(setup, U, psolver);
+u = velocityfield(setup, U, psolver);
 
 # ## Solve unsteady problem
 
 state, outputs = solve_unsteady(;
     setup,
-    ustart,
+    start = (; u),
     tlims = (T(0), T(1.0)),
-    Δt = T(1e-3),
     processors = (
         ## rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 10),
         ehist = realtimeplotter(;

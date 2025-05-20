@@ -11,14 +11,14 @@ end
     using IncompressibleNavierStokes
     T = Float64
     ArrayType = Array
-    Re = T(1_000)
+    visc = T(1e-3)
     D = 2
     n = 8
     N = n + 2
     lims = T(0), T(1)
     x = tanh_grid(lims..., n), tanh_grid(lims..., n, 1.3)
     boundary_conditions = ntuple(d -> (DirichletBC(), DirichletBC()), D)
-    setup = Setup(; x, boundary_conditions, Re)
+    setup = Setup(; x, boundary_conditions, visc)
     psolver = default_psolver(setup)
 end
 

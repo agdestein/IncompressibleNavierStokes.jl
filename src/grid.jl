@@ -223,29 +223,47 @@ function Grid(; x, boundary_conditions, backend)
     #         reshape(γ == β ? 1 : γ == α ? Δu[γ] : Δ[γ], ntuple(Returns(1), γ - 1)..., :)
     # end
 
-    # Interpolation weights from α-face centers x_I to x_{I \pm e(β) / 2}
-    A = ntuple(
-        α -> ntuple(
-            β -> begin
-                if α == β
-                    # Interpolation from face center to volume center
-                    Aαβ1 = fill(T(1 / 2), N[α])
-                    Aαβ1[1] = 1
-                    Aαβ2 = fill(T(1 / 2), N[α])
-                    Aαβ2[end] = 1
-                else
-                    # Interpolation from α-face center to left (1) or right (2) α-face β-edge
-                    Aαβ2 = [(x[β][i] - xp[β][i-1]) / Δu[β][i-1] for i = 2:N[β]]
-                    Aαβ1 = 1 .- Aαβ2
-                    pushfirst!(Aαβ1, 1)
-                    push!(Aαβ2, 1)
-                end
-                Aαβ1, Aαβ2
-            end,
-            D,
-        ),
-        D,
-    )
+    # # Interpolation weights from α-face centers x_I to x_{I \pm e(β) / 2}
+    # A = ntuple(
+    #     α -> ntuple(
+    #         β -> begin
+    #             if α == β
+    #                 # Interpolation from face center to volume center
+    #                 Aαβ1 = fill(T(1 / 2), N[α])
+    #                 Aαβ1[1] = 1
+    #                 Aαβ2 = fill(T(1 / 2), N[α])
+    #                 Aαβ2[end] = 1
+    #             else
+    #                 # Interpolation from α-face center to left (1) or right (2) α-face β-edge
+    #                 Aαβ2 = [(x[β][i] - xp[β][i-1]) / Δu[β][i-1] for i = 2:N[β]]
+    #                 Aαβ1 = 1 .- Aαβ2
+    #                 pushfirst!(Aαβ1, 1)
+    #                 push!(Aαβ2, 1)
+    #             end
+    #             Aαβ1, Aαβ2
+    #         end,
+    #         D,
+    #     ),
+    #     D,
+    # )
+
+    # Interpolate from face to center
+    A_coll = ntuple(D) do j
+        Aj1 = fill(T(1 / 2), N[j])
+        Aj1[1] = 1
+        Aj2 = fill(T(1 / 2), N[j])
+        Aj2[end] = 1
+        Aj1, Aj2
+    end
+
+    # Interpolate from center to face
+    A_stag = ntuple(D) do j
+        Aj2 = [(x[j][n] - xp[j][n-1]) / Δu[j][n-1] for n = 2:N[j]]
+        Aj1 = 1 .- Aj2
+        pushfirst!(Aj1, 1)
+        push!(Aj2, 1)
+        Aj1, Aj2
+    end
 
     # Store quantities
     (;
@@ -270,7 +288,9 @@ function Grid(; x, boundary_conditions, backend)
             # Ωu,
             # Ωω,
             # Γu,
-            A,
+            # A,
+            A_coll,
+            A_stag,
         ))...,
     )
 end

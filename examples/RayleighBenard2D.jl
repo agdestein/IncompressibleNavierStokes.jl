@@ -93,14 +93,15 @@ plotgrid(x...)
 setup = Setup(;
     x,
     boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
-    Re = 1 / temperature.α1,
     temperature,
     backend,
 );
 
 # Initial conditions
-ustart = velocityfield(setup, (dim, x, y) -> zero(x));
-tempstart = temperaturefield(setup, (x, y) -> one(y) / 2 + max(sinpi(20 * x) / 100, 0));
+start = (;
+    u = velocityfield(setup, (dim, x, y) -> zero(x)),
+    temp = temperaturefield(setup, (x, y) -> one(y) / 2 + max(sinpi(20 * x) / 100, 0)),
+);
 
 # Processors
 GLMakie.closeall() #!md
@@ -130,14 +131,8 @@ processors = (;
 )
 
 # Solve equation
-state, outputs = solve_unsteady(;
-    setup,
-    ustart,
-    tempstart,
-    tlims = (T(0), T(20)),
-    Δt = T(1e-2),
-    processors,
-);
+state, outputs =
+    solve_unsteady(; setup, start, tlims = (T(0), T(20)), Δt = T(1e-2), processors);
 
 #md # ```@raw html
 #md # <video src="/RayleighBenard2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>

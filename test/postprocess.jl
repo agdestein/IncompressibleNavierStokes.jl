@@ -11,14 +11,14 @@
     x = LinRange(0.0, 1.0, n + 1), LinRange(0.0, 1.0, n + 1)
     setup = Setup(;
         x,
-        Re = 100.0,
+        visc = 1e-2,
         boundary_conditions = (
             (DirichletBC(), DirichletBC()),
             (DirichletBC(), DirichletBC()),
         ),
     )
     uref(dim, x, y, args...) = dim == 1 ? -sin(x) * cos(y) : cos(x) * sin(y)
-    ustart = velocityfield(setup, uref, 0.0)
+    u = velocityfield(setup, uref, 0.0)
 
     nprocess = 20
     nupdate = 10
@@ -39,7 +39,7 @@
     )
 
     state, outputs =
-        solve_unsteady(; setup, ustart, tlims = (0.0, nstep * Δt), Δt, processors)
+        solve_unsteady(; setup, start = (; u), tlims = (0.0, nstep * Δt), Δt, processors)
 
     @testset "Field saver" begin
         @test length(outputs.field) == nprocess

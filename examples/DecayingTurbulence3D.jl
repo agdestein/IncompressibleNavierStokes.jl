@@ -17,7 +17,7 @@ backend = IncompressibleNavierStokes.CPU()
 T = Float32
 n = 128
 ax = range(T(0), T(1), n + 1)
-setup = Setup(; x = (ax, ax, ax), Re = T(4e3), backend);
+setup = Setup(; x = (ax, ax, ax), visc = T(2.5e-4), backend);
 psolver = default_psolver(setup);
 ustart = random_field(setup; psolver);
 

@@ -103,7 +103,7 @@ function EnzymeRules.augmented_primal(
     p = scalarfield(setup)
     u_bc = copy(u.val)
     INS.apply_bc_u!(u_bc, t.val, setup)
-    INS.momentum!(dudt.val, u_bc, nothing, t, setup)
+    INS.navierstokes!((; u = dudt.val), (; u = u_bc), t, nothing, setup, nothing)
     INS.apply_bc_u!(dudt.val, t.val, setup)
     INS.project!(dudt.val, setup; psolver, p)
     return AugmentedReturn(nothing, nothing, u_bc)
@@ -160,11 +160,10 @@ function INS.enzyme_wrap(
         typeof(INS.pressuregradient!),
         typeof(INS.convection!),
         typeof(INS.diffusion!),
-        typeof(INS.applybodyforce!),
         typeof(INS.gravity!),
         typeof(INS.dissipation!),
         typeof(INS.convection_diffusion_temp!),
-        typeof(INS.momentum!),
+        typeof(INS.navierstokes!),
     },
 )
     function wrapped_f(args...)
@@ -257,40 +256,6 @@ function EnzymeRules.reverse(
     return (nothing, nothing, nothing)
 end
 
-function EnzymeRules.augmented_primal(
-    config::RevConfigWidth{1},
-    func::Union{Const{typeof(INS.enzyme_wrap(INS.applybodyforce!))}},
-    ::Type{<:Const},
-    y::Duplicated,
-    u::Duplicated,
-    t::Const,
-    setup::Const,
-)
-    primal = func.val(y.val, u.val, t.val, setup.val)
-    if overwritten(config)[3]
-        tape = copy(u.val)
-    else
-        tape = nothing
-    end
-    return AugmentedReturn(primal, nothing, tape)
-end
-function EnzymeRules.reverse(
-    config::RevConfigWidth{1},
-    func::Const{typeof(INS.enzyme_wrap(INS.applybodyforce!))},
-    dret,
-    tape,
-    y::Duplicated,
-    u::Duplicated,
-    t::Const,
-    setup::Const,
-)
-    @warn "bodyforce Enzyme-AD tested only for issteadybodyforce=true"
-    adj = setup.val.bodyforce
-    u.dval .+= adj .* y.dval
-    EnzymeCore.make_zero!(y.dval)
-    return (nothing, nothing, nothing, nothing)
-end
-
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.enzyme_wrap(INS.gravity!))},
@@ -359,7 +324,7 @@ function EnzymeRules.reverse(
     u::Duplicated,
     setup::Const,
 )
-    (; grid, backend, workgroupsize, Re, temperature) = setup.val
+    (; grid, backend, workgroupsize, visc, temperature) = setup.val
     (; dimension, N, Ip) = grid
     (; α1, γ) = temperature
     D = dimension()
@@ -371,20 +336,20 @@ function EnzymeRules.reverse(
             a = zero(eltype(u))
             # 1
             I = J + e(β)
-            I ∈ Ip && (a += Re * α1 / γ * d[I-e(β), β] / 2)
+            I ∈ Ip && (a += α1 / visc / γ * d[I-e(β), β] / 2)
             # 2
             I = J
-            I ∈ Ip && (a += Re * α1 / γ * d[I, β] / 2)
+            I ∈ Ip && (a += α1 / visc / γ * d[I, β] / 2)
             ubar[J, β] += a
 
             # Compute dbar
             b = zero(eltype(u))
             # 1
             I = J + e(β)
-            I ∈ Ip && (b += Re * α1 / γ * u[I-e(β), β] / 2)
+            I ∈ Ip && (b += α1 / visc / γ * u[I-e(β), β] / 2)
             # 2
             I = J
-            I ∈ Ip && (b += Re * α1 / γ * u[I, β] / 2)
+            I ∈ Ip && (b += α1 / visc / γ * u[I, β] / 2)
             dbar[J, β] += b
         end
     end
@@ -417,7 +382,7 @@ end
 
 function EnzymeRules.augmented_primal(
     config::RevConfigWidth{1},
-    func::Union{Const{typeof(INS.enzyme_wrap(INS.momentum!))}},
+    func::Union{Const{typeof(INS.enzyme_wrap(INS.navierstokes!))}},
     ::Type{<:Const},
     y::Duplicated,
     x1::Duplicated,
@@ -426,11 +391,11 @@ function EnzymeRules.augmented_primal(
     t::Const,
     setup::Const,
 )
-    @error "momentum Enzyme-AD not yet implemented"
+    @error "navierstokes! Enzyme-AD not yet implemented"
 end
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
-    func::Const{typeof(INS.enzyme_wrap(INS.momentum!))},
+    func::Const{typeof(INS.enzyme_wrap(INS.navierstokes!))},
     dret,
     tape,
     y::Duplicated,
@@ -439,7 +404,7 @@ function EnzymeRules.reverse(
     t::Const,
     setup::Const,
 )
-    @error "momentum Enzyme-AD not yet implemented"
+    @error "navierstokes! Enzyme-AD not yet implemented"
 end
 # COV_EXCL_STOP
 
