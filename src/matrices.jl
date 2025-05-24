@@ -68,7 +68,7 @@ function bc_u_mat(setup)
     (; dimension, boundary_conditions) = setup
     B = LinearAlgebra.I # BC mat should preserve inputs
     for β = 1:dimension()
-        bc_a, bc_b = boundary_conditions[β]
+        bc_a, bc_b = boundary_conditions.u[β]
         a = bc_u_mat(bc_a, setup, β, false) # Left BC
         b = bc_u_mat(bc_b, setup, β, true) # Right BC
         B = b * a * B # Apply left and right BC for given dimension
@@ -80,7 +80,7 @@ function bc_p_mat(setup)
     (; dimension, boundary_conditions) = setup
     B = LinearAlgebra.I
     for β = 1:dimension()
-        bc_a, bc_b = boundary_conditions[β]
+        bc_a, bc_b = boundary_conditions.u[β]
         a = bc_p_mat(bc_a, setup, β, false)
         b = bc_p_mat(bc_b, setup, β, true)
         B = b * a * B
@@ -92,7 +92,7 @@ function bc_temp_mat(setup)
     (; dimension, boundary_conditions) = setup
     B = LinearAlgebra.I
     for β = 1:dimension()
-        bc_a, bc_b = boundary_conditions[β]
+        bc_a, bc_b = boundary_conditions.temp[β]
         a = bc_temp_mat(bc_a, setup, β, false)
         b = bc_temp_mat(bc_b, setup, β, true)
         B = b * a * B

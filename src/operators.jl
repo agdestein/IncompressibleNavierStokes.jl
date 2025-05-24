@@ -358,7 +358,7 @@ function laplacian!(L, p, setup)
     # lap!(backend, workgroupsize)(L, p, I0; ndrange)
     L .= 0
     for α = 1:D
-        lapα!(backend, workgroupsize)(L, p, I0, Val(α), boundary_conditions[α]; ndrange)
+        lapα!(backend, workgroupsize)(L, p, I0, Val(α), boundary_conditions.u[α]; ndrange)
     end
     L
 end
@@ -547,11 +547,16 @@ end
 end
 
 "Compute diffusive term (differentiable version)."
-diffusion(u, setup; kwargs...) = diffusion!(zero.(u), u, setup; kwargs...)
+diffusion(u, setup, viscosity) = diffusion!(zero.(u), u, setup, viscosity)
 
-ChainRulesCore.rrule(::typeof(diffusion), u, setup; kwargs...) = (
-    diffusion(u, setup; kwargs...),
-    φ -> (NoTangent(), diffusion_adjoint!(zero(u), φ, setup; kwargs...), NoTangent()),
+ChainRulesCore.rrule(::typeof(diffusion), u, setup, viscosity) = (
+    diffusion(u, setup, viscosity),
+    φ -> (
+        NoTangent(),
+        diffusion_adjoint!(zero(u), φ, setup, viscosity),
+        NoTangent(),
+        NoTangent(),
+    ),
 )
 
 """
@@ -611,18 +616,6 @@ end
         u[I, α] += val
     end
 end
-
-# "Compute convective and diffusive terms (differentiable version)."
-# convectiondiffusion(u, setup) = convectiondiffusion!(zero.(u), u, setup)
-#
-# ChainRulesCore.rrule(::typeof(convectiondiffusion), u, setup) = (
-#     convection(u, setup),
-#     φ -> (
-#         NoTangent(),
-#         convectiondiffusion_adjoint!(vectorfield(setup), φ, setup),
-#         NoTangent(),
-#     ),
-# )
 
 """
 Compute diffusive term (in-place version).
@@ -685,7 +678,7 @@ end
 end
 
 "Compute dissipation term for the temperature equation (differentiable version)."
-dissipation(u, setup) = dissipation!(scalarfield(setup), vectorfield(setup), u, setup)
+dissipation(u, setup, coeff) = dissipation!(scalarfield(setup), u, setup, coeff)
 
 function ChainRulesCore.rrule(::typeof(dissipation), u, setup, coeff)
     error("Not imlemented yet")
@@ -1074,8 +1067,8 @@ Get the following dimensional scale numbers [Pope2000](@cite):
 - Integral length scale ``L = \\frac{3 \\pi}{2 u_\\text{avg}^2} \\int_0^\\infty \\frac{E(k)}{k} \\, \\mathrm{d} k``
 - Large-eddy turnover time ``\\tau = \\frac{L}{u_\\text{avg}}``
 """
-function get_scale_numbers(u, setup)
-    (; dimension, Iu, Ip, Δ, Δu, Np, visc) = setup
+function get_scale_numbers(u, setup, viscosity)
+    (; dimension, Iu, Ip, Δ, Δu, Np) = setup
     D = dimension()
     T = eltype(u)
     Ω = scalewithvolume!(fill!(scalarfield(setup), 1), setup)
@@ -1090,11 +1083,11 @@ function get_scale_numbers(u, setup)
             field = @. u^2 * Ωu
             sum(field[Iu[1], :]) / sum(Ωu[Iu[1]])
         end |> sqrt
-    ϵ = dissipation_from_strain(u, setup)
+    ϵ = dissipation(u, setup, viscosity)
     ϵ = sum((Ω .* ϵ)[Ip]) / sum(Ω[Ip])
-    η = (visc^3 / ϵ)^T(1 / 4)
-    λ = sqrt(5 * visc / ϵ) * uavg
-    Reλ = λ * uavg / sqrt(T(3)) / visc
+    η = (viscosity^3 / ϵ)^T(1 / 4)
+    λ = sqrt(5 * viscosity / ϵ) * uavg
+    Reλ = λ * uavg / sqrt(T(3)) / viscosity
     L = let
         assert_uniform_periodic(setup, "Scale numbers")
         K = div.(Np, 2)
@@ -1120,6 +1113,6 @@ function get_scale_numbers(u, setup)
         T(3π) / 2 / uavg^2 * sum(e)
     end
     τ = L / uavg
-    Re_int = L * uavg / visc
+    Re_int = L * uavg / viscosity
     (; uavg, ϵ, η, λ, Reλ, L, τ, Re_int)
 end

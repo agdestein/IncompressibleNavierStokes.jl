@@ -1,15 +1,13 @@
 @testmodule Setup2D begin
     using IncompressibleNavierStokes
     T = Float64
-    visc = T(1e-3)
     n = 16
     lims = T(0), T(1)
     x = tanh_grid(lims..., n), tanh_grid(lims..., n, 1.3)
     bc = DirichletBC(), DirichletBC()
-    boundary_conditions = (bc, bc)
-    temperature =
-        temperature_equation(; Pr = T(0.71), Ra = T(1e6), Ge = T(1.0), boundary_conditions)
-    setup = Setup(; x, boundary_conditions, visc, temperature)
+    boundary_conditions = (; u = (bc, bc), temp = (bc, bc))
+    setup = Setup(; x, boundary_conditions)
+    params = (; viscosity = T(1e-3), gdir = 2, gravity = T(1.0), conductivity = T(1e-3))
     psolver = default_psolver(setup)
     uref(dim, x, y, args...) = -(dim == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
     u = velocityfield(setup, uref, T(0))
@@ -18,15 +16,13 @@ end
 @testmodule Setup3D begin
     using IncompressibleNavierStokes
     T = Float64
-    visc = T(1e-3)
     n = 16
     lims = T(0), T(1)
     x = tanh_grid(lims..., n, 1.2), tanh_grid(lims..., n, 1.1), cosine_grid(lims..., n)
-    bc = DirichletBC(), DirichletBC(), DirichletBC()
-    boundary_conditions = (bc, bc, bc)
-    temperature =
-        temperature_equation(; Pr = T(0.71), Ra = T(1e6), Ge = T(1.0), boundary_conditions)
-    setup = Setup(; x, boundary_conditions, visc, temperature)
+    bc = DirichletBC(), DirichletBC()
+    boundary_conditions = (; u = (bc, bc, bc), temp = (bc, bc, bc))
+    setup = Setup(; x, boundary_conditions)
+    params = (; viscosity = T(1e-3), gdir = 2, gravity = T(1.0), conductivity = T(1e-3))
     psolver = default_psolver(setup)
     uref(dim, x, y, args...) = -(dim == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
     u = velocityfield(setup, uref, T(0))
@@ -42,7 +38,7 @@ end
 @testitem "Pressure gradient" setup = [Setup2D, Setup3D] begin
     using Random
     for setup in (Setup2D.setup, Setup3D.setup)
-        (; Iu, Ip, Δu, Δ, dimension) = setup.grid
+        (; Iu, Ip, Δu, Δ, dimension) = setup
         D = dimension()
         v = randn!(vectorfield(setup))
         p = randn!(scalarfield(setup))
@@ -74,7 +70,7 @@ end
 @testitem "Laplacian" setup = [Setup2D, Setup3D] begin
     using Random, SparseArrays
     for setup in (Setup2D.setup, Setup3D.setup)
-        (; Ip, dimension) = setup.grid
+        (; Ip, dimension) = setup
         p = randn!(scalarfield(setup))
         T = eltype(p)
         p = apply_bc_p(p, T(0), setup)
@@ -90,7 +86,7 @@ end
 
 @testitem "Convection" setup = [Setup2D, Setup3D] begin
     for (u, setup) in ((Setup2D.u, Setup2D.setup), (Setup3D.u, Setup3D.setup))
-        (; Iu, Δ, Δu) = setup.grid
+        (; Iu, Δ, Δu) = setup
         T = eltype(u)
         c = convection(u, setup)
         D = length(Δ)
@@ -112,10 +108,13 @@ end
 end
 
 @testitem "Diffusion" setup = [Setup2D, Setup3D] begin
-    for (u, setup) in ((Setup2D.u, Setup2D.setup), (Setup3D.u, Setup3D.setup))
+    for (u, setup, params) in (
+        (Setup2D.u, Setup2D.setup, Setup2D.params),
+        (Setup3D.u, Setup3D.setup, Setup3D.params),
+    )
         T = eltype(u)
-        (; dimension, Iu, Δ, Δu) = setup.grid
-        d = diffusion(u, setup)
+        (; dimension, Iu, Δ, Δu) = setup
+        d = diffusion(u, setup, params.viscosity)
         D = dimension()
         uDu = if D == 2
             uDux = u[:, :, 1] .* Δu[1] .* Δ[2]' .* d[:, :, 1]
@@ -135,19 +134,30 @@ end
 end
 
 @testitem "Convection-Diffusion" setup = [Setup2D, Setup3D] begin
-    for (u, setup) in ((Setup2D.u, Setup2D.setup), (Setup3D.u, Setup3D.setup))
-        cd = IncompressibleNavierStokes.convectiondiffusion!(zero(u), u, setup)
+    for (u, setup, params) in (
+        (Setup2D.u, Setup2D.setup, Setup2D.params),
+        (Setup3D.u, Setup3D.setup, Setup3D.params),
+    )
+        cd = IncompressibleNavierStokes.convectiondiffusion!(
+            zero(u),
+            u,
+            setup,
+            params.viscosity,
+        )
         c = convection(u, setup)
-        d = diffusion(u, setup)
+        d = diffusion(u, setup, params.viscosity)
         @test cd ≈ c + d
     end
 end
 
 @testitem "Other fields" setup = [Setup2D, Setup3D] begin
     using Random
-    for (u, setup) in ((Setup2D.u, Setup2D.setup), (Setup3D.u, Setup3D.setup))
+    for (u, setup, params) in (
+        (Setup2D.u, Setup2D.setup, Setup2D.params),
+        (Setup3D.u, Setup3D.setup, Setup3D.params),
+    )
         T = eltype(u)
-        D = setup.grid.dimension()
+        D = setup.dimension()
         p = randn!(scalarfield(setup))
         ω = vorticity(u, setup)
         D == 2 && @test ω isa Array{T}
@@ -157,7 +167,7 @@ end
         D == 3 && @test interpolate_ω_p(ω, setup) isa Array{T}
         @test kinetic_energy(u, setup) isa Array{T}
         @test total_kinetic_energy(u, setup) isa T
-        @test dissipation_from_strain(u, setup) isa Array{T}
+        @test dissipation(u, setup, params.viscosity) isa Array{T}
     end
 end
 
@@ -165,20 +175,23 @@ end
     using Random
     ax = range(0, 1, 19)
     for x in ((ax, ax), (ax, ax, ax))
-        setup = Setup(; x, visc = 1e-3)
+        setup = Setup(;
+            x,
+            boundary_conditions = (;
+                u = ntuple(Returns((PeriodicBC(), PeriodicBC())), length(x))
+            ),
+        )
         u = randn!(vectorfield(setup))
-        @test get_scale_numbers(u, setup) isa NamedTuple
+        @test get_scale_numbers(u, setup, 0.1) isa NamedTuple
     end
 
     # Only works for uniform periodic
     setup = Setup(;
         x = (ax, ax),
-        visc = 1e-3,
-        boundary_conditions = (
-            (DirichletBC(), DirichletBC()),
-            (DirichletBC(), DirichletBC()),
+        boundary_conditions = (;
+            u = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC()))
         ),
     )
     u = randn!(vectorfield(setup))
-    @test_broken get_scale_numbers(u, setup) isa NamedTuple
+    @test_throws AssertionError get_scale_numbers(u, setup, 0.1)
 end
