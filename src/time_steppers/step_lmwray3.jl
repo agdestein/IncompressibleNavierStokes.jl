@@ -10,11 +10,10 @@ function timestep!(
     force_cache,
 )
     (; setup, psolver, state, t, n) = stepper
-    (; temperature) = setup
     (; statestart, p, k) = ode_cache
     T = eltype(state.u)
 
-    dotemp = !isnothing(temperature)
+    dotemp = haskey(state, :temp)
 
     # Boundary conditions and pressure projection
     function correct!(state, t, setup)
@@ -61,7 +60,7 @@ function timestep!(
     nstage = length(a)
 
     for i = 1:nstage
-        force!(k, state, t, params, setup, force_cache)
+        force!(k, state, t; setup, cache = force_cache, params...)
 
         # Compute x = correct(xstart + Δt * a[i] * dx)
         t = tstart + c[i] * Δt
@@ -92,11 +91,10 @@ end
 
 function timestep(method::LMWray3, force, stepper, Δt; params = nothing)
     (; setup, psolver, state, t, n) = stepper
-    (; temperature) = setup
     (; u) = state
     T = eltype(u)
 
-    dotemp = !isnothing(temperature)
+    dotemp = haskey(state, :temp)
 
     # Update current state
     tstart = t
@@ -122,7 +120,7 @@ function timestep(method::LMWray3, force, stepper, Δt; params = nothing)
     nstage = length(a)
 
     for i = 1:nstage
-        k = force(state, t, params, setup)
+        k = force(state, t; setup, params...)
 
         # Compute state at current stage
         t = tstart + c[i] * Δt

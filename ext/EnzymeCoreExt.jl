@@ -264,10 +264,10 @@ function EnzymeRules.reverse(
     y::Duplicated,
     temp::Duplicated,
     setup::Const,
+    gdir,
+    gravity,
 )
-    (; grid, backend, workgroupsize, temperature) = setup.val
-    (; dimension, Δ, N, Iu) = grid
-    (; gdir, α2) = temperature
+    (; dimension, Δ, N, Iu, backend, workgroupsize) = setup
     backend = get_backend(temp.val)
     D = dimension()
     e = INS.Offset(D)
@@ -278,10 +278,12 @@ function EnzymeRules.reverse(
             t = zero(eltype(tempbar))
             # 1
             I = J
-            I ∈ Iu[α] && (t += α2 * Δ[α][I[α]+1] * φbar[I, α] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
+            I ∈ Iu[α] &&
+                (t += gravity * Δ[α][I[α]+1] * φbar[I, α] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
             # 2
             I = J - e(α)
-            I ∈ Iu[α] && (t += α2 * Δ[α][I[α]] * φbar[I, α] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
+            I ∈ Iu[α] &&
+                (t += gravity * Δ[α][I[α]] * φbar[I, α] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
             tempbar[J] = t
         end
         tempbar = zero(temp.val)
@@ -324,8 +326,7 @@ function EnzymeRules.reverse(
     u::Duplicated,
     setup::Const,
 )
-    (; grid, backend, workgroupsize, visc, temperature) = setup.val
-    (; dimension, N, Ip) = grid
+    (; dimension, N, Ip, backend, workgroupsize, visc) = setup.val
     (; α1, γ) = temperature
     D = dimension()
     e = INS.Offset(D)
@@ -336,7 +337,7 @@ function EnzymeRules.reverse(
             a = zero(eltype(u))
             # 1
             I = J + e(β)
-            I ∈ Ip && (a += α1 / visc / γ * d[I-e(β), β] / 2)
+            I ∈ Ip && (a += α3 / visc * d[I-e(β), β] / 2)
             # 2
             I = J
             I ∈ Ip && (a += α1 / visc / γ * d[I, β] / 2)

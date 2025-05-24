@@ -2,10 +2,9 @@
 function enzyme_wrap end
 
 function assert_uniform_periodic(setup, string)
-    (; grid, boundary_conditions) = setup
-    (; Δ, N) = grid
+    (; Δ, N, boundary_conditions) = setup
     @assert(
-        all(==((PeriodicBC(), PeriodicBC())), boundary_conditions),
+        all(==((PeriodicBC(), PeriodicBC())), boundary_conditions.u),
         string * " requires periodic boundary conditions.",
     )
     @assert(
@@ -49,8 +48,8 @@ Plot nonuniform Cartesian grid.
 function plotgrid end
 
 "Get utilities to compute energy spectrum."
-function spectral_stuff(setup; npoint = 100, a = typeof(setup.visc)(1 + sqrt(5)) / 2)
-    (; dimension, xp, Np) = setup.grid
+function spectral_stuff(setup; npoint = 100, a = eltype(setup.x[1])(1 + sqrt(5)) / 2)
+    (; dimension, xp, Np) = setup
     T = eltype(xp[1])
     D = dimension()
 
@@ -114,8 +113,8 @@ function spectral_stuff(setup; npoint = 100, a = typeof(setup.visc)(1 + sqrt(5))
 end
 
 "Get energy spectrum of velocity field."
-function get_spectrum(setup; npoint = 100, a = typeof(setup.visc)(1 + sqrt(5)) / 2)
-    (; dimension, xp, Ip) = setup.grid
+function get_spectrum(setup; npoint = 100, a = eltype(setup.x[1])(1 + sqrt(5)) / 2)
+    (; dimension, xp, Ip) = setup
     T = eltype(xp[1])
     D = dimension()
 

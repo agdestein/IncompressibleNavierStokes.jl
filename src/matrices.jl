@@ -21,7 +21,7 @@ and not the ghost volumes. To go back, simply transpose the matrix.
 See also: [`pad_vectorfield_mat`](@ref).
 """
 function pad_scalarfield_mat(setup)
-    (; N, Np, Ip, x) = setup.grid
+    (; N, Np, Ip, x) = setup
     n = prod(N)
     np = prod(Np)
     ilin = reshape(1:n, N)
@@ -36,7 +36,7 @@ Create matrix for padding inner vector field with boundary volumes,
 similar to [`pad_scalarfield_mat`](@ref).
 """
 function pad_vectorfield_mat(setup)
-    (; dimension, N, Nu, Iu, x) = setup.grid
+    (; dimension, N, Nu, Iu, x) = setup
     D = dimension()
     n = prod(N) * D
     nu = sum(prod.(Nu))
@@ -65,8 +65,7 @@ function bc_p_mat end
 function bc_temp_mat end
 
 function bc_u_mat(setup)
-    (; grid, boundary_conditions) = setup
-    (; dimension) = grid
+    (; dimension, boundary_conditions) = setup
     B = LinearAlgebra.I # BC mat should preserve inputs
     for β = 1:dimension()
         bc_a, bc_b = boundary_conditions[β]
@@ -78,8 +77,7 @@ function bc_u_mat(setup)
 end
 
 function bc_p_mat(setup)
-    (; grid, boundary_conditions) = setup
-    (; dimension) = grid
+    (; dimension, boundary_conditions) = setup
     B = LinearAlgebra.I
     for β = 1:dimension()
         bc_a, bc_b = boundary_conditions[β]
@@ -91,8 +89,7 @@ function bc_p_mat(setup)
 end
 
 function bc_temp_mat(setup)
-    (; grid, boundary_conditions) = setup
-    (; dimension) = grid
+    (; dimension, boundary_conditions) = setup
     B = LinearAlgebra.I
     for β = 1:dimension()
         bc_a, bc_b = boundary_conditions[β]
@@ -105,7 +102,7 @@ end
 
 function bc_u_mat(::PeriodicBC, setup, β, isright = false)
     isright && return LinearAlgebra.I # We do both in one go for "left"
-    (; dimension, N, Ip, x) = setup.grid
+    (; dimension, N, Ip, x) = setup
     T = eltype(x[1])
     D = dimension()
     n = prod(N) * D # Total number of points in vector fields
@@ -138,7 +135,7 @@ end
 
 function bc_p_mat(::PeriodicBC, setup, β, isright = false)
     isright && return LinearAlgebra.I # We do both in one go for "left"
-    (; dimension, N, Ip, x) = setup.grid
+    (; dimension, N, Ip, x) = setup
     T = eltype(x[1])
     D = dimension()
     ilin = reshape(1:prod(N), N)
@@ -171,7 +168,7 @@ bc_temp_mat(bc::PeriodicBC, setup, β, isright = false) =
     apply_bc_p_mat(bc, setup, β, isright)
 
 function bc_u_mat(::DirichletBC, setup, β, isright = false)
-    (; dimension, N, Iu, x) = setup.grid
+    (; dimension, N, Iu, x) = setup
     T = eltype(x[1])
     D = dimension()
     n = prod(N) * D
@@ -206,7 +203,7 @@ end
 bc_p_mat(::DirichletBC, setup, β, isright = false) = LinearAlgebra.I
 
 function bc_temp_mat(::DirichletBC, setup, β, isright = false)
-    (; dimension, N, Ip, x) = setup.grid
+    (; dimension, N, Ip, x) = setup
     T = eltype(x[1])
     D = dimension()
     n = prod(N)
@@ -237,7 +234,7 @@ function bc_temp_mat(::DirichletBC, setup, β, isright = false)
 end
 
 function bc_u_mat(::SymmetricBC, setup, β, isright = false)
-    (; dimension, N, Nu, Iu, x) = setup.grid
+    (; dimension, N, Nu, Iu, x) = setup
     D = dimension()
     e = Offset(D)
     n = prod(N) * D
@@ -277,7 +274,7 @@ function bc_u_mat(::SymmetricBC, setup, β, isright = false)
 end
 
 function bc_p_mat(::SymmetricBC, setup, β, isright = false)
-    (; dimension, N, Ip, x) = setup.grid
+    (; dimension, N, Ip, x) = setup
     T = eltype(x[1])
     D = dimension()
     n = prod(N)
@@ -315,7 +312,7 @@ end
 bc_temp_mat(bc::SymmetricBC, setup, β, isright = false) = bc_p_mat(bc, setup, β, isright)
 
 function bc_u_mat(::PressureBC, setup, β, isright = false)
-    (; dimension, N, Nu, Iu, x) = setup.grid
+    (; dimension, N, Nu, Iu, x) = setup
     D = dimension()
     e = Offset(D)
     n = prod(N) * D
@@ -353,7 +350,7 @@ function bc_u_mat(::PressureBC, setup, β, isright = false)
 end
 
 function bc_p_mat(::PressureBC, setup, β, isright = false)
-    (; dimension, N, Ip, x) = setup.grid
+    (; dimension, N, Ip, x) = setup
     T = eltype(x[1])
     D = dimension()
     n = prod(N)
@@ -387,7 +384,7 @@ bc_temp_mat(bc::PressureBC, setup, β, isright = false) = bc_p_mat(bc, setup, β
 
 "Divergence matrix."
 function divergence_mat(setup)
-    (; dimension, N, Ip, Δ, x) = setup.grid
+    (; dimension, N, Ip, Δ, x) = setup
     Δ = adapt(Array, Δ) # Do assembly on CPU
     D = dimension()
     e = Offset(D)
@@ -428,8 +425,7 @@ end
 
 "Pressure gradient matrix."
 function pressuregradient_mat(setup)
-    (; grid) = setup
-    (; dimension, N, Iu, Δu, x) = grid
+    (; dimension, N, Iu, Δu, x) = setup
     Δu = adapt(Array, Δu) # Do assembly on CPU
     D = dimension()
     e = Offset(D)
@@ -469,8 +465,7 @@ end
 
 "Volume-size matrix."
 function volume_mat(setup)
-    (; grid) = setup
-    (; N) = grid
+    (; N) = setup
     n = prod(N)
     v = scalewithvolume!(fill!(scalarfield(setup), 1), setup)
     v = adapt(Array, v) # Do assembly on CPU
@@ -495,8 +490,7 @@ end
 function diffusion_mat(setup)
     # Note: This matrix could also be implemented as
     # sum of Dβ * Dβ (different versions of Dβ depending on staggered points)
-    (; grid) = setup
-    (; dimension, N, Iu, Δ, Δu, x) = grid
+    (; dimension, N, Iu, Δ, Δu, x) = setup
     Δ = adapt(Array, Δ) # Do assembly on CPU
     Δu = adapt(Array, Δu)
     D = dimension()

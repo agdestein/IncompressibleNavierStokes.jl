@@ -18,8 +18,7 @@ IncompressibleNavierStokes.sparseadapt(::CUDABackend, A) = CuSparseMatrixCSC(A)
 
 # CUDA version, using CUDSS LDLt decomposition.
 function IncompressibleNavierStokes.psolver_direct(::CuArray, setup)
-    (; grid, boundary_conditions) = setup
-    (; x, Np, Ip) = grid
+    (; x, Np, Ip, boundary_conditions) = setup
     T = eltype(x[1])
     L = laplacian_mat(setup)
     isdefinite =

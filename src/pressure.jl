@@ -56,12 +56,11 @@ end
 
 "Get default Poisson solver from setup."
 function default_psolver(setup)
-    (; grid, boundary_conditions) = setup
-    (; dimension, Δ) = grid
+    (; dimension, Δ, boundary_conditions) = setup
     D = dimension()
     Δx = first.(Array.(Δ))
     isperiodic =
-        all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions)
+        all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions.u)
     isuniform = all(α -> all(≈(Δx[α]), Δ[α]), 1:D)
     if isperiodic && isuniform
         psolver_spectral(setup)
@@ -71,7 +70,7 @@ function default_psolver(setup)
 end
 
 "Create direct Poisson solver using an appropriate matrix decomposition."
-psolver_direct(setup) = psolver_direct(setup.grid.x[1], setup) # Dispatch on array type
+psolver_direct(setup) = psolver_direct(setup.x[1], setup) # Dispatch on array type
 
 psolver_direct(::Any, setup) = error("""
     Unsupported array type.
@@ -88,12 +87,11 @@ psolver_direct(::Any, setup) = error("""
 
 # CPU version
 function psolver_direct(::Array, setup)
-    (; grid, boundary_conditions) = setup
-    (; x, Np, Ip) = grid
+    (; x, Np, Ip, boundary_conditions) = setup
     T = eltype(x[1])
     L = laplacian_mat(setup)
     isdefinite =
-        any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
+        any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions.u)
     if isdefinite
         # No extra DOF
         Ttemp = Float64 # This is currently required for SuiteSparse LU
@@ -134,12 +132,11 @@ The `kwargs` are passed to the `cg!` function
 from IterativeSolvers.jl.
 """
 function psolver_cg_matrix(setup; kwargs...)
-    (; grid, boundary_conditions, backend) = setup
-    (; x, Np, Ip) = grid
+    (; x, Np, Ip, boundary_conditions, backend) = setup
     T = eltype(x[1])
     L = laplacian_mat(setup)
     isdefinite =
-        any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
+        any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions.u)
     if isdefinite
         # No extra DOF
         ftemp = fill!(similar(x[1], prod(Np)), 0)
@@ -164,8 +161,7 @@ end
 
 # Preconditioner
 function create_laplace_diag(setup)
-    (; grid, workgroupsize) = setup
-    (; Δ, Δu, Np, Ip) = grid
+    (; Δ, Δu, Np, Ip, workgroupsize) = setup
     @kernel function _laplace_diag!(z, p, I0)
         I = @index(Global, Cartesian)
         I = I + I0
@@ -186,14 +182,13 @@ end
 "Conjugate gradients iterative Poisson solver."
 function psolver_cg(
     setup;
-    abstol = zero(eltype(setup.grid.x[1])),
-    reltol = sqrt(eps(eltype(setup.grid.x[1]))),
-    maxiter = prod(setup.grid.Np),
+    abstol = zero(eltype(setup.x[1])),
+    reltol = sqrt(eps(eltype(setup.x[1]))),
+    maxiter = prod(setup.Np),
     preconditioner = create_laplace_diag(setup),
 )
-    (; grid, workgroupsize) = setup
-    (; Np, Ip) = grid
-    T = eltype(setup.grid.x[1])
+    (; Np, Ip, workgroupsize) = setup
+    T = eltype(setup.x[1])
     r = scalarfield(setup)
     L = scalarfield(setup)
     q = scalarfield(setup)
@@ -274,8 +269,7 @@ Warning: This does transform one dimension at a time.
 With `Float32` precision, this can lead to large errors.
 """
 function psolver_transform(setup)
-    (; grid, boundary_conditions) = setup
-    (; dimension, Δ, Np, Ip, x, xlims) = grid
+    (; dimension, Δ, Np, Ip, x, xlims, boundary_conditions) = setup
 
     D = dimension()
     T = eltype(Δ[1])
@@ -286,10 +280,10 @@ function psolver_transform(setup)
 
     @assert all(
         bc -> all(b -> b isa PeriodicBC || b isa DirichletBC, bc),
-        boundary_conditions,
+        boundary_conditions.u,
     )
     @assert all(i -> all(≈(Δx[i]), Δ[i][Ip.indices[i]]), eachindex(Δx))
-    perdirs = map(bc -> bc[1] isa PeriodicBC, boundary_conditions)
+    perdirs = map(bc -> bc[1] isa PeriodicBC, boundary_conditions.u)
 
     # Fourier transform of the discrete Laplacian
     # Assuming uniform grid, although Δx[1] and Δx[2] do not need to be the same
@@ -381,8 +375,7 @@ end
 
 "Create spectral Poisson solver from setup."
 function psolver_spectral(setup)
-    (; grid, boundary_conditions) = setup
-    (; dimension, Δ, Np, Ip, x) = grid
+    (; dimension, Δ, Np, Ip, x, boundary_conditions) = setup
 
     D = dimension()
     T = eltype(Δ[1])

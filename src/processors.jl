@@ -87,10 +87,10 @@ function observefield(
     state;
     setup,
     fieldname,
-    logtol = eps(eltype(setup.grid.x[1])),
+    logtol = eps(eltype(setup.x[1])),
     psolver = nothing,
 )
-    (; dimension, Ip) = setup.grid
+    (; dimension, Ip) = setup
     D = dimension()
 
     # Initialize buffers
@@ -156,8 +156,7 @@ z-component of zero, as this seems to be preferred by ParaView.
 """
 function snapshotsaver(state; setup, fieldnames = (:velocity,), psolver = nothing)
     state isa Observable || (state = Observable(state))
-    (; grid) = setup
-    (; dimension, xp, Ip) = grid
+    (; dimension, xp, Ip) = setup
     D = dimension()
     xparr = getindex.(Array.(xp), Ip.indices)
     fields = map(fieldname -> observefield(state; setup, fieldname, psolver), fieldnames)
@@ -257,11 +256,11 @@ function observespectrum(
     state;
     setup,
     npoint = 100,
-    a = typeof(setup.visc)(1 + sqrt(5)) / 2,
+    a = eltype(setup.x[1])(1 + sqrt(5)) / 2,
 )
     state isa Observable || (state = Observable(state))
 
-    (; dimension, xp, Ip, Np) = setup.grid
+    (; dimension, xp, Ip, Np) = setup
     T = eltype(xp[1])
     D = dimension()
 

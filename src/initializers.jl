@@ -1,12 +1,11 @@
 "Create empty scalar field."
-scalarfield(setup) = fill!(similar(setup.grid.x[1], setup.grid.N), 0)
+scalarfield(setup) = fill!(similar(setup.x[1], setup.N), 0)
 
 "Create empty vector field."
-vectorfield(setup) =
-    fill!(similar(setup.grid.x[1], setup.grid.N..., setup.grid.dimension()), 0)
+vectorfield(setup) = fill!(similar(setup.x[1], setup.N..., setup.dimension()), 0)
 
 "Non-symmetric tensor field, stored as a named tuple `σ.ij`."
-tensorfield(setup) = tensorfield(setup.grid.dimension, setup)
+tensorfield(setup) = tensorfield(setup.dimension, setup)
 tensorfield(::Dimension{2}, setup) = (;
     xx = scalarfield(setup),
     yx = scalarfield(setup),
@@ -46,12 +45,11 @@ The initial conditions of `u[α]` are specified by the function
 function velocityfield(
     setup,
     ufunc,
-    t = convert(eltype(setup.grid.x[1]), 0);
+    t = convert(eltype(setup.x[1]), 0);
     psolver = default_psolver(setup),
     doproject = true,
 )
-    (; grid) = setup
-    (; dimension, Iu, xu) = grid
+    (; dimension, Iu, xu) = setup
 
     D = dimension()
 
@@ -79,9 +77,8 @@ function velocityfield(
 end
 
 "Create temperature field from function with boundary conditions at time `t`."
-function temperaturefield(setup, tempfunc, t = zero(eltype(setup.grid.x[1])))
-    (; grid) = setup
-    (; dimension, N, Ip, xp) = grid
+function temperaturefield(setup, tempfunc, t = zero(eltype(setup.x[1])))
+    (; dimension, N, Ip, xp) = setup
     D = dimension()
     xin = ntuple(β -> reshape(xp[β][Ip.indices[β]], ntuple(Returns(1), β - 1)..., :), D)
     temperature = scalarfield(setup)
@@ -90,7 +87,7 @@ function temperaturefield(setup, tempfunc, t = zero(eltype(setup.grid.x[1])))
 end
 
 # function create_spectrum(; setup, A, σ, s, rng = Random.default_rng())
-#     (; dimension, x, N) = setup.grid
+#     (; dimension, x, N) = setup
 #     T = eltype(x[1])
 #     D = dimension()
 #     K = N .÷ 2
@@ -113,7 +110,7 @@ end
 # end
 
 function create_spectrum(; setup, kp, rng = Random.default_rng())
-    (; dimension, x, N) = setup.grid
+    (; dimension, x, N) = setup
     T = eltype(x[1])
     D = dimension()
     τ = T(2π)
@@ -221,28 +218,26 @@ Create random field, as in [Orlandi2000](@cite).
 """
 function random_field(
     setup,
-    t = zero(eltype(setup.grid.x[1]));
+    t = zero(eltype(setup.x[1]));
     A = 1,
     kp = 10,
     psolver = default_psolver(setup),
     rng = Random.default_rng(),
 )
-    (; grid, boundary_conditions) = setup
-    (; dimension, N, Δ) = grid
+    (; dimension, N, Δ, boundary_conditions) = setup
     D = dimension()
 
     assert_uniform_periodic(setup, "Random field")
 
+    u = vectorfield(setup)
+
     # Create random velocity field
-    uhat = create_spectrum(; setup, kp, rng)
-    u = ifft(uhat, 1:D)
-    u = @. A * real(u)
+    vhat = create_spectrum(; setup, kp, rng)
+    v = ifft(vhat, 1:D)
 
-    # Add ghost volumes (one on each side for periodic)
-    u = pad_circular(u, 1; dims = 1:D)
-
-    # # Interpolate to staggered grid
-    # interpolate_p_u!(u, setup)
+    # Fill interior
+    uin = view(u, setup.Ip, :)
+    @. uin = A * real(v)
 
     # Make velocity field divergence free on staggered grid
     # (it is already diergence free on the "spectral grid")

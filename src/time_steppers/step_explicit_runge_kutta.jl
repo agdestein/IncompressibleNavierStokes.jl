@@ -22,7 +22,7 @@ function timestep!(
 
     for i = 1:nstage
         # Compute force at current stage i
-        force!(k[i], state, t, params, setup, force_cache)
+        force!(k[i], state, t; setup, cache = force_cache, params...)
 
         # Apply stage forces
         map(copyto!, state, statestart)
@@ -74,7 +74,7 @@ function timestep(method::ExplicitRungeKuttaMethod, force, stepper, Δt; params 
 
     for i = 1:nstage
         # Compute force at current stage i
-        f = force(state, t, params, setup)
+        f = force(state, t; setup, params...)
 
         # Store right-hand side of stage i
         k = (k..., f)

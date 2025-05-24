@@ -1,45 +1,53 @@
 "Navier-Stokes momentum forcing (convection + diffusion)."
-function navierstokes!(force, state, t, params, setup, cache)
+function navierstokes!(force, state, t; setup, cache, viscosity)
     (; u) = state
     fill!(force.u, 0)
-    convectiondiffusion!(force.u, state.u, setup)
+    convectiondiffusion!(force.u, state.u, setup, viscosity)
 end
 
 "Navier-Stokes momentum forcing (convection + diffusion)."
-function navierstokes(state, t, params, setup)
+function navierstokes(state, t; setup, viscosity)
     c = convection(state.u, setup)
-    d = diffusion(state.u, setup)
+    d = diffusion(state.u, setup, viscosity)
     (; u = c + d)
 end
 
 "Boussinesq forcing (Navier-Stokes + gravity for `u`, convection-diffusion for `temp`)."
-function boussinesq!(force, state, t, params, setup, cache)
-    (; temperature) = setup
+function boussinesq!(
+    force,
+    state,
+    t;
+    setup,
+    cache,
+    viscosity,
+    conductivity,
+    gdir,
+    gravity,
+    dodissipation,
+)
     (; u, temp) = state
-    (; diff) = cache
     fill!(force.u, 0)
     fill!(force.temp, 0)
-    convectiondiffusion!(force.u, u, setup)
-    gravity!(force.u, temp, setup)
-    convection_diffusion_temp!(force.temp, u, temp, setup)
-    temperature.dodissipation && dissipation!(force.temp, diff, u, setup)
+    convectiondiffusion!(force.u, u, setup, viscosity)
+    applygravity!(force.u, temp, setup, gdir, gravity)
+    convection_diffusion_temp!(force.temp, u, temp, setup, conductivity)
+    dodissipation && dissipation!(force.temp, u, setup, viscosity)
 end
 
 "Boussinesq forcing (Navier-Stokes + gravity for `u`, convection-diffusion for `temp`)."
-function boussinesq(state, t, params, setup)
-    (; temperature) = setup
+function boussinesq(state, t; setup, viscosity, conductivity, gdir, gravity, dodissipation)
     (; u, temp) = state
-    d = diffusion(u, setup)
+    d = diffusion(u, setup, viscosity)
     c = convection(u, setup)
-    g = gravity(temp, setup)
+    g = applygravity(temp, setup, gdir, gravity)
     fu = @. c + d + g
-    ftemp = convection_diffusion_temp(u, temp, setup)
-    temperature.dodissipation && (ftemp += dissipation(u, setup))
+    ftemp = convection_diffusion_temp(u, temp, setup, conductivity)
+    dodissipation && (ftemp += dissipation(u, setup))
     (; u = fu, temp = ftemp)
 end
 
 get_cache(::typeof(navierstokes!), setup) = nothing
-get_cache(::typeof(boussinesq!), setup) = (; diff = vectorfield(setup))
+get_cache(::typeof(boussinesq!), setup) = nothing
 
 """
 Solve unsteady problem using `method`.
@@ -60,9 +68,9 @@ outputs of `processors` with the same field names.
 """
 function solve_unsteady(;
     setup,
-    force! = isnothing(setup.temperature) ? navierstokes! : boussinesq!,
     tlims,
     start,
+    force! = haskey(start, :temp) ? boussinesq! : navierstokes!,
     docopy = true,
     method = LMWray3(; T = eltype(start.u)),
     psolver = default_psolver(setup),
@@ -71,16 +79,13 @@ function solve_unsteady(;
     cfl = eltype(start.u)(0.9),
     n_adapt_Δt = 1,
     processors = (;),
-    params = nothing,
+    params,
     # Cache arrays for intermediate computations
     ode_cache = get_cache(method, start, setup),
     force_cache = get_cache(force!, setup),
 )
     tstart, tend = tlims
     isadaptive = isnothing(Δt)
-    if isadaptive
-        cflbuf = scalarfield(setup)
-    end
 
     state = docopy ? deepcopy(start) : start
 
@@ -95,7 +100,7 @@ function solve_unsteady(;
         while stepper.t < tend
             if stepper.n % n_adapt_Δt == 0
                 # Change timestep based on operators
-                Δt = cfl * get_cfl_timestep!(cflbuf, stepper.state, setup)
+                Δt = cfl * propose_timestep(force!, stepper.state, setup, params)
                 Δt = isnothing(Δt_min) ? Δt : max(Δt, Δt_min)
             end
 
@@ -135,30 +140,57 @@ function get_state(stepper)
     (; state..., t, n)
 end
 
-"Get proposed maximum time step for convection and diffusion terms."
-function get_cfl_timestep!(buf, state, setup)
-    (; visc, grid) = setup
-    (; dimension, Δ, Δu, Iu) = grid
+function propose_timestep(::typeof(diffusion!), state, setup, params)
+    (; dimension, Δ, Δu, Iu) = setup
+    D = dimension()
+
+    # Check maximum step size in each dimension
+    minimum(1:D) do α
+        Δαmin = minimum(view(Δu[α], Iu[α].indices[α]))
+        Δαmin^2 / params.viscosity / 2D
+    end
+end
+
+broadcastreduce(f, op, args...; kwargs...) =
+    reduce(op, Broadcast.instantiate(Broadcast.broadcasted(f, args...); kwargs...))
+
+function propose_timestep(::typeof(convection!), state, setup, params)
+    (; dimension, Δ, Δu, Iu) = setup
     D = dimension()
     (; u) = state
 
-    # Initial maximum step size
-    Δt = eltype(u)(Inf)
+    # Check maximum step size in each dimension
+    minimum(1:D) do α
+        uα = selectdim(u, D + 1, α)
+        Δα = view(Δu[α], Iu[α].indices[α])
+        Δα = reshape(Δα, ntuple(Returns(1), α - 1)..., :)
+        uα = view(uα, Iu[α])
+        broadcastreduce(min, Δα, uα) do Δα, uα
+            Δα / abs(uα)
+        end
+    end
+end
+
+function propose_timestep(::typeof(convection_diffusion_temp!), state, setup, params)
+    (; dimension, Δ, Ip) = setup
+    D = dimension()
 
     # Check maximum step size in each dimension
-    for (α, uα) in enumerate(eachslice(u; dims = D + 1))
-        # Diffusion
-        Δαmin = minimum(view(Δu[α], Iu[α].indices[α]))
-        Δt_diff = Δαmin^2 / visc / 2D
-
-        # Convection
-        Δα = reshape(Δu[α], ntuple(Returns(1), α - 1)..., :)
-        @. buf = Δα / abs(uα)
-        Δt_conv = minimum(view(buf, Iu[α]))
-
-        # Update time step
-        Δt = min(Δt, Δt_diff, Δt_conv)
+    minimum(1:D) do α
+        Δαmin = minimum(view(Δ[α], Ip.indices[α]))
+        Δαmin^2 / params.conductivity / 2D
     end
-
-    Δt
 end
+
+propose_timestep(::typeof(navierstokes), state, setup, params) =
+    propose_timestep(navierstokes!, state, setup, params)
+propose_timestep(::typeof(navierstokes!), state, setup, params) = min(
+    propose_timestep(convection!, state, setup, params),
+    propose_timestep(diffusion!, state, setup, params),
+)
+propose_timestep(::typeof(boussinesq), state, setup, params) =
+    propose_timestep(boussinesq!, state, setup, params)
+propose_timestep(::typeof(boussinesq!), state, setup, params) = min(
+    propose_timestep(navierstokes!, state, setup, params),
+    propose_timestep(convection_diffusion_temp!, state, setup, params),
+)

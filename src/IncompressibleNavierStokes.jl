@@ -18,7 +18,6 @@ using IterativeSolvers
 using KernelAbstractions
 using KernelAbstractions.Extras.LoopInfo: @unroll
 using LinearAlgebra
-using NNlib
 using Observables
 using PrecompileTools
 using Printf
@@ -60,7 +59,6 @@ license = "MIT"
 # General stuff
 include("boundary_conditions.jl")
 include("grid.jl")
-include("setup.jl")
 include("pressure.jl")
 include("operators.jl")
 include("eddyviscosity.jl")

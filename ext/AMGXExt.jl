@@ -50,8 +50,7 @@ function IncompressibleNavierStokes.close_amgx(stuff)
 end
 
 function IncompressibleNavierStokes.psolver_cg_AMGX(setup; stuff, kwargs...)
-    (; grid, boundary_conditions, backend) = setup
-    (; x, Np, Ip) = grid
+    (; x, Np, Ip, boundary_conditions, backend) = grid
     T = eltype(x[1])
     L = laplacian_mat(setup)
     isdefinite = true
