@@ -38,7 +38,7 @@
 
 """
 Cartesian index unit vector in `D = 2` or `D = 3` dimensions.
-Calling `Offset(D)(α)` returns a Cartesian index with `1` in the dimension `α` and zeros
+Calling `Offset(D)(i)` returns a Cartesian index with `1` in the dimension `i` and zeros
 elsewhere.
 
 See <https://b-fg.github.io/research/2023-07-05-waterlily-on-gpu.html>
@@ -48,10 +48,10 @@ struct Offset{D} end
 
 Offset(D) = Offset{D}()
 
-@inline (::Offset{D})(α) where {D} = CartesianIndex(ntuple(β -> β == α ? 1 : 0, D))
+@inline (::Offset{D})(i) where {D} = CartesianIndex(ntuple(j -> j == i ? 1 : 0, D))
 
 "Get tuple of all unit vectors as Cartesian indices."
-unit_cartesian_indices(D) = ntuple(α -> Offset(D)(α), D)
+unit_cartesian_indices(D) = ntuple(i -> Offset(D)(i), D)
 
 "Left index `n` times away in direction `i`."
 @inline left(I::CartesianIndex{D}, i, n = 1) where {D} =
@@ -62,8 +62,8 @@ unit_cartesian_indices(D) = ntuple(α -> Offset(D)(α), D)
     CartesianIndex(ntuple(j -> j == i ? I[j] + n : I[j], D))
 
 """
-Apply kernel to args with offset `O`.
-By default, it is applied over `setup.Ip`.
+Apply kernel to args with offset `offset`.
+By default, it is applied everywhere except for at the outermost boundary.
 """
 function apply!(
     kernel,
@@ -77,21 +77,30 @@ function apply!(
     KernelAbstractions.synchronize(setup.backend)
 end
 
+# Contractions and expansions:
+# Compute things like u -> δ_j σ_ij(u) (contraction over j)
+# in every grid point.
+# The `..._add!` variants add the result to the output array
+# instead of overwriting it.
+
 @kernel function contract_vector!(O::CartesianIndex{2}, f, p, args)
     I = @index(Global, Cartesian)
     I = I + O
     p[I] = f(args..., 1, I) + f(args..., 2, I)
 end
+
 @kernel function contract_vector!(O::CartesianIndex{3}, f, p, args)
     I = @index(Global, Cartesian)
     I = I + O
     p[I] = f(args..., 1, I) + f(args..., 2, I) + f(args..., 3, I)
 end
+
 @kernel function contract_vector_add!(O::CartesianIndex{2}, f, p, args)
     I = @index(Global, Cartesian)
     I = I + O
     p[I] += f(args..., 1, I) + f(args..., 2, I)
 end
+
 @kernel function contract_vector_add!(O::CartesianIndex{3}, f, p, args)
     I = @index(Global, Cartesian)
     I = I + O
@@ -104,6 +113,7 @@ end
     u[I, 1] = f(args..., 1, 1, I) + f(args..., 1, 2, I)
     u[I, 2] = f(args..., 2, 1, I) + f(args..., 2, 2, I)
 end
+
 @kernel function contract_tensor!(O::CartesianIndex{3}, f, u, args)
     I = @index(Global, Cartesian)
     I = I + O
@@ -111,12 +121,14 @@ end
     u[I, 2] = f(args..., 2, 1, I) + f(args..., 2, 2, I) + f(args..., 2, 3, I)
     u[I, 3] = f(args..., 3, 1, I) + f(args..., 3, 2, I) + f(args..., 3, 3, I)
 end
+
 @kernel function contract_tensor_add!(O::CartesianIndex{2}, f, u, args)
     I = @index(Global, Cartesian)
     I = I + O
     u[I, 1] += f(args..., 1, 1, I) + f(args..., 1, 2, I)
     u[I, 2] += f(args..., 2, 1, I) + f(args..., 2, 2, I)
 end
+
 @kernel function contract_tensor_add!(O::CartesianIndex{3}, f, u, args)
     I = @index(Global, Cartesian)
     I = I + O
@@ -131,6 +143,7 @@ end
     u[I, 1] = f(args..., 1, I)
     u[I, 2] = f(args..., 2, I)
 end
+
 @kernel function expand_scalar!(O::CartesianIndex{3}, f, u, args)
     I = @index(Global, Cartesian)
     I = I + O
@@ -138,12 +151,14 @@ end
     u[I, 2] = f(args..., 2, I)
     u[I, 3] = f(args..., 3, I)
 end
+
 @kernel function expand_scalar_add!(O::CartesianIndex{2}, f, u, args)
     I = @index(Global, Cartesian)
     I = I + O
     u[I, 1] += f(args..., 1, I)
     u[I, 2] += f(args..., 2, I)
 end
+
 @kernel function expand_scalar_add!(O::CartesianIndex{3}, f, u, args)
     I = @index(Global, Cartesian)
     I = I + O
@@ -159,12 +174,13 @@ to remove the `if`-statement.
 """
 @inline function δ(setup, u, i, j, I)
     (; Δ, Δu) = setup
+    tol = 2 * eps(eltype(u))
     Δij = i == j ? Δ[j][I[j]] : Δu[j][I[j]]
     δu = (u[right(I, j, i != j), i] - u[left(I, j, i == j), i]) / Δij
-    # For some Neumann BC, Δa or Δb are zero (eps),
-    # and (right - left) / Δa blows up even if right = left according to BC.
+    # For some Neumann BC, Δ is zero (eps)
+    # and (right - left) / Δ blows up even if right = left according to BC.
     # Here we manually set the derivatives to zero in such cases.
-    ifelse(Δij > 2 * eps(typeof(δu)), δu, zero(δu))
+    ifelse(Δij > tol, δu, zero(δu))
 end
 
 # Land in volume face
@@ -172,11 +188,11 @@ end
 @inline δ(setup, p, i, I) = (p[right(I, i)] - p[I]) / setup.Δu[i][I[i]]
 
 """
-Average scalar field `ϕ` in the `α`-direction.
+Average scalar field `ϕ` in the `i`-direction.
 """
-@inline function avg(ϕ, Δ, I, α)
+@inline function avg(ϕ, Δ, I, i)
     e = Offset(length(I.I))
-    (Δ[α][I[α]+1] * ϕ[I] + Δ[α][I[α]] * ϕ[I+e(α)]) / (Δ[α][I[α]] + Δ[α][I[α]+1])
+    (Δ[i][I[i]+1] * ϕ[I] + Δ[i][I[i]] * ϕ[I+e(i)]) / (Δ[i][I[i]] + Δ[i][I[i]+1])
 end
 
 "Scale scalar field `p` with volume sizes (differentiable version)."
@@ -226,21 +242,18 @@ function divergence!(div, u, setup)
 end
 
 function divergence_adjoint!(u, φ, setup)
-    (; Δ, N, Ip, backend, workgroupsize) = setup
-    D = length(Δ)
-    e = Offset(D)
-    divergence_adjoint_kernel!(backend, workgroupsize)(u, φ, Δ, Ip, e; ndrange = N)
+    (; N) = setup
+    offset = zero(CartesianIndex(N))
+    apply!(expand_scalar_add!, setup, divfunc_adjoint, u, (setup, φ); offset, ndrange = N)
     u
 end
 
-@kernel function divergence_adjoint_kernel!(u, φ, Δ, Ip, e)
-    I = @index(Global, Cartesian)
-    for α in eachindex(Δ)
-        adjoint = zero(eltype(u))
-        I ∈ Ip && (adjoint += φ[I] / Δ[α][I[α]])
-        I + e(α) ∈ Ip && (adjoint -= φ[I+e(α)] / Δ[α][I[α]+1])
-        u[I, α] += adjoint
-    end
+@inline function divfunc_adjoint(setup, φ, i, I)
+    (; inside, Δ, x) = setup
+    adjoint = zero(eltype(x[1]))
+    I ∈ inside && (adjoint += φ[I] / Δ[i][I[i]])
+    right(I, i) ∈ inside && (adjoint -= φ[right(I, i)] / Δ[i][I[i]+1])
+    adjoint
 end
 
 "Compute pressure gradient (differentiable version)."
@@ -263,22 +276,26 @@ function pressuregradient!(G, p, setup)
 end
 
 function pressuregradient_adjoint!(pbar, φ, setup)
-    (; dimension, Δu, N, Iu, backend, workgroupsize) = setup
-    D = dimension()
-    e = Offset(D)
-    kernel = pressuregradient_adjoint_kernel!(backend, workgroupsize)
-    kernel(pbar, φ, Δu, Iu, e, Val(1:D); ndrange = N)
+    (; N) = setup
+    offset = zero(CartesianIndex(N))
+    apply!(
+        contract_vector_add!,
+        setup,
+        pgrad_adjoint,
+        pbar,
+        (setup, φ);
+        offset,
+        ndrange = N,
+    )
     pbar
 end
 
-@kernel function pressuregradient_adjoint_kernel!(p, φ, Δu, Iu, e, valdims)
-    I = @index(Global, Cartesian)
-    adjoint = zero(eltype(p))
-    @unroll for α in getval(valdims)
-        I - e(α) ∈ Iu[α] && (adjoint += φ[I-e(α), α] / Δu[α][I[α]-1])
-        I ∈ Iu[α] && (adjoint -= φ[I, α] / Δu[α][I[α]])
-    end
-    p[I] += adjoint
+@inline function pgrad_adjoint(setup, φ, i, I)
+    (; inside, Δu, x) = setup
+    adjoint = zero(eltype(x[1]))
+    left(I, i) ∈ inside && (adjoint += φ[left(I, i), i] / Δu[i][I[i]-1])
+    I ∈ inside && (adjoint -= φ[I, i] / Δu[i][I[i]])
+    adjoint
 end
 
 "Subtract pressure gradient (in-place version)."
@@ -374,26 +391,10 @@ ChainRulesCore.rrule(::typeof(convection), u, setup) = (
 @inline function interpolate_reverse(setup, u, i, j, I)
     (; A_coll, A_stag) = setup
     if i == j
-        u[left(I, j), i] / 2 + u[I, i] / 2
+        A_coll[j][2][I[j]-1] * u[left(I, j), i] + A_coll[j][1][I[j]] * u[I, i]
     else
         A_stag[j][2][I[j]] * u[I, i] + A_stag[j][1][I[j]+1] * u[right(I, j), i]
     end
-end
-
-@inline function conv(setup, u, i, j, I)
-    (; Δu, Δ) = setup
-    Δuij = i == j ? Δu[j] : Δ[j]
-
-    # Half for u[i], (reverse!) interpolation for u[j]
-    # Note:
-    #     In matrix version, uses
-    #     1*u[i][I-e(j)] + 0*u[i][I]
-    #     instead of 1/2 when u[i][I-e(j)] is at Dirichlet boundary.
-    uij1 = (u[left(I, j), i] + u[I, i]) / 2
-    uij2 = (u[I, i] + u[right(I, j), i]) / 2
-    uji1 = interpolate_reverse(setup, u, j, i, left(I, j, i != j))
-    uji2 = interpolate_reverse(setup, u, j, i, right(I, j, i == j))
-    -(uij2 * uji2 - uij1 * uji1) / Δuij[I[j]]
 end
 
 @inline function convstress(setup, u, i, j, I)
@@ -406,6 +407,7 @@ end
     if i == j
         uij = (u[left(I, j), i] + u[I, i]) / 2
         uji = uij
+        # uji = A_coll[i][2][I[i]-1] * u[left(I, i), j] + A_coll[i][1][I[i]] * u[I, j]
     else
         uij = (u[I, i] + u[right(I, j), i]) / 2
         uji = A_stag[i][2][I[i]] * u[I, j] + A_stag[i][1][I[i]+1] * u[right(I, i), j]
@@ -416,8 +418,8 @@ end
 @inline function tensordivergence(setup, σ, args, i, j, I)
     (; Δu, Δ) = setup
     Δuij = i == j ? Δu[j] : Δ[j]
-    σb = σ(args..., i, j, right(I, j, i == j))
     σa = σ(args..., i, j, left(I, j, i != j))
+    σb = σ(args..., i, j, right(I, j, i == j))
     -(σb - σa) / Δuij[I[j]]
 end
 
@@ -426,15 +428,6 @@ Compute convective term (in-place version).
 Add the result to `F`.
 """
 function convection!(f, u, setup)
-    apply!(contract_tensor_add!, setup, conv, f, (setup, u))
-    f
-end
-
-"""
-Compute convective term (in-place version).
-Add the result to `F`.
-"""
-function convection2!(f, u, setup)
     apply!(
         contract_tensor_add!,
         setup,
@@ -452,6 +445,7 @@ function convection_adjoint!(ubar, φbar, u, setup)
     T = eltype(u)
     kernel = convection_adjoint_kernel!(backend, workgroupsize)
     kernel(ubar, φbar, u, setup, Val(1:D); ndrange = N)
+    KernelAbstractions.synchronize(backend)
     ubar
 end
 
@@ -459,90 +453,100 @@ end
     h = eltype(u)(1 / 2)
     e = Offset(setup.dimension())
     dims = getval(valdims)
-    (; Δ, Δu, Iu, A_coll, A_stag) = setup
+    (; inside, Δ, Δu, A_coll, A_stag) = setup
+    z = u |> eltype |> zero
+    tol = 2 * eps(eltype(u))
     J = @index(Global, Cartesian)
-    @unroll for γ in dims
+    @unroll for k in dims
         adjoint = zero(eltype(u))
-        @unroll for α in dims
-            @unroll for β in dims
-                Δuαβ = α == β ? Δu[β] : Δ[β]
-                AAβα1 = α == β ? A_coll[α][1] : A_stag[α][1]
-                AAβα2 = α == β ? A_coll[α][2] : A_stag[α][2]
+        @unroll for i in dims
+            @unroll for j in dims
+                Δuij = i == j ? Δu[j] : Δ[j]
+                AAji1 = i == j ? A_coll[i][1] : A_stag[i][1]
+                AAji2 = i == j ? A_coll[i][2] : A_stag[i][2]
 
                 # 1
                 I = J
-                if α == γ && I in Iu[α]
-                    uαβ2 = h
-                    uβα2 = interpolate_reverse(setup, u, β, α, I + (α == β) * e(β))
-                    dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
-                    adjoint += φbar[I, α] * dφdu
+                if i == k && I in inside
+                    Δa = Δuij[I[j]]
+                    uij2 = h
+                    uji2 = interpolate_reverse(setup, u, j, i, I + (i == j) * e(j))
+                    dφdu = -uij2 * uji2 / Δa
+                    adjoint += ifelse(Δa > tol, φbar[I, i] * dφdu, z)
                 end
 
                 # 2
-                I = J - e(β)
-                if α == γ && I in Iu[α]
-                    uαβ2 = h
-                    uβα2 = interpolate_reverse(setup, u, β, α, I + (α == β) * e(β))
-                    dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
-                    adjoint += φbar[I, α] * dφdu
+                I = J - e(j)
+                if i == k && I in inside
+                    Δa = Δuij[I[j]]
+                    uij2 = h
+                    uji2 = interpolate_reverse(setup, u, j, i, I + (i == j) * e(j))
+                    dφdu = -uij2 * uji2 / Δa
+                    adjoint += ifelse(Δa > tol, φbar[I, i] * dφdu, z)
                 end
 
                 # 3
                 I = J
-                if β == γ && I in Iu[α]
-                    uαβ2 = h * u[I, α] + h * u[I+e(β), α]
-                    uβα2 = AAβα2[I[α]+(α==β)]
-                    dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
-                    adjoint += φbar[I, α] * dφdu
+                if j == k && I in inside
+                    Δa = Δuij[I[j]]
+                    uij2 = h * u[I, i] + h * u[I+e(j), i]
+                    uji2 = AAji2[I[i]+(i==j)]
+                    dφdu = -uij2 * uji2 / Δa
+                    adjoint += ifelse(Δa > tol, φbar[I, i] * dφdu, z)
                 end
 
                 # 4
-                I = J - e(α)
-                if β == γ && I in Iu[α]
-                    uαβ2 = h * u[I, α] + h * u[I+e(β), α]
-                    uβα2 = AAβα1[I[α]+1]
-                    dφdu = -uαβ2 * uβα2 / Δuαβ[I[β]]
-                    adjoint += φbar[I, α] * dφdu
+                I = J - e(i)
+                if j == k && I in inside
+                    Δa = Δuij[I[j]]
+                    uij2 = h * u[I, i] + h * u[I+e(j), i]
+                    uji2 = AAji1[I[i]+1]
+                    dφdu = -uij2 * uji2 / Δuij[I[j]]
+                    adjoint += ifelse(Δa > tol, φbar[I, i] * dφdu, z)
                 end
 
                 # 5
-                I = J + e(β)
-                if α == γ && I in Iu[α]
-                    uαβ1 = h
-                    uβα1 = interpolate_reverse(setup, u, β, α, I - (α != β) * e(β))
-                    dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
-                    adjoint += φbar[I, α] * dφdu
+                I = J + e(j)
+                if i == k && I in inside
+                    Δa = Δuij[I[j]]
+                    uij1 = h
+                    uji1 = interpolate_reverse(setup, u, j, i, I - (i != j) * e(j))
+                    dφdu = uij1 * uji1 / Δa
+                    adjoint += ifelse(Δa > tol, φbar[I, i] * dφdu, z)
                 end
 
                 # 6
                 I = J
-                if α == γ && I in Iu[α]
-                    uαβ1 = h
-                    uβα1 = interpolate_reverse(setup, u, β, α, I - (α != β) * e(β))
-                    dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
-                    adjoint += φbar[I, α] * dφdu
+                if i == k && I in inside
+                    Δa = Δuij[I[j]]
+                    uij1 = h
+                    uji1 = interpolate_reverse(setup, u, j, i, I - (i != j) * e(j))
+                    dφdu = uij1 * uji1 / Δa
+                    adjoint += ifelse(Δa > tol, φbar[I, i] * dφdu, z)
                 end
 
                 # 7
-                I = J + e(β)
-                if β == γ && I in Iu[α]
-                    uαβ1 = h * u[I-e(β), α] + h * u[I, α]
-                    uβα1 = AAβα2[I[α]-(α==β)]
-                    dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
-                    adjoint += φbar[I, α] * dφdu
+                I = J + e(j)
+                if j == k && I in inside
+                    Δa = Δuij[I[j]]
+                    uij1 = h * u[I-e(j), i] + h * u[I, i]
+                    uji1 = AAji2[I[i]-(i==j)]
+                    dφdu = uij1 * uji1 / Δa
+                    adjoint += ifelse(Δa > tol, φbar[I, i] * dφdu, z)
                 end
 
                 # 8
-                I = J + e(β) - e(α)
-                if β == γ && I in Iu[α]
-                    uαβ1 = h * u[I-e(β), α] + h * u[I, α]
-                    uβα1 = AAβα1[I[α]+(α!=β)]
-                    dφdu = uαβ1 * uβα1 / Δuαβ[I[β]]
-                    adjoint += φbar[I, α] * dφdu
+                I = J + e(j) - e(i)
+                if j == k && I in inside
+                    Δa = Δuij[I[j]]
+                    uij1 = h * u[I-e(j), i] + h * u[I, i]
+                    uji1 = AAji1[I[i]+(i!=j)]
+                    dφdu = uij1 * uji1 / Δa
+                    adjoint += ifelse(Δa > tol, φbar[I, i] * dφdu, z)
                 end
             end
         end
-        ubar[J, γ] += adjoint
+        ubar[J, k] += adjoint
     end
 end
 
@@ -576,45 +580,58 @@ end
 
 @inline diffstress(setup, u, viscosity, i, j, I) = -viscosity * δ(setup, u, i, j, I)
 
-function diffusion_adjoint!(u, φ, setup, viscosity)
-    (; dimension, N, Δ, Δu, Iu, backend, workgroupsize) = setup
-    D = dimension()
-    e = Offset(D)
-    kernel = diffusion_adjoint_kernel!(backend, workgroupsize)
-    kernel(u, φ, viscosity, e, Δ, Δu, Iu, Val(1:D); ndrange = N)
-    u
+function diffusion_adjoint!(ubar, φbar, setup, viscosity)
+    (; Ip, N) = setup
+    apply!(
+        contract_tensor_add!,
+        setup,
+        diffusion_adjoint_ij,
+        ubar,
+        (φbar, viscosity, setup);
+        offset = zero(first(Ip)),
+        ndrange = N,
+    )
+    ubar
 end
 
-@kernel function diffusion_adjoint_kernel!(u, φ, visc, e, Δ, Δu, Iu, valdims)
-    dims = getval(valdims)
-    I = @index(Global, Cartesian)
-    @unroll for α in dims
-        val = zero(eltype(u))
-        @unroll for β in dims
-            Δuαβ = α == β ? Δu[β] : Δ[β]
-            # F[α][I] += visc * u[I+e(β), α] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
-            # F[α][I] -= visc * u[I, α] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]])
-            # F[α][I] -= visc * u[I, α] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
-            # F[α][I] += visc * u[I-e(β), α] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1])
-            if I - e(β) ∈ Iu[α]
-                val +=
-                    visc * φ[I-e(β), α] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) /
-                    Δuαβ[I[β]-1]
-            end
-            if I ∈ Iu[α]
-                val -= visc * φ[I, α] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) / Δuαβ[I[β]]
-            end
-            if I ∈ Iu[α]
-                val -= visc * φ[I, α] / (β == α ? Δ[β][I[β]] : Δu[β][I[β]-1]) / Δuαβ[I[β]]
-            end
-            if I + e(β) ∈ Iu[α]
-                val +=
-                    visc * φ[I+e(β), α] / (β == α ? Δ[β][I[β]+1] : Δu[β][I[β]]) /
-                    Δuαβ[I[β]+1]
-            end
-        end
-        u[I, α] += val
+@inline function diffusion_adjoint_ij(φ, visc, setup, i, j, I)
+    (; inside, e, Δ, Δu) = setup
+    Δuij = i == j ? Δu[j] : Δ[j]
+    val = zero(eltype(Δuij))
+    tol = 2 * eps(eltype(Δuij))
+    # F[i][I] += visc * u[I+e(j), i] / (j == i ? Δ[j][I[j]+1] : Δu[j][I[j]])
+    # F[i][I] -= visc * u[I, i] / (j == i ? Δ[j][I[j]+1] : Δu[j][I[j]])
+    # F[i][I] -= visc * u[I, i] / (j == i ? Δ[j][I[j]] : Δu[j][I[j]-1])
+    # F[i][I] += visc * u[I-e(j), i] / (j == i ? Δ[j][I[j]] : Δu[j][I[j]-1])
+    J = left(I, j)
+    if J ∈ inside
+        Δa = j == i ? Δ[j][I[j]] : Δu[j][I[j]-1]
+        Δb = Δuij[I[j]-1]
+        valtry = visc * φ[J, i] / Δa / Δb
+        val += ifelse(Δa > tol && Δb > tol, valtry, zero(valtry))
     end
+    J = I
+    if J ∈ inside
+        Δb = Δuij[I[j]]
+        Δa = j == i ? Δ[j][I[j]+1] : Δu[j][I[j]]
+        valtry = visc * φ[J, i] / Δa / Δb
+        val -= ifelse(Δa > tol && Δb > tol, valtry, zero(valtry))
+    end
+    J = I
+    if J ∈ inside
+        Δb = Δuij[I[j]]
+        Δa = j == i ? Δ[j][I[j]] : Δu[j][I[j]-1]
+        valtry = visc * φ[J, i] / Δa / Δb
+        val -= ifelse(Δa > tol && Δb > tol, valtry, zero(valtry))
+    end
+    J = right(I, j)
+    if J ∈ inside
+        Δb = Δuij[I[j]+1]
+        Δa = j == i ? Δ[j][I[j]+1] : Δu[j][I[j]]
+        valtry = visc * φ[J, i] / Δa / Δb
+        val += ifelse(Δa > tol && Δb > tol, valtry, zero(valtry))
+    end
+    val
 end
 
 """
@@ -638,12 +655,19 @@ end
 Compute convection-diffusion term for the temperature equation.
 (differentiable version).
 """
-convection_diffusion_temp(u, temp, setup) =
-    convection_diffusion_temp!(zero(temp), u, temp, setup)
+convection_diffusion_temp(u, temp, setup, conductivity) =
+    convection_diffusion_temp!(zero(temp), u, temp, setup, conductivity)
 
-function ChainRulesCore.rrule(::typeof(convection_diffusion_temp), u, temp, setup)
-    conv = convection_diffusion_temp(u, temp, setup)
-    convection_diffusion_temp_pullback(φ) = (NoTangent(), du, dtemp, NoTangent())
+function ChainRulesCore.rrule(
+    ::typeof(convection_diffusion_temp),
+    u,
+    temp,
+    setup,
+    conductivity,
+)
+    conv = convection_diffusion_temp(u, temp, setup, conductivity)
+    convection_diffusion_temp_pullback(φ) =
+        (NoTangent(), du, dtemp, NoTangent(), NoTangent())
     @warn "Check if convection_diffusion_temp pullback behaves as expected"
     (conv, pullback)
 end
@@ -654,27 +678,17 @@ Compute convection-diffusion term for the temperature equation.
 Add result to `c`.
 """
 function convection_diffusion_temp!(c, u, temp, setup, conductivity)
-    (; dimension, Δ, Δu, Np, Ip, backend, workgroupsize) = setup
-    D = dimension()
-    e = Offset(D)
-    I0 = getoffset(Ip)
-    kernel = convection_diffusion_temp_kernel!(backend, workgroupsize)
-    kernel(c, u, temp, conductivity, Δ, Δu, e, Val(1:D), I0; ndrange = Np)
+    (; Δ, Δu) = setup
+    apply!(contract_vector_add!, setup, convdiff_temp, c, (u, temp, conductivity, Δ, Δu))
     c
 end
 
-@kernel function convection_diffusion_temp_kernel!(c, u, temp, cond, Δ, Δu, e, valdims, I0)
-    I = @index(Global, Cartesian)
-    I = I + I0
-    cI = zero(eltype(c))
-    @unroll for β in getval(valdims)
-        ∂T∂x1 = (temp[I] - temp[I-e(β)]) / Δu[β][I[β]-1]
-        ∂T∂x2 = (temp[I+e(β)] - temp[I]) / Δu[β][I[β]]
-        uT1 = u[I-e(β), β] * avg(temp, Δ, I - e(β), β)
-        uT2 = u[I, β] * avg(temp, Δ, I, β)
-        cI += (-(uT2 - uT1) + cond * (∂T∂x2 - ∂T∂x1)) / Δ[β][I[β]]
-    end
-    c[I] += cI
+@inline function convdiff_temp(u, temp, cond, Δ, Δu, i, I)
+    ∂T∂x1 = (temp[I] - temp[left(I, j)]) / Δu[j][I[j]-1]
+    ∂T∂x2 = (temp[right(I, j)] - temp[I]) / Δu[j][I[j]]
+    uT1 = u[left(I, j), j] * avg(temp, Δ, left(I, j), j)
+    uT2 = u[I, j] * avg(temp, Δ, I, j)
+    (-(uT2 - uT1) + cond * (∂T∂x2 - ∂T∂x1)) / Δ[j][I[j]]
 end
 
 "Compute dissipation term for the temperature equation (differentiable version)."
@@ -690,48 +704,38 @@ Compute dissipation term for the temperature equation (in-place version).
 Add result to `diss`.
 """
 function dissipation!(diss, u, setup, coeff)
-    (; dimension, Δ, Δu, Np, Ip, backend, workgroupsize) = setup
-    D = dimension()
-    e = Offset(D)
-    @kernel function dissipartion_kernel!(diss, u, coeff, I0)
+    @kernel function dissipation_kernel!(O, diss, u, coeff)
         I = @index(Global, Cartesian)
-        I += I0
-        G = ∇(u, I, Δ, Δu)
+        I = I + O
+        G = ∇_coll(u, setup, I)
         diss[I] += coeff * dot(G, G)
     end
-    I0 = first(Ip)
-    I0 -= oneunit(I0)
-    dissipartion_kernel!(backend, workgroupsize)(diss, u, coeff, I0; ndrange = Np)
+    apply!(dissipation_kernel!, setup, diss, u, coeff)
     diss
 end
 
 "Compute gravity term (differentiable version)."
-applygravity(temp, setup) = applygravity!(vectorfield(setup), temp, setup)
+applygravity(temp, setup, gdir, gravity) =
+    applygravity!(vectorfield(setup), temp, setup, gdir, gravity)
 
 function ChainRulesCore.rrule(::typeof(applygravity), temp, setup, gdir, gravity)
-    (; dimension, Δ, N, Iu, backend, workgroupsize) = setup
-    backend = get_backend(temp)
-    D = dimension()
-    e = Offset(D)
+    (; Δ, N, inside) = setup
     g = applygravity(temp, setup, gdir, gravity)
-    function gravity_pullback(φ)
-        @kernel function g!(tempbar, φbar, valα)
-            α = getval(valα)
-            J = @index(Global, Cartesian)
-            t = zero(eltype(tempbar))
-            # 1
-            I = J
-            I ∈ Iu[α] &&
-                (t += gravity * Δ[α][I[α]+1] * φbar[I, α] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
-            # 2
-            I = J - e(α)
-            I ∈ Iu[α] &&
-                (t += gravity * Δ[α][I[α]] * φbar[I, α] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
-            tempbar[J] = t
-        end
+    function gravity_pullback(φbar)
         tempbar = zero(temp)
-        g!(backend, workgroupsize)(tempbar, φ, Val(gdir); ndrange = N)
-        (NoTangent(), tempbar, NoTangent())
+        apply!(
+            applygravity_adjoint_kernel!,
+            setup,
+            tempbar,
+            φbar,
+            Δ,
+            gravity,
+            inside,
+            gdir;
+            offset = zero(first(inside)),
+            ndrange = N,
+        )
+        (NoTangent(), tempbar, NoTangent(), NoTangent(), NoTangent())
     end
     g, gravity_pullback
 end
@@ -740,17 +744,33 @@ end
 Compute gravity term (in-place version).
 add the result to `F`.
 """
-function applygravity!(F, temp, setup, gdir, gravity)
-    (; dimension, Δ, Nu, Iu, backend, workgroupsize) = setup
-    @kernel function g!(F, temp, gravity, ::Val{gdir}, I0) where {gdir}
-        I = @index(Global, Cartesian)
-        I = I + I0
-        F[I, gdir] += gravity * avg(temp, Δ, I, gdir)
+function applygravity!(f, temp, setup, gdir, gravity)
+    (; Δ) = setup
+    apply!(applygravity_kernel!, setup, f, temp, Δ, gravity, gdir)
+    f
+end
+
+@kernel function applygravity_kernel!(O, f, temp, Δ, gravity, gdir)
+    I = @index(Global, Cartesian)
+    I = I + O
+    f[I, gdir] += gravity * avg(temp, Δ, I, gdir)
+end
+
+@kernel function applygravity_adjoint_kernel!(O, tempbar, φbar, Δ, gravity, inside, i)
+    J = @index(Global, Cartesian)
+    J = J + O
+    t = zero(eltype(tempbar))
+    # 1
+    I = J
+    if I ∈ inside
+        t += gravity * Δ[i][I[i]+1] * φbar[I, i] / (Δ[i][I[i]] + Δ[i][I[i]+1])
     end
-    I0 = first(Iu[gdir])
-    I0 -= oneunit(I0)
-    g!(backend, workgroupsize)(F, temp, gravity, Val(gdir), I0; ndrange = Nu[gdir])
-    F
+    # 2
+    I = left(J, i)
+    if I ∈ inside
+        t += gravity * Δ[i][I[i]] * φbar[I, i] / (Δ[i][I[i]] + Δ[i][I[i]+1])
+    end
+    tempbar[J] = t
 end
 
 "Compute vorticity field (differentiable version)."
@@ -762,141 +782,79 @@ vorticity!(ω, u, setup) = vorticity!(setup.dimension, ω, u, setup)
 
 # 2D version
 function vorticity!(::Dimension{2}, ω, u, setup)
-    (; dimension, Δu, N, backend, workgroupsize) = setup
-    D = dimension()
-    e = Offset(D)
-    @kernel function ω!(ω, u)
+    (; Δu, N, backend, workgroupsize) = setup
+    @kernel function ω!(ω, u, Δu)
         I = @index(Global, Cartesian)
         ω[I] =
-            (u[I+e(1), 2] - u[I, 2]) / Δu[1][I[1]] - (u[I+e(2), 1] - u[I, 1]) / Δu[2][I[2]]
+            (u[right(I, 1), 2] - u[I, 2]) / Δu[1][I[1]] -
+            (u[right(I, 2), 1] - u[I, 1]) / Δu[2][I[2]]
     end
-    ω!(backend, workgroupsize)(ω, u; ndrange = N .- 1)
+    ω!(backend, workgroupsize)(ω, u, Δu; ndrange = N .- 1)
     ω
 end
 
 # 3D version
 function vorticity!(::Dimension{3}, ω, u, setup)
-    (; dimension, Δu, N, backend, workgroupsize) = setup
-    D = dimension()
-    e = Offset(D)
-    @kernel function ω!(ω, u)
+    (; Δu, N, backend, workgroupsize) = setup
+    @kernel function ω!(ω, u, Δu)
         I = @index(Global, Cartesian)
-        for (α, α₊, α₋) in ((1, 2, 3), (2, 3, 1), (3, 1, 2))
-            # α₊ = mod1(α + 1, D)
-            # α₋ = mod1(α - 1, D)
-            ω[I, α] =
-                (u[I+e(α₊), α₋] - u[I, α₋]) / Δu[α₊][I[α₊]] -
-                (u[I+e(α₋), α₊] - u[I, α₊]) / Δu[α₋][I[α₋]]
+        @unroll for (i, j, k) in ((1, 2, 3), (2, 3, 1), (3, 1, 2))
+            ω[I, i] =
+                (u[right(I, j), k] - u[I, k]) / Δu[j][I[j]] -
+                (u[right(I, k), j] - u[I, j]) / Δu[k][I[k]]
         end
     end
     ω!(backend, workgroupsize)(ω, u; ndrange = N .- 1)
     ω
 end
 
-@inline ∂x(u, I::CartesianIndex{D}, α, β, Δβ, Δuβ; e = Offset(D)) where {D} =
-    if α == β
-        (u[I, α] - u[I-e(β), α]) / Δβ[I[β]]
+@inline δ_coll(u, setup, i, j, I) =
+    if i == j
+        δ(setup, u, i, j, I)
     else
         (
-            (u[I+e(β), α] - u[I, α]) / Δuβ[I[β]] +
-            (u[I-e(α)+e(β), α] - u[I-e(α), α]) / Δuβ[I[β]] +
-            (u[I, α] - u[I-e(β), α]) / Δuβ[I[β]-1] +
-            (u[I-e(α), α] - u[I-e(α)-e(β), α]) / Δuβ[I[β]-1]
+            δ(setup, u, i, j, I) +
+            δ(setup, u, i, j, left(I, i)) +
+            δ(setup, u, i, j, left(I, j)) +
+            δ(setup, u, i, j, left(left(I, i), j))
         ) / 4
     end
-@inline function ∂x_adjoint!(
-    φ,
-    u,
-    I::CartesianIndex{D},
-    α,
-    β,
-    Δβ,
-    Δuβ;
-    e = Offset(D),
-) where {D}
-    # TODO:
-    # - Invert input/output indices
-    # - combine all output indices into one
-    # - Get rid of @atomic
-    if α == β
-        # φ = (u[I, α] - u[I-e(β), α]) / Δβ[I[β]]
-        val = φ / Δβ[I[β]]
-        @atomic u[I, α] += val
-        @atomic u[I-e(β), α] -= val
-    else
-        # φ =
-        #     (u[I+e(β), α] - u[I, α]) / 4Δuβ[I[β]] +
-        #     (u[I-e(α)+e(β), α] - u[I-e(α), α]) / 4Δuβ[I[β]] +
-        #     (u[I, α] - u[I-e(β), α]) / 4Δuβ[I[β]-1] +
-        #     (u[I-e(α), α] - u[I-e(α)-e(β), α]) / 4Δuβ[I[β]-1]
-        val = φ / 4Δuβ[I[β]]
-        @atomic u[I+e(β), α] += val
-        @atomic u[I, α] -= val
-        @atomic u[I-e(α)+e(β), α] += val
-        @atomic u[I-e(α), α] -= val
-        val = φ / 4Δuβ[I[β]-1]
-        @atomic u[I, α] += val
-        @atomic u[I-e(β), α] -= val
-        @atomic u[I-e(α), α] += val
-        @atomic u[I-e(α)-e(β), α] -= val
-    end
-    u
-end
-@inline ∇(u, I::CartesianIndex{2}, Δ, Δu) = SMatrix{2,2,eltype(u),4}(
-    ∂x(u, I, 1, 1, Δ[1], Δu[1]),
-    ∂x(u, I, 2, 1, Δ[1], Δu[1]),
-    ∂x(u, I, 1, 2, Δ[2], Δu[2]),
-    ∂x(u, I, 2, 2, Δ[2], Δu[2]),
+@inline ∇_coll(u, setup, I::CartesianIndex{2}) = SMatrix{2,2,eltype(u),4}(
+    δ_coll(u, setup, 1, 1, I),
+    δ_coll(u, setup, 2, 1, I),
+    δ_coll(u, setup, 1, 2, I),
+    δ_coll(u, setup, 2, 2, I),
 )
-@inline ∇(u, I::CartesianIndex{3}, Δ, Δu) = SMatrix{3,3,eltype(u),9}(
-    ∂x(u, I, 1, 1, Δ[1], Δu[1]),
-    ∂x(u, I, 2, 1, Δ[1], Δu[1]),
-    ∂x(u, I, 3, 1, Δ[1], Δu[1]),
-    ∂x(u, I, 1, 2, Δ[2], Δu[2]),
-    ∂x(u, I, 2, 2, Δ[2], Δu[2]),
-    ∂x(u, I, 3, 2, Δ[2], Δu[2]),
-    ∂x(u, I, 1, 3, Δ[3], Δu[3]),
-    ∂x(u, I, 2, 3, Δ[3], Δu[3]),
-    ∂x(u, I, 3, 3, Δ[3], Δu[3]),
+@inline ∇_coll(u, setup, I::CartesianIndex{3}) = SMatrix{3,3,eltype(u),9}(
+    δ_coll(u, setup, 1, 1, I),
+    δ_coll(u, setup, 2, 1, I),
+    δ_coll(u, setup, 3, 1, I),
+    δ_coll(u, setup, 1, 2, I),
+    δ_coll(u, setup, 2, 2, I),
+    δ_coll(u, setup, 3, 2, I),
+    δ_coll(u, setup, 1, 3, I),
+    δ_coll(u, setup, 2, 3, I),
+    δ_coll(u, setup, 3, 3, I),
 )
-@inline function ∇_adjoint!(∇u, u, I::CartesianIndex{2}, Δ, Δu)
-    ∂x_adjoint!(∇u[1, 1], u, I, 1, 1, Δ[1], Δu[1])
-    ∂x_adjoint!(∇u[2, 1], u, I, 2, 1, Δ[1], Δu[1])
-    ∂x_adjoint!(∇u[1, 2], u, I, 1, 2, Δ[2], Δu[2])
-    ∂x_adjoint!(∇u[2, 2], u, I, 2, 2, Δ[2], Δu[2])
-    u
-end
-@inline function ∇_adjoint!(∇u, u, I::CartesianIndex{3}, Δ, Δu)
-    ∂x_adjoint!(∇u[1, 1], u, I, 1, 1, Δ[1], Δu[1])
-    ∂x_adjoint!(∇u[2, 1], u, I, 2, 1, Δ[1], Δu[1])
-    ∂x_adjoint!(∇u[3, 1], u, I, 3, 1, Δ[1], Δu[1])
-    ∂x_adjoint!(∇u[1, 2], u, I, 1, 2, Δ[2], Δu[2])
-    ∂x_adjoint!(∇u[2, 2], u, I, 2, 2, Δ[2], Δu[2])
-    ∂x_adjoint!(∇u[3, 2], u, I, 3, 2, Δ[2], Δu[2])
-    ∂x_adjoint!(∇u[1, 3], u, I, 1, 3, Δ[3], Δu[3])
-    ∂x_adjoint!(∇u[2, 3], u, I, 2, 3, Δ[3], Δu[3])
-    ∂x_adjoint!(∇u[3, 3], u, I, 3, 3, Δ[3], Δu[3])
-    u
-end
 @inline idtensor(u, ::CartesianIndex{2}) = SMatrix{2,2,eltype(u),4}(1, 0, 0, 1)
 @inline idtensor(u, ::CartesianIndex{3}) =
     SMatrix{3,3,eltype(u),9}(1, 0, 0, 0, 1, 0, 0, 0, 1)
-@inline unittensor(u, ::CartesianIndex{2}, α, β) = SMatrix{2,2,eltype(u),4}(
-    (α, β) == (1, 1),
-    (α, β) == (2, 1),
-    (α, β) == (1, 2),
-    (α, β) == (2, 2),
+@inline unittensor(u, ::CartesianIndex{2}, i, β) = SMatrix{2,2,eltype(u),4}(
+    (i, β) == (1, 1),
+    (i, β) == (2, 1),
+    (i, β) == (1, 2),
+    (i, β) == (2, 2),
 )
-@inline unittensor(u, ::CartesianIndex{3}, α, β) = SMatrix{3,3,eltype(u),9}(
-    (α, β) == (1, 1),
-    (α, β) == (2, 1),
-    (α, β) == (3, 1),
-    (α, β) == (1, 2),
-    (α, β) == (2, 2),
-    (α, β) == (3, 2),
-    (α, β) == (1, 3),
-    (α, β) == (2, 3),
-    (α, β) == (3, 3),
+@inline unittensor(u, ::CartesianIndex{3}, i, β) = SMatrix{3,3,eltype(u),9}(
+    (i, β) == (1, 1),
+    (i, β) == (2, 1),
+    (i, β) == (3, 1),
+    (i, β) == (1, 2),
+    (i, β) == (2, 2),
+    (i, β) == (3, 2),
+    (i, β) == (1, 3),
+    (i, β) == (2, 3),
+    (i, β) == (3, 3),
 )
 
 "Gridsize based on the length of the diagonal of the cell."
@@ -915,17 +873,22 @@ interpolate_u_p(u, setup) = interpolate_u_p!(vectorfield(setup), u, setup)
 
 "Interpolate velocity to pressure points (in-place version)."
 function interpolate_u_p!(up, u, setup)
-    (; dimension, Np, Ip, backend, workgroupsize) = setup
+    (; dimension, N, Ip, backend, workgroupsize) = setup
     D = dimension()
-    e = Offset(D)
-    @kernel function int!(up, u, ::Val{α}, I0) where {α}
+    @kernel function int!(up, u, ::Val{i}, O) where {i}
         I = @index(Global, Cartesian)
-        I = I + I0
-        up[I, α] = (u[I-e(α), α] + u[I, α]) / 2
+        I = I + O
+        up[I, i] = (u[left(I, i), i] + u[I, i]) / 2
     end
-    for α = 1:D
-        I0 = getoffset(Ip)
-        int!(backend, workgroupsize)(up, u, Val(α), I0; ndrange = Np)
+    for i = 1:D
+        I0 = right(zero(Ip), i)
+        int!(backend, workgroupsize)(
+            up,
+            u,
+            Val(i),
+            I0;
+            ndrange = ntuple(j -> j == i ? N[j] - 1 : N[j], D),
+        )
     end
     up
 end
@@ -960,16 +923,16 @@ function interpolate_ω_p!(::Dimension{3}, ωp, ω, setup)
     (; dimension, Np, Ip, backend, workgroupsize) = setup
     D = dimension()
     e = Offset(D)
-    @kernel function int!(ωp, ω, ::Val{α}, I0) where {α}
+    @kernel function int!(ωp, ω, ::Val{i}, I0) where {i}
         I = @index(Global, Cartesian)
         I = I + I0
-        α₊ = mod1(α + 1, D)
-        α₋ = mod1(α - 1, D)
-        ωp[I, α] = (ω[I-e(α₊)-e(α₋), α] + ω[I, α]) / 2
+        j = mod1(i + 1, D)
+        k = mod1(i - 1, D)
+        ωp[I, i] = (ω[I-e(j)-e(k), i] + ω[I, i]) / 2
     end
     I0 = getoffset(Ip)
-    for α = 1:D
-        int!(backend, workgroupsize)(ωp, ω, Val(α), I0; ndrange = Np)
+    for i = 1:D
+        int!(backend, workgroupsize)(ωp, ω, Val(i), I0; ndrange = Np)
     end
     ωp
 end
@@ -982,7 +945,7 @@ function qcrit!(q, u, setup)
     @kernel function qcrit_kernel!(q, u)
         I = @index(Global, Cartesian)
         I += oneunit(I)
-        G = ∇(u, I, Δ, Δu)
+        G = ∇_coll(u, setup, I)
         q[I] = -tr(G * G) / 2
     end
     kernel! = qcrit_kernel!(backend, workgroupsize)
@@ -1019,12 +982,12 @@ function kinetic_energy!(ke, u, setup; interpolate_first = false)
     (; dimension, Np, Ip, backend, workgroupsize) = setup
     D = dimension()
     e = Offset(D)
-    @kernel function efirst!(ke, u, I0)
+    @kernel function efirst!(ke, u, O)
         I = @index(Global, Cartesian)
-        I = I + I0
+        I = I + O
         k = zero(eltype(ke))
-        for α = 1:D
-            k += (u[I, α] + u[I-e(α), α])^2
+        for i = 1:D
+            k += (u[I, i] + u[left(I, i), i])^2
         end
         k = k / 8
         ke[I] = k
@@ -1033,8 +996,8 @@ function kinetic_energy!(ke, u, setup; interpolate_first = false)
         I = @index(Global, Cartesian)
         I = I + I0
         k = zero(eltype(ke))
-        for α = 1:D
-            k += u[I, α]^2 + u[I-e(α), α]^2
+        for i = 1:D
+            k += u[I, i]^2 + u[left(I, i), i]^2
         end
         k = k / 4
         ke[I] = k
@@ -1073,9 +1036,9 @@ function get_scale_numbers(u, setup, viscosity)
     T = eltype(u)
     Ω = scalewithvolume!(fill!(scalarfield(setup), 1), setup)
     uavg =
-        sum(1:D) do α
+        sum(1:D) do i
             Δα = ntuple(
-                β -> reshape(α == β ? Δu[β] : Δ[β], ntuple(Returns(1), β - 1)..., :),
+                j -> reshape(i == j ? Δu[j] : Δ[j], ntuple(Returns(1), j - 1)..., :),
                 D,
             )
             Ωu = .*(Δα...)
@@ -1093,7 +1056,7 @@ function get_scale_numbers(u, setup, viscosity)
         K = div.(Np, 2)
         up = view(u, Ip, :)
         uhat = fft(up, 1:D)
-        uhat = uhat[ntuple(α->1:K[α], D)..., :]
+        uhat = uhat[ntuple(i->1:K[i], D)..., :]
         e = abs2.(uhat) ./ (2 * prod(Np)^2)
         if D == 2
             kx = reshape(0:(K[1]-1), :)

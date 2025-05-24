@@ -25,10 +25,10 @@ function pad_scalarfield_mat(setup)
     n = prod(N)
     np = prod(Np)
     ilin = reshape(1:n, N)
-    i = ilin[Ip][:]
-    j = 1:np
+    a = ilin[Ip][:]
+    b = 1:np
     v = ones(eltype(x[1]), np)
-    sparse(i, j, v, n, np)
+    sparse(a, b, v, n, np)
 end
 
 """
@@ -41,14 +41,14 @@ function pad_vectorfield_mat(setup)
     n = prod(N) * D
     nu = sum(prod.(Nu))
     ilin = reshape(1:n, N..., D)
-    i = zeros(Int, 0)
-    for α = 1:D
-        I = Iu[α]
-        append!(i, ilin[I, α][:])
+    a = zeros(Int, 0)
+    for i = 1:D
+        I = Iu[i]
+        append!(a, ilin[I, i][:])
     end
-    j = 1:nu
+    b = 1:nu
     v = ones(eltype(x[1]), nu)
-    sparse(i, j, v, n, nu)
+    sparse(a, b, v, n, nu)
 end
 
 """
@@ -393,74 +393,80 @@ function divergence_mat(setup)
     ilin_u = reshape(1:(n*D), N..., D)
 
     # Initialize sparse matrix parts
-    i = zeros(Int, 0)
-    j = zeros(Int, 0)
+    a = zeros(Int, 0)
+    b = zeros(Int, 0)
     v = zeros(eltype(x[1]), 0)
 
+    # These are the indices looped over in the original kernel
+    A = CartesianIndex(map(Returns(2), N))
+    B = CartesianIndex(map(n -> n - 1, N))
+    I = A:B
+
     # Add entries from each of the D velocity components
-    I = Ip # These are the indices looped over in the original kernel
-    for α = 1:D # Velocity components
+    for i = 1:D # Velocity components
         # Original kernel:
         #
-        # div[I]  += (u[I, α] - u[I-e(α), α]) / Δ[α][I[α]]
+        # div[I]  += (u[I, i] - u[I-e(i), i]) / Δ[i][I[i]]
         #
         # becomes
         #
-        # div[I] += u[I, α] / Δ[α][I[α]]
-        # div[I] += -u[I-e(α), α] / Δ[α][I[α]]
+        # div[I] += u[I, i] / Δ[i][I[i]]
+        # div[I] += -u[I-e(i), i] / Δ[i][I[i]]
         #
-        # We want i, j, v such that div_i = v_ij * u_j
-        ΔI = map(I -> Δ[α][I[α]], I)
-        append!(i, ilin_p[I][:])
-        append!(i, ilin_p[I][:])
-        append!(j, ilin_u[I, α][:])
-        append!(j, ilin_u[I .- e(α), α][:])
+        # We want a, b, v such that div_a = v_ab * u_b
+        ΔI = map(I -> Δ[i][I[i]], I)
+        append!(a, ilin_p[I][:])
+        append!(a, ilin_p[I][:])
+        append!(b, ilin_u[I, i][:])
+        append!(b, ilin_u[left.(I, i), i][:])
         append!(v, @. 1 / ΔI)
         append!(v, @. -1 / ΔI)
     end
 
     # Assemble matrix
-    sparse(i, j, v, n, n * D)
+    sparse(a, b, v, n, n * D)
 end
 
 "Pressure gradient matrix."
 function pressuregradient_mat(setup)
-    (; dimension, N, Iu, Δu, x) = setup
+    (; dimension, N, Δu, x) = setup
     Δu = adapt(Array, Δu) # Do assembly on CPU
     D = dimension()
-    e = Offset(D)
     n = prod(N)
     ilin_u = reshape(1:(n*D), N..., D)
     ilin_p = reshape(1:n, N...)
 
     # Initialize sparse matrix parts
-    i = zeros(Int, 0)
-    j = zeros(Int, 0)
+    a = zeros(Int, 0)
+    b = zeros(Int, 0)
     v = zeros(eltype(x[1]), 0)
 
-    # Add entries for each of the D velocity components
-    for α = 1:D
-        I = Iu[α] # These are the indices looped over in the original kernel
+    # These are the indices looped over in the original kernel
+    A = CartesianIndex(map(Returns(2), N))
+    B = CartesianIndex(map(n -> n - 1, N))
+    I = A:B
 
+    # Add entries for each of the D velocity components
+    for i = 1:D
         # Original kernel:
         #
-        # G[I, α] = (p[I+e(α)] - p[I]) / Δu[α][I[α]]
+        # G[I, i] = (p[I+e(i)] - p[I]) / Δu[i][I[i]]
         #
         # becomes
         #
-        # G[I, α] += p[I+e(α)] / Δu[α][I[α]]
-        # G[I, α] -= p[I] / Δu[α][I[α]]
-        ΔI = map(I -> Δu[α][I[α]], I)
-        append!(i, ilin_u[I, α][:])
-        append!(i, ilin_u[I, α][:])
-        append!(j, ilin_p[I .+ e(α)][:])
-        append!(j, ilin_p[I][:])
+        # G[I, i] += p[I+e(i)] / Δu[i][I[i]]
+        # G[I, i] -= p[I] / Δu[i][I[i]]
+        ΔI = map(I -> Δu[i][I[i]], I)
+        append!(a, ilin_u[I, i][:])
+        append!(a, ilin_u[I, i][:])
+        append!(b, ilin_p[right.(I, i)][:])
+        append!(b, ilin_p[I][:])
         append!(v, @. 1 / ΔI)
         append!(v, @. -1 / ΔI)
     end
 
     # Assemble matrix
-    sparse(i, j, v, n * D, n)
+    sparse(a, b, v, n * D, n)
 end
 
 "Volume-size matrix."
@@ -489,7 +495,7 @@ end
 "Diffusion matrix."
 function diffusion_mat(setup)
     # Note: This matrix could also be implemented as
-    # sum of Dβ * Dβ (different versions of Dβ depending on staggered points)
+    # sum of Dj * Dj (different versions of Dj depending on staggered points)
     (; dimension, N, Iu, Δ, Δu, x) = setup
     Δ = adapt(Array, Δ) # Do assembly on CPU
     Δu = adapt(Array, Δu)
@@ -499,51 +505,54 @@ function diffusion_mat(setup)
     ilin = reshape(1:n, N..., D)
 
     # Initialize sparse matrix parts
-    i = zeros(Int, 0) # Output indices
-    j = zeros(Int, 0) # Input indices
-    v = zeros(T, 0) # Values v_ij
+    a = zeros(Int, 0) # Output indices
+    b = zeros(Int, 0) # Input indices
+    v = zeros(T, 0) # Values v_ab
 
-    for α = 1:D # Velocity components
-        I = Iu[α] # These are the indices looped over in the original kernel
-        for β = 1:D # Differentiation directions
-            Δuαβ = map(I -> α == β ? Δu[β][I[β]] : Δ[β][I[β]], I)
-            Δa = map(I -> β == α ? Δ[β][I[β]] : Δu[β][I[β]-1], I)
-            Δb = map(I -> β == α ? Δ[β][I[β]+1] : Δu[β][I[β]], I)
-            eβ = Offset(D)(β)
+    # These are the indices looped over in the original kernel
+    A = CartesianIndex(map(Returns(2), N))
+    B = CartesianIndex(map(n -> n - 1, N))
+    I = A:B
+
+    for i = 1:D # Velocity components
+        for j = 1:D # Differentiation directions
+            Δuαβ = map(I -> i == j ? Δu[j][I[j]] : Δ[j][I[j]], I)
+            Δa = map(I -> j == i ? Δ[j][I[j]] : Δu[j][I[j]-1], I)
+            Δb = map(I -> j == i ? Δ[j][I[j]+1] : Δu[j][I[j]], I)
 
             # Original
             #
-            # ∂a = (u[I, α] - u[I-e(β), α]) / Δa
-            # ∂b = (u[I+e(β), α] - u[I, α]) / Δb
-            # F[I, α] += (∂b - ∂a) / Δuαβ
+            # ∂a = (u[I, i] - u[I-e(j), i]) / Δa
+            # ∂b = (u[I+e(j), i] - u[I, i]) / Δb
+            # F[I, i] += (∂b - ∂a) / Δuαβ
             #
             # becomes
             #
-            # F[I, α] += u[I - e(β), α] / Δa / Δuαβ
-            # F[I, α] += u[I + e(β), α] / Δb / Δuαβ
-            # F[I, α] -= u[I, α] * (1 / Δa + 1 / Δb) / Δuαβ
+            # F[I, i] += u[I - e(j), i] / Δa / Δuαβ
+            # F[I, i] += u[I + e(j), i] / Δb / Δuαβ
+            # F[I, i] -= u[I, i] * (1 / Δa + 1 / Δb) / Δuαβ
             #
-            # We want i, j, v such that F_i = v_ij * u_j
+            # We want a, b, v such that F_a = v_ab * u_b
             # They are defined below:
 
-            append!(i, ilin[I, α][:])
-            append!(i, ilin[I, α][:])
-            append!(i, ilin[I, α][:])
-            append!(j, ilin[I .- eβ, α][:])
-            append!(j, ilin[I .+ eβ, α][:])
-            append!(j, ilin[I, α][:])
+            append!(a, ilin[I, i][:])
+            append!(a, ilin[I, i][:])
+            append!(a, ilin[I, i][:])
+            append!(b, ilin[left.(I, j), i][:])
+            append!(b, ilin[right.(I, j), i][:])
+            append!(b, ilin[I, i][:])
 
             # For some Neumann BC, Δa or Δb are zero (eps),
             # and (right - left) / Δa blows up even if right = left according to BC.
             # Here we manually set the first derivative entry to zero if Δa or Δb are too small.
-            a = @. ifelse(Δa > 2 * eps(T), 1 / Δa / Δuαβ, zero(T))
-            b = @. ifelse(Δb > 2 * eps(T), 1 / Δb / Δuαβ, zero(T))
-            append!(v, a)
-            append!(v, b)
-            append!(v, @. -(a + b))
+            aa = @. ifelse(Δa > 2 * eps(T), 1 / Δa / Δuαβ, zero(T))
+            bb = @. ifelse(Δb > 2 * eps(T), 1 / Δb / Δuαβ, zero(T))
+            append!(v, aa)
+            append!(v, bb)
+            append!(v, @. -(aa + bb))
         end
     end
 
     # Assemble matrix
-    sparse(i, j, v, n, n)
+    sparse(a, b, v, n, n)
 end

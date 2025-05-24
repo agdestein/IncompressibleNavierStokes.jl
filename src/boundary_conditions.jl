@@ -241,7 +241,7 @@ function apply_bc_temp!(temp, t, setup; kwargs...)
 end
 
 function apply_bc_temp_pullback!(φbar, t, setup; kwargs...)
-    (; temperature, dimension) = setup
+    (; boundary_conditions, dimension) = setup
     D = dimension()
     for β = 1:D
         apply_bc_temp_pullback!(

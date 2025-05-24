@@ -1,4 +1,5 @@
 @testmodule Setup2D begin
+    using Random
     using IncompressibleNavierStokes
     T = Float64
     n = 16
@@ -7,13 +8,21 @@
     bc = DirichletBC(), DirichletBC()
     boundary_conditions = (; u = (bc, bc), temp = (bc, bc))
     setup = Setup(; x, boundary_conditions)
-    params = (; viscosity = T(1e-3), gdir = 2, gravity = T(1.0), conductivity = T(1e-3))
+    params = (;
+        viscosity = T(1e-3),
+        gdir = 2,
+        gravity = T(1.0),
+        conductivity = T(1e-3),
+        dodissipation = true,
+    )
     psolver = default_psolver(setup)
     uref(dim, x, y, args...) = -(dim == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
     u = velocityfield(setup, uref, T(0))
+    temp = randn!(scalarfield(setup))
 end
 
 @testmodule Setup3D begin
+    using Random
     using IncompressibleNavierStokes
     T = Float64
     n = 16
@@ -22,10 +31,17 @@ end
     bc = DirichletBC(), DirichletBC()
     boundary_conditions = (; u = (bc, bc, bc), temp = (bc, bc, bc))
     setup = Setup(; x, boundary_conditions)
-    params = (; viscosity = T(1e-3), gdir = 2, gravity = T(1.0), conductivity = T(1e-3))
+    params = (;
+        viscosity = T(1e-3),
+        gdir = 2,
+        gravity = T(1.0),
+        conductivity = T(1e-3),
+        dodissipation = true,
+    )
     psolver = default_psolver(setup)
     uref(dim, x, y, args...) = -(dim == 1) * sin(x) * cos(y) + (dim == 2) * cos(x) * sin(y)
     u = velocityfield(setup, uref, T(0))
+    temp = randn!(scalarfield(setup))
 end
 
 @testitem "Divergence" setup = [Setup2D, Setup3D] begin
@@ -147,6 +163,44 @@ end
         c = convection(u, setup)
         d = diffusion(u, setup, params.viscosity)
         @test cd ≈ c + d
+    end
+end
+
+@testitem "Gravity" setup = [Setup2D, Setup3D] begin
+    for (u, temp, setup, params) in (
+        (Setup2D.u, Setup2D.temp, Setup2D.setup, Setup2D.params),
+        (Setup3D.u, Setup3D.temp, Setup3D.setup, Setup3D.params),
+    )
+        g = IncompressibleNavierStokes.applygravity(
+            temp,
+            setup,
+            params.gdir,
+            params.gravity,
+        )
+        D = setup.dimension()
+        for i = 1:D
+            # Check that only direction gdir is computed
+            i != params.gdir && @test all(≈(0), selectdim(g, D + 1, i))
+        end
+    end
+end
+
+@testitem "Right hand sides" setup = [Setup2D, Setup3D] begin
+    for (u, temp, setup, params) in (
+        (Setup2D.u, Setup2D.temp, Setup2D.setup, Setup2D.params),
+        (Setup3D.u, Setup3D.temp, Setup3D.setup, Setup3D.params),
+    )
+        # Navier-Stokes
+        f = navierstokes((; u), 0.0; setup, params.viscosity)
+        @test f.u isa Array{eltype(u)}
+        @test all(!isnan, f.u)
+
+        # Boussinesq
+        f = boussinesq((; u, temp), 0.0; setup, params...)
+        @test f.u isa Array{eltype(u)}
+        @test f.temp isa Array{eltype(u)}
+        @test all(!isnan, f.u)
+        @test all(!isnan, f.temp)
     end
 end
 

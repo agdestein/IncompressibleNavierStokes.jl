@@ -42,7 +42,7 @@ function boussinesq(state, t; setup, viscosity, conductivity, gdir, gravity, dod
     g = applygravity(temp, setup, gdir, gravity)
     fu = @. c + d + g
     ftemp = convection_diffusion_temp(u, temp, setup, conductivity)
-    dodissipation && (ftemp += dissipation(u, setup))
+    dodissipation && (ftemp += dissipation(u, setup, viscosity))
     (; u = fu, temp = ftemp)
 end
 

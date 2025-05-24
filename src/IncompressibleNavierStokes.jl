@@ -93,7 +93,7 @@ export processor,
 export fieldplot, energy_history_plot, energy_spectrum_plot
 
 # Setup
-export Setup, temperature_equation
+export Setup
 
 # 1D grids
 export stretched_grid, cosine_grid, tanh_grid
@@ -120,15 +120,13 @@ export OneLegMethod, RKMethods, LMWray3
 export apply_bc_u,
     apply_bc_p,
     apply_bc_temp,
-    applypressure,
     convection_diffusion_temp,
     convection,
     diffusion,
     dissipation,
-    dissipation_from_strain,
     divergence,
     get_scale_numbers,
-    gravity,
+    applygravity,
     kinetic_energy,
     interpolate_u_p,
     interpolate_ω_p,

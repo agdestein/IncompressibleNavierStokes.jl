@@ -153,6 +153,10 @@ function Setup(; x, boundary_conditions, backend = CPU(), workgroupsize = 64)
         (1+na):(N[α]-nb)
     end)
 
+    A = CartesianIndex(ntuple(Returns(2), D))
+    B = CartesianIndex(map(n -> n - 1, N))
+    inside = A:B
+
     # Coordinates of velocity points
     xu = ntuple(D) do α
         ntuple(D) do β
@@ -184,9 +188,9 @@ function Setup(; x, boundary_conditions, backend = CPU(), workgroupsize = 64)
     # Interpolate from face to center
     A_coll = ntuple(D) do j
         Aj1 = fill(T(1 / 2), N[j])
-        Aj1[1] = 1
+        # Aj1[1] = 1
         Aj2 = fill(T(1 / 2), N[j])
-        Aj2[end] = 1
+        # Aj2[end] = 1
         Aj1, Aj2
     end
 
@@ -211,6 +215,7 @@ function Setup(; x, boundary_conditions, backend = CPU(), workgroupsize = 64)
         # Keep those as ranges
         Iu,
         Ip,
+        inside,
 
         # Put arrays on GPU, if requested
         adapt(backend, (; x, xu, xp, Δ, Δu, A_coll, A_stag))...,
