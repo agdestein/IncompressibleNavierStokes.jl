@@ -182,6 +182,10 @@ function propose_timestep(::typeof(convection_diffusion_temp!), state, setup, pa
     end
 end
 
+# Fallback
+propose_timestep(_, state, setup, params) =
+    propose_timestep(navierstokes!, state, setup, params)
+
 propose_timestep(::typeof(navierstokes), state, setup, params) =
     propose_timestep(navierstokes!, state, setup, params)
 propose_timestep(::typeof(navierstokes!), state, setup, params) = min(

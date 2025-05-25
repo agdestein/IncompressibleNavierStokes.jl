@@ -52,11 +52,6 @@ end
 IncompressibleNavierStokes.get_cache(::typeof(force!), setup) =
     (; bodyforce = velocityfield(setup, f; doproject = false))
 
-# We also need to tell how to propos the time step sizes for our given force.
-# We just fall back to the default one.
-IncompressibleNavierStokes.propose_timestep(::typeof(force!), state, setup, params) =
-    IncompressibleNavierStokes.propose_timestep(navierstokes!, state, setup, params)
-
 # Initial conditions (extend inflow)
 u = velocityfield(setup, (dim, x, y) -> inflow(dim, x, y, 0.0));
 

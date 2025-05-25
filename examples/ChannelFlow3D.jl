@@ -135,11 +135,6 @@ function IncompressibleNavierStokes.get_cache(::typeof(force!), setup)
     nothing
 end
 
-# We also need to tell how to propos the time step sizes for our given force.
-# We just fall back to the default one.
-IncompressibleNavierStokes.propose_timestep(::typeof(force!), state, setup, params) =
-    IncompressibleNavierStokes.propose_timestep(navierstokes!, state, setup, params)
-
 Re_tau = 180 |> T
 Re_m = 2800 |> T
 Re_ratio = Re_m / Re_tau

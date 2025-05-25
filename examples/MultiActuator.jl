@@ -63,11 +63,6 @@ function IncompressibleNavierStokes.get_cache(::typeof(force!), setup)
     (; bodyforce)
 end
 
-# We also need to tell how to propos the time step sizes for our given force.
-# We just fall back to the default one.
-IncompressibleNavierStokes.propose_timestep(::typeof(force!), state, setup, params) =
-    IncompressibleNavierStokes.propose_timestep(navierstokes!, state, setup, params)
-
 # A 2D grid is a Cartesian product of two vectors
 n = 50
 x = LinRange(0.0, 10.0, 5n + 1), LinRange(-2.0, 2.0, 2n + 1)
