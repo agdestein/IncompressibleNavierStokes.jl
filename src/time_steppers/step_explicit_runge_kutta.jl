@@ -11,7 +11,6 @@ function timestep!(
     force_cache,
 )
     (; setup, psolver, state, t, n) = stepper
-    (; temperature) = setup
     (; A, b, c) = method
     (; statestart, k, p) = ode_cache
     nstage = length(b)
@@ -60,7 +59,6 @@ end
 function timestep(method::ExplicitRungeKuttaMethod, force, stepper, Δt; params = nothing)
     (; setup, psolver, state, t, n) = stepper
     (; A, b, c) = method
-    (; temperature) = setup
     nstage = length(b)
 
     # TODO: allow for different fields

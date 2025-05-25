@@ -684,18 +684,18 @@ function convection_diffusion_temp!(c, u, temp, setup, conductivity)
 end
 
 @inline function convdiff_temp(u, temp, cond, Δ, Δu, i, I)
-    ∂T∂x1 = (temp[I] - temp[left(I, j)]) / Δu[j][I[j]-1]
-    ∂T∂x2 = (temp[right(I, j)] - temp[I]) / Δu[j][I[j]]
-    uT1 = u[left(I, j), j] * avg(temp, Δ, left(I, j), j)
-    uT2 = u[I, j] * avg(temp, Δ, I, j)
-    (-(uT2 - uT1) + cond * (∂T∂x2 - ∂T∂x1)) / Δ[j][I[j]]
+    ∂T∂x1 = (temp[I] - temp[left(I, i)]) / Δu[i][I[i]-1]
+    ∂T∂x2 = (temp[right(I, i)] - temp[I]) / Δu[i][I[i]]
+    uT1 = u[left(I, i), i] * avg(temp, Δ, left(I, i), i)
+    uT2 = u[I, i] * avg(temp, Δ, I, i)
+    (-(uT2 - uT1) + cond * (∂T∂x2 - ∂T∂x1)) / Δ[i][I[i]]
 end
 
 "Compute dissipation term for the temperature equation (differentiable version)."
 dissipation(u, setup, coeff) = dissipation!(scalarfield(setup), u, setup, coeff)
 
 function ChainRulesCore.rrule(::typeof(dissipation), u, setup, coeff)
-    error("Not imlemented yet")
+    error("Not implemented yet")
     φ, dissipation_pullback
 end
 
@@ -714,31 +714,31 @@ function dissipation!(diss, u, setup, coeff)
     diss
 end
 
+function dissipation_adjoint!(ubar, φbar, u, setup, coeff)
+    (; N) = setup
+    error()
+    apply!(dissipation_adjoint_kernel!, setup, ubar, φbar, u, setup, coeff; ndrange = N)
+    diss
+end
+
+@kernel function dissipation_adjoint_kernel!(O, ubar, φbar, u, setup, coeff)
+    I = @index(Global, Cartesian)
+    I = I + O
+    # G = ∇_coll(u, setup, I)
+    # diss[I] += coeff * dot(G, G)
+end
+
 "Compute gravity term (differentiable version)."
 applygravity(temp, setup, gdir, gravity) =
     applygravity!(vectorfield(setup), temp, setup, gdir, gravity)
 
-function ChainRulesCore.rrule(::typeof(applygravity), temp, setup, gdir, gravity)
-    (; Δ, N, inside) = setup
-    g = applygravity(temp, setup, gdir, gravity)
+ChainRulesCore.rrule(::typeof(applygravity), temp, setup, gdir, gravity) =
+    applygravity(temp, setup, gdir, gravity),
     function gravity_pullback(φbar)
         tempbar = zero(temp)
-        apply!(
-            applygravity_adjoint_kernel!,
-            setup,
-            tempbar,
-            φbar,
-            Δ,
-            gravity,
-            inside,
-            gdir;
-            offset = zero(first(inside)),
-            ndrange = N,
-        )
-        (NoTangent(), tempbar, NoTangent(), NoTangent(), NoTangent())
+        applygravity_adjoint!(tempbar, φbar, setup, gdir, gravity)
+        NoTangent(), tempbar, NoTangent(), NoTangent(), NoTangent()
     end
-    g, gravity_pullback
-end
 
 """
 Compute gravity term (in-place version).
@@ -748,6 +748,23 @@ function applygravity!(f, temp, setup, gdir, gravity)
     (; Δ) = setup
     apply!(applygravity_kernel!, setup, f, temp, Δ, gravity, gdir)
     f
+end
+
+function applygravity_adjoint!(tempbar, φbar, setup, gdir, gravity)
+    (; Δ, N, inside) = setup
+    apply!(
+        applygravity_adjoint_kernel!,
+        setup,
+        tempbar,
+        φbar,
+        Δ,
+        gravity,
+        inside,
+        gdir;
+        offset = zero(first(inside)),
+        ndrange = N,
+    )
+    tempbar
 end
 
 @kernel function applygravity_kernel!(O, f, temp, Δ, gravity, gdir)
@@ -804,7 +821,7 @@ function vorticity!(::Dimension{3}, ω, u, setup)
                 (u[right(I, k), j] - u[I, j]) / Δu[k][I[k]]
         end
     end
-    ω!(backend, workgroupsize)(ω, u; ndrange = N .- 1)
+    ω!(backend, workgroupsize)(ω, u, Δu; ndrange = N .- 1)
     ω
 end
 
@@ -881,7 +898,7 @@ function interpolate_u_p!(up, u, setup)
         up[I, i] = (u[left(I, i), i] + u[I, i]) / 2
     end
     for i = 1:D
-        I0 = right(zero(Ip), i)
+        I0 = right(zero(first(Ip)), i)
         int!(backend, workgroupsize)(
             up,
             u,

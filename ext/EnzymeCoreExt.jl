@@ -11,16 +11,13 @@ using EnzymeCore.EnzymeRules
 INS = IncompressibleNavierStokes
 
 # Wrap a function to return `nothing`, because Enzyme can not handle vector return values.
-function INS.enzyme_wrap(
+INS.enzyme_wrap(
     f::Union{typeof(INS.apply_bc_u!),typeof(INS.apply_bc_p!),typeof(INS.apply_bc_temp!)},
-)
+) = function wrapped_f(y, x, args...)
     # the boundary condition modifies x which is usually the field that we want to differentiate, so we need to introduce a copy of it and modify it instead
-    function wrapped_f(y, x, args...)
-        y .= x
-        f(y, args...)
-        return nothing
-    end
-    return wrapped_f
+    y .= x
+    f(y, args...)
+    nothing
 end
 
 function EnzymeRules.augmented_primal(
@@ -37,8 +34,9 @@ function EnzymeRules.augmented_primal(
     setup::Const,
 )
     primal = func.val(y.val, x.val, t.val, setup.val)
-    return AugmentedReturn(primal, nothing, nothing)
+    AugmentedReturn(primal, nothing, nothing)
 end
+
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.enzyme_wrap(INS.apply_bc_u!))},
@@ -52,8 +50,9 @@ function EnzymeRules.reverse(
     adj = INS.apply_bc_u_pullback!(x.val, t.val, setup.val)
     x.dval .+= adj
     y.dval .= x.dval # y is a copy of x
-    return (nothing, nothing, nothing, nothing)
+    nothing, nothing, nothing, nothing
 end
+
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.enzyme_wrap(INS.apply_bc_p!))},
@@ -67,8 +66,9 @@ function EnzymeRules.reverse(
     adj = INS.apply_bc_p_pullback!(x.val, t.val, setup.val)
     x.dval .+= adj
     y.dval .= x.dval # y is a copy of x
-    return (nothing, nothing, nothing, nothing)
+    nothing, nothing, nothing, nothing
 end
+
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.enzyme_wrap(INS.apply_bc_temp!))},
@@ -82,10 +82,10 @@ function EnzymeRules.reverse(
     adj = INS.apply_bc_temp_pullback!(x.val, t.val, setup.val)
     x.dval .+= adj
     y.dval .= x.dval # y is a copy of x
-    return (nothing, nothing, nothing, nothing)
+    nothing, nothing, nothing, nothing
 end
 # COV_EXCL_STOP
-#
+
 # COV_EXCL_START
 function EnzymeRules.augmented_primal(
     config::RevConfigWidth{1},
@@ -98,16 +98,16 @@ function EnzymeRules.augmented_primal(
 )
     # this runs function to modify dudt and store the intermediates
     params = params_ref.val[]
-    setup = params[1]
-    psolver = params[2]
+    setup, psolver, viscosity = params
     p = scalarfield(setup)
     u_bc = copy(u.val)
     INS.apply_bc_u!(u_bc, t.val, setup)
-    INS.navierstokes!((; u = dudt.val), (; u = u_bc), t, nothing, setup, nothing)
+    INS.navierstokes!((; u = dudt.val), (; u = u_bc), t; setup, cache = nothing, viscosity)
     INS.apply_bc_u!(dudt.val, t.val, setup)
     INS.project!(dudt.val, setup; psolver, p)
-    return AugmentedReturn(nothing, nothing, u_bc)
+    AugmentedReturn(nothing, nothing, u_bc)
 end
+
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.right_hand_side!)},
@@ -120,8 +120,7 @@ function EnzymeRules.reverse(
 )
     # unpack the parameters
     params = params_ref.val[]
-    setup = params[1]
-    psolver = params[2]
+    setup, psolver, viscosity = params
     temp_scalar = scalarfield(setup)
     dp = scalarfield(setup)
     temp_vector = vectorfield(setup)
@@ -130,7 +129,7 @@ function EnzymeRules.reverse(
     # [!] notice that the chain starts from the final value of dudt because it gets modified in place in the forward pass
     dudt.dval .*= dudt.val
     # [!] the minus sign is missing somewhere in the adjoint
-    dp .= -INS.applypressure_adjoint!(temp_scalar, dudt.dval, nothing, setup)
+    dp .= .-INS.pressuregradient_adjoint!(dp, dudt.dval, setup)
 
     INS.apply_bc_p_pullback!(dp, t.val, setup)
 
@@ -144,33 +143,30 @@ function EnzymeRules.reverse(
     fill!(temp_vector, 0)
     u.dval .= INS.convection_adjoint!(temp_vector, dudt.dval, u_bc, setup)
     fill!(temp_vector, 0)
-    u.dval .+= INS.diffusion_adjoint!(temp_vector, dudt.dval, setup)
+    u.dval .+= INS.diffusion_adjoint!(temp_vector, dudt.dval, setup, viscosity)
 
     INS.apply_bc_u_pullback!(u.dval, t.val, setup)
 
-    return (nothing, nothing, nothing, nothing)
+    nothing, nothing, nothing, nothing
 end
 # COV_EXCL_STOP
 
 # COV_EXCL_START
 # Wrap a function to return `nothing`, because Enzyme can not handle vector return values.
-function INS.enzyme_wrap(
+INS.enzyme_wrap(
     f::Union{
         typeof(INS.divergence!),
         typeof(INS.pressuregradient!),
         typeof(INS.convection!),
         typeof(INS.diffusion!),
-        typeof(INS.gravity!),
+        typeof(INS.applygravity!),
         typeof(INS.dissipation!),
         typeof(INS.convection_diffusion_temp!),
         typeof(INS.navierstokes!),
     },
-)
-    function wrapped_f(args...)
-        f(args...)
-        return nothing
-    end
-    return wrapped_f
+) = function wrapped_f(args...)
+    f(args...)
+    nothing
 end
 
 function EnzymeRules.augmented_primal(
@@ -179,8 +175,6 @@ function EnzymeRules.augmented_primal(
         Const{typeof(INS.enzyme_wrap(INS.divergence!))},
         Const{typeof(INS.enzyme_wrap(INS.pressuregradient!))},
         Const{typeof(INS.enzyme_wrap(INS.convection!))},
-        Const{typeof(INS.enzyme_wrap(INS.diffusion!))},
-        Const{typeof(INS.enzyme_wrap(INS.gravity!))},
     },
     ::Type{<:Const},
     y::Duplicated,
@@ -193,8 +187,46 @@ function EnzymeRules.augmented_primal(
     else
         tape = nothing
     end
-    return AugmentedReturn(primal, nothing, tape)
+    AugmentedReturn(primal, nothing, tape)
 end
+
+function EnzymeRules.augmented_primal(
+    config::RevConfigWidth{1},
+    func::Const{typeof(INS.enzyme_wrap(INS.diffusion!))},
+    ::Type{<:Const},
+    y::Duplicated,
+    u::Duplicated,
+    setup::Const,
+    viscosity::Const,
+)
+    primal = func.val(y.val, u.val, setup.val, viscosity.val)
+    if overwritten(config)[3]
+        tape = copy(u.val)
+    else
+        tape = nothing
+    end
+    AugmentedReturn(primal, nothing, tape)
+end
+
+function EnzymeRules.augmented_primal(
+    config::RevConfigWidth{1},
+    func::Union{Const{typeof(INS.enzyme_wrap(INS.applygravity!))}},
+    ::Type{<:Const},
+    y::Duplicated,
+    u::Duplicated,
+    setup::Const,
+    gdir::Const,
+    gravity::Const,
+)
+    primal = func.val(y.val, u.val, setup.val, gdir.val, gravity.val)
+    if overwritten(config)[3]
+        tape = copy(u.val)
+    else
+        tape = nothing
+    end
+    AugmentedReturn(primal, nothing, tape)
+end
+
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.enzyme_wrap(INS.divergence!))},
@@ -208,8 +240,9 @@ function EnzymeRules.reverse(
     INS.divergence_adjoint!(adj, y.val, setup.val)
     u.dval .+= adj
     EnzymeCore.make_zero!(y.dval)
-    return (nothing, nothing, nothing)
+    nothing, nothing, nothing
 end
+
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.enzyme_wrap(INS.pressuregradient!))},
@@ -223,8 +256,9 @@ function EnzymeRules.reverse(
     INS.pressuregradient_adjoint!(adj, y.val, setup.val)
     p.dval .+= adj
     EnzymeCore.make_zero!(y.dval)
-    return (nothing, nothing, nothing)
+    nothing, nothing, nothing
 end
+
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.enzyme_wrap(INS.convection!))},
@@ -238,8 +272,9 @@ function EnzymeRules.reverse(
     INS.convection_adjoint!(adj, y.val, u.val, setup.val)
     u.dval .+= adj
     EnzymeCore.make_zero!(y.dval)
-    return (nothing, nothing, nothing)
+    nothing, nothing, nothing
 end
+
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.enzyme_wrap(INS.diffusion!))},
@@ -248,60 +283,54 @@ function EnzymeRules.reverse(
     y::Duplicated,
     u::Duplicated,
     setup::Const,
+    viscosity::Const,
 )
     adj = zero(u.val)
-    INS.diffusion_adjoint!(adj, y.val, setup.val)
+    INS.diffusion_adjoint!(adj, y.val, setup.val, viscosity.val)
     u.dval .+= adj
     EnzymeCore.make_zero!(y.dval)
-    return (nothing, nothing, nothing)
+    nothing, nothing, nothing, nothing
 end
 
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
-    func::Const{typeof(INS.enzyme_wrap(INS.gravity!))},
+    func::Const{typeof(INS.enzyme_wrap(INS.applygravity!))},
     dret,
     tape,
     y::Duplicated,
     temp::Duplicated,
     setup::Const,
-    gdir,
-    gravity,
+    gdir::Const,
+    gravity::Const,
 )
-    (; dimension, Δ, N, Iu, backend, workgroupsize) = setup
-    backend = get_backend(temp.val)
-    D = dimension()
-    e = INS.Offset(D)
-    function gravity_pullback(φ)
-        @kernel function g!(tempbar, φbar, valα)
-            α = INS.getval(valα)
-            J = @index(Global, Cartesian)
-            t = zero(eltype(tempbar))
-            # 1
-            I = J
-            I ∈ Iu[α] &&
-                (t += gravity * Δ[α][I[α]+1] * φbar[I, α] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
-            # 2
-            I = J - e(α)
-            I ∈ Iu[α] &&
-                (t += gravity * Δ[α][I[α]] * φbar[I, α] / (Δ[α][I[α]] + Δ[α][I[α]+1]))
-            tempbar[J] = t
-        end
-        tempbar = zero(temp.val)
-        g!(backend, workgroupsize)(tempbar, φ, Val(gdir); ndrange = N)
-        tempbar
-    end
-    adj = gravity_pullback(y.val)
+    adj = INS.applygravity_adjoint!(zero(temp.val), y.val, setup.val, gdir.val, gravity.val)
     temp.dval .+= adj
     EnzymeCore.make_zero!(y.dval)
-    return (nothing, nothing, nothing)
+    nothing, nothing, nothing, nothing, nothing
 end
 
 function EnzymeRules.augmented_primal(
     config::RevConfigWidth{1},
-    func::Union{
-        Const{typeof(INS.enzyme_wrap(INS.dissipation!))},
-        Const{typeof(INS.enzyme_wrap(INS.convection_diffusion_temp!))},
-    },
+    func::Union{Const{typeof(INS.enzyme_wrap(INS.dissipation!))}},
+    ::Type{<:Const},
+    y::Duplicated,
+    x1::Duplicated,
+    x2::Duplicated,
+    setup::Const,
+    coeff::Const,
+)
+    primal = func.val(y.val, x1.val, x2.val, setup.val, coeff.val)
+    if overwritten(config)[3]
+        tape = copy(x2.val)
+    else
+        tape = nothing
+    end
+    AugmentedReturn(primal, nothing, tape)
+end
+
+function EnzymeRules.augmented_primal(
+    config::RevConfigWidth{1},
+    func::Union{Const{typeof(INS.enzyme_wrap(INS.convection_diffusion_temp!))}},
     ::Type{<:Const},
     y::Duplicated,
     x1::Duplicated,
@@ -314,8 +343,9 @@ function EnzymeRules.augmented_primal(
     else
         tape = nothing
     end
-    return AugmentedReturn(primal, nothing, tape)
+    AugmentedReturn(primal, nothing, tape)
 end
+
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.enzyme_wrap(INS.dissipation!))},
@@ -325,47 +355,12 @@ function EnzymeRules.reverse(
     d::Duplicated,
     u::Duplicated,
     setup::Const,
+    coeff::Const,
 )
-    (; dimension, N, Ip, backend, workgroupsize, visc) = setup.val
-    (; α1, γ) = temperature
-    D = dimension()
-    e = INS.Offset(D)
-    @kernel function ∂φ!(ubar, dbar, φbar, d, u, valdims)
-        J = @index(Global, Cartesian)
-        @unroll for β in INS.getval(valdims)
-            # Compute ubar
-            a = zero(eltype(u))
-            # 1
-            I = J + e(β)
-            I ∈ Ip && (a += α3 / visc * d[I-e(β), β] / 2)
-            # 2
-            I = J
-            I ∈ Ip && (a += α1 / visc / γ * d[I, β] / 2)
-            ubar[J, β] += a
-
-            # Compute dbar
-            b = zero(eltype(u))
-            # 1
-            I = J + e(β)
-            I ∈ Ip && (b += α1 / visc / γ * u[I-e(β), β] / 2)
-            # 2
-            I = J
-            I ∈ Ip && (b += α1 / visc / γ * u[I, β] / 2)
-            dbar[J, β] += b
-        end
-    end
-    function dissipation_pullback(φbar)
-        # Dφ/Du = ∂φ(u, d)/∂u + ∂φ(u, d)/∂d ⋅ ∂d(u)/∂u
-        dbar = zero(u.val)
-        ubar = zero(u.val)
-        ∂φ!(backend, workgroupsize)(ubar, dbar, φbar, d.val, u.val, Val(1:D); ndrange = N)
-        INS.diffusion_adjoint!(ubar, dbar, setup.val)
-        ubar
-    end
     adj = dissipation_pullback(y.val)
     u.dval .+= adj
     EnzymeCore.make_zero!(y.dval)
-    return (nothing, nothing, nothing, nothing)
+    nothing, nothing, nothing, nothing
 end
 
 function EnzymeRules.reverse(
@@ -394,6 +389,7 @@ function EnzymeRules.augmented_primal(
 )
     @error "navierstokes! Enzyme-AD not yet implemented"
 end
+
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.enzyme_wrap(INS.navierstokes!))},
@@ -411,14 +407,12 @@ end
 
 # COV_EXCL_START
 # Wrap a function to return `nothing`, because Enzyme can not handle vector return values.
-function INS.enzyme_wrap(f::typeof(INS.poisson!))
-    function wrapped_f(p, psolve, d)
-        p .= d
-        f(psolve, p)
-        return nothing
-    end
-    return wrapped_f
+INS.enzyme_wrap(f::typeof(INS.poisson!)) = function wrapped_f(p, psolve, d)
+    p .= d
+    f(psolve, p)
+    nothing
 end
+
 function EnzymeRules.augmented_primal(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.enzyme_wrap(INS.poisson!))},
@@ -428,8 +422,9 @@ function EnzymeRules.augmented_primal(
     div::Duplicated,
 )
     primal = func.val(y.val, psolver.val, div.val)
-    return AugmentedReturn(primal, nothing, nothing)
+    AugmentedReturn(primal, nothing, nothing)
 end
+
 function EnzymeRules.reverse(
     config::RevConfigWidth{1},
     func::Const{typeof(INS.enzyme_wrap(INS.poisson!))},
@@ -443,7 +438,7 @@ function EnzymeRules.reverse(
     func.val(auto_adj, psolver.val, y.val)
     div.dval .+= auto_adj .* y.dval
     EnzymeCore.make_zero!(y.dval)
-    return (nothing, nothing, nothing)
+    nothing, nothing, nothing
 end
 
 end
