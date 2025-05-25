@@ -30,7 +30,7 @@ setup = Setup(;
             (PeriodicBC(), PeriodicBC()),
         ),
     ),
-    backend = CUDABackend(),
+    ## backend = CUDABackend(),
 );
 psolver = psolver_spectral(setup);
 

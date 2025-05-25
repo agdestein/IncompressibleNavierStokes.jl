@@ -27,7 +27,7 @@ setup = Setup(;
     boundary_conditions = (;
         u = ((PeriodicBC(), PeriodicBC()), (PeriodicBC(), PeriodicBC())),
     ),
-    backend = CUDABackend(),
+    ## backend = CUDABackend(),
 )
 u = random_field(setup, 0.0);
 
