@@ -14,18 +14,11 @@ Modules = [IncompressibleNavierStokes]
 Pages   = ["boundary_conditions.jl"]
 ```
 
-## Grid
-
-```@autodocs
-Modules = [IncompressibleNavierStokes]
-Pages   = ["grid.jl"]
-```
-
 ## Setup
 
 ```@autodocs
 Modules = [IncompressibleNavierStokes]
-Pages   = ["setup.jl"]
+Pages   = ["grid.jl"]
 ```
 
 ## Field initializers

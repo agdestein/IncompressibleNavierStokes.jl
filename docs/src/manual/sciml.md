@@ -30,19 +30,28 @@ This projected right-hand side can be used in the SciML solvers to solve the Nav
 using OrdinaryDiffEqTsit5
 using IncompressibleNavierStokes
 ax = range(0, 1, 101)
-setup = Setup(; x = (ax, ax), visc = 2e-3)
+setup = Setup(;
+    x = (ax, ax),
+    boundary_conditions = (;
+        u = (
+            (PeriodicBC(), PeriodicBC()),
+            (PeriodicBC(), PeriodicBC()),
+        ),
+    ),
+)
 psolver = default_psolver(setup)
 f = create_right_hand_side(setup, psolver)
 u0 = random_field(setup)
 tspan = (0.0, 1.0)     # time span where to solve.
-problem = ODEProblem(f, u0, tspan) #SciMLBase.ODEProblem
+problem = ODEProblem(f, u0, tspan, (; viscosity = 2e-3)) #SciMLBase.ODEProblem
 sol = solve(problem, Tsit5(), reltol = 1e-8, abstol = 1e-8) # sol: SciMLBase.ODESolution
 ```
 
 Alternatively, it is also possible to use an [in-place formulation](https://docs.sciml.ai/DiffEqDocs/stable/basics/problem/#In-place-vs-Out-of-Place-Function-Definition-Forms)
 
 ```@example SciML
-f!(du,u,p,t) = right_hand_side!(du, u, Ref([setup, psolver]), t)
+viscosity = 2e-3
+f!(du,u,p,t) = right_hand_side!(du, u, Ref((setup, psolver, viscosity)), t)
 u = similar(u0)
 du = similar(u0)
 p = nothing
