@@ -65,7 +65,7 @@ setup = Setup(;
     x = (range(0.0, 2.0, 2n + 1), range(0.0, 1.0, n + 1)),
     boundary_conditions = (;
         u = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
-        temp = ((SymmetricBC(), SymmetricBC()), (DirichletBC(T(1)), DirichletBC(T(0)))),
+        temp = ((SymmetricBC(), SymmetricBC()), (DirichletBC(1.0), DirichletBC(0.0))),
     ),
     ## backend = CUDABackend()
 );
@@ -97,7 +97,7 @@ state, outputs = solve_unsteady(;
         rtp = realtimeplotter(;
             setup,
             fieldname = :temperature,
-            colorrange = (T(0), T(1)),
+            colorrange = (0.0, 1.0),
             size = (600, 350),
             colormap = :seaborn_icefire_gradient,
             nupdate = 20,

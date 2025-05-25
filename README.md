@@ -108,26 +108,41 @@ using IncompressibleNavierStokes
 
 # Setup
 setup = Setup(
-    x = (tanh_grid(0.0, 2.0, 200, 1.2), tanh_grid(0.0, 1.0, 100, 1.2)),
-    boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
-    temperature = temperature_equation(;
-        Pr = 0.71,
-        Ra = 1e7,
-        Ge = 1.0,
-        boundary_conditions = (
+    x = (
+        tanh_grid(0.0, 2.0, 200, 1.2),
+        tanh_grid(0.0, 1.0, 100, 1.2),
+    ),
+    boundary_conditions = (
+        u = (
+            (DirichletBC(), DirichletBC()),
+            (DirichletBC(), DirichletBC()),
+        ),
+        temp = (
             (SymmetricBC(), SymmetricBC()),
             (DirichletBC(1.0), DirichletBC(0.0)),
         ),
     ),
 )
 
+# Physical parameters
+params = (
+    viscosity = 3e-4,
+    conductivity = 2e-4,
+    gravity = 1.0,
+    gdir = 2, # Gravity in the y-direction
+    dodissipation = true,
+)
+
 # Solve equation
 solve_unsteady(;
+    force! = boussinesq!,
     setup,
-    ustart = velocityfield(setup, (dim, x, y) -> zero(x)),
-    tempstart = temperaturefield(setup, (x, y) -> 1 / 2 + sinpi(30 * x) / 100),
+    start = (
+        u = velocityfield(setup, (dim, x, y) -> zero(x)),
+        temp = temperaturefield(setup, (x, y) -> 1 / 2 + sinpi(30 * x) / 100),
+    ),
     tlims = (0.0, 30.0),
-    Δt = 0.02,
+    params,
     processors = (;
         anim = animator(;
             setup,
