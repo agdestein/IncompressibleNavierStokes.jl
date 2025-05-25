@@ -18,8 +18,7 @@ IncompressibleNavierStokes.sparseadapt(::CUDABackend, A) = CuSparseMatrixCSC(A)
 
 # CUDA version, using CUDSS LDLt decomposition.
 function IncompressibleNavierStokes.psolver_direct(::CuArray, setup)
-    (; grid, boundary_conditions) = setup
-    (; x, Np, Ip) = grid
+    (; x, Np, Ip, boundary_conditions) = setup
     T = eltype(x[1])
     L = laplacian_mat(setup)
     isdefinite =
@@ -57,35 +56,34 @@ function IncompressibleNavierStokes.psolver_direct(::CuArray, setup)
     end
 end
 
-# Same as src/precompile.jl, but for `CuArray`s
-PrecompileTools.@compile_workload begin
-    for D in (2, 3), T in (Float32, Float64)
-        # Periodic
-        x = ntuple(d -> range(T(0), T(1), 5), D)
-        setup = Setup(; x, Re = T(1000), backend = CUDABackend())
-        ustart = velocityfield(setup, (dim, x...) -> zero(x[1]))
-        solve_unsteady(; ustart, setup, Δt = T(1e-3), tlims = (T(0), T(1e-2)))
-
-        # Boundaries, temperature
-        x = ntuple(d -> tanh_grid(T(0), T(1), 6), D)
-        boundary_conditions = ntuple(d -> (DirichletBC(), PressureBC()), D)
-        temperature = temperature_equation(;
-            Pr = T(0.71),
-            Ra = T(1e6),
-            Ge = T(1.0),
-            boundary_conditions,
-        )
-        setup = Setup(;
-            x,
-            Re = T(1000),
-            temperature,
-            boundary_conditions,
-            backend = CUDABackend(),
-        )
-        ustart = velocityfield(setup, (dim, x...) -> zero(x[1]))
-        tempstart = temperaturefield(setup, (x...) -> zero(x[1]))
-        solve_unsteady(; ustart, tempstart, setup, Δt = T(1e-3), tlims = (T(0), T(1e-2)))
-    end
-end
+# # Same as src/precompile.jl, but for `CuArray`s
+# PrecompileTools.@compile_workload begin
+#     for D in (2, 3), T in (Float32, Float64)
+#         # Periodic
+#         x = ntuple(d -> range(T(0), T(1), 5), D)
+#         setup = Setup(; x, visc = T(1e-3), backend = CUDABackend())
+#         u = velocityfield(setup, (dim, x...) -> zero(x[1]))
+#         solve_unsteady(; start = (; u), setup, tlims = (T(0), T(1e-2)))
+#         # Boundaries, temperature
+#         x = ntuple(d -> tanh_grid(T(0), T(1), 6), D)
+#         boundary_conditions = ntuple(d -> (DirichletBC(), PressureBC()), D)
+#         temperature = temperature_equation(;
+#             Pr = T(0.71),
+#             Ra = T(1e6),
+#             Ge = T(1.0),
+#             boundary_conditions,
+#         )
+#         setup = Setup(;
+#             x,
+#             visc = T(1e-3),
+#             temperature,
+#             boundary_conditions,
+#             backend = CUDABackend(),
+#         )
+#         u = velocityfield(setup, (dim, x...) -> zero(x[1]))
+#         temp = temperaturefield(setup, (x...) -> zero(x[1]))
+#         solve_unsteady(; start = (; u, temp), setup, Δt = T(1e-3), tlims = (T(0), T(1e-2)))
+#     end
+# end
 
 end

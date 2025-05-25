@@ -1,9 +1,13 @@
 @testitem "Pressure solvers" begin
     n = 32
-    x = LinRange(0, 2π, n + 1), LinRange(0, 2π, n + 1)
-    Re = 1e3
-    setup = Setup(; x, Re)
-    (; Ip, xp) = setup.grid
+    ax = LinRange(0, 2π, n + 1)
+    setup = Setup(;
+        x = (ax, ax),
+        boundary_conditions = (;
+            u = ((PeriodicBC(), PeriodicBC()), (PeriodicBC(), PeriodicBC())),
+        ),
+    )
+    (; Ip, xp) = setup
     D = 2
 
     initial_pressure(x, y) = 1 / 4 * (cos(2x) + cos(2y))
@@ -17,6 +21,7 @@
     direct = psolver_direct(setup)
     cg = psolver_cg(setup)
     spectral = psolver_spectral(setup)
+    transform = psolver_transform(setup)
 
     get_p(psolver) = IncompressibleNavierStokes.apply_bc_p(
         IncompressibleNavierStokes.poisson(psolver, lap),
@@ -28,4 +33,5 @@
     @test get_p(direct)[Ip] ≈ p_exact[Ip]
     @test get_p(cg)[Ip] ≈ p_exact[Ip]
     @test get_p(spectral)[Ip] ≈ p_exact[Ip]
+    @test get_p(transform)[Ip] ≈ p_exact[Ip]
 end

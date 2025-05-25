@@ -18,8 +18,9 @@
 # We just need the `IncompressibleNavierStokes` and a Makie plotting package.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
+## using CUDA
 
 # ## Setup
 #
@@ -29,27 +30,47 @@ n = 256
 axis = range(0.0, 1.0, n + 1)
 setup = Setup(;
     x = (axis, axis),
-    Re = 2e3,
-    bodyforce = (dim, x, y, t) -> (dim == 1) * 5 * sinpi(8 * y),
-    issteadybodyforce = true,
+    boundary_conditions = (;
+        u = ((PeriodicBC(), PeriodicBC()), (PeriodicBC(), PeriodicBC()))
+    ),
+    ## backend = CUDABackend(),
 );
-ustart = random_field(setup, 0.0; A = 1e-2);
+u = random_field(setup, 0.0; A = 1e-2);
+
+# This is the right-hand side force in the momentum equation
+# By default, it is just `navierstokes!`. Here we add a
+# pre-computed body force.
+function force!(f, state, t; setup, cache, viscosity)
+    navierstokes!(f, state, t; setup, cache, viscosity)
+    f.u .+= cache.bodyforce
+end
+
+# Tell IncompressibleNavierStokes how to prepare the cache for `force!`.
+# The cache is created before time stepping begins.
+function IncompressibleNavierStokes.get_cache(::typeof(force!), setup)
+    f(dim, x, y) = (dim == 1) * 5 * sinpi(8 * y)
+    bodyforce = velocityfield(setup, f; doproject = false)
+    (; bodyforce)
+end
 
 # ## Plot body force
 #
 # Since the force is steady, it is just stored as a field.
-
-heatmap(setup.bodyforce[:, :, 1])
+let
+    (; bodyforce) = IncompressibleNavierStokes.get_cache(force!, setup)
+    bodyforce[:, :, 1] |> Array |> heatmap
+end
 
 # ## Solve unsteady problem
 
 state, outputs = solve_unsteady(;
     setup,
-    ustart,
+    force!,
+    start = (; u),
     tlims = (0.0, 2.0),
-    Δt = 1e-3,
+    params = (; viscosity = 5e-4),
     processors = (
-        rtp = realtimeplotter(; setup, nupdate = 100),
+        rtp = realtimeplotter(; setup, nupdate = 10),
         ehist = realtimeplotter(;
             setup,
             plot = energy_history_plot,

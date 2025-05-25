@@ -5,72 +5,76 @@
 # force on a thin rectangle.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
 using Random
 
 # Output directory
 outdir = joinpath(@__DIR__, "output", "MultiActuator")
 
-# Floating point precision
-T = Float64
-
-# Backend
-backend = IncompressibleNavierStokes.CPU()
-## using CUDA; backend = CUDABackend()
-
 # Boundary conditions
-boundary_conditions = (
-    ## x left, x right
-    (
-        DirichletBC((dim, x, y, t) -> sinpi(sinpi(t / 6) / 6 + one(x) / 2 * (dim == 1))),
-        PressureBC(),
-    ),
+boundary_conditions = (;
+    u = (
+        ## x left, x right
+        (
+            DirichletBC(
+                (dim, x, y, t) -> sinpi(sinpi(t / 6) / 6 + one(x) / 2 * (dim == 1)),
+            ),
+            PressureBC(),
+        ),
 
-    ## y rear, y front
-    (PressureBC(), PressureBC()),
+        ## y rear, y front
+        (PressureBC(), PressureBC()),
+    )
 )
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
 create_bodyforce(; xc, yc, D, δ, C) =
-    (dim, x, y, t) ->
+    (dim, x, y) ->
         dim == 1 && abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2 ? -C / (D * δ) : zero(x)
 
-create_manyforce(forces...) = function (dim, x, y, t)
+create_manyforce(forces...) = function (dim, x, y)
     out = zero(x)
     for f in forces
-        out += f(dim, x, y, t)
+        out += f(dim, x, y)
     end
     out
 end
 
 disk = (; D = T(1), δ = T(0.11), C = T(0.2))
-bodyforce = create_manyforce(
+f = create_manyforce(
     create_bodyforce(; xc = T(2), yc = T(0), disk...),
     create_bodyforce(; xc = T(4), yc = T(0.7), disk...),
     create_bodyforce(; xc = T(6.4), yc = T(-1), disk...),
 )
 
+# This is the right-hand side force in the momentum equation
+# By default, it is just `navierstokes!`. Here we add a
+# pre-computed body force.
+function force!(f, state, t, params, setup, cache)
+    navierstokes!(f, state, t, nothing, setup, nothing)
+    f.u .+= cache.bodyforce
+end
+
+# Tell IncompressibleNavierStokes how to prepare the cache for `force!`.
+# The cache is created before time stepping begins.
+function IncompressibleNavierStokes.get_cache(::typeof(force!), setup)
+    bodyforce = velocityfield(setup, f; doproject = false)
+    (; bodyforce)
+end
+
 # A 2D grid is a Cartesian product of two vectors
 n = 50
-x = LinRange(T(0), T(10), 5n + 1), LinRange(-T(2), T(2), 2n + 1)
+x = LinRange(0.0, 10.0, 5n + 1), LinRange(-2.0, 2.0, 2n + 1)
 plotgrid(x...; figure = (; size = (600, 300)))
 
 # Build setup and assemble operators
-setup = Setup(;
-    x,
-    Re = T(1000),
-    boundary_conditions,
-    bodyforce,
-    issteadybodyforce = true,
-    backend,
-);
+setup = Setup(; x, boundary_conditions);
 
 # Initial conditions (extend inflow)
-ustart = velocityfield(setup, (dim, x, y) -> dim == 1 ? one(x) : zero(x));
-t = T(0)
+u = velocityfield(setup, (dim, x, y) -> (dim == 1) * one(x));
 
-boxes = map(bodyforce.forces) do (; xc, yc, D, δ)
+boxes = map(f.forces) do (; xc, yc, D, δ)
     [
         Point2f(xc - δ / 2, yc + D / 2),
         Point2f(xc - δ / 2, yc - D / 2),
@@ -84,9 +88,10 @@ box = boxes[1]
 # Solve unsteady problem
 state, outputs = solve_unsteady(;
     setup,
-    ustart,
-    tlims = (T(0), T(12)),
-    method = RKMethods.RK44P2(),
+    force!,
+    start = (; u),
+    tlims = (0.0, 12.0),
+    params = (; viscosity = 5e-3),
     processors = (
         rtp = realtimeplotter(;
             setup,
@@ -116,11 +121,6 @@ state, outputs = solve_unsteady(;
 
 # Export to VTK
 save_vtk(state; setup, filename = joinpath(outdir, "solution"))
-
-# Plot pressure
-fig = fieldplot(state; setup, size = (600, 300), fieldname = :pressure)
-lines!.(boxes; color = :red);
-fig
 
 # Plot velocity
 fig = fieldplot(state; setup, size = (600, 300), fieldname = :velocitynorm)

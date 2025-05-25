@@ -16,61 +16,28 @@
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-# Case name for saving results
-outdir = joinpath(@__DIR__, "output", "LidDrivenCavity2D")
-
-# The code allows for using different floating point number types, including single
-# precision (`Float32`) and double precision (`Float64`). On the CPU, the speed
-# is not really different, but double precision uses twice as much memory as
-# single precision. When running on the GPU, single precision is preferred.
-# Half precision (`Float16`) is also an option, but then the values should be
-# scaled judiciously to avoid vanishing digits when applying differential
-# operators of the form "right minus left divided by small distance".
-
-# Note how floating point type hygiene is enforced in the following using `T`
-# to avoid mixing different precisions.
-
-# T = Float64
-T = Float32
-## T = Float16
-
-# We can also choose to do the computations on a different device. By default,
-# the computations are performed on the host (CPU). An optional `backend`
-# allows for moving arrays to a different device such as a GPU.
-#
-# Note: For GPUs, single precision is preferred.
-
-backend = IncompressibleNavierStokes.CPU()
-## using CUDA; backend = CUDABackend()
-
-# Here we choose a moderate Reynolds number. Note how we pass the floating point type.
-Re = T(1_000)
-
-# Non-zero Dirichlet boundary conditions are specified as plain Julia functions.
-U = (T(1), T(0))
-boundary_conditions = (
+# Boundary conditions
+boundary_conditions = (; u = (
     ## x left, x right
     (DirichletBC(), DirichletBC()),
 
     ## y bottom, y top
-    (DirichletBC(), DirichletBC(U)),
-)
+    (DirichletBC(), DirichletBC((1.0, 0.0))),
+))
 
 # We create a two-dimensional domain with a box of size `[1, 1]`. The grid is
 # created as a Cartesian product between two vectors. We add a refinement near
 # the walls.
 n = 32
-lims = T(0), T(1)
-x = cosine_grid(lims..., n), cosine_grid(lims..., n)
-plotgrid(x...)
+ax = tanh_grid(0.0, 1.0, n)
+plotgrid(ax, ax)
 
 # We can now build the setup and assemble operators.
 # A 3D setup is built if we also provide a vector of z-coordinates.
-setup = Setup(; x, boundary_conditions, Re, backend);
+setup = Setup(; x = (ax, ax), boundary_conditions);
 
-# The initial conditions are provided in function. The value `dim()` determines
-# the velocity component.
-ustart = velocityfield(setup, (dim, x, y) -> zero(x));
+# Initial conditions
+u = velocityfield(setup, (dim, x, y) -> zero(x));
 
 # Iteration processors are called after every `nupdate` time steps. This can be
 # useful for logging, plotting, or saving results. Their respective outputs are
@@ -86,10 +53,13 @@ processors = (
     log = timelogger(; nupdate = 1000),
 );
 
-# By default, a standard fourth order Runge-Kutta method is used. If we don't
-# provide the time step explicitly, an adaptive time step is used.
-tlims = (T(0), T(10))
-state, outputs = solve_unsteady(; setup, ustart, tlims, Δt = T(1e-3), processors);
+state, outputs = solve_unsteady(;
+    setup,
+    start = (; u),
+    tlims = (0.0, 10.0),
+    params = (; viscosity = 1e-3),
+    processors,
+);
 
 # ## Post-process
 #
@@ -98,13 +68,11 @@ state, outputs = solve_unsteady(; setup, ustart, tlims, Δt = T(1e-3), processor
 # Export fields to VTK. The file `outdir/solution.vti` may be opened for
 # visualization in [ParaView](https://www.paraview.org/). This is particularly
 # useful for inspecting results from 3D simulations.
-save_vtk(state; setup, filename = joinpath(outdir, "solution"))
 
-# Plot pressure
-fieldplot(state; setup, fieldname = :pressure)
+filename = joinpath(@__DIR__, "output", "solution")
+## save_vtk(state; setup, filename)
 
-# Plot velocity. Note the time stamp used for computing boundary conditions, if
-# any.
+# Plot velocity
 fieldplot(state; setup, fieldname = :velocitynorm)
 
 # Plot vorticity

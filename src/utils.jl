@@ -2,10 +2,9 @@
 function enzyme_wrap end
 
 function assert_uniform_periodic(setup, string)
-    (; grid, boundary_conditions) = setup
-    (; Δ, N) = grid
+    (; Δ, N, boundary_conditions) = setup
     @assert(
-        all(==((PeriodicBC(), PeriodicBC())), boundary_conditions),
+        all(==((PeriodicBC(), PeriodicBC())), boundary_conditions.u),
         string * " requires periodic boundary conditions.",
     )
     @assert(
@@ -49,8 +48,8 @@ Plot nonuniform Cartesian grid.
 function plotgrid end
 
 "Get utilities to compute energy spectrum."
-function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) / 2)
-    (; dimension, xp, Np) = setup.grid
+function spectral_stuff(setup; npoint = 100, a = eltype(setup.x[1])(1 + sqrt(5)) / 2)
+    (; dimension, xp, Np) = setup
     T = eltype(xp[1])
     D = dimension()
 
@@ -114,8 +113,8 @@ function spectral_stuff(setup; npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) /
 end
 
 "Get energy spectrum of velocity field."
-function get_spectrum(setup; npoint = 100, a = typeof(e.setup.Re)(1 + sqrt(5)) / 2)
-    (; dimension, xp, Ip) = setup.grid
+function get_spectrum(setup; npoint = 100, a = eltype(setup.x[1])(1 + sqrt(5)) / 2)
+    (; dimension, xp, Ip) = setup
     T = eltype(xp[1])
     D = dimension()
 
@@ -146,4 +145,111 @@ function get_spectrum(setup; npoint = 100, a = typeof(e.setup.Re)(1 + sqrt(5)) /
     BoolArray = typeof(similar(xp[1], Bool, ntuple(Returns(0), D)...))
     masks = adapt.(BoolArray, masks)
     (; κ, masks, K)
+end
+
+"Get permutation indices for DCT."
+function get_perminds(N)
+    n = div(N, 2)
+    @assert 2 * n == N "Only even grids supported"
+    x = zeros(Int, N)
+    xinv = zeros(Int, N)
+    for k = 1:n
+        x[k] = 2 * k - 1
+        x[end-k+1] = 2 * k
+        xinv[2*k-1] = k
+        xinv[2*k] = N - k + 1
+    end
+    x, xinv
+end
+
+function manual_dct_stuff(u)
+    uhat = complex(u)
+    T = eltype(u)
+    w = ntuple(ndims(u)) do i
+        N = size(u, i)
+        k = (0:(N-1)) .|> T
+        p = T(π) # Don't promote Irrational to Float64
+        ww = @. exp(-2 * p * im * k / 4N) / sqrt(T(2) * N)
+        ww[1] = ww[1] / sqrt(T(2))
+        ww
+    end
+    winv = ntuple(ndims(u)) do i
+        N = size(u, i)
+        k = (0:(N-1)) .|> T
+        p = T(π) # Don't promote Irrational to Float64
+        ww = @. exp(2 * p * im * k / 4N) * sqrt(T(2) * N)
+        ww[1] = ww[1] * sqrt(T(2)) / 2
+        ww
+    end
+    perm = map(n -> get_perminds(n)[1], size(u))
+    perminv = map(n -> get_perminds(n)[2], size(u))
+    adapt(get_backend(u), (; uhat, w, winv, perm, perminv))
+end
+
+function manual_dct!(u, i, stuff)
+    (; uhat, w, perm, perminv) = stuff
+
+    @assert isreal(u) "Manual DCT only implemented for real inputs"
+
+    # Permute u
+    if ndims(u) == 1
+        @. u = u[perm[1]]
+    elseif ndims(u) == 2
+        if i == 1
+            @. u = u[perm[1], :]
+        else
+            @. u = u[:, perm[2]]
+        end
+    else
+        if i == 1
+            @. u = u[perm[1], :, :]
+        elseif i == 2
+            @. u = u[:, perm[2], :]
+        else
+            @. u = u[:, :, perm[3]]
+        end
+    end
+
+    # FFT in direction i
+    copyto!(uhat, u)
+    fft!(uhat, i)
+
+    # Convert to DCT
+    w = reshape(w[i], ntuple(Returns(1), i - 1)..., :)
+    @. u = 2 * real(w * uhat)
+
+    u
+end
+
+function manual_idct!(u, i, stuff)
+    (; uhat, w, winv, perm, perminv) = stuff
+
+    @assert isreal(u) "Manual IDCT only implemented for real inputs"
+
+    copyto!(uhat, u)
+    winv = reshape(winv[i], ntuple(Returns(1), i - 1)..., :)
+    @. uhat = winv * uhat
+    ifft!(uhat, i)
+    @. u = real(uhat)
+
+    # Permute back
+    if ndims(u) == 1
+        @. u = u[perminv[1]]
+    elseif ndims(u) == 2
+        if i == 1
+            @. u = u[perminv[1], :]
+        else
+            @. u = u[:, perminv[2]]
+        end
+    else
+        if i == 1
+            @. u = u[perminv[1], :, :]
+        elseif i == 2
+            @. u = u[:, perminv[2], :]
+        else
+            @. u = u[:, :, perminv[3]]
+        end
+    end
+
+    u
 end

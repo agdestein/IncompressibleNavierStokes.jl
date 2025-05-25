@@ -46,19 +46,14 @@ The code is currently not adapted to time steppers from
 but they may be integrated in the future.
 
 ```@docs
+get_cache
 AbstractODEMethod
-ode_method_cache
 runge_kutta_method
 create_stepper
 timestep
 timestep!
 ```
 
-## Adams-Bashforth Crank-Nicolson method
-
-```@docs
-AdamsBashforthCrankNicolsonMethod
-```
 
 ## One-leg beta method
 
@@ -71,7 +66,6 @@ OneLegMethod
 ```@docs
 AbstractRungeKuttaMethod
 ExplicitRungeKuttaMethod
-ImplicitRungeKuttaMethod
 RKMethods
 LMWray3
 ```

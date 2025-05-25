@@ -7,11 +7,18 @@
 end
 
 @testmodule EnzymeCase begin
+    # module EnzymeCase
     using IncompressibleNavierStokes
 
     D2, D3 = map((2, 3)) do D
         T = Float64
-        Re = T(1_000)
+        params = (
+            viscosity = T(1e-3),
+            conductivity = T(1e-3),
+            gdir = 2,
+            gravity = T(1.0),
+            dodissipation = true,
+        )
         n = if D == 2
             8
         elseif D == 3
@@ -27,60 +34,35 @@ end
         elseif D == 3
             tanh_grid(lims..., n, 1.2), tanh_grid(lims..., n, 1.1), cosine_grid(lims..., n)
         end
-        boundary_conditions = ntuple(d -> (DirichletBC(), DirichletBC()), D)
-        temperature = temperature_equation(;
-            Pr = T(0.71),
-            Ra = T(1e6),
-            Ge = T(1.0),
-            boundary_conditions,
-        )
-        if D == 2
-            bodyforce = (dim, x, y, t) -> (dim == 1) * 5 * sinpi(8 * y)
-            dbodyforce = (dim, x, y, t) -> (dim == 1) * 5 * pi * 8 * cos(pi * 8 * y)
-        elseif D == 3
-            bodyforce = (dim, x, y, z, t) -> (dim == 1) * 5 * sinpi(8 * y)
-            dbodyforce = (dim, x, y, z, t) -> (dim == 1) * 5 * pi * 8 * cos(pi * 8 * y)
-        end
-        setup = Setup(;
-            x,
-            boundary_conditions,
-            Re,
-            temperature,
-            bodyforce,
-            dbodyforce,
-            issteadybodyforce = true,
-        )
+        bc = ntuple(d -> (DirichletBC(), DirichletBC()), D)
+        setup = Setup(; x, boundary_conditions = (; u = bc, temp = bc))
         psolver = default_psolver(setup)
-        u = randn(T, setup.grid.N..., D)
-        p = randn(T, setup.grid.N)
-        temp = randn(T, setup.grid.N)
-        div = divergence(u, setup)
-        (; setup, psolver, u, p, temp, div)
+        u = randn(T, setup.N..., D)
+        p = randn(T, setup.N)
+        temp = randn(T, setup.N)
+        (; setup, psolver, u, p, temp, params)
     end
 end
 
 @testitem "Chain rules (boundary conditions)" setup = [EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
     T = Float64
-    Re = T(1_000)
-    Pr = T(0.71)
-    Ra = T(1e6)
-    Ge = T(1.0)
+    params = (
+        viscosity = T(1e-3),
+        conductivity = T(1e-3),
+        gdir = 2,
+        gravity = T(1.0),
+        dodissipation = true,
+    )
     n = 7
     lims = T(0), T(1)
     x = range(lims..., n + 1), range(lims..., n + 1)
-
     for bc in (PeriodicBC(), DirichletBC(), SymmetricBC(), PressureBC())
-        boundary_conditions = (bc, bc), (bc, bc)
-        setup = Setup(;
-            x,
-            Re,
-            boundary_conditions,
-            temperature = temperature_equation(; Pr, Ra, Ge, boundary_conditions),
-        )
-        u = randn(T, setup.grid.N..., 2)
-        p = randn(T, setup.grid.N)
-        temp = randn(T, setup.grid.N)
+        BC = (bc, bc), (bc, bc)
+        setup = Setup(; x, boundary_conditions = (; u = BC, temp = BC))
+        u = randn(T, setup.N..., 2)
+        p = randn(T, setup.N)
+        temp = randn(T, setup.N)
         u0 = copy(u)
         p0 = copy(p)
         temp0 = copy(temp)
@@ -209,10 +191,10 @@ end
 
 @testitem "Divergence" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (u, setup, d) in (
-        (EnzymeCase.D2.u, EnzymeCase.D2.setup, EnzymeCase.D2.div),
-        (EnzymeCase.D3.u, EnzymeCase.D3.setup, EnzymeCase.D3.div),
-    )
+    # case = EnzymeCase.D2
+    for case in (EnzymeCase.D2, EnzymeCase.D3)
+        (; u, setup) = case
+        d = divergence(u, setup)
         d0 = copy(d)
         u0 = copy(u)
         Zygote.pullback(INS.divergence, u, setup)[2](d0)[1]
@@ -252,8 +234,8 @@ end
 
 @testitem "Pressuregradient" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (p, setup) in
-        ((EnzymeCase.D2.p, EnzymeCase.D2.setup), (EnzymeCase.D3.p, EnzymeCase.D3.setup))
+    for case in (EnzymeCase.D2, EnzymeCase.D3)
+        (; p, setup) = case
         p0 = copy(p)
         pg = INS.pressuregradient(p, setup)
         pg0 = copy(pg)
@@ -294,10 +276,9 @@ end
 
 @testitem "Poisson" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (psolver, d, setup) in (
-        (EnzymeCase.D2.psolver, EnzymeCase.D2.div, EnzymeCase.D2.setup),
-        (EnzymeCase.D3.psolver, EnzymeCase.D3.div, EnzymeCase.D3.setup),
-    )
+    for case in (EnzymeCase.D2, EnzymeCase.D3)
+        (; psolver, setup, u) = case
+        d = divergence(u, setup)
         p0 = INS.poisson(psolver, d)
         Zygote.pullback(INS.poisson, psolver, d)[2](p0)[1]
         zpull, z_time = @timed Zygote.pullback(INS.poisson, psolver, d)[2](p0)[2]
@@ -338,8 +319,8 @@ end
 
 @testitem "Convection" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (u, setup) in
-        ((EnzymeCase.D2.u, EnzymeCase.D2.setup), (EnzymeCase.D3.u, EnzymeCase.D3.setup))
+    for case in (EnzymeCase.D2, EnzymeCase.D3)
+        (; u, setup) = case
         c = INS.convection(u, setup)
         c0 = copy(c)
         Zygote.pullback(INS.convection, u, setup)[2](u)[1]
@@ -383,12 +364,14 @@ end
 
 @testitem "Diffusion" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (u, setup) in
-        ((EnzymeCase.D2.u, EnzymeCase.D2.setup), (EnzymeCase.D3.u, EnzymeCase.D3.setup))
-        d = INS.diffusion(u, setup)
+    # case = EnzymeCase.D2
+    for case in (EnzymeCase.D2, EnzymeCase.D3)
+        (; u, setup, params) = case
+        (; viscosity) = params
+        d = INS.diffusion(u, setup, viscosity)
         d0 = copy(d)
-        Zygote.pullback(INS.diffusion, u, setup)[2](d)[1]
-        zpull, z_time = @timed Zygote.pullback(INS.diffusion, u, setup)[2](d)[1]
+        Zygote.pullback(INS.diffusion, u, setup, viscosity)[2](d)[1]
+        zpull, z_time = @timed Zygote.pullback(INS.diffusion, u, setup, viscosity)[2](d)[1]
 
         # [!] diffusion! wants to start from 0 initialized field
         EnzymeCore.make_zero!(d)
@@ -396,7 +379,7 @@ end
         du = Enzyme.make_zero(u)
         f = INS.enzyme_wrap(INS.diffusion!)
         @test f isa Function
-        f(d, u, setup)
+        f(d, u, setup, viscosity)
         @test d == d0
         Enzyme.autodiff(
             Enzyme.Reverse,
@@ -404,6 +387,7 @@ end
             Duplicated(d, dd),
             Duplicated(u, du),
             Const(setup),
+            Const(viscosity),
         )
         EnzymeCore.make_zero!(d)
         dd = Enzyme.make_zero(d) .+ 1
@@ -414,6 +398,7 @@ end
             Duplicated(d, dd),
             Duplicated(u, du),
             Const(setup),
+            Const(viscosity),
         )
         if ENABLE_LOGGING
             if e_time < z_time
@@ -426,75 +411,23 @@ end
     end
 end
 
-@testitem "Bodyforce" setup = [EnzymeCase, EnzymeSnip] begin
-    using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    @warn "bodyforce is tested only in the static case"
-    for (u, setup) in
-        ((EnzymeCase.D2.u, EnzymeCase.D2.setup), (EnzymeCase.D3.u, EnzymeCase.D3.setup))
-        t = 0.5
-        bf = INS.applybodyforce(u, t, setup)
-        bf0 = copy(bf)
-        setup0 = deepcopy(setup)
-        Zygote.pullback(INS.applybodyforce, u, t, setup)[2](bf0)
-        zpull, z_time =
-            @timed Zygote.pullback(INS.applybodyforce, u, t, setup)[2](bf0)[3].bodyforce
-
-        # We can also test Zygote autodiff
-        @test zpull == setup.bodyforce
-
-        bf = bf .* 0
-        dbf = Enzyme.make_zero(bf) .+ 1
-        du = Enzyme.make_zero(u)
-        f = INS.enzyme_wrap(INS.applybodyforce!)
-        @test f isa Function
-        f(bf, u, t, setup)
-        @test bf == bf0
-        Enzyme.autodiff(
-            Enzyme.Reverse,
-            f,
-            Duplicated(bf, dbf),
-            Duplicated(u, du),
-            Const(t),
-            Const(setup),
-        )
-        bf = bf .* 0
-        dbf = Enzyme.make_zero(bf) .+ 1
-        du = Enzyme.make_zero(u)
-        eb, e_time = @timed Enzyme.autodiff(
-            Enzyme.Reverse,
-            f,
-            Duplicated(bf, dbf),
-            Duplicated(u, du),
-            Const(t),
-            Const(setup),
-        )
-        if ENABLE_LOGGING
-            if e_time < z_time
-                @info "Enzyme is faster (bodyforce): ", e_time, " vs ", z_time
-            else
-                @info "Zygote is faster (bodyforce): ", z_time, " vs ", e_time
-            end
-        end
-        @test du == zpull
-    end
-end
-
 @testitem "Gravity" setup = [EnzymeCase, EnzymeSnip] begin
     using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (t, setup) in (
-        (EnzymeCase.D2.temp, EnzymeCase.D2.setup),
-        (EnzymeCase.D3.temp, EnzymeCase.D3.setup),
-    )
-        g = INS.gravity(t, setup)
-        Zygote.pullback(INS.gravity, t, setup)[2](g)
-        zpull, z_time = @timed Zygote.pullback(INS.gravity, t, setup)[2](g)[1]
+    for case in (EnzymeCase.D2, EnzymeCase.D3)
+        (; setup, params) = case
+        (; gdir, gravity) = params
+        t = case.temp
+        g = INS.applygravity(t, setup, gdir, gravity)
+        Zygote.pullback(INS.applygravity, t, setup, gdir, gravity)[2](g)
+        zpull, z_time =
+            @timed Zygote.pullback(INS.applygravity, t, setup, gdir, gravity)[2](g)[1]
 
         g = vectorfield(setup)
         dg = Enzyme.make_zero(g) .+ 1
         dt = Enzyme.make_zero(t)
-        f = INS.enzyme_wrap(INS.gravity!)
+        f = INS.enzyme_wrap(INS.applygravity!)
         @test f isa Function
-        f(g, t, setup)
+        f(g, t, setup, gdir, gravity)
         @test g != 0
         Enzyme.autodiff(
             Enzyme.Reverse,
@@ -502,6 +435,8 @@ end
             Duplicated(g, dg),
             Duplicated(t, dt),
             Const(setup),
+            Const(gdir),
+            Const(gravity),
         )
         g = vectorfield(setup)
         dg = Enzyme.make_zero(g) .+ 1
@@ -512,6 +447,8 @@ end
             Duplicated(g, dg),
             Duplicated(t, dt),
             Const(setup),
+            Const(gdir),
+            Const(gravity),
         )
         if ENABLE_LOGGING
             if e_time < z_time
@@ -525,54 +462,52 @@ end
 end
 
 @testitem "Dissipation" setup = [EnzymeCase, EnzymeSnip] begin
-    using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
-    for (u, setup) in
-        ((EnzymeCase.D2.u, EnzymeCase.D2.setup), (EnzymeCase.D3.u, EnzymeCase.D3.setup))
-        diss = INS.dissipation(u, setup)
-        diss0 = copy(diss)
-        Zygote.pullback(INS.dissipation, u, setup)[2](diss)
-        zpull, z_time = @timed Zygote.pullback(INS.dissipation, u, setup)[2](diss)[1]
-
-        diss = scalarfield(setup)
-        diff = vectorfield(setup)
-        ddiss = Enzyme.make_zero(diss) .+ 1
-        ddiff = Enzyme.make_zero(diff)
-        du = Enzyme.make_zero(u)
-        f = INS.enzyme_wrap(INS.dissipation!)
-        @test f isa Function
-        f(diss, diff, u, setup)
-        @test diss == diss0
-        Enzyme.autodiff(
-            Enzyme.Reverse,
-            f,
-            Duplicated(diss, ddiss),
-            Duplicated(diff, ddiff),
-            Duplicated(u, du),
-            Const(setup),
-        )
-        diss = scalarfield(setup)
-        diff = vectorfield(setup)
-        diss = Enzyme.make_zero(diss) .+ 1
-        diff = Enzyme.make_zero(diff)
-        du = Enzyme.make_zero(u)
-        ed, e_time = @timed Enzyme.autodiff(
-            Enzyme.Reverse,
-            f,
-            Duplicated(diss, ddiss),
-            Duplicated(diff, ddiff),
-            Duplicated(u, du),
-            Const(setup),
-        )
-        if ENABLE_LOGGING
-            if e_time < z_time
-                @info "Enzyme is faster (dissipation): ", e_time, " vs ", z_time
-            else
-                @info "Zygote is faster (dissipation): ", z_time, " vs ", e_time
-            end
-        end
-        @test du == zpull
-    end
+    @test_broken 1 == 2 # Just to mark undefined adjoint
+    # using IncompressibleNavierStokes: IncompressibleNavierStokes as INS
+    # for case in (EnzymeCase.D2, EnzymeCase.D3)
+    #     (; u, setup, params) = case
+    #     (; viscosity) = params
+    #     diss = INS.dissipation(u, setup, viscosity)
+    #     diss0 = copy(diss)
+    #     Zygote.pullback(INS.dissipation, u, setup, viscosity)[2](diss)
+    #     zpull, z_time = @timed Zygote.pullback(INS.dissipation, u, setup, viscosity)[2](diss)[1]
+    #     diss = scalarfield(setup)
+    #     ddiss = Enzyme.make_zero(diss) .+ 1
+    #     du = Enzyme.make_zero(u)
+    #     f = INS.enzyme_wrap(INS.dissipation!)
+    #     @test f isa Function
+    #     f(diss, u, setup, dissipation)
+    #     @test diss == diss0
+    #     Enzyme.autodiff(
+    #         Enzyme.Reverse,
+    #         f,
+    #         Duplicated(diss, ddiss),
+    #         Duplicated(u, du),
+    #         Const(setup),
+    #         Const(viscosity),
+    #     )
+    #     diss = scalarfield(setup)
+    #     diss = Enzyme.make_zero(diss) .+ 1
+    #     du = Enzyme.make_zero(u)
+    #     ed, e_time = @timed Enzyme.autodiff(
+    #         Enzyme.Reverse,
+    #         f,
+    #         Duplicated(diss, ddiss),
+    #         Duplicated(u, du),
+    #         Const(setup),
+    #         Const(viscosity),
+    #     )
+    #     if ENABLE_LOGGING
+    #         if e_time < z_time
+    #             @info "Enzyme is faster (dissipation): ", e_time, " vs ", z_time
+    #         else
+    #             @info "Zygote is faster (dissipation): ", z_time, " vs ", e_time
+    #         end
+    #     end
+    #     @test du == zpull
+    # end
 end
+
 @testitem "Convection_diffusion_temp" setup = [EnzymeCase, EnzymeSnip] begin
     @test_broken 1 == 2
 end

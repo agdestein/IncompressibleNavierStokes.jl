@@ -12,7 +12,7 @@
 # `CairoMakie` makes high-quality static vector-graphics plots.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
 
 # ## Setup
@@ -24,7 +24,11 @@ plotgrid(x...; figure = (; size = (600, 300)))
 
 # Boundary conditions
 inflow(dim, x, y, t) = sinpi(sinpi(t / 6) / 6 + (dim == 1) / 2)
-boundary_conditions = ((DirichletBC(inflow), PressureBC()), (PressureBC(), PressureBC()))
+boundary_conditions =
+    (; u = ((DirichletBC(inflow), PressureBC()), (PressureBC(), PressureBC())))
+
+# Build setup
+setup = Setup(; x, boundary_conditions);
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
 xc, yc = 2.0, 0.0 # Disk center
@@ -33,25 +37,36 @@ D = 1.0           # Disk diameter
 C = 0.2           # Thrust coefficient
 c = C / (D * δ)   # Normalize
 inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
-bodyforce(dim, x, y, t) = -c * (dim == 1) * inside(x, y)
+f(dim, x, y) = -c * (dim == 1) * inside(x, y)
 
-# Build setup
-setup = Setup(; x, Re = 100.0, boundary_conditions, bodyforce, issteadybodyforce = true);
+# This is the right-hand side force in the momentum equation
+# By default, it is just `navierstokes!`. Here we add a
+# pre-computed body force.
+function force!(f, state, t; setup, cache, viscosity)
+    navierstokes!(f, state, t; setup, cache, viscosity)
+    f.u .+= cache.bodyforce
+end
+
+# Tell IncompressibleNavierStokes how to prepare the cache for `force!`.
+# The cache is created before time stepping begins.
+IncompressibleNavierStokes.get_cache(::typeof(force!), setup) =
+    (; bodyforce = velocityfield(setup, f; doproject = false))
 
 # Initial conditions (extend inflow)
-ustart = velocityfield(setup, (dim, x, y) -> inflow(dim, x, y, 0.0))
+u = velocityfield(setup, (dim, x, y) -> inflow(dim, x, y, 0.0));
 
 # ## Solve unsteady problem
 
+# @profview
 state, outputs = solve_unsteady(;
     setup,
-    ustart,
-    tlims = (0.0, 12.0),
-    method = RKMethods.RK44P2(),
-    Δt = 0.05,
+    force!,
+    params = (; viscosity = 0.01),
+    start = (; u),
+    tlims = (0.0, 12e0),
     processors = (
         rtp = realtimeplotter(; setup, size = (600, 300), nupdate = 5),
-        log = timelogger(; nupdate = 24),
+        log = timelogger(; nupdate = 100),
     ),
 );
 
@@ -66,11 +81,6 @@ box = (
     [xc - δ / 2, xc - δ / 2, xc + δ / 2, xc + δ / 2, xc - δ / 2],
     [yc + D / 2, yc - D / 2, yc - D / 2, yc + D / 2, yc + D / 2],
 )
-
-# Plot pressure
-fig = fieldplot(state; setup, size = (600, 300), fieldname = :pressure)
-lines!(box...; color = :red)
-fig
 
 # Plot velocity
 fig = fieldplot(state; setup, size = (600, 300), fieldname = :velocitynorm)

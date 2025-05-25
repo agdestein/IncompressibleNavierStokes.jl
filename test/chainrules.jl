@@ -11,24 +11,23 @@ end
 
 @testitem "Chain rules (boundary conditions)" setup = [ChainRulesStuff] begin
     T = Float64
-    Re = T(1_000)
-    Pr = T(0.71)
-    Ra = T(1e6)
-    Ge = T(1.0)
+    params = (
+        viscosity = T(1e-3),
+        conductivity = T(1e-3),
+        gdir = 2,
+        gravity = T(1.0),
+        dodissipation = true,
+    )
     n = 7
     lims = T(0), T(1)
-    x = range(lims..., n + 1), range(lims..., n + 1)
+    ax = range(lims..., n + 1)
+    x = ax, ax
     for bc in (PeriodicBC(), DirichletBC(), SymmetricBC(), PressureBC())
-        boundary_conditions = (bc, bc), (bc, bc)
-        setup = Setup(;
-            x,
-            Re,
-            boundary_conditions,
-            temperature = temperature_equation(; Pr, Ra, Ge, boundary_conditions),
-        )
-        u = randn(T, setup.grid.N..., 2)
-        p = randn(T, setup.grid.N)
-        temp = randn(T, setup.grid.N)
+        BC = (bc, bc), (bc, bc)
+        setup = Setup(; x, boundary_conditions = (; u = BC, temp = BC))
+        u = randn(T, setup.N..., 2)
+        p = randn(T, setup.N)
+        temp = randn(T, setup.N)
         test_rrule_named(apply_bc_u, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
         test_rrule_named(apply_bc_p, p, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
         test_rrule_named(apply_bc_temp, temp, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
@@ -36,11 +35,18 @@ end
 end
 
 @testmodule Case begin
+    # module Case
     using IncompressibleNavierStokes
 
     D2, D3 = map((2, 3)) do D
         T = Float64
-        Re = T(1_000)
+        params = (
+            viscosity = T(1e-3),
+            conductivity = T(1e-3),
+            gdir = 2,
+            gravity = T(1.0),
+            dodissipation = true,
+        )
         n = if D == 2
             8
         elseif D == 3
@@ -56,19 +62,13 @@ end
         elseif D == 3
             tanh_grid(lims..., n, 1.2), tanh_grid(lims..., n, 1.1), cosine_grid(lims..., n)
         end
-        boundary_conditions = ntuple(d -> (DirichletBC(), DirichletBC()), D)
-        temperature = temperature_equation(;
-            Pr = T(0.71),
-            Ra = T(1e6),
-            Ge = T(1.0),
-            boundary_conditions,
-        )
-        setup = Setup(; x, boundary_conditions, Re, temperature)
+        bc = ntuple(d -> (DirichletBC(), DirichletBC()), D)
+        setup = Setup(; x, boundary_conditions = (; u = bc, temp = bc))
         psolver = default_psolver(setup)
-        u = randn(T, setup.grid.N..., D)
-        p = randn(T, setup.grid.N)
-        temp = randn(T, setup.grid.N)
-        (; setup, psolver, u, p, temp)
+        u = randn(T, setup.N..., D)
+        p = randn(T, setup.N)
+        temp = randn(T, setup.N)
+        (; setup, psolver, u, p, temp, params)
     end
 end
 
@@ -92,36 +92,78 @@ end
     test_rrule_named(convection, Case.D3.u, Case.D3.setup ⊢ NoTangent())
 end
 
-@testitem "Diffusion" setup = [Case, ChainRulesStuff] begin
-    test_rrule_named(diffusion, Case.D2.u, Case.D2.setup ⊢ NoTangent())
-    test_rrule_named(diffusion, Case.D3.u, Case.D3.setup ⊢ NoTangent())
-end
+# # Convection
+# let
+#     using Random
+#     using LinearAlgebra
+#     # w = rand!(similar(Case.D2.u))
+#     w = zero(Case.D2.u)
+#     w[end-1, 4, 1] = 1
+#     u = copy(Case.D2.u)
+#     g_fd = map(u |> axes |> CartesianIndices) do I
+#         h = u |> eltype |> eps |> cbrt
+#         a = u |> copy
+#         b = u |> copy
+#         a[I] -= h / 2
+#         b[I] += h / 2
+#         fa = convection(a, Case.D2.setup)
+#         fb = convection(b, Case.D2.setup)
+#         (dot(w .* fb, fb) - dot(w .* fa, fa)) / 2 / h
+#         # (dot(fb, fb) - dot(fa, fa)) / 2 / h
+#     end;
+#     c, c_pb = ChainRulesCore.rrule(convection, u, Case.D2.setup);
+#     c_pb(w .* c)[2][:, :, 1]
+#     g_fd[:, :, 1]
+#     c_pb(w .* c)[2] - g_fd
+# end
 
-@testitem "Tensor basis" setup = [Case, ChainRulesStuff] begin
-    using IncompressibleNavierStokes.StaticArrays
-    using Random
-    test_rrule_named(tensorbasis, Case.D2.u, Case.D2.setup ⊢ NoTangent())
-    @test_broken false # TODO: 3D adjoint
-    # test_rrule_named(tensorbasis, Case.D3.u, Case.D3.setup ⊢ NoTangent())
-    T = eltype(Case.D2.u)
-    a = similar(Case.D2.u, size(Case.D2.u)..., 5) |> randn!
-    b = similar(Case.D2.u, SMatrix{2,2,T,4}, size(Case.D2.u)..., 5) |> randn!
+# # Diffusion
+# let
+#     viscosity = Case.D2.params.viscosity
+#     g_fd = map(Case.D2.u |> axes |> CartesianIndices) do I
+#         h = Case.D2.u |> eltype |> eps |> cbrt
+#         a = Case.D2.u |> copy
+#         b = Case.D2.u |> copy
+#         a[I] -= h / 2
+#         b[I] += h / 2
+#         fa = diffusion(a, Case.D2.setup, viscosity)
+#         fb = diffusion(b, Case.D2.setup, viscosity)
+#         (sum(abs2, fb) - sum(abs2, fa)) / 2 / h
+#     end
+#     c, c_pb = ChainRulesCore.rrule(diffusion, Case.D2.u, Case.D2.setup, viscosity)
+#     c_pb(c)[2]
+#     g_fd
+#     c
+#     c_pb(c)[2] - g_fd
+# end
+
+@testitem "Diffusion" setup = [Case, ChainRulesStuff] begin
     test_rrule_named(
-        IncompressibleNavierStokes.lastdimcontract,
-        a,
-        b,
+        diffusion,
+        Case.D2.u,
         Case.D2.setup ⊢ NoTangent(),
+        Case.D2.params.viscosity ⊢ NoTangent(),
+    )
+    test_rrule_named(
+        diffusion,
+        Case.D3.u,
+        Case.D3.setup ⊢ NoTangent(),
+        Case.D2.params.viscosity ⊢ NoTangent(),
     )
 end
 
 @testitem "Temperature" setup = [Case, ChainRulesStuff] begin
+    case = Case.D2
     for case in (Case.D2, Case.D3)
         (; u, temp, setup) = case
 
-        @test_broken 1 == 2 # Just to identify location for broken rrule test
-        # test_rrule_named(bodyforce, u, T(0) ⊢ NoTangent(), setup ⊢ NoTangent())
-
-        test_rrule_named(gravity, temp, setup ⊢ NoTangent())
+        test_rrule_named(
+            applygravity,
+            temp,
+            setup ⊢ NoTangent(),
+            Case.D2.params.gdir ⊢ NoTangent(),
+            Case.D2.params.gravity ⊢ NoTangent(),
+        )
 
         @test_broken 1 == 2 # Just to identify location for broken rrule test
         # test_rrule_named(dissipation, u, setup ⊢ NoTangent())
