@@ -16,18 +16,14 @@
 using GLMakie #!md
 using IncompressibleNavierStokes
 
-# Choose backend
-backend = IncompressibleNavierStokes.CPU()
-## using CUDA; backend = CUDABackend()
-
 # Boundary conditions
-boundary_conditions = (
+boundary_conditions = (; u = (
     ## x left, x right
     (DirichletBC(), DirichletBC()),
 
     ## y bottom, y top
     (DirichletBC(), DirichletBC((1.0, 0.0))),
-)
+))
 
 # We create a two-dimensional domain with a box of size `[1, 1]`. The grid is
 # created as a Cartesian product between two vectors. We add a refinement near
@@ -38,7 +34,7 @@ plotgrid(ax, ax)
 
 # We can now build the setup and assemble operators.
 # A 3D setup is built if we also provide a vector of z-coordinates.
-setup = Setup(; x = (ax, ax), boundary_conditions, visc = 1e-3, backend);
+setup = Setup(; x = (ax, ax), boundary_conditions);
 
 # Initial conditions
 u = velocityfield(setup, (dim, x, y) -> zero(x));
@@ -57,7 +53,13 @@ processors = (
     log = timelogger(; nupdate = 1000),
 );
 
-state, outputs = solve_unsteady(; setup, start = (; u), tlims = (0.0, 10.0), processors);
+state, outputs = solve_unsteady(;
+    setup,
+    start = (; u),
+    tlims = (0.0, 10.0),
+    params = (; viscosity = 1e-3),
+    processors,
+);
 
 # ## Post-process
 #
@@ -67,7 +69,7 @@ state, outputs = solve_unsteady(; setup, start = (; u), tlims = (0.0, 10.0), pro
 # visualization in [ParaView](https://www.paraview.org/). This is particularly
 # useful for inspecting results from 3D simulations.
 
-filenmae = joinpath(@__DIR__, "output", "solution")
+filename = joinpath(@__DIR__, "output", "solution")
 ## save_vtk(state; setup, filename)
 
 # Plot velocity

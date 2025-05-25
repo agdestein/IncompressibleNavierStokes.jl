@@ -8,20 +8,17 @@ end
 using IncompressibleNavierStokes
 using CairoMakie
 using WGLMakie
-## using WGLMakie
 using WriteVTK
-
-backend = IncompressibleNavierStokes.CPU()
-## using CUDA, CUDSS; backend = CUDABackend()
+## using CUDA, CUDSS;
 
 function sectionplot(state; setup, component, qrange = (0, 500))
     state isa Observable || (state = Observable(state))
-    (; xu) = setup.grid
+    (; xu) = setup
     xplot = xu[component][1][2:(end-1)] |> Array
     yplot = xu[component][2] |> Array
     zplot = xu[component][3][2:(end-1)] |> Array
-    imid = div(setup.grid.N[1], 2)
-    kmid = div(setup.grid.N[3], 2)
+    imid = div(setup.N[1], 2)
+    kmid = div(setup.N[3], 2)
     q = scalarfield(setup)
     u_xy = map(state) do (; u)
         ## View u at y = 0.5
@@ -85,15 +82,16 @@ nx, ny, nz = 48, 24, 24
 ## nx, ny, nz = 512, 512, 256
 
 setup = Setup(;
-    boundary_conditions = (
-        (PeriodicBC(), PeriodicBC()),
-        (DirichletBC(), DirichletBC()),
-        (PeriodicBC(), PeriodicBC()),
+    boundary_conditions = (;
+        u = (
+            (PeriodicBC(), PeriodicBC()),
+            (DirichletBC(), DirichletBC()),
+            (PeriodicBC(), PeriodicBC()),
+        )
     ),
     ## x = (range(xlims..., nx + 1), tanh_grid(ylims..., ny + 1), range(zlims..., nz + 1)),
     x = (range(xlims..., nx + 1), range(ylims..., ny + 1), range(zlims..., nz + 1)),
-    visc = T(1 / 180),
-    backend,
+    ## backend = CUDABackend(),
 );
 
 # AMGX solver (for NVidia GPUs)
@@ -120,8 +118,8 @@ psolver = psolver_transform(setup);
 # This is the right-hand side force in the momentum equation
 # By default, it is just `navierstokes!`. Here we add a
 # pre-computed body force.
-function force!(f, state, t, params, setup, cache)
-    navierstokes!(f, state, t, nothing, setup, nothing)
+function force!(f, state, t; setup, cache, viscosity)
+    navierstokes!(f, state, t; setup, cache, viscosity)
     @. f.u[:, :, :, 1] += 1 # Force is 1 in direction x
     ## wale_closure!(f.u, u, params, cache.wale, setup)
 end
@@ -136,6 +134,11 @@ function IncompressibleNavierStokes.get_cache(::typeof(force!), setup)
     ## (; bodyforce, wale)
     nothing
 end
+
+# We also need to tell how to propos the time step sizes for our given force.
+# We just fall back to the default one.
+IncompressibleNavierStokes.propose_timestep(::typeof(force!), state, setup, params) =
+    IncompressibleNavierStokes.propose_timestep(navierstokes!, state, setup, params)
 
 Re_tau = 180 |> T
 Re_m = 2800 |> T
@@ -158,17 +161,21 @@ u = let
     velocityfield(setup, U; psolver)
 end;
 
-plotgrid(setup.grid.x[1] |> Array, setup.grid.x[2] |> Array)
-plotgrid(setup.grid.x[1] |> Array, setup.grid.x[3] |> Array)
-plotgrid(setup.grid.x[2] |> Array, setup.grid.x[3] |> Array)
+plotgrid(setup.x[1] |> Array, setup.x[2] |> Array)
+plotgrid(setup.x[1] |> Array, setup.x[3] |> Array)
+plotgrid(setup.x[2] |> Array, setup.x[3] |> Array)
 
+viscosity = T(1 / 180)
 sol, outputs = solve_unsteady(;
     setup,
     force!,
-    ## params = 0.6, # WALE constant
     psolver,
-    start = (; sol.u),
+    start = (; u),
     tlims = (0 |> T, 1 |> T),
+    params = (;
+        viscosity,
+        ## wale = T(0.6), # WALE constant
+    ),
     processors = (;
         logger = timelogger(; nupdate = 1),
         ## plotter = realtimeplotter(; plot = sectionplot, setup, component = 1, nupdate = 5),
@@ -182,17 +189,17 @@ sol, outputs = solve_unsteady(;
     ),
 );
 
-xp1 = setup.grid.xp[1][2:(end-1)] |> Array
-xp2 = setup.grid.xp[2][2:(end-1)] |> Array
-xp3 = setup.grid.xp[3][2:(end-1)] |> Array
-vtk_grid("output/channel_visc=$(setup.visc)", xp1, xp2, xp3) do vtk
+xp1 = setup.xp[1][2:(end-1)] |> Array
+xp2 = setup.xp[2][2:(end-1)] |> Array
+xp3 = setup.xp[3][2:(end-1)] |> Array
+vtk_grid("output/channel_visc=$(viscosity)", xp1, xp2, xp3) do vtk
     q = qcrit(sol.u, setup);
     # uin = sol.u[2:(end-1), 2:(end-1), 2:(end-1), :]
     unorm = kinetic_energy(sol.u, setup)
     @. unorm = sqrt(2 * unorm)
     # vtk["u"] = (eachslice(uin; dims = 4)...,) .|> Array
-    vtk["u"] = view(unorm, setup.grid.Ip) |> Array
-    vtk["q"] = view(q, setup.grid.Ip) |> Array
+    vtk["u"] = view(unorm, setup.Ip) |> Array
+    vtk["q"] = view(q, setup.Ip) |> Array
 end
 
 # The AMGX solver needs to be closed after use.

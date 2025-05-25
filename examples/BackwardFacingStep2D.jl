@@ -12,8 +12,9 @@
 # `CairoMakie` makes high-quality static vector-graphics plots.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
+## using CUDA
 
 # Output directory
 outdir = joinpath(@__DIR__, "output", "BackwardFacingStep2D")
@@ -21,23 +22,16 @@ outdir = joinpath(@__DIR__, "output", "BackwardFacingStep2D")
 # Floating point type
 T = Float64
 
-# Backend
-backend = IncompressibleNavierStokes.CPU()
-## using CUDA; backend = CUDABackend()
-
-# Reynolds number
-visc = T(1 / 3_000)
-
 # Boundary conditions: steady inflow on the top half
 U(dim, x, y, t) =
     dim == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x) + randn(typeof(x)) / 1_000
-boundary_conditions = (
+boundary_conditions = (; u = (
     ## x left, x right
     (DirichletBC(U), PressureBC()),
 
     ## y rear, y front
     (DirichletBC(), DirichletBC()),
-)
+))
 
 # A 2D grid is a Cartesian product of two vectors. Here we refine the grid near
 # the walls.
@@ -45,7 +39,11 @@ x = LinRange(T(0), T(10), 301), cosine_grid(-T(0.5), T(0.5), 51)
 plotgrid(x...; figure = (; size = (600, 150)))
 
 # Build setup and assemble operators
-setup = Setup(; x, visc, boundary_conditions, backend);
+setup = Setup(;
+    x,
+    boundary_conditions,
+    ## backend = CUDABackend(),
+);
 
 # Initial conditions (extend inflow)
 u = velocityfield(setup, (dim, x, y) -> U(dim, x, y, zero(x)));
@@ -55,6 +53,7 @@ state, outputs = solve_unsteady(;
     setup,
     start = (; u),
     tlims = (T(0), T(7)),
+    params = (; viscosity = T(1 / 3_000)),
     processors = (
         rtp = realtimeplotter(;
             setup,

@@ -12,7 +12,7 @@
 # `CairoMakie` makes high-quality static vector-graphics plots.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
 
 # ## Setup
@@ -24,18 +24,11 @@ plotgrid(x...; figure = (; size = (600, 300)))
 
 # Boundary conditions
 inflow(dim, x, y, t) = sinpi(sinpi(t / 6) / 6 + (dim == 1) / 2)
-boundary_conditions = ((DirichletBC(inflow), PressureBC()), (PressureBC(), PressureBC()))
+boundary_conditions =
+    (; u = ((DirichletBC(inflow), PressureBC()), (PressureBC(), PressureBC())))
 
 # Build setup
-setup = Setup(; x, visc = 1e-2, boundary_conditions);
-
-# This is the right-hand side force in the momentum equation
-# By default, it is just `navierstokes!`. Here we add a
-# pre-computed body force.
-function force!(f, state, t, params, setup, cache)
-    navierstokes!(f, state, t, nothing, setup, nothing)
-    f.u .+= cache.bodyforce
-end
+setup = Setup(; x, boundary_conditions);
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
 xc, yc = 2.0, 0.0 # Disk center
@@ -46,26 +39,39 @@ c = C / (D * δ)   # Normalize
 inside(x, y) = abs(x - xc) ≤ δ / 2 && abs(y - yc) ≤ D / 2
 f(dim, x, y) = -c * (dim == 1) * inside(x, y)
 
-# Tell IncompressibleNavierStokes how to prepare the cache for `force!`.
-# The cache is created before time stepping begins.
-function IncompressibleNavierStokes.get_cache(::typeof(force!), setup)
-    bodyforce = velocityfield(setup, f; doproject = false)
-    (; bodyforce)
+# This is the right-hand side force in the momentum equation
+# By default, it is just `navierstokes!`. Here we add a
+# pre-computed body force.
+function force!(f, state, t; setup, cache, viscosity)
+    navierstokes!(f, state, t; setup, cache, viscosity)
+    f.u .+= cache.bodyforce
 end
 
+# Tell IncompressibleNavierStokes how to prepare the cache for `force!`.
+# The cache is created before time stepping begins.
+IncompressibleNavierStokes.get_cache(::typeof(force!), setup) =
+    (; bodyforce = velocityfield(setup, f; doproject = false))
+
+# We also need to tell how to propos the time step sizes for our given force.
+# We just fall back to the default one.
+IncompressibleNavierStokes.propose_timestep(::typeof(force!), state, setup, params) =
+    IncompressibleNavierStokes.propose_timestep(navierstokes!, state, setup, params)
+
 # Initial conditions (extend inflow)
-u = velocityfield(setup, (dim, x, y) -> inflow(dim, x, y, 0.0))
+u = velocityfield(setup, (dim, x, y) -> inflow(dim, x, y, 0.0));
 
 # ## Solve unsteady problem
 
+# @profview
 state, outputs = solve_unsteady(;
     setup,
     force!,
+    params = (; viscosity = 0.01),
     start = (; u),
-    tlims = (0.0, 12.0),
+    tlims = (0.0, 12e0),
     processors = (
         rtp = realtimeplotter(; setup, size = (600, 300), nupdate = 5),
-        log = timelogger(; nupdate = 50),
+        log = timelogger(; nupdate = 100),
     ),
 );
 

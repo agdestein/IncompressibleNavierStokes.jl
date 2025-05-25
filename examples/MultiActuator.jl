@@ -5,7 +5,7 @@
 # force on a thin rectangle.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
 using Random
 
@@ -13,15 +13,19 @@ using Random
 outdir = joinpath(@__DIR__, "output", "MultiActuator")
 
 # Boundary conditions
-boundary_conditions = (
-    ## x left, x right
-    (
-        DirichletBC((dim, x, y, t) -> sinpi(sinpi(t / 6) / 6 + one(x) / 2 * (dim == 1))),
-        PressureBC(),
-    ),
+boundary_conditions = (;
+    u = (
+        ## x left, x right
+        (
+            DirichletBC(
+                (dim, x, y, t) -> sinpi(sinpi(t / 6) / 6 + one(x) / 2 * (dim == 1)),
+            ),
+            PressureBC(),
+        ),
 
-    ## y rear, y front
-    (PressureBC(), PressureBC()),
+        ## y rear, y front
+        (PressureBC(), PressureBC()),
+    )
 )
 
 # Actuator body force: A thrust coefficient `Cₜ` distributed over a thin rectangle
@@ -59,13 +63,18 @@ function IncompressibleNavierStokes.get_cache(::typeof(force!), setup)
     (; bodyforce)
 end
 
+# We also need to tell how to propos the time step sizes for our given force.
+# We just fall back to the default one.
+IncompressibleNavierStokes.propose_timestep(::typeof(force!), state, setup, params) =
+    IncompressibleNavierStokes.propose_timestep(navierstokes!, state, setup, params)
+
 # A 2D grid is a Cartesian product of two vectors
 n = 50
 x = LinRange(0.0, 10.0, 5n + 1), LinRange(-2.0, 2.0, 2n + 1)
 plotgrid(x...; figure = (; size = (600, 300)))
 
 # Build setup and assemble operators
-setup = Setup(; x, visc = 5e-3, boundary_conditions);
+setup = Setup(; x, boundary_conditions);
 
 # Initial conditions (extend inflow)
 u = velocityfield(setup, (dim, x, y) -> (dim == 1) * one(x));
@@ -87,6 +96,7 @@ state, outputs = solve_unsteady(;
     force!,
     start = (; u),
     tlims = (0.0, 12.0),
+    params = (; viscosity = 5e-3),
     processors = (
         rtp = realtimeplotter(;
             setup,

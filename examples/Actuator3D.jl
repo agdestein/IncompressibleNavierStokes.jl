@@ -11,8 +11,9 @@
 # `CairoMakie` makes high-quality static vector-graphics plots.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
+## using CUDA
 
 # Output directory
 outdir = joinpath(@__DIR__, "output", "Actuator3D")
@@ -20,41 +21,38 @@ outdir = joinpath(@__DIR__, "output", "Actuator3D")
 # Floating point type
 T = Float64
 
-# Backend
-backend = IncompressibleNavierStokes.CPU()
-## using CUDA; backend = CUDABackend()
-
 # Reynolds number
-visc = T(1e-2)
 
 # A 3D grid is a Cartesian product of three vectors
 x = LinRange(0.0, 6.0, 31), LinRange(-2.0, 2.0, 41), LinRange(-2.0, 2.0, 41)
 plotgrid(x...)
 
 # Boundary conditions: Unsteady BC requires time derivatives
-boundary_conditions = (
-    ## x left, x right
-    (
-        DirichletBC(
-            (dim, x, y, z, t) ->
-                dim == 1 ? cos(π / 6 * sin(π / 6 * t)) :
-                dim == 2 ? sin(π / 6 * sin(π / 6 * t)) : zero(x),
+boundary_conditions = (;
+    u = (
+        ## x left, x right
+        (
+            DirichletBC(
+                (dim, x, y, z, t) ->
+                    dim == 1 ? cos(π / 6 * sin(π / 6 * t)) :
+                    dim == 2 ? sin(π / 6 * sin(π / 6 * t)) : zero(x),
+            ),
+            PressureBC(),
         ),
-        PressureBC(),
-    ),
 
-    ## y rear, y front
-    (PressureBC(), PressureBC()),
+        ## y rear, y front
+        (PressureBC(), PressureBC()),
 
-    ## z rear, z front
-    (PressureBC(), PressureBC()),
+        ## z rear, z front
+        (PressureBC(), PressureBC()),
+    )
 )
 
 # This is the right-hand side force in the momentum equation
 # By default, it is just `navierstokes!`. Here we add a
 # pre-computed body force.
-function force!(f, state, t, params, setup, cache)
-    navierstokes!(f, state, t, nothing, setup, nothing)
+function force!(f, state, t; setup, cache, viscosity)
+    navierstokes!(f, state, t; setup, cache, viscosity)
     f.u .+= cache.bodyforce
 end
 
@@ -73,11 +71,23 @@ function IncompressibleNavierStokes.get_cache(::typeof(force!), setup)
     (; bodyforce)
 end
 
+# We also need to tell how to propos the time step sizes for our given force.
+# We just fall back to the default one.
+IncompressibleNavierStokes.propose_timestep(::typeof(force!), state, setup, params) =
+    IncompressibleNavierStokes.propose_timestep(navierstokes!, state, setup, params)
+
 # Build setup and assemble operators
-setup = Setup(; x, visc, boundary_conditions, backend);
+setup = Setup(;
+    x,
+    boundary_conditions,
+    ## backend = CUDABackend(),
+);
+
+# This will factorize the Laplace matrix
+psolver = default_psolver(setup);
 
 # Initial conditions (extend inflow)
-u = velocityfield(setup, (dim, x, y, z) -> dim == 1 ? one(x) : zero(x));
+u = velocityfield(setup, (dim, x, y, z) -> dim == 1 ? one(x) : zero(x); psolver);
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(;
@@ -85,6 +95,8 @@ state, outputs = solve_unsteady(;
     force!,
     start = (; u),
     tlims = (T(0), T(3)),
+    params = (; viscosity = T(1e-2),),
+    psolver,
     processors = (
         rtp = realtimeplotter(;
             setup,

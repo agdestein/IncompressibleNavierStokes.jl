@@ -1,14 +1,7 @@
 # # Taylor-Green vortex - 3D
 #
 # In this example we consider the Taylor-Green vortex.
-
-#md using CairoMakie
-using GLMakie #!md
-using IncompressibleNavierStokes
-
-# Floating point precision
-T = Float64
-
+#
 # ## Backend
 #
 # Running in 3D is heavier than in 2D.
@@ -16,14 +9,29 @@ T = Float64
 # starting Julia with `julia -t auto`, or
 # add `"julia.NumThreads": "auto"` to the settings in VSCode.
 
-backend = IncompressibleNavierStokes.CPU()
-## using CUDA; backend = CUDABackend()
+#md using CairoMakie
+using GLMakie #!md
+using IncompressibleNavierStokes
+## using CUDA
+
+# Floating point precision
+T = Float64
 
 # ## Setup
 
-n = 32
+n = 64
 r = range(T(0), T(1), n + 1)
-setup = Setup(; x = (r, r, r), visc = T(1e-3), backend);
+setup = Setup(;
+    x = (r, r, r),
+    boundary_conditions = (;
+        u = (
+            (PeriodicBC(), PeriodicBC()),
+            (PeriodicBC(), PeriodicBC()),
+            (PeriodicBC(), PeriodicBC()),
+        ),
+    ),
+    backend = CUDABackend(),
+);
 psolver = psolver_spectral(setup);
 
 # Initial conditions
@@ -43,6 +51,7 @@ state, outputs = solve_unsteady(;
     setup,
     start = (; u),
     tlims = (T(0), T(1.0)),
+    params = (; viscosity = T(1e-3)),
     processors = (
         ## rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 10),
         ehist = realtimeplotter(;

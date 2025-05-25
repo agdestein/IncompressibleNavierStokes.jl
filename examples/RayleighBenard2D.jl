@@ -3,23 +3,15 @@
 # A hot and a cold plate generate a convection cell in a box.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
-
-# Output directory for saving results
-outdir = joinpath(@__DIR__, "output", "RayleighBenard2D")
-
-# Hardware
-backend = IncompressibleNavierStokes.CPU()
-
 ## using CUDA, CUDSS
-## backend = CUDABackend()
 
 # Define observer function to track Nusselt numbers
 # on top and bottom plates.
 function nusseltplot(state; setup)
     state isa Observable || (state = Observable(state))
-    (; Δ, Δu) = setup.grid
+    (; Δ, Δu) = setup
     Δy1 = Δu[2][1:1] |> sum
     Δy2 = Δu[2][(end-1):(end-1)] |> sum
 
@@ -49,7 +41,7 @@ end
 # Define observer function to track average temperature.
 function averagetemp(state; setup)
     state isa Observable || (state = Observable(state))
-    (; xp, Δ, Ip) = setup.grid
+    (; xp, Δ, Ip) = setup
     ix = Ip.indices[1]
     Ty = lift(state) do (; temp)
         Ty = sum(temp[ix, :] .* Δ[1][ix]; dims = 1) ./ sum(Δ[1][ix])
@@ -66,73 +58,65 @@ function averagetemp(state; setup)
     fig
 end
 
-# Instabilities should depend on the floating point precision.
-# Try both `Float32` and `Float64`.
-T = Float32
-
-# Temperature equation setup.
-temperature = temperature_equation(;
-    Pr = T(0.71),
-    Ra = T(1e7),
-    Ge = T(1.0),
-    dodissipation = true,
-    boundary_conditions = (
-        (SymmetricBC(), SymmetricBC()),
-        (DirichletBC(T(1)), DirichletBC(T(0))),
-    ),
-    gdir = 2,
-    nondim_type = 1,
-)
-
-# Grid
-n = 100
-x = tanh_grid(T(0), T(2), 2n, T(1.2)), tanh_grid(T(0), T(1), n, T(1.2))
-plotgrid(x...)
-
 # Setup
+n = 128
 setup = Setup(;
-    x,
-    boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
-    temperature,
-    backend,
+    ## x = (tanh_grid(0.0, 2.0, 2n, 1.2), tanh_grid(0.0, 1.0, n, 1.2)),
+    x = (range(0.0, 2.0, 2n + 1), range(0.0, 1.0, n + 1)),
+    boundary_conditions = (;
+        u = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
+        temp = ((SymmetricBC(), SymmetricBC()), (DirichletBC(T(1)), DirichletBC(T(0)))),
+    ),
+    ## backend = CUDABackend()
 );
+
+# Since the grid is uniform, we can use an FFT/DCT type of solver.
+psolver = psolver_transform(setup)
 
 # Initial conditions
 start = (;
-    u = velocityfield(setup, (dim, x, y) -> zero(x)),
+    u = velocityfield(setup, (dim, x, y) -> zero(x); psolver),
     temp = temperaturefield(setup, (x, y) -> one(y) / 2 + max(sinpi(20 * x) / 100, 0)),
 );
 
-# Processors
-GLMakie.closeall() #!md
-processors = (;
-    rtp = realtimeplotter(;
-        screen = GLMakie.Screen(), #!md
-        setup,
-        fieldname = :temperature,
-        colorrange = (T(0), T(1)),
-        size = (600, 350),
-        colormap = :seaborn_icefire_gradient,
-        nupdate = 20,
-    ),
-    nusselt = realtimeplotter(;
-        screen = GLMakie.Screen(), #!md
-        setup,
-        plot = nusseltplot,
-        nupdate = 20,
-    ),
-    avg = realtimeplotter(;
-        screen = GLMakie.Screen(), #!md
-        setup,
-        plot = averagetemp,
-        nupdate = 50,
-    ),
-    log = timelogger(; nupdate = 1000),
-)
-
 # Solve equation
-state, outputs =
-    solve_unsteady(; setup, start, tlims = (T(0), T(20)), Δt = T(1e-2), processors);
+state, outputs = solve_unsteady(;
+    force! = boussinesq!, # Solve the Boussinesq equations
+    setup,
+    start,
+    tlims = (0.0, 20.0),
+    psolver,
+    params = (;
+        viscosity = 2.5e-4,
+        gravity = 1.0,
+        gdir = 2,
+        conductivity = 2.5e-4,
+        dodissipation = true,
+    ),
+    processors = (;
+        rtp = realtimeplotter(;
+            setup,
+            fieldname = :temperature,
+            colorrange = (T(0), T(1)),
+            size = (600, 350),
+            colormap = :seaborn_icefire_gradient,
+            nupdate = 20,
+        ),
+        nusselt = realtimeplotter(;
+            setup,
+            plot = nusseltplot,
+            displayfig = false,
+            nupdate = 20,
+        ),
+        avg = realtimeplotter(;
+            setup,
+            plot = averagetemp,
+            displayfig = false,
+            nupdate = 50,
+        ),
+        log = timelogger(; nupdate = 1000),
+    ),
+);
 
 #md # ```@raw html
 #md # <video src="/RayleighBenard2D.mp4" controls="controls" autoplay="autoplay" loop="loop"></video>

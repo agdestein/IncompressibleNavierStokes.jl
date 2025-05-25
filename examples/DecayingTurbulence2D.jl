@@ -15,13 +15,20 @@ if false                       #src
 end                            #src
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
+## using CUDA
 
 # Setup
 n = 256
 ax = LinRange(0.0, 1.0, n + 1)
-setup = Setup(; x = (ax, ax), visc = 2.5e-4)
+setup = Setup(;
+    x = (ax, ax),
+    boundary_conditions = (;
+        u = ((PeriodicBC(), PeriodicBC()), (PeriodicBC(), PeriodicBC())),
+    ),
+    backend = CUDABackend(),
+)
 u = random_field(setup, 0.0);
 
 # Solve unsteady problem
@@ -29,6 +36,7 @@ state, outputs = solve_unsteady(;
     setup,
     start = (; u),
     tlims = (0.0, 1.0),
+    params = (; viscosity = 2.5e-4),
     processors = (
         rtp = realtimeplotter(; setup, nupdate = 10),
         ehist = realtimeplotter(;

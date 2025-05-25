@@ -12,21 +12,15 @@
 # `CairoMakie` makes high-quality static vector-graphics plots.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
+## using CUDA
 
 # Output directory
 outdir = joinpath(@__DIR__, "output", "BackwardFacingStep3D")
 
 # Floating point type
 T = Float32
-
-# Backend
-backend = IncompressibleNavierStokes.CPU()
-## using CUDA; backend = CUDABackend()
-
-# Reynolds number
-visc = T(1e-3)
 
 # A 3D grid is a Cartesian product of three vectors
 x = LinRange(T(0), T(10), 129),
@@ -36,19 +30,25 @@ plotgrid(x...)
 
 # Boundary conditions: steady inflow on the top half
 U(dim, x, y, z, t) = (dim == 1) * (y ≥ 0) * 24y * (one(x) / 2 - y)
-boundary_conditions = (
-    ## x left, x right
-    (DirichletBC(U), PressureBC()),
+boundary_conditions = (;
+    u = (
+        ## x left, x right
+        (DirichletBC(U), PressureBC()),
 
-    ## y rear, y front
-    (DirichletBC(), DirichletBC()),
+        ## y rear, y front
+        (DirichletBC(), DirichletBC()),
 
-    ## z bottom, z top
-    (PeriodicBC(), PeriodicBC()),
+        ## z bottom, z top
+        (PeriodicBC(), PeriodicBC()),
+    )
 )
 
 # Build setup and assemble operators
-setup = Setup(; x, visc, boundary_conditions, backend);
+setup = Setup(;
+    x,
+    boundary_conditions,
+    ## backend = CUDABackend(),
+);
 
 # This will factorize the Laplace matrix
 @time psolver = default_psolver(setup)
@@ -62,6 +62,7 @@ state, outputs = solve_unsteady(;
     start = (; u),
     tlims = (T(0), T(7)),
     psolver,
+    params = (; viscosity = T(1e-3)),
     processors = (
         rtp = realtimeplotter(;
             setup,
