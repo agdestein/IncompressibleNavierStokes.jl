@@ -70,7 +70,7 @@ function solve_unsteady(;
     setup,
     tlims,
     start,
-    force! = haskey(start, :temp) ? boussinesq! : navierstokes!,
+    force! = navierstokes!,
     docopy = true,
     method = LMWray3(; T = eltype(start.u)),
     psolver = default_psolver(setup),

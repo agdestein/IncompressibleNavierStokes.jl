@@ -83,38 +83,40 @@ end
 # The `..._add!` variants add the result to the output array
 # instead of overwriting it.
 
-@kernel function contract_vector!(O::CartesianIndex{2}, f, p, args)
+# Note: the `... where {F}` seems to be necessary to specialize on `f` for some reason.
+
+@kernel function contract_vector!(O::CartesianIndex{2}, f::F, p, args) where {F}
     I = @index(Global, Cartesian)
     I = I + O
     p[I] = f(args..., 1, I) + f(args..., 2, I)
 end
 
-@kernel function contract_vector!(O::CartesianIndex{3}, f, p, args)
+@kernel function contract_vector!(O::CartesianIndex{3}, f::F, p, args) where {F}
     I = @index(Global, Cartesian)
     I = I + O
     p[I] = f(args..., 1, I) + f(args..., 2, I) + f(args..., 3, I)
 end
 
-@kernel function contract_vector_add!(O::CartesianIndex{2}, f, p, args)
+@kernel function contract_vector_add!(O::CartesianIndex{2}, f::F, p, args) where {F}
     I = @index(Global, Cartesian)
     I = I + O
     p[I] += f(args..., 1, I) + f(args..., 2, I)
 end
 
-@kernel function contract_vector_add!(O::CartesianIndex{3}, f, p, args)
+@kernel function contract_vector_add!(O::CartesianIndex{3}, f::F, p, args) where {F}
     I = @index(Global, Cartesian)
     I = I + O
     p[I] += f(args..., 1, I) + f(args..., 2, I) + f(args..., 3, I)
 end
 
-@kernel function contract_tensor!(O::CartesianIndex{2}, f, u, args)
+@kernel function contract_tensor!(O::CartesianIndex{2}, f::F, u, args) where {F}
     I = @index(Global, Cartesian)
     I = I + O
     u[I, 1] = f(args..., 1, 1, I) + f(args..., 1, 2, I)
     u[I, 2] = f(args..., 2, 1, I) + f(args..., 2, 2, I)
 end
 
-@kernel function contract_tensor!(O::CartesianIndex{3}, f, u, args)
+@kernel function contract_tensor!(O::CartesianIndex{3}, f::F, u, args) where {F}
     I = @index(Global, Cartesian)
     I = I + O
     u[I, 1] = f(args..., 1, 1, I) + f(args..., 1, 2, I) + f(args..., 1, 3, I)
@@ -122,14 +124,14 @@ end
     u[I, 3] = f(args..., 3, 1, I) + f(args..., 3, 2, I) + f(args..., 3, 3, I)
 end
 
-@kernel function contract_tensor_add!(O::CartesianIndex{2}, f, u, args)
+@kernel function contract_tensor_add!(O::CartesianIndex{2}, f::F, u, args) where {F}
     I = @index(Global, Cartesian)
     I = I + O
     u[I, 1] += f(args..., 1, 1, I) + f(args..., 1, 2, I)
     u[I, 2] += f(args..., 2, 1, I) + f(args..., 2, 2, I)
 end
 
-@kernel function contract_tensor_add!(O::CartesianIndex{3}, f, u, args)
+@kernel function contract_tensor_add!(O::CartesianIndex{3}, f::F, u, args) where {F}
     I = @index(Global, Cartesian)
     I = I + O
     u[I, 1] += f(args..., 1, 1, I) + f(args..., 1, 2, I) + f(args..., 1, 3, I)
@@ -137,14 +139,14 @@ end
     u[I, 3] += f(args..., 3, 1, I) + f(args..., 3, 2, I) + f(args..., 3, 3, I)
 end
 
-@kernel function expand_scalar!(O::CartesianIndex{2}, f, u, args)
+@kernel function expand_scalar!(O::CartesianIndex{2}, f::F, u, args) where {F}
     I = @index(Global, Cartesian)
     I = I + O
     u[I, 1] = f(args..., 1, I)
     u[I, 2] = f(args..., 2, I)
 end
 
-@kernel function expand_scalar!(O::CartesianIndex{3}, f, u, args)
+@kernel function expand_scalar!(O::CartesianIndex{3}, f::F, u, args) where {F}
     I = @index(Global, Cartesian)
     I = I + O
     u[I, 1] = f(args..., 1, I)
@@ -152,14 +154,14 @@ end
     u[I, 3] = f(args..., 3, I)
 end
 
-@kernel function expand_scalar_add!(O::CartesianIndex{2}, f, u, args)
+@kernel function expand_scalar_add!(O::CartesianIndex{2}, f::F, u, args) where {F}
     I = @index(Global, Cartesian)
     I = I + O
     u[I, 1] += f(args..., 1, I)
     u[I, 2] += f(args..., 2, I)
 end
 
-@kernel function expand_scalar_add!(O::CartesianIndex{3}, f, u, args)
+@kernel function expand_scalar_add!(O::CartesianIndex{3}, f::F, u, args) where {F}
     I = @index(Global, Cartesian)
     I = I + O
     u[I, 1] += f(args..., 1, I)
@@ -236,10 +238,11 @@ ChainRulesCore.rrule(::typeof(divergence), u, setup) = (
 
 "Compute divergence of velocity field (in-place version)."
 function divergence!(div, u, setup)
-    @inline divfunc(setup, u, i, I) = δ(setup, u, i, i, I)
     apply!(contract_vector!, setup, divfunc, div, (setup, u))
     div
 end
+
+@inline divfunc(setup, u, i, I) = δ(setup, u, i, i, I)
 
 function divergence_adjoint!(u, φ, setup)
     (; N) = setup
@@ -300,10 +303,11 @@ end
 
 "Subtract pressure gradient (in-place version)."
 function applypressure!(u, p, setup)
-    @inline mδ(setup, p, i, I) = -δ(setup, p, i, I)
-    apply!(expand_scalar_add!, setup, mδ, u, (setup, p))
+    apply!(expand_scalar_add!, setup, minusδ, u, (setup, p))
     u
 end
+
+@inline minusδ(setup, p, i, I) = -δ(setup, p, i, I)
 
 "Compute Laplacian of pressure field (differentiable version)."
 laplacian(p, setup) = laplacian!(scalarfield(setup), p, setup)
@@ -639,8 +643,6 @@ Compute diffusive term (in-place version).
 Add the result to `F`.
 """
 function convectiondiffusion!(f, u, setup, viscosity)
-    @inline convdiffstress(setup, u, viscosity, i, j, I) =
-        convstress(setup, u, i, j, I) + diffstress(setup, u, viscosity, i, j, I)
     apply!(
         contract_tensor_add!,
         setup,
@@ -650,6 +652,9 @@ function convectiondiffusion!(f, u, setup, viscosity)
     )
     f
 end
+
+@inline convdiffstress(setup, u, viscosity, i, j, I) =
+    convstress(setup, u, i, j, I) + diffstress(setup, u, viscosity, i, j, I)
 
 """
 Compute convection-diffusion term for the temperature equation.
