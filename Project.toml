@@ -32,8 +32,8 @@ Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 [extensions]
 AMGXExt = ["AMGX"]
 CUDSSExt = ["CUDSS"]
-MakieExt = ["Makie"]
 EnzymeCoreExt = ["EnzymeCore"]
+MakieExt = ["Makie"]
 
 [compat]
 AMGX = "0.2"
@@ -48,7 +48,7 @@ FFTW = "1"
 IterativeSolvers = "0.9"
 KernelAbstractions = "0.9"
 LinearAlgebra = "1"
-Makie = "0.21, 0.22"
+Makie = "0.21, 0.22, 0.23"
 NNlib = "0.9"
 Observables = "0.5"
 PrecompileTools = "1"
