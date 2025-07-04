@@ -393,16 +393,16 @@ ChainRulesCore.rrule(::typeof(convection), u, setup) = (
 )
 
 @inline function interpolate_reverse(setup, u, i, j, I)
-    (; A_coll, A_stag) = setup
+    (; A_stag) = setup
     if i == j
-        A_coll[j][2][I[j]-1] * u[left(I, j), i] + A_coll[j][1][I[j]] * u[I, i]
+        u[left(I, j), i] / 2 + u[I, i] / 2
     else
         A_stag[j][2][I[j]] * u[I, i] + A_stag[j][1][I[j]+1] * u[right(I, j), i]
     end
 end
 
 @inline function convstress(setup, u, i, j, I)
-    (; A_coll, A_stag) = setup
+    (; A_stag) = setup
     # Half for u[i], (reverse!) interpolation for u[j]
     # Note:
     #     In matrix version, uses
@@ -411,7 +411,6 @@ end
     if i == j
         uij = (u[left(I, j), i] + u[I, i]) / 2
         uji = uij
-        # uji = A_coll[i][2][I[i]-1] * u[left(I, i), j] + A_coll[i][1][I[i]] * u[I, j]
     else
         uij = (u[I, i] + u[right(I, j), i]) / 2
         uji = A_stag[i][2][I[i]] * u[I, j] + A_stag[i][1][I[i]+1] * u[right(I, i), j]
@@ -457,7 +456,7 @@ end
     h = eltype(u)(1 / 2)
     e = Offset(setup.dimension())
     dims = getval(valdims)
-    (; inside, Δ, Δu, A_coll, A_stag) = setup
+    (; inside, Δ, Δu, A_stag) = setup
     z = u |> eltype |> zero
     tol = 2 * eps(eltype(u))
     J = @index(Global, Cartesian)
@@ -466,8 +465,8 @@ end
         @unroll for i in dims
             @unroll for j in dims
                 Δuij = i == j ? Δu[j] : Δ[j]
-                AAji1 = i == j ? A_coll[i][1] : A_stag[i][1]
-                AAji2 = i == j ? A_coll[i][2] : A_stag[i][2]
+                AAji1 = i == j ? h : A_stag[i][1]
+                AAji2 = i == j ? h : A_stag[i][2]
 
                 # 1
                 I = J

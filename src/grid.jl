@@ -185,15 +185,6 @@ function Setup(; x, boundary_conditions, backend = CPU(), workgroupsize = 64)
         Δx
     end
 
-    # Interpolate from face to center
-    A_coll = ntuple(D) do j
-        Aj1 = fill(T(1 / 2), N[j])
-        # Aj1[1] = 1
-        Aj2 = fill(T(1 / 2), N[j])
-        # Aj2[end] = 1
-        Aj1, Aj2
-    end
-
     # Interpolate from center to face
     A_stag = ntuple(D) do j
         Aj2 = [(x[j][n] - xp[j][n-1]) / Δu[j][n-1] for n = 2:N[j]]
@@ -218,7 +209,7 @@ function Setup(; x, boundary_conditions, backend = CPU(), workgroupsize = 64)
         inside,
 
         # Put arrays on GPU, if requested
-        adapt(backend, (; x, xu, xp, Δ, Δu, A_coll, A_stag))...,
+        adapt(backend, (; x, xu, xp, Δ, Δu, A_stag))...,
         boundary_conditions,
         backend,
         workgroupsize,
