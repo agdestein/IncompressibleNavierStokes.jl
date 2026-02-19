@@ -25,7 +25,7 @@ tensorfield(::Dimension{3}, setup) = (;
 )
 
 "Symmetric tensor field, stored as a named tuple `σ.ij`."
-symmetric_tensorfield(setup) = symmetric_tensorfield(setup.grid.dimension, setup)
+symmetric_tensorfield(setup) = symmetric_tensorfield(setup.dimension, setup)
 symmetric_tensorfield(::Dimension{2}, setup) =
     (; xx = scalarfield(setup), xy = scalarfield(setup), yy = scalarfield(setup))
 symmetric_tensorfield(::Dimension{3}, setup) = (;

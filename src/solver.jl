@@ -107,6 +107,11 @@ function solve_unsteady(;
             # Make sure not to step past `t_end`
             Δt = min(Δt, tend - stepper.t)
 
+            if Δt < 1e-10 || Δt > 100 || isnan(Δt)
+                @warn "Proposed time step $Δt is out of bounds. Stopping simulation."
+                break
+            end
+
             # Perform a single time step with the time integration method
             stepper = timestep!(method, force!, stepper, Δt; params, ode_cache, force_cache)
 

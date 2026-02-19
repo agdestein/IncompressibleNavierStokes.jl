@@ -6,9 +6,11 @@
 #### See `examples/ChannelFlow3D.jl` for an example.
 #### provide model coefficients in `params` as a parameter to solve_unsteady() !!!
 
-strain!(S, u, setup) = apply!(strain_kernel!, setup, S, u, setup.grid)
+getgrid(setup) = (; setup.Δ, setup.Δu)
 
-@kernel function strain_kernel!(S, u, grid, O::CartesianIndex{2})
+strain!(S, u, setup) = apply!(strain_kernel2!, setup, S, u, getgrid(setup))
+
+@kernel function strain_kernel2!(O::CartesianIndex{2}, S, u, grid)
     I = @index(Global, Cartesian)
     I = I + O
     (; Δ, Δu) = grid
@@ -24,7 +26,7 @@ strain!(S, u, setup) = apply!(strain_kernel!, setup, S, u, setup.grid)
     S.xy[I] = (∂u∂y + ∂v∂x) / 2
 end
 
-@kernel function strain_kernel!(S, u, grid, O::CartesianIndex{3})
+@kernel function strain_kernel2!(O::CartesianIndex{3}, S, u, grid)
     I = @index(Global, Cartesian)
     I = I + O
     (; Δ, Δu) = grid
@@ -49,9 +51,9 @@ end
     S.yz[I] = (∂v∂z + ∂w∂y) / 2
 end
 
-gradient_tensor!(G, u, setup) = apply!(gradient_tensor_kernel!, setup, G, u, setup.grid)
+gradient_tensor!(G, u, setup) = apply!(gradient_tensor_kernel3!, setup, G, u, getgrid(setup))
 
-@kernel function gradient_tensor_kernel!(G, u, grid, O::CartesianIndex{3})
+@kernel function gradient_tensor_kernel3!(O::CartesianIndex{3}, G, u, grid)
     I = @index(Global, Cartesian)
     I = I + O
     (; Δ, Δu) = grid
@@ -82,9 +84,9 @@ function symmetrize!(G)
 end
 
 smagorinsky_viscosity!(visc, S, θ, setup) =
-    apply!(smagorinsky_viscosity_kernel!, setup, visc, S, θ, setup.grid)
+    apply!(smagorinsky_viscosity_kernel2!, setup, visc, S, θ, getgrid(setup))
 
-@kernel function smagorinsky_viscosity_kernel!(visc, S, θ, grid, O::CartesianIndex{2})
+@kernel function smagorinsky_viscosity_kernel2!(O::CartesianIndex{2}, visc, S, θ, grid)
     I = @index(Global, Cartesian)
     I = I + O
     (; Δ) = grid
@@ -96,7 +98,7 @@ smagorinsky_viscosity!(visc, S, θ, setup) =
     visc[I] = θ^2 * d^2 * sqrt(2 * (Sxx2 + Syy2) + 4 * Sxy2)
 end
 
-@kernel function smagorinsky_viscosity_kernel!(visc, S, θ, grid, O::CartesianIndex{3})
+@kernel function smagorinsky_viscosity_kernel2!(O::CartesianIndex{3}, visc, S, θ, grid)
     I = @index(Global, Cartesian)
     I = I + O
     (; Δ) = grid
@@ -111,9 +113,9 @@ end
     visc[I] = θ^2 * d^2 * sqrt(2 * (Sxx2 + Syy2 + Szz2) + 4 * (Sxy2 + Sxz2 + Syz2))
 end
 
-apply_eddy_viscosity!(σ, visc, setup) = apply!(apply_eddy_viscosity_kernel!, setup, σ, visc)
+apply_eddy_viscosity!(σ, visc, setup) = apply!(apply_eddy_viscosity_kernel2!, setup, σ, visc)
 
-@kernel function apply_eddy_viscosity_kernel!(σ, visc, O::CartesianIndex{2})
+@kernel function apply_eddy_viscosity_kernel2!(O::CartesianIndex{2}, σ, visc)
     I = @index(Global, Cartesian)
     I = I + O
     ex, ey = unit_cartesian_indices(2)
@@ -124,7 +126,7 @@ apply_eddy_viscosity!(σ, visc, setup) = apply!(apply_eddy_viscosity_kernel!, se
     σ.xy[I] = -2 * visc_xy * σ.xy[I]
 end
 
-@kernel function apply_eddy_viscosity_kernel!(σ, visc, O::CartesianIndex{3})
+@kernel function apply_eddy_viscosity_kernel2!(O::CartesianIndex{3}, σ, visc)
     I = @index(Global, Cartesian)
     I = I + O
     ex, ey, ez = unit_cartesian_indices(3)
@@ -140,9 +142,9 @@ end
     σ.yz[I] = -2 * visc_yz * σ.yz[I]
 end
 
-divoftensor!(c, σ, setup) = apply!(divoftensor_kernel!, setup, c, σ, setup.grid)
+divoftensor!(c, σ, setup) = apply!(divoftensor_kernel2!, setup, c, σ, getgrid(setup))
 
-@kernel function divoftensor_kernel!(f, σ, grid, O::CartesianIndex{2})
+@kernel function divoftensor_kernel2!(O::CartesianIndex{2}, f, σ, grid)
     I = @index(Global, Cartesian)
     I = I + O
     (; Δ, Δu) = grid
@@ -157,7 +159,7 @@ divoftensor!(c, σ, setup) = apply!(divoftensor_kernel!, setup, c, σ, setup.gri
     f[I, 2] -= ∂σyx∂x + ∂σyy∂y
 end
 
-@kernel function divoftensor_kernel!(f, σ, grid, O::CartesianIndex{3})
+@kernel function divoftensor_kernel2!(O::CartesianIndex{3}, f, σ, grid)
     I = @index(Global, Cartesian)
     I = I + O
     (; Δ, Δu) = grid
@@ -180,7 +182,7 @@ end
 
 "Apply WAL viscosity."
 wale_viscosity!(visc, G_split, θ, setup) =
-    apply!(wale_viscosity_kernel!, setup, visc, G_split, θ, setup.grid)
+    apply!(wale_viscosity_kernel2!, setup, visc, G_split, θ, getgrid(setup))
 
 """
 Collocate staggered tensor to the center of the cell.
@@ -211,7 +213,7 @@ function collocate_tensor(σ, I::CartesianIndex{3})
     )
 end
 
-@kernel function wale_viscosity_kernel!(visc, G_split, θ, grid, O::CartesianIndex{3})
+@kernel function wale_viscosity_kernel2!(O::CartesianIndex{3}, visc, G_split, θ, grid)
     I = @index(Global, Cartesian)
     I = I + O
     (; Δ) = grid
@@ -228,9 +230,9 @@ end
 end
 
 function zero_out_wall!(p, setup)
-    d = setup.grid.dimension()
+    d = setup.dimension()
     for i = 1:d
-        bc = setup.boundary_conditions[i]
+        bc = setup.boundary_conditions.u[i]
         bc[1] isa DirichletBC && fill!(view(p, ntuple(j -> i == j ? 1 : (:), d)...), 0)
         bc[2] isa DirichletBC &&
             fill!(view(p, ntuple(j -> i == j ? size(p, i) : (:), d)...), 0)
@@ -265,13 +267,13 @@ end
 function smagorinsky_closure!(f, u, θ, cache, setup)
     (; visc, S) = cache
     fill!(visc, 0)
-    for s in S
+    for S in S
         fill!(S, 0)
     end
     strain!(S, u, setup)
-    for s in S
-        zero_out_wall!(s, setup)
-        apply_bc_p!(s, zero(eltype(u)), setup)
+    for S in S
+        zero_out_wall!(S, setup)
+        apply_bc_p!(S, zero(eltype(u)), setup)
     end
     smagorinsky_viscosity!(visc, S, θ, setup)
     zero_out_wall!(visc, setup)

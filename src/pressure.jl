@@ -80,6 +80,7 @@ psolver_direct(::Any, setup) = error("""
     ```julia
     using Pkg
     Pkg.add("CUDSS")
+    using CUDSS
     ```
 
     This will trigger an extension that works for `CuArrays`.
@@ -261,7 +262,7 @@ end
 """
 Create FFT/DCT Poisson solver from setup.
 This solver does FFT in periodic directions, and DCT in Dirichlet directions.
-Only works on uniform grids, with periodic/dirichtlet BC.
+Only works on uniform grids, with periodic/dirichlet BC.
 If there is only Periodic BC, then [`psolver_spectral`](@ref) is faster,
 and uses half as much memory.
 
@@ -291,14 +292,14 @@ function psolver_transform(setup)
         n = Np[i]
         k = 0:(n-1)
         h = Δx[i]
-        ahat = similar(x[1], n)
+        _ahat = similar(x[1], n)
         Ω = prod(Δx)
         if perdirs[i]
-            @. ahat = -4 * Ω * sinpi(k / n)^2 / h^2
+            @. _ahat = -4 * Ω * sinpi(k / n)^2 / h^2
         else
-            @. ahat = 2 * Ω * (cospi(k / n) - 1) / h^2
+            @. _ahat = 2 * Ω * (cospi(k / n) - 1) / h^2
         end
-        ahat
+        _ahat
     end
 
     # Placeholders for intermediate results
@@ -322,7 +323,7 @@ function psolver_transform(setup)
                 manual_dct!(p, i, stuff)
             end
         end
-        copyto!(phat, p)
+        copyto!(phat, p) # phat is complex, p is real
         for i in eachindex(ahat)
             if perdirs[i]
                 fft!(phat, i)
@@ -355,7 +356,7 @@ function psolver_transform(setup)
             else
             end
         end
-        @. p = real(phat)
+        @. p = real(phat) # phat is now real in value, but complex in type
         for i in ahat |> eachindex |> reverse
             if perdirs[i]
             else

@@ -83,7 +83,9 @@ end
 # The `..._add!` variants add the result to the output array
 # instead of overwriting it.
 
-# Note: the `... where {F}` seems to be necessary to specialize on `f` for some reason.
+# Note: In Julia, by default, `function wrap(f) ... end` does not specialize on `f`
+# for `f::Function`, unless we do `f::F ... where {F}`. For kernels, we want
+# `f` to be inlined and thus need to make the specialization explicit.
 
 @kernel function contract_vector!(O::CartesianIndex{2}, f::F, p, args) where {F}
     I = @index(Global, Cartesian)

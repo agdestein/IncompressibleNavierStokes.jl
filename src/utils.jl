@@ -8,7 +8,7 @@ function assert_uniform_periodic(setup, string)
         string * " requires periodic boundary conditions.",
     )
     @assert(
-        all(Δ -> all(≈(Δ[1]), Δ), Array.(Δ)),
+        all(Δ -> all(≈(Δ[1]; atol = 10 * eps(eltype(Δ))), Δ), Array.(Δ)),
         string * " requires uniform grid spacing.",
     )
     @assert(all(iseven, N), string * " requires even number of volumes.",)
