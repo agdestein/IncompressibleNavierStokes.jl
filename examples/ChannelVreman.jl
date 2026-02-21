@@ -1,5 +1,8 @@
 # Turbulent channel flow
 
+println("Loading packages")
+flush(stdout) # Prevent logging delay on Snellius
+
 using AcceleratedKernels: AcceleratedKernels as AK
 using Adapt
 using CairoMakie
@@ -15,6 +18,9 @@ using WriteVTK
 
 "Get turbulent channel flow problem setup."
 function getproblem()
+
+    println("Creating problem setup")
+    flush(stdout) # Prevent logging delay on Snellius
 
     # Domain
     d = 1.0
@@ -147,6 +153,10 @@ end
 
 "Solve channel flow and average statistics over time."
 function solve_statistics(setup, psolver, ustart, force!, params)
+
+    println("Solve DNS and compute statistics.")
+    flush(stdout) # Prevent logging delay on Snellius
+
     tstart = 0.0
     twarm = 10.0
     taverage = 20.0
@@ -209,6 +219,7 @@ function solve_statistics(setup, psolver, ustart, force!, params)
         stepper = NS.timestep!(method, force!, stepper, Δt; params, ode_cache, force_cache)
 
         stepper.n % nupdate == 0 && println("Warm-up, t = $(round(stepper.t, sigdigits = 5)) / $twarm")
+        flush(stdout) # Prevent logging delay on Snellius
     end
 
     # Register statistics
@@ -234,6 +245,7 @@ function solve_statistics(setup, psolver, ustart, force!, params)
 
         compute_statistics!(statistics, stepper.state.u, setup)
         stepper.n % nupdate == 0 && println("Computing statistics, t = $(round(stepper.t - twarm, sigdigits = 5)) / $taverage")
+        flush(stdout) # Prevent logging delay on Snellius
     end
 
     # Extract half profile for comparison with Vreman and Kuerten (2014)
@@ -306,6 +318,8 @@ if true # PROGRAM_FILE == @__FILE__
     psolver = nothing
     (; setup, psolver, ustart, viscosity) = getproblem()
     statistics = solve_statistics(setup, psolver, ustart, force!, (; viscosity))
+    println("Saving statistics")
+    flush(stdout) # Prevent logging delay on Snellius
     save_object(statfile(), statistics)
     statistics = load_object(statfile())
     statistics_ref = vremanstatistics()
