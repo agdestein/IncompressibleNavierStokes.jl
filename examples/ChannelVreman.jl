@@ -2,17 +2,16 @@
 
 using AcceleratedKernels: AcceleratedKernels as AK
 using Adapt
-# using AMGX
-using IncompressibleNavierStokes
-using IncompressibleNavierStokes: IncompressibleNavierStokes as NS
 using CairoMakie
-using DelimitedFiles
-using LaTeXStrings
-using WGLMakie
-using WriteVTK
 using CUDA
 using CUDSS
+using DelimitedFiles
+using IncompressibleNavierStokes
+using IncompressibleNavierStokes: IncompressibleNavierStokes as NS
 using JLD2
+using LaTeXStrings
+# using WGLMakie
+using WriteVTK
 
 "Get turbulent channel flow problem setup."
 function getproblem()
@@ -30,13 +29,17 @@ function getproblem()
 
     # Grid
     # n = 16
-    n = 32
+    # n = 32
     # n = 64
     # n = 128
-    # n = 256
+    n = 256
     # n = 512
+
     nx, ny, nz = 2 * n, n, n
-    nx, ny, nz = 2 * n, 2 * n, n
+    # nx, ny, nz = 2 * n, 2 * n, n
+    # nx, ny, nz = n, 2 * n, n
+    
+    stretch = 1.4
 
     setup = Setup(;
         boundary_conditions = (;
@@ -48,7 +51,7 @@ function getproblem()
         ),
         x = (
             range(xlims..., nx + 1),
-            tanh_grid(ylims..., ny + 1),
+            tanh_grid(ylims..., ny + 1, stretch),
             range(zlims..., nz + 1),
         ),
         # x = (
@@ -146,7 +149,7 @@ end
 function solve_statistics(setup, psolver, ustart, force!, params)
     tstart = 0.0
     twarm = 10.0
-    taverage = 10.0
+    taverage = 20.0
 
     # Quantities from Vreman and Kuerten (2014):
     # y+ (=180*yc; yc is the (cell-central) y-location of u, w and p)
@@ -179,8 +182,9 @@ function solve_statistics(setup, psolver, ustart, force!, params)
     method = NS.LMWray3(; T = Float64)
     Δt = nothing
     Δt_min = nothing
-    cfl = 0.9
+    cfl = 0.45
     n_adapt_Δt = 1
+    nupdate = 10
     ode_cache = NS.get_cache(method, state, setup)
     force_cache = NS.get_cache(force!, setup)
     stepper = create_stepper(method; setup, psolver, state, t = tstart)
@@ -204,7 +208,7 @@ function solve_statistics(setup, psolver, ustart, force!, params)
         # Perform a single time step with the time integration method
         stepper = NS.timestep!(method, force!, stepper, Δt; params, ode_cache, force_cache)
 
-        println("Warm-up, t = $(round(stepper.t, sigdigits = 3)) / $twarm")
+        stepper.n % nupdate == 0 && println("Warm-up, t = $(round(stepper.t, sigdigits = 5)) / $twarm")
     end
 
     # Register statistics
@@ -229,7 +233,7 @@ function solve_statistics(setup, psolver, ustart, force!, params)
         nstep += 1
 
         compute_statistics!(statistics, stepper.state.u, setup)
-        println("Computing statistics, t = $(round(stepper.t - twarm, sigdigits = 3)) / $taverage")
+        stepper.n % nupdate == 0 && println("Computing statistics, t = $(round(stepper.t - twarm, sigdigits = 5)) / $taverage")
     end
 
     # Extract half profile for comparison with Vreman and Kuerten (2014)
@@ -293,10 +297,17 @@ function plot_wall_profile(stats)
     return
 end
 
+function statfile()
+    path = joinpath(@__DIR__, "output", "ChannelVreman") |> mkpath
+    return "$path/statistics.jld2"
+end
+
 if true # PROGRAM_FILE == @__FILE__
     psolver = nothing
     (; setup, psolver, ustart, viscosity) = getproblem()
     statistics = solve_statistics(setup, psolver, ustart, force!, (; viscosity))
+    save_object(statfile(), statistics)
+    statistics = load_object(statfile())
     statistics_ref = vremanstatistics()
     plot_wall_profile([statistics_ref, statistics])
 end
