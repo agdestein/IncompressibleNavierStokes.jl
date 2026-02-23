@@ -1,7 +1,7 @@
 # Turbulent channel flow
 
-println("Loading packages")
-flush(stdout) # Prevent logging delay on Snellius
+@info "Loading packages"
+flush(stderr) # Prevent logging delay on Snellius
 
 using Adapt
 using CairoMakie
@@ -9,7 +9,7 @@ using CUDA
 using CUDSS
 using DelimitedFiles
 using JLD2
-using ProgressLogging
+using ProgressMeter
 using Printf
 using LaTeXStrings
 # using WGLMakie
@@ -50,13 +50,13 @@ function getproblem()
     # stretch = 3.0 # Stretched wall-normal grid
 
     # Simulation time
-    twarmup = 1.0 * H / u_tau # Warm-up time
-    taverage = 2.0 * H / u_tau # Averaging time for statistics
+    twarmup = 5.0 * H / u_tau # Warm-up time
+    taverage = 10.0 * H / u_tau # Averaging time for statistics
     tsimulation = twarmup + taverage
 
     # Time stepping
     cfl = 0.8 # Time step control
-    nsave = 20 # Number of times to save statistics
+    nsave = 1000 # Number of times to save statistics
 
     return (;
         H, Lx, Ly, Lz,
@@ -71,8 +71,8 @@ end
 function getsetup(problem)
     isuniform = isnothing(problem.stretch)
 
-    println("Creating problem setup")
-    flush(stdout) # Prevent logging delay on Snellius
+    @info "Creating problem setup"
+    # flush(stderr) # Prevent logging delay on Snellius
 
     ax_x = range(0.0, problem.Lx, problem.nx + 1)
     ax_y = if isuniform
@@ -274,10 +274,13 @@ function solve(setup, psolver, ustart, force!, params, problem)
     stepper = NS.create_stepper(method; setup, psolver, state, t = tstart)
 
     # Step through all the save points
-    @progress for isave in 0:nsave
+    everythingfine = true
+    prog = Progress(nsave + 1)
+    for isave in 0:nsave
         # Step until next save point.
         # For the step, the while loop is never entered.
         tstop = isave * Δt_save
+        isubstep = 0
         while stepper.t < prevfloat(tstop)
             # Change timestep based on operators
             Δt = cfl * NS.propose_timestep(force!, stepper.state, setup, params)
@@ -287,11 +290,13 @@ function solve(setup, psolver, ustart, force!, params, problem)
 
             if Δt < 1.0e-10 || Δt > 100 || isnan(Δt)
                 @warn "Proposed time step $Δt is out of bounds. Stopping simulation."
+                everythingfine = false
                 break
             end
 
             # Perform a single time step with the time integration method
             stepper = NS.timestep!(method, force!, stepper, Δt; params, ode_cache, force_cache)
+            isubstep += 1
         end
 
         # Compute statistics, copy to CPU, and store in list
@@ -299,8 +304,19 @@ function solve(setup, psolver, ustart, force!, params, problem)
         push!(statistics, map(Array, buffers))
         push!(times, stepper.t)
 
-        flush(stdout) # Prevent logging delay on Snellius
-        flush(stderr) # Prevent logging delay on Snellius
+        next!(
+            prog; showvalues = [
+                ("Δt", cfl * NS.propose_timestep(force!, stepper.state, setup, params)),
+                ("substeps", isubstep),
+                ("time", stepper.t),
+            ]
+        )
+
+        # Progress bar shows up late on SLURM
+        haskey(ENV, "SLURM_JOB_ID") && @info "Iteration $isave / $nsave, time = $(stepper.t), Δt = $Δt"
+        flush(stderr)
+
+        everythingfine || break
     end
 
     # Extract half profile for comparison with Vreman and Kuerten (2014)
@@ -313,11 +329,13 @@ function solve(setup, psolver, ustart, force!, params, problem)
 end
 
 function process_statseries(statistics, setup, problem)
-    (; tsimulation, twarmup, nsave) = problem
+    (; u_tau, viscosity, tsimulation, twarmup, nsave, ny) = problem
+    (; xp, xu) = setup
+
     # Exclude zero
-    nhalf = div(problem.ny, 2)
-    ycenter = setup.xp[2][2:(nhalf + 1)] * problem.u_tau / problem.viscosity
-    yedge = setup.xu[2][2][2:(nhalf + 1)] * problem.u_tau / problem.viscosity
+    nhalf = div(ny, 2)
+    ycenter = xp[2][2:(nhalf + 1)] * u_tau / viscosity |> Array
+    yedge = xu[2][2][2:(nhalf + 1)] * u_tau / viscosity |> Array
 
     # Filter out warm-up stats
     istart = findfirst(i -> tsimulation / nsave * i > twarmup, 0:(length(statistics) - 1))
@@ -325,29 +343,47 @@ function process_statseries(statistics, setup, problem)
 
     # Compute time averages
     averages = map(keys(statistics[1])) do key
-        # Average over time
         statavg = sum(stats_use) do s
-            getindex(s, key)[2:(nhalf + 1)]
+            if key == :vp_vp || key == :vbar
+                (getindex(s, key)[2:(nhalf + 1)] .+ getindex(s, key)[(end - 2):-1:(nhalf + 1)]) ./ 2
+            else
+                (getindex(s, key)[2:(nhalf + 1)] .+ getindex(s, key)[(end - 1):-1:(nhalf + 2)]) ./ 2
+            end
         end / length(stats_use)
         key => statavg
-    end
+    end |> NamedTuple
 
-    return (; averages..., ycenter, yedge, label = "IncompressibleNavierStokes.jl")
+    return (;
+        averages...,
+        ycenter, yedge,
+        urms = sqrt.(averages.up_up),
+        vrms = sqrt.(averages.vp_vp),
+        wrms = sqrt.(averages.wp_wp),
+        label = "IncompressibleNavierStokes.jl",
+    )
 end
 
 "Extract data from Vreman."
 function vremanstatistics()
-    file = "Chan180_FD2_all/Chan180_FD2_basic_u.txt"
-    fullfile = joinpath(@__DIR__, file)
-    data = readdlm(fullfile, comments = true, comment_char = '%')
+    ufile = joinpath(@__DIR__, "Chan180_FD2_all/Chan180_FD2_basic_u.txt")
+    vfile = joinpath(@__DIR__, "Chan180_FD2_all/Chan180_FD2_basic_v.txt")
+    wfile = joinpath(@__DIR__, "Chan180_FD2_all/Chan180_FD2_basic_w.txt")
+    udata = readdlm(ufile, comments = true, comment_char = '%')
+    vdata = readdlm(vfile, comments = true, comment_char = '%')
+    wdata = readdlm(wfile, comments = true, comment_char = '%')
     statistics = (;
-        ycenter = data[:, 1],
-        ubar = data[:, 2],
-        urms = data[:, 3],
-        up_up_up = data[:, 4],
-        up_up_up_up = data[:, 5],
-        up_up_vp = data[:, 6],
-        up_wp = data[:, 7],
+        ycenter = udata[:, 1],
+        yedge = vdata[:, 1],
+        ubar = udata[:, 2],
+        vbar = vdata[:, 2],
+        wbar = wdata[:, 2],
+        urms = udata[:, 3],
+        vrms = vdata[:, 3],
+        wrms = wdata[:, 3],
+        up_up_up = udata[:, 4],
+        up_up_up_up = udata[:, 5],
+        up_up_vp = udata[:, 6],
+        up_wp = udata[:, 7],
         label = "Vreman and Kuerten (2014)",
     )
     return statistics
@@ -357,7 +393,11 @@ end
 function plot_wall_profile(stats)
     for (key, title) in [
             :ubar => L"\langle u \rangle",
+            :vbar => L"\langle v \rangle",
+            :wbar => L"\langle w \rangle",
             :urms => L"\sqrt{\langle u'u' \rangle}",
+            :vrms => L"\sqrt{\langle v'v' \rangle}",
+            :wrms => L"\sqrt{\langle w'w' \rangle}",
             :up_up_up => L"\langle u'u'u' \rangle",
             :up_up_up_up => L"\langle u'u'u'u' \rangle",
             :up_up_vp => L"\langle u'u'v' \rangle",
@@ -371,7 +411,8 @@ function plot_wall_profile(stats)
             xscale = log10,
         )
         for s in stats
-            scatter!(s.ycenter, s[key]; s.label)
+            yuse = key == :vrms || key == :vbar ? s.yedge : s.ycenter
+            scatter!(yuse, s[key]; s.label)
         end
         Legend(fig[1, 2], ax)
         # path = "~/Projects/Thesis/Figures/Software" |> expanduser
@@ -380,6 +421,30 @@ function plot_wall_profile(stats)
         save(plotfile, fig; backend = CairoMakie, size = (700, 400))
     end
     return
+end
+
+"Make wall profile RMS comparison plot."
+function plot_wall_profile_rms_comparison(stats)
+    fig = Figure()
+    ax = Axis(
+        fig[1, 1];
+        xlabel = L"y^{+}",
+        ylabel = "RMS",
+        title = "Comparison of velocity fluctuations",
+        xscale = log10,
+    )
+    markers = [:circle, :rect, :diamond, :cross, :xcross, :utriangle, :dtriangle]
+    for (i, s) in enumerate(stats)
+        scatter!(s.ycenter, s.urms; color = Cycled(i), marker = markers[1], label = L"%$(s.label), $\sqrt{\langle u'u' \rangle}$")
+        scatter!(s.yedge, s.vrms; color = Cycled(i), marker = markers[2], label = L"%$(s.label), $\sqrt{\langle v'v' \rangle}$")
+        scatter!(s.ycenter, s.wrms; color = Cycled(i), marker = markers[3], label = L"%$(s.label), $\sqrt{\langle w'w' \rangle}$")
+    end
+    Legend(fig[1, 2], ax)
+    # path = "~/Projects/Thesis/Figures/Software" |> expanduser
+    plotfile = joinpath(getoutdir(problem), "wallplot-comparision-rms.pdf")
+    println("Saving plot to: $plotfile")
+    save(plotfile, fig; backend = CairoMakie, size = (700, 400))
+    return fig
 end
 
 function getoutdir(problem)
@@ -403,14 +468,13 @@ function show_problem(setup, problem)
     return nothing
 end
 
-setup.Iu
-
 # Main script
 problem = getproblem()
 (; setup, psolver, ustart) = getsetup(problem)
 show_problem(setup, problem)
 statistics = solve(setup, psolver, ustart, force!, (; problem.viscosity), problem)
-# statistics = load_object(statfile)
+statistics = load_object(joinpath(getoutdir(problem), "statistics.jld2"))
 statistics_ins = process_statseries(statistics, setup, problem)
 statistics_ref = vremanstatistics()
-plot_wall_profile([statistics_ref, statistics])
+plot_wall_profile([statistics_ref, statistics_ins])
+plot_wall_profile_rms_comparison([statistics_ref, statistics_ins])

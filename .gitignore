@@ -16,3 +16,4 @@
 *.DS_Store
 *.out
 *.jld2
+examples/Chan180_FD2_all/
