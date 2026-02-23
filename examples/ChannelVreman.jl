@@ -50,12 +50,12 @@ function getproblem()
     # stretch = 3.0 # Stretched wall-normal grid
 
     # Simulation time
-    twarmup = 5.0 * H / u_tau # Warm-up time
+    twarmup = 15.0 * H / u_tau # Warm-up time
     taverage = 10.0 * H / u_tau # Averaging time for statistics
     tsimulation = twarmup + taverage
 
     # Time stepping
-    cfl = 0.8 # Time step control
+    cfl = 0.9 # Time step control
     nsave = 1000 # Number of times to save statistics
 
     return (;
@@ -312,9 +312,9 @@ function solve(setup, psolver, ustart, force!, params, problem)
             ]
         )
 
-        # Progress bar shows up late on SLURM
-        haskey(ENV, "SLURM_JOB_ID") && @info "Iteration $isave / $nsave, time = $(stepper.t), Δt = $Δt"
-        flush(stderr)
+        # # Progress bar shows up late on SLURM
+        # haskey(ENV, "SLURM_JOB_ID") && @info "Iteration $isave / $nsave, time = $(stepper.t), Δt = $Δt"
+        flush(stderr) # Prevent logging delay on Snellius
 
         everythingfine || break
     end
@@ -344,8 +344,14 @@ function process_statseries(statistics, setup, problem)
     # Compute time averages
     averages = map(keys(statistics[1])) do key
         statavg = sum(stats_use) do s
-            if key == :vp_vp || key == :vbar
+            # Average over the two symmetric values also
+            if key == :vp_vp 
                 (getindex(s, key)[2:(nhalf + 1)] .+ getindex(s, key)[(end - 2):-1:(nhalf + 1)]) ./ 2
+            elseif key == :vbar
+                # This quantity is signed, but the sign we want is "velocity away from the wall".
+                # Therefore flip the sign in the average.
+                # Note: This quantity is probably zero anyway.
+                (getindex(s, key)[2:(nhalf + 1)] .- getindex(s, key)[(end - 2):-1:(nhalf + 1)]) ./ 2
             else
                 (getindex(s, key)[2:(nhalf + 1)] .+ getindex(s, key)[(end - 1):-1:(nhalf + 2)]) ./ 2
             end
@@ -448,8 +454,8 @@ function plot_wall_profile_rms_comparison(stats)
 end
 
 function getoutdir(problem)
-    (; nx, ny, nz, stretch) = problem
-    name = "ChannelVreman-nx=$nx-ny=$ny-nz=$nz-stretch=$stretch"
+    (; nx, ny, nz, stretch, twarmup, taverage) = problem
+    name = "ChannelVreman-nx=$nx-ny=$ny-nz=$nz-stretch=$stretch-twarmup=$twarmup-taverage=$taverage"
     return joinpath(@__DIR__, "output", name) |> mkpath
 end
 
