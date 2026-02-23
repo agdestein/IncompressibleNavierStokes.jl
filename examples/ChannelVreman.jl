@@ -12,8 +12,6 @@ using JLD2
 using ProgressMeter
 using Printf
 using LaTeXStrings
-# using WGLMakie
-using WriteVTK
 
 import AcceleratedKernels as AK
 import IncompressibleNavierStokes as NS
@@ -311,9 +309,7 @@ function solve(setup, psolver, ustart, force!, params, problem)
                 ("time", stepper.t),
             ]
         )
-
-        # # Progress bar shows up late on SLURM
-        # haskey(ENV, "SLURM_JOB_ID") && @info "Iteration $isave / $nsave, time = $(stepper.t), Δt = $Δt"
+        flush(stdout) # Prevent logging delay on Snellius
         flush(stderr) # Prevent logging delay on Snellius
 
         everythingfine || break
@@ -468,9 +464,10 @@ function show_problem(setup, problem)
     Δxp_min = minimum(Δ[1][2:(end - 1)]) * u_tau / viscosity
     Δyp_min = minimum(Δ[2][2:(end - 1)]) * u_tau / viscosity
     Δzp_min = minimum(Δ[3][2:(end - 1)]) * u_tau / viscosity
-    @printf("Max grid spacing in wall units: Δx+ = %.4g, Δy+ = %.4g, Δz+ = %.4g\n", Δxp_max, Δyp_max, Δzp_max)
-    @printf("Min grid spacing in wall units: Δx+ = %.4g, Δy+ = %.4g, Δz+ = %.4g\n", Δxp_min, Δyp_min, Δzp_min)
-    println("Grid size: nx = $nx, ny = $ny, nz = $nz")
+    @info @sprintf("Max grid spacing in wall units: Δx+ = %.4g, Δy+ = %.4g, Δz+ = %.4g\n", Δxp_max, Δyp_max, Δzp_max)
+    @info @sprintf("Min grid spacing in wall units: Δx+ = %.4g, Δy+ = %.4g, Δz+ = %.4g\n", Δxp_min, Δyp_min, Δzp_min)
+    @info "Grid size: nx = $nx, ny = $ny, nz = $nz"
+    flush(stderr) # Prevent logging delay on Snellius
     return nothing
 end
 
@@ -484,3 +481,7 @@ statistics_ins = process_statseries(statistics, setup, problem)
 statistics_ref = vremanstatistics()
 plot_wall_profile([statistics_ref, statistics_ins])
 plot_wall_profile_rms_comparison([statistics_ref, statistics_ins])
+
+@info "Done."
+flush(stdout) # Prevent logging delay on Snellius
+flush(stderr) # Prevent logging delay on Snellius
