@@ -34,19 +34,19 @@ function getproblem()
     # Grid
     # n = 16
     # n = 32
-    n = 64
+    # n = 64
     # n = 128
-    # n = 256
+    n = 256
     # n = 512
 
     # Number of volumes in each dimension
-    nx, ny, nz = 2 * n, n, n
+    # nx, ny, nz = 2 * n, n, n
     # nx, ny, nz = 2 * n, 2 * n, n
     # nx, ny, nz = 2 * n, 4 * n, n
-    # nx, ny, nz = 2 * n, 8 * n, n
+    nx, ny, nz = 2 * n, 4 * n, n
 
-    # stretch = nothing # Uniform wall-normal grid
-    stretch = 1.4 # Stretched wall-normal grid
+    stretch = nothing # Uniform wall-normal grid
+    # stretch = 1.4 # Stretched wall-normal grid
     # stretch = 2.0 # Stretched wall-normal grid
 
     # Simulation time
@@ -378,6 +378,9 @@ function process_statseries(statistics, setup, problem, label)
     )
 end
 
+# 0.17888816473E+03 -
+# 0.17666476018E+03
+
 "Extract data from Vreman."
 function vremanstatistics()
     ufile = joinpath(@__DIR__, "Chan180_FD2_all/Chan180_FD2_basic_u.txt")
@@ -411,17 +414,19 @@ function plot_wall_profile(stats, problem, doscatter)
             :ubar => L"\langle u \rangle",
             :vbar => L"\langle v \rangle",
             :wbar => L"\langle w \rangle",
-            :urms => L"\sqrt{\langle u'u' \rangle}",
-            :vrms => L"\sqrt{\langle v'v' \rangle}",
-            :wrms => L"\sqrt{\langle w'w' \rangle}",
-            :up_up_up => L"\langle u'u'u' \rangle",
-            :up_up_up_up => L"\langle u'u'u'u' \rangle",
-            :up_up_vp => L"\langle u'u'v' \rangle",
-            :up_wp => L"\langle u'w' \rangle",
+            :urms => L"\sqrt{\langle u' u' \rangle}",
+            :vrms => L"\sqrt{\langle v' v' \rangle}",
+            :wrms => L"\sqrt{\langle w' w' \rangle}",
+            :up_up_up => L"\langle u' u' u' \rangle",
+            :up_up_up_up => L"\langle u' u' u' u' \rangle",
+            :up_up_vp => L"\langle u' u' v' \rangle",
+            :up_wp => L"\langle u' w' \rangle",
         ]
         fig = Figure()
         ax = Axis(
             fig[1, 1];
+            xlabelsize = 24,
+            ylabelsize = 24,
             xlabel = L"y^{+}",
             ylabel = title,
             xscale = log10,
@@ -456,20 +461,21 @@ function plot_wall_profile_rms_comparison(stats, doscatter)
         fig[1, 1];
         xlabel = L"y^{+}",
         ylabel = "RMS",
+        xlabelsize = 24,
         title = "Comparison of velocity fluctuations",
         xscale = log10,
     )
     for (i, s) in enumerate(stats)
         if doscatter
             markers = [:circle, :rect, :diamond, :cross, :xcross, :utriangle, :dtriangle]
-            scatter!(s.ycenter, s.urms; color = Cycled(i), marker = markers[1], label = L"%$(s.label), $\sqrt{\langle u'u' \rangle}$")
-            scatter!(s.yedge, s.vrms; color = Cycled(i), marker = markers[2], label = L"%$(s.label), $\sqrt{\langle v'v' \rangle}$")
-            scatter!(s.ycenter, s.wrms; color = Cycled(i), marker = markers[3], label = L"%$(s.label), $\sqrt{\langle w'w' \rangle}$")
+            scatter!(s.ycenter, s.urms; color = Cycled(i), marker = markers[1], label = L"%$(s.label), $\sqrt{\langle u' u' \rangle}$")
+            scatter!(s.yedge, s.vrms; color = Cycled(i), marker = markers[2], label = L"%$(s.label), $\sqrt{\langle v' v' \rangle}$")
+            scatter!(s.ycenter, s.wrms; color = Cycled(i), marker = markers[3], label = L"%$(s.label), $\sqrt{\langle w' w' \rangle}$")
         else
             linestyles = [:solid, :dash, :dot, :dashdot]
-            lines!(s.ycenter, s.urms; color = Cycled(i), linestyle = linestyles[1], label = L"%$(s.label), $\sqrt{\langle u'u' \rangle}$")
-            lines!(s.yedge, s.vrms; color = Cycled(i), linestyle = linestyles[2], label = L"%$(s.label), $\sqrt{\langle v'v' \rangle}$")
-            lines!(s.ycenter, s.wrms; color = Cycled(i), linestyle = linestyles[3], label = L"%$(s.label), $\sqrt{\langle w'w' \rangle}$")
+            lines!(s.ycenter, s.urms; color = Cycled(i), linestyle = linestyles[1], label = L"%$(s.label), $\sqrt{\langle u' u' \rangle}$")
+            lines!(s.yedge, s.vrms; color = Cycled(i), linestyle = linestyles[2], label = L"%$(s.label), $\sqrt{\langle v' v' \rangle}$")
+            lines!(s.ycenter, s.wrms; color = Cycled(i), linestyle = linestyles[3], label = L"%$(s.label), $\sqrt{\langle w' w' \rangle}$")
         end
     end
     Legend(fig[1, 2], ax)
@@ -508,7 +514,8 @@ problem = getproblem()
 setup = getsetup(problem)
 show_problem(setup, problem)
 
-(; psolver, ustart) = getheavystuff(setup, problem)
+# (; psolver, ustart) = getheavystuff(setup, problem)
+#
 # solve(
 #     setup, psolver, ustart, force_nomo!,
 #     (; problem.viscosity, problem.forcing), problem,
@@ -524,31 +531,34 @@ show_problem(setup, problem)
 #     (; problem.viscosity, problem.forcing, eddyviscosity = NS.WALE(problem.C_wale)), problem,
 #     "statseries_wale.jld2", "WALE",
 # )
-solve(
-    setup, psolver, ustart, force_eddy!,
-    (; problem.viscosity, problem.forcing, eddyviscosity = NS.QR(problem.C_qr)), problem,
-    "statseries_qr.jld2", "QR",
-)
 # solve(
 #     setup, psolver, ustart, force_eddy!,
-#     (; problem.viscosity, problem.forcing, eddyviscosity = NS.Vreman(problem.C_vreman)), problem,
-#     "statseries_vreman.jld2", "Vreman",
+#     (; problem.viscosity, problem.forcing, eddyviscosity = NS.QR(problem.C_qr)), problem,
+#     "statseries_qr.jld2", "QR",
 # )
+# # solve(
+# #     setup, psolver, ustart, force_eddy!,
+# #     (; problem.viscosity, problem.forcing, eddyviscosity = NS.Vreman(problem.C_vreman)), problem,
+# #     "statseries_vreman.jld2", "Vreman",
+# # )
+
+# statseries_nomo = load_object(joinpath(getoutdir(problem), "statseries_nomo.jld2"))
+# statseries_smag = load_object(joinpath(getoutdir(problem), "statseries_smag.jld2"))
+# statseries_wale = load_object(joinpath(getoutdir(problem), "statseries_wale.jld2"))
+# statseries_qr = load_object(joinpath(getoutdir(problem), "statseries_qr.jld2"))
+#
+# statistics_nomo = process_statseries(statseries_nomo, setup, problem, "No-model")
+# statistics_smag = process_statseries(statseries_smag, setup, problem, "Smagorinsky")
+# statistics_wale = process_statseries(statseries_wale, setup, problem, "WALE")
+# statistics_qr = process_statseries(statseries_wale, setup, problem, "QR")
 
 statseries_nomo = load_object(joinpath(getoutdir(problem), "statseries_nomo.jld2"))
-statseries_smag = load_object(joinpath(getoutdir(problem), "statseries_smag.jld2"))
-statseries_wale = load_object(joinpath(getoutdir(problem), "statseries_wale.jld2"))
-statseries_qr = load_object(joinpath(getoutdir(problem), "statseries_qr.jld2"))
-
-statistics_nomo = process_statseries(statseries_nomo, setup, problem, "No-model")
-statistics_smag = process_statseries(statseries_smag, setup, problem, "Smagorinsky")
-statistics_wale = process_statseries(statseries_wale, setup, problem, "WALE")
-statistics_qr = process_statseries(statseries_wale, setup, problem, "QR")
+statistics_nomo = process_statseries(statseries_nomo, setup, problem, "IncomperssibleNavierStokes.jl")
 
 statistics_ref = vremanstatistics()
 
-# stats = [statistics_ref, statistics_nomo]
-stats = [statistics_ref, statistics_nomo, statistics_smag, statistics_wale, statistics_qr]
+stats = [statistics_ref, statistics_nomo]
+# stats = [statistics_ref, statistics_nomo, statistics_smag, statistics_wale, statistics_qr]
 
 doscatter = true
 plot_wall_profile(stats, problem, doscatter)
