@@ -115,25 +115,46 @@ end
 
 apply_eddy_viscosity!(σ, visc, setup) = apply!(apply_eddy_viscosity_kernel!, setup, σ, visc)
 
+# Strain is already stored in σ, multiply by eddy-viscosity scaling
 @kernel function apply_eddy_viscosity_kernel!(O::CartesianIndex{2}, σ, visc)
     I = @index(Global, Cartesian)
     I = I + O
     ex, ey = unit_cartesian_indices(2)
-    # TODO: Add interpolation weights here
-    visc_xy = (visc[I] + visc[I+ex] + visc[I+ey] + visc[I+ex+ey]) / 4
+
+    # Get linear interpolation weights
+    Δx, Δy = Δ
+    Δxa, Δxb = Δx[I], Δx[I+ex]
+    Δya, Δyb = Δy[I], Δy[I+ey]
+    ax, bx = Δxb / (Δxa + Δxb), Δxa / (Δxa + Δxb)
+    ay, by = Δyb / (Δya + Δyb), Δya / (Δya + Δyb)
+
+    # Interpolate viscosity to off-diagonal location
+    visc_xy = ax * ay * visc[I] + bx * ay * visc[I+ex] + ax * by * visc[I+ey] + bx * by * visc[I+ex+ey]
+
     σ.xx[I] = -2 * visc[I] * σ.xx[I]
     σ.yy[I] = -2 * visc[I] * σ.yy[I]
     σ.xy[I] = -2 * visc_xy * σ.xy[I]
 end
 
-@kernel function apply_eddy_viscosity_kernel!(O::CartesianIndex{3}, σ, visc)
+@kernel function apply_eddy_viscosity_kernel!(O::CartesianIndex{3}, σ, visc, Δ)
     I = @index(Global, Cartesian)
     I = I + O
     ex, ey, ez = unit_cartesian_indices(3)
-    # TODO: Add interpolation weights here
-    visc_xy = (visc[I] + visc[I+ex] + visc[I+ey] + visc[I+ex+ey]) / 4
-    visc_xz = (visc[I] + visc[I+ex] + visc[I+ez] + visc[I+ex+ez]) / 4
-    visc_yz = (visc[I] + visc[I+ey] + visc[I+ez] + visc[I+ey+ez]) / 4
+
+    # Get linear interpolation weights
+    Δx, Δy, Δz = Δ
+    Δxa, Δxb = Δx[I], Δx[I+ex]
+    Δya, Δyb = Δy[I], Δy[I+ey]
+    Δza, Δzb = Δz[I], Δz[I+ez]
+    ax, bx = Δxb / (Δxa + Δxb), Δxa / (Δxa + Δxb)
+    ay, by = Δyb / (Δya + Δyb), Δya / (Δya + Δyb)
+    az, bz = Δzb / (Δza + Δzb), Δza / (Δza + Δzb)
+
+    # Interpolate viscosities to off-diagonal locations
+    visc_xy = ax * ay * visc[I] + bx * ay * visc[I+ex] + ax * by * visc[I+ey] + bx * by * visc[I+ex+ey]
+    visc_xz = ax * az * visc[I] + bx * az * visc[I+ex] + ax * bz * visc[I+ez] + bx * bz * visc[I+ex+ez]
+    visc_yz = ay * az * visc[I] + by * az * visc[I+ey] + ay * bz * visc[I+ez] + by * bz * visc[I+ey+ez]
+
     σ.xx[I] = -2 * visc[I] * σ.xx[I]
     σ.yy[I] = -2 * visc[I] * σ.yy[I]
     σ.zz[I] = -2 * visc[I] * σ.zz[I]
@@ -180,7 +201,7 @@ end
     f[I, 3] -= ∂σzx∂x + ∂σzy∂y + ∂σzz∂z
 end
 
-"Apply WAL viscosity."
+"Apply WALE viscosity."
 wale_viscosity!(visc, G_split, θ, setup) =
     apply!(wale_viscosity_kernel!, setup, visc, G_split, θ, getgrid(setup))
 

@@ -29,23 +29,25 @@ function getproblem()
     Re_tau = 180.0
     Re_m = 2800.0
     viscosity = u_tau * H / Re_tau
+    forcing = 1.0
 
     # Grid
-    n = 16
+    # n = 16
     # n = 32
-    # n = 64
+    n = 64
     # n = 128
     # n = 256
     # n = 512
 
     # Number of volumes in each dimension
+    nx, ny, nz = 2 * n, n, n
+    # nx, ny, nz = 2 * n, 2 * n, n
     # nx, ny, nz = 2 * n, 4 * n, n
-    # nx, ny, nz = 2 * n, n, n
-    nx, ny, nz = 2 * n, 2 * n, n
-    # nx, ny, nz = n, 2 * n, n
+    # nx, ny, nz = 2 * n, 8 * n, n
 
-    stretch = nothing # Uniform wall-normal grid
-    # stretch = 3.0 # Stretched wall-normal grid
+    # stretch = nothing # Uniform wall-normal grid
+    stretch = 1.4 # Stretched wall-normal grid
+    # stretch = 2.0 # Stretched wall-normal grid
 
     # Simulation time
     twarmup = 15.0 * H / u_tau # Warm-up time
@@ -54,33 +56,40 @@ function getproblem()
 
     # Time stepping
     cfl = 0.9 # Time step control
-    nsave = 1000 # Number of times to save statistics
+    nsave = 2500 # Number of times to save statistics
+
+    # Closure models
+    C_smag = 0.1
+    C_wale = 0.5
 
     return (;
         H, Lx, Ly, Lz,
-        u_tau, Re_tau, Re_m, viscosity,
+        u_tau, Re_tau, Re_m,
+        viscosity, forcing,
         nx, ny, nz, stretch,
         twarmup, taverage, tsimulation,
         cfl, nsave,
+        C_smag, C_wale,
     )
 end
 
 "Get setup, psolver, and initial conditions."
 function getsetup(problem)
-    isuniform = isnothing(problem.stretch)
+    (; Lx, Ly, Lz, nx, ny, nz, stretch) = problem
+    isuniform = isnothing(stretch)
 
     @info "Creating problem setup"
-    # flush(stderr) # Prevent logging delay on Snellius
+    flush(stderr) # Prevent logging delay on Snellius
 
-    ax_x = range(0.0, problem.Lx, problem.nx + 1)
+    ax_x = range(0.0, Lx, nx + 1)
     ax_y = if isuniform
-        range(0.0, problem.Ly, problem.ny + 1)
+        range(0.0, Ly, ny + 1)
     else
-        NS.tanh_grid(0.0, problem.Ly, problem.ny + 1, problem.stretch)
+        NS.tanh_grid(0.0, Ly, ny, stretch)
     end
-    ax_z = range(0.0, problem.Lz, problem.nz + 1)
+    ax_z = range(0.0, Lz, nz + 1)
 
-    setup = NS.Setup(;
+    return NS.Setup(;
         boundary_conditions = (;
             u = (
                 (NS.PeriodicBC(), NS.PeriodicBC()),
@@ -91,17 +100,21 @@ function getsetup(problem)
         x = (ax_x, ax_y, ax_z),
         backend = CUDABackend(),
     )
+end
 
+function getheavystuff(setup, problem)
+    (; stretch, Lx, Ly, Lz, Re_m, Re_tau) = problem
+
+    isuniform = isnothing(stretch)
     psolver = if isuniform
         NS.psolver_transform(setup) # FFT-based
     else
-        NS.default_direct(setup) # Matrix decomposition
+        NS.psolver_direct(setup) # Matrix decomposition
         # psolver_cg(setup; abstol = 1e-6)
         # psolver_cg_matrix(setup; abstol = 1e-4)
     end
 
     # Initial conditions
-    (; Lx, Ly, Lz, Re_m, Re_tau) = problem
     Re_ratio = Re_m / Re_tau
     C = 9 / 8 * Re_ratio
     E = 1 / 10 * Re_ratio # 10% of average mean velocity
@@ -115,37 +128,37 @@ function getsetup(problem)
     end
     ustart = NS.velocityfield(setup, U; psolver)
 
-    return (; setup, psolver, ustart)
+    return (; psolver, ustart)
 end
 
 # This is the right-hand side force in the momentum equation
 # By default, it is just `navierstokes!`. Here we add a
 # pre-computed body force.
-function force!(
-        f, state, t;
-        setup, cache, viscosity,
-    )
+function force_nomo!(f, state, t; setup, cache, viscosity, forcing)
     NS.navierstokes!(f, state, t; setup, cache, viscosity)
-    @. f.u[:, :, :, 1] += 1 # Force is 1 in direction x
-    # NS.wale_closure!(f.u, u, wale, cache.wale, setup)
-    # NS.smagorinsky_closure!(f.u, u, smag, cache.smag, setup)
+    @. f.u[:, :, :, 1] += forcing # Forcing in direction x
+    return nothing
+end
+function force_smag!(f, state, t; setup, cache, viscosity, forcing, C)
+    NS.navierstokes!(f, state, t; setup, cache, viscosity)
+    NS.smagorinsky_closure!(f.u, state.u, C, cache.smag, setup)
+    @. f.u[:, :, :, 1] += forcing # Forcing in direction x
+    return nothing
+end
+function force_wale!(f, state, t; setup, cache, viscosity, forcing, C)
+    NS.navierstokes!(f, state, t; setup, cache, viscosity)
+    NS.wale_closure!(f.u, state.u, C, cache.wale, setup)
+    @. f.u[:, :, :, 1] += forcing # Forcing in direction x
     return nothing
 end
 
 # Tell NS how to prepare the cache for `force!`.
 # The cache is created before time stepping begins.
-function NS.get_cache(::typeof(force!), setup)
-    # f(dim, x, y, z) = (dim == 1) * one(x)
-    # bodyforce = velocityfield(setup, f; psolver, doproject = false)
-    # (; bodyforce)
-    # wale = NS.get_cache(NS.wale_closure!, setup)
-    # smag = NS.get_cache(NS.smagorinsky_closure!, setup)
-    # (; bodyforce, wale)
-    # (; wale)
-    # (; smag)
-    return nothing
-end
+NS.get_cache(::typeof(force_nomo!), setup) = nothing
+NS.get_cache(::typeof(force_wale!), setup) = (; wale = NS.get_cache(NS.wale_closure!, setup))
+NS.get_cache(::typeof(force_smag!), setup) = (; smag = NS.get_cache(NS.smagorinsky_closure!, setup))
 
+"Compute spatial statistics for a single velocity snapshot."
 function compute_statistics!(buffers, uvw, setup)
     (; N) = setup
     (;
@@ -225,9 +238,9 @@ function compute_statistics!(buffers, uvw, setup)
 end
 
 "Solve channel flow and average statistics over time."
-function solve(setup, psolver, ustart, force!, params, problem)
+function solve(setup, psolver, ustart, force!, params, problem, filename, desc)
 
-    @info "Solving DNS and computing statistics."
+    @info "Solving with \"$desc\" and computing statistics."
     flush(stderr) # Prevent logging delay on Snellius
 
     (; tsimulation, cfl, nsave) = problem
@@ -273,10 +286,10 @@ function solve(setup, psolver, ustart, force!, params, problem)
 
     # Step through all the save points
     everythingfine = true
-    prog = Progress(nsave + 1)
+    prog = Progress(nsave + 1; desc)
     for isave in 0:nsave
         # Step until next save point.
-        # For the step, the while loop is never entered.
+        # For the first step, the while loop is never entered.
         tstop = isave * Δt_save
         isubstep = 0
         while stepper.t < prevfloat(tstop)
@@ -315,39 +328,44 @@ function solve(setup, psolver, ustart, force!, params, problem)
         everythingfine || break
     end
 
-    # Extract half profile for comparison with Vreman and Kuerten (2014)
-    statfile = joinpath(getoutdir(problem), "statistics.jld2")
+    # Save statistics to disk
+    statfile = joinpath(getoutdir(problem), filename)
     @info "Saving statistics to: $statfile"
     flush(stderr) # Prevent logging delay on Snellius
     save_object(statfile, statistics)
 
-    return statistics
+    return nothing
 end
 
-function process_statseries(statistics, setup, problem)
+function process_statseries(statistics, setup, problem, label)
     (; u_tau, viscosity, tsimulation, twarmup, nsave, ny) = problem
     (; xp, xu) = setup
 
-    # Exclude zero
+    # Get yplus coordinates until half channel height.
+    # Exclude zero.
     nhalf = div(ny, 2)
     ycenter = xp[2][2:(nhalf + 1)] * u_tau / viscosity |> Array
     yedge = xu[2][2][2:(nhalf + 1)] * u_tau / viscosity |> Array
 
     # Filter out warm-up stats
-    istart = findfirst(i -> tsimulation / nsave * i > twarmup, 0:(length(statistics) - 1))
+    istart = findfirst(i -> tsimulation / nsave * (i - 1) > twarmup, eachindex(statistics))
     stats_use = statistics[istart:end]
 
     # Compute time averages
     averages = map(keys(statistics[1])) do key
         statavg = sum(stats_use) do s
             # Average over the two symmetric values also
-            if key == :vp_vp 
+            if key == :vp_vp
                 (getindex(s, key)[2:(nhalf + 1)] .+ getindex(s, key)[(end - 2):-1:(nhalf + 1)]) ./ 2
             elseif key == :vbar
                 # This quantity is signed, but the sign we want is "velocity away from the wall".
                 # Therefore flip the sign in the average.
                 # Note: This quantity is probably zero anyway.
                 (getindex(s, key)[2:(nhalf + 1)] .- getindex(s, key)[(end - 2):-1:(nhalf + 1)]) ./ 2
+            elseif key == :up_up_vp
+                # This should also have a flipped sign, since up^2 is positive,
+                # but vp is probably inverse accross midline.
+                (getindex(s, key)[2:(nhalf + 1)] .- getindex(s, key)[(end - 1):-1:(nhalf + 2)]) ./ 2
             else
                 (getindex(s, key)[2:(nhalf + 1)] .+ getindex(s, key)[(end - 1):-1:(nhalf + 2)]) ./ 2
             end
@@ -357,11 +375,11 @@ function process_statseries(statistics, setup, problem)
 
     return (;
         averages...,
-        ycenter, yedge,
         urms = sqrt.(averages.up_up),
         vrms = sqrt.(averages.vp_vp),
         wrms = sqrt.(averages.wp_wp),
-        label = "IncompressibleNavierStokes.jl",
+        ycenter, yedge,
+        label,
     )
 end
 
@@ -392,7 +410,8 @@ function vremanstatistics()
 end
 
 "Make wall profile plot."
-function plot_wall_profile(stats)
+function plot_wall_profile(stats, problem, doscatter)
+    (; H) = problem
     for (key, title) in [
             :ubar => L"\langle u \rangle",
             :vbar => L"\langle v \rangle",
@@ -412,9 +431,19 @@ function plot_wall_profile(stats)
             ylabel = title,
             xscale = log10,
         )
-        for s in stats
+        markers = [:circle, :rect, :diamond, :cross, :xcross, :utriangle, :dtriangle]
+        for (i, s) in enumerate(stats)
+            if key == :ubar && i == 1
+                # Add reference lines for mean velocity profile
+                yvisc = filter(<=(18), s.ycenter)
+                ylog = filter(y -> 1 <= y <= 180, s.ycenter)
+                ulog = @. log(ylog) / 0.41 + 5.7
+                lines!(yvisc, yvisc; color = :black, linestyle = :dash, label = "Linear profile")
+                lines!(ylog, ulog; color = :black, linestyle = :dot, label = "Logarithmic profile")
+            end
             yuse = key == :vrms || key == :vbar ? s.yedge : s.ycenter
-            scatter!(yuse, s[key]; s.label)
+            doscatter && scatter!(yuse, s[key]; marker = markers[i], s.label)
+            doscatter || lines!(yuse, s[key]; s.label)
         end
         Legend(fig[1, 2], ax)
         # path = "~/Projects/Thesis/Figures/Software" |> expanduser
@@ -422,11 +451,11 @@ function plot_wall_profile(stats)
         println("Saving plot to: $plotfile")
         save(plotfile, fig; backend = CairoMakie, size = (700, 400))
     end
-    return
+    return nothing
 end
 
 "Make wall profile RMS comparison plot."
-function plot_wall_profile_rms_comparison(stats)
+function plot_wall_profile_rms_comparison(stats, doscatter)
     fig = Figure()
     ax = Axis(
         fig[1, 1];
@@ -435,11 +464,18 @@ function plot_wall_profile_rms_comparison(stats)
         title = "Comparison of velocity fluctuations",
         xscale = log10,
     )
-    markers = [:circle, :rect, :diamond, :cross, :xcross, :utriangle, :dtriangle]
     for (i, s) in enumerate(stats)
-        scatter!(s.ycenter, s.urms; color = Cycled(i), marker = markers[1], label = L"%$(s.label), $\sqrt{\langle u'u' \rangle}$")
-        scatter!(s.yedge, s.vrms; color = Cycled(i), marker = markers[2], label = L"%$(s.label), $\sqrt{\langle v'v' \rangle}$")
-        scatter!(s.ycenter, s.wrms; color = Cycled(i), marker = markers[3], label = L"%$(s.label), $\sqrt{\langle w'w' \rangle}$")
+        if doscatter
+            markers = [:circle, :rect, :diamond, :cross, :xcross, :utriangle, :dtriangle]
+            scatter!(s.ycenter, s.urms; color = Cycled(i), marker = markers[1], label = L"%$(s.label), $\sqrt{\langle u'u' \rangle}$")
+            scatter!(s.yedge, s.vrms; color = Cycled(i), marker = markers[2], label = L"%$(s.label), $\sqrt{\langle v'v' \rangle}$")
+            scatter!(s.ycenter, s.wrms; color = Cycled(i), marker = markers[3], label = L"%$(s.label), $\sqrt{\langle w'w' \rangle}$")
+        else
+            linestyles = [:solid, :dash, :dot, :dashdot]
+            lines!(s.ycenter, s.urms; color = Cycled(i), linestyle = linestyles[1], label = L"%$(s.label), $\sqrt{\langle u'u' \rangle}$")
+            lines!(s.yedge, s.vrms; color = Cycled(i), linestyle = linestyles[2], label = L"%$(s.label), $\sqrt{\langle v'v' \rangle}$")
+            lines!(s.ycenter, s.wrms; color = Cycled(i), linestyle = linestyles[3], label = L"%$(s.label), $\sqrt{\langle w'w' \rangle}$")
+        end
     end
     Legend(fig[1, 2], ax)
     # path = "~/Projects/Thesis/Figures/Software" |> expanduser
@@ -472,15 +508,44 @@ function show_problem(setup, problem)
 end
 
 # Main script
+
 problem = getproblem()
-(; setup, psolver, ustart) = getsetup(problem)
+setup = getsetup(problem)
 show_problem(setup, problem)
-statistics = solve(setup, psolver, ustart, force!, (; problem.viscosity), problem)
-statistics = load_object(joinpath(getoutdir(problem), "statistics.jld2"))
-statistics_ins = process_statseries(statistics, setup, problem)
+
+# (; psolver, ustart) = getheavystuff(setup, problem)
+# solve(
+#     setup, psolver, ustart, force_nomo!,
+#     (; problem.viscosity, problem.forcing), problem,
+#     "statseries_nomo.jld2", "No-model"
+# )
+# solve(
+#     setup, psolver, ustart, force_smag!,
+#     (; problem.viscosity, problem.forcing, C = problem.C_smag), problem,
+#     "statseries_smag.jld2", "Smagorinsky"
+# )
+# solve(
+#     setup, psolver, ustart, force_wale!,
+#     (; problem.viscosity, problem.forcing, C = problem.C_wale), problem,
+#     "statseries_wale.jld2", "WALE",
+# )
+
+statseries_nomo = load_object(joinpath(getoutdir(problem), "statseries_nomo.jld2"))
+statseries_smag = load_object(joinpath(getoutdir(problem), "statseries_smag.jld2"))
+statseries_wale = load_object(joinpath(getoutdir(problem), "statseries_wale.jld2"))
+
+statistics_nomo = process_statseries(statseries_nomo, setup, problem, "No-model")
+statistics_smag = process_statseries(statseries_smag, setup, problem, "Smagorinsky")
+statistics_wale = process_statseries(statseries_wale, setup, problem, "WALE")
+
 statistics_ref = vremanstatistics()
-plot_wall_profile([statistics_ref, statistics_ins])
-plot_wall_profile_rms_comparison([statistics_ref, statistics_ins])
+
+# stats = [statistics_ref, statistics_nomo]
+stats = [statistics_ref, statistics_nomo, statistics_smag, statistics_wale]
+
+doscatter = true
+plot_wall_profile(stats, problem, doscatter)
+plot_wall_profile_rms_comparison(stats, doscatter)
 
 @info "Done."
 flush(stdout) # Prevent logging delay on Snellius
