@@ -61,6 +61,8 @@ function getproblem()
     # Closure models
     C_smag = 0.1
     C_wale = 0.5
+    C_qr = 1 / π / sqrt(3 / 2)
+    C_vreman = sqrt(0.07)
 
     return (;
         H, Lx, Ly, Lz,
@@ -69,7 +71,7 @@ function getproblem()
         nx, ny, nz, stretch,
         twarmup, taverage, tsimulation,
         cfl, nsave,
-        C_smag, C_wale,
+        C_smag, C_wale, C_qr, C_vreman,
     )
 end
 
@@ -139,15 +141,9 @@ function force_nomo!(f, state, t; setup, cache, viscosity, forcing)
     @. f.u[:, :, :, 1] += forcing # Forcing in direction x
     return nothing
 end
-function force_smag!(f, state, t; setup, cache, viscosity, forcing, C)
+function force_eddy!(f, state, t; setup, cache, viscosity, forcing, eddyviscosity)
     NS.navierstokes!(f, state, t; setup, cache, viscosity)
-    NS.smagorinsky_closure!(f.u, state.u, C, cache.smag, setup)
-    @. f.u[:, :, :, 1] += forcing # Forcing in direction x
-    return nothing
-end
-function force_wale!(f, state, t; setup, cache, viscosity, forcing, C)
-    NS.navierstokes!(f, state, t; setup, cache, viscosity)
-    NS.wale_closure!(f.u, state.u, C, cache.wale, setup)
+    NS.eddy_viscosity_closure!(eddyviscosity, f.u, state.u, cache, setup)
     @. f.u[:, :, :, 1] += forcing # Forcing in direction x
     return nothing
 end
@@ -155,8 +151,7 @@ end
 # Tell NS how to prepare the cache for `force!`.
 # The cache is created before time stepping begins.
 NS.get_cache(::typeof(force_nomo!), setup) = nothing
-NS.get_cache(::typeof(force_wale!), setup) = (; wale = NS.get_cache(NS.wale_closure!, setup))
-NS.get_cache(::typeof(force_smag!), setup) = (; smag = NS.get_cache(NS.smagorinsky_closure!, setup))
+NS.get_cache(::typeof(force_eddy!), setup) = NS.get_cache(NS.eddy_viscosity_closure!, setup)
 
 "Compute spatial statistics for a single velocity snapshot."
 function compute_statistics!(buffers, uvw, setup)
@@ -513,35 +508,47 @@ problem = getproblem()
 setup = getsetup(problem)
 show_problem(setup, problem)
 
-# (; psolver, ustart) = getheavystuff(setup, problem)
+(; psolver, ustart) = getheavystuff(setup, problem)
 # solve(
 #     setup, psolver, ustart, force_nomo!,
 #     (; problem.viscosity, problem.forcing), problem,
 #     "statseries_nomo.jld2", "No-model"
 # )
 # solve(
-#     setup, psolver, ustart, force_smag!,
-#     (; problem.viscosity, problem.forcing, C = problem.C_smag), problem,
+#     setup, psolver, ustart, force_eddy!,
+#     (; problem.viscosity, problem.forcing, eddyviscosity = NS.Smagorinsky(problem.C_smag)), problem,
 #     "statseries_smag.jld2", "Smagorinsky"
 # )
 # solve(
-#     setup, psolver, ustart, force_wale!,
-#     (; problem.viscosity, problem.forcing, C = problem.C_wale), problem,
+#     setup, psolver, ustart, force_eddy!,
+#     (; problem.viscosity, problem.forcing, eddyviscosity = NS.WALE(problem.C_wale)), problem,
 #     "statseries_wale.jld2", "WALE",
+# )
+solve(
+    setup, psolver, ustart, force_eddy!,
+    (; problem.viscosity, problem.forcing, eddyviscosity = NS.QR(problem.C_qr)), problem,
+    "statseries_qr.jld2", "QR",
+)
+# solve(
+#     setup, psolver, ustart, force_eddy!,
+#     (; problem.viscosity, problem.forcing, eddyviscosity = NS.Vreman(problem.C_vreman)), problem,
+#     "statseries_vreman.jld2", "Vreman",
 # )
 
 statseries_nomo = load_object(joinpath(getoutdir(problem), "statseries_nomo.jld2"))
 statseries_smag = load_object(joinpath(getoutdir(problem), "statseries_smag.jld2"))
 statseries_wale = load_object(joinpath(getoutdir(problem), "statseries_wale.jld2"))
+statseries_qr = load_object(joinpath(getoutdir(problem), "statseries_qr.jld2"))
 
 statistics_nomo = process_statseries(statseries_nomo, setup, problem, "No-model")
 statistics_smag = process_statseries(statseries_smag, setup, problem, "Smagorinsky")
 statistics_wale = process_statseries(statseries_wale, setup, problem, "WALE")
+statistics_qr = process_statseries(statseries_wale, setup, problem, "QR")
 
 statistics_ref = vremanstatistics()
 
 # stats = [statistics_ref, statistics_nomo]
-stats = [statistics_ref, statistics_nomo, statistics_smag, statistics_wale]
+stats = [statistics_ref, statistics_nomo, statistics_smag, statistics_wale, statistics_qr]
 
 doscatter = true
 plot_wall_profile(stats, problem, doscatter)

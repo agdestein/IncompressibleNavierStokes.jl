@@ -201,10 +201,6 @@ end
     f[I, 3] -= ∂σzx∂x + ∂σzy∂y + ∂σzz∂z
 end
 
-"Apply WALE viscosity."
-wale_viscosity!(visc, G_split, θ, setup) =
-    apply!(wale_viscosity_kernel!, setup, visc, G_split, θ, getgrid(setup))
-
 """
 Collocate staggered tensor to the center of the cell.
 Put the tensor in a statically sized `SMatrix`.
@@ -234,20 +230,59 @@ function collocate_tensor(σ, I::CartesianIndex{3})
     )
 end
 
-@kernel function wale_viscosity_kernel!(O::CartesianIndex{3}, visc, G_split, θ, grid)
+abstract type AbstractEddyViscosity end
+
+struct Smagorinsky{T} <: AbstractEddyViscosity C::T end
+struct WALE{T} <: AbstractEddyViscosity C::T end
+struct Vreman{T} <: AbstractEddyViscosity C::T end
+struct QR{T} <: AbstractEddyViscosity C::T end
+
+@kernel function eddy_viscosity_kernel!(O::CartesianIndex{3}, e::Smagorinsky, visc, G_split, grid)
     I = @index(Global, Cartesian)
     I = I + O
-    (; Δ) = grid
+    G = collocate_tensor(G_split, I)
+    d = gridsize_vol(grid, I)
+    S = (G + G') / 2
+    visc[I] = (e.C * d)^2 * sqrt(2 * dot(S, S))
+end
+
+@kernel function eddy_viscosity_kernel!(O::CartesianIndex{3}, e::WALE, visc, G_split, grid)
+    I = @index(Global, Cartesian)
+    I = I + O
     T = eltype(G_split.xx)
-    ex, ey, ez = unit_cartesian_indices(3)
     G = collocate_tensor(G_split, I)
     d = gridsize_vol(grid, I)
     S = (G + G') / 2
     G2 = G * G
     Sd = (G2 + G2') / 2 - tr(G2) * one(G2) / 3
     visc[I] =
-        (θ * d)^2 * dot(Sd, Sd)^T(3 / 2) /
+        (e.C * d)^2 * dot(Sd, Sd)^T(3 / 2) /
         (dot(S, S)^T(5 / 2) + dot(Sd, Sd)^T(5/4) + eps(T))
+end
+
+@kernel function eddy_viscosity_kernel!(O::CartesianIndex{3}, e::QR, visc, G_split, grid)
+    I = @index(Global, Cartesian)
+    I = I + O
+    G = collocate_tensor(G_split, I)
+    d = gridsize_vol(grid, I)
+    S = (G + G') / 2
+    QS = -tr(S * S) / 2
+    RS = tr(S * S * S) / 3
+    visc[I] = (e.C * d)^2 * abs(RS) / QS
+end
+
+@kernel function eddy_viscosity_kernel!(O::CartesianIndex{3}, e::Vreman, visc, G_split, grid)
+    I = @index(Global, Cartesian)
+    I = I + O
+    G = collocate_tensor(G_split, I)
+    d = gridsize_vol(grid, I)
+    S = (G + G') / 2
+    Ω = (G - G') / 2
+    QG = -tr(G * G) / 2
+    QS = -tr(S * S) / 2
+    QΩ = -tr(Ω * Ω) / 2
+    V2 = 4 * (tr(S * S * Ω * Ω) − 2 * QS * QΩ)
+    visc[I] = (e.C * d)^2 * sqrt((V2 + QG^2) / 2 / (QΩ - QS))
 end
 
 function zero_out_wall!(p, setup)
@@ -260,8 +295,8 @@ function zero_out_wall!(p, setup)
     end
 end
 
-"Apply WALE closure model."
-function wale_closure!(f, u, θ, cache, setup)
+"Apply eddy viscosity closure model."
+function eddy_viscosity_closure!(eddyvisc, f, u, cache, setup)
     (; visc, G) = cache
     fill!(visc, 0)
     for g in G
@@ -272,7 +307,7 @@ function wale_closure!(f, u, θ, cache, setup)
         zero_out_wall!(g, setup)
         apply_bc_p!(g, zero(eltype(u)), setup)
     end
-    wale_viscosity!(visc, G, θ, setup)
+    apply!(eddy_viscosity_kernel!, setup, eddyvisc, visc, G_split, getgrid(setup))
     zero_out_wall!(visc, setup)
     apply_bc_p!(visc, zero(eltype(u)), setup)
     symmetrize!(G)
@@ -307,7 +342,7 @@ function smagorinsky_closure!(f, u, θ, cache, setup)
     divoftensor!(f, S, setup)
 end
 
-get_cache(::typeof(wale_closure!), setup) =
+get_cache(::typeof(eddy_viscosity_closure!), setup) =
     (; visc = scalarfield(setup), G = tensorfield(setup))
 
 get_cache(::typeof(smagorinsky_closure!), setup) =
