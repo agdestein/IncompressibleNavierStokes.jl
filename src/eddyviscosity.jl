@@ -275,7 +275,7 @@ end
     G = collocate_tensor(G_split, I)
     d = gridsize_vol(grid, I)
     S = (G + G') / 2
-    QS = -tr(S * S) / 2
+    QS = tr(S * S) / 2
     RS = tr(S * S * S) / 3
     visc[I] = (e.C * d)^2 * abs(RS) / QS
 end
