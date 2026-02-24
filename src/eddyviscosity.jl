@@ -114,18 +114,18 @@ end
     visc[I] = θ^2 * d^2 * sqrt(2 * (Sxx2 + Syy2 + Szz2) + 4 * (Sxy2 + Sxz2 + Syz2))
 end
 
-apply_eddy_viscosity!(σ, visc, setup) = apply!(apply_eddy_viscosity_kernel!, setup, σ, visc)
+apply_eddy_viscosity!(σ, visc, setup) = apply!(apply_eddy_viscosity_kernel!, setup, σ, visc, setup.Δ)
 
 # Strain is already stored in σ, multiply by eddy-viscosity scaling
-@kernel function apply_eddy_viscosity_kernel!(O::CartesianIndex{2}, σ, visc)
+@kernel function apply_eddy_viscosity_kernel!(O::CartesianIndex{2}, σ, visc, Δ)
     I = @index(Global, Cartesian)
     I = I + O
     ex, ey = unit_cartesian_indices(2)
 
     # Get linear interpolation weights
     Δx, Δy = Δ
-    Δxa, Δxb = Δx[I], Δx[I + ex]
-    Δya, Δyb = Δy[I], Δy[I + ey]
+    Δxa, Δxb = Δx[I[1]], Δx[I[1] + 1]
+    Δya, Δyb = Δy[I[2]], Δy[I[2] + 1]
     ax, bx = Δxb / (Δxa + Δxb), Δxa / (Δxa + Δxb)
     ay, by = Δyb / (Δya + Δyb), Δya / (Δya + Δyb)
 
@@ -144,9 +144,9 @@ end
 
     # Get linear interpolation weights
     Δx, Δy, Δz = Δ
-    Δxa, Δxb = Δx[I], Δx[I + ex]
-    Δya, Δyb = Δy[I], Δy[I + ey]
-    Δza, Δzb = Δz[I], Δz[I + ez]
+    Δxa, Δxb = Δx[I[1]], Δx[I[1] + 1]
+    Δya, Δyb = Δy[I[2]], Δy[I[2] + 1]
+    Δza, Δzb = Δz[I[3]], Δz[I[3] + 1]
     ax, bx = Δxb / (Δxa + Δxb), Δxa / (Δxa + Δxb)
     ay, by = Δyb / (Δya + Δyb), Δya / (Δya + Δyb)
     az, bz = Δzb / (Δza + Δzb), Δza / (Δza + Δzb)
@@ -317,7 +317,7 @@ function eddy_viscosity_closure!(eddyvisc, f, u, cache, setup)
         zero_out_wall!(g, setup)
         apply_bc_p!(g, zero(eltype(u)), setup)
     end
-    apply!(eddy_viscosity_kernel!, setup, eddyvisc, visc, G_split, getgrid(setup))
+    apply!(eddy_viscosity_kernel!, setup, eddyvisc, visc, G, getgrid(setup))
     zero_out_wall!(visc, setup)
     apply_bc_p!(visc, zero(eltype(u)), setup)
     symmetrize!(G)
