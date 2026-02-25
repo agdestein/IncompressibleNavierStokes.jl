@@ -31,23 +31,30 @@ function getproblem()
     viscosity = u_tau * H / Re_tau
     forcing = 1.0
 
-    # Grid
-    # n = 16
-    # n = 32
-    # n = 64
-    # n = 128
-    n = 256
-    # n = 512
+    doles = true # DNS or LES
 
-    # Number of volumes in each dimension
-    # nx, ny, nz = 2 * n, n, n
-    # nx, ny, nz = 2 * n, 2 * n, n
-    # nx, ny, nz = 2 * n, 4 * n, n
-    nx, ny, nz = 2 * n, 4 * n, n
+    if doles
+        n = 64
+        nx, ny, nz = 2 * n, n, n
+        stretch = 1.4 # Stretched wall-normal grid
+    else
+        # Grid
+        # n = 16
+        # n = 32
+        # n = 64
+        # n = 128
+        n = 256
+        # n = 512
 
-    stretch = nothing # Uniform wall-normal grid
-    # stretch = 1.4 # Stretched wall-normal grid
-    # stretch = 2.0 # Stretched wall-normal grid
+        # Number of volumes in each dimension
+        # nx, ny, nz = 2 * n, n, n
+        # nx, ny, nz = 2 * n, 2 * n, n
+        nx, ny, nz = 2 * n, 4 * n, n
+
+        stretch = nothing # Uniform wall-normal grid
+        # stretch = 1.4 # Stretched wall-normal grid
+        # stretch = 2.0 # Stretched wall-normal grid
+    end
 
     # Simulation time
     twarmup = 15.0 * H / u_tau # Warm-up time
@@ -63,8 +70,10 @@ function getproblem()
     C_wale = 0.5
     C_qr = 1 / π / sqrt(3 / 2)
     C_vreman = sqrt(0.07)
+    # C_vreman = sqrt(2.5 * C_smag^2)
 
     return (;
+        doles,
         H, Lx, Ly, Lz,
         u_tau, Re_tau, Re_m,
         viscosity, forcing,
@@ -514,51 +523,56 @@ problem = getproblem()
 setup = getsetup(problem)
 show_problem(setup, problem)
 
-# (; psolver, ustart) = getheavystuff(setup, problem)
-#
-# solve(
-#     setup, psolver, ustart, force_nomo!,
-#     (; problem.viscosity, problem.forcing), problem,
-#     "statseries_nomo.jld2", "No-model"
-# )
-# solve(
-#     setup, psolver, ustart, force_eddy!,
-#     (; problem.viscosity, problem.forcing, eddyviscosity = NS.Smagorinsky(problem.C_smag)), problem,
-#     "statseries_smag.jld2", "Smagorinsky"
-# )
-# solve(
-#     setup, psolver, ustart, force_eddy!,
-#     (; problem.viscosity, problem.forcing, eddyviscosity = NS.WALE(problem.C_wale)), problem,
-#     "statseries_wale.jld2", "WALE",
-# )
-# solve(
-#     setup, psolver, ustart, force_eddy!,
-#     (; problem.viscosity, problem.forcing, eddyviscosity = NS.QR(problem.C_qr)), problem,
-#     "statseries_qr.jld2", "QR",
-# )
-# # solve(
-# #     setup, psolver, ustart, force_eddy!,
-# #     (; problem.viscosity, problem.forcing, eddyviscosity = NS.Vreman(problem.C_vreman)), problem,
-# #     "statseries_vreman.jld2", "Vreman",
-# # )
+(; psolver, ustart) = getheavystuff(setup, problem)
 
-# statseries_nomo = load_object(joinpath(getoutdir(problem), "statseries_nomo.jld2"))
-# statseries_smag = load_object(joinpath(getoutdir(problem), "statseries_smag.jld2"))
-# statseries_wale = load_object(joinpath(getoutdir(problem), "statseries_wale.jld2"))
-# statseries_qr = load_object(joinpath(getoutdir(problem), "statseries_qr.jld2"))
-#
-# statistics_nomo = process_statseries(statseries_nomo, setup, problem, "No-model")
-# statistics_smag = process_statseries(statseries_smag, setup, problem, "Smagorinsky")
-# statistics_wale = process_statseries(statseries_wale, setup, problem, "WALE")
-# statistics_qr = process_statseries(statseries_wale, setup, problem, "QR")
-
-statseries_nomo = load_object(joinpath(getoutdir(problem), "statseries_nomo.jld2"))
-statistics_nomo = process_statseries(statseries_nomo, setup, problem, "IncomperssibleNavierStokes.jl")
+solve(
+    setup, psolver, ustart, force_nomo!,
+    (; problem.viscosity, problem.forcing), problem,
+    "statseries_nomo.jld2", "No-model"
+)
+if problem.doles
+    solve(
+        setup, psolver, ustart, force_eddy!,
+        (; problem.viscosity, problem.forcing, eddyviscosity = NS.Smagorinsky(problem.C_smag)), problem,
+        "statseries_smag.jld2", "Smagorinsky"
+    )
+    solve(
+        setup, psolver, ustart, force_eddy!,
+        (; problem.viscosity, problem.forcing, eddyviscosity = NS.WALE(problem.C_wale)), problem,
+        "statseries_wale.jld2", "WALE",
+    )
+    solve(
+        setup, psolver, ustart, force_eddy!,
+        (; problem.viscosity, problem.forcing, eddyviscosity = NS.QR(problem.C_qr)), problem,
+        "statseries_qr.jld2", "QR",
+    )
+    solve(
+        setup, psolver, ustart, force_eddy!,
+        (; problem.viscosity, problem.forcing, eddyviscosity = NS.Vreman(problem.C_vreman)), problem,
+        "statseries_vreman.jld2", "Vreman",
+    )
+end
 
 statistics_ref = vremanstatistics()
 
-stats = [statistics_ref, statistics_nomo]
-# stats = [statistics_ref, statistics_nomo, statistics_smag, statistics_wale, statistics_qr]
+if problem.doles
+    statseries_nomo = load_object(joinpath(getoutdir(problem), "statseries_nomo.jld2"))
+    statseries_smag = load_object(joinpath(getoutdir(problem), "statseries_smag.jld2"))
+    statseries_wale = load_object(joinpath(getoutdir(problem), "statseries_wale.jld2"))
+    statseries_qr = load_object(joinpath(getoutdir(problem), "statseries_qr.jld2"))
+    statseries_vreman = load_object(joinpath(getoutdir(problem), "statseries_vreman.jld2"))
+
+    statistics_nomo = process_statseries(statseries_nomo, setup, problem, "No-model")
+    statistics_smag = process_statseries(statseries_smag, setup, problem, "Smagorinsky")
+    statistics_wale = process_statseries(statseries_wale, setup, problem, "WALE")
+    statistics_qr = process_statseries(statseries_wale, setup, problem, "QR")
+    statistics_vreman = process_statseries(statseries_vreman, setup, problem, "Vreman")
+    stats = [statistics_ref, statistics_nomo, statistics_smag, statistics_wale, statistics_qr, statistics_vreman]
+else
+    statseries_nomo = load_object(joinpath(getoutdir(problem), "statseries_nomo.jld2"))
+    statistics_nomo = process_statseries(statseries_nomo, setup, problem, "IncompressibleNavierStokes.jl")
+    stats = [statistics_ref, statistics_nomo]
+end
 
 doscatter = true
 plot_wall_profile(stats, problem, doscatter)
