@@ -284,15 +284,35 @@ end
     I = @index(Global, Cartesian)
     I = I + O
     G = collocate_tensor(G_split, I)
-    d = gridsize_vol(grid, I)
-    S = (G + G') / 2
-    Ω = (G - G') / 2
-    QG = -tr(G * G) / 2
-    QS = -tr(S * S) / 2
-    QΩ = -tr(Ω * Ω) / 2
-    V2 = 4 * (tr(S * S * Ω * Ω) − 2 * QS * QΩ)
-    visc[I] = (e.C * d)^2 * sqrt((V2 + QG^2) / 2 / (QΩ - QS))
+
+    # Non-uniform grid sizes
+    d1, d2, d3 = grid.Δ[1][I[1]]^2, grid.Δ[2][I[2]]^2, grid.Δ[3][I[3]]^2
+
+    # Transpose gradient
+    a11, a21, a31 = G[1, 1], G[1, 2], G[1, 3]
+    a12, a22, a32 = G[2, 1], G[2, 2], G[2, 3]
+    a13, a23, a33 = G[3, 1], G[3, 2], G[3, 3]
+
+    b11 = d1 * a11 * a11 + d2 * a21 * a21 + d3 * a31 * a31
+    b12 = d1 * a11 * a12 + d2 * a21 * a22 + d3 * a31 * a32
+    b13 = d1 * a11 * a13 + d2 * a21 * a23 + d3 * a31 * a33
+    b22 = d1 * a12 * a12 + d2 * a22 * a22 + d3 * a32 * a32
+    b23 = d1 * a12 * a13 + d2 * a22 * a23 + d3 * a32 * a33
+    b33 = d1 * a13 * a13 + d2 * a23 * a23 + d3 * a33 * a33
+
+    abeta =
+        a11^2 + a12^2 + a13^2 +
+        a21^2 + a22^2 + a23^2 +
+        a31^2 + a32^2 + a33^2
+    bbeta = b11 * b22 - (b12^2) + b11 * b33 - (b13^2) + b22 * b33 - (b23^2)
+
+    value = e.C^2 * sqrt(bbeta / abeta)
+
+    # Add threshold for edge case of zero gradient
+    visc[I] = ifelse(abeta > getvremantol(value), value, zero(value))
 end
+@inline getvremantol(::Float64) = 1e-12
+@inline getvremantol(::Float32) = 1f-6
 
 function zero_out_wall!(p, setup)
     d = setup.dimension()
