@@ -32,6 +32,7 @@ function getproblem()
     forcing = 1.0
 
     doles = true # DNS or LES
+    dosimulation = false # Switch for rerunning simulations
 
     if doles
         n = 64
@@ -68,12 +69,14 @@ function getproblem()
     # Closure models
     C_smag = 0.1
     C_wale = 0.5
-    C_qr = 1 / π / sqrt(3 / 2)
-    C_vreman = sqrt(0.07)
-    # C_vreman = sqrt(2.5 * C_smag^2)
+    C_qr = sqrt(3 / 2) / π
+    C_vreman = sqrt(2.5 * C_smag^2)
+
+    # 2.5 * 0.17^2
+    # 2.5 * 0.1^2
 
     return (;
-        doles,
+        dosimulation, doles,
         H, Lx, Ly, Lz,
         u_tau, Re_tau, Re_m,
         viscosity, forcing,
@@ -163,13 +166,15 @@ NS.get_cache(::typeof(force_nomo!), setup) = nothing
 NS.get_cache(::typeof(force_eddy!), setup) = NS.get_cache(NS.eddy_viscosity_closure!, setup)
 
 "Compute spatial statistics for a single velocity snapshot."
-function compute_statistics!(buffers, uvw, setup)
+function compute_statistics!(buffers, uvw, setup, cache)
+    dovisc = !isnothing(cache)
     (; N) = setup
     (;
         ubar, vbar, wbar,
         up_up, vp_vp, wp_wp,
         up_up_up, up_up_up_up,
         up_up_vp, up_wp,
+        visc,
     ) = buffers
     nspace = (N[1] - 2) * (N[3] - 2) # Number of averaging volumes
 
@@ -186,6 +191,15 @@ function compute_statistics!(buffers, uvw, setup)
         ubar[j] = ubar_j / nspace
         vbar[j] = vbar_j / nspace
         wbar[j] = wbar_j / nspace
+    end
+
+    # Average eddy viscosity
+    dovisc && AK.foraxes(uvw, 2) do j
+        visc_j = 0.0
+        for k in 2:(N[3] - 1), i in 2:(N[1] - 1)
+            visc_j += dovisc ? cache.visc[i, j, k] : 0.0
+        end
+        visc[j] = visc_j / nspace
     end
 
     # Loop over wall-normal planes
@@ -276,6 +290,7 @@ function solve(setup, psolver, ustart, force!, params, problem, filename, desc)
         up_up_up_up = zero(Δ[2]),
         up_up_vp = zero(Δ[2]),
         up_wp = zero(Δ[2]),
+        visc = zero(Δ[2])
     )
 
     statistics = fill(map(Array, buffers), 0)
@@ -315,7 +330,7 @@ function solve(setup, psolver, ustart, force!, params, problem, filename, desc)
         end
 
         # Compute statistics, copy to CPU, and store in list
-        compute_statistics!(buffers, stepper.state.u, setup)
+        compute_statistics!(buffers, stepper.state.u, setup, force_cache)
         push!(statistics, map(Array, buffers))
         push!(times, stepper.t)
 
@@ -387,9 +402,6 @@ function process_statseries(statistics, setup, problem, label)
     )
 end
 
-# 0.17888816473E+03 -
-# 0.17666476018E+03
-
 "Extract data from Vreman."
 function vremanstatistics()
     ufile = joinpath(@__DIR__, "Chan180_FD2_all/Chan180_FD2_basic_u.txt")
@@ -411,6 +423,7 @@ function vremanstatistics()
         up_up_up_up = udata[:, 5],
         up_up_vp = udata[:, 6],
         up_wp = udata[:, 7],
+        visc = zero(udata[:, 1]), # DNS: No eddy viscosity in Vreman's data
         label = "Vreman and Kuerten (2014)",
     )
     return statistics
@@ -418,7 +431,7 @@ end
 
 "Make wall profile plot."
 function plot_wall_profile(stats, problem, doscatter)
-    (; H) = problem
+    (; u_tau, H) = problem
     for (key, title) in [
             :ubar => L"\langle u \rangle",
             :vbar => L"\langle v \rangle",
@@ -430,6 +443,8 @@ function plot_wall_profile(stats, problem, doscatter)
             :up_up_up_up => L"\langle u' u' u' u' \rangle",
             :up_up_vp => L"\langle u' u' v' \rangle",
             :up_wp => L"\langle u' w' \rangle",
+            :visc => L"\langle \nu^\Delta \rangle / \nu",
+            # :visc => "Eddy-viscosity",
         ]
         fig = Figure()
         ax = Axis(
@@ -441,6 +456,10 @@ function plot_wall_profile(stats, problem, doscatter)
             xscale = log10,
         )
         markers = [:circle, :rect, :diamond, :cross, :xcross, :utriangle, :dtriangle]
+        normalizations = (;
+                          # visc = u_tau * H,
+                          visc = problem.viscosity,
+                         )
         for (i, s) in enumerate(stats)
             if key == :ubar && i == 1
                 # Add reference lines for mean velocity profile
@@ -451,8 +470,9 @@ function plot_wall_profile(stats, problem, doscatter)
                 lines!(ylog, ulog; color = :black, linestyle = :dot, label = "Logarithmic profile")
             end
             yuse = key == :vrms || key == :vbar ? s.yedge : s.ycenter
-            doscatter && scatter!(yuse, s[key]; marker = markers[i], s.label)
-            doscatter || lines!(yuse, s[key]; s.label)
+            normal = haskey(normalizations, key) ? normalizations[key] : 1.0
+            doscatter && scatter!(yuse, s[key] / normal; marker = markers[i], s.label)
+            doscatter || lines!(yuse, s[key] / normal; s.label)
         end
         Legend(fig[1, 2], ax)
         # path = "~/Projects/Thesis/Figures/Software" |> expanduser
@@ -523,35 +543,35 @@ problem = getproblem()
 setup = getsetup(problem)
 show_problem(setup, problem)
 
-(; psolver, ustart) = getheavystuff(setup, problem)
+if problem.dosimulation
+    (; psolver, ustart) = getheavystuff(setup, problem)
+end
 
-solve(
+problem.dosimulation && solve(
     setup, psolver, ustart, force_nomo!,
     (; problem.viscosity, problem.forcing), problem,
     "statseries_nomo.jld2", "No-model"
 )
-if problem.doles
+problem.dosimulation && problem.doles && solve(
+    setup, psolver, ustart, force_eddy!,
+    (; problem.viscosity, problem.forcing, eddyviscosity = NS.Smagorinsky(problem.C_smag)), problem,
+    "statseries_smag.jld2", "Smagorinsky"
+)
+problem.dosimulation && problem.doles && solve(
+    setup, psolver, ustart, force_eddy!, (; problem.viscosity, problem.forcing, eddyviscosity = NS.WALE(problem.C_wale)), problem,
+    "statseries_wale.jld2", "WALE",
+)
+problem.dosimulation && problem.doles &&
     solve(
-        setup, psolver, ustart, force_eddy!,
-        (; problem.viscosity, problem.forcing, eddyviscosity = NS.Smagorinsky(problem.C_smag)), problem,
-        "statseries_smag.jld2", "Smagorinsky"
-    )
-    solve(
-        setup, psolver, ustart, force_eddy!,
-        (; problem.viscosity, problem.forcing, eddyviscosity = NS.WALE(problem.C_wale)), problem,
-        "statseries_wale.jld2", "WALE",
-    )
-    solve(
-        setup, psolver, ustart, force_eddy!,
-        (; problem.viscosity, problem.forcing, eddyviscosity = NS.QR(problem.C_qr)), problem,
-        "statseries_qr.jld2", "QR",
-    )
-    solve(
-        setup, psolver, ustart, force_eddy!,
-        (; problem.viscosity, problem.forcing, eddyviscosity = NS.Vreman(problem.C_vreman)), problem,
-        "statseries_vreman.jld2", "Vreman",
-    )
-end
+    setup, psolver, ustart, force_eddy!,
+    (; problem.viscosity, problem.forcing, eddyviscosity = NS.QR(problem.C_qr)), problem,
+    "statseries_qr.jld2", "QR",
+)
+problem.dosimulation && problem.doles && solve(
+    setup, psolver, ustart, force_eddy!,
+    (; problem.viscosity, problem.forcing, eddyviscosity = NS.Vreman(problem.C_vreman)), problem,
+    "statseries_vreman.jld2", "Vreman",
+)
 
 statistics_ref = vremanstatistics()
 
@@ -565,7 +585,7 @@ if problem.doles
     statistics_nomo = process_statseries(statseries_nomo, setup, problem, "No-model")
     statistics_smag = process_statseries(statseries_smag, setup, problem, "Smagorinsky")
     statistics_wale = process_statseries(statseries_wale, setup, problem, "WALE")
-    statistics_qr = process_statseries(statseries_wale, setup, problem, "QR")
+    statistics_qr = process_statseries(statseries_qr, setup, problem, "QR")
     statistics_vreman = process_statseries(statseries_vreman, setup, problem, "Vreman")
     stats = [statistics_ref, statistics_nomo, statistics_smag, statistics_wale, statistics_qr, statistics_vreman]
 else
