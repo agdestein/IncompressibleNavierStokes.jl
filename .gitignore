@@ -3,7 +3,7 @@
 *.jl.cov
 *.jl.mem
 *package-lock.json
-*Manifest.toml
+*Manifest*.toml
 /docs/build/
 /docs/src/examples/generated/
 /docs/node_modules/
