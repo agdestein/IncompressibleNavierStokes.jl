@@ -8,6 +8,7 @@ using CairoMakie
 using CUDA
 using CUDSS
 using DelimitedFiles
+using Downloads
 using JLD2
 using ProgressMeter
 using Printf
@@ -402,6 +403,23 @@ function process_statseries(statistics, setup, problem, label)
     )
 end
 
+"Download data from Vreman."
+function downloaddata()
+    url = "http://www.vremanresearch.nl"
+    path = joinpath(@__DIR__, "Chan180_FD2_all")
+    if ispath(path)
+        @info "Reference data already exists at $path. Skipping download."
+    else
+        @info "Downloading reference data from $url to $path."
+        mkpath(path)
+        for sym in ["u", "v", "w"]
+            file = "Chan180_FD2_basic_$sym.txt"
+            Downloads.download("$url/$file", "$path/$file")
+        end
+    end
+    return nothing
+end
+
 "Extract data from Vreman."
 function vremanstatistics()
     ufile = joinpath(@__DIR__, "Chan180_FD2_all/Chan180_FD2_basic_u.txt")
@@ -573,6 +591,7 @@ problem.dosimulation && problem.doles && solve(
     "statseries_vreman.jld2", "Vreman",
 )
 
+downloaddata()
 statistics_ref = vremanstatistics()
 
 if problem.doles
