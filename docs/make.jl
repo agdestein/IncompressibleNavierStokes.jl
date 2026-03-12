@@ -1,6 +1,3 @@
-# Look for environment variable triggering local development modifications
-localdev = haskey(ENV, "LOCALDEV")
-
 # Get access to example dependencies
 # Those are required for running the examples and generating output
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
@@ -22,36 +19,35 @@ bib = CitationBibliography(joinpath(@__DIR__, "references.bib"))
 
 # Generate examples
 examples = [
-    # Simple flows
+    # Periodic box
     (true, "examples/DecayingTurbulence2D"),
     (false, "examples/DecayingTurbulence3D"),
     (true, "examples/TaylorGreenVortex2D"),
     (false, "examples/TaylorGreenVortex3D"),
     (false, "examples/Kolmogorov2D"),
-    (false, "examples/ShearLayer2D"),
-    (false, "examples/PlaneJets2D"),
 
     # Mixed boundary conditions
     (true, "examples/Actuator2D"),
     (false, "examples/Actuator3D"),
     (false, "examples/BackwardFacingStep2D"),
     (false, "examples/BackwardFacingStep3D"),
-    (false, "examples/LidDrivenCavity2D"),
-    (false, "examples/LidDrivenCavity3D"),
+    (true, "examples/LidDrivenCavity2D"),
     (false, "examples/MultiActuator"),
-    (false, "examples/PlanarMixing2D"),
+    (false, "examples/ChannelFlow"),
 
     # With temperature field
     (true, "examples/RayleighBenard2D"),
     (false, "examples/RayleighBenard3D"),
     (true, "examples/RayleighTaylor2D"),
-    (false, "examples/RayleighTaylor3D"),
+
+    # Reduced order models
+    (false, "examples/DipolePOD"),
 ]
 
 # Convert scripts to executable markdown files
 output = "examples/generated"
 outputdir = joinpath(@__DIR__, "src", output)
-## rm(outputdir; recursive = true)
+isdir(outputdir) && rm(outputdir; recursive = true)
 scriptdir = mktempdir()
 for (run, name) in examples
     inputfile = joinpath(@__DIR__, "..", name * ".jl")

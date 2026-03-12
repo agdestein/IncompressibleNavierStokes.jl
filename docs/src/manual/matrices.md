@@ -17,7 +17,15 @@ Consider a simple setup
 ```@example Matrices
 using IncompressibleNavierStokes
 ax = range(0, 1, 17);
-setup = Setup(; x = (ax, ax), Re = 1e3);
+setup = Setup(;
+    x = (ax, ax),
+    boundary_conditions = (;
+        u = (
+            (PeriodicBC(), PeriodicBC()),
+            (PeriodicBC(), PeriodicBC()),
+        ),
+    ),
+)
 ```
 
 The matrices for the linear operators are named by appending `_mat` to the function name, for example:
@@ -49,14 +57,14 @@ bc_u_mat(setup)
 ```
 
 We can verify that the diffusion matrix gives the same results as the diffusion
-kernel (without viscosity):
+kernel (with viscosity of 1):
 
 ```@example Matrices
 using Random
 u = randn!(vectorfield(setup))
 B = bc_u_mat(setup)
 D = diffusion_mat(setup)
-d_kernel = diffusion(apply_bc_u(u, 0.0, setup), setup; use_viscosity = false)
+d_kernel = diffusion(apply_bc_u(u, 0.0, setup), setup, 1)
 d_matrix = reshape(D * B * u[:], size(u))
 maximum(abs, d_matrix - d_kernel)
 ```
@@ -74,9 +82,11 @@ Consider the following inflow-setup:
 ```@example Matrices
 setup = Setup(;
     x = (ax, ax),
-    boundary_conditions = (
-        (DirichletBC((10.0, 0.0)), PressureBC()),
-        (DirichletBC(), DirichletBC()),
+    boundary_conditions = (;
+        u = (
+            (DirichletBC((10.0, 0.0)), PressureBC()),
+            (DirichletBC(), DirichletBC()),
+        ),
     ),
 )
 ```

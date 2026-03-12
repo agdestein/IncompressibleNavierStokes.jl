@@ -3,7 +3,7 @@
 *.jl.cov
 *.jl.mem
 *package-lock.json
-*Manifest.toml
+*Manifest*.toml
 /docs/build/
 /docs/src/examples/generated/
 /docs/node_modules/
@@ -15,3 +15,5 @@
 *.un~
 *.DS_Store
 *.out
+*.jld2
+examples/Chan180_FD2_all/

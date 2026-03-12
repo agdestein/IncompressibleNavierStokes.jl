@@ -50,7 +50,16 @@ timelogger(;
     showspeed = true,
     nupdate = 1,
 ) =
-    processor() do state
+    processor(
+        (timing, state) -> @info(
+            @sprintf(
+                "Finished after %d time steps and %.2g seconds",
+                state[].n,
+                time() - timing,
+            ),
+        ),
+    ) do state
+        globaltime = time()
         told = Ref(state[].t)
         oldtime = time()
         on(state) do (; u, t, n)
@@ -68,7 +77,7 @@ timelogger(;
             showspeed && push!(msg, @sprintf("itertime = %.2g", itertime))
             @info join(msg, "\t")
         end
-        nothing
+        globaltime
     end
 
 """
@@ -78,57 +87,27 @@ function observefield(
     state;
     setup,
     fieldname,
-    logtol = eps(eltype(setup.grid.x[1])),
+    logtol = eps(eltype(setup.x[1])),
     psolver = nothing,
 )
-    (; dimension, Ip) = setup.grid
-    (; u, temp, t) = state[]
+    (; dimension, Ip) = setup
     D = dimension()
 
     # Initialize buffers
     _f = if fieldname in (1, 2, 3)
-        up = interpolate_u_p(u, setup)
+        up = interpolate_u_p(state[].u, setup)
         upf = selectdim(up, ndims(up), fieldname)
     elseif fieldname == :velocity
-        up = interpolate_u_p(u, setup)
+        up = interpolate_u_p(state[].u, setup)
     elseif fieldname == :velocitynorm
-        up = interpolate_u_p(u, setup)
         upnorm = scalarfield(setup)
     elseif fieldname == :vorticity
-        ω = vorticity(u, setup)
+        ω = vorticity(state[].u, setup)
         ωp = interpolate_ω_p(ω, setup)
-    elseif fieldname == :streamfunction
-        ψ = get_streamfunction(setup, u, t)
-    elseif fieldname == :pressure
-        if isnothing(psolver)
-            @warn "Creating new pressure solver for observefield"
-            psolver = default_psolver(setup)
-        end
-        F = vectorfield(setup)
-        p = scalarfield(setup)
-    elseif fieldname == :Dfield
-        if isnothing(psolver)
-            @warn "Creating new pressure solver for observefield"
-            psolver = default_psolver(setup)
-        end
-        F = vectorfield(setup)
-        p = scalarfield(setup)
-        F = vectorfield(setup)
-        d = scalarfield(setup)
-    elseif fieldname == :Qfield
-        Q = scalarfield(setup)
     elseif fieldname == :qcrit
         q = scalarfield(setup)
-    elseif fieldname == :eig2field
-        λ = scalarfield(setup)
-    elseif fieldname in union(Symbol.(["B$i" for i = 1:11]), Symbol.(["V$i" for i = 1:5]))
-        sym = string(fieldname)[1]
-        sym = sym == 'B' ? 1 : 2
-        idx = parse(Int, string(fieldname)[2:end])
-        tb = tensorbasis(u, setup)
-        tb[sym][idx]
     elseif fieldname == :temperature
-        temp
+        state[].temp
     else
         error("Unknown fieldname")
     end
@@ -141,54 +120,24 @@ function observefield(
     end
 
     # Observe field
-    field = map(state) do (; u, temp, t)
+    field = map(state) do state
         f = if fieldname in (1, 2, 3)
-            interpolate_u_p!(up, u, setup)
+            interpolate_u_p!(up, state.u, setup)
             upf
         elseif fieldname == :velocity
-            interpolate_u_p!(up, u, setup)
+            interpolate_u_p!(up, state.u, setup)
         elseif fieldname == :velocitynorm
-            interpolate_u_p!(up, u, setup)
-            # map((u, v, w) -> √sum(u^2 + v^2 + w^2), up...)
-            if D == 2
-                uptuple = eachslice(up; dims = ndims(up))
-                @. upnorm = sqrt(uptuple[1]^2 + uptuple[2]^2)
-            elseif D == 3
-                uptuple = eachslice(up; dims = ndims(up))
-                @. upnorm = sqrt(uptuple[1]^2 + uptuple[2]^2 + uptuple[3]^2)
-            end
+            kinetic_energy!(upnorm, state.u, setup)
+            @. upnorm = sqrt(2 * upnorm)
+            upnorm
         elseif fieldname == :vorticity
-            apply_bc_u!(u, t, setup)
-            vorticity!(ω, u, setup)
+            apply_bc_u!(state.u, state.t, setup)
+            vorticity!(ω, state.u, setup)
             interpolate_ω_p!(ωp, ω, setup)
-        elseif fieldname == :streamfunction
-            get_streamfunction(setup, u, t)
-        elseif fieldname == :pressure
-            pressure!(p, u, temp, t, setup; psolver, F)
-        elseif fieldname == :Dfield
-            pressure!(p, u, temp, t, setup; psolver, F)
-            Dfield!(d, G, p, setup)
-            din = view(d, Ip)
-            @. din = log(max(logtol, din))
-            d
-        elseif fieldname == :Qfield
-            Qfield!(Q, u, setup)
-            Qin = view(Q, Ip)
-            @. Qin = log(max(logtol, Qin))
-            Q
         elseif fieldname == :qcrit
-            qcrit!(q, u, setup)
-        elseif fieldname == :eig2field
-            eig2field!(λ, u, setup)
-            λin = view(λ, Ip)
-            @. λin .= log(max(logtol, -λin))
-            λ
-        elseif fieldname in
-               union(Symbol.(["B$i" for i = 1:11]), Symbol.(["V$i" for i = 1:5]))
-            tensorbasis!(tb..., u, setup)
-            tb[sym][idx]
+            qcrit!(q, state.u, setup)
         elseif fieldname == :temperature
-            temp
+            state.temp
         end
         if ndims(f) == D + 1
             copyto!(_f, view(f, Ip, :))
@@ -207,8 +156,7 @@ z-component of zero, as this seems to be preferred by ParaView.
 """
 function snapshotsaver(state; setup, fieldnames = (:velocity,), psolver = nothing)
     state isa Observable || (state = Observable(state))
-    (; grid) = setup
-    (; dimension, xp, Ip) = grid
+    (; dimension, xp, Ip) = setup
     D = dimension()
     xparr = getindex.(Array.(xp), Ip.indices)
     fields = map(fieldname -> observefield(state; setup, fieldname, psolver), fieldnames)
@@ -304,10 +252,15 @@ fieldsaver(; setup, nupdate = 1) =
     end
 
 "Observe energy spectrum of `state`."
-function observespectrum(state; setup, npoint = 100, a = typeof(setup.Re)(1 + sqrt(5)) / 2)
+function observespectrum(
+    state;
+    setup,
+    npoint = 100,
+    a = eltype(setup.x[1])(1 + sqrt(5)) / 2,
+)
     state isa Observable || (state = Observable(state))
 
-    (; dimension, xp, Ip, Np) = setup.grid
+    (; dimension, xp, Ip, Np) = setup
     T = eltype(xp[1])
     D = dimension()
 

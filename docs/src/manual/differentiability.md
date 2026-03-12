@@ -32,24 +32,37 @@ make a time stepping loop composed of differentiable operations:
 ```@example Differentiability
 using IncompressibleNavierStokes
 
-ax = range(0, 1, 101)
-setup = Setup(; x = (ax, ax), Re = 500.0)
+n = 100
+ax = range(0, 1, n + 1)
+setup = Setup(;
+    x = (ax, ax),
+    boundary_conditions = (;
+        u = (
+            (PeriodicBC(), PeriodicBC()),
+            (PeriodicBC(), PeriodicBC()),
+        ),
+    ),
+)
 psolver = default_psolver(setup)
-method = RKMethods.RK44P2()
-Δt = 0.01
+method = LMWray3()
+Δt = 0.001
 nstep = 100
-(; Iu) = setup.grid
+(; Iu) = setup
 function final_energy(u)
-    stepper = create_stepper(method; setup, psolver, u, temp = nothing, t = 0.0)
+    state = (; u)
+    stepper = create_stepper(method; setup, psolver, state, t = 0.0)
     for it = 1:nstep
-        stepper = timestep(method, stepper, Δt)
+        stepper = timestep(
+            method, navierstokes, stepper, Δt;
+            params = (; viscosity = 2e-3),
+        )
     end
-    (; u) = stepper
-    sum(abs2, u[Iu[1], 1]) / 2 + sum(abs2, u[Iu[2], 2]) / 2
+    (; u) = stepper.state
+    E = sum(abs2, u[Iu[1], 1]) / 2n^2 + sum(abs2, u[Iu[2], 2]) / 2n^2
 end
 
 u = random_field(setup)
-
+final_energy(u)
 using Zygote
 g, = Zygote.gradient(final_energy, u)
 
@@ -78,7 +91,15 @@ In this example we differentiate the right-hand side of the Navier-Stokes equati
 ```@example Differentiability
 using Enzyme
 ax = range(0, 1, 101)
-setup = Setup(; x = (ax, ax), Re = 500.0)
+setup = Setup(;
+    x = (ax, ax),
+    boundary_conditions = (;
+        u = (
+            (PeriodicBC(), PeriodicBC()),
+            (PeriodicBC(), PeriodicBC()),
+        ),
+    ),
+)
 psolver = default_psolver(setup)
 u = random_field(setup)
 dudt = similar(u)
@@ -98,7 +119,8 @@ Remember that the derivative of the output (also called the *seed*) has to be se
 Then we pack the parameters to be passed to `right_hand_side!`:
 
 ```@example Differentiability
-params = [setup, psolver];
+viscosity = 2e-3
+params = setup, psolver, viscosity;
 params_ref = Ref(params);
 ```
 Now, we call the `autodiff` function from Enzyme:
@@ -112,6 +134,6 @@ Finally, we can also compare its value with the one obtained by Zygote different
 
 ```@example Differentiability
 f = create_right_hand_side(setup, psolver)
-_, zpull = Zygote.pullback(f, u, nothing, 0.0);
+_, zpull = Zygote.pullback(f, u, (; viscosity), 0.0);
 @assert zpull(dudt)[1] == du
 ```

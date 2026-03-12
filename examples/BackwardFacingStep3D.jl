@@ -12,21 +12,15 @@
 # `CairoMakie` makes high-quality static vector-graphics plots.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
+## using CUDA
 
 # Output directory
 outdir = joinpath(@__DIR__, "output", "BackwardFacingStep3D")
 
 # Floating point type
 T = Float32
-
-# Backend
-backend = IncompressibleNavierStokes.CPU()
-## using CUDA; backend = CUDABackend()
-
-# Reynolds number
-Re = T(1000)
 
 # A 3D grid is a Cartesian product of three vectors
 x = LinRange(T(0), T(10), 129),
@@ -35,39 +29,45 @@ LinRange(-T(0.25), T(0.25), 9)
 plotgrid(x...)
 
 # Boundary conditions: steady inflow on the top half
-U(dim, x, y, z, t) = dim == 1 && y ≥ 0 ? 24y * (one(x) / 2 - y) : zero(x)
-boundary_conditions = (
-    ## x left, x right
-    (DirichletBC(U), PressureBC()),
+U(dim, x, y, z, t) = (dim == 1) * (y ≥ 0) * 24y * (one(x) / 2 - y)
+boundary_conditions = (;
+    u = (
+        ## x left, x right
+        (DirichletBC(U), PressureBC()),
 
-    ## y rear, y front
-    (DirichletBC(), DirichletBC()),
+        ## y rear, y front
+        (DirichletBC(), DirichletBC()),
 
-    ## z bottom, z top
-    (PeriodicBC(), PeriodicBC()),
+        ## z bottom, z top
+        (PeriodicBC(), PeriodicBC()),
+    )
 )
 
 # Build setup and assemble operators
-setup = Setup(; x, Re, boundary_conditions, backend);
+setup = Setup(;
+    x,
+    boundary_conditions,
+    ## backend = CUDABackend(),
+);
+
+# This will factorize the Laplace matrix
+@time psolver = default_psolver(setup)
 
 # Initial conditions (extend inflow)
-ustart = velocityfield(setup, (dim, x, y, z) -> U(dim, x, y, z, zero(x)));
-
-# Solve steady state problem
-## u, p = solve_steady_state(setup, u₀, p₀);
-nothing
+u = velocityfield(setup, (dim, x, y, z) -> U(dim, x, y, z, zero(x)); psolver);
 
 # Solve unsteady problem
 state, outputs = solve_unsteady(;
     setup,
-    ustart,
+    start = (; u),
     tlims = (T(0), T(7)),
-    Δt = T(0.01),
+    psolver,
+    params = (; viscosity = T(1e-3)),
     processors = (
         rtp = realtimeplotter(;
             setup,
-            plot = fieldplot,
-            ## plot = energy_history_plot,
+            ## plot = fieldplot,
+            plot = energy_history_plot,
             ## plot = energy_spectrum_plot,
             nupdate = 1,
         ),
@@ -76,7 +76,7 @@ state, outputs = solve_unsteady(;
         ## field = fieldsaver(; setup, nupdate = 10),
         log = timelogger(; nupdate = 100),
     ),
-)
+);
 
 # ## Post-process
 #
@@ -85,11 +85,5 @@ state, outputs = solve_unsteady(;
 # Export to VTK
 save_vtk(state; setup, filename = joinpath(outdir, "solution"))
 
-# Plot pressure
-fieldplot(state; setup, fieldname = :pressure)
-
-# Plot velocity
-fieldplot(state; setup, fieldname = :velocitynorm)
-
-# Plot vorticity
-fieldplot(state; setup, fieldname = :vorticity)
+# Plot
+outputs.rtp

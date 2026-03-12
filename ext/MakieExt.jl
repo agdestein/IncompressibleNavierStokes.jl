@@ -120,7 +120,7 @@ realtimeplotter(;
     end
 
 fieldplot(state; setup, kwargs...) = fieldplot(
-    setup.grid.dimension,
+    setup.dimension,
     state isa Observable ? state : Observable(state);
     setup,
     kwargs...,
@@ -137,10 +137,10 @@ function fieldplot(
     docolorbar = true,
     size = nothing,
     title = nothing,
+    nsigma = 3.0,
     kwargs...,
 )
-    (; grid) = setup
-    (; dimension, xlims, xp, Ip, Δ) = grid
+    (; dimension, xlims, xp, Ip, Δ) = setup
     D = dimension()
 
     xf = Array.(getindex.(xp, Ip.indices))
@@ -158,7 +158,7 @@ function fieldplot(
                 f[1] += 1
                 f[end] -= 1
             else
-                a, b = get_lims(f)
+                a, b = get_lims(f, nsigma)
             end
             lims = (a, b)
         end
@@ -207,17 +207,16 @@ function fieldplot(
     setup,
     psolver = nothing,
     fieldname = :eig2field,
-    alpha = convert(eltype(setup.grid.x[1]), 0.1),
-    # isorange = convert(eltype(setup.grid.x[1]), 0.5),
+    alpha = convert(eltype(setup.x[1]), 0.1),
+    # isorange = convert(eltype(setup.x[1]), 0.5),
     equal_axis = true,
-    levels = LinRange{eltype(setup.grid.x[1])}(-10, 5, 10),
+    levels = LinRange{eltype(setup.x[1])}(-10, 5, 10),
     docolorbar = false,
     size = nothing,
     type = contour,
     kwargs...,
 )
-    (; grid) = setup
-    (; xp, Ip) = grid
+    (; xp, Ip) = setup
 
     xf = Array.(getindex.(xp, Ip.indices))
     dxf = diff.(xf)
@@ -280,7 +279,7 @@ end
 
 function energy_history_plot(state; setup)
     @assert state isa Observable "Energy history requires observable state."
-    (; Ip) = setup.grid
+    (; Ip) = setup
     e = scalarfield(setup)
     _points = Point2f[]
     points = lift(state) do (; u, t)
@@ -303,7 +302,7 @@ function energy_spectrum_plot(
 )
     state isa Observable || (state = Observable(state))
 
-    (; dimension, xp, Ip) = setup.grid
+    (; dimension, xp, Ip) = setup
     T = eltype(xp[1])
     D = dimension()
 

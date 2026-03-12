@@ -3,86 +3,87 @@
 # A hot and a cold plate generate a convection cell in a box.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
-
-# Hardware
-backend = IncompressibleNavierStokes.CPU()
-
 ## using CUDA, CUDSS
-## backend = CUDABackend()
 
 # Precision
-T = Float32
+T = Float64
 
 # Output directory
 outdir = joinpath(@__DIR__, "output", "RayleighBenard3D")
 
-# Temperature equation
-temperature = temperature_equation(;
-    Pr = T(0.71),
-    Ra = T(1e7),
-    Ge = T(1.0),
-    dodissipation = true,
-    boundary_conditions = (
-        (PeriodicBC(), PeriodicBC()),
-        (SymmetricBC(), SymmetricBC()),
-        (DirichletBC(T(1)), DirichletBC(T(0))),
-    ),
-    gdir = 3,
-    nondim_type = 1,
-)
-
 # Setup
-n = 60
-x = (
-    LinRange(T(0), T(π), 2n),
-    tanh_grid(T(0), T(1), n, T(1.2)),
-    tanh_grid(T(0), T(1), n, T(1.2)),
-)
+n = 64
+# x = (
+#     range(T(0), T(π), 2n),
+#     tanh_grid(T(0), T(1), n, T(1.2)),
+#     tanh_grid(T(0), T(1), n, T(1.2)),
+# )
+x = (range(T(0), T(π), 2n + 1), range(T(0), T(1), n + 1), range(T(0), T(1), n + 1))
 setup = Setup(;
     x,
-    boundary_conditions = (
-        (PeriodicBC(), PeriodicBC()),
-        (DirichletBC(), DirichletBC()),
-        (DirichletBC(), DirichletBC()),
+    boundary_conditions = (;
+        u = (
+            (PeriodicBC(), PeriodicBC()),
+            (DirichletBC(), DirichletBC()),
+            (DirichletBC(), DirichletBC()),
+        ),
+        temp = (
+            (PeriodicBC(), PeriodicBC()),
+            (SymmetricBC(), SymmetricBC()),
+            (DirichletBC(T(1)), DirichletBC(T(0))),
+        ),
     ),
-    Re = 1 / temperature.α1,
-    temperature,
-    backend,
+    ## backend = CUDABackend()
 );
 
 plotgrid(x[1], x[2])
+
+#-
+
 plotgrid(x[2], x[3])
 
-# This will factorize the Laplace matrix
-@time psolver = psolver_direct(setup)
+# AMGX solver (for NVidia GPUs)
+## AMGX_stuff = amgx_setup();
+## psolver = psolver_cg_AMGX(setup; stuff = AMGX_stuff);
+
+# Direct pressure solver
+## @time psolver = default_psolver(setup);
+
+# Discrete transform solver (FFT/DCT)
+psolver = psolver_transform(setup);
 
 # Initial conditions
-ustart = velocityfield(setup, (dim, x, y, z) -> zero(x); psolver);
-tempstart =
-    temperaturefield(setup, (x, y, z) -> one(x) / 2 + sin(20 * x) * sinpi(20 * y) / 100);
+start = (;
+    u = velocityfield(setup, (dim, x, y, z) -> zero(x); psolver),
+    temp = temperaturefield(
+        setup,
+        (x, y, z) -> one(x) / 2 + sin(20 * x) * sinpi(20 * y) / 100,
+    ),
+);
 
 # Solve equation
 state, outputs = solve_unsteady(;
+    force! = boussinesq!, # Solve the Boussinesq equations
     setup,
-    ustart,
-    tempstart,
-    tlims = (T(0), T(10)),
-    method = RKMethods.RK33C2(; T),
-    ## Δt = T(1e-2),
+    start,
+    tlims = (T(0), T(1)),
     psolver,
+    params = (;
+        viscosity = T(2.5e-4),
+        gravity = T(1.0),
+        gdir = 3, # Gravity in z-direction
+        conductivity = T(2.5e-4),
+        dodissipation = true,
+    ),
     processors = (;
-        ## anim = animator(;
-        ##     path = "$outdir/RB3D.mp4",
-        rtp = realtimeplotter(;
-            setup,
-            nupdate = 1,
-            levels = LinRange(-T(5), T(1), 10),
-            fieldname = :eig2field,
-            ## levels = LinRange{T}(0.01, 0.99, 10),
-            ## fieldname = :temperature,
-        ),
+        ## rtp = realtimeplotter(;
+        ##     setup,
+        ##     nupdate = 1,
+        ##     levels = LinRange(0.01 |> T, 0.99 |> T, 10),
+        ##     fieldname = :temperature,
+        ## ),
         ## vtk = vtk_writer(;
         ##     setup,
         ##     dir = joinpath(outdir, "RB3D_$n"),
@@ -90,19 +91,6 @@ state, outputs = solve_unsteady(;
         ##     ## fieldnames = (:velocity, :temperature, :eig2field)
         ##     fieldnames = (:temperature,),
         ## ),
-        log = timelogger(; nupdate = 100),
+        log = timelogger(; nupdate = 1),
     ),
 );
-
-field = IncompressibleNavierStokes.eig2field(state.u, setup)[setup.grid.Ip]
-hist(vec(Array(log.(max.(eps(T), .-field)))))
-
-fieldplot(
-    ## (; u = ustart, temp = tempstart, t = T(0));
-    state;
-    setup,
-    levels = LinRange{T}(0.5, 2, 5),
-    ## levels = LinRange(-T(5), T(1), 10),
-    ## fieldname = :eig2field,
-    fieldname = :temperature,
-)

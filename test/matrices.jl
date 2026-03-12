@@ -3,11 +3,12 @@
     x = tanh_grid(0.0, 5.0, 11), cosine_grid(0.0, 1.0, 7), tanh_grid(0.0, 0.8, 5)
     setup = Setup(;
         x,
-        Re = 1e3,
-        boundary_conditions = (
-            (PeriodicBC(), PeriodicBC()),
-            (DirichletBC(), PressureBC()),
-            (SymmetricBC(), SymmetricBC()),
+        boundary_conditions = (;
+            u = (
+                (PeriodicBC(), PeriodicBC()),
+                (DirichletBC(), PressureBC()),
+                (SymmetricBC(), SymmetricBC()),
+            )
         ),
     )
     u = randn!(vectorfield(setup))
@@ -46,6 +47,6 @@ end
     B = IncompressibleNavierStokes.bc_u_mat(setup)
     D = IncompressibleNavierStokes.diffusion_mat(setup)
     d1 = reshape(D * B * u[:], size(u))
-    d2 = diffusion(apply_bc_u(u, 0, setup), setup; use_viscosity = false)
+    d2 = diffusion(apply_bc_u(u, 0, setup), setup, 1)
     @test d1 ≈ d2
 end

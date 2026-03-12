@@ -1,66 +1,45 @@
-create_stepper(::LMWray3; setup, psolver, u, temp, t, n = 0) =
-    (; setup, psolver, u, temp, t, n)
+create_stepper(::LMWray3; setup, psolver, state, t, n = 0) = (; setup, psolver, state, t, n)
 
-function timestep!(method::LMWray3, stepper, Δt; θ = nothing, cache)
-    (; setup, psolver, u, temp, t, n) = stepper
-    (; closure_model, temperature) = setup
-    (; ustart, ku, p, tempstart, ktemp, diff) = cache
-    m = closure_model
-    T = eltype(u)
+function timestep!(
+    method::LMWray3,
+    force!,
+    stepper,
+    Δt;
+    params = nothing,
+    ode_cache,
+    force_cache,
+)
+    (; setup, psolver, state, t, n) = stepper
+    (; statestart, p, k) = ode_cache
+    T = eltype(state.u)
 
-    # We wrap the state in x = (; u, temp), and define some
-    # functions that operate on x
-
-    # Right-hand side function (without projection)
-    function f!(dx, x, t, setup)
-        # Velocity equation
-        apply_bc_u!(x.u, t, setup)
-        isnothing(x.temp) || apply_bc_temp!(x.temp, t, setup)
-        momentum!(dx.u, x.u, x.temp, t, setup)
-
-        # Add closure term
-        isnothing(m) || (dx.u .+= m(x.u, θ))
-
-        # Temperature equation
-        if !isnothing(x.temp)
-            fill!(dx.temp, 0)
-            convection_diffusion_temp!(dx.temp, x.u, x.temp, setup)
-            temperature.dodissipation && dissipation!(dx.temp, diff, x.u, setup)
-        end
-
-        dx
-    end
+    dotemp = haskey(state, :temp)
 
     # Boundary conditions and pressure projection
-    function correct!(x, t, setup)
+    function correct!(state, t, setup)
         # Project stage u directly
         # Make velocity divergence free at time t
-        apply_bc_u!(x.u, t, setup)
-        project!(x.u, setup; psolver, p)
-        x
+        apply_bc_u!(state.u, t, setup)
+        project!(state.u, setup; psolver, p)
+        state
     end
 
     # Copy state x to y
     function state_copyto!(y, x)
         copyto!(y.u, x.u)
-        isnothing(temp) || copyto!(y.temp, x.temp)
+        dotemp && copyto!(y.temp, x.temp)
         y
     end
 
     # Compute y = a * x + y for states x, y
     function state_axpy!(a, x, y)
         axpy!(a, x.u, y.u)
-        isnothing(temp) || axpy!(a, x.temp, y.temp)
+        dotemp && axpy!(a, x.temp, y.temp)
     end
-
-    # States
-    xstart = (; u = ustart, temp = tempstart)
-    x = (; u, temp)
-    dx = (; u = ku, temp = ktemp)
 
     # Update current solution
     tstart = t
-    state_copyto!(xstart, x)
+    state_copyto!(statestart, state)
 
     # Low-storage Butcher tableau:
     # c1 | 0             ⋯   0
@@ -81,17 +60,21 @@ function timestep!(method::LMWray3, stepper, Δt; θ = nothing, cache)
     nstage = length(a)
 
     for i = 1:nstage
-        t = tstart + c[i] * Δt
-        f!(dx, x, t, setup)
+        force!(k, state, t; setup, cache = force_cache, params...)
 
         # Compute x = correct(xstart + Δt * a[i] * dx)
-        state_copyto!(x, xstart)
-        state_axpy!(a[i] * Δt, dx, x)
-        correct!(x, t, setup)
+        t = tstart + c[i] * Δt
+        state_copyto!(state, statestart)
+        state_axpy!(a[i] * Δt, k, state)
+        correct!(state, t, setup)
 
-        # Compute xstart = xstart + Δt * b[i] * dx
+        # Compute statestart = statestart + Δt * b[i] * k
         # Skip for last iter
-        i == nstage || state_axpy!(b[i] * Δt, dx, xstart)
+        i == nstage || state_axpy!(b[i] * Δt, k, statestart)
+
+        # Fill boundary values at new time
+        apply_bc_u!(state.u, t, setup)
+        dotemp && apply_bc_temp!(state.temp, t, setup)
     end
 
     # Full time step
@@ -100,45 +83,23 @@ function timestep!(method::LMWray3, stepper, Δt; θ = nothing, cache)
     # This is redundant, but Neumann BC need to have _exact_ copies
     # since we divide by an infinitely thin (eps(T)) volume width in the
     # diffusion term
-    apply_bc_u!(x.u, t, setup)
-    isnothing(x.temp) || apply_bc_temp!(x.temp, t, setup)
+    apply_bc_u!(state.u, t, setup)
+    dotemp && apply_bc_temp!(state.temp, t, setup)
 
-    create_stepper(method; setup, psolver, x.u, x.temp, t, n = n + 1)
+    create_stepper(method; setup, psolver, state, t, n = n + 1)
 end
 
-function timestep(method::LMWray3, stepper, Δt; θ = nothing)
-    (; setup, psolver, u, temp, t, n) = stepper
-    (; closure_model, temperature) = setup
-    m = closure_model
+function timestep(method::LMWray3, force, stepper, Δt; params = nothing)
+    (; setup, psolver, state, t, n) = stepper
+    (; u) = state
     T = eltype(u)
 
-    # We wrap the state in x = (; u, temp), and define some
-    # functions that operate on x
-
-    # Right-hand side function (without projection)
-    function f(u, temp, t, setup)
-        u = apply_bc_u(u, t, setup)
-        if isnothing(temp)
-            dtemp = nothing
-        else
-            temp = apply_bc_temp(temp, t, setup)
-            dtemp = convection_diffusion_temp(u, temp, setup)
-            if temperature.dodissipation
-                dtemp += dissipation(u, setup)
-            end
-        end
-        du = momentum(u, temp, t, setup)
-
-        # Add closure term
-        isnothing(m) || (du += m(u, θ))
-
-        du, dtemp
-    end
+    dotemp = haskey(state, :temp)
 
     # Update current state
     tstart = t
-    ustart = u
-    tempstart = temp
+    ustart = state.u
+    dotemp && (tempstart = state.temp)
 
     # Low-storage Butcher tableau:
     # c1 | 0             ⋯   0
@@ -159,24 +120,32 @@ function timestep(method::LMWray3, stepper, Δt; θ = nothing)
     nstage = length(a)
 
     for i = 1:nstage
-        t = tstart + c[i] * Δt
-        du, dtemp = f(u, temp, t, setup)
+        k = force(state, t; setup, params...)
 
         # Compute state at current stage
-        u = @. ustart + Δt * a[i] * du
+        t = tstart + c[i] * Δt
+        u = @. ustart + Δt * a[i] * k.u
         u = apply_bc_u(u, t, setup)
         u = project(u, setup; psolver)
-        if !isnothing(temp)
-            temp = @. tempstart + Δt * a[i] * dtemp
+        if dotemp
+            temp = @. tempstart + Δt * a[i] * k.temp
         end
 
         # Advance start state (skip for last iter)
         if i < nstage
-            ustart = @. ustart + Δt * b[i] * du
-            if !isnothing(temp)
-                tempstart = @. tempstart + Δt * b[i] * dtemp
+            ustart = @. ustart + Δt * b[i] * k.u
+            if dotemp
+                tempstart = @. tempstart + Δt * b[i] * k.temp
             end
         end
+
+        # Fill boundary values at new time
+        u = apply_bc_u(u, t, setup)
+        if dotemp
+            temp = apply_bc_temp(temp, t, setup)
+        end
+
+        state = dotemp ? (; u, temp) : (; u)
     end
 
     # Full time step
@@ -185,10 +154,6 @@ function timestep(method::LMWray3, stepper, Δt; θ = nothing)
     # This is redundant, but Neumann BC need to have _exact_ copies
     # since we divide by an infinitely thin (eps(T)) volume width in the
     # diffusion term
-    u = apply_bc_u(u, t, setup)
-    if !isnothing(temp)
-        temp = apply_bc_temp(temp, t, setup)
-    end
 
-    create_stepper(method; setup, psolver, u, temp, t, n = n + 1)
+    create_stepper(method; setup, psolver, state, t, n = n + 1)
 end

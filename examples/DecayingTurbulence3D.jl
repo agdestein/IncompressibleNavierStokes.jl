@@ -7,27 +7,37 @@
 # eventually group to form larger visible eddies.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
+## using CUDA; 
 
 # ## Problem setup
 
-backend = IncompressibleNavierStokes.CPU()
-## using CUDA; backend = CUDABackend()
 T = Float32
 n = 128
 ax = range(T(0), T(1), n + 1)
-setup = Setup(; x = (ax, ax, ax), Re = T(4e3), backend);
+setup = Setup(;
+    x = (ax, ax, ax),
+    boundary_conditions = (;
+        u = (
+            (PeriodicBC(), PeriodicBC()),
+            (PeriodicBC(), PeriodicBC()),
+            (PeriodicBC(), PeriodicBC()),
+        ),
+    ),
+    ## backend = CUDABackend(),
+);
 psolver = default_psolver(setup);
-ustart = random_field(setup; psolver);
+u = random_field(setup; psolver);
 
 # ## Solve problem
 
 state, outputs = solve_unsteady(;
     setup,
-    ustart,
-    tlims = (T(0), T(2)),
+    start = (; u),
+    tlims = (T(0), T(1)),
     psolver,
+    params = (; viscosity = T(2e-4)),
     processors = (
         ## rtp = realtimeplotter(; setup, plot = fieldplot, nupdate = 10),
         ## ehist = realtimeplotter(; setup, plot = energy_history_plot, nupdate = 10),

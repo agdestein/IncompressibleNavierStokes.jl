@@ -3,17 +3,11 @@
 # Two fluids with different temperatures start mixing.
 
 #md using CairoMakie
-using GLMakie #!md
+using WGLMakie #!md
 using IncompressibleNavierStokes
 
 # Output directory for saving results
 outdir = joinpath(@__DIR__, "output", "RayleighTaylor2D")
-
-# Hardware
-backend = IncompressibleNavierStokes.CPU()
-
-## using CUDA, CUDSS
-## backend = CUDABackend()
 
 # Precision
 T = Float64
@@ -24,33 +18,33 @@ x = tanh_grid(T(0), T(1), n, T(1.5)), tanh_grid(T(0), T(2), 2n, T(1.5))
 plotgrid(x...; figure = (; size = (300, 600)))
 
 # Setup
-temperature = temperature_equation(;
-    Pr = T(0.71),
-    Ra = T(1e6),
-    Ge = T(1.0),
-    dodissipation = true,
-    boundary_conditions = ((SymmetricBC(), SymmetricBC()), (SymmetricBC(), SymmetricBC())),
-    gdir = 2,
-    nondim_type = 1,
-)
 setup = Setup(;
     x,
-    boundary_conditions = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
-    Re = 1 / temperature.α1,
-    temperature,
+    boundary_conditions = (;
+        u = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
+        temp = ((SymmetricBC(), SymmetricBC()), (SymmetricBC(), SymmetricBC())),
+    ),
 );
 
 # Initial conditions
-ustart = velocityfield(setup, (dim, x, y) -> zero(x));
-tempstart = temperaturefield(setup, (x, y) -> one(x) * (1 + sinpi(x) / 50 > y));
+start = (;
+    u = velocityfield(setup, (dim, x, y) -> zero(x)),
+    temp = temperaturefield(setup, (x, y) -> one(x) * (1 + sinpi(x) / 50 > y)),
+)
 
 # Solve equation
 state, outputs = solve_unsteady(;
+    force! = boussinesq!, # Solve the Boussinesq equations
     setup,
-    ustart,
-    tempstart,
+    start,
     tlims = (T(0), T(10)),
-    Δt = T(5e-3),
+    params = (;
+        viscosity = T(1e-3),
+        gravity = T(1.0),
+        gdir = 2, # Gravity acts in the y-direction
+        conductivity = T(1e-3),
+        dodissipation = true,
+    ),
     processors = (;
         rtp = realtimeplotter(;
             setup,

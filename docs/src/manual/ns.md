@@ -59,7 +59,7 @@ The boundary conditions on a part of the boundary
 
 ## Pressure equation
 
-Taking the divergence of the momemtum equations yields a Poisson
+Taking the divergence of the momentum equations yields a Poisson
 equation for the pressure:
 
 ```math
