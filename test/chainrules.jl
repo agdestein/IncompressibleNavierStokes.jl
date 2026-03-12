@@ -35,9 +35,7 @@ end
 end
 
 @testmodule Case begin
-    # module Case
     using IncompressibleNavierStokes
-
     D2, D3 = map((2, 3)) do D
         T = Float64
         params = (

@@ -467,8 +467,6 @@ end
         @unroll for i in dims
             @unroll for j in dims
                 Δuij = i == j ? Δu[j] : Δ[j]
-                AAji1 = i == j ? h : A_stag[i][1]
-                AAji2 = i == j ? h : A_stag[i][2]
 
                 # 1
                 I = J
@@ -495,7 +493,7 @@ end
                 if j == k && I in inside
                     Δa = Δuij[I[j]]
                     uij2 = h * u[I, i] + h * u[I+e(j), i]
-                    uji2 = AAji2[I[i]+(i==j)]
+                    uji2 = i == j ? h : A_stag[i][2][I[i]+(i==j)]
                     dφdu = -uij2 * uji2 / Δa
                     adjoint += ifelse(Δa > tol, φbar[I, i] * dφdu, z)
                 end
@@ -505,7 +503,7 @@ end
                 if j == k && I in inside
                     Δa = Δuij[I[j]]
                     uij2 = h * u[I, i] + h * u[I+e(j), i]
-                    uji2 = AAji1[I[i]+1]
+                    uji2 = i == j ? h : A_stag[i][1][I[i]+1]
                     dφdu = -uij2 * uji2 / Δuij[I[j]]
                     adjoint += ifelse(Δa > tol, φbar[I, i] * dφdu, z)
                 end
@@ -535,7 +533,7 @@ end
                 if j == k && I in inside
                     Δa = Δuij[I[j]]
                     uij1 = h * u[I-e(j), i] + h * u[I, i]
-                    uji1 = AAji2[I[i]-(i==j)]
+                    uji1 = i == j ? h : A_stag[i][2][I[i]-(i==j)]
                     dφdu = uij1 * uji1 / Δa
                     adjoint += ifelse(Δa > tol, φbar[I, i] * dφdu, z)
                 end
@@ -545,7 +543,7 @@ end
                 if j == k && I in inside
                     Δa = Δuij[I[j]]
                     uij1 = h * u[I-e(j), i] + h * u[I, i]
-                    uji1 = AAji1[I[i]+(i!=j)]
+                    uji1 = i == j ? h : A_stag[i][1][I[i]+(i!=j)]
                     dφdu = uij1 * uji1 / Δa
                     adjoint += ifelse(Δa > tol, φbar[I, i] * dφdu, z)
                 end
