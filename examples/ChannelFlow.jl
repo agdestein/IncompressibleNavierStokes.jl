@@ -393,7 +393,7 @@ function process_statseries(statistics, setup, problem, label)
                 (getindex(s, key)[2:(nhalf + 1)] .- getindex(s, key)[(end - 2):-1:(nhalf + 1)]) ./ 2
             elseif key == :up_up_vp
                 ## This should also have a flipped sign, since up^2 is positive,
-                ## but vp is probably inverse accross midline.
+                ## but vp is probably inverse across midline.
                 (getindex(s, key)[2:(nhalf + 1)] .- getindex(s, key)[(end - 1):-1:(nhalf + 2)]) ./ 2
             else
                 (getindex(s, key)[2:(nhalf + 1)] .+ getindex(s, key)[(end - 1):-1:(nhalf + 2)]) ./ 2
@@ -535,7 +535,7 @@ function plot_wall_profile_rms_comparison(stats, doscatter)
         end
     end
     Legend(fig[1, 2], ax)
-    plotfile = joinpath(getoutdir(problem), "wallplot-comparision-rms.pdf")
+    plotfile = joinpath(getoutdir(problem), "wallplot-comparison-rms.pdf")
     println("Saving plot to: $plotfile")
     save(plotfile, fig; backend = CairoMakie, size = (700, 400))
     return fig
