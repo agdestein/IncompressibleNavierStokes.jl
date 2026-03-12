@@ -17,10 +17,10 @@ strain!(S, u, setup) = apply!(strain_kernel!, setup, S, u, getgrid(setup))
     ex, ey = unit_cartesian_indices(2)
     Δux, Δuy = Δu[1][I[1]], Δ[2][I[2]]
     Δvx, Δvy = Δ[1][I[1]], Δu[2][I[2]]
-    ∂u∂x = (u[I, 1] - u[I - ex, 1]) / Δux
-    ∂u∂y = (u[I + ey, 1] - u[I, 1]) / Δuy
-    ∂v∂x = (u[I + ex, 2] - u[I, 2]) / Δvx
-    ∂v∂y = (u[I, 2] - u[I - ey, 2]) / Δvy
+    ∂u∂x = (u[I, 1] - u[I-ex, 1]) / Δux
+    ∂u∂y = (u[I+ey, 1] - u[I, 1]) / Δuy
+    ∂v∂x = (u[I+ex, 2] - u[I, 2]) / Δvx
+    ∂v∂y = (u[I, 2] - u[I-ey, 2]) / Δvy
     S.xx[I] = ∂u∂x
     S.yy[I] = ∂v∂y
     S.xy[I] = (∂u∂y + ∂v∂x) / 2
@@ -34,15 +34,15 @@ end
     Δux, Δuy, Δuz = Δu[1][I[1]], Δ[2][I[2]], Δ[3][I[3]]
     Δvx, Δvy, Δvz = Δ[1][I[1]], Δu[2][I[2]], Δ[3][I[3]]
     Δwx, Δwy, Δwz = Δ[1][I[1]], Δ[2][I[2]], Δu[3][I[3]]
-    ∂u∂x = (u[I, 1] - u[I - ex, 1]) / Δux
-    ∂u∂y = (u[I + ey, 1] - u[I, 1]) / Δuy
-    ∂u∂z = (u[I + ez, 1] - u[I, 1]) / Δuz
-    ∂v∂x = (u[I + ex, 2] - u[I, 2]) / Δvx
-    ∂v∂y = (u[I, 2] - u[I - ey, 2]) / Δvy
-    ∂v∂z = (u[I + ez, 2] - u[I, 2]) / Δvz
-    ∂w∂x = (u[I + ex, 3] - u[I, 3]) / Δwx
-    ∂w∂y = (u[I + ey, 3] - u[I, 3]) / Δwy
-    ∂w∂z = (u[I, 3] - u[I - ez, 3]) / Δwz
+    ∂u∂x = (u[I, 1] - u[I-ex, 1]) / Δux
+    ∂u∂y = (u[I+ey, 1] - u[I, 1]) / Δuy
+    ∂u∂z = (u[I+ez, 1] - u[I, 1]) / Δuz
+    ∂v∂x = (u[I+ex, 2] - u[I, 2]) / Δvx
+    ∂v∂y = (u[I, 2] - u[I-ey, 2]) / Δvy
+    ∂v∂z = (u[I+ez, 2] - u[I, 2]) / Δvz
+    ∂w∂x = (u[I+ex, 3] - u[I, 3]) / Δwx
+    ∂w∂y = (u[I+ey, 3] - u[I, 3]) / Δwy
+    ∂w∂z = (u[I, 3] - u[I-ez, 3]) / Δwz
     S.xx[I] = ∂u∂x
     S.yy[I] = ∂v∂y
     S.zz[I] = ∂w∂z
@@ -61,15 +61,15 @@ gradient_tensor!(G, u, setup) = apply!(gradient_tensor_kernel!, setup, G, u, get
     Δux, Δuy, Δuz = Δ[1][I[1]], Δu[2][I[2]], Δu[3][I[3]]
     Δvx, Δvy, Δvz = Δu[1][I[1]], Δ[2][I[2]], Δu[3][I[3]]
     Δwx, Δwy, Δwz = Δu[1][I[1]], Δu[2][I[2]], Δ[3][I[3]]
-    G.xx[I] = (u[I, 1] - u[I - ex, 1]) / Δux
-    G.xy[I] = (u[I + ey, 1] - u[I, 1]) / Δuy
-    G.xz[I] = (u[I + ez, 1] - u[I, 1]) / Δuz
-    G.yx[I] = (u[I + ex, 2] - u[I, 2]) / Δvx
-    G.yy[I] = (u[I, 2] - u[I - ey, 2]) / Δvy
-    G.yz[I] = (u[I + ez, 2] - u[I, 2]) / Δvz
-    G.zx[I] = (u[I + ex, 3] - u[I, 3]) / Δwx
-    G.zy[I] = (u[I + ey, 3] - u[I, 3]) / Δwy
-    G.zz[I] = (u[I, 3] - u[I - ez, 3]) / Δwz
+    G.xx[I] = (u[I, 1] - u[I-ex, 1]) / Δux
+    G.xy[I] = (u[I+ey, 1] - u[I, 1]) / Δuy
+    G.xz[I] = (u[I+ez, 1] - u[I, 1]) / Δuz
+    G.yx[I] = (u[I+ex, 2] - u[I, 2]) / Δvx
+    G.yy[I] = (u[I, 2] - u[I-ey, 2]) / Δvy
+    G.yz[I] = (u[I+ez, 2] - u[I, 2]) / Δvz
+    G.zx[I] = (u[I+ex, 3] - u[I, 3]) / Δwx
+    G.zy[I] = (u[I+ey, 3] - u[I, 3]) / Δwy
+    G.zz[I] = (u[I, 3] - u[I-ez, 3]) / Δwz
 end
 
 """
@@ -95,7 +95,7 @@ smagorinsky_viscosity!(visc, S, θ, setup) =
     d = gridsize_vol(grid, I)
     Sxx2 = S.xx[I]^2
     Syy2 = S.yy[I]^2
-    Sxy2 = (S.xy[I]^2 + S.xy[I - ex]^2 + S.xy[I - ey]^2 + S.xy[I - ex - ey]^2) / 4
+    Sxy2 = (S.xy[I]^2 + S.xy[I-ex]^2 + S.xy[I-ey]^2 + S.xy[I-ex-ey]^2) / 4
     visc[I] = θ^2 * d^2 * sqrt(2 * (Sxx2 + Syy2) + 4 * Sxy2)
 end
 
@@ -108,13 +108,14 @@ end
     Sxx2 = S.xx[I]^2
     Syy2 = S.yy[I]^2
     Szz2 = S.zz[I]^2
-    Sxy2 = (S.xy[I]^2 + S.xy[I - ex]^2 + S.xy[I - ey]^2 + S.xy[I - ex - ey]^2) / 4
-    Sxz2 = (S.xz[I]^2 + S.xz[I - ex]^2 + S.xz[I - ez]^2 + S.xz[I - ex - ez]^2) / 4
-    Syz2 = (S.yz[I]^2 + S.yz[I - ey]^2 + S.yz[I - ez]^2 + S.yz[I - ey - ez]^2) / 4
+    Sxy2 = (S.xy[I]^2 + S.xy[I-ex]^2 + S.xy[I-ey]^2 + S.xy[I-ex-ey]^2) / 4
+    Sxz2 = (S.xz[I]^2 + S.xz[I-ex]^2 + S.xz[I-ez]^2 + S.xz[I-ex-ez]^2) / 4
+    Syz2 = (S.yz[I]^2 + S.yz[I-ey]^2 + S.yz[I-ez]^2 + S.yz[I-ey-ez]^2) / 4
     visc[I] = θ^2 * d^2 * sqrt(2 * (Sxx2 + Syy2 + Szz2) + 4 * (Sxy2 + Sxz2 + Syz2))
 end
 
-apply_eddy_viscosity!(σ, visc, setup) = apply!(apply_eddy_viscosity_kernel!, setup, σ, visc, setup.Δ)
+apply_eddy_viscosity!(σ, visc, setup) =
+    apply!(apply_eddy_viscosity_kernel!, setup, σ, visc, setup.Δ)
 
 # Strain is already stored in σ, multiply by eddy-viscosity scaling
 @kernel function apply_eddy_viscosity_kernel!(O::CartesianIndex{2}, σ, visc, Δ)
@@ -124,13 +125,17 @@ apply_eddy_viscosity!(σ, visc, setup) = apply!(apply_eddy_viscosity_kernel!, se
 
     # Get linear interpolation weights
     Δx, Δy = Δ
-    Δxa, Δxb = Δx[I[1]], Δx[I[1] + 1]
-    Δya, Δyb = Δy[I[2]], Δy[I[2] + 1]
+    Δxa, Δxb = Δx[I[1]], Δx[I[1]+1]
+    Δya, Δyb = Δy[I[2]], Δy[I[2]+1]
     ax, bx = Δxb / (Δxa + Δxb), Δxa / (Δxa + Δxb)
     ay, by = Δyb / (Δya + Δyb), Δya / (Δya + Δyb)
 
     # Interpolate viscosity to off-diagonal location
-    visc_xy = ax * ay * visc[I] + bx * ay * visc[I + ex] + ax * by * visc[I + ey] + bx * by * visc[I + ex + ey]
+    visc_xy =
+        ax * ay * visc[I] +
+        bx * ay * visc[I+ex] +
+        ax * by * visc[I+ey] +
+        bx * by * visc[I+ex+ey]
 
     σ.xx[I] = -2 * visc[I] * σ.xx[I]
     σ.yy[I] = -2 * visc[I] * σ.yy[I]
@@ -144,17 +149,29 @@ end
 
     # Get linear interpolation weights
     Δx, Δy, Δz = Δ
-    Δxa, Δxb = Δx[I[1]], Δx[I[1] + 1]
-    Δya, Δyb = Δy[I[2]], Δy[I[2] + 1]
-    Δza, Δzb = Δz[I[3]], Δz[I[3] + 1]
+    Δxa, Δxb = Δx[I[1]], Δx[I[1]+1]
+    Δya, Δyb = Δy[I[2]], Δy[I[2]+1]
+    Δza, Δzb = Δz[I[3]], Δz[I[3]+1]
     ax, bx = Δxb / (Δxa + Δxb), Δxa / (Δxa + Δxb)
     ay, by = Δyb / (Δya + Δyb), Δya / (Δya + Δyb)
     az, bz = Δzb / (Δza + Δzb), Δza / (Δza + Δzb)
 
     # Interpolate viscosities to off-diagonal locations
-    visc_xy = ax * ay * visc[I] + bx * ay * visc[I + ex] + ax * by * visc[I + ey] + bx * by * visc[I + ex + ey]
-    visc_xz = ax * az * visc[I] + bx * az * visc[I + ex] + ax * bz * visc[I + ez] + bx * bz * visc[I + ex + ez]
-    visc_yz = ay * az * visc[I] + by * az * visc[I + ey] + ay * bz * visc[I + ez] + by * bz * visc[I + ey + ez]
+    visc_xy =
+        ax * ay * visc[I] +
+        bx * ay * visc[I+ex] +
+        ax * by * visc[I+ey] +
+        bx * by * visc[I+ex+ey]
+    visc_xz =
+        ax * az * visc[I] +
+        bx * az * visc[I+ex] +
+        ax * bz * visc[I+ez] +
+        bx * bz * visc[I+ex+ez]
+    visc_yz =
+        ay * az * visc[I] +
+        by * az * visc[I+ey] +
+        ay * bz * visc[I+ez] +
+        by * bz * visc[I+ey+ez]
 
     σ.xx[I] = -2 * visc[I] * σ.xx[I]
     σ.yy[I] = -2 * visc[I] * σ.yy[I]
@@ -173,10 +190,10 @@ divoftensor!(c, σ, setup) = apply!(divoftensor_kernel!, setup, c, σ, getgrid(s
     ex, ey = unit_cartesian_indices(2)
     Δpx, Δpy = Δ[1][I[1]], Δ[2][I[2]]
     Δux, Δuy = Δu[1][I[1]], Δu[2][I[2]]
-    ∂σxx∂x = (σ.xx[I + ex] - σ.xx[I]) / Δux
-    ∂σxy∂y = (σ.xy[I] - σ.xy[I - ey]) / Δpy
-    ∂σyx∂x = (σ.xy[I] - σ.xy[I - ex]) / Δpx
-    ∂σyy∂y = (σ.yy[I + ey] - σ.yy[I]) / Δuy
+    ∂σxx∂x = (σ.xx[I+ex] - σ.xx[I]) / Δux
+    ∂σxy∂y = (σ.xy[I] - σ.xy[I-ey]) / Δpy
+    ∂σyx∂x = (σ.xy[I] - σ.xy[I-ex]) / Δpx
+    ∂σyy∂y = (σ.yy[I+ey] - σ.yy[I]) / Δuy
     f[I, 1] -= ∂σxx∂x + ∂σxy∂y
     f[I, 2] -= ∂σyx∂x + ∂σyy∂y
 end
@@ -188,15 +205,15 @@ end
     ex, ey, ez = unit_cartesian_indices(3)
     Δpx, Δpy, Δpz = Δ[1][I[1]], Δ[2][I[2]], Δ[3][I[3]]
     Δux, Δuy, Δuz = Δu[1][I[1]], Δu[2][I[2]], Δu[3][I[3]]
-    ∂σxx∂x = (σ.xx[I + ex] - σ.xx[I]) / Δux
-    ∂σxy∂y = (σ.xy[I] - σ.xy[I - ey]) / Δpy
-    ∂σxz∂z = (σ.xz[I] - σ.xz[I - ez]) / Δpz
-    ∂σyx∂x = (σ.xy[I] - σ.xy[I - ex]) / Δpx
-    ∂σyy∂y = (σ.yy[I + ey] - σ.yy[I]) / Δuy
-    ∂σyz∂z = (σ.yz[I] - σ.yz[I - ez]) / Δpz
-    ∂σzx∂x = (σ.xz[I] - σ.xz[I - ex]) / Δpx
-    ∂σzy∂y = (σ.yz[I] - σ.yz[I - ey]) / Δpy
-    ∂σzz∂z = (σ.zz[I + ez] - σ.zz[I]) / Δuz
+    ∂σxx∂x = (σ.xx[I+ex] - σ.xx[I]) / Δux
+    ∂σxy∂y = (σ.xy[I] - σ.xy[I-ey]) / Δpy
+    ∂σxz∂z = (σ.xz[I] - σ.xz[I-ez]) / Δpz
+    ∂σyx∂x = (σ.xy[I] - σ.xy[I-ex]) / Δpx
+    ∂σyy∂y = (σ.yy[I+ey] - σ.yy[I]) / Δuy
+    ∂σyz∂z = (σ.yz[I] - σ.yz[I-ez]) / Δpz
+    ∂σzx∂x = (σ.xz[I] - σ.xz[I-ex]) / Δpx
+    ∂σzy∂y = (σ.yz[I] - σ.yz[I-ey]) / Δpy
+    ∂σzz∂z = (σ.zz[I+ez] - σ.zz[I]) / Δuz
     f[I, 1] -= ∂σxx∂x + ∂σxy∂y + ∂σxz∂z
     f[I, 2] -= ∂σyx∂x + ∂σyy∂y + ∂σyz∂z
     f[I, 3] -= ∂σzx∂x + ∂σzy∂y + ∂σzz∂z
@@ -209,24 +226,24 @@ Put the tensor in a statically sized `SMatrix`.
 function collocate_tensor end
 function collocate_tensor(σ, I::CartesianIndex{2})
     ex, ey = unit_cartesian_indices(2)
-    return SMatrix{2, 2, eltype(σ.xx), 4}(
+    return SMatrix{2,2,eltype(σ.xx),4}(
         σ.xx[I],
-        (σ.yx[I] + σ.yx[I - ex] + σ.yx[I - ey] + σ.yx[I - ex - ey]) / 4,
-        (σ.xy[I] + σ.xy[I - ex] + σ.xy[I - ey] + σ.xy[I - ex - ey]) / 4,
+        (σ.yx[I] + σ.yx[I-ex] + σ.yx[I-ey] + σ.yx[I-ex-ey]) / 4,
+        (σ.xy[I] + σ.xy[I-ex] + σ.xy[I-ey] + σ.xy[I-ex-ey]) / 4,
         σ.yy[I],
     )
 end
 function collocate_tensor(σ, I::CartesianIndex{3})
     ex, ey, ez = unit_cartesian_indices(3)
-    return SMatrix{3, 3, eltype(σ.xx), 9}(
+    return SMatrix{3,3,eltype(σ.xx),9}(
         σ.xx[I],
-        (σ.yx[I] + σ.yx[I - ex] + σ.yx[I - ey] + σ.yx[I - ex - ey]) / 4,
-        (σ.zx[I] + σ.zx[I - ex] + σ.zx[I - ez] + σ.zx[I - ex - ez]) / 4,
-        (σ.xy[I] + σ.xy[I - ex] + σ.xy[I - ey] + σ.xy[I - ex - ey]) / 4,
+        (σ.yx[I] + σ.yx[I-ex] + σ.yx[I-ey] + σ.yx[I-ex-ey]) / 4,
+        (σ.zx[I] + σ.zx[I-ex] + σ.zx[I-ez] + σ.zx[I-ex-ez]) / 4,
+        (σ.xy[I] + σ.xy[I-ex] + σ.xy[I-ey] + σ.xy[I-ex-ey]) / 4,
         σ.yy[I],
-        (σ.zy[I] + σ.zy[I - ey] + σ.zy[I - ez] + σ.zy[I - ey - ez]) / 4,
-        (σ.xz[I] + σ.xz[I - ex] + σ.xz[I - ez] + σ.xz[I - ex - ez]) / 4,
-        (σ.yz[I] + σ.yz[I - ey] + σ.yz[I - ez] + σ.yz[I - ey - ez]) / 4,
+        (σ.zy[I] + σ.zy[I-ey] + σ.zy[I-ez] + σ.zy[I-ey-ez]) / 4,
+        (σ.xz[I] + σ.xz[I-ex] + σ.xz[I-ez] + σ.xz[I-ex-ez]) / 4,
+        (σ.yz[I] + σ.yz[I-ey] + σ.yz[I-ez] + σ.yz[I-ey-ez]) / 4,
         σ.zz[I],
     )
 end
@@ -246,7 +263,13 @@ struct QR{T} <: AbstractEddyViscosity
     C::T
 end
 
-@kernel function eddy_viscosity_kernel!(O::CartesianIndex{3}, e::Smagorinsky, visc, G_split, grid)
+@kernel function eddy_viscosity_kernel!(
+    O::CartesianIndex{3},
+    e::Smagorinsky,
+    visc,
+    G_split,
+    grid,
+)
     I = @index(Global, Cartesian)
     I = I + O
     G = collocate_tensor(G_split, I)
@@ -280,7 +303,13 @@ end
     visc[I] = (e.C * d)^2 * abs(RS) / QS
 end
 
-@kernel function eddy_viscosity_kernel!(O::CartesianIndex{3}, e::Vreman, visc, G_split, grid)
+@kernel function eddy_viscosity_kernel!(
+    O::CartesianIndex{3},
+    e::Vreman,
+    visc,
+    G_split,
+    grid,
+)
     I = @index(Global, Cartesian)
     I = I + O
     G = collocate_tensor(G_split, I)
@@ -300,10 +329,7 @@ end
     b23 = d1 * a12 * a13 + d2 * a22 * a23 + d3 * a32 * a33
     b33 = d1 * a13 * a13 + d2 * a23 * a23 + d3 * a33 * a33
 
-    abeta =
-        a11^2 + a12^2 + a13^2 +
-        a21^2 + a22^2 + a23^2 +
-        a31^2 + a32^2 + a33^2
+    abeta = a11^2 + a12^2 + a13^2 + a21^2 + a22^2 + a23^2 + a31^2 + a32^2 + a33^2
     bbeta = b11 * b22 - b12^2 + b11 * b33 - b13^2 + b22 * b33 - b23^2
 
     value = e.C^2 * sqrt(bbeta / abeta)
@@ -312,11 +338,11 @@ end
     visc[I] = ifelse(abeta > getvremantol(value), value, zero(value))
 end
 @inline getvremantol(::Float64) = 1e-12
-@inline getvremantol(::Float32) = 1f-6
+@inline getvremantol(::Float32) = 1.0f-6
 
 function zero_out_wall!(p, setup)
     d = setup.dimension()
-    for i in 1:d
+    for i = 1:d
         bc = setup.boundary_conditions.u[i]
         bc[1] isa DirichletBC && fill!(view(p, ntuple(j -> i == j ? 1 : (:), d)...), 0)
         bc[2] isa DirichletBC &&

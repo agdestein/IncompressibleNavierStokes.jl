@@ -86,14 +86,30 @@ function getproblem()
     C_vreman = sqrt(2.5 * C_smag^2)
 
     return (;
-        dosimulation, doles,
-        H, Lx, Ly, Lz,
-        u_tau, Re_tau, Re_m,
-        viscosity, forcing,
-        nx, ny, nz, stretch,
-        twarmup, taverage, tsimulation,
-        cfl, nsave,
-        C_smag, C_wale, C_qr, C_vreman,
+        dosimulation,
+        doles,
+        H,
+        Lx,
+        Ly,
+        Lz,
+        u_tau,
+        Re_tau,
+        Re_m,
+        viscosity,
+        forcing,
+        nx,
+        ny,
+        nz,
+        stretch,
+        twarmup,
+        taverage,
+        tsimulation,
+        cfl,
+        nsave,
+        C_smag,
+        C_wale,
+        C_qr,
+        C_vreman,
     )
 end
 
@@ -180,10 +196,16 @@ function compute_statistics!(buffers, uvw, setup, cache)
     dovisc = !isnothing(cache)
     (; N) = setup
     (;
-        ubar, vbar, wbar,
-        up_up, vp_vp, wp_wp,
-        up_up_up, up_up_up_up,
-        up_up_vp, up_wp,
+        ubar,
+        vbar,
+        wbar,
+        up_up,
+        vp_vp,
+        wp_wp,
+        up_up_up,
+        up_up_up_up,
+        up_up_vp,
+        up_wp,
         visc,
     ) = buffers
     nspace = (N[1] - 2) * (N[3] - 2) # Number of averaging volumes
@@ -193,7 +215,7 @@ function compute_statistics!(buffers, uvw, setup, cache)
         ubar_j = 0.0
         vbar_j = 0.0
         wbar_j = 0.0
-        for k in 2:(N[3] - 1), i in 2:(N[1] - 1)
+        for k = 2:(N[3]-1), i = 2:(N[1]-1)
             ubar_j += uvw[i, j, k, 1]
             vbar_j += uvw[i, j, k, 2]
             wbar_j += uvw[i, j, k, 3]
@@ -206,7 +228,7 @@ function compute_statistics!(buffers, uvw, setup, cache)
     ## Average eddy viscosity
     dovisc && AK.foraxes(uvw, 2) do j
         visc_j = 0.0
-        for k in 2:(N[3] - 1), i in 2:(N[1] - 1)
+        for k = 2:(N[3]-1), i = 2:(N[1]-1)
             visc_j += dovisc ? cache.visc[i, j, k] : 0.0
         end
         visc[j] = visc_j / nspace
@@ -225,7 +247,7 @@ function compute_statistics!(buffers, uvw, setup, cache)
         up_wp_j = 0.0
 
         ## Sum over current wall-normal plane
-        for k in 2:(N[3] - 1), i in 2:(N[1] - 1)
+        for k = 2:(N[3]-1), i = 2:(N[1]-1)
             ## Face centered velocity fluctuations
             up = uvw[i, j, k, 1] - ubar[j]
             vp = uvw[i, j, k, 2] - vbar[j]
@@ -236,9 +258,9 @@ function compute_statistics!(buffers, uvw, setup, cache)
             jleft = max(j - 1, 1)
 
             ## Fluctuations interpolated to cell centers. For v, we subtract mean, then interpolate
-            upc = (uvw[i, j, k, 1] + uvw[i - 1, j, k, 1]) / 2 - ubar[j]
+            upc = (uvw[i, j, k, 1] + uvw[i-1, j, k, 1]) / 2 - ubar[j]
             vpc = ((uvw[i, j, k, 2] - vbar[j]) + (uvw[i, jleft, k, 2] - vbar[jleft])) / 2
-            wpc = (uvw[i, j, k, 3] + uvw[i, j, k - 1, 3]) / 2 - wbar[j]
+            wpc = (uvw[i, j, k, 3] + uvw[i, j, k-1, 3]) / 2 - wbar[j]
 
             ## Add to existing sums
             up_up_j += up^2
@@ -267,7 +289,6 @@ end
 
 "Solve channel flow and average statistics over time."
 function solve(setup, psolver, ustart, force!, params, problem, filename, desc)
-
     @info "Solving with \"$desc\" and computing statistics."
     flush(stderr) # Prevent logging delay on Snellius
 
@@ -300,7 +321,7 @@ function solve(setup, psolver, ustart, force!, params, problem, filename, desc)
         up_up_up_up = zero(Δ[2]),
         up_up_vp = zero(Δ[2]),
         up_wp = zero(Δ[2]),
-        visc = zero(Δ[2])
+        visc = zero(Δ[2]),
     )
 
     statistics = fill(map(Array, buffers), 0)
@@ -316,7 +337,7 @@ function solve(setup, psolver, ustart, force!, params, problem, filename, desc)
     ## Step through all the save points
     everythingfine = true
     prog = Progress(nsave + 1; desc)
-    for isave in 0:nsave
+    for isave = 0:nsave
         ## Step until next save point.
         ## For the first step, the while loop is never entered.
         tstop = isave * Δt_save
@@ -335,7 +356,8 @@ function solve(setup, psolver, ustart, force!, params, problem, filename, desc)
             end
 
             ## Perform a single time step with the time integration method
-            stepper = NS.timestep!(method, force!, stepper, Δt; params, ode_cache, force_cache)
+            stepper =
+                NS.timestep!(method, force!, stepper, Δt; params, ode_cache, force_cache)
             isubstep += 1
         end
 
@@ -345,11 +367,12 @@ function solve(setup, psolver, ustart, force!, params, problem, filename, desc)
         push!(times, stepper.t)
 
         next!(
-            prog; showvalues = [
+            prog;
+            showvalues = [
                 ("Δt", cfl * NS.propose_timestep(force!, stepper.state, setup, params)),
                 ("substeps", isubstep),
                 ("time", stepper.t),
-            ]
+            ],
         )
         flush(stdout) # Prevent logging delay on Snellius
         flush(stderr) # Prevent logging delay on Snellius
@@ -373,41 +396,56 @@ function process_statseries(statistics, setup, problem, label)
     ## Get yplus coordinates until half channel height.
     ## Exclude zero.
     nhalf = div(ny, 2)
-    ycenter = xp[2][2:(nhalf + 1)] * u_tau / viscosity |> Array
-    yedge = xu[2][2][2:(nhalf + 1)] * u_tau / viscosity |> Array
+    ycenter = xp[2][2:(nhalf+1)] * u_tau / viscosity |> Array
+    yedge = xu[2][2][2:(nhalf+1)] * u_tau / viscosity |> Array
 
     ## Filter out warm-up stats
     istart = findfirst(i -> tsimulation / nsave * (i - 1) > twarmup, eachindex(statistics))
     stats_use = statistics[istart:end]
 
     ## Compute time averages
-    averages = map(keys(statistics[1])) do key
-        statavg = sum(stats_use) do s
-            ## Average over the two symmetric values also
-            if key == :vp_vp
-                (getindex(s, key)[2:(nhalf + 1)] .+ getindex(s, key)[(end - 2):-1:(nhalf + 1)]) ./ 2
-            elseif key == :vbar
-                ## This quantity is signed, but the sign we want is "velocity away from the wall".
-                ## Therefore flip the sign in the average.
-                ## Note: This quantity is probably zero anyway.
-                (getindex(s, key)[2:(nhalf + 1)] .- getindex(s, key)[(end - 2):-1:(nhalf + 1)]) ./ 2
-            elseif key == :up_up_vp
-                ## This should also have a flipped sign, since up^2 is positive,
-                ## but vp is probably inverse across midline.
-                (getindex(s, key)[2:(nhalf + 1)] .- getindex(s, key)[(end - 1):-1:(nhalf + 2)]) ./ 2
-            else
-                (getindex(s, key)[2:(nhalf + 1)] .+ getindex(s, key)[(end - 1):-1:(nhalf + 2)]) ./ 2
-            end
-        end / length(stats_use)
-        key => statavg
-    end |> NamedTuple
+    averages =
+        map(keys(statistics[1])) do key
+            statavg =
+                sum(stats_use) do s
+                    ## Average over the two symmetric values also
+                    if key == :vp_vp
+                        (
+                            getindex(s, key)[2:(nhalf+1)] .+
+                            getindex(s, key)[(end-2):-1:(nhalf+1)]
+                        ) ./ 2
+                    elseif key == :vbar
+                        ## This quantity is signed, but the sign we want is "velocity away from the wall".
+                        ## Therefore flip the sign in the average.
+                        ## Note: This quantity is probably zero anyway.
+                        (
+                            getindex(s, key)[2:(nhalf+1)] .-
+                            getindex(s, key)[(end-2):-1:(nhalf+1)]
+                        ) ./ 2
+                    elseif key == :up_up_vp
+                        ## This should also have a flipped sign, since up^2 is positive,
+                        ## but vp is probably inverse across midline.
+                        (
+                            getindex(s, key)[2:(nhalf+1)] .-
+                            getindex(s, key)[(end-1):-1:(nhalf+2)]
+                        ) ./ 2
+                    else
+                        (
+                            getindex(s, key)[2:(nhalf+1)] .+
+                            getindex(s, key)[(end-1):-1:(nhalf+2)]
+                        ) ./ 2
+                    end
+                end / length(stats_use)
+            key => statavg
+        end |> NamedTuple
 
     return (;
         averages...,
         urms = sqrt.(averages.up_up),
         vrms = sqrt.(averages.vp_vp),
         wrms = sqrt.(averages.wp_wp),
-        ycenter, yedge,
+        ycenter,
+        yedge,
         label,
     )
 end
@@ -434,9 +472,9 @@ function vremanstatistics()
     ufile = joinpath(@__DIR__, "Chan180_FD2_all/Chan180_FD2_basic_u.txt")
     vfile = joinpath(@__DIR__, "Chan180_FD2_all/Chan180_FD2_basic_v.txt")
     wfile = joinpath(@__DIR__, "Chan180_FD2_all/Chan180_FD2_basic_w.txt")
-    udata = readdlm(ufile, comments = true, comment_char = '%')
-    vdata = readdlm(vfile, comments = true, comment_char = '%')
-    wdata = readdlm(wfile, comments = true, comment_char = '%')
+    udata = readdlm(ufile; comments = true, comment_char = '%')
+    vdata = readdlm(vfile; comments = true, comment_char = '%')
+    wdata = readdlm(wfile; comments = true, comment_char = '%')
     statistics = (;
         ycenter = udata[:, 1],
         yedge = vdata[:, 1],
@@ -460,19 +498,19 @@ end
 function plot_wall_profile(stats, problem, doscatter)
     (; u_tau, H) = problem
     for (key, title) in [
-            :ubar => L"\langle u \rangle",
-            :vbar => L"\langle v \rangle",
-            :wbar => L"\langle w \rangle",
-            :urms => L"\sqrt{\langle u' u' \rangle}",
-            :vrms => L"\sqrt{\langle v' v' \rangle}",
-            :wrms => L"\sqrt{\langle w' w' \rangle}",
-            :up_up_up => L"\langle u' u' u' \rangle",
-            :up_up_up_up => L"\langle u' u' u' u' \rangle",
-            :up_up_vp => L"\langle u' u' v' \rangle",
-            :up_wp => L"\langle u' w' \rangle",
-            :visc => L"\langle \nu^\Delta \rangle / \nu",
-            ## :visc => "Eddy-viscosity",
-        ]
+        :ubar => L"\langle u \rangle",
+        :vbar => L"\langle v \rangle",
+        :wbar => L"\langle w \rangle",
+        :urms => L"\sqrt{\langle u' u' \rangle}",
+        :vrms => L"\sqrt{\langle v' v' \rangle}",
+        :wrms => L"\sqrt{\langle w' w' \rangle}",
+        :up_up_up => L"\langle u' u' u' \rangle",
+        :up_up_up_up => L"\langle u' u' u' u' \rangle",
+        :up_up_vp => L"\langle u' u' v' \rangle",
+        :up_wp => L"\langle u' w' \rangle",
+        :visc => L"\langle \nu^\Delta \rangle / \nu",
+        ## :visc => "Eddy-viscosity",
+    ]
         fig = Figure()
         ax = Axis(
             fig[1, 1];
@@ -484,17 +522,29 @@ function plot_wall_profile(stats, problem, doscatter)
         )
         markers = [:circle, :rect, :diamond, :cross, :xcross, :utriangle, :dtriangle]
         normalizations = (;
-                      ## visc = u_tau * H,
-                      visc = problem.viscosity,
-                     )
+            ## visc = u_tau * H,
+            visc = problem.viscosity,
+        )
         for (i, s) in enumerate(stats)
             if key == :ubar && i == 1
                 ## Add reference lines for mean velocity profile
                 yvisc = filter(<=(18), s.ycenter)
                 ylog = filter(y -> 1 <= y <= 180, s.ycenter)
                 ulog = @. log(ylog) / 0.41 + 5.7
-                lines!(yvisc, yvisc; color = :black, linestyle = :dash, label = "Linear profile")
-                lines!(ylog, ulog; color = :black, linestyle = :dot, label = "Logarithmic profile")
+                lines!(
+                    yvisc,
+                    yvisc;
+                    color = :black,
+                    linestyle = :dash,
+                    label = "Linear profile",
+                )
+                lines!(
+                    ylog,
+                    ulog;
+                    color = :black,
+                    linestyle = :dot,
+                    label = "Logarithmic profile",
+                )
             end
             yuse = key == :vrms || key == :vbar ? s.yedge : s.ycenter
             normal = haskey(normalizations, key) ? normalizations[key] : 1.0
@@ -524,14 +574,50 @@ function plot_wall_profile_rms_comparison(stats, doscatter)
     for (i, s) in enumerate(stats)
         if doscatter
             markers = [:circle, :rect, :diamond, :cross, :xcross, :utriangle, :dtriangle]
-            scatter!(s.ycenter, s.urms; color = Cycled(i), marker = markers[1], label = L"%$(s.label), $\sqrt{\langle u' u' \rangle}$")
-            scatter!(s.yedge, s.vrms; color = Cycled(i), marker = markers[2], label = L"%$(s.label), $\sqrt{\langle v' v' \rangle}$")
-            scatter!(s.ycenter, s.wrms; color = Cycled(i), marker = markers[3], label = L"%$(s.label), $\sqrt{\langle w' w' \rangle}$")
+            scatter!(
+                s.ycenter,
+                s.urms;
+                color = Cycled(i),
+                marker = markers[1],
+                label = L"%$(s.label), $\sqrt{\langle u' u' \rangle}$",
+            )
+            scatter!(
+                s.yedge,
+                s.vrms;
+                color = Cycled(i),
+                marker = markers[2],
+                label = L"%$(s.label), $\sqrt{\langle v' v' \rangle}$",
+            )
+            scatter!(
+                s.ycenter,
+                s.wrms;
+                color = Cycled(i),
+                marker = markers[3],
+                label = L"%$(s.label), $\sqrt{\langle w' w' \rangle}$",
+            )
         else
             linestyles = [:solid, :dash, :dot, :dashdot]
-            lines!(s.ycenter, s.urms; color = Cycled(i), linestyle = linestyles[1], label = L"%$(s.label), $\sqrt{\langle u' u' \rangle}$")
-            lines!(s.yedge, s.vrms; color = Cycled(i), linestyle = linestyles[2], label = L"%$(s.label), $\sqrt{\langle v' v' \rangle}$")
-            lines!(s.ycenter, s.wrms; color = Cycled(i), linestyle = linestyles[3], label = L"%$(s.label), $\sqrt{\langle w' w' \rangle}$")
+            lines!(
+                s.ycenter,
+                s.urms;
+                color = Cycled(i),
+                linestyle = linestyles[1],
+                label = L"%$(s.label), $\sqrt{\langle u' u' \rangle}$",
+            )
+            lines!(
+                s.yedge,
+                s.vrms;
+                color = Cycled(i),
+                linestyle = linestyles[2],
+                label = L"%$(s.label), $\sqrt{\langle v' v' \rangle}$",
+            )
+            lines!(
+                s.ycenter,
+                s.wrms;
+                color = Cycled(i),
+                linestyle = linestyles[3],
+                label = L"%$(s.label), $\sqrt{\langle w' w' \rangle}$",
+            )
         end
     end
     Legend(fig[1, 2], ax)
@@ -550,14 +636,24 @@ end
 function show_problem(setup, problem)
     (; Δ) = setup
     (; nx, ny, nz, u_tau, viscosity) = problem
-    Δxp_max = maximum(Δ[1][2:(end - 1)]) * u_tau / viscosity
-    Δyp_max = maximum(Δ[2][2:(end - 1)]) * u_tau / viscosity
-    Δzp_max = maximum(Δ[3][2:(end - 1)]) * u_tau / viscosity
-    Δxp_min = minimum(Δ[1][2:(end - 1)]) * u_tau / viscosity
-    Δyp_min = minimum(Δ[2][2:(end - 1)]) * u_tau / viscosity
-    Δzp_min = minimum(Δ[3][2:(end - 1)]) * u_tau / viscosity
-    @info @sprintf("Max grid spacing in wall units: Δx+ = %.4g, Δy+ = %.4g, Δz+ = %.4g\n", Δxp_max, Δyp_max, Δzp_max)
-    @info @sprintf("Min grid spacing in wall units: Δx+ = %.4g, Δy+ = %.4g, Δz+ = %.4g\n", Δxp_min, Δyp_min, Δzp_min)
+    Δxp_max = maximum(Δ[1][2:(end-1)]) * u_tau / viscosity
+    Δyp_max = maximum(Δ[2][2:(end-1)]) * u_tau / viscosity
+    Δzp_max = maximum(Δ[3][2:(end-1)]) * u_tau / viscosity
+    Δxp_min = minimum(Δ[1][2:(end-1)]) * u_tau / viscosity
+    Δyp_min = minimum(Δ[2][2:(end-1)]) * u_tau / viscosity
+    Δzp_min = minimum(Δ[3][2:(end-1)]) * u_tau / viscosity
+    @info @sprintf(
+        "Max grid spacing in wall units: Δx+ = %.4g, Δy+ = %.4g, Δz+ = %.4g\n",
+        Δxp_max,
+        Δyp_max,
+        Δzp_max
+    )
+    @info @sprintf(
+        "Min grid spacing in wall units: Δx+ = %.4g, Δy+ = %.4g, Δz+ = %.4g\n",
+        Δxp_min,
+        Δyp_min,
+        Δzp_min
+    )
     @info "Grid size: nx = $nx, ny = $ny, nz = $nz"
     flush(stderr) # Prevent logging delay on Snellius
     return nothing
@@ -574,30 +670,67 @@ if problem.dosimulation
 end
 
 problem.dosimulation && solve(
-    setup, psolver, ustart, force_nomo!,
-    (; problem.viscosity, problem.forcing), problem,
-    "statseries_nomo.jld2", "No-model"
+    setup,
+    psolver,
+    ustart,
+    force_nomo!,
+    (; problem.viscosity, problem.forcing),
+    problem,
+    "statseries_nomo.jld2",
+    "No-model",
 )
-problem.dosimulation && problem.doles && solve(
-    setup, psolver, ustart, force_eddy!,
-    (; problem.viscosity, problem.forcing, eddyviscosity = NS.Smagorinsky(problem.C_smag)), problem,
-    "statseries_smag.jld2", "Smagorinsky"
-)
-problem.dosimulation && problem.doles && solve(
-    setup, psolver, ustart, force_eddy!, (; problem.viscosity, problem.forcing, eddyviscosity = NS.WALE(problem.C_wale)), problem,
-    "statseries_wale.jld2", "WALE",
-)
-problem.dosimulation && problem.doles &&
+problem.dosimulation &&
+    problem.doles &&
     solve(
-    setup, psolver, ustart, force_eddy!,
-    (; problem.viscosity, problem.forcing, eddyviscosity = NS.QR(problem.C_qr)), problem,
-    "statseries_qr.jld2", "QR",
-)
-problem.dosimulation && problem.doles && solve(
-    setup, psolver, ustart, force_eddy!,
-    (; problem.viscosity, problem.forcing, eddyviscosity = NS.Vreman(problem.C_vreman)), problem,
-    "statseries_vreman.jld2", "Vreman",
-)
+        setup,
+        psolver,
+        ustart,
+        force_eddy!,
+        (;
+            problem.viscosity,
+            problem.forcing,
+            eddyviscosity = NS.Smagorinsky(problem.C_smag),
+        ),
+        problem,
+        "statseries_smag.jld2",
+        "Smagorinsky",
+    )
+problem.dosimulation &&
+    problem.doles &&
+    solve(
+        setup,
+        psolver,
+        ustart,
+        force_eddy!,
+        (; problem.viscosity, problem.forcing, eddyviscosity = NS.WALE(problem.C_wale)),
+        problem,
+        "statseries_wale.jld2",
+        "WALE",
+    )
+problem.dosimulation &&
+    problem.doles &&
+    solve(
+        setup,
+        psolver,
+        ustart,
+        force_eddy!,
+        (; problem.viscosity, problem.forcing, eddyviscosity = NS.QR(problem.C_qr)),
+        problem,
+        "statseries_qr.jld2",
+        "QR",
+    )
+problem.dosimulation &&
+    problem.doles &&
+    solve(
+        setup,
+        psolver,
+        ustart,
+        force_eddy!,
+        (; problem.viscosity, problem.forcing, eddyviscosity = NS.Vreman(problem.C_vreman)),
+        problem,
+        "statseries_vreman.jld2",
+        "Vreman",
+    )
 
 downloaddata()
 statistics_ref = vremanstatistics()
@@ -614,10 +747,18 @@ if problem.doles
     statistics_wale = process_statseries(statseries_wale, setup, problem, "WALE")
     statistics_qr = process_statseries(statseries_qr, setup, problem, "QR")
     statistics_vreman = process_statseries(statseries_vreman, setup, problem, "Vreman")
-    stats = [statistics_ref, statistics_nomo, statistics_smag, statistics_wale, statistics_qr, statistics_vreman]
+    stats = [
+        statistics_ref,
+        statistics_nomo,
+        statistics_smag,
+        statistics_wale,
+        statistics_qr,
+        statistics_vreman,
+    ]
 else
     statseries_nomo = load_object(joinpath(getoutdir(problem), "statseries_nomo.jld2"))
-    statistics_nomo = process_statseries(statseries_nomo, setup, problem, "IncompressibleNavierStokes.jl")
+    statistics_nomo =
+        process_statseries(statseries_nomo, setup, problem, "IncompressibleNavierStokes.jl")
     stats = [statistics_ref, statistics_nomo]
 end
 

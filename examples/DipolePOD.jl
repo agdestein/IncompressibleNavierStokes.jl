@@ -12,7 +12,8 @@ using CairoMakie
 using LinearAlgebra
 using WGLMakie
 
-getbackend() = CUDA.functional() ? CUDABackend() : IncompressibleNavierStokes.KernelAbstractions.CPU()
+getbackend() =
+    CUDA.functional() ? CUDABackend() : IncompressibleNavierStokes.KernelAbstractions.CPU()
 
 # Parameters
 n = 1024                 # Number of grid points in each direction
@@ -26,8 +27,10 @@ nlog = 100               # How often to log
 nsave = 20               # How often to save snapshot
 dipole() = (;
     r0 = 0.1,            # Initial vortex radius
-    x1 = 0.0, y1 = 0.1,  # Position of first vortex
-    x2 = 0.0, y2 = -0.1, # Position of second vortex
+    x1 = 0.0,
+    y1 = 0.1,  # Position of first vortex
+    x2 = 0.0,
+    y2 = -0.1, # Position of second vortex
     initialenergy = 2.0, # Initial kinetic energy
 )
 output = joinpath(@__DIR__, "output/dipole") |> mkpath # Output directory
@@ -37,10 +40,7 @@ ax = isnothing(stretch) ? range(lims..., n + 1) : tanh_grid(lims..., n, stretch)
 setup = Setup(;
     x = (ax, ax),
     boundary_conditions = (;
-        u = (
-            (DirichletBC(), DirichletBC()),
-            (DirichletBC(), DirichletBC()),
-        ),
+        u = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC())),
     ),
     backend = getbackend(),
 )
@@ -90,13 +90,14 @@ state, outputs = solve_unsteady(;
             nupdate = nplot,
         ),
         log = timelogger(; nupdate = nlog),
-        saver = fieldsaver(; setup, nupdate = nsave)
+        saver = fieldsaver(; setup, nupdate = nsave),
     ),
 );
 
 let
     fig = Figure()
-    ax = Axis(fig[1, 1];
+    ax = Axis(
+        fig[1, 1];
         title = "Vorticity at final time",
         xlabel = "x",
         ylabel = "y",
@@ -113,7 +114,8 @@ end
 # Zoom in (fig 9 of Knikker)
 let
     fig = Figure()
-    ax = Axis(fig[1, 1];
+    ax = Axis(
+        fig[1, 1];
         title = "Vorticity at final time",
         xlabel = "x",
         ylabel = "y",
@@ -137,7 +139,8 @@ e = svd(snapshots)
 
 let
     fig = Figure()
-    ax = Axis(fig[1, 1];
+    ax = Axis(
+        fig[1, 1];
         title = "Singular values",
         xlabel = "Mode number",
         ylabel = "Singular value",
@@ -154,10 +157,11 @@ let
     nrow = 2
     modelist = [1, 2, 3, 5, 10, 20]
     coords = adapt(Array, setup.xp)
-    for ilin in 1:nrow*ncol
+    for ilin = 1:(nrow*ncol)
         j, i = CartesianIndices((ncol, nrow))[ilin].I
         imode = modelist[ilin]
-        ax = Axis(fig[i, j];
+        ax = Axis(
+            fig[i, j];
             title = "Mode $imode",
             xlabel = "x",
             ylabel = "y",
