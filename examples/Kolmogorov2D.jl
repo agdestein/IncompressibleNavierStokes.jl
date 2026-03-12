@@ -22,7 +22,7 @@ using WGLMakie #!md
 using IncompressibleNavierStokes
 ## using CUDA
 
-# ## Setup
+# ## Problem setup
 #
 # Define a uniform grid with a steady body force field.
 

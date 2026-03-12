@@ -17,7 +17,7 @@ using IncompressibleNavierStokes
 # Floating point precision
 T = Float64
 
-# ## Setup
+# ## Problem setup
 
 n = 64
 r = range(T(0), T(1), n + 1)

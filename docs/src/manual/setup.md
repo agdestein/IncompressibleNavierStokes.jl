@@ -14,7 +14,7 @@ Modules = [IncompressibleNavierStokes]
 Pages   = ["boundary_conditions.jl"]
 ```
 
-## Setup
+## Grid setup
 
 ```@autodocs
 Modules = [IncompressibleNavierStokes]

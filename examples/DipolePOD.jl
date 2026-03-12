@@ -31,7 +31,6 @@ dipole() = (;
     initialenergy = 2.0, # Initial kinetic energy
 )
 output = joinpath(@__DIR__, "output/dipole") |> mkpath # Output directory
-# output = "examples/output/dipole" |> mkpath # Output directory
 
 # Setup
 ax = isnothing(stretch) ? range(lims..., n + 1) : tanh_grid(lims..., n, stretch)
@@ -46,10 +45,7 @@ setup = Setup(;
     backend = getbackend(),
 )
 
-# Array(setup.Δ[1])[2]
-
 psolver = default_psolver(setup)
-# psolver = psolver_transform(setup)
 
 function U(dim, x, y)
     @inline
@@ -126,7 +122,6 @@ let
     vort = vorticity(state.u, setup) |> Array
     colorrange = get_lims(vort, 3.0)
     coords = adapt(Array, setup.xp)
-    # heatmap!(ax, coords..., vort; colormap = :RdBu) #, colorrange)
     contour!(ax, coords..., vort; levels = 80, color = :grey)
     xlims!(ax, 0.4, 1.0)
     ylims!(ax, 0.0, 0.6)

@@ -1,6 +1,3 @@
-# Look for environment variable triggering local development modifications
-localdev = haskey(ENV, "LOCALDEV")
-
 # Get access to example dependencies
 # Those are required for running the examples and generating output
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
@@ -36,12 +33,15 @@ examples = [
     (false, "examples/BackwardFacingStep3D"),
     (true, "examples/LidDrivenCavity2D"),
     (false, "examples/MultiActuator"),
-    (false, "examples/ChannelFlow3D"),
+    (false, "examples/ChannelFlow"),
 
     # With temperature field
     (true, "examples/RayleighBenard2D"),
     (false, "examples/RayleighBenard3D"),
     (true, "examples/RayleighTaylor2D"),
+
+    # Reduced order models
+    (false, "examples/DipolePOD"),
 ]
 
 # Convert scripts to executable markdown files

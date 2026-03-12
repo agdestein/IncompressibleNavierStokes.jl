@@ -73,6 +73,12 @@ const boundaries = [
     desc: "Unsteady inflow around multiple actuator disks",
   },
   {
+    href: "generated/DipolePOD",
+    src: "../logo.svg",
+    caption: "Dipole + POD (2D)",
+    desc: "Two vortices interact.",
+  },
+  {
     href: "generated/ChannelFlow3D",
     src: "../ChannelFlow3D.webp",
     caption: "Turbulent channel flow (3D)",

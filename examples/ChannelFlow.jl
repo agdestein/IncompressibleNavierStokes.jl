@@ -1,4 +1,16 @@
-# Turbulent channel flow
+# # Turbulent channel flow
+#
+# Turbulent channel flow setup from 
+# > A. W. Vreman and J. G. M. Kuerten.
+# > “Comparison of Direct Numerical Simulation Databases of Turbulent Channel Flow at ``Re_\tau = 180``.”
+# > In: Physics of Fluids 26.1 (Jan. 2014), p. 015102.
+# > doi: [10.1063/1.4861064](https://doi.org/10.1063/1.4861064).
+#
+# This script contains two experiments:
+# 1. DNS.
+# 2. LES with various eddy-viscosity closures.
+#
+# All settings are toggled in the function `getproblem()`.
 
 @info "Loading packages"
 flush(stderr) # Prevent logging delay on Snellius
@@ -19,13 +31,13 @@ import IncompressibleNavierStokes as NS
 
 "Get turbulent channel flow problem parameters."
 function getproblem()
-    # Domain
+    ## Domain
     H = 1.0 # Channel half width
     Lx = 4 * π * H
     Ly = 2 * H
     Lz = 4 / 3 * π * H
 
-    # Flow
+    ## Flow
     u_tau = 1.0
     Re_tau = 180.0
     Re_m = 2800.0
@@ -40,41 +52,38 @@ function getproblem()
         nx, ny, nz = 2 * n, n, n
         stretch = 1.4 # Stretched wall-normal grid
     else
-        # Grid
-        # n = 16
-        # n = 32
-        # n = 64
-        # n = 128
+        ## Grid
+        ## n = 16
+        ## n = 32
+        ## n = 64
+        ## n = 128
         n = 256
-        # n = 512
+        ## n = 512
 
-        # Number of volumes in each dimension
-        # nx, ny, nz = 2 * n, n, n
-        # nx, ny, nz = 2 * n, 2 * n, n
+        ## Number of volumes in each dimension
+        ## nx, ny, nz = 2 * n, n, n
+        ## nx, ny, nz = 2 * n, 2 * n, n
         nx, ny, nz = 2 * n, 4 * n, n
 
         stretch = nothing # Uniform wall-normal grid
-        # stretch = 1.4 # Stretched wall-normal grid
-        # stretch = 2.0 # Stretched wall-normal grid
+        ## stretch = 1.4 # Stretched wall-normal grid
+        ## stretch = 2.0 # Stretched wall-normal grid
     end
 
-    # Simulation time
+    ## Simulation time
     twarmup = 15.0 * H / u_tau # Warm-up time
     taverage = 10.0 * H / u_tau # Averaging time for statistics
     tsimulation = twarmup + taverage
 
-    # Time stepping
+    ## Time stepping
     cfl = 0.9 # Time step control
     nsave = 2500 # Number of times to save statistics
 
-    # Closure models
+    ## Closure models
     C_smag = 0.1
     C_wale = 0.5
     C_qr = sqrt(3 / 2) / π
     C_vreman = sqrt(2.5 * C_smag^2)
-
-    # 2.5 * 0.17^2
-    # 2.5 * 0.1^2
 
     return (;
         dosimulation, doles,
@@ -125,11 +134,11 @@ function getheavystuff(setup, problem)
         NS.psolver_transform(setup) # FFT-based
     else
         NS.psolver_direct(setup) # Matrix decomposition
-        # psolver_cg(setup; abstol = 1e-6)
-        # psolver_cg_matrix(setup; abstol = 1e-4)
+        ## psolver_cg(setup; abstol = 1e-6)
+        ## psolver_cg_matrix(setup; abstol = 1e-4)
     end
 
-    # Initial conditions
+    ## Initial conditions
     Re_ratio = Re_m / Re_tau
     C = 9 / 8 * Re_ratio
     E = 1 / 10 * Re_ratio # 10% of average mean velocity
@@ -179,7 +188,7 @@ function compute_statistics!(buffers, uvw, setup, cache)
     ) = buffers
     nspace = (N[1] - 2) * (N[3] - 2) # Number of averaging volumes
 
-    # First compute ubar, vbar, wbar
+    ## First compute ubar, vbar, wbar
     AK.foraxes(uvw, 2) do j
         ubar_j = 0.0
         vbar_j = 0.0
@@ -194,7 +203,7 @@ function compute_statistics!(buffers, uvw, setup, cache)
         wbar[j] = wbar_j / nspace
     end
 
-    # Average eddy viscosity
+    ## Average eddy viscosity
     dovisc && AK.foraxes(uvw, 2) do j
         visc_j = 0.0
         for k in 2:(N[3] - 1), i in 2:(N[1] - 1)
@@ -203,10 +212,10 @@ function compute_statistics!(buffers, uvw, setup, cache)
         visc[j] = visc_j / nspace
     end
 
-    # Loop over wall-normal planes
+    ## Loop over wall-normal planes
     AK.foraxes(uvw, 2) do j
 
-        # Initialize sums
+        ## Initialize sums
         up_up_j = 0.0
         vp_vp_j = 0.0
         wp_wp_j = 0.0
@@ -215,35 +224,35 @@ function compute_statistics!(buffers, uvw, setup, cache)
         up_up_vp_j = 0.0
         up_wp_j = 0.0
 
-        # Sum over current wall-normal plane
+        ## Sum over current wall-normal plane
         for k in 2:(N[3] - 1), i in 2:(N[1] - 1)
-            # Face centered velocity fluctuations
+            ## Face centered velocity fluctuations
             up = uvw[i, j, k, 1] - ubar[j]
             vp = uvw[i, j, k, 2] - vbar[j]
             wp = uvw[i, j, k, 3] - wbar[j]
 
-            # For j = 1, there is no left volume,
-            # but the volume is flat so we can just use jleft = j
+            ## For j = 1, there is no left volume,
+            ## but the volume is flat so we can just use jleft = j
             jleft = max(j - 1, 1)
 
-            # Fluctuations interpolated to cell centers. For v, we subtract mean, then interpolate
+            ## Fluctuations interpolated to cell centers. For v, we subtract mean, then interpolate
             upc = (uvw[i, j, k, 1] + uvw[i - 1, j, k, 1]) / 2 - ubar[j]
             vpc = ((uvw[i, j, k, 2] - vbar[j]) + (uvw[i, jleft, k, 2] - vbar[jleft])) / 2
             wpc = (uvw[i, j, k, 3] + uvw[i, j, k - 1, 3]) / 2 - wbar[j]
 
-            # Add to existing sums
+            ## Add to existing sums
             up_up_j += up^2
             vp_vp_j += vp^2
             wp_wp_j += wp^2
             up_up_up_j += up^3
             up_up_up_up_j += up^4
 
-            # These are with cell-centered interpolations for collocation between u, v, w
+            ## These are with cell-centered interpolations for collocation between u, v, w
             up_up_vp_j += upc^2 * vpc
             up_wp_j += upc * wpc
         end
 
-        # Write means
+        ## Write means
         up_up[j] = up_up_j / nspace
         vp_vp[j] = vp_vp_j / nspace
         wp_wp[j] = wp_wp_j / nspace
@@ -269,16 +278,16 @@ function solve(setup, psolver, ustart, force!, params, problem, filename, desc)
     Δt = 0.0 # Will be overridden by adaptive time stepping
     Δt_save = tsimulation / nsave
 
-    # Quantities from Vreman and Kuerten (2014):
-    # y+ (=180*yc; yc is the (cell-central) y-location of u, w and p)
-    # <u>
-    # rms(u)  (=sqrt<u'u'>)
-    # <u'u'u'>
-    # <u'u'u'u'>
-    # <u'u'v'>
-    # <u'w'>
-    #
-    # The average is over x, z, and t
+    ## Quantities from Vreman and Kuerten (2014):
+    ## y+ (=180*yc; yc is the (cell-central) y-location of u, w and p)
+    ## <u>
+    ## rms(u)  (=sqrt<u'u'>)
+    ## <u'u'u'>
+    ## <u'u'u'u'>
+    ## <u'u'v'>
+    ## <u'w'>
+    ##
+    ## The average is over x, z, and t
 
     buffers = (;
         ubar = zero(Δ[2]),
@@ -304,19 +313,19 @@ function solve(setup, psolver, ustart, force!, params, problem, filename, desc)
     force_cache = NS.get_cache(force!, setup)
     stepper = NS.create_stepper(method; setup, psolver, state, t = tstart)
 
-    # Step through all the save points
+    ## Step through all the save points
     everythingfine = true
     prog = Progress(nsave + 1; desc)
     for isave in 0:nsave
-        # Step until next save point.
-        # For the first step, the while loop is never entered.
+        ## Step until next save point.
+        ## For the first step, the while loop is never entered.
         tstop = isave * Δt_save
         isubstep = 0
         while stepper.t < prevfloat(tstop)
-            # Change timestep based on operators
+            ## Change timestep based on operators
             Δt = cfl * NS.propose_timestep(force!, stepper.state, setup, params)
 
-            # Make sure not to step past `tstop`
+            ## Make sure not to step past `tstop`
             Δt = min(Δt, tstop - stepper.t)
 
             if Δt < 1.0e-10 || Δt > 100 || isnan(Δt)
@@ -325,12 +334,12 @@ function solve(setup, psolver, ustart, force!, params, problem, filename, desc)
                 break
             end
 
-            # Perform a single time step with the time integration method
+            ## Perform a single time step with the time integration method
             stepper = NS.timestep!(method, force!, stepper, Δt; params, ode_cache, force_cache)
             isubstep += 1
         end
 
-        # Compute statistics, copy to CPU, and store in list
+        ## Compute statistics, copy to CPU, and store in list
         compute_statistics!(buffers, stepper.state.u, setup, force_cache)
         push!(statistics, map(Array, buffers))
         push!(times, stepper.t)
@@ -348,7 +357,7 @@ function solve(setup, psolver, ustart, force!, params, problem, filename, desc)
         everythingfine || break
     end
 
-    # Save statistics to disk
+    ## Save statistics to disk
     statfile = joinpath(getoutdir(problem), filename)
     @info "Saving statistics to: $statfile"
     flush(stderr) # Prevent logging delay on Snellius
@@ -361,30 +370,30 @@ function process_statseries(statistics, setup, problem, label)
     (; u_tau, viscosity, tsimulation, twarmup, nsave, ny) = problem
     (; xp, xu) = setup
 
-    # Get yplus coordinates until half channel height.
-    # Exclude zero.
+    ## Get yplus coordinates until half channel height.
+    ## Exclude zero.
     nhalf = div(ny, 2)
     ycenter = xp[2][2:(nhalf + 1)] * u_tau / viscosity |> Array
     yedge = xu[2][2][2:(nhalf + 1)] * u_tau / viscosity |> Array
 
-    # Filter out warm-up stats
+    ## Filter out warm-up stats
     istart = findfirst(i -> tsimulation / nsave * (i - 1) > twarmup, eachindex(statistics))
     stats_use = statistics[istart:end]
 
-    # Compute time averages
+    ## Compute time averages
     averages = map(keys(statistics[1])) do key
         statavg = sum(stats_use) do s
-            # Average over the two symmetric values also
+            ## Average over the two symmetric values also
             if key == :vp_vp
                 (getindex(s, key)[2:(nhalf + 1)] .+ getindex(s, key)[(end - 2):-1:(nhalf + 1)]) ./ 2
             elseif key == :vbar
-                # This quantity is signed, but the sign we want is "velocity away from the wall".
-                # Therefore flip the sign in the average.
-                # Note: This quantity is probably zero anyway.
+                ## This quantity is signed, but the sign we want is "velocity away from the wall".
+                ## Therefore flip the sign in the average.
+                ## Note: This quantity is probably zero anyway.
                 (getindex(s, key)[2:(nhalf + 1)] .- getindex(s, key)[(end - 2):-1:(nhalf + 1)]) ./ 2
             elseif key == :up_up_vp
-                # This should also have a flipped sign, since up^2 is positive,
-                # but vp is probably inverse accross midline.
+                ## This should also have a flipped sign, since up^2 is positive,
+                ## but vp is probably inverse accross midline.
                 (getindex(s, key)[2:(nhalf + 1)] .- getindex(s, key)[(end - 1):-1:(nhalf + 2)]) ./ 2
             else
                 (getindex(s, key)[2:(nhalf + 1)] .+ getindex(s, key)[(end - 1):-1:(nhalf + 2)]) ./ 2
@@ -462,7 +471,7 @@ function plot_wall_profile(stats, problem, doscatter)
             :up_up_vp => L"\langle u' u' v' \rangle",
             :up_wp => L"\langle u' w' \rangle",
             :visc => L"\langle \nu^\Delta \rangle / \nu",
-            # :visc => "Eddy-viscosity",
+            ## :visc => "Eddy-viscosity",
         ]
         fig = Figure()
         ax = Axis(
@@ -475,12 +484,12 @@ function plot_wall_profile(stats, problem, doscatter)
         )
         markers = [:circle, :rect, :diamond, :cross, :xcross, :utriangle, :dtriangle]
         normalizations = (;
-                          # visc = u_tau * H,
-                          visc = problem.viscosity,
-                         )
+                      ## visc = u_tau * H,
+                      visc = problem.viscosity,
+                     )
         for (i, s) in enumerate(stats)
             if key == :ubar && i == 1
-                # Add reference lines for mean velocity profile
+                ## Add reference lines for mean velocity profile
                 yvisc = filter(<=(18), s.ycenter)
                 ylog = filter(y -> 1 <= y <= 180, s.ycenter)
                 ulog = @. log(ylog) / 0.41 + 5.7
@@ -493,7 +502,7 @@ function plot_wall_profile(stats, problem, doscatter)
             doscatter || lines!(yuse, s[key] / normal; s.label)
         end
         Legend(fig[1, 2], ax)
-        # path = "~/Projects/Thesis/Figures/Software" |> expanduser
+        ## path = "~/Projects/Thesis/Figures/Software" |> expanduser
         plotfile = joinpath(getoutdir(problem), "wallplot-$(key).pdf")
         println("Saving plot to: $plotfile")
         save(plotfile, fig; backend = CairoMakie, size = (700, 400))
@@ -526,7 +535,6 @@ function plot_wall_profile_rms_comparison(stats, doscatter)
         end
     end
     Legend(fig[1, 2], ax)
-    # path = "~/Projects/Thesis/Figures/Software" |> expanduser
     plotfile = joinpath(getoutdir(problem), "wallplot-comparision-rms.pdf")
     println("Saving plot to: $plotfile")
     save(plotfile, fig; backend = CairoMakie, size = (700, 400))
