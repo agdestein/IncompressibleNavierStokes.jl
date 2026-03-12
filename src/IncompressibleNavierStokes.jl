@@ -136,7 +136,6 @@ export apply_bc_u,
     project,
     scalewithvolume,
     smagorinsky_closure!,
-    wale_closure!,
     total_kinetic_energy,
     vorticity,
     qcrit
