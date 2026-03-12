@@ -137,6 +137,7 @@ function fieldplot(
     docolorbar = true,
     size = nothing,
     title = nothing,
+    nsigma = 3.0,
     kwargs...,
 )
     (; dimension, xlims, xp, Ip, Δ) = setup
@@ -157,7 +158,7 @@ function fieldplot(
                 f[1] += 1
                 f[end] -= 1
             else
-                a, b = get_lims(f)
+                a, b = get_lims(f, nsigma)
             end
             lims = (a, b)
         end
