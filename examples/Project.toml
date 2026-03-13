@@ -24,8 +24,8 @@ WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
-[sources]
-IncompressibleNavierStokes = {path = ".."}
+[sources.IncompressibleNavierStokes]
+path = ".."
 
 [compat]
 AcceleratedKernels = "0.4"
@@ -35,7 +35,7 @@ CUDSS = "0.6"
 CairoMakie = "0.15"
 Enzyme = "0.13"
 FFTW = "1"
-IncompressibleNavierStokes = "4"
+IncompressibleNavierStokes = "4, 3"
 JLD2 = "0.6"
 LaTeXStrings = "1"
 LinearAlgebra = "1"
