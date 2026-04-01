@@ -10,7 +10,7 @@ getparams() = (;
     n = 128, # Number of grid points
 
     # Flow
-    viscosity = 1.0e-4,
+    viscosity = 5.0e-4,
     lidvelocity = 1.0,
     # dens = (1.0e3, 1.25),
     # grav = (0.0, 0.0, -9.81),
@@ -23,11 +23,12 @@ getparams() = (;
         radius = 0.1, # Bubble radius
         npoint = 50, # Number of control points for the bubble surface
         markerlims = (1.0e-2, 5.0e-2), # Marker length limits for remeshing
+        angle_min = π / 8,             # Minimum allowed angle between adjacent segments
     ),
 
     # Time integration
     tsim = 0.1,
-    dt = 2.0e-3,
+    dt = 1.0e-3,
     nsubstep = 20,
     nstep = 100,
 
@@ -242,9 +243,17 @@ function interpolate_velocity!(bub_u, bub_x, u, setup)
     return nothing
 end
 
-"Remesh the bubble surface to have marker lengths within range `markerlims`."
-function remesh(x, markerlims)
+"""
+Remesh the bubble surface.
+
+- Splits segments longer than `markerlims[2]` and merges segments shorter than `markerlims[1]`.
+- Replaces any node where the interior angle between adjacent segments is smaller than
+  `angle_min` with the two midpoints of its adjacent segments, removing the sharp corner.
+"""
+function remesh(x, markerlims, angle_min)
     lmin, lmax = markerlims
+
+    # Pass 1: length-based split/merge
     result = eltype(x)[]
     n = length(x)
     i = 1
@@ -270,7 +279,41 @@ function remesh(x, markerlims)
             i += 1
         end
     end
-    return result
+
+    # Pass 2: angle-based refinement
+    # At each node with a sharp interior angle, insert midpoints on both adjacent
+    # segments so the sharp feature is well-resolved.
+    result2 = eltype(x)[]
+    n2 = length(result)
+    for i in 1:n2
+        pprev = result[mod1(i - 1, n2)]
+        p     = result[i]
+        pnext = result[mod1(i + 1, n2)]
+
+        # Incoming and outgoing tangent vectors
+        t1x = p[1] - pprev[1];  t1y = p[2] - pprev[2]
+        t2x = pnext[1] - p[1];  t2y = pnext[2] - p[2]
+        l1 = sqrt(t1x^2 + t1y^2)
+        l2 = sqrt(t2x^2 + t2y^2)
+
+        sharp = if l1 > 0 && l2 > 0
+            # Interior angle: angle between the reversed incoming tangent and outgoing tangent
+            cos_θ = (-t1x * t2x - t1y * t2y) / (l1 * l2)
+            acos(clamp(cos_θ, -1.0, 1.0)) < angle_min
+        else
+            false
+        end
+
+        if sharp
+            # Replace p with midpoints on both adjacent segments, removing the sharp node
+            push!(result2, MyPoint((pprev[1] + p[1]) / 2, (pprev[2] + p[2]) / 2))
+            push!(result2, MyPoint((p[1] + pnext[1]) / 2, (p[2] + pnext[2]) / 2))
+        else
+            push!(result2, p)
+        end
+    end
+
+    return result2
 end
 
 """
@@ -435,7 +478,7 @@ end
 function solveandplot(u, x, setup, psolver)
     params = getparams()
     (; viscosity, tsim, dt, nsubstep, nstep) = params
-    (; markerlims) = params.bubble
+    (; markerlims, angle_min) = params.bubble
 
     # Allocate registers
     U = (; u, x)
@@ -460,7 +503,7 @@ function solveandplot(u, x, setup, psolver)
             # need to be reshaped as well. For now, just allocate new vectors.
             # TODO: Remesh without too much reallocation? (for heavy 3D triangulations)
             # TODO: Maybe only do this every `nremesh` steps? (for heavy 3D triangulations)
-            x = remesh(U.x, markerlims)
+            x = remesh(U.x, markerlims, angle_min)
             U = (; U.u, x)
             U0 = (; U0.u, x = zero(x))
             F = (; F.u, x = zero(x))
