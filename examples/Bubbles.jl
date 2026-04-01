@@ -81,9 +81,43 @@ If `intersect` is false, the original segment is returned but should be ignored.
 """
 function masksegment(segment, rect)
     p, q = segment
-    a, b, c, d  = rect
-    # ...
-    return (p, q), intersect
+    a, b, c, d = rect
+
+    # Axis-aligned bounds from the four corners (a=bottom-left, b=bottom-right,
+    # c=top-right, d=top-left)
+    xmin, xmax = a[1], b[1]
+    ymin, ymax = a[2], c[2]
+
+    dx = q[1] - p[1]
+    dy = q[2] - p[2]
+
+    # Liang-Barsky: parametrize segment as P(t) = p + t*(q-p), t ∈ [0,1].
+    # Each boundary gives a constraint p_k*t <= q_k.
+    # pk < 0 → outside→inside, update t0; pk > 0 → inside→outside, update t1.
+    t0 = zero(dx)
+    t1 = one(dx)
+
+    for (pk, qk) in (
+        (-dx, p[1] - xmin),  # left boundary:   x >= xmin
+        ( dx, xmax - p[1]),  # right boundary:  x <= xmax
+        (-dy, p[2] - ymin),  # bottom boundary: y >= ymin
+        ( dy, ymax - p[2]),  # top boundary:    y <= ymax
+    )
+        if pk == 0
+            qk < 0 && return (p, q), false   # parallel and outside
+        elseif pk < 0
+            t0 = max(t0, qk / pk)
+        else
+            t1 = min(t1, qk / pk)
+        end
+    end
+
+    t0 > t1 && return (p, q), false
+
+    p_clip = MyPoint(p[1] + t0 * dx, p[2] + t0 * dy)
+    q_clip = MyPoint(p[1] + t1 * dx, p[2] + t1 * dy)
+
+    return (p_clip, q_clip), true
 end
 
 "Interpolate surface tension force at markers to velocity points."
@@ -97,15 +131,35 @@ function interpolate_tension!(Fu, bub_F, bub_x, setup)
         otherdim = ifelse(dim == 1, 2, 1)
         i, j = I.I
 
-        # Loop through all markers and add their contribution to the current velocity point.
+        # Loop through all markers and add their contribution to the current velocity point (if any).
         for ipoint = 1:npoint
-            xa = bub_x[ipoint]
-            xb = bub_x[mod1(ipoint + 1, npoint)]
+            p = bub_x[ipoint]
+            q = bub_x[mod1(ipoint + 1, npoint)]
 
-            # "Mask" the line segment (xa,xb) by the current rectangle defined
+            # "Mask" the line segment (p, q) by the current rectangle defined
             # by the product of the intervals
             # (xu[1][i-1], xu[1][i+1]) and (xu[2][j-1], xu[2][j]) for u1, and
             # (xu[1][i-1], xu[1][i]) and (xu[2][j-1], xu[2][j+1]) for u2.
+            a = MyPoint(xu[1][i - 1], xu[2][j - 1])
+            b = MyPoint(xu[1][i + (dim == 1)], xu[2][j - 1])
+            c = MyPoint(xu[1][i + (dim == 1)], xu[2][j + (dim == 2)])
+            d = MyPoint(xu[1][i - 1], xu[2][j + (dim == 2)])
+
+            (p, q), intersect = masksegment((p, q), (a, b, c, d))
+            intersect || continue
+
+            p, q = ifelse(p[otherdim] < q[otherdim], (p, q), (q, p)) # Ensure p is "left" of q in the integral dimension
+
+            t = bub_F[ipoint][dim] # Surface tension of current marker and current component. This is just a single scalar constant value.
+
+            # Now integrate the constant `t` over x[otherdim],
+            # but it should be weighed by the piece-wise linear function w(x[dim]).
+            # We therefore need to write x[dim] as a function of x[otherdim] on the line segment (p, q).
+            # Then use an exact integration formula for each of the two linear pieces of w(x[dim]) to get the contribution to the velocity point.
+            # The function w(xdim) is 
+            # (xdim - xu[dim][I[dim] - 1]) / (xu[dim][I[dim]] - xu[dim][I[dim] - 1]) for xdim in (xu[dim][I[dim] - 1], xu[dim][I[dim]]),
+            # (xu[dim][I[dim] + 1] - xdim) / (xu[dim][I[dim] + 1] - xu[dim][I[dim]]) for xdim in (xu[dim][I[dim]], xu[dim][I[dim] + 1]).
+            # 0 otherwise.
         end
     end
 end
@@ -399,11 +453,73 @@ function bubble()
     end
 end
 
-# Problem definition
-setup = lidsetup()
-psolver = NS.default_psolver(setup)
-u = NS.velocityfield(setup, (dim, x, y) -> zero(x));
-x = bubble()
+# # Problem definition
+# setup = lidsetup()
+# psolver = NS.default_psolver(setup)
+# u = NS.velocityfield(setup, (dim, x, y) -> zero(x));
+# x = bubble()
+#
+# # Solve
+# solveandplot(u, x, setup, psolver)
 
-# Solve
-solveandplot(u, x, setup, psolver)
+let
+    # Unit rectangle (0,0)–(1,1), corners in CCW order: BL, BR, TR, TL
+    rect = [MyPoint(0.0, 0.0), MyPoint(1.0, 0.0), MyPoint(1.0, 1.0), MyPoint(0.0, 1.0)]
+    rect_loop = map(Point2, [rect; [rect[1]]])   # closed polygon for plotting
+
+    function draw_case!(ax, segment, title)
+        p, q = segment
+        masked, hit = masksegment(segment, rect)
+        pm, qm = masked
+
+        # Rectangle outline
+        lines!(ax, rect_loop; color = :black, linewidth = 2)
+
+        # Original segment (dashed, gray)
+        scatterlines!(ax, [Point2(p), Point2(q)]; color = (:gray, 0.6), linewidth = 1.5, markersize = 8)
+
+        # Clipped segment (solid blue) or a cross indicating no intersection
+        if hit
+            scatterlines!(ax, [Point2(pm), Point2(qm)]; color = Makie.wong_colors()[1], linewidth = 3, markersize = 8)
+        else
+            text!(ax, 0.5, 0.5; text = "no intersection", align = (:center, :center), color = :red)
+        end
+
+        ax.title = title
+        ax.aspect = DataAspect()
+        # xlims!(ax, -0.65, 1.65)
+        # ylims!(ax, -0.65, 1.65)
+    end
+
+    fig = Figure(size = (800, 800))
+
+    # Case 1: segment crosses left and right boundaries (typical case)
+    draw_case!(
+        Axis(fig[1, 1]),
+        (MyPoint(-0.4, 0.4), MyPoint(1.4, 0.6)),
+        "Crosses left & right boundaries",
+    )
+
+    # Case 2: one endpoint inside, one outside (exits through right boundary)
+    draw_case!(
+        Axis(fig[1, 2]),
+        (MyPoint(0.4, 0.5), MyPoint(1.8, 0.2)),
+        "One endpoint inside, one outside",
+    )
+
+    # Case 3: segment fully outside the rectangle (no intersection)
+    draw_case!(
+        Axis(fig[2, 1]),
+        (MyPoint(1.3, 0.2), MyPoint(1.8, 0.8)),
+        "Fully outside — no intersection",
+    )
+
+    # Case 4: diagonal segment clipped exactly at two corners (0,0) and (1,1)
+    draw_case!(
+        Axis(fig[2, 2]),
+        (MyPoint(-0.4, -0.4), MyPoint(1.4, 1.4)),
+        "Clips exactly at two corners",
+    )
+
+    fig
+end
