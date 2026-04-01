@@ -10,7 +10,7 @@ getparams() = (;
     n = 128, # Number of grid points
 
     # Flow
-    viscosity = 1.0e-3,
+    viscosity = 1.0e-4,
     lidvelocity = 1.0,
     # dens = (1.0e3, 1.25),
     # grav = (0.0, 0.0, -9.81),
@@ -18,18 +18,24 @@ getparams() = (;
 
     # Bubble
     bubble = (;
-        σ = 1.0e-2, # Surface tension coefficient
-        center = (0.8, 0.8), # Bubble center
-        radius = 0.15, # Bubble radius
+        σ = 5.0e-1, # Surface tension coefficient
+        center = (0.85, 0.7), # Bubble center
+        radius = 0.1, # Bubble radius
         npoint = 50, # Number of control points for the bubble surface
         markerlims = (1.0e-2, 5.0e-2), # Marker length limits for remeshing
     ),
 
     # Time integration
     tsim = 0.1,
-    dt = 1.0e-3,
-    nsubstep = 50,
-    nstep = 40,
+    dt = 2.0e-3,
+    nsubstep = 20,
+    nstep = 100,
+
+    # Plotting
+    plotting = (;
+        step = 4, # Grid point frequency of arrow plot
+        lengthscale = 0.1, # Scaling facostor for arrow lengths in the plot
+    ),
 )
 
 # Small alias for point, until I decide on what type to use.
@@ -122,7 +128,7 @@ end
 
 "Interpolate surface tension force at markers to velocity points."
 function interpolate_tension!(Fu, bub_F, bub_x, setup)
-    (; xp, Iu) = setup
+    (; Δ, Iu) = setup
     xu = setup.x[1][2:end], setup.x[2][2:end]
     npoint = length(bub_x)
 
@@ -130,6 +136,9 @@ function interpolate_tension!(Fu, bub_F, bub_x, setup)
     for dim = 1:2, I in Iu[dim]
         otherdim = ifelse(dim == 1, 2, 1)
         i, j = I.I
+
+        # Accumulator for `dim`-component of marker forces 
+        FuI = zero(eltype(Fu))
 
         # Loop through all markers and add their contribution to the current velocity point (if any).
         for ipoint = 1:npoint
@@ -152,15 +161,40 @@ function interpolate_tension!(Fu, bub_F, bub_x, setup)
 
             t = bub_F[ipoint][dim] # Surface tension of current marker and current component. This is just a single scalar constant value.
 
-            # Now integrate the constant `t` over x[otherdim],
-            # but it should be weighed by the piece-wise linear function w(x[dim]).
-            # We therefore need to write x[dim] as a function of x[otherdim] on the line segment (p, q).
-            # Then use an exact integration formula for each of the two linear pieces of w(x[dim]) to get the contribution to the velocity point.
-            # The function w(xdim) is 
-            # (xdim - xu[dim][I[dim] - 1]) / (xu[dim][I[dim]] - xu[dim][I[dim] - 1]) for xdim in (xu[dim][I[dim] - 1], xu[dim][I[dim]]),
-            # (xu[dim][I[dim] + 1] - xdim) / (xu[dim][I[dim] + 1] - xu[dim][I[dim]]) for xdim in (xu[dim][I[dim]], xu[dim][I[dim] + 1]).
-            # 0 otherwise.
+            # Integrate t · w(x_dim(s)) over s = x_otherdim from p to q.
+            # x_dim(s) is linear in s, so substitute xd = x_dim(s):
+            #   ds = dxd / slope,  integral = t · (W(xd_q) - W(xd_p)) / slope
+            # where W is the antiderivative of w (piecewise quadratic, continuous at xM).
+            # Special-case slope ≈ 0: w is constant, integral = t · w(xd_p) · s_span.
+            xL = xu[dim][I[dim] - 1]
+            xM = xu[dim][I[dim]]
+            xR = xu[dim][I[dim] + 1]
+            hL = xM - xL
+            hR = xR - xM
+
+            xd_p = p[dim]
+            xd_q = q[dim]
+            s_span = q[otherdim] - p[otherdim]   # > 0 after sorting
+
+            # Antiderivative of w, continuous on [xL, xR]
+            W(xd) = xd <= xM ? (xd - xL)^2 / (2 * hL) : hL / 2 + hR / 2 - (xR - xd)^2 / (2 * hR)
+            w(xd) = xd <= xM ? (xd - xL) / hL : (xR - xd) / hR
+
+            slope = (xd_q - xd_p) / s_span
+            contribution = if slope == 0
+                t * w(xd_p) * s_span
+            else
+                t * (W(xd_q) - W(xd_p)) / slope
+            end
+
+            # Add contribution from current marker
+            FuI += contribution
         end
+
+        # Now write the total contribution from all markers to the current velocity point.
+        # Add to existing force (convection-diffusion etc.).
+        # Also normalize by the current grid spacing, since all the integrals are weighed by marker lengths
+        Fu[I, dim] += FuI / Δ[otherdim][I[otherdim]]
     end
 end
 
@@ -190,17 +224,20 @@ function interpolate_velocity!(bub_u, bub_x, u, setup)
 
         # Compute velocity at marker control point by bilinear interpolation
         bub_u1 =
-            (w1u - 1) * (w2p - 1) * u[iu - 1, jp - 1, 1] +
+            (1 - w1u) * (1 - w2p) * u[iu - 1, jp - 1, 1] +
             w1u * (1 - w2p) * u[iu, jp - 1, 1] +
             (1 - w1u) * w2p * u[iu - 1, jp, 1] +
             w1u  * w2p * u[iu, jp, 1]
+
         bub_u2 =
-            (w1p - 1) * (w2u - 1) * u[ip - 1, ju - 1, 2] + 
-            w1p * (w2u - 1) * u[ip, ju - 1, 2] +
-            (w1p - 1) * w2u * u[ip - 1, ju, 2] +
+            (1 - w1p) * (1 - w2u) * u[ip - 1, ju - 1, 2] + 
+            w1p * (1 - w2u) * u[ip, ju - 1, 2] +
+            (1 - w1p) * w2u * u[ip - 1, ju, 2] +
             w1p * w2u * u[ip, ju, 2]
+
         bub_u[ipoint] = MyPoint(bub_u1, bub_u2)
     end
+
 
     return nothing
 end
@@ -347,11 +384,10 @@ The plot is update when the observable Uobs[] = (; u, x) is updated."
 """
 function plotstate(Uobs, setup)
     size = 600, 600
-    step = 4
-    lengthscale = 0.1
 
-    params = getparams()
-    (; σ) = params.bubble
+    (; plotting, bubble) = getparams()
+    (; σ) = bubble
+    (; step, lengthscale) = plotting
 
     fig = Figure(; size)
     ax = Axis(
@@ -363,8 +399,6 @@ function plotstate(Uobs, setup)
     )
 
     # Plot velocity field as arrows
-    # x1 = setup.xp[1][2:step:(end - 1)]
-    # x2 = setup.xp[2][2:step:(end - 1)]
     x1 = range(0.0, 1.0, 32)
     x2 = range(0.0, 1.0, 32)
     u1 = map(Uobs) do (; u)
@@ -381,16 +415,18 @@ function plotstate(Uobs, setup)
 
     # Plot bubble surface
     pp = map(U -> map(Point2, [U.x; [U.x[1]]]), Uobs)
-    ppedge = map(Uobs) do (; x)
-        pedge = edgecenters(x)
-        return map(Point2, pedge)
-    end
-    nn = map(Uobs) do (; x)
-        c = curvature(x)
-        n = map(Vec2, normals(x))
-        return @. -σ * c * n
-    end
     scatterlines!(ax, pp)
+
+    # # Plot surface tension
+    # ppedge = map(Uobs) do (; x)
+    #     pedge = edgecenters(x)
+    #     return map(Point2, pedge)
+    # end
+    # nn = map(Uobs) do (; x)
+    #     c = curvature(x)
+    #     n = map(Vec2, normals(x))
+    #     return @. -σ * c * n
+    # end
     # arrows2d!(ax, ppedge, nn; color = Makie.wong_colors()[2])
 
     return fig
@@ -428,6 +464,8 @@ function solveandplot(u, x, setup, psolver)
             U = (; U.u, x)
             U0 = (; U0.u, x = zero(x))
             F = (; F.u, x = zero(x))
+
+            @info "itime = $itime / $nstep, isub = $isub / $nsubstep, t = $(round(t, sigdigits=3))" # maximum(abs, U.u)
         end
 
         # Update plot
@@ -453,16 +491,30 @@ function bubble()
     end
 end
 
-# # Problem definition
-# setup = lidsetup()
-# psolver = NS.default_psolver(setup)
-# u = NS.velocityfield(setup, (dim, x, y) -> zero(x));
-# x = bubble()
-#
-# # Solve
-# solveandplot(u, x, setup, psolver)
+# Problem definition
+setup = lidsetup()
+psolver = NS.default_psolver(setup)
+u = NS.velocityfield(setup, (dim, x, y) -> zero(x));
+x = bubble()
 
-let
+# Solve
+(; u, x) = solveandplot(u, x, setup, psolver)
+
+# Compute integral of surface tension (it should be zero)
+false && let
+    npoint = length(x)
+    s = surfacetension(x)
+    sum(1:npoint) do i
+        p = x[i]
+        q = x[mod1(i + 1, npoint)]
+        t = s[i]
+        dx = abs(q[1] - p[1])
+        dy = abs(q[2] - p[2])
+        return MyPoint(t[1] * dx, t[2] * dy)
+    end
+end
+
+false && let
     # Unit rectangle (0,0)–(1,1), corners in CCW order: BL, BR, TR, TL
     rect = [MyPoint(0.0, 0.0), MyPoint(1.0, 0.0), MyPoint(1.0, 1.0), MyPoint(0.0, 1.0)]
     rect_loop = map(Point2, [rect; [rect[1]]])   # closed polygon for plotting
