@@ -1,0 +1,409 @@
+using LinearAlgebra
+using StaticArrays
+using WGLMakie
+
+import IncompressibleNavierStokes as NS
+
+getparams() = (;
+    # Domain
+    L = 1.0, # Domain side length
+    n = 128, # Number of grid points
+
+    # Flow
+    viscosity = 1.0e-3,
+    lidvelocity = 1.0,
+    # dens = (1.0e3, 1.25),
+    # grav = (0.0, 0.0, -9.81),
+    # visc = (1.0e-3, 1.8e-5),
+
+    # Bubble
+    bubble = (;
+        σ = 1.0e-2, # Surface tension coefficient
+        center = (0.8, 0.8), # Bubble center
+        radius = 0.15, # Bubble radius
+        npoint = 50, # Number of control points for the bubble surface
+        markerlims = (1.0e-2, 5.0e-2), # Marker length limits for remeshing
+    ),
+
+    # Time integration
+    tsim = 0.1,
+    dt = 1.0e-3,
+    nsubstep = 50,
+    nstep = 40,
+)
+
+# Small alias for point, until I decide on what type to use.
+# A simple tuple would be the cleanest, but we cannot do `(a, b) + (x, y)` directly,
+# whereas
+# `Point(a, b) + Point(x, y)` or
+# `@SVector [a, b] + @SVector [x, y]`
+# works out of the box.
+MyPoint(x, y) = @SVector [x, y] # StaticArrays
+# MyPoint(x, y) = Point(x, y) # GeometryBasics
+
+"Get lid-driven cavity setup."
+function lidsetup()
+    params = getparams()
+    ax = NS.tanh_grid(0.0, params.L, params.n)
+    setup = NS.Setup(;
+        x = (ax, ax),
+        boundary_conditions = (;
+            u = (
+                (NS.DirichletBC(), NS.DirichletBC()),
+                (NS.DirichletBC(), NS.DirichletBC((params.lidvelocity, 0.0))),
+            ),
+        ),
+        backend = NS.KernelAbstractions.CPU(),
+    )
+    return setup
+end
+
+"Compute surface tension at markers."
+function surfacetension(x)
+    (; σ) = getparams().bubble
+    c = curvature(x)
+    n = normals(x)
+    return @. -σ * c * n
+end
+
+"Left index `n` times away in direction `i`."
+@inline left(I::CartesianIndex{D}, i, n = 1) where {D} =
+    CartesianIndex(ntuple(j -> j == i ? I[j] - n : I[j], D))
+
+"Right index `n` times away in direction `i`."
+@inline right(I::CartesianIndex{D}, i, n = 1) where {D} =
+    CartesianIndex(ntuple(j -> j == i ? I[j] + n : I[j], D))
+
+"""
+Mask segment p-q by rectangle a-b-c-d-a, where p, q, a, b, c, d are 2D `MyPoint`s.
+Return the masked segment and an indicator for whether any part of the original segment is contained in the rectangle.
+If `intersect` is false, the original segment is returned but should be ignored.
+"""
+function masksegment(segment, rect)
+    p, q = segment
+    a, b, c, d  = rect
+    # ...
+    return (p, q), intersect
+end
+
+"Interpolate surface tension force at markers to velocity points."
+function interpolate_tension!(Fu, bub_F, bub_x, setup)
+    (; xp, Iu) = setup
+    xu = setup.x[1][2:end], setup.x[2][2:end]
+    npoint = length(bub_x)
+
+    # Loop through all velocity components and let that component receive its due contribution of the integral of the force
+    for dim = 1:2, I in Iu[dim]
+        otherdim = ifelse(dim == 1, 2, 1)
+        i, j = I.I
+
+        # Loop through all markers and add their contribution to the current velocity point.
+        for ipoint = 1:npoint
+            xa = bub_x[ipoint]
+            xb = bub_x[mod1(ipoint + 1, npoint)]
+
+            # "Mask" the line segment (xa,xb) by the current rectangle defined
+            # by the product of the intervals
+            # (xu[1][i-1], xu[1][i+1]) and (xu[2][j-1], xu[2][j]) for u1, and
+            # (xu[1][i-1], xu[1][i]) and (xu[2][j-1], xu[2][j+1]) for u2.
+        end
+    end
+end
+
+"Interpolate velocity field to marker control points."
+function interpolate_velocity!(bub_u, bub_x, u, setup)
+    (; xp) = setup
+    xu = setup.x[1][2:end], setup.x[2][2:end]
+    npoint = length(bub_x)
+    for ipoint in 1:npoint
+        x1, x2 = bub_x[ipoint]
+
+        # Find first velocity point to the RIGHT of marker control point
+        # Note: Two types of points: volume centers ("p") and volume edges ("u").
+        # The staggered velocity field is indexed as follows:
+        # u[i, j, 1] is defined at (RIGHTEDGE, CENTER) of volume (i, j) and
+        # u[i, j, 2] is defined at (CENTER, RIGHTEDGE) of volume (i, j).
+        ip = findfirst(>(x1), xp[1])
+        iu = findfirst(>(x1), xu[1])
+        jp = findfirst(>(x2), xp[2])
+        ju = findfirst(>(x2), xu[2])
+
+        # Linear interpolation weights for each dimension and CENTER/EDGE type
+        w1u = (x1 - xu[1][iu - 1]) / (xu[1][iu] - xu[1][iu - 1])
+        w1p = (x1 - xp[1][ip - 1]) / (xp[1][ip] - xp[1][ip - 1])
+        w2u = (x2 - xu[2][ju - 1]) / (xu[2][ju] - xu[2][ju - 1])
+        w2p = (x2 - xp[2][jp - 1]) / (xp[2][jp] - xp[2][jp - 1])
+
+        # Compute velocity at marker control point by bilinear interpolation
+        bub_u1 =
+            (w1u - 1) * (w2p - 1) * u[iu - 1, jp - 1, 1] +
+            w1u * (1 - w2p) * u[iu, jp - 1, 1] +
+            (1 - w1u) * w2p * u[iu - 1, jp, 1] +
+            w1u  * w2p * u[iu, jp, 1]
+        bub_u2 =
+            (w1p - 1) * (w2u - 1) * u[ip - 1, ju - 1, 2] + 
+            w1p * (w2u - 1) * u[ip, ju - 1, 2] +
+            (w1p - 1) * w2u * u[ip - 1, ju, 2] +
+            w1p * w2u * u[ip, ju, 2]
+        bub_u[ipoint] = MyPoint(bub_u1, bub_u2)
+    end
+
+    return nothing
+end
+
+"Remesh the bubble surface to have marker lengths within range `markerlims`."
+function remesh(x, markerlims)
+    lmin, lmax = markerlims
+    result = eltype(x)[]
+    n = length(x)
+    i = 1
+    while i <= n
+        p = x[i]
+        push!(result, p)
+        pnext = x[mod1(i + 1, n)]
+        dx = pnext[1] - p[1]
+        dy = pnext[2] - p[2]
+        d = sqrt(dx^2 + dy^2)
+        if d > lmax
+            # Split: insert evenly-spaced midpoints targeting segment length (lmin+lmax)/2
+            nseg = ceil(Int, d / ((lmin + lmax) / 2))
+            for k in 1:(nseg - 1)
+                t = k / nseg
+                push!(result, MyPoint(p[1] + t * dx, p[2] + t * dy))
+            end
+            i += 1
+        elseif d < lmin && i < n
+            # Merge: skip the next point (too close)
+            i += 2
+        else
+            i += 1
+        end
+    end
+    return result
+end
+
+"""
+Compute the curvature at the center of each marker (line segment).
+
+Uses the Menger curvature (signed circumradius formula) at each node via its two
+neighbours, then averages adjacent nodes to get the value at each segment center.
+Returns a vector of length n, where entry i is the curvature at the center of the
+segment from points[i] to points[i+1].
+"""
+function curvature(points)
+    n = length(points)
+    # Signed Menger curvature at each node i using (i-1, i, i+1)
+    κ_nodes = map(1:n) do i
+        A = points[mod1(i - 1, n)]
+        B = points[i]
+        C = points[mod1(i + 1, n)]
+        cross_z = (B[1] - A[1]) * (C[2] - A[2]) - (B[2] - A[2]) * (C[1] - A[1])
+        ab = sqrt((B[1] - A[1])^2 + (B[2] - A[2])^2)
+        bc = sqrt((C[1] - B[1])^2 + (C[2] - B[2])^2)
+        ac = sqrt((C[1] - A[1])^2 + (C[2] - A[2])^2)
+        2 * cross_z / (ab * bc * ac)
+    end
+    # Curvature at center of segment i = average of curvatures at its two endpoints
+    return map(i -> (κ_nodes[i] + κ_nodes[mod1(i + 1, n)]) / 2, 1:n)
+end
+
+function normals(points)
+    n = length(points)
+    # Shoelace signed area: positive = CCW winding
+    area = sum(1:n) do i
+        p, q = points[i], points[mod1(i + 1, n)]
+        p[1] * q[2] - q[1] * p[2]
+    end / 2
+    # CCW: outward normal = tangent rotated 90° clockwise = (dy, -dx)
+    # CW:  outward normal = tangent rotated 90° counter-clockwise = (-dy, dx)
+    s = sign(area)
+    return map(1:n) do i
+        p, q = points[i], points[mod1(i + 1, n)]
+        dx, dy = q[1] - p[1], q[2] - p[2]
+        nx, ny = s * dy, -s * dx
+        len = sqrt(nx^2 + ny^2)
+        MyPoint(nx / len, ny / len)
+    end
+end
+
+function edgecenters(points)
+    n = length(points)
+    return map(1:n) do i
+        x = (points[i][1] + points[mod1(i + 1, n)][1]) / 2
+        y = (points[i][2] + points[mod1(i + 1, n)][2]) / 2
+        return MyPoint(x, y)
+    end
+end
+
+"""
+Perform one time step for the total state `U = (; u, x)`, where
+`u` is the velocity field and `x` are the control points defining the bubble.
+Wray's low-storage RK3 method is used, which only relies on two 
+temporary registers `F` and `U0` (same size as `U`).
+In addition, we need a pressure register `p`.
+"""
+function rk3step!(F, U0, U, t, dt, p, psolver, viscosity)
+    # RK coefficients
+    a = 8 / 15, 5 / 12, 3 / 4
+    b = 1 / 4, 0.0
+    c = 0.0, 8 / 15, 2 / 3
+    nstage = length(a)
+
+    # Update current solution
+    t0 = t
+    foreach(copyto!, U0, U)
+
+    # RK3 substeps
+    for i in 1:nstage
+        # Apply right-hand side function to current state U, put in F
+        fill!(F.u, 0) # Initialize with 0
+        NS.convectiondiffusion!(F.u, U.u, setup, viscosity) # This adds to existing force
+        tension = surfacetension(U.x) # This allocates a new array for now
+        interpolate_tension!(F.u, tension, U.x, setup) # Add surface tension to existing force
+        interpolate_velocity!(F.x, U.x, U.u, setup) # Interpolate velocity to control points
+
+        # Evolve U = U0 + Δt * a[i] * F
+        t = t0 + c[i] * dt
+        foreach(copyto!, U, U0)
+        @. U.u += a[i] * dt * F.u
+        @. U.x += a[i] * dt * F.x
+        NS.apply_bc_u!(U.u, t, setup)
+        NS.project!(U.u, setup; psolver, p)
+
+        # Evolve U0 = U0 + Δt * b[i] * F
+        # Skip for last iter
+        if i < nstage
+            @. U0.u += b[i] * dt * F.u
+            @. U0.x += b[i] * dt * F.x
+        end
+
+        # Fill boundary values at new time
+        NS.apply_bc_u!(U.u, t, setup)
+    end
+
+    # Full time step
+    t = t0 + dt
+
+    return nothing
+end
+
+"""
+Plot velocity field and bubble.
+The plot is update when the observable Uobs[] = (; u, x) is updated."
+"""
+function plotstate(Uobs, setup)
+    size = 600, 600
+    step = 4
+    lengthscale = 0.1
+
+    params = getparams()
+    (; σ) = params.bubble
+
+    fig = Figure(; size)
+    ax = Axis(
+        fig[1, 1];
+        title = "Velocity field and bubble",
+        xlabel = "x",
+        ylabel = "y",
+        aspect = DataAspect()
+    )
+
+    # Plot velocity field as arrows
+    # x1 = setup.xp[1][2:step:(end - 1)]
+    # x2 = setup.xp[2][2:step:(end - 1)]
+    x1 = range(0.0, 1.0, 32)
+    x2 = range(0.0, 1.0, 32)
+    u1 = map(Uobs) do (; u)
+        ub = u[2:step:(end - 1), 2:step:(end - 1), 1]
+        ua = u[1:step:(end - 2), 2:step:(end - 1), 1]
+        @. (ua + ub) / 2
+    end
+    u2 = map(Uobs) do (; u)
+        ub = u[2:step:(end - 1), 2:step:(end - 1), 2]
+        ua = u[2:step:(end - 1), 1:step:(end - 2), 2]
+        @. (ua + ub) / 2
+    end
+    arrows2d!(ax, x1, x2, u1, u2; lengthscale)
+
+    # Plot bubble surface
+    pp = map(U -> map(Point2, [U.x; [U.x[1]]]), Uobs)
+    ppedge = map(Uobs) do (; x)
+        pedge = edgecenters(x)
+        return map(Point2, pedge)
+    end
+    nn = map(Uobs) do (; x)
+        c = curvature(x)
+        n = map(Vec2, normals(x))
+        return @. -σ * c * n
+    end
+    scatterlines!(ax, pp)
+    # arrows2d!(ax, ppedge, nn; color = Makie.wong_colors()[2])
+
+    return fig
+end
+
+function solveandplot(u, x, setup, psolver)
+    params = getparams()
+    (; viscosity, tsim, dt, nsubstep, nstep) = params
+    (; markerlims) = params.bubble
+
+    # Allocate registers
+    U = (; u, x)
+    U0 = deepcopy(U)
+    F = deepcopy(U)
+    p = NS.scalarfield(setup)
+
+    # Create plot
+    Uobs = Observable(U)
+    fig = plotstate(Uobs, setup)
+    display(fig)
+
+    t = 0.0
+    for itime in 1:nstep
+        for isub in 1:nsubstep
+            # Perform one RK3 step of step size `dt`
+            rk3step!(F, U0, U, t, dt, p, psolver, viscosity)
+            t += dt
+
+            # Remesh the bubble.
+            # Since this changes the size of the point vector, the temporary registers
+            # need to be reshaped as well. For now, just allocate new vectors.
+            # TODO: Remesh without too much reallocation? (for heavy 3D triangulations)
+            # TODO: Maybe only do this every `nremesh` steps? (for heavy 3D triangulations)
+            x = remesh(U.x, markerlims)
+            U = (; U.u, x)
+            U0 = (; U0.u, x = zero(x))
+            F = (; F.u, x = zero(x))
+        end
+
+        # Update plot
+        Uobs[] = U
+        sleep(0.005)
+    end
+
+    return U
+end
+
+"""
+Create a circular bubble centered at `center` with radius `radius`,
+discretized by `npoint` control points.
+"""
+function bubble()
+    (; center, radius, npoint) = getparams().bubble
+    return map(1:npoint) do i
+        x0, y0 = center
+        angle = 2π * i / (npoint + 1)
+        x = x0 + radius * cos(angle)
+        y = y0 + radius * sin(angle)
+        return MyPoint(x, y)
+    end
+end
+
+# Problem definition
+setup = lidsetup()
+psolver = NS.default_psolver(setup)
+u = NS.velocityfield(setup, (dim, x, y) -> zero(x));
+x = bubble()
+
+# Solve
+solveandplot(u, x, setup, psolver)
