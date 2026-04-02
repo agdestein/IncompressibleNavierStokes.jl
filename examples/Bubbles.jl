@@ -27,7 +27,6 @@ getparams() = (;
     ),
 
     # Time integration
-    tsim = 0.1,
     dt = 1.0e-3,
     nsubstep = 20,
     nstep = 100,
@@ -477,7 +476,7 @@ end
 
 function solveandplot(u, x, setup, psolver)
     params = getparams()
-    (; viscosity, tsim, dt, nsubstep, nstep) = params
+    (; viscosity, dt, nsubstep, nstep) = params
     (; markerlims, angle_min) = params.bubble
 
     # Allocate registers
