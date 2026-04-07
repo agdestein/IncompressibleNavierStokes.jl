@@ -37,14 +37,20 @@ getparams() = (;
 
     # Time integration
     dt = 2.0e-3,
-    nsubstep = 10, # Steps between plot updates
-    nstep = 1000,
+    nsubstep = 25, # Steps between plot updates
+    nstep = 400,
 
     # Plotting
     plotting = (;
         step = 2, # Grid point frequency of arrow plot
         lengthscale = 0.1, # Scaling factor for arrow lengths in the plot
         plotsurfacetension = true, # Show the surface tension vectors for each marker
+    ),
+
+    # Animation
+    animation = (;
+        doanimation = true,
+        filename = joinpath(@__DIR__, "output", "bubble.mp4"),
     ),
 )
 
@@ -453,15 +459,14 @@ function rk3step!(F, U0, U, t, dt, tension, p, psolver, viscosity, setup)
         interpolate_tension!(F.u, tension, U.x, setup) # Add surface tension to existing force
         interpolate_velocity!(F.x, U.x, U.u, setup) # Interpolate velocity to control points
 
-        # Evolve U = U0 + Δt * a[i] * F
+        # Evolve U
         t = t0 + c[i] * dt
-        foreach(copyto!, U, U0)
-        @. U.u += a[i] * dt * F.u
-        @. U.x += a[i] * dt * F.x
+        @. U.u = U0.u + a[i] * dt * F.u
+        @. U.x = U0.x + a[i] * dt * F.x
         NS.apply_bc_u!(U.u, t, setup)
         NS.project!(U.u, setup; psolver, p)
 
-        # Evolve U0 = U0 + Δt * b[i] * F
+        # Evolve U0
         # Skip for last iter
         if i < nstage
             @. U0.u += b[i] * dt * F.u
@@ -562,7 +567,7 @@ end
 
 function solveandplot(u, x, setup, psolver)
     params = getparams()
-    (; viscosity, dt, nsubstep, nstep) = params
+    (; viscosity, dt, nsubstep, nstep, animation) = params
     (; markerlims, angle_min) = params.bubble
 
     # Allocate registers
@@ -576,6 +581,11 @@ function solveandplot(u, x, setup, psolver)
     Uobs = Observable(U)
     fig = plotstate(Uobs, setup) # This plot "listens" to changes in `Uobs`
     display(fig)
+
+    # Create animation (if filename provided)
+    if animation.doanimation
+        stream = VideoStream(fig)
+    end
 
     t = 0.0
     for itime in 1:nstep
@@ -603,7 +613,11 @@ function solveandplot(u, x, setup, psolver)
         # Update plot
         Uobs[] = U
         sleep(0.005)
+
+        animation.doanimation && recordframe!(stream)
     end
+
+    animation.doanimation && save(animation.filename, stream)
 
     return U
 end
