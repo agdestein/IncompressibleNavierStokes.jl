@@ -518,13 +518,18 @@ function plotstate(Uobs, setup)
         adapt(cpu, avg)
     end
     arrows2d!(ax, x1, x2, u1, u2; lengthscale, label = "Velocity")
+    velocity_label = [LineElement(color = :black)]
 
     # Plot bubble surface
     pp = map(Uobs) do U
         Ux = adapt(cpu, U.x)
         return map(Point2, [Ux; [Ux[1]]])
     end
-    scatterlines!(ax, pp; label = "Bubble surface")
+    bubplot = scatterlines!(ax, pp; label = "Bubble surface")
+
+    # Just do this manually for now, since there is an isssue with plotting `arrows2d` as a legend entry.
+    leg_elems = [velocity_label, bubplot]
+    leg_labels = ["Velocity", "Bubble surface"]
 
     # Plot surface tension
     if plotsurfacetension
@@ -539,10 +544,14 @@ function plotstate(Uobs, setup)
             return adapt(cpu, tension)
         end
         arrows2d!(ax, ppedge, nn; lengthscale = 0.03, color = Makie.wong_colors()[2], label = "Surface tension")
+        push!(leg_elems, [LineElement(color = Makie.wong_colors()[2])])
+        push!(leg_labels, "Surface tension")
     end
 
     Legend(
-        fig[0, 1], ax;
+        fig[0, 1],
+        # ax;
+        leg_elems, leg_labels;
         tellwidth = false,
         orientation = :horizontal,
         framevisible = false,
