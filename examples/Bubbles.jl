@@ -1,3 +1,5 @@
+module Bubbles
+
 using LinearAlgebra
 using StaticArrays
 using WGLMakie
@@ -7,7 +9,7 @@ import IncompressibleNavierStokes as NS
 getparams() = (;
     # Domain
     L = 1.0, # Domain side length
-    n = 128, # Number of grid points
+    n = 64, # Number of grid points
 
     # Flow
     viscosity = 5.0e-4,
@@ -19,22 +21,23 @@ getparams() = (;
     # Bubble
     bubble = (;
         σ = 5.0e-1, # Surface tension coefficient
-        center = (0.85, 0.7), # Bubble center
-        radius = 0.1, # Bubble radius
-        npoint = 50, # Number of control points for the bubble surface
+        center = (0.6, 0.6), # Initial bubble center
+        radius = 0.15, # Initial bubble radius
+        npoint = 51, # Initial number of control points for the bubble surface
         markerlims = (1.0e-2, 5.0e-2), # Marker length limits for remeshing
-        angle_min = π / 8,             # Minimum allowed angle between adjacent segments
+        angle_min = π / 8, # Minimum allowed angle between adjacent segments
     ),
 
     # Time integration
-    dt = 1.0e-3,
-    nsubstep = 20,
-    nstep = 100,
+    dt = 2.0e-3,
+    nsubstep = 10, # Steps between plot updates
+    nstep = 1000,
 
     # Plotting
     plotting = (;
-        step = 4, # Grid point frequency of arrow plot
-        lengthscale = 0.1, # Scaling facostor for arrow lengths in the plot
+        step = 2, # Grid point frequency of arrow plot
+        lengthscale = 0.1, # Scaling factor for arrow lengths in the plot
+        plotsurfacetension = true, # Show the surface tension vectors for each marker
     ),
 )
 
@@ -64,12 +67,29 @@ function lidsetup()
     return setup
 end
 
+# "Compute surface tension at markers."
+# function surfacetension!(tension, x)
+#     (; σ) = getparams().bubble
+#     c = curvature(x)
+#     n = normals(x)
+#     @. tension = -σ * c * n
+#     return nothing
+# end
+
 "Compute surface tension at markers."
-function surfacetension(x)
+function surfacetension!(tension, x)
     (; σ) = getparams().bubble
-    c = curvature(x)
+    # c = curvature(x)
     n = normals(x)
-    return @. -σ * c * n
+    npoint = length(x)
+    for i = 1:npoint
+        nleft = n[mod1(i - 1, npoint)]
+        nright = n[mod1(i + 1, npoint)]
+        fleft = MyPoint(-nleft[2], nleft[1])
+        fright = MyPoint(nright[2], -nright[1])
+        tension[i] = -σ * (fleft + fright)
+    end
+    return nothing
 end
 
 "Left index `n` times away in direction `i`."
@@ -104,11 +124,11 @@ function masksegment(segment, rect)
     t1 = one(dx)
 
     for (pk, qk) in (
-        (-dx, p[1] - xmin),  # left boundary:   x >= xmin
-        ( dx, xmax - p[1]),  # right boundary:  x <= xmax
-        (-dy, p[2] - ymin),  # bottom boundary: y >= ymin
-        ( dy, ymax - p[2]),  # top boundary:    y <= ymax
-    )
+            (-dx, p[1] - xmin),  # left boundary:   x >= xmin
+            (dx, xmax - p[1]),  # right boundary:  x <= xmax
+            (-dy, p[2] - ymin),  # bottom boundary: y >= ymin
+            (dy, ymax - p[2]),  # top boundary:    y <= ymax
+        )
         if pk == 0
             qk < 0 && return (p, q), false   # parallel and outside
         elseif pk < 0
@@ -133,15 +153,15 @@ function interpolate_tension!(Fu, bub_F, bub_x, setup)
     npoint = length(bub_x)
 
     # Loop through all velocity components and let that component receive its due contribution of the integral of the force
-    for dim = 1:2, I in Iu[dim]
+    for dim in 1:2, I in Iu[dim]
         otherdim = ifelse(dim == 1, 2, 1)
         i, j = I.I
 
-        # Accumulator for `dim`-component of marker forces 
+        # Accumulator for `dim`-component of marker forces
         FuI = zero(eltype(Fu))
 
         # Loop through all markers and add their contribution to the current velocity point (if any).
-        for ipoint = 1:npoint
+        for ipoint in 1:npoint
             p = bub_x[ipoint]
             q = bub_x[mod1(ipoint + 1, npoint)]
 
@@ -155,7 +175,7 @@ function interpolate_tension!(Fu, bub_F, bub_x, setup)
             d = MyPoint(xu[1][i - 1], xu[2][j + (dim == 2)])
 
             (p, q), intersect = masksegment((p, q), (a, b, c, d))
-            intersect || continue
+            intersect || continue # Go to next marker if no intersection with current velocity control volume
 
             p, q = ifelse(p[otherdim] < q[otherdim], (p, q), (q, p)) # Ensure p is "left" of q in the integral dimension
 
@@ -196,6 +216,7 @@ function interpolate_tension!(Fu, bub_F, bub_x, setup)
         # Also normalize by the current grid spacing, since all the integrals are weighed by marker lengths
         Fu[I, dim] += FuI / Δ[otherdim][I[otherdim]]
     end
+    return nothing
 end
 
 "Interpolate velocity field to marker control points."
@@ -227,17 +248,16 @@ function interpolate_velocity!(bub_u, bub_x, u, setup)
             (1 - w1u) * (1 - w2p) * u[iu - 1, jp - 1, 1] +
             w1u * (1 - w2p) * u[iu, jp - 1, 1] +
             (1 - w1u) * w2p * u[iu - 1, jp, 1] +
-            w1u  * w2p * u[iu, jp, 1]
+            w1u * w2p * u[iu, jp, 1]
 
         bub_u2 =
-            (1 - w1p) * (1 - w2u) * u[ip - 1, ju - 1, 2] + 
+            (1 - w1p) * (1 - w2u) * u[ip - 1, ju - 1, 2] +
             w1p * (1 - w2u) * u[ip, ju - 1, 2] +
             (1 - w1p) * w2u * u[ip - 1, ju, 2] +
             w1p * w2u * u[ip, ju, 2]
 
         bub_u[ipoint] = MyPoint(bub_u1, bub_u2)
     end
-
 
     return nothing
 end
@@ -286,7 +306,7 @@ function remesh(x, markerlims, angle_min)
     n2 = length(result)
     for i in 1:n2
         pprev = result[mod1(i - 1, n2)]
-        p     = result[i]
+        p = result[i]
         pnext = result[mod1(i + 1, n2)]
 
         # Incoming and outgoing tangent vectors
@@ -373,9 +393,9 @@ Perform one time step for the total state `U = (; u, x)`, where
 `u` is the velocity field and `x` are the control points defining the bubble.
 Wray's low-storage RK3 method is used, which only relies on two 
 temporary registers `F` and `U0` (same size as `U`).
-In addition, we need a pressure register `p`.
+In addition, we need a pressure register `p` and a surface tension register `tension`.
 """
-function rk3step!(F, U0, U, t, dt, p, psolver, viscosity)
+function rk3step!(F, U0, U, t, dt, tension, p, psolver, viscosity, setup)
     # RK coefficients
     a = 8 / 15, 5 / 12, 3 / 4
     b = 1 / 4, 0.0
@@ -391,7 +411,7 @@ function rk3step!(F, U0, U, t, dt, p, psolver, viscosity)
         # Apply right-hand side function to current state U, put in F
         fill!(F.u, 0) # Initialize with 0
         NS.convectiondiffusion!(F.u, U.u, setup, viscosity) # This adds to existing force
-        tension = surfacetension(U.x) # This allocates a new array for now
+        surfacetension!(tension, U.x) # This allocates a new array for now
         interpolate_tension!(F.u, tension, U.x, setup) # Add surface tension to existing force
         interpolate_velocity!(F.x, U.x, U.u, setup) # Interpolate velocity to control points
 
@@ -425,11 +445,11 @@ Plot velocity field and bubble.
 The plot is update when the observable Uobs[] = (; u, x) is updated."
 """
 function plotstate(Uobs, setup)
-    size = 600, 600
+    size = 600, 650
 
     (; plotting, bubble) = getparams()
     (; σ) = bubble
-    (; step, lengthscale) = plotting
+    (; step, lengthscale, plotsurfacetension) = plotting
 
     fig = Figure(; size)
     ax = Axis(
@@ -453,23 +473,29 @@ function plotstate(Uobs, setup)
         ua = u[2:step:(end - 1), 1:step:(end - 2), 2]
         @. (ua + ub) / 2
     end
-    arrows2d!(ax, x1, x2, u1, u2; lengthscale)
+    arrows2d!(ax, x1, x2, u1, u2; lengthscale, label = "Velocity")
 
     # Plot bubble surface
     pp = map(U -> map(Point2, [U.x; [U.x[1]]]), Uobs)
-    scatterlines!(ax, pp)
+    scatterlines!(ax, pp; label = "Bubble surface")
 
-    # # Plot surface tension
-    # ppedge = map(Uobs) do (; x)
-    #     pedge = edgecenters(x)
-    #     return map(Point2, pedge)
-    # end
-    # nn = map(Uobs) do (; x)
-    #     c = curvature(x)
-    #     n = map(Vec2, normals(x))
-    #     return @. -σ * c * n
-    # end
-    # arrows2d!(ax, ppedge, nn; color = Makie.wong_colors()[2])
+    # Plot surface tension
+    if plotsurfacetension
+        ppedge = map(U -> map(Point2, edgecenters(U.x)), Uobs)
+        nn = map(Uobs) do U
+            tension = similar(U.x)
+            surfacetension!(tension, U.x)
+            return tension
+        end
+        arrows2d!(ax, ppedge, nn; lengthscale = 0.03, color = Makie.wong_colors()[2], label = "Surface tension")
+    end
+
+    Legend(
+        fig[0, 1], ax;
+        tellwidth = false,
+        orientation = :horizontal,
+        framevisible = false,
+    )
 
     return fig
 end
@@ -480,21 +506,22 @@ function solveandplot(u, x, setup, psolver)
     (; markerlims, angle_min) = params.bubble
 
     # Allocate registers
-    U = (; u, x)
-    U0 = deepcopy(U)
-    F = deepcopy(U)
-    p = NS.scalarfield(setup)
+    U = (; u, x) # Current state
+    U0 = deepcopy(U) # RK3 accumulator for previous stages
+    F = deepcopy(U) # RK3 right hand side
+    tension = similar(x) # Surface tension at markers
+    p = NS.scalarfield(setup) # Pressure
 
     # Create plot
     Uobs = Observable(U)
-    fig = plotstate(Uobs, setup)
+    fig = plotstate(Uobs, setup) # This plot "listens" to changes in `Uobs`
     display(fig)
 
     t = 0.0
     for itime in 1:nstep
         for isub in 1:nsubstep
             # Perform one RK3 step of step size `dt`
-            rk3step!(F, U0, U, t, dt, p, psolver, viscosity)
+            rk3step!(F, U0, U, t, dt, tension, p, psolver, viscosity, setup)
             t += dt
 
             # Remesh the bubble.
@@ -506,8 +533,9 @@ function solveandplot(u, x, setup, psolver)
             U = (; U.u, x)
             U0 = (; U0.u, x = zero(x))
             F = (; F.u, x = zero(x))
+            tension = similar(x)
 
-            @info "itime = $itime / $nstep, isub = $isub / $nsubstep, t = $(round(t, sigdigits=3))" # maximum(abs, U.u)
+            @info "itime = $itime / $nstep, isub = $isub / $nsubstep, t = $(round(t, digits = 4))" # maximum(abs, U.u)
         end
 
         # Update plot
@@ -526,37 +554,15 @@ function bubble()
     (; center, radius, npoint) = getparams().bubble
     return map(1:npoint) do i
         x0, y0 = center
-        angle = 2π * i / (npoint + 1)
+        angle = 2π * i / npoint
         x = x0 + radius * cos(angle)
         y = y0 + radius * sin(angle)
         return MyPoint(x, y)
     end
 end
 
-# Problem definition
-setup = lidsetup()
-psolver = NS.default_psolver(setup)
-u = NS.velocityfield(setup, (dim, x, y) -> zero(x));
-x = bubble()
-
-# Solve
-(; u, x) = solveandplot(u, x, setup, psolver)
-
-# Compute integral of surface tension (it should be zero)
-false && let
-    npoint = length(x)
-    s = surfacetension(x)
-    sum(1:npoint) do i
-        p = x[i]
-        q = x[mod1(i + 1, npoint)]
-        t = s[i]
-        dx = abs(q[1] - p[1])
-        dy = abs(q[2] - p[2])
-        return MyPoint(t[1] * dx, t[2] * dy)
-    end
-end
-
-false && let
+"Make illustration plot of the rectangular segment masking procedure."
+function illustrate_masking()
     # Unit rectangle (0,0)–(1,1), corners in CCW order: BL, BR, TR, TL
     rect = [MyPoint(0.0, 0.0), MyPoint(1.0, 0.0), MyPoint(1.0, 1.0), MyPoint(0.0, 1.0)]
     rect_loop = map(Point2, [rect; [rect[1]]])   # closed polygon for plotting
@@ -583,6 +589,8 @@ false && let
         ax.aspect = DataAspect()
         # xlims!(ax, -0.65, 1.65)
         # ylims!(ax, -0.65, 1.65)
+
+        return nothing
     end
 
     fig = Figure(size = (800, 800))
@@ -616,4 +624,34 @@ false && let
     )
 
     fig
+end
+
+end
+
+Bubbles.illustrate_masking()
+
+# Problem definition
+setup = Bubbles.lidsetup()
+psolver = Bubbles.NS.default_psolver(setup)
+u = Bubbles.NS.velocityfield(setup, (dim, x, y) -> zero(x));
+x = Bubbles.bubble()
+
+# Solve
+(; u, x) = Bubbles.solveandplot(u, x, setup, psolver)
+
+# Compute integral of surface tension (it should be zero)
+false && let
+    npoint = length(x)
+    s = similar(x)
+    Bubbles.surfacetension!(s, x)
+    sum(1:npoint) do i
+        p = x[i]
+        q = x[mod1(i + 1, npoint)]
+        t = s[i]
+        # dx = abs(q[1] - p[1])
+        # dy = abs(q[2] - p[2])
+        dx = 1
+        dy = 1
+        return Bubbles.MyPoint(t[1] * dx, t[2] * dy)
+    end
 end
