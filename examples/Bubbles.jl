@@ -1,10 +1,17 @@
 module Bubbles
 
+using Adapt
+using CUDA
+using CUDSS
 using LinearAlgebra
 using StaticArrays
 using WGLMakie
 
+import AcceleratedKernels as AK
 import IncompressibleNavierStokes as NS
+
+getbackend() = CUDA.functional() ? CUDA.CUDABackend() : NS.KernelAbstractions.CPU()
+# getbackend() = NS.KernelAbstractions.CPU()
 
 getparams() = (;
     # Domain
@@ -20,7 +27,7 @@ getparams() = (;
 
     # Bubble
     bubble = (;
-        σ = 5.0e-1, # Surface tension coefficient
+        σ = 1.0e0, # Surface tension coefficient
         center = (0.6, 0.6), # Initial bubble center
         radius = 0.15, # Initial bubble radius
         npoint = 51, # Initial number of control points for the bubble surface
@@ -62,7 +69,8 @@ function lidsetup()
                 (NS.DirichletBC(), NS.DirichletBC((params.lidvelocity, 0.0))),
             ),
         ),
-        backend = NS.KernelAbstractions.CPU(),
+        backend = getbackend(),
+        # backend = NS.KernelAbstractions.CPU(),
     )
     return setup
 end
@@ -82,7 +90,7 @@ function surfacetension!(tension, x)
     # c = curvature(x)
     n = normals(x)
     npoint = length(x)
-    for i = 1:npoint
+    AK.foreachindex(tension) do i
         nleft = n[mod1(i - 1, npoint)]
         nright = n[mod1(i + 1, npoint)]
         fleft = MyPoint(-nleft[2], nleft[1])
@@ -153,9 +161,15 @@ function interpolate_tension!(Fu, bub_F, bub_x, setup)
     npoint = length(bub_x)
 
     # Loop through all velocity components and let that component receive its due contribution of the integral of the force
-    for dim in 1:2, I in Iu[dim]
+    # for dim in 1:2, I in Iu[dim]
+    AK.foreachindex(Fu) do index
+        II = CartesianIndices(Fu)[index]
+        i, j, dim = II.I
+        I = CartesianIndex(i, j)
         otherdim = ifelse(dim == 1, 2, 1)
-        i, j = I.I
+        # i, j = I.I
+
+        I in Iu[dim] || return nothing
 
         # Accumulator for `dim`-component of marker forces
         FuI = zero(eltype(Fu))
@@ -215,6 +229,8 @@ function interpolate_tension!(Fu, bub_F, bub_x, setup)
         # Add to existing force (convection-diffusion etc.).
         # Also normalize by the current grid spacing, since all the integrals are weighed by marker lengths
         Fu[I, dim] += FuI / Δ[otherdim][I[otherdim]]
+
+        return nothing
     end
     return nothing
 end
@@ -223,8 +239,7 @@ end
 function interpolate_velocity!(bub_u, bub_x, u, setup)
     (; xp) = setup
     xu = setup.x[1][2:end], setup.x[2][2:end]
-    npoint = length(bub_x)
-    for ipoint in 1:npoint
+    AK.foreachindex(bub_u) do ipoint
         x1, x2 = bub_x[ipoint]
 
         # Find first velocity point to the RIGHT of marker control point
@@ -232,10 +247,16 @@ function interpolate_velocity!(bub_u, bub_x, u, setup)
         # The staggered velocity field is indexed as follows:
         # u[i, j, 1] is defined at (RIGHTEDGE, CENTER) of volume (i, j) and
         # u[i, j, 2] is defined at (CENTER, RIGHTEDGE) of volume (i, j).
-        ip = findfirst(>(x1), xp[1])
-        iu = findfirst(>(x1), xu[1])
-        jp = findfirst(>(x2), xp[2])
-        ju = findfirst(>(x2), xu[2])
+
+        # ip = findfirst(>(x1), xp[1])
+        # iu = findfirst(>(x1), xu[1])
+        # jp = findfirst(>(x2), xp[2])
+        # ju = findfirst(>(x2), xu[2])
+
+        ip = 1; while ip < length(xp[1]) && xp[1][ip] < x1; ip += 1; end
+        iu = 1; while iu < length(xu[1]) && xu[1][iu] < x1; iu += 1; end
+        jp = 1; while jp < length(xp[2]) && xp[2][jp] < x2; jp += 1; end
+        ju = 1; while ju < length(xu[2]) && xu[2][ju] < x2; ju += 1; end
 
         # Linear interpolation weights for each dimension and CENTER/EDGE type
         w1u = (x1 - xu[1][iu - 1]) / (xu[1][iu] - xu[1][iu - 1])
@@ -269,8 +290,14 @@ Remesh the bubble surface.
 - Replaces any node where the interior angle between adjacent segments is smaller than
   `angle_min` with the two midpoints of its adjacent segments, removing the sharp corner.
 """
-function remesh(x, markerlims, angle_min)
+function remesh(xdevice, markerlims, angle_min)
     lmin, lmax = markerlims
+
+    # Do this on the CPU for now
+    # TODO: Do on GPU
+    cpu = NS.KernelAbstractions.CPU()
+    dev = NS.KernelAbstractions.get_backend(xdevice)
+    x = adapt(cpu, xdevice)
 
     # Pass 1: length-based split/merge
     result = eltype(x)[]
@@ -332,7 +359,9 @@ function remesh(x, markerlims, angle_min)
         end
     end
 
-    return result2
+    result3 = adapt(dev, result2)
+
+    return result3
 end
 
 """
@@ -360,7 +389,13 @@ function curvature(points)
     return map(i -> (κ_nodes[i] + κ_nodes[mod1(i + 1, n)]) / 2, 1:n)
 end
 
-function normals(points)
+function normals(pointsdevice)
+    # For now: Do on CPU.
+    # TODO: Do on GPU
+    cpu = NS.KernelAbstractions.CPU()
+    dev = NS.KernelAbstractions.get_backend(pointsdevice)
+    points = adapt(cpu, pointsdevice)
+
     n = length(points)
     # Shoelace signed area: positive = CCW winding
     area = sum(1:n) do i
@@ -370,22 +405,25 @@ function normals(points)
     # CCW: outward normal = tangent rotated 90° clockwise = (dy, -dx)
     # CW:  outward normal = tangent rotated 90° counter-clockwise = (-dy, dx)
     s = sign(area)
-    return map(1:n) do i
+    nn = map(1:n) do i
         p, q = points[i], points[mod1(i + 1, n)]
         dx, dy = q[1] - p[1], q[2] - p[2]
         nx, ny = s * dy, -s * dx
         len = sqrt(nx^2 + ny^2)
         MyPoint(nx / len, ny / len)
     end
+    return adapt(dev, nn)
 end
 
 function edgecenters(points)
     n = length(points)
-    return map(1:n) do i
+    centers = adapt(NS.KernelAbstractions.get_backend(points), fill(MyPoint(0.0, 0.0), n))
+    AK.foreachindex(centers) do i
         x = (points[i][1] + points[mod1(i + 1, n)][1]) / 2
         y = (points[i][2] + points[mod1(i + 1, n)][2]) / 2
-        return MyPoint(x, y)
+        centers[i] = MyPoint(x, y)
     end
+    return centers
 end
 
 """
@@ -447,6 +485,8 @@ The plot is update when the observable Uobs[] = (; u, x) is updated."
 function plotstate(Uobs, setup)
     size = 600, 650
 
+    cpu = AK.KernelAbstractions.CPU()
+
     (; plotting, bubble) = getparams()
     (; σ) = bubble
     (; step, lengthscale, plotsurfacetension) = plotting
@@ -461,31 +501,42 @@ function plotstate(Uobs, setup)
     )
 
     # Plot velocity field as arrows
-    x1 = range(0.0, 1.0, 32)
-    x2 = range(0.0, 1.0, 32)
+    # x1 = range(0.0, 1.0, 32)
+    # x2 = range(0.0, 1.0, 32)
+    x1 = setup.xp[1][2:step:end-1] |> adapt(cpu)
+    x2 = setup.xp[2][2:step:end-1] |> adapt(cpu)
     u1 = map(Uobs) do (; u)
         ub = u[2:step:(end - 1), 2:step:(end - 1), 1]
         ua = u[1:step:(end - 2), 2:step:(end - 1), 1]
-        @. (ua + ub) / 2
+        avg = @. (ua + ub) / 2
+        adapt(cpu, avg)
     end
     u2 = map(Uobs) do (; u)
         ub = u[2:step:(end - 1), 2:step:(end - 1), 2]
         ua = u[2:step:(end - 1), 1:step:(end - 2), 2]
-        @. (ua + ub) / 2
+        avg = @. (ua + ub) / 2
+        adapt(cpu, avg)
     end
     arrows2d!(ax, x1, x2, u1, u2; lengthscale, label = "Velocity")
 
     # Plot bubble surface
-    pp = map(U -> map(Point2, [U.x; [U.x[1]]]), Uobs)
+    pp = map(Uobs) do U
+        Ux = adapt(cpu, U.x)
+        return map(Point2, [Ux; [Ux[1]]])
+    end
     scatterlines!(ax, pp; label = "Bubble surface")
 
     # Plot surface tension
     if plotsurfacetension
-        ppedge = map(U -> map(Point2, edgecenters(U.x)), Uobs)
+        ppedge = map(Uobs) do U
+            c = edgecenters(U.x)
+            cc = adapt(cpu, c)
+            return map(Point2, cc)
+        end
         nn = map(Uobs) do U
             tension = similar(U.x)
             surfacetension!(tension, U.x)
-            return tension
+            return adapt(cpu, tension)
         end
         arrows2d!(ax, ppedge, nn; lengthscale = 0.03, color = Makie.wong_colors()[2], label = "Surface tension")
     end
@@ -535,8 +586,10 @@ function solveandplot(u, x, setup, psolver)
             F = (; F.u, x = zero(x))
             tension = similar(x)
 
-            @info "itime = $itime / $nstep, isub = $isub / $nsubstep, t = $(round(t, digits = 4))" # maximum(abs, U.u)
+            # @info "itime = $itime / $nstep, isub = $isub / $nsubstep, t = $(round(t, digits = 4))" # maximum(abs, U.u)
         end
+
+        @info "itime = $itime / $nstep, t = $(round(t, digits = 4))" # maximum(abs, U.u)
 
         # Update plot
         Uobs[] = U
@@ -552,13 +605,14 @@ discretized by `npoint` control points.
 """
 function bubble()
     (; center, radius, npoint) = getparams().bubble
-    return map(1:npoint) do i
+    b = map(1:npoint) do i
         x0, y0 = center
         angle = 2π * i / npoint
         x = x0 + radius * cos(angle)
         y = y0 + radius * sin(angle)
         return MyPoint(x, y)
     end
+    return adapt(getbackend(), b)
 end
 
 "Make illustration plot of the rectangular segment masking procedure."
@@ -632,6 +686,7 @@ Bubbles.illustrate_masking()
 
 # Problem definition
 setup = Bubbles.lidsetup()
+
 psolver = Bubbles.NS.default_psolver(setup)
 u = Bubbles.NS.velocityfield(setup, (dim, x, y) -> zero(x));
 x = Bubbles.bubble()
