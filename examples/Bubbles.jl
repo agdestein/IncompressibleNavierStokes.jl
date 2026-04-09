@@ -13,6 +13,8 @@ import IncompressibleNavierStokes as NS
 getbackend() = CUDA.functional() ? CUDA.CUDABackend() : NS.KernelAbstractions.CPU()
 # getbackend() = NS.KernelAbstractions.CPU()
 
+outdir() = joinpath(@__DIR__, "output", "Bubble") |> mkpath
+
 getparams() = (;
     # Domain
     L = 1.0, # Domain side length
@@ -50,7 +52,7 @@ getparams() = (;
     # Animation
     animation = (;
         doanimation = true,
-        filename = joinpath(@__DIR__, "output", "bubble.mp4"),
+        filename = joinpath(outdir(), "bubble.mp4"),
     ),
 )
 
