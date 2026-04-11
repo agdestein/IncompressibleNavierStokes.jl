@@ -1,7 +1,7 @@
 name = "IncompressibleNavierStokes"
 uuid = "5e318141-6589-402b-868d-77d7df8c442e"
-authors = ["Syver Døving Agdestein, Benjamin Sanderse, and contributors"]
 version = "4.0.0"
+authors = ["Syver Døving Agdestein, Benjamin Sanderse, and contributors"]
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -34,14 +34,11 @@ CUDSSExt = ["CUDSS"]
 EnzymeCoreExt = ["EnzymeCore"]
 MakieExt = ["Makie"]
 
-[extras]
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-
 [compat]
 AMGX = "0.2"
 Adapt = "4"
 Atomix = "1"
-CUDA = "5"
+CUDA = "5, 6"
 CUDSS = "0.6"
 ChainRulesCore = "1"
 DocStringExtensions = "0.9"
@@ -60,3 +57,6 @@ StaticArrays = "1"
 Statistics = "1"
 WriteVTK = "1"
 julia = "1.10"
+
+[extras]
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
