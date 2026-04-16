@@ -457,14 +457,16 @@ function rk3step!(F, U0, U, t, dt, tension, p, psolver, viscosity, setup)
         # Apply right-hand side function to current state U, put in F
         fill!(F.u, 0) # Initialize with 0
         NS.convectiondiffusion!(F.u, U.u, setup, viscosity) # This adds to existing force
-        surfacetension!(tension, U.x) # This allocates a new array for now
+        surfacetension!(tension, U.x)
         interpolate_tension!(F.u, tension, U.x, setup) # Add surface tension to existing force
         interpolate_velocity!(F.x, U.x, U.u, setup) # Interpolate velocity to control points
+        interpolate_velocity!(F.xcenter, U.xcenter, U.u, setup) # Interpolate velocity to /ubble center
 
         # Evolve U
         t = t0 + c[i] * dt
         @. U.u = U0.u + a[i] * dt * F.u
         @. U.x = U0.x + a[i] * dt * F.x
+        @. U.xcenter = U0.xcenter + a[i] * dt * F.xcenter
         NS.apply_bc_u!(U.u, t, setup)
         NS.project!(U.u, setup; psolver, p)
 
@@ -473,6 +475,7 @@ function rk3step!(F, U0, U, t, dt, tension, p, psolver, viscosity, setup)
         if i < nstage
             @. U0.u += b[i] * dt * F.u
             @. U0.x += b[i] * dt * F.x
+            @. U0.xcenter += b[i] * dt * F.xcenter
         end
 
         # Fill boundary values at new time
@@ -495,7 +498,6 @@ function plotstate(Uobs, setup)
     cpu = AK.KernelAbstractions.CPU()
 
     (; plotting, bubble) = getparams()
-    (; σ) = bubble
     (; step, lengthscale, plotsurfacetension) = plotting
 
     fig = Figure(; size)
@@ -534,6 +536,12 @@ function plotstate(Uobs, setup)
     end
     bubplot = scatterlines!(ax, pp; label = "Bubble surface")
 
+    # Plot bubble center
+    xxcenter = map(Uobs) do U
+        return map(Point2, U.xcenter)
+    end
+    scatter!(ax, xxcenter; color = Cycled(3))
+
     # Just do this manually for now, since there is an isssue with plotting `arrows2d` as a legend entry.
     leg_elems = [velocity_label, bubplot]
     leg_labels = ["Velocity", "Bubble surface"]
@@ -567,13 +575,13 @@ function plotstate(Uobs, setup)
     return fig
 end
 
-function solveandplot(u, x, setup, psolver)
+function solveandplot(u, x, xcenter, setup, psolver)
     params = getparams()
     (; viscosity, dt, nsubstep, nstep, animation) = params
     (; markerlims, angle_min) = params.bubble
 
     # Allocate registers
-    U = (; u, x) # Current state
+    U = (; u, x, xcenter) # Current state
     U0 = deepcopy(U) # RK3 accumulator for previous stages
     F = deepcopy(U) # RK3 right hand side
     tension = similar(x) # Surface tension at markers
@@ -602,9 +610,9 @@ function solveandplot(u, x, setup, psolver)
             # TODO: Remesh without too much reallocation? (for heavy 3D triangulations)
             # TODO: Maybe only do this every `nremesh` steps? (for heavy 3D triangulations)
             x = remesh(U.x, markerlims, angle_min)
-            U = (; U.u, x)
-            U0 = (; U0.u, x = zero(x))
-            F = (; F.u, x = zero(x))
+            U = (; U.u, x, U.xcenter)
+            U0 = (; U0.u, x = zero(x), U0.xcenter)
+            F = (; F.u, x = zero(x), F.xcenter)
             tension = similar(x)
 
             # @info "itime = $itime / $nstep, isub = $isub / $nsubstep, t = $(round(t, digits = 4))" # maximum(abs, U.u)
@@ -627,6 +635,8 @@ end
 """
 Create a circular bubble centered at `center` with radius `radius`,
 discretized by `npoint` control points.
+The center point is also returned,
+in the same format as the marker control points (vector of points).
 """
 function bubble()
     (; center, radius, npoint) = getparams().bubble
@@ -637,7 +647,9 @@ function bubble()
         y = y0 + radius * sin(angle)
         return MyPoint(x, y)
     end
-    return adapt(getbackend(), b)
+    bdev = adapt(getbackend(), b)
+    xcenterdev = adapt(getbackend(), [MyPoint(center...)]) # This is an array containing a single point
+    return bdev, xcenterdev
 end
 
 "Make illustration plot of the rectangular segment masking procedure."
@@ -714,10 +726,10 @@ setup = Bubbles.lidsetup()
 
 psolver = Bubbles.NS.default_psolver(setup)
 u = Bubbles.NS.velocityfield(setup, (dim, x, y) -> zero(x));
-x = Bubbles.bubble()
+x, xcenter = Bubbles.bubble()
 
 # Solve
-(; u, x) = Bubbles.solveandplot(u, x, setup, psolver)
+(; u, x, xcenter) = Bubbles.solveandplot(u, x, xcenter, setup, psolver)
 
 # Compute integral of surface tension (it should be zero)
 false && let
