@@ -23,9 +23,10 @@ getparams() = (;
     # Flow
     viscosity = 5.0e-4,
     lidvelocity = 1.0,
-    # dens = (1.0e3, 1.25),
-    # grav = (0.0, 0.0, -9.81),
-    # visc = (1.0e-3, 1.8e-5),
+    gravity = (0.0, -9.81),
+    # densities = (; liquid = 1.0e3, gas = 1.25),
+    densities = (; liquid = 1.0, gas = 1e-3),
+    viscosities = (; liquid = 1.0e-3, gas = 1.8e-5),
 
     # Bubble
     bubble = (;
@@ -163,7 +164,8 @@ function masksegment(segment, rect)
 end
 
 "Interpolate surface tension force at markers to velocity points."
-function interpolate_tension!(Fu, bub_F, bub_x, setup)
+function interpolate_tension!(Fu, bub_F, bub_x, fractions, setup)
+    (; densities) = getparams()
     (; Δ, Iu) = setup
     xu = setup.x[1][2:end], setup.x[2][2:end]
     npoint = length(bub_x)
@@ -233,10 +235,14 @@ function interpolate_tension!(Fu, bub_F, bub_x, setup)
             FuI += contribution
         end
 
+        # Density in current point
+        a = (fractions[I] + fractions[right(I, dim, 1)]) / 2 # Interpolate to velocity point
+        dens = (1 - a) * densities.liquid + a * densities.gas
+
         # Now write the total contribution from all markers to the current velocity point.
         # Add to existing force (convection-diffusion etc.).
         # Also normalize by the current grid spacing, since all the integrals are weighed by marker lengths
-        Fu[I, dim] += FuI / Δ[otherdim][I[otherdim]]
+        Fu[I, dim] += FuI / Δ[otherdim][I[otherdim]] / dens
 
         return nothing
     end
@@ -434,6 +440,39 @@ function edgecenters(points)
     return centers
 end
 
+function convectiondiffusion_nonconstant!(f, u, fractions, setup)
+    (; Iu) = setup
+    (; viscosities, densities) = getparams()
+    AK.foreachindex(f) do ilin
+        II = CartesianIndices(f)[ilin]
+        i, j, dim = II.I
+        I = CartesianIndex(i, j)
+        I in Iu[dim] || return nothing
+        conv =
+            NS.tensordivergence(setup, NS.convstress, (setup, u), dim, 1, I) +
+            NS.tensordivergence(setup, NS.convstress, (setup, u), dim, 2, I)
+        diff =
+            NS.tensordivergence(setup, NS.diffstress, (setup, u, 1.0), dim, 1, I) +
+            NS.tensordivergence(setup, NS.diffstress, (setup, u, 1.0), dim, 2, I)
+        a = (fractions[I] + fractions[right(I, dim, 1)]) / 2 # Interpolate to velocity point
+        dens = (1 - a) * densities.liquid + a * densities.gas
+        visc = dens / ((1 - a) * densities.liquid / viscosities.liquid + a * densities.gas / viscosities.gas)
+        # visc = viscosity
+        f[II] += conv + visc * diff
+        return nothing
+    end
+    return nothing
+end
+
+function applygravity!(f, setup)
+    gravity = getparams()
+    AK.foreachindex(f) do ilin
+        II = CartesianIndices(f)[ilin]
+        dim = II.I[3]
+        f[II] += gravity[dim]
+    end
+end
+
 """
 Perform one time step for the total state `U = (; u, x)`, where
 `u` is the velocity field and `x` are the control points defining the bubble.
@@ -441,7 +480,7 @@ Wray's low-storage RK3 method is used, which only relies on two
 temporary registers `F` and `U0` (same size as `U`).
 In addition, we need a pressure register `p` and a surface tension register `tension`.
 """
-function rk3step!(F, U0, U, t, dt, tension, p, psolver, viscosity, setup)
+function rk3step!(F, U0, U, t, dt, fractions, tension, p, psolver, viscosity, setup)
     # RK coefficients
     a = 8 / 15, 5 / 12, 3 / 4
     b = 1 / 4, 0.0
@@ -455,12 +494,15 @@ function rk3step!(F, U0, U, t, dt, tension, p, psolver, viscosity, setup)
     # RK3 substeps
     for i in 1:nstage
         # Apply right-hand side function to current state U, put in F
+        compute_fractions!(fractions, U.x, U.xcenter, setup) # Current phase fractions
         fill!(F.u, 0) # Initialize with 0
-        NS.convectiondiffusion!(F.u, U.u, setup, viscosity) # This adds to existing force
+        # NS.convectiondiffusion!(F.u, U.u, setup, viscosity) # This adds to existing force
+        convectiondiffusion_nonconstant!(F.u, U.u, fractions, setup) # This adds to existing force
         surfacetension!(tension, U.x)
-        interpolate_tension!(F.u, tension, U.x, setup) # Add surface tension to existing force
+        interpolate_tension!(F.u, tension, U.x, fractions, setup) # Add surface tension to existing force
+        applygravity!(F.u, setup)
         interpolate_velocity!(F.x, U.x, U.u, setup) # Interpolate velocity to control points
-        interpolate_velocity!(F.xcenter, U.xcenter, U.u, setup) # Interpolate velocity to /ubble center
+        interpolate_velocity!(F.xcenter, U.xcenter, U.u, setup) # Interpolate velocity to bubble center
 
         # Evolve U
         t = t0 + c[i] * dt
@@ -586,6 +628,7 @@ function solveandplot(u, x, xcenter, setup, psolver)
     F = deepcopy(U) # RK3 right hand side
     tension = similar(x) # Surface tension at markers
     p = NS.scalarfield(setup) # Pressure
+    fractions = NS.scalarfield(setup) # Phase fractions (1.0 if inside bubble, 0.0 outside)
 
     # Create plot
     Uobs = Observable(U)
@@ -601,7 +644,7 @@ function solveandplot(u, x, xcenter, setup, psolver)
     for itime in 1:nstep
         for isub in 1:nsubstep
             # Perform one RK3 step of step size `dt`
-            rk3step!(F, U0, U, t, dt, tension, p, psolver, viscosity, setup)
+            rk3step!(F, U0, U, t, dt, fractions, tension, p, psolver, viscosity, setup)
             t += dt
 
             # Remesh the bubble.
@@ -822,6 +865,8 @@ x, xcenter = Bubbles.bubble()
 
 # Solve
 (; u, x, xcenter) = Bubbles.solveandplot(u, x, xcenter, setup, psolver)
+
+Bubbles.plotstate(Observable((; u, x, xcenter)), setup)
 
 Bubbles.plot_insidemarkers(u, x, xcenter, setup) |> display
 Bubbles.plot_fractions(u, x, xcenter, setup) |> display
