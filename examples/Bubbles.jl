@@ -717,6 +717,98 @@ function illustrate_masking()
     fig
 end
 
+"""
+Return `true` if `point` is inside the bubble.
+This is determined by whether the number of intersections of the segment `point`-`xcenter` is odd or even with the marker segments.
+`point` and `xcenter` are `MyPoint`s, while `x` is a vector of `MyPoint`s.
+"""
+function check_if_inside(point, x, xcenter, setup)
+    # Count intersections of the segment (point → xcenter) with the bubble boundary.
+    # Since xcenter is inside, an even count (incl. 0) means point is also inside.
+    n = length(x)
+    crossings = 0
+    px, py = point[1], point[2]
+    qx, qy = xcenter[1], xcenter[2]
+    for i in 1:n
+        a = x[i]
+        b = x[mod1(i + 1, n)]
+        ax, ay = a[1], a[2]
+        bx, by = b[1], b[2]
+
+        # Check if segments (p,q) and (a,b) intersect using cross-product method.
+        # Parameterize: P(t) = p + t*(q-p), Q(s) = a + s*(b-a)
+        # Solve for t and s; segments intersect iff 0 ≤ t ≤ 1 and 0 ≤ s ≤ 1.
+        dx_pq = qx - px
+        dy_pq = qy - py
+        dx_ab = bx - ax
+        dy_ab = by - ay
+
+        denom = dx_pq * dy_ab - dy_pq * dx_ab
+
+        dx_pa = ax - px
+        dy_pa = ay - py
+
+        t = (dx_pa * dy_ab - dy_pa * dx_ab) / denom
+        s = (dx_pa * dy_pq - dy_pa * dx_pq) / denom
+
+        # When denom == 0 (parallel), t and s become ±Inf or NaN,
+        # so the comparison naturally fails.
+        if 0 ≤ t ≤ 1 && 0 ≤ s ≤ 1
+            crossings += 1
+        end
+    end
+    return iseven(crossings)
+end
+
+function mark_inside_points!(setup, insidemarkers, x, xcenter)
+    (; xp) = setup
+    AK.foreachindex(insidemarkers) do index
+        I = CartesianIndices(insidemarkers)[index]
+        i, j = I.I
+        point = MyPoint(xp[1][i], xp[2][j])
+        insidemarkers[I] = check_if_inside(point, x, xcenter[1], setup)
+    end
+    return nothing
+end
+
+function compute_fractions!(fractions, x, xcenter, setup)
+    (; xp) = setup
+    xu = setup.x # Includes leftmost point
+    AK.foreachindex(fractions) do index
+        I = CartesianIndices(fractions)[index]
+        i, j = I.I
+        ninside = 0
+        for dj in (0, 1), di in (0, 1)
+            point = MyPoint(xu[1][i + di], xu[2][j + dj])
+            ninside += check_if_inside(point, x, xcenter[1], setup)
+        end
+        fractions[I] = ninside / 4 # 1.0 if all corners inside, 0.0 if all corners outside
+    end
+    return nothing
+end
+
+function plot_insidemarkers(u, x, xcenter, setup)
+    insidemarkers = similar(NS.scalarfield(setup), Bool)
+    mark_inside_points!(setup, insidemarkers, x, xcenter)
+    fig = Figure()
+    ax = Axis(fig[1, 1])
+    heatmap!(ax, setup.xp..., insidemarkers)
+    scatterlines!(ax, map(Point2, x))
+    scatter!(ax, map(Point2, xcenter); color = Cycled(3))
+    return fig
+end
+
+function plot_fractions(u, x, xcenter, setup)
+    fractions = NS.scalarfield(setup)
+    compute_fractions!(fractions, x, xcenter, setup)
+    fig = Figure()
+    ax = Axis(fig[1, 1])
+    heatmap!(ax, setup.xp..., fractions)
+    scatterlines!(ax, map(Point2, x))
+    scatter!(ax, map(Point2, xcenter); color = Cycled(3))
+    return fig
+end
+
 end
 
 Bubbles.illustrate_masking()
@@ -730,6 +822,9 @@ x, xcenter = Bubbles.bubble()
 
 # Solve
 (; u, x, xcenter) = Bubbles.solveandplot(u, x, xcenter, setup, psolver)
+
+Bubbles.plot_insidemarkers(u, x, xcenter, setup) |> display
+Bubbles.plot_fractions(u, x, xcenter, setup) |> display
 
 # Compute integral of surface tension (it should be zero)
 false && let
