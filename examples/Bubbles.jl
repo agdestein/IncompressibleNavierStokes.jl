@@ -166,7 +166,7 @@ end
 "Interpolate surface tension force at markers to velocity points."
 function interpolate_tension!(Fu, bub_F, bub_x, fractions, setup)
     (; densities) = getparams()
-    (; Δ, Iu) = setup
+    (; Δ, Iu, xp) = setup
     xu = setup.x[1][2:end], setup.x[2][2:end]
     npoint = length(bub_x)
 
@@ -189,46 +189,24 @@ function interpolate_tension!(Fu, bub_F, bub_x, fractions, setup)
             p = bub_x[ipoint]
             q = bub_x[mod1(ipoint + 1, npoint)]
 
-            # "Mask" the line segment (p, q) by the current rectangle defined
-            # by the product of the intervals
-            # (xu[1][i-1], xu[1][i+1]) and (xu[2][j-1], xu[2][j]) for u1, and
-            # (xu[1][i-1], xu[1][i]) and (xu[2][j-1], xu[2][j+1]) for u2.
-            a = MyPoint(xu[1][i - 1], xu[2][j - 1])
-            b = MyPoint(xu[1][i + (dim == 1)], xu[2][j - 1])
-            c = MyPoint(xu[1][i + (dim == 1)], xu[2][j + (dim == 2)])
-            d = MyPoint(xu[1][i - 1], xu[2][j + (dim == 2)])
+            # Compute center of current marker
+            m = (p + q) / 2
 
-            (p, q), intersect = masksegment((p, q), (a, b, c, d))
-            intersect || continue # Go to next marker if no intersection with current velocity control volume
+            # # Find index of first points to the RIGHT
+            # i1p = findfirst(>(m[1]), xp[1])
+            # i1u = findfirst(>(m[1]), xu[1])
+            # i2p = findfirst(>(m[2]), xp[2])
+            # i2u = findfirst(>(m[2]), xu[2])
 
-            p, q = ifelse(p[otherdim] < q[otherdim], (p, q), (q, p)) # Ensure p is "left" of q in the integral dimension
+            # Find index of first points to the RIGHT
+            i1p = 1; while i1p < length(xp[1]) && xp[1][i1p] < m[1]; i1p += 1; end
+            i1u = 1; while i1u < length(xu[1]) && xu[1][i1u] < m[1]; i1u += 1; end
+            i2p = 1; while i2p < length(xp[2]) && xp[2][i2p] < m[2]; i2p += 1; end
+            i2u = 1; while i2u < length(xu[2]) && xu[2][i2u] < m[2]; i2u += 1; end
 
-            t = bub_F[ipoint][dim] # Surface tension of current marker and current component. This is just a single scalar constant value.
-
-            # Integrate t · w(x_dim(s)) over s = x_otherdim from p to q.
-            # x_dim(s) is linear in s, so substitute xd = x_dim(s):
-            #   ds = dxd / slope,  integral = t · (W(xd_q) - W(xd_p)) / slope
-            # where W is the antiderivative of w (piecewise quadratic, continuous at xM).
-            # Special-case slope ≈ 0: w is constant, integral = t · w(xd_p) · s_span.
-            xL = xu[dim][I[dim] - 1]
-            xM = xu[dim][I[dim]]
-            xR = xu[dim][I[dim] + 1]
-            hL = xM - xL
-            hR = xR - xM
-
-            xd_p = p[dim]
-            xd_q = q[dim]
-            s_span = q[otherdim] - p[otherdim]   # > 0 after sorting
-
-            # Antiderivative of w, continuous on [xL, xR]
-            W(xd) = xd <= xM ? (xd - xL)^2 / (2 * hL) : hL / 2 + hR / 2 - (xR - xd)^2 / (2 * hR)
-            w(xd) = xd <= xM ? (xd - xL) / hL : (xR - xd) / hR
-
-            slope = (xd_q - xd_p) / s_span
-            contribution = if slope == 0
-                t * w(xd_p) * s_span
+            if dim == 1
+                a1 = (m[1] - xu[i1u - 1]) / (xu[i1u] - xu[i1u - 1])
             else
-                t * (W(xd_q) - W(xd_p)) / slope
             end
 
             # Add contribution from current marker
