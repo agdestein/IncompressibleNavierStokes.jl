@@ -22,7 +22,7 @@ getparams() = (;
 
     # Flow
     viscosity = 5.0e-4,
-    lidvelocity = 1.0,
+    lidvelocity = 0.0,
     gravity = (0.0, -9.81),
     # densities = (; liquid = 1.0e3, gas = 1.25),
     densities = (; liquid = 1.0, gas = 1e-3),
@@ -465,7 +465,7 @@ function convectiondiffusion_nonconstant!(f, u, fractions, setup)
 end
 
 function applygravity!(f, setup)
-    gravity = getparams()
+    (; gravity) = getparams()
     AK.foreachindex(f) do ilin
         II = CartesianIndices(f)[ilin]
         dim = II.I[3]
@@ -580,7 +580,8 @@ function plotstate(Uobs, setup)
 
     # Plot bubble center
     xxcenter = map(Uobs) do U
-        return map(Point2, U.xcenter)
+        Uxcenter = adapt(cpu, U.xcenter)
+        return map(Point2, Uxcenter)
     end
     scatter!(ax, xxcenter; color = Cycled(3))
 
@@ -852,16 +853,38 @@ function plot_fractions(u, x, xcenter, setup)
     return fig
 end
 
+function plot_bubble_on_grid(setup, x)
+    cpu = NS.KernelAbstractions.CPU()
+    xgrid = setup.x |> adapt(cpu)
+    fig = Figure(; size = (600, 650))
+    ax = Axis(fig[1, 1]; aspect = DataAspect(), xlabel = "x", ylabel = "y")
+    wireframe!(ax, xgrid[1], xgrid[2], zeros(length(xgrid[1]), length(xgrid[2])))
+    scatterlines!(ax, map(Point, adapt(cpu, x)); color = Cycled(2))
+    x1 = getindex.(x, 1) |> adapt(cpu)
+    x2 = getindex.(x, 2) |> adapt(cpu)
+    lims1 = extrema(x1)
+    lims2 = extrema(x2)
+    l1 = lims1[2] - lims1[1]
+    l2 = lims2[2] - lims2[1]
+    scale = 10
+    xlims!(ax, lims1[1] - l1 / scale, lims1[2] + l1 / scale)
+    ylims!(ax, lims2[1] - l2 / scale, lims2[2] + l2 / scale)
+    fig
 end
 
-Bubbles.illustrate_masking()
+end
+
+# Illustrate marker masking procedure
+Bubbles.illustrate_masking() |> display
 
 # Problem definition
 setup = Bubbles.lidsetup()
-
 psolver = Bubbles.NS.default_psolver(setup)
 u = Bubbles.NS.velocityfield(setup, (dim, x, y) -> zero(x));
 x, xcenter = Bubbles.bubble()
+
+# Plot nonuniform grid
+Bubbles.plot_bubble_on_grid(setup, x) |> display
 
 # Solve
 (; u, x, xcenter) = Bubbles.solveandplot(u, x, xcenter, setup, psolver)
@@ -877,9 +900,9 @@ false && let
     s = similar(x)
     Bubbles.surfacetension!(s, x)
     sum(1:npoint) do i
-        p = x[i]
-        q = x[mod1(i + 1, npoint)]
         t = s[i]
+        # p = x[i]
+        # q = x[mod1(i + 1, npoint)]
         # dx = abs(q[1] - p[1])
         # dy = abs(q[2] - p[2])
         dx = 1
