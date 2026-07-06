@@ -182,13 +182,22 @@ for e in examples
     code = strip(read(script, String))
     codepair = "CODE_CONTENT" => code
     replacefunc(pairs...) = content -> replace(content, pairs...)
+    # The `details custom-block` classes make Vitepress style the block like
+    # its built-in collapsible `::: details` container (collapsed by default).
     codecoda = """
-        # ## Copy-pasteable code
+        # ```@raw html
+        # <details class="details custom-block">
+        # <summary>Copy-pasteable code</summary>
+        # ```
         #
         # Below is the full code for this example stripped of comments and output.
         #
         # ```julia
         # CODE_CONTENT
+        # ```
+        #
+        # ```@raw html
+        # </details>
         # ```
     """
     if e.run
