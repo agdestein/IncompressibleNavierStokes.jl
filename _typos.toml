@@ -1,0 +1,3 @@
+[default.extend-words]
+# "FOM" = full-order model (reduced-order modeling terminology)
+fom = "fom"

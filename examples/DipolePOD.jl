@@ -1,6 +1,6 @@
 # # Two-dimensional dipole
 #
-# This example uses thet setup from the paper
+# This example uses the setup from the paper
 # > Study of a staggered fourth‐order compact scheme for unsteady incompressible viscous flows 
 # > Knikker, 2009, International Journal for Numerical Methods in Fluids
 # > <https://onlinelibrary.wiley.com/doi/10.1002/fld.1854>
@@ -28,7 +28,7 @@ import IncompressibleNavierStokes as NS
 #
 # We first define all actions in functions, and run them later.
 # This makes it convenient to comment out the slow running function calls later and
-# just `include("filname.jl")` to run everything.
+# just `include("filename.jl")` to run everything.
 # It also keeps the namespace clean and avoids too many global variables.
 
 # Define all parameters here for convenience
