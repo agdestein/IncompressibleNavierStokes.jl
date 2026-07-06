@@ -37,9 +37,8 @@ initial conditions. We say that the time integration scheme (definition of
 ``u^n``) is accurate to the order ``r`` if ``u^n = u(t^n) +
 \mathcal{O}(\Delta t^r)`` for all ``n``.
 
-IncompressibleNavierStokes provides a collection of explicit and implicit
-Runge-Kutta methods, in addition to Adams-Bashforth Crank-Nicolson and one-leg
-beta method time steppers.
+IncompressibleNavierStokes provides a collection of explicit Runge-Kutta
+methods.
 
 The code is currently not adapted to time steppers from
 [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/solvers/dae_solve/),
@@ -54,12 +53,6 @@ timestep
 timestep!
 ```
 
-
-## One-leg beta method
-
-```@docs
-OneLegMethod
-```
 
 ## Runge-Kutta methods
 
@@ -86,15 +79,6 @@ RKMethods.RK56
 RKMethods.DOPRI6
 ```
 
-### Implicit Methods
-
-```@docs
-RKMethods.BE11
-RKMethods.SDIRK34
-RKMethods.ISSPm2
-RKMethods.ISSPs3
-```
-
 ### Half explicit methods
 
 ```@docs
@@ -103,37 +87,11 @@ RKMethods.HEM3BS
 RKMethods.HEM5
 ```
 
-### Classical Methods
-
-```@docs
-RKMethods.GL1
-RKMethods.GL2
-RKMethods.GL3
-RKMethods.RIA1
-RKMethods.RIA2
-RKMethods.RIA3
-RKMethods.RIIA1
-RKMethods.RIIA2
-RKMethods.RIIA3
-RKMethods.LIIIA2
-RKMethods.LIIIA3
-```
-
-### Chebyshev methods
-
-```@docs
-RKMethods.CHDIRK3
-RKMethods.CHCONS3
-RKMethods.CHC3
-RKMethods.CHC5
-```
-
 ### Miscellaneous Methods
 
 ```@docs
 RKMethods.Mid22
 RKMethods.MTE22
-RKMethods.CN22
 RKMethods.Heun33
 RKMethods.RK33C2
 RKMethods.RK33P2
@@ -141,14 +99,6 @@ RKMethods.RK44
 RKMethods.RK44C2
 RKMethods.RK44C23
 RKMethods.RK44P2
-```
-
-### DSRK Methods
-
-```@docs
-RKMethods.DSso2
-RKMethods.DSRK2
-RKMethods.DSRK3
 ```
 
 ### "Non-SSP" Methods of Wong & Spiteri

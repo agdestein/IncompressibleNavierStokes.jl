@@ -147,7 +147,7 @@ function get_state(stepper)
 end
 
 function propose_timestep(::typeof(diffusion!), state, setup, params)
-    (; dimension, Δ, Δu, Iu) = setup
+    (; dimension, Δu, Iu) = setup
     D = dimension()
 
     # Check maximum step size in each dimension
@@ -161,7 +161,7 @@ broadcastreduce(f, op, args...; kwargs...) =
     reduce(op, Broadcast.instantiate(Broadcast.broadcasted(f, args...); kwargs...))
 
 function propose_timestep(::typeof(convection!), state, setup, params)
-    (; dimension, Δ, Δu, Iu) = setup
+    (; dimension, Δu, Iu) = setup
     D = dimension()
     (; u) = state
 

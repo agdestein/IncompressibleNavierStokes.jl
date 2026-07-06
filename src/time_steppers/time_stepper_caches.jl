@@ -5,16 +5,6 @@ Get time stepper cache for the given ODE method.
 """
 function get_cache end
 
-function get_cache(::OneLegMethod, state, setup)
-    # TODO
-    unew = vectorfield(setup)
-    F = vectorfield(setup)
-    pnew = scalarfield(setup)
-    div = scalarfield(setup)
-    Δp = scalarfield(setup)
-    (; unew, pnew, F, div, Δp)
-end
-
 function get_cache(method::ExplicitRungeKuttaMethod, state, setup)
     ns = length(method.b)
     statestart = map(similar, state)

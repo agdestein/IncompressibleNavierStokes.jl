@@ -275,7 +275,6 @@ ChainRulesCore.rrule(::typeof(pressuregradient), p, setup) = (
 
 "Compute pressure gradient (in-place version)."
 function pressuregradient!(G, p, setup)
-    (; Ip, N) = setup
     apply!(expand_scalar!, setup, δ, G, (setup, p))
     G
 end
@@ -322,32 +321,6 @@ function laplacian!(L, p, setup)
     (; dimension, Δ, Δu, N, Np, Ip, backend, workgroupsize, boundary_conditions) = setup
     D = dimension()
     e = Offset(D)
-    # @kernel function lap!(L, p, I0)
-    #     I = @index(Global, Cartesian)
-    #     I = I + I0
-    #     lap = zero(eltype(p))
-    #     for α = 1:D
-    #         # bc = boundary_conditions[α]
-    #         if bc[1] isa PressureBC && I[α] == I0[α] + 1
-    #             lap +=
-    #                 ΩI / Δ[α][I[α]] *
-    #                 ((p[I+e(α)] - p[I]) / Δu[α][I[α]] - (p[I]) / Δu[α][I[α]-1])
-    #         elseif bc[2] isa PressureBC && I[α] == I0[α] + Np[α]
-    #             lap +=
-    #                 ΩI / Δ[α][I[α]] *
-    #                 ((-p[I]) / Δu[α][I[α]] - (p[I] - p[I-e(α)]) / Δu[α][I[α]-1])
-    #         elseif bc[1] isa DirichletBC && I[α] == I0[α] + 1
-    #             lap += ΩI / Δ[α][I[α]] * ((p[I+e(α)] - p[I]) / Δu[α][I[α]])
-    #         elseif bc[2] isa DirichletBC && I[α] == I0[α] + Np[α]
-    #             lap += ΩI / Δ[α][I[α]] * (-(p[I] - p[I-e(α)]) / Δu[α][I[α]-1])
-    #         else
-    #             lap +=
-    #                 ΩI / Δ[α][I[α]] *
-    #                 ((p[I+e(α)] - p[I]) / Δu[α][I[α]] - (p[I] - p[I-e(α)]) / Δu[α][I[α]-1])
-    #         end
-    #     end
-    #     L[I] = lap
-    # end
     @kernel function lapα!(L, p, I0, ::Val{α}, bc) where {α}
         I = @index(Global, Cartesian)
         I = I + I0
@@ -378,7 +351,6 @@ function laplacian!(L, p, setup)
     # Start at second volume
     ndrange = Np
     I0 = getoffset(Ip)
-    # lap!(backend, workgroupsize)(L, p, I0; ndrange)
     L .= 0
     for α = 1:D
         lapα!(backend, workgroupsize)(L, p, I0, Val(α), boundary_conditions.u[α]; ndrange)
@@ -446,8 +418,6 @@ end
 function convection_adjoint!(ubar, φbar, u, setup)
     (; dimension, N, backend, workgroupsize) = setup
     D = dimension()
-    e = Offset(D)
-    T = eltype(u)
     kernel = convection_adjoint_kernel!(backend, workgroupsize)
     kernel(ubar, φbar, u, setup, Val(1:D); ndrange = N)
     KernelAbstractions.synchronize(backend)
@@ -718,20 +688,6 @@ function dissipation!(diss, u, setup, coeff)
     diss
 end
 
-function dissipation_adjoint!(ubar, φbar, u, setup, coeff)
-    (; N) = setup
-    error()
-    apply!(dissipation_adjoint_kernel!, setup, ubar, φbar, u, setup, coeff; ndrange = N)
-    diss
-end
-
-@kernel function dissipation_adjoint_kernel!(O, ubar, φbar, u, setup, coeff)
-    I = @index(Global, Cartesian)
-    I = I + O
-    # G = ∇_coll(u, setup, I)
-    # diss[I] += coeff * dot(G, G)
-end
-
 "Compute gravity term (differentiable version)."
 applygravity(temp, setup, gdir, gravity) =
     applygravity!(vectorfield(setup), temp, setup, gdir, gravity)
@@ -857,32 +813,6 @@ end
     δ_coll(u, setup, 2, 3, I),
     δ_coll(u, setup, 3, 3, I),
 )
-@inline idtensor(u, ::CartesianIndex{2}) = SMatrix{2,2,eltype(u),4}(1, 0, 0, 1)
-@inline idtensor(u, ::CartesianIndex{3}) =
-    SMatrix{3,3,eltype(u),9}(1, 0, 0, 0, 1, 0, 0, 0, 1)
-@inline unittensor(u, ::CartesianIndex{2}, i, β) = SMatrix{2,2,eltype(u),4}(
-    (i, β) == (1, 1),
-    (i, β) == (2, 1),
-    (i, β) == (1, 2),
-    (i, β) == (2, 2),
-)
-@inline unittensor(u, ::CartesianIndex{3}, i, β) = SMatrix{3,3,eltype(u),9}(
-    (i, β) == (1, 1),
-    (i, β) == (2, 1),
-    (i, β) == (3, 1),
-    (i, β) == (1, 2),
-    (i, β) == (2, 2),
-    (i, β) == (3, 2),
-    (i, β) == (1, 3),
-    (i, β) == (2, 3),
-    (i, β) == (3, 3),
-)
-
-"Gridsize based on the length of the diagonal of the cell."
-@inline gridsize(setup, I::CartesianIndex{2}) = sqrt(setup[1][I[1]]^2 + setup[2][I[2]]^2)
-@inline gridsize(setup, I::CartesianIndex{3}) =
-    cbrt(setup[1][I[1]]^2 + setup[2][I[2]]^2 + setup[3][I[3]]^2)
-
 "Grid size based on the volume of the cell."
 @inline gridsize_vol(setup, I::CartesianIndex{2}) =
     sqrt(setup.Δ[1][I[1]] * setup.Δ[2][I[2]])
@@ -962,7 +892,7 @@ end
 qcrit(u, setup) = qcrit!(scalarfield(setup), u, setup)
 
 function qcrit!(q, u, setup)
-    (; Np, Δ, Δu, backend, workgroupsize) = setup
+    (; Np, backend, workgroupsize) = setup
     @kernel function qcrit_kernel!(q, u)
         I = @index(Global, Cartesian)
         I += oneunit(I)

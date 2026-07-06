@@ -86,29 +86,6 @@ function temperaturefield(setup, tempfunc, t = zero(eltype(setup.x[1])))
     apply_bc_temp!(temperature, t, setup)
 end
 
-# function create_spectrum(; setup, A, σ, s, rng = Random.default_rng())
-#     (; dimension, x, N) = setup
-#     T = eltype(x[1])
-#     D = dimension()
-#     K = N .÷ 2
-#     k = ntuple(
-#         α -> reshape(1:K[α], ntuple(Returns(1), α - 1)..., :, ntuple(Returns(1), D - α)...),
-#         D,
-#     )
-#     a = fill!(similar(x[1], Complex{T}, K), 1)
-#     τ = T(2π)
-#     a .*= prod(N) * A / sqrt(τ^2 * 2σ^2)
-#     for α = 1:D
-#         kα = k[α]
-#         @. a *= exp(-max(abs(kα) - s, 0)^2 / 2σ^2)
-#     end
-#     @. a *= randn(rng, T) * exp(im * τ * rand(rng, T))
-#     for α = 1:D
-#         a = cat(a, reverse(a; dims = α); dims = α)
-#     end
-#     a
-# end
-
 function create_spectrum(; setup, kp, rng = Random.default_rng())
     (; dimension, x, N) = setup
     T = eltype(x[1])

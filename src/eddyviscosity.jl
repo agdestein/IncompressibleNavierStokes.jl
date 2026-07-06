@@ -90,7 +90,6 @@ smagorinsky_viscosity!(visc, S, θ, setup) =
 @kernel function smagorinsky_viscosity_kernel!(O::CartesianIndex{2}, visc, S, θ, grid)
     I = @index(Global, Cartesian)
     I = I + O
-    (; Δ) = grid
     ex, ey = unit_cartesian_indices(2)
     d = gridsize_vol(grid, I)
     Sxx2 = S.xx[I]^2
@@ -102,7 +101,6 @@ end
 @kernel function smagorinsky_viscosity_kernel!(O::CartesianIndex{3}, visc, S, θ, grid)
     I = @index(Global, Cartesian)
     I = I + O
-    (; Δ) = grid
     ex, ey, ez = unit_cartesian_indices(3)
     d = gridsize_vol(grid, I)
     Sxx2 = S.xx[I]^2
@@ -382,13 +380,13 @@ end
 function smagorinsky_closure!(f, u, θ, cache, setup)
     (; visc, S) = cache
     fill!(visc, 0)
-    for S in S
-        fill!(S, 0)
+    for s in S
+        fill!(s, 0)
     end
     strain!(S, u, setup)
-    for S in S
-        zero_out_wall!(S, setup)
-        apply_bc_p!(S, zero(eltype(u)), setup)
+    for s in S
+        zero_out_wall!(s, setup)
+        apply_bc_p!(s, zero(eltype(u)), setup)
     end
     smagorinsky_viscosity!(visc, S, θ, setup)
     zero_out_wall!(visc, setup)
