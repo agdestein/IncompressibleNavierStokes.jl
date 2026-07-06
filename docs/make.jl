@@ -115,6 +115,14 @@ examples = [
     ),
     (;
         category = "Mixed boundary conditions",
+        name = "LidDrivenCavitySteady2D",
+        title = "Steady lid-driven cavity (2D)",
+        description = "Solve for a steady state with Newton's method",
+        image = "logo.svg",
+        run = true,
+    ),
+    (;
+        category = "Mixed boundary conditions",
         name = "MultiActuator",
         title = "Multiple actuators (2D)",
         description = "Unsteady inflow around multiple actuator disks",
