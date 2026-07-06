@@ -149,7 +149,7 @@ function RK56(; kwargs...)
     runge_kutta_method(A, b, c, r; kwargs...)
 end
 
-"Dormand-Price pair."
+"Dormand-Prince pair."
 function DOPRI6(; kwargs...)
     A = [
         0 0 0 0 0 0

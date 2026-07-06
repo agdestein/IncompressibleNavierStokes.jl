@@ -72,7 +72,7 @@ Create useful quantities for Cartesian box mesh
 ``x[1] \\times \\dots \\times x[d]` with boundary conditions `boundary_conditions`.
 Return a named tuple (`[α]` denotes a tuple index) with the following fields:
 
-- `N[α]`: Number of finite volumes in direction `β`, including ghost volumes
+- `N[α]`: Number of finite volumes in direction `α`, including ghost volumes
 - `Nu[α][β]`: Number of `u[α]` velocity DOFs in direction `β`
 - `Np[α]`: Number of pressure DOFs in direction `α`
 - `Iu[α]`: Cartesian index range of `u[α]` velocity DOFs
@@ -83,7 +83,7 @@ Return a named tuple (`[α]` denotes a tuple index) with the following fields:
 - `xp[α]`: α-coordinates of pressure points
 - `Δ[α]`: All volume widths in direction `α`
 - `Δu[α]`: Distance between pressure points in direction `α`
-- `A[α][β]`: Interpolation weights from α-face centers ``x_I`` to ``x_{I \\pm h_β}``
+- `A_stag[α]`: Interpolation weights from volume centers to volume faces in the direction `α`
 
 Note that the memory footprint of the redundant 1D-arrays above is negligible
 compared to the memory footprint of the 2D/3D-fields used in the code.

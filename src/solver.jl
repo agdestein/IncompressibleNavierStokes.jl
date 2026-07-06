@@ -52,6 +52,14 @@ get_cache(::typeof(boussinesq!), setup) = nothing
 """
 Solve unsteady problem using `method`.
 
+The initial `start` state is a named tuple of fields, e.g. `(; u)` or
+`(; u, temp)`. The right-hand side `force!` is called as
+`force!(force, state, t; setup, cache, params...)`, where `params` is a named
+tuple of parameters passed as keyword arguments (e.g.
+`params = (; viscosity)` for the default `navierstokes!`, or
+`(; viscosity, conductivity, gdir, gravity, dodissipation)` for
+`boussinesq!`).
+
 If `Δt` is a real number, it is rounded such that `(t_end - t_start) / Δt` is
 an integer.
 If `Δt = nothing`, the time step is chosen every `n_adapt_Δt` iteration with
@@ -60,10 +68,10 @@ CFL-number `cfl`. If `Δt_min` is given, the adaptive time step never goes below
 The `processors` are called after every time step.
 
 Note that the `state` observable passed to the `processor.initialize` function
-contains vector living on the device, and you may have to move them back to
-the host using `Array(u)` in the processor.
+contains fields living on the device, and you may have to move them back to
+the host using `Array` in the processor.
 
-Return `(; u, t), outputs`, where `outputs` is a  named tuple with the
+Return `(; state..., t), outputs`, where `outputs` is a named tuple with the
 outputs of `processors` with the same field names.
 """
 function solve_unsteady(;

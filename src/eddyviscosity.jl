@@ -1,10 +1,11 @@
 #### Implementations of eddy viscosity closure models
 #### Contains:
-#### - WALE (only 3D):          `wale_closure!`
 #### - Smagorinsky (2D and 3D): `smagorinsky_closure!`
-#### Use these models in INS, by including them in the right hand side function.
-#### See `examples/ChannelFlow3D.jl` for an example.
-#### provide model coefficients in `params` as a parameter to solve_unsteady() !!!
+#### - Smagorinsky, WALE, Vreman, QR (3D only): `eddy_viscosity_closure!`
+####   with the model structs `Smagorinsky`, `WALE`, `Vreman`, `QR`
+#### Use these models in INS by including them in the right-hand-side function.
+#### See `examples/ChannelFlow.jl` for an example.
+#### Provide model coefficients in `params` as a parameter to `solve_unsteady`.
 
 getgrid(setup) = (; setup.Δ, setup.Δu)
 

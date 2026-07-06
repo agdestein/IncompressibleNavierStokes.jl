@@ -5,7 +5,7 @@
 # the matrix-free operators, e.g.
 #
 #     u = apply_bc_u(u, t, setup) # u is a (D+1)-array
-#     d = diffusion(u, setup; use_viscosity = false) # d is a (D+1)-array
+#     d = diffusion(u, setup, viscosity) # d is a (D+1)-array
 #
 # becomes
 #

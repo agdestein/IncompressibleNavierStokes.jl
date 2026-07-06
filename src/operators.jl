@@ -608,8 +608,8 @@ end
 end
 
 """
-Compute diffusive term (in-place version).
-Add the result to `F`.
+Compute convective and diffusive terms (in-place version).
+Add the result to `f`.
 """
 function convectiondiffusion!(f, u, setup, viscosity)
     apply!(

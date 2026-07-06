@@ -7,7 +7,7 @@
 #     (::PSolver)(p, f) = # solve Poisson
 
 """
-Solve the Poisson equation for the pressure with right hand side `f` at time `t`.
+Solve the Poisson equation for the pressure with right hand side `f`.
 For periodic and no-slip BC, the sum of `f` should be zero.
 
 Differentiable version.
