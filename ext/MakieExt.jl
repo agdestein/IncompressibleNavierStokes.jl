@@ -290,20 +290,18 @@ function energy_history_plot(state; setup)
     fig
 end
 
-function energy_spectrum_plot(
-    state;
-    setup,
-    sloperange = [0.6, 0.9],
-    slopeoffset = 1.3,
-    kwargs...,
-)
+function energy_spectrum_plot(state; setup, sloperange = [0.6, 0.9], slopeoffset = 1.3)
     state isa Observable || (state = Observable(state))
 
     (; dimension, xp, Ip) = setup
     T = eltype(xp[1])
     D = dimension()
 
-    (; ehat, κ) = observespectrum(state; setup, kwargs...)
+    (; ehat, κ) = observespectrum(state; setup)
+
+    # Drop the κ = 0 bin (mean mode) for the log-log plot
+    κ = κ[2:end]
+    ehat = lift(e -> e[2:end], ehat)
 
     kmax = maximum(κ)
 

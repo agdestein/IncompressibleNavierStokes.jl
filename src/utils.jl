@@ -47,67 +47,6 @@ Plot nonuniform Cartesian grid.
 """
 function plotgrid end
 
-"Get utilities to compute energy spectrum."
-function spectral_stuff(setup; npoint = 100, a = eltype(setup.x[1])(1 + sqrt(5)) / 2)
-    (; dimension, xp, Np) = setup
-    T = eltype(xp[1])
-    D = dimension()
-
-    K = div.(Np, 2)
-
-    k = zeros(T, K)
-    if D == 2
-        kx = reshape(0:(K[1]-1), :)
-        ky = reshape(0:(K[2]-1), 1, :)
-        @. k = sqrt(kx^2 + ky^2)
-    elseif D == 3
-        kx = reshape(0:(K[1]-1), :)
-        ky = reshape(0:(K[2]-1), 1, :)
-        kz = reshape(0:(K[3]-1), 1, 1, :)
-        @. k = sqrt(kx^2 + ky^2 + kz^2)
-    end
-    k = reshape(k, :)
-
-    # Sum or average wavenumbers between k and k+1
-    kmax = minimum(K) - 1
-    isort = sortperm(k)
-    ksort = k[isort]
-
-    IntArray = typeof(similar(xp[1], Int, 0))
-    inds = IntArray[]
-
-    # For Julia v1.10
-    logrange(a, b, n) = map(exp, range(log(a), log(b), n))
-
-    # Output query points (evenly log-spaced, but only integer wavenumbers)
-    κ = logrange(T(1), T(kmax), npoint)
-    κ = sort(unique(round.(Int, κ)))
-    npoint = length(κ)
-
-    for i = 1:npoint
-        if D == 2
-            # Dyadic binning - this gives the k^-3 slope in 2D
-            jstart = findfirst(≥(κ[i] / a), ksort)
-            jstop = findfirst(≥(κ[i] * a), ksort)
-            # tol = T(0.01)
-            # jstart = findfirst(≥(κ[i] - tol), ksort)
-            # jstop = findfirst(≥(κ[i] + 1 - tol), ksort)
-        elseif D == 3
-            # Linear binning - this gives the k^-5/3 slope in 3D
-            tol = T(0.01)
-            jstart = findfirst(≥(κ[i] - tol), ksort)
-            jstop = findfirst(≥(κ[i] + 1 - tol), ksort)
-            # jstart = findfirst(≥(κ[i] - T(0.5) - tol), ksort)
-            # jstop = findfirst(≥(κ[i] + T(0.5) + tol), ksort)
-        end
-        isnothing(jstop) && (jstop = length(ksort) + 1)
-        jstop -= 1
-        push!(inds, adapt(IntArray, isort[jstart:jstop]))
-    end
-
-    (; inds, κ, K)
-end
-
 "Get permutation indices for DCT."
 function get_perminds(N)
     n = div(N, 2)

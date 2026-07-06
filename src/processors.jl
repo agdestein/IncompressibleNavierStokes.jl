@@ -242,41 +242,34 @@ fieldsaver(; setup, nupdate = 1) = processor() do state
     states
 end
 
-"Observe energy spectrum of `state`."
-function observespectrum(
-    state;
-    setup,
-    npoint = 100,
-    a = eltype(setup.x[1])(1 + sqrt(5)) / 2,
-)
+"""
+Observe energy spectrum of `state` (see [`energyspectrum`](@ref)).
+Return `(; ehat, κ)`, where `ehat` is an observable energy spectrum vector.
+"""
+function observespectrum(state; setup)
     state isa Observable || (state = Observable(state))
 
-    (; dimension, xp, Ip, Np) = setup
-    T = eltype(xp[1])
-    D = dimension()
+    (; Np, x) = setup
+    T = eltype(x[1])
 
-    (; inds, κ, K) = spectral_stuff(setup; npoint, a)
+    stuff = spectral_stuff(setup)
 
-    # Energy
-    uhat = similar(xp[1], Complex{T}, Np)
-    # up = interpolate_u_p(state[].u, setup)
-    _ehat = zeros(T, length(κ))
+    # Preallocate buffers
+    uin = similar(x[1], Np)
+    uhat = similar(x[1], Complex{T}, stuff.Nhat)
+    ehat_field = similar(x[1], stuff.Nhat)
+    plan = plan_rfft(uin)
+    _ehat = zeros(T, length(stuff.κ))
+
     ehat = map(state) do (; u)
-        # interpolate_u_p!(up, u, setup)
-        up = u
-        # TODO: Maybe preallocate e and A * e
-        e = sum(eachslice(up; dims = D + 1)) do u
-            copyto!(uhat, view(u, Ip))
-            fft!(uhat)
-            uhathalf = view(uhat, ntuple(α -> 1:K[α], D)...)
-            abs2.(uhathalf) ./ (2 * prod(Np)^2)
+        spectral_energy_field!(ehat_field, u, setup; plan, uin, uhat)
+        for (j, inds) in enumerate(stuff.energyinds)
+            _ehat[j] = sum(view(ehat_field, inds))
         end
-        e = map(i -> sum(view(e, i)), inds)
-        # e = max.(e, eps(T)) # Avoid log(0)
-        copyto!(_ehat, e)
+        _ehat
     end
 
-    (; ehat, κ)
+    (; ehat, stuff.κ)
 end
 
 # These empty functions are defined here, but implemented in
@@ -358,18 +351,13 @@ energy_history_plot
 
 """
 Create energy spectrum plot.
-The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is defined by
-
-```math
-\\hat{e}(\\kappa) = \\int_{\\kappa \\leq \\| k \\|_2 < \\kappa + 1} | \\hat{e}(k) | \\mathrm{d} k,
-```
-
-as in San and Staples [San2012](@cite).
+The energy at a scalar wavenumber level ``\\kappa \\in \\mathbb{N}`` is the sum
+over the wavenumber shell ``\\kappa \\leq \\| k \\|_2 < \\kappa + 1``
+(see [`energyspectrum`](@ref)).
 
 Keyword arguments:
 
 - `sloperange = [0.6, 0.9]`: Percentage (between 0 and 1) of x-axis where the slope is plotted.
 - `slopeoffset = 1.3`: How far above the energy spectrum the inertial slope is plotted.
-- `kwargs...`: They are passed to [`observespectrum`](@ref).
 """
 energy_spectrum_plot

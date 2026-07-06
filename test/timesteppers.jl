@@ -4,7 +4,7 @@
     bc = PeriodicBC(), PeriodicBC()
     setup = Setup(; x = (ax, ax), boundary_conditions = (; u = (bc, bc), temp = (bc, bc)))
     psolver = default_psolver(setup)
-    u = random_field(setup; psolver)
+    u = random_field(setup)
     temp = randn!(scalarfield(setup))
     temp = apply_bc_temp(temp, 0.0, setup)
     Δt = 0.1
