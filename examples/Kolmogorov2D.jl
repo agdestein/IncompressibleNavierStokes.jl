@@ -35,7 +35,7 @@ setup = Setup(;
     ),
     ## backend = CUDABackend(),
 );
-u = random_field(setup, 0.0; A = 1e-2);
+u = random_field(setup, 0.0; totalenergy = 1e-4);
 
 # This is the right-hand side force in the momentum equation
 # By default, it is just `navierstokes!`. Here we add a

@@ -59,6 +59,7 @@ include("pressure.jl")
 include("operators.jl")
 include("eddyviscosity.jl")
 include("matrices.jl")
+include("spectral.jl")
 include("initializers.jl")
 include("processors.jl")
 include("sciml.jl")
@@ -100,7 +101,11 @@ export navierstokes, navierstokes!, boussinesq, boussinesq!
 export solve_unsteady, timestep, create_stepper
 
 # Field generation
-export scalarfield, vectorfield, velocityfield, temperaturefield, random_field
+export scalarfield,
+    vectorfield, velocityfield, temperaturefield, random_field, orlandi_profile
+
+# Spectral quantities
+export spectral_stuff, energyspectrum, turbulence_statistics
 
 # Utils
 export getoffset, splitseed, plotgrid, save_vtk, get_lims
@@ -118,7 +123,6 @@ export apply_bc_u,
     diffusion,
     dissipation,
     divergence,
-    get_scale_numbers,
     applygravity,
     kinetic_energy,
     interpolate_u_p,

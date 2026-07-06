@@ -28,7 +28,7 @@ setup = Setup(;
     ## backend = CUDABackend(),
 );
 psolver = default_psolver(setup);
-u = random_field(setup; psolver);
+u = random_field(setup);
 
 # ## Solve problem
 

@@ -224,28 +224,3 @@ end
         @test dissipation(u, setup, params.viscosity) isa Array{T}
     end
 end
-
-@testitem "Turbulence statistics" begin
-    using Random
-    ax = range(0, 1, 19)
-    for x in ((ax, ax), (ax, ax, ax))
-        setup = Setup(;
-            x,
-            boundary_conditions = (;
-                u = ntuple(Returns((PeriodicBC(), PeriodicBC())), length(x))
-            ),
-        )
-        u = randn!(vectorfield(setup))
-        @test get_scale_numbers(u, setup, 0.1) isa NamedTuple
-    end
-
-    # Only works for uniform periodic
-    setup = Setup(;
-        x = (ax, ax),
-        boundary_conditions = (;
-            u = ((DirichletBC(), DirichletBC()), (DirichletBC(), DirichletBC()))
-        ),
-    )
-    u = randn!(vectorfield(setup))
-    @test_throws AssertionError get_scale_numbers(u, setup, 0.1)
-end
