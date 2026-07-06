@@ -8,16 +8,13 @@ The [SciML organization](https://sciml.ai/) is a collection of tools for solving
 
 In particular, [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/) contains tools to solve differential equations defined as $\dfrac{du}{dt} = f(u, t)$ that include a large collection of solvers, sensitivity analysis, and more.
 
-Using IncompressibleNavierStokes it is possible to write the momentum equations without the pressure by explicitly solving the discrete Poisson equation and obtaining:
+Using IncompressibleNavierStokes it is possible to write the momentum equations without the pressure by explicitly solving the discrete Poisson equation and obtaining a plain ODE:
 
 ```math
-\begin{align*}
-\frac{\mathrm{d} u_h}{\mathrm{d} t} &= (I - G L^{-1} W M)
-(F(u_h) - y_G) - G L^{-1} W \frac{\mathrm{d} y_M}{\mathrm{d} t}\\ &=f(u_h).
-\end{align*}
+\frac{\mathrm{d} u}{\mathrm{d} t} = (I - G L^{-1} W M) F(u) = f(u),
 ```
 
-The derivation and the drawbacks of this approach are discussed in the documentation.
+where the operator ``(I - G L^{-1} W M)`` projects the force onto the space of discretely divergence-free velocities (see [Spatial and temporal discretization](discretization.md)).
 
 This projected right-hand side can be used in the SciML solvers to solve the Navier-Stokes equations. The following example shows how to use the SciML solvers to solve the ODEs obtained from the Navier-Stokes equations.
 
