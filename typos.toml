@@ -1,2 +1,6 @@
 [files]
 extend-exclude = ["docs/references.bib"]
+
+[default.extend-words]
+# "FOM" = full-order model (reduced-order modeling terminology)
+FOM = "FOM"
