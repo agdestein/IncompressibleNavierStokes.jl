@@ -152,7 +152,7 @@ function fieldplot(
             lims = get_lims(f)
         elseif type ∈ (contour, contourf)
             if ≈(extrema(f)...; rtol = 1e-10)
-                μ = mean(f)
+                μ = sum(f) / length(f)
                 a = μ - 1
                 b = μ + 1
                 f[1] += 1
@@ -206,7 +206,7 @@ function fieldplot(
     state;
     setup,
     psolver = nothing,
-    fieldname = :eig2field,
+    fieldname = :qcrit,
     alpha = convert(eltype(setup.x[1]), 0.1),
     # isorange = convert(eltype(setup.x[1]), 0.5),
     equal_axis = true,

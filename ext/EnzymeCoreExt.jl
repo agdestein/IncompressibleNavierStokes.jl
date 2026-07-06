@@ -8,7 +8,7 @@ using IncompressibleNavierStokes.KernelAbstractions.Extras.LoopInfo: @unroll
 using EnzymeCore
 using EnzymeCore.EnzymeRules
 
-INS = IncompressibleNavierStokes
+const INS = IncompressibleNavierStokes
 
 # Wrap a function to return `nothing`, because Enzyme can not handle vector return values.
 INS.enzyme_wrap(
@@ -373,7 +373,7 @@ function EnzymeRules.reverse(
     u::Duplicated,
     setup::Const,
 )
-    @error "convection_diffusion_temp Enzyme-AD not yet implemented"
+    error("convection_diffusion_temp Enzyme-AD not yet implemented")
 end
 
 function EnzymeRules.augmented_primal(
@@ -387,7 +387,7 @@ function EnzymeRules.augmented_primal(
     t::Const,
     setup::Const,
 )
-    @error "navierstokes! Enzyme-AD not yet implemented"
+    error("navierstokes! Enzyme-AD not yet implemented")
 end
 
 function EnzymeRules.reverse(
@@ -401,7 +401,7 @@ function EnzymeRules.reverse(
     t::Const,
     setup::Const,
 )
-    @error "navierstokes! Enzyme-AD not yet implemented"
+    error("navierstokes! Enzyme-AD not yet implemented")
 end
 # COV_EXCL_STOP
 

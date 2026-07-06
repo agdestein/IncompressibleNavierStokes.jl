@@ -102,18 +102,19 @@ function solve_unsteady(;
                 # Change timestep based on operators
                 Δt = cfl * propose_timestep(force!, stepper.state, setup, params)
                 Δt = isnothing(Δt_min) ? Δt : max(Δt, Δt_min)
+                if Δt < 1e-10 || Δt > 100 || isnan(Δt)
+                    @warn "Proposed time step $Δt is out of bounds. Stopping simulation."
+                    break
+                end
             end
 
             # Make sure not to step past `t_end`
-            Δt = min(Δt, tend - stepper.t)
-
-            if Δt < 1e-10 || Δt > 100 || isnan(Δt)
-                @warn "Proposed time step $Δt is out of bounds. Stopping simulation."
-                break
-            end
+            # (keep `Δt` itself unclipped, it is reused until the next adaptation)
+            Δt_step = min(Δt, tend - stepper.t)
 
             # Perform a single time step with the time integration method
-            stepper = timestep!(method, force!, stepper, Δt; params, ode_cache, force_cache)
+            stepper =
+                timestep!(method, force!, stepper, Δt_step; params, ode_cache, force_cache)
 
             # Process iteration results with each processor
             state[] = get_state(stepper)
