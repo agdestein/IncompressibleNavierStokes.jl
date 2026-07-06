@@ -49,12 +49,12 @@ function IncompressibleNavierStokes.close_amgx(stuff)
     AMGX.finalize()
 end
 
-function IncompressibleNavierStokes.psolver_cg_AMGX(setup; stuff, kwargs...)
-    (; x, Np, Ip, boundary_conditions, backend) = grid
+function IncompressibleNavierStokes.psolver_cg_AMGX(setup; stuff)
+    (; x, Np, Ip, boundary_conditions, backend) = setup
     T = eltype(x[1])
     L = laplacian_mat(setup)
-    isdefinite = true
-    #any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
+    isdefinite =
+        any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions.u)
     if isdefinite
         # No extra DOF
         ftemp = fill!(similar(x[1], prod(Np)), 0)

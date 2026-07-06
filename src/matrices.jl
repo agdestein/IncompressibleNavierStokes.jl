@@ -164,8 +164,7 @@ function bc_p_mat(::PeriodicBC, setup, β, isright = false)
     sparse(i, j, v, prod(N), prod(N))
 end
 
-bc_temp_mat(bc::PeriodicBC, setup, β, isright = false) =
-    apply_bc_p_mat(bc, setup, β, isright)
+bc_temp_mat(bc::PeriodicBC, setup, β, isright = false) = bc_p_mat(bc, setup, β, isright)
 
 function bc_u_mat(::DirichletBC, setup, β, isright = false)
     (; dimension, N, Iu, x) = setup

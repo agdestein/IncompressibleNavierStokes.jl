@@ -22,7 +22,7 @@ function IncompressibleNavierStokes.psolver_direct(::CuArray, setup)
     T = eltype(x[1])
     L = laplacian_mat(setup)
     isdefinite =
-        any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions)
+        any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions.u)
     if isdefinite
         # No extra DOF
         ftemp = fill!(similar(x[1], prod(Np)), 0)

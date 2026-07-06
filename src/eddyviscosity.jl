@@ -295,12 +295,14 @@ end
 @kernel function eddy_viscosity_kernel!(O::CartesianIndex{3}, e::QR, visc, G_split, grid)
     I = @index(Global, Cartesian)
     I = I + O
+    T = eltype(G_split.xx)
     G = collocate_tensor(G_split, I)
     d = gridsize_vol(grid, I)
     S = (G + G') / 2
     QS = tr(S * S) / 2
     RS = tr(S * S * S) / 3
-    visc[I] = (e.C * d)^2 * abs(RS) / QS
+    # Guard against 0 / 0 = NaN for zero strain
+    visc[I] = (e.C * d)^2 * abs(RS) / (QS + eps(T))
 end
 
 @kernel function eddy_viscosity_kernel!(
