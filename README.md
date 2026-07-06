@@ -26,7 +26,7 @@ into Pkg-mode, and type:
 ```
 
 which will install the package and all dependencies to your local environment.
-Note that IncompressibleNavierStokes requires Julia version `1.9` or above.
+Note that IncompressibleNavierStokes requires Julia version `1.10` or above.
 
 See the
 [Documentation](https://agdestein.github.io/IncompressibleNavierStokes.jl/dev/generated/LidDrivenCavity2D/)
@@ -44,7 +44,7 @@ The velocity and pressure fields may be visualized in a live session using
 [Makie](https://github.com/JuliaPlots/Makie.jl). Alternatively,
 [ParaView](https://www.paraview.org/) may be used, after exporting individual
 snapshot files using the `save_vtk` function, or the full time series using the
-`VTKWriter` processor.
+`vtk_writer` processor.
 
 <table>
 <tbody>

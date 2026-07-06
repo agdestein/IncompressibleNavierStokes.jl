@@ -61,7 +61,7 @@ padghost!(::SymmetricBC, x, isright) =
 padghost!(::PressureBC, x, isright) = isright ? push!(x, x[end]) : pushfirst!(x, x[1], x[1])
 
 """
-    $FUNCTIONNAME(bc, isnormal, isright)
+    $FUNCTIONNAME(bc, isright, isnormal)
 
 Number of non-DOF velocity components at boundary.
 If `isnormal`, then the velocity is normal to the boundary, else parallel.
@@ -70,9 +70,10 @@ If `isright`, it is at the end/right/rear/top boundary, otherwise beginning.
 function offset_u end
 
 """
-    $FUNCTIONNAME(bc, isnormal, isright)
+    $FUNCTIONNAME(bc, isright)
 
 Number of non-DOF pressure components at boundary.
+If `isright`, it is at the end/right/rear/top boundary, otherwise beginning.
 """
 function offset_p end
 

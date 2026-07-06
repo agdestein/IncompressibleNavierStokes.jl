@@ -10,16 +10,16 @@ See the following example:
 
 ```julia
 function initialize(state)
-    s = 0
+    s = Ref(0)
     println("Let's sum up the time steps")
     on(state) do (; n, t)
         println("The summand is \$n, the time is \$t")
-        s = s + n
+        s[] = s[] + n
     end
     s
 end
 
-finalize(i, state) = println("The final sum (at time t=\$(state.t)) is \$s")
+finalize(s, state) = println("The final sum (at time t=\$(state[].t)) is \$(s[])")
 p = processor(initialize, finalize)
 ```
 
@@ -331,10 +331,12 @@ If `state` is `Observable`, then the plot is interactive.
 
 Available fieldnames are:
 
+- `1`, `2`, or `3`: velocity component,
 - `:velocity`,
-- `:vorticity`,
-- `:streamfunction`,
-- `:pressure`.
+- `:velocitynorm`,
+- `:vorticity` (default in 2D),
+- `:qcrit` (default in 3D),
+- `:temperature`.
 
 Available plot `type`s for 2D are:
 

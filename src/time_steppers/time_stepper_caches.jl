@@ -1,7 +1,10 @@
 """
-    $FUNCTIONNAME(method, setup, u, temp)
+    $FUNCTIONNAME(method, state, setup)
 
 Get time stepper cache for the given ODE method.
+
+The method `$FUNCTIONNAME(force!, setup)` returns the cache for a
+right-hand-side function `force!` instead.
 """
 function get_cache end
 

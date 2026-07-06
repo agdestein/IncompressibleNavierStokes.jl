@@ -1,12 +1,12 @@
 """
-    $FUNCTIONNAME(method; setup, psolver, u, temp, t, n)
+    $FUNCTIONNAME(method; setup, psolver, state, t, n = 0)
 
 Create time stepper.
 """
 function create_stepper end
 
 """
-    $FUNCTIONNAME(method, stepper, Δt; θ = nothing)
+    $FUNCTIONNAME(method, force, stepper, Δt; params = nothing)
 
 Perform one time step.
 
@@ -17,9 +17,9 @@ See also [`timestep!`](@ref).
 function timestep end
 
 """
-    $FUNCTIONNAME(method, stepper, Δt; θ = nothing, cache)
+    $FUNCTIONNAME(method, force!, stepper, Δt; params = nothing, ode_cache, force_cache)
 
-Perform one time step>
+Perform one time step.
 
 Mutating/non-allocating/in-place version.
 
