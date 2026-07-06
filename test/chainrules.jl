@@ -167,7 +167,47 @@ end
         # test_rrule_named(dissipation, u, setup ⊢ NoTangent())
         # ChainRulesCore.rrule(dissipation, u, setup)[2](temp)[2][2]
 
-        @test_broken 1 == 2 # Just to identify location for broken rrule test
-        # test_rrule_named(convection_diffusion_temp, u, temp, setup ⊢ NoTangent())
+        test_rrule_named(
+            convection_diffusion_temp,
+            u,
+            temp,
+            setup ⊢ NoTangent(),
+            case.params.conductivity ⊢ NoTangent(),
+        )
+    end
+end
+
+@testitem "Boussinesq gradient" setup = [Case, ChainRulesStuff] begin
+    using LinearAlgebra
+    using Random
+    using Zygote
+    rng = Xoshiro(123)
+    for case in (Case.D2, Case.D3)
+        (; u, temp, setup, params) = case
+        (; viscosity, conductivity, gdir, gravity) = params
+        loss(u, temp) = begin
+            f = boussinesq(
+                (; u, temp),
+                zero(eltype(u));
+                setup,
+                viscosity,
+                conductivity,
+                gdir,
+                gravity,
+                # Dissipation pullback is not implemented yet
+                dodissipation = false,
+            )
+            sum(abs2, f.u) + sum(abs2, f.temp)
+        end
+        gu, gtemp = Zygote.gradient(loss, u, temp)
+
+        # Compare with central finite differences in random directions
+        h = cbrt(eps(eltype(u)))
+        vu = randn!(rng, zero(u))
+        vtemp = randn!(rng, zero(temp))
+        dloss_u = (loss(u .+ h .* vu, temp) - loss(u .- h .* vu, temp)) / 2h
+        dloss_temp = (loss(u, temp .+ h .* vtemp) - loss(u, temp .- h .* vtemp)) / 2h
+        @test dot(gu, vu) ≈ dloss_u rtol = 1e-6
+        @test dot(gtemp, vtemp) ≈ dloss_temp rtol = 1e-6
     end
 end

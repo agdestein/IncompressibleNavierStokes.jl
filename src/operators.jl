@@ -639,11 +639,20 @@ function ChainRulesCore.rrule(
     setup,
     conductivity,
 )
-    conv = convection_diffusion_temp(u, temp, setup, conductivity)
-    convection_diffusion_temp_pullback(φ) =
-        (NoTangent(), du, dtemp, NoTangent(), NoTangent())
-    @warn "Check if convection_diffusion_temp pullback behaves as expected"
-    (conv, pullback)
+    c = convection_diffusion_temp(u, temp, setup, conductivity)
+    function convection_diffusion_temp_pullback(φ)
+        φ = unthunk(φ)
+        ubar = convection_diffusion_temp_adjoint_u!(vectorfield(setup), φ, temp, setup)
+        tempbar = convection_diffusion_temp_adjoint_temp!(
+            scalarfield(setup),
+            φ,
+            u,
+            setup,
+            conductivity,
+        )
+        (NoTangent(), ubar, tempbar, NoTangent(), NoTangent())
+    end
+    (c, convection_diffusion_temp_pullback)
 end
 
 """
@@ -665,13 +674,90 @@ end
     (-(uT2 - uT1) + cond * (∂T∂x2 - ∂T∂x1)) / Δ[i][I[i]]
 end
 
+"Adjoint of [`convection_diffusion_temp!`](@ref) with respect to `u` (add result to `ubar`)."
+function convection_diffusion_temp_adjoint_u!(ubar, φ, temp, setup)
+    (; N) = setup
+    offset = zero(CartesianIndex(N))
+    apply!(
+        expand_scalar_add!,
+        setup,
+        convdiff_temp_adjoint_u,
+        ubar,
+        (setup, φ, temp);
+        offset,
+        ndrange = N,
+    )
+    ubar
+end
+
+# The velocity component u[J, i] appears in the fluxes uT2 of c[J] and uT1 of
+# c[J + e(i)], both times multiplied by the interpolated temperature avg(temp, J).
+@inline function convdiff_temp_adjoint_u(setup, φ, temp, i, J)
+    (; inside, Δ) = setup
+    adjoint = zero(eltype(φ))
+    if J ∈ inside
+        adjoint -= φ[J] * avg(temp, Δ, J, i) / Δ[i][J[i]]
+    end
+    Jr = right(J, i)
+    if Jr ∈ inside
+        adjoint += φ[Jr] * avg(temp, Δ, J, i) / Δ[i][J[i]+1]
+    end
+    adjoint
+end
+
+"Adjoint of [`convection_diffusion_temp!`](@ref) with respect to `temp` (add result to `tempbar`)."
+function convection_diffusion_temp_adjoint_temp!(tempbar, φ, u, setup, conductivity)
+    (; N) = setup
+    offset = zero(CartesianIndex(N))
+    apply!(
+        contract_vector_add!,
+        setup,
+        convdiff_temp_adjoint_temp,
+        tempbar,
+        (setup, φ, u, conductivity);
+        offset,
+        ndrange = N,
+    )
+    tempbar
+end
+
+# The temperature temp[J] appears in c[J - e(i)], c[J], and c[J + e(i)]:
+# through the diffusive fluxes ∂T∂x1/∂T∂x2 and through the interpolation
+# weights w1 = Δ[J+1] / (Δ[J] + Δ[J+1]) of avg(temp, J) (convected by u[J, i])
+# and w2 = Δ[J-1] / (Δ[J-1] + Δ[J]) of avg(temp, J - e(i)) (convected by
+# u[J - e(i), i]).
+@inline function convdiff_temp_adjoint_temp(setup, φ, u, cond, i, J)
+    (; inside, Δ, Δu) = setup
+    adjoint = zero(eltype(φ))
+    if J ∈ inside
+        w1 = Δ[i][J[i]+1] / (Δ[i][J[i]] + Δ[i][J[i]+1])
+        w2 = Δ[i][J[i]-1] / (Δ[i][J[i]-1] + Δ[i][J[i]])
+        adjoint +=
+            φ[J] / Δ[i][J[i]] * (
+                -u[J, i] * w1 + u[left(J, i), i] * w2 -
+                cond * (1 / Δu[i][J[i]] + 1 / Δu[i][J[i]-1])
+            )
+    end
+    Jr = right(J, i)
+    if Jr ∈ inside
+        w1 = Δ[i][J[i]+1] / (Δ[i][J[i]] + Δ[i][J[i]+1])
+        adjoint += φ[Jr] / Δ[i][J[i]+1] * (u[J, i] * w1 + cond / Δu[i][J[i]])
+    end
+    Jl = left(J, i)
+    if Jl ∈ inside
+        w2 = Δ[i][J[i]-1] / (Δ[i][J[i]-1] + Δ[i][J[i]])
+        adjoint += φ[Jl] / Δ[i][J[i]-1] * (-u[Jl, i] * w2 + cond / Δu[i][J[i]-1])
+    end
+    adjoint
+end
+
 "Compute dissipation term for the temperature equation (differentiable version)."
 dissipation(u, setup, coeff) = dissipation!(scalarfield(setup), u, setup, coeff)
 
-function ChainRulesCore.rrule(::typeof(dissipation), u, setup, coeff)
-    error("Not implemented yet")
-    φ, dissipation_pullback
-end
+ChainRulesCore.rrule(::typeof(dissipation), u, setup, coeff) = (
+    dissipation(u, setup, coeff),
+    φ -> error("Pullback for `dissipation` not yet implemented."),
+)
 
 """
 Compute dissipation term for the temperature equation (in-place version).
