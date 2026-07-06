@@ -73,7 +73,11 @@ end
     u = rand(T, (N, N, 2))
     u0 = copy(u)
     du = Enzyme.make_zero(u)
-    dd = Enzyme.make_zero(dudt) .+ 1
+    # Use a random cotangent, shared between Enzyme and Zygote: with special
+    # seeds (e.g. all ones or the primal output) a wrong adjoint can
+    # coincidentally match
+    w = rand(T, (N, N, 2))
+    dd = copy(w)
     params = setup, psolver, viscosity
     params_ref = Ref(params)
     Enzyme.autodiff(
@@ -92,25 +96,25 @@ end
     @test dudt ≈ F_out(u, (; viscosity), T(0))
     zpull = Zygote.pullback(F_out, u, (; viscosity), T(0))
     @test zpull[1] ≈ dudt
-    @test zpull[2](dudt)[1] == du
+    @test zpull[2](w)[1] ≈ du
 
-    # Now I run each option multiple times from different random initial conditions
+    # Now I run each option multiple times from different random initial
+    # conditions, with a different random cotangent each time
     niter = 3000
     list_u = [rand(T, (N, N, 2)) for i = 1:niter]
+    list_w = [rand(T, (N, N, 2)) for i = 1:niter]
     list_z = []
     _, tz, mz = @timed begin
         for i = 1:niter
-            du = Enzyme.make_zero(u)
-            dd = Enzyme.make_zero(dudt) .+ 1
-            zpull = Zygote.pullback(F_out, list_u[i], (; viscosity), T(0))
-            push!(list_z, zpull[2](zpull[1])[1])
+            local zpull = Zygote.pullback(F_out, list_u[i], (; viscosity), T(0))
+            push!(list_z, zpull[2](list_w[i])[1])
         end
     end
     list_e = []
     _, te, me = @timed begin
         for i = 1:niter
-            du = Enzyme.make_zero(u)
-            dd = Enzyme.make_zero(dudt) .+ 1
+            local du = Enzyme.make_zero(u)
+            local dd = copy(list_w[i])
             Enzyme.autodiff(
                 Enzyme.Reverse,
                 right_hand_side!,

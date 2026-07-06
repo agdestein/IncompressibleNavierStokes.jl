@@ -121,18 +121,20 @@ function EnzymeRules.reverse(
     # unpack the parameters
     params = params_ref.val[]
     setup, psolver, viscosity = params
-    temp_scalar = scalarfield(setup)
     dp = scalarfield(setup)
     temp_vector = vectorfield(setup)
 
-    # traverse the graph backwards
-    # [!] notice that the chain starts from the final value of dudt because it gets modified in place in the forward pass
-    dudt.dval .*= dudt.val
-    # [!] the minus sign is missing somewhere in the adjoint
-    dp .= .-INS.pressuregradient_adjoint!(dp, dudt.dval, setup)
+    # Traverse the graph backwards, starting from the cotangent of the output
+    # `dudt` (which was overwritten in the forward pass).
+
+    # Adjoint of the projection step:
+    # `applypressure!` subtracts the pressure gradient, hence the minus sign
+    INS.pressuregradient_adjoint!(dp, dudt.dval, setup)
+    dp .= .-dp
 
     INS.apply_bc_p_pullback!(dp, t.val, setup)
 
+    # The Poisson matrix is symmetric, so the adjoint of the solve is the same solve
     INS.poisson!(psolver, dp)
     INS.scalewithvolume!(dp, setup)
 
@@ -140,12 +142,15 @@ function EnzymeRules.reverse(
 
     INS.apply_bc_u_pullback!(dudt.dval, t.val, setup)
 
+    # Adjoint of the convection-diffusion forcing, evaluated at `u_bc` from the tape
     fill!(temp_vector, 0)
-    u.dval .= INS.convection_adjoint!(temp_vector, dudt.dval, u_bc, setup)
-    fill!(temp_vector, 0)
-    u.dval .+= INS.diffusion_adjoint!(temp_vector, dudt.dval, setup, viscosity)
+    INS.convection_adjoint!(temp_vector, dudt.dval, u_bc, setup)
+    INS.diffusion_adjoint!(temp_vector, dudt.dval, setup, viscosity)
+    INS.apply_bc_u_pullback!(temp_vector, t.val, setup)
+    u.dval .+= temp_vector
 
-    INS.apply_bc_u_pullback!(u.dval, t.val, setup)
+    # The output cotangent is consumed (`dudt` was overwritten in the forward pass)
+    EnzymeCore.make_zero!(dudt.dval)
 
     nothing, nothing, nothing, nothing
 end
@@ -357,10 +362,7 @@ function EnzymeRules.reverse(
     setup::Const,
     coeff::Const,
 )
-    adj = dissipation_pullback(y.val)
-    u.dval .+= adj
-    EnzymeCore.make_zero!(y.dval)
-    nothing, nothing, nothing, nothing
+    error("dissipation! Enzyme-AD not yet implemented")
 end
 
 function EnzymeRules.reverse(
@@ -434,9 +436,11 @@ function EnzymeRules.reverse(
     psolver::Const,
     div::Duplicated,
 )
-    auto_adj = copy(y.val)
-    func.val(auto_adj, psolver.val, y.val)
-    div.dval .+= auto_adj .* y.dval
+    # The Poisson matrix is symmetric, so the adjoint of the solve
+    # is the same solve, applied to the output cotangent
+    auto_adj = copy(y.dval)
+    func.val(auto_adj, psolver.val, y.dval)
+    div.dval .+= auto_adj
     EnzymeCore.make_zero!(y.dval)
     nothing, nothing, nothing
 end

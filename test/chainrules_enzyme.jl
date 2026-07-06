@@ -280,17 +280,21 @@ end
         (; psolver, setup, u) = case
         d = divergence(u, setup)
         p0 = INS.poisson(psolver, d)
-        Zygote.pullback(INS.poisson, psolver, d)[2](p0)[1]
-        zpull, z_time = @timed Zygote.pullback(INS.poisson, psolver, d)[2](p0)[2]
+
+        # Use a random cotangent: with special seeds (e.g. all ones or the
+        # primal output) a wrong adjoint can coincidentally match
+        w = randn(eltype(p0), size(p0))
+
+        Zygote.pullback(INS.poisson, psolver, d)[2](w)[1]
+        zpull, z_time = @timed Zygote.pullback(INS.poisson, psolver, d)[2](w)[2]
 
         dd = Enzyme.make_zero(d)
         p = Enzyme.make_zero(p0)
-        dp = Enzyme.make_zero(p) .+ 1
         f = INS.enzyme_wrap(INS.poisson!)
         @test f isa Function
         f(p, psolver, d)
         @test p == p0
-        dp = Enzyme.make_zero(p) .+ 1
+        dp = copy(w)
 
         Enzyme.autodiff(
             Enzyme.Reverse,
@@ -313,7 +317,7 @@ end
                 @info "Zygote is faster (poisson): ", z_time, " vs ", e_time
             end
         end
-        @test dd == zpull
+        @test dd ≈ zpull
     end
 end
 
