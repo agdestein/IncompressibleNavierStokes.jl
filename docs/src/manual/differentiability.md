@@ -129,11 +129,14 @@ Now, we call the `autodiff` function from Enzyme:
 Enzyme.autodiff(Enzyme.Reverse, f!, Duplicated(dudt,ddudt), Duplicated(u,du), Const(params_ref), Const(t))
 ```
 Since we have passed a `Duplicated` object, the gradient of `u` is stored in `du`.
+Note that the output seed `ddudt` is consumed in the process: Enzyme zeroes it
+during the reverse pass.
 
-Finally, we can also compare its value with the one obtained by Zygote differentiating the out-of-place (non-mutating) version of the right-hand side:
+Finally, we can also compare its value with the one obtained by Zygote differentiating the out-of-place (non-mutating) version of the right-hand side. We seed the Zygote pullback with a fresh copy of the original seed (a vector of ones):
 
 ```@example Differentiability
 f = create_right_hand_side(setup, psolver)
 _, zpull = Zygote.pullback(f, u, (; viscosity), 0.0);
-@assert zpull(dudt)[1] == du
+w = one.(dudt); # The same seed values that ddudt started with
+@assert zpull(w)[1] ≈ du
 ```
