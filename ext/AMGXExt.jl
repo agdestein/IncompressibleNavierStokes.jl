@@ -21,16 +21,7 @@ function IncompressibleNavierStokes.amgx_setup()
             "cg:max_iters" => 100,
         ),
     )
-    # config = AMGX.Config(Dict(
-    #      "config_version" => "2",
-    #      "solver" => "PCGF",
-    #      "pcgf:tolerance" => 0.0001,
-    #      "pcgf:max_iters" => 100,
-    #      "preconditioner(amg_solver)" => "AMG",
-    #      "amg_solver:algorithm" => "CLASSICAL",
-    #      "amg_solver:max_iters" => 1,
-    # ))
-    resources = AMGX.Resources(config);
+    resources = AMGX.Resources(config)
     rhs = AMGX.AMGXVector(resources, AMGX.dFFI)
     matrix = AMGX.AMGXMatrix(resources, AMGX.dFFI)
     AMGXsolver = AMGX.Solver(resources, AMGX.dFFI, config)
@@ -50,7 +41,7 @@ function IncompressibleNavierStokes.close_amgx(stuff)
 end
 
 function IncompressibleNavierStokes.psolver_cg_AMGX(setup; stuff)
-    (; x, Np, Ip, boundary_conditions, backend) = setup
+    (; x, Np, Ip, boundary_conditions) = setup
     T = eltype(x[1])
     L = laplacian_mat(setup)
     isdefinite =
@@ -87,7 +78,6 @@ function IncompressibleNavierStokes.psolver_cg_AMGX(setup; stuff)
         AMGX.solve!(stuff.solution, stuff.AMGXsolver, stuff.rhs)
         AMGX.copy!(ptemp, stuff.solution)
 
-        # cg!(ptemp, L, ftemp; kwargs...)
         copyto!(view(view(p, Ip), :), view(ptemp, viewrange))
         p
     end

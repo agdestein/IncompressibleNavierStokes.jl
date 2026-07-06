@@ -80,11 +80,7 @@ function spectral_stuff(setup; npoint = 100, a = eltype(setup.x[1])(1 + sqrt(5))
     logrange(a, b, n) = map(exp, range(log(a), log(b), n))
 
     # Output query points (evenly log-spaced, but only integer wavenumbers)
-    # κ = logrange(T(1), T(kmax) - 1, npoint)
-    # κ = logrange(T(1), T(kmax) / a, npoint)
-    # κ = logrange(a, T(kmax) / a, npoint)
     κ = logrange(T(1), T(kmax), npoint)
-    # κ = logrange(T(1), T(sqrt(D) * kmax), npoint)
     κ = sort(unique(round.(Int, κ)))
     npoint = length(κ)
 
@@ -110,41 +106,6 @@ function spectral_stuff(setup; npoint = 100, a = eltype(setup.x[1])(1 + sqrt(5))
     end
 
     (; inds, κ, K)
-end
-
-"Get energy spectrum of velocity field."
-function get_spectrum(setup; npoint = 100, a = eltype(setup.x[1])(1 + sqrt(5)) / 2)
-    (; dimension, xp, Ip) = setup
-    T = eltype(xp[1])
-    D = dimension()
-
-    @assert all(==(size(Ip, 1)), size(Ip))
-
-    K = size(Ip, 1) .÷ 2
-    kmax = K - 1
-    k = ntuple(
-        i -> reshape(0:kmax, ntuple(Returns(1), i - 1)..., :, ntuple(Returns(1), D - i)...),
-        D,
-    )
-
-    # Output query points (evenly log-spaced, but only integer wavenumbers)
-    κ = logrange(T(1), T(sqrt(D) * kmax), npoint)
-    κ = sort(unique(round.(Int, κ)))
-    npoint = length(κ)
-
-    masks = map(κ) do κ
-        if D == 2
-            @. (κ / a)^2 ≤ k[1]^2 + k[2]^2 < (κ * a)^2
-        elseif D == 3
-            @. (κ / a)^2 ≤ k[1]^2 + k[2]^2 + k[3]^2 < (κ * a)^2
-        else
-            error("Not implemented")
-        end
-    end
-
-    BoolArray = typeof(similar(xp[1], Bool, ntuple(Returns(0), D)...))
-    masks = adapt.(BoolArray, masks)
-    (; κ, masks, K)
 end
 
 "Get permutation indices for DCT."

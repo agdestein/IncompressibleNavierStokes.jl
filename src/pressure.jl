@@ -111,7 +111,6 @@ function psolver_direct(::Array, setup)
         viewrange = 1:prod(Np)
         fact = ldlt(L)
     end
-    # fact = factorize(L)
     function psolve!(p)
         copyto!(view(ftemp, viewrange), view(view(p, Ip), :))
         ptemp .= fact \ ftemp
@@ -188,35 +187,17 @@ function psolver_cg(
     maxiter = prod(setup.Np),
     preconditioner = create_laplace_diag(setup),
 )
-    (; Np, Ip, workgroupsize) = setup
+    (; Ip) = setup
     T = eltype(setup.x[1])
     r = scalarfield(setup)
     L = scalarfield(setup)
     q = scalarfield(setup)
     function psolve!(p)
-        function innerdot(a, b)
-            @kernel function innerdot!(d, a, b, I0)
-                I = @index(Global, Cartesian)
-                I = I + I0
-                d[I-I+I0] += a[I] * b[I]
-                # a[I] = b[I]
-            end
-            # d = zero(eltype(a))
-            I0 = first(Ip)
-            I0 -= oneunit(I0)
-            d = fill!(similar(a, ntuple(Returns(1), length(I0))), 0),
-            innerdot!(get_backend(a), workgroupsize)(d, a, b, I0; ndrange = Np)
-            d[]
-        end
-
-        # Initialize
+        # Initialize (initial guess is zero, so residual is rhs)
         q .= 0
-        laplacian!(L, q, setup) # Initial residual
-        r .= p .- L
+        r .= p
         ρ_prev = one(T)
-        # residual = norm(r[Ip])
         residual = sqrt(sum(abs2, view(r, Ip)))
-        # residual = norm(r)
         tolerance = max(reltol * residual, abstol)
         iteration = 0
 
@@ -225,10 +206,7 @@ function psolver_cg(
         while iteration < maxiter && residual > tolerance
             preconditioner(L, r)
 
-            # ρ = sum(L[Ip] .* r[Ip])
             ρ = dot(view(L, Ip), view(r, Ip))
-            # ρ = innerdot(L, r)
-            # ρ = dot(L, r)
 
             β = ρ / ρ_prev
             q .= L .+ β .* q
@@ -236,24 +214,16 @@ function psolver_cg(
             # Periodic/symmetric padding (maybe)
             apply_bc_p!(q, T(0), setup)
             laplacian!(L, q, setup)
-            # α = ρ / sum(q[Ip] .* L[Ip])
             α = ρ / dot(view(q, Ip), view(L, Ip))
-            # α = ρ / innerdot(q, L)
-            # α = ρ / dot(q, L)
 
             p .+= α .* q
             r .-= α .* L
 
             ρ_prev = ρ
-            # residual = norm(r[Ip])
             residual = sqrt(sum(abs2, view(r, Ip)))
-            # residual = sqrt(sum(abs2, r))
-            # residual = sqrt(innerdot(r, r))
 
             iteration += 1
         end
-
-        # @show iteration residual tolerance
 
         p
     end

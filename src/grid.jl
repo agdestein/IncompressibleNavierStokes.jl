@@ -17,15 +17,6 @@ Dimension(N) = Dimension{N}()
 (::Dimension{N})() where {N} = N
 
 """
-Get size of the largest grid element.
-"""
-function max_size(grid)
-    (; Δ) = grid
-    m = maximum.(Δ)
-    sqrt(sum(m .^ 2))
-end
-
-"""
 Create a nonuniform grid of `N + 1` points from `a` to `b` using a cosine
 profile, i.e.
 

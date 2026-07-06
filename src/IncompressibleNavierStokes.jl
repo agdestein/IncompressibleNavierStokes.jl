@@ -19,7 +19,6 @@ using KernelAbstractions
 using KernelAbstractions.Extras.LoopInfo: @unroll
 using LinearAlgebra
 using Observables
-using PrecompileTools
 using Printf
 using Random
 using SparseArrays
@@ -53,9 +52,6 @@ using WriteVTK: CollectionFile, paraview_collection, vtk_grid, vtk_save
 "$LICENSE"
 license = "MIT"
 
-# # Easily retrieve value from Val
-# (::Val{x})() where {x} = x
-
 # General stuff
 include("boundary_conditions.jl")
 include("grid.jl")
@@ -74,9 +70,6 @@ include("time_steppers/methods.jl")
 include("time_steppers/time_stepper_caches.jl")
 include("time_steppers/step.jl")
 include("time_steppers/RKMethods.jl")
-
-# # Precompile workflow
-# include("precompile.jl")
 
 # Boundary conditions
 export PeriodicBC, DirichletBC, SymmetricBC, PressureBC
@@ -114,7 +107,7 @@ export getoffset, splitseed, plotgrid, save_vtk, get_lims
 
 # ODE methods
 export get_cache
-export OneLegMethod, RKMethods, LMWray3
+export RKMethods, LMWray3
 
 # Operators
 export apply_bc_u,

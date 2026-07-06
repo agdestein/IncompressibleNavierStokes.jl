@@ -49,47 +49,40 @@ timelogger(;
     showmax = true,
     showspeed = true,
     nupdate = 1,
-) =
-    processor(
-        (timing, state) -> @info(
-            @sprintf(
-                "Finished after %d time steps and %.2g seconds",
-                state[].n,
-                time() - timing,
-            ),
+) = processor(
+    (timing, state) -> @info(
+        @sprintf(
+            "Finished after %d time steps and %.2g seconds",
+            state[].n,
+            time() - timing,
         ),
-    ) do state
-        globaltime = time()
-        told = Ref(state[].t)
-        oldtime = time()
-        on(state) do (; u, t, n)
-            Δt = t - told[]
-            told[] = t
-            n % nupdate == 0 || return
-            newtime = time()
-            itertime = (newtime - oldtime) / nupdate
-            oldtime = newtime
-            msg = String[]
-            showiter && push!(msg, "Iteration $n")
-            showt && push!(msg, @sprintf("t = %g", t))
-            showdt && push!(msg, @sprintf("Δt = %.2g", Δt))
-            showmax && push!(msg, @sprintf("umax = %.2g", maximum(abs, u)))
-            showspeed && push!(msg, @sprintf("itertime = %.2g", itertime))
-            @info join(msg, "\t")
-        end
-        globaltime
+    ),
+) do state
+    globaltime = time()
+    told = Ref(state[].t)
+    oldtime = time()
+    on(state) do (; u, t, n)
+        Δt = t - told[]
+        told[] = t
+        n % nupdate == 0 || return
+        newtime = time()
+        itertime = (newtime - oldtime) / nupdate
+        oldtime = newtime
+        msg = String[]
+        showiter && push!(msg, "Iteration $n")
+        showt && push!(msg, @sprintf("t = %g", t))
+        showdt && push!(msg, @sprintf("Δt = %.2g", Δt))
+        showmax && push!(msg, @sprintf("umax = %.2g", maximum(abs, u)))
+        showspeed && push!(msg, @sprintf("itertime = %.2g", itertime))
+        @info join(msg, "\t")
     end
+    globaltime
+end
 
 """
 Observe field `fieldname` at pressure points.
 """
-function observefield(
-    state;
-    setup,
-    fieldname,
-    logtol = eps(eltype(setup.x[1])),
-    psolver = nothing,
-)
+function observefield(state; setup, fieldname, psolver = nothing)
     (; dimension, Ip) = setup
     D = dimension()
 
@@ -168,33 +161,32 @@ function snapshotsaver(state; setup, fieldnames = (:velocity,), psolver = nothin
         nothing
     end
 
-    savesnapshot!(filename, pvd = nothing) =
-        vtk_grid(filename, xparr...) do vtk
-            # Write fields to VTK file for current time
-            for (fieldname, f) in zip(fieldnames, fields)
-                # Extract scalar channels fx, fy, fz
-                g = f[]
-                field = if ndims(g) == D
-                    # Scalar field
-                    g
-                elseif ndims(g) == D + 1
-                    # Vector field
-                    if D == 2
-                        # ParaView prefers 3D vectors. Add zero z-component.
-                        g[:, :, 1], g[:, :, 2], gz
-                    else
-                        g[:, :, :, 1], g[:, :, :, 2], g[:, :, :, 3]
-                    end
+    savesnapshot!(filename, pvd = nothing) = vtk_grid(filename, xparr...) do vtk
+        # Write fields to VTK file for current time
+        for (fieldname, f) in zip(fieldnames, fields)
+            # Extract scalar channels fx, fy, fz
+            g = f[]
+            field = if ndims(g) == D
+                # Scalar field
+                g
+            elseif ndims(g) == D + 1
+                # Vector field
+                if D == 2
+                    # ParaView prefers 3D vectors. Add zero z-component.
+                    g[:, :, 1], g[:, :, 2], gz
+                else
+                    g[:, :, :, 1], g[:, :, :, 2], g[:, :, :, 3]
                 end
-                vtk[string(fieldname)] = field
             end
-
-            # This is a special ParaView variable for non-uniform time stamp
-            vtk["TimeValue"] = state[].t
-
-            # Add VTK file for current time to collection file
-            isnothing(pvd) || setindex!(pvd, vtk, state[].t)
+            vtk[string(fieldname)] = field
         end
+
+        # This is a special ParaView variable for non-uniform time stamp
+        vtk["TimeValue"] = state[].t
+
+        # Add VTK file for current time to collection file
+        isnothing(pvd) || setindex!(pvd, vtk, state[].t)
+    end
 end
 
 """
@@ -239,17 +231,16 @@ vtk_writer(; setup, nupdate = 1, dir = "output", filename = "solution", kwargs..
 """
 Create processor that stores the solution and time every `nupdate` time step.
 """
-fieldsaver(; setup, nupdate = 1) =
-    processor() do state
-        states = fill(adapt(Array, state[]), 0)
-        on(state) do state
-            state.n % nupdate == 0 || return
-            state = adapt(Array, state)
-            state.u isa Array && (state = deepcopy(state))
-            push!(states, state)
-        end
-        states
+fieldsaver(; setup, nupdate = 1) = processor() do state
+    states = fill(adapt(Array, state[]), 0)
+    on(state) do state
+        state.n % nupdate == 0 || return
+        state = adapt(Array, state)
+        state.u isa Array && (state = deepcopy(state))
+        push!(states, state)
     end
+    states
+end
 
 "Observe energy spectrum of `state`."
 function observespectrum(

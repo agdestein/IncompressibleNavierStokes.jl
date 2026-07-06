@@ -79,21 +79,20 @@ animator(;
     visible = true,
     screen = nothing,
     kwargs...,
-) =
-    processor((stream, state) -> save(path, stream)) do outerstate
-        ispath(dirname(path)) || mkpath(dirname(path))
-        state = Observable(outerstate[])
-        fig = plot(state; setup, kwargs...)
-        visible && isnothing(screen) && display(fig)
-        visible && !isnothing(screen) && display(screen, fig)
-        stream = VideoStream(fig; framerate, visible)
-        on(outerstate) do outerstate
-            outerstate.n % nupdate == 0 || return
-            state[] = outerstate
-            recordframe!(stream)
-        end
-        stream
+) = processor((stream, state) -> save(path, stream)) do outerstate
+    ispath(dirname(path)) || mkpath(dirname(path))
+    state = Observable(outerstate[])
+    fig = plot(state; setup, kwargs...)
+    visible && isnothing(screen) && display(fig)
+    visible && !isnothing(screen) && display(screen, fig)
+    stream = VideoStream(fig; framerate, visible)
+    on(outerstate) do outerstate
+        outerstate.n % nupdate == 0 || return
+        state[] = outerstate
+        recordframe!(stream)
     end
+    stream
+end
 
 realtimeplotter(;
     setup,
@@ -104,20 +103,19 @@ realtimeplotter(;
     displayupdates = false,
     sleeptime = nothing,
     kwargs...,
-) =
-    processor() do outerstate
-        state = Observable(outerstate[])
-        fig = plot(state; setup, kwargs...)
-        displayfig && isnothing(screen) && display(fig)
-        displayfig && !isnothing(screen) && display(screen, fig)
-        on(outerstate) do outerstate
-            outerstate.n % nupdate == 0 || return
-            state[] = outerstate
-            displayupdates && display(fig)
-            isnothing(sleeptime) || sleep(sleeptime)
-        end
-        fig
+) = processor() do outerstate
+    state = Observable(outerstate[])
+    fig = plot(state; setup, kwargs...)
+    displayfig && isnothing(screen) && display(fig)
+    displayfig && !isnothing(screen) && display(screen, fig)
+    on(outerstate) do outerstate
+        outerstate.n % nupdate == 0 || return
+        state[] = outerstate
+        displayupdates && display(fig)
+        isnothing(sleeptime) || sleep(sleeptime)
     end
+    fig
+end
 
 fieldplot(state; setup, kwargs...) = fieldplot(
     setup.dimension,
@@ -219,7 +217,6 @@ function fieldplot(
     (; xp, Ip) = setup
 
     xf = Array.(getindex.(xp, Ip.indices))
-    dxf = diff.(xf)
     xf = map(xf) do xf
         dxf = diff(xf)
         if all(≈(dxf[1]), dxf)
