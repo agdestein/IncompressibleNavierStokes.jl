@@ -13,8 +13,6 @@ using IncompressibleNavierStokes
 using IncompressibleNavierStokes: PressureBC, laplacian_mat
 using SparseArrays
 
-IncompressibleNavierStokes.sparseadapt(::CUDABackend, A) = CuSparseMatrixCSC(A)
-
 # CUDA version, using CUDSS LDLt decomposition.
 function IncompressibleNavierStokes.psolver_direct(::CuArray, setup)
     (; x, Np, Ip, boundary_conditions) = setup

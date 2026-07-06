@@ -14,7 +14,6 @@ using Atomix: @atomic
 using ChainRulesCore
 using DocStringExtensions
 using FFTW
-using IterativeSolvers
 using KernelAbstractions
 using KernelAbstractions.Extras.LoopInfo: @unroll
 using LinearAlgebra
@@ -94,7 +93,7 @@ export stretched_grid, cosine_grid, tanh_grid
 
 # Pressure solvers
 export default_psolver,
-    psolver_direct, psolver_cg, psolver_cg_matrix, psolver_transform, psolver_spectral
+    psolver_direct, psolver_cg, psolver_transform, psolver_tridiagonal, psolver_spectral
 
 # Solvers
 export navierstokes, navierstokes!, boussinesq, boussinesq!

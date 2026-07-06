@@ -143,16 +143,11 @@ function getsetup(problem)
 end
 
 function getheavystuff(setup, problem)
-    (; stretch, Lx, Ly, Lz, Re_m, Re_tau) = problem
+    (; Lx, Ly, Lz, Re_m, Re_tau) = problem
 
-    isuniform = isnothing(stretch)
-    psolver = if isuniform
-        NS.psolver_transform(setup) # FFT-based
-    else
-        NS.psolver_direct(setup) # Matrix decomposition
-        ## psolver_cg(setup; abstol = 1e-6)
-        ## psolver_cg_matrix(setup; abstol = 1e-4)
-    end
+    ## FFT in the periodic directions, tri-diagonal solve in the (possibly
+    ## stretched) wall-normal direction
+    psolver = NS.psolver_tridiagonal(setup)
 
     ## Initial conditions
     Re_ratio = Re_m / Re_tau
