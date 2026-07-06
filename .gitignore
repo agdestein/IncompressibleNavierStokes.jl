@@ -17,3 +17,5 @@
 *.out
 *.jld2
 examples/Chan180_FD2_all/
+/docs/src/examples/index.md
+/docs/src/.vitepress/examples_sidebar.json

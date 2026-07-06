@@ -1,5 +1,7 @@
-# Get access to example dependencies
-# Those are required for running the examples and generating output
+# The examples environment is put on the load path, so that executed
+# `@example` blocks and Literate examples can load the example dependencies
+# (CairoMakie etc.), which are not direct dependencies of this docs
+# environment.
 push!(LOAD_PATH, joinpath(@__DIR__, "..", "examples"))
 
 using IncompressibleNavierStokes
@@ -7,6 +9,12 @@ using Literate
 using Documenter
 using DocumenterCitations
 using DocumenterVitepress
+
+# Fast build: skip execution of all `@example` blocks (including the
+# executable Literate examples). Useful for iterating on prose locally:
+#
+#     INS_DOCS_FAST=1 julia --project=docs docs/make.jl
+fast = get(ENV, "INS_DOCS_FAST", "") in ("1", "true")
 
 DocMeta.setdocmeta!(
     IncompressibleNavierStokes,
@@ -17,40 +25,159 @@ DocMeta.setdocmeta!(
 
 bib = CitationBibliography(joinpath(@__DIR__, "references.bib"))
 
-# Generate examples
+# Single source of truth for the examples: this list generates
+# - the Literate-converted example pages (`src/examples/generated/`),
+# - the examples gallery (`src/examples/index.md`),
+# - the examples sidebar (`src/.vitepress/examples_sidebar.json`).
+# Examples with `run = true` are executed during the docs build;
+# for the others only the (non-executed) code is shown.
+# The `image` is a file in `src/public/`.
 examples = [
-    # Periodic box
-    (true, "examples/DecayingTurbulence2D"),
-    (false, "examples/DecayingTurbulence3D"),
-    (true, "examples/TaylorGreenVortex2D"),
-    (false, "examples/TaylorGreenVortex3D"),
-    (false, "examples/Kolmogorov2D"),
-
-    # Mixed boundary conditions
-    (true, "examples/Actuator2D"),
-    (false, "examples/Actuator3D"),
-    (false, "examples/BackwardFacingStep2D"),
-    (false, "examples/BackwardFacingStep3D"),
-    (true, "examples/LidDrivenCavity2D"),
-    (false, "examples/MultiActuator"),
-    (false, "examples/ChannelFlow"),
-
-    # With temperature field
-    (true, "examples/RayleighBenard2D"),
-    (false, "examples/RayleighBenard3D"),
-    (true, "examples/RayleighTaylor2D"),
-
-    # Reduced order models
-    (false, "examples/DipolePOD"),
+    (;
+        category = "Periodic box",
+        name = "DecayingTurbulence2D",
+        title = "Decaying turbulence (2D)",
+        description = "Decaying turbulence in a periodic 2D-box",
+        image = "DecayingTurbulence2D.gif",
+        run = true,
+    ),
+    (;
+        category = "Periodic box",
+        name = "DecayingTurbulence3D",
+        title = "Decaying turbulence (3D)",
+        description = "Decaying turbulence in a periodic 3D-box",
+        image = "DecayingTurbulence3D.png",
+        run = false,
+    ),
+    (;
+        category = "Periodic box",
+        name = "TaylorGreenVortex2D",
+        title = "Taylor-Green vortex (2D)",
+        description = "Decaying vortex structures in a periodic 2D-box",
+        image = "TaylorGreenVortex2D.png",
+        run = true,
+    ),
+    (;
+        category = "Periodic box",
+        name = "TaylorGreenVortex3D",
+        title = "Taylor-Green vortex (3D)",
+        description = "Decaying vortex structures in a periodic 3D-box",
+        image = "TaylorGreenVortex3D.png",
+        run = false,
+    ),
+    (;
+        category = "Periodic box",
+        name = "Kolmogorov2D",
+        title = "Kolmogorov flow (2D)",
+        description = "Initiate a flow through a sinusoidal force",
+        image = "logo.svg",
+        run = false,
+    ),
+    (;
+        category = "Mixed boundary conditions",
+        name = "Actuator2D",
+        title = "Actuator (2D)",
+        description = "Unsteady inflow around an actuator disk",
+        image = "Actuator2D.gif",
+        run = true,
+    ),
+    (;
+        category = "Mixed boundary conditions",
+        name = "Actuator3D",
+        title = "Actuator (3D)",
+        description = "Unsteady inflow around an actuator disk",
+        image = "Actuator3D.png",
+        run = false,
+    ),
+    (;
+        category = "Mixed boundary conditions",
+        name = "BackwardFacingStep2D",
+        title = "Backward facing step (2D)",
+        description = "Flow past a backward facing step",
+        image = "BackwardFacingStep2D.png",
+        run = false,
+    ),
+    (;
+        category = "Mixed boundary conditions",
+        name = "BackwardFacingStep3D",
+        title = "Backward facing step (3D)",
+        description = "Flow past a backward facing step",
+        image = "BackwardFacingStep3D.png",
+        run = false,
+    ),
+    (;
+        category = "Mixed boundary conditions",
+        name = "LidDrivenCavity2D",
+        title = "Lid-driven cavity (2D)",
+        description = "Generate a flow caused by a moving lid",
+        image = "logo.svg",
+        run = true,
+    ),
+    (;
+        category = "Mixed boundary conditions",
+        name = "MultiActuator",
+        title = "Multiple actuators (2D)",
+        description = "Unsteady inflow around multiple actuator disks",
+        image = "logo.svg",
+        run = false,
+    ),
+    (;
+        category = "Mixed boundary conditions",
+        name = "ChannelFlow",
+        title = "Turbulent channel flow (3D)",
+        description = "Turbulence in a periodic channel with two walls",
+        image = "ChannelFlow3D.webp",
+        run = false,
+    ),
+    (;
+        category = "With temperature field",
+        name = "RayleighBenard2D",
+        title = "Rayleigh-Bénard convection (2D)",
+        description = "Convection generated by a temperature gradient between a hot and a cold plate",
+        image = "RayleighBenard2D.gif",
+        run = true,
+    ),
+    (;
+        category = "With temperature field",
+        name = "RayleighBenard3D",
+        title = "Rayleigh-Bénard convection (3D)",
+        description = "Convection generated by a temperature gradient between a hot and a cold plate",
+        image = "RayleighBenard3D.gif",
+        run = false,
+    ),
+    (;
+        category = "With temperature field",
+        name = "RayleighTaylor2D",
+        title = "Rayleigh-Taylor instability (2D)",
+        description = "Convection generated by a temperature gradient between hot and cold fluids",
+        image = "RayleighTaylor2D.gif",
+        run = true,
+    ),
+    (;
+        category = "Reduced order models",
+        name = "DipolePOD",
+        title = "Dipole + POD (2D)",
+        description = "Fit a reduced-order model to two interacting vortices",
+        image = "logo.svg",
+        run = false,
+    ),
+    (;
+        category = "Differentiability",
+        name = "Differentiability",
+        title = "Differentiating through the solver",
+        description = "Compute gradients with Zygote and Enzyme",
+        image = "logo.svg",
+        run = true,
+    ),
 ]
+categories = unique(map(e -> e.category, examples))
 
 # Convert scripts to executable markdown files
-output = "examples/generated"
-outputdir = joinpath(@__DIR__, "src", output)
+outputdir = joinpath(@__DIR__, "src", "examples", "generated")
 isdir(outputdir) && rm(outputdir; recursive = true)
 scriptdir = mktempdir()
-for (run, name) in examples
-    inputfile = joinpath(@__DIR__, "..", name * ".jl")
+for e in examples
+    inputfile = joinpath(@__DIR__, "..", "examples", e.name * ".jl")
     script = Literate.script(inputfile, scriptdir; config = Dict("credit" => false))
     code = strip(read(script, String))
     codepair = "CODE_CONTENT" => code
@@ -64,7 +191,7 @@ for (run, name) in examples
         # CODE_CONTENT
         # ```
     """
-    if run
+    if e.run
         # With code execution blocks
         Literate.markdown(
             inputfile,
@@ -91,6 +218,76 @@ for (run, name) in examples
     end
 end
 
+# Generate the examples gallery page
+galleryitems(category) = join(map(filter(e -> e.category == category, examples)) do e
+    """
+      {
+        href: "generated/$(e.name)",
+        src: "../$(e.image)",
+        caption: "$(e.title)",
+        desc: "$(e.description)",
+      },
+    """
+end)
+open(joinpath(@__DIR__, "src", "examples", "index.md"), "w") do io
+    println(
+        io,
+        """
+        ```@raw html
+        <!-- Generated by docs/make.jl from the example list. Do not edit. -->
+        <script setup lang="ts">
+        import Gallery from "../components/Gallery.vue";
+        """,
+    )
+    for (i, category) in enumerate(categories)
+        println(io, "const category$i = [\n$(galleryitems(category))];")
+    end
+    println(
+        io,
+        """
+        </script>
+        ```
+
+        # Examples gallery
+
+        Here is a gallery of commented example simulations.
+        The outputs are generated with
+        [Literate.jl](https://github.com/fredrikekre/Literate.jl)
+        and displayed inline.
+        Copy-pasteable code is available at the bottom of each example.
+        The raw Julia source scripts can be found in the
+        [examples](https://github.com/agdestein/IncompressibleNavierStokes.jl/tree/main/examples)
+        folder.
+        """,
+    )
+    for (i, category) in enumerate(categories)
+        println(io, "## $category\n")
+        println(io, "```@raw html\n<Gallery :images=\"category$i\" />\n```\n")
+    end
+end
+
+# Generate the examples sidebar (imported by src/.vitepress/config.mts)
+sidebaritem(e) = """{ "text": "$(e.title)", "link": "/examples/generated/$(e.name)" }"""
+sidebargroup(category) = """
+    {
+      "text": "$category",
+      "items": [
+        $(join(map(sidebaritem, filter(e -> e.category == category, examples)), ",\n    "))
+      ]
+    }"""
+open(joinpath(@__DIR__, "src", ".vitepress", "examples_sidebar.json"), "w") do io
+    println(
+        io,
+        """
+        {
+          "items": [
+            { "text": "Examples gallery", "link": "/examples/" },
+            $(join(map(sidebargroup, categories), ",\n"))
+          ]
+        }""",
+    )
+end
+
 # There is an issue with linking to other MD pages:
 # https://github.com/LuxDL/DocumenterVitepress.jl/issues/172
 makedocs(;
@@ -103,6 +300,7 @@ makedocs(;
         repo = "github.com/agdestein/IncompressibleNavierStokes.jl",
         devurl = "dev",
     ),
+    draft = fast,
     pagesonly = true,
 )
 

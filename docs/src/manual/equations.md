@@ -19,6 +19,11 @@ the body force per unit of volume. The velocity, pressure, and body force are
 functions of the spatial coordinate ``x = (x^1, \dots, x^d)`` and time ``t``.
 We assume that ``\Omega`` is a rectangular domain.
 
+The equations are stated here in dimensionless form with a reference length
+and velocity of unity, in which case the viscosity is the inverse of the
+Reynolds number: ``\nu = 1 / Re``. In the code, the viscosity is passed
+directly, e.g. `params = (; viscosity = 1e-3)`.
+
 ## Integral form
 
 The integral form of the Navier-Stokes equations is used as starting point to
@@ -40,7 +45,8 @@ develop a spatial discretization:
 where ``\mathcal{O} \subset \Omega`` is an arbitrary control volume with boundary
 ``\partial \mathcal{O}``, normal ``n``, surface element ``\mathrm{d} \Gamma``, and
 volume size ``|\mathcal{O}|``. We have divided by the control volume sizes in the
-integral form.
+integral form, so that all terms have the same units as their differential
+counterparts.
 
 ## Boundary conditions
 
@@ -57,6 +63,9 @@ The boundary conditions on a part of the boundary
 - Stress free: ``\sigma \cdot n = 0`` on ``\Gamma``,
     where ``\sigma = \left(- p \mathrm{I} + 2 \nu S \right)``.
 
+See [Problem setup](setup.md) for how to prescribe boundary conditions in the
+code.
+
 ## Pressure equation
 
 Taking the divergence of the momentum equations yields a Poisson
@@ -67,36 +76,24 @@ equation for the pressure:
 \nabla \cdot f
 ```
 
-In scalar notation, this becomes
-
-```math
-- \sum_{\alpha = 1}^d \frac{\partial^2}{\partial x^\alpha \partial x^\alpha} p = \sum_{\alpha
-= 1}^d \sum_{\beta = 1}^d \frac{\partial^2 }{\partial x^\alpha \partial
-x^\beta} (u^\alpha u^\beta) - \sum_{\alpha = 1}^d \frac{\partial
-f^\alpha}{\partial x^\alpha}.
-```
-
 Note the absence of time derivatives in the pressure equation. While the
 velocity field evolves in time, the pressure only changes such that the
 velocity stays divergence free.
 
 If there are no pressure boundary conditions, the pressure is only unique up to
-a constant. We set this constant to ``1``.
-
+a constant. Since only the gradient of the pressure appears in the equations,
+this constant can be set to zero without affecting the velocity field.
 
 ## Other quantities of interest
-
-### Reynolds number
-
-The Reynolds number is the inverse of the viscosity: ``Re = \frac{1}{\nu}``. It
-is the only flow parameter governing the incompressible Navier-Stokes
-equations.
 
 ### Kinetic energy
 
 The local and total kinetic energy are defined by ``k = \frac{1}{2} \| u
 \|_2^2`` and ``K = \frac{1}{2} \| u \|_{L^2(\Omega)}^2 = \int_\Omega k \,
-\mathrm{d} \Omega``.
+\mathrm{d} \Omega``. In the absence of viscosity, boundaries, and body forces,
+the total kinetic energy is conserved. The discretization used in this package
+preserves this property (see [Spatial and temporal
+discretization](discretization.md)).
 
 ### Vorticity
 
@@ -119,32 +116,5 @@ In 3D, it is a vector field given by
 \end{pmatrix}.
 ```
 
-Note that the 2D vorticity is equal
-to the ``x^3``-component of the 3D vorticity.
-
-### Stream function
-
-In 2D, the stream function ``\psi`` is a scalar field such that
-
-```math
-u^1 = \frac{\partial \psi}{\partial x^2}, \quad
-u^2 = -\frac{\partial \psi}{\partial x^1}.
-```
-
-It can be found by solving
-
-```math
-\nabla^2 \psi = - \omega.
-```
-
-In 3D, the stream function is a vector field such that
-
-```math
-u = \nabla \times \psi.
-```
-
-It can be found by solving
-
-```math
-\nabla^2 \psi = \nabla \times \omega.
-```
+Note that the 2D vorticity is equal to the ``x^3``-component of the 3D
+vorticity.

@@ -27,19 +27,27 @@ EnzymeCore rules, both backed by hand-written adjoint kernels.
   hold the version back and older versions format differently).
 - **Spell check**: `typos` (CLI, available locally). Config in `typos.toml`
   (single config file — extra `_typos.toml`/`.typos.toml` files shadow it).
-- **Docs** are built with Documenter + DocumenterVitepress from `docs/`.
+- **Docs** are built with Documenter + DocumenterVitepress from `docs/`
+  (`julia --project=docs docs/make.jl`). Set `INS_DOCS_FAST=1` for a fast
+  build that skips executing all `@example` blocks.
 
 ## Docs gotchas
 
 - Manual pages under `docs/src/manual/` use `@autodocs` blocks with `Pages`
   filters listing source files. A new `src/*.jl` file with documented symbols
   must be added to some page's `Pages` list, or the docs build fails.
-- `@example` blocks in the manual (e.g. `differentiability.md`) are executed
-  during the docs build — they are effectively integration tests. Keep them
-  in sync with code changes, and run them locally
-  (`julia --project=test`, which has Enzyme/Zygote) before pushing.
+- `@example` blocks in the manual (e.g. `matrices.md`, `sciml.md`,
+  `getting_started.md`) are executed during the docs build — they are
+  effectively integration tests. Keep them in sync with code changes, and
+  run them locally (`julia --project=test`, which has Enzyme/Zygote) before
+  pushing.
 - `examples/*.jl` are Literate.jl scripts; the docs build converts them to
-  pages and runs them. `docs/src/examples/generated/` is build output.
+  pages and runs the ones marked `run = true`. The example list (titles,
+  categories, gallery entries, sidebar) is defined *once* in `docs/make.jl`,
+  which generates `docs/src/examples/index.md` and
+  `docs/src/.vitepress/examples_sidebar.json` (both gitignored) —
+  `docs/src/examples/generated/` is build output. New examples only need an
+  entry in that list.
 
 ## Architecture notes
 

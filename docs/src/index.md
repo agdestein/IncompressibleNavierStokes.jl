@@ -25,7 +25,7 @@ features:
   - icon: <img width="64" height="64" src="https://raw.githubusercontent.com/JuliaGPU/CUDA.jl/3a2546c1ac1546b05b4c0d3d6ff26c268091a202/docs/src/assets/logo.png" alt="CUDA.jl"/>
     title: GPU acceleration
     details: Fast and efficient 2D/3D kernels for CPU and GPU with CUDA.jl
-    link: /manual/gpu
+    link: /manual/backends
   - icon: <img width="64" height="64" src="https://raw.githubusercontent.com/JuliaDiff/ChainRulesCore.jl/fa530b9865ec0cb3acff81ddef0967fdcc8c8214/docs/src/assets/logo.svg" alt="ChainRules.jl"/>
     title: Differentiable physics
     details: Backpropagate through the solver using Zygote.jl to optimize closure models

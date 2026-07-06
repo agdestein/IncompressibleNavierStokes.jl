@@ -89,7 +89,7 @@ function runge_kutta_method(A, b, c, r; T = Float64, kwargs...)
 end
 
 """
-Low memory Wray 3rd order scheme.
+Low memory Wray 3rd order scheme [Wray1990](@cite).
 Uses 3 vector fields and one scalar field.
 """
 struct LMWray3{T} <: AbstractRungeKuttaMethod{T}
