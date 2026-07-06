@@ -56,14 +56,22 @@ end
 
 "Get default Poisson solver from setup."
 function default_psolver(setup)
-    (; dimension, Δ, boundary_conditions) = setup
+    (; dimension, Δ, Ip, boundary_conditions) = setup
     D = dimension()
-    Δx = first.(Array.(Δ))
+    Δ = Array.(Δ)
+    Δx = first.(Δ)
     isperiodic =
-        all(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions.u)
-    isuniform = all(α -> all(≈(Δx[α]), Δ[α]), 1:D)
-    if isperiodic && isuniform
+        map(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions.u)
+    iswall =
+        map(bc -> bc[1] isa DirichletBC && bc[2] isa DirichletBC, boundary_conditions.u)
+    isuniform = map(α -> all(≈(Δ[α][Ip.indices[α][1]]), Δ[α][Ip.indices[α]]), 1:D)
+    ischannel = map(1:D) do α
+        iswall[α] && all(β -> β == α || isperiodic[β] && isuniform[β], 1:D)
+    end
+    if all(isperiodic) && all(isuniform)
         psolver_spectral(setup)
+    elseif any(ischannel)
+        psolver_tridiagonal(setup)
     else
         psolver_direct(setup)
     end
@@ -120,41 +128,6 @@ function psolver_direct(::Array, setup)
         else
             copyto!(view(view(p, Ip), :), view(ptemp, viewrange))
         end
-        p
-    end
-end
-
-sparseadapt(::CPU, A) = A
-
-"""
-Conjugate gradients iterative Poisson solver.
-The `kwargs` are passed to the `cg!` function
-from IterativeSolvers.jl.
-"""
-function psolver_cg_matrix(setup; kwargs...)
-    (; x, Np, Ip, boundary_conditions, backend) = setup
-    T = eltype(x[1])
-    L = laplacian_mat(setup)
-    isdefinite =
-        any(bc -> bc[1] isa PressureBC || bc[2] isa PressureBC, boundary_conditions.u)
-    if isdefinite
-        # No extra DOF
-        ftemp = fill!(similar(x[1], prod(Np)), 0)
-        ptemp = fill!(similar(x[1], prod(Np)), 0)
-        viewrange = (:)
-    else
-        # With extra DOF
-        ftemp = fill!(similar(x[1], prod(Np) + 1), 0)
-        ptemp = fill!(similar(x[1], prod(Np) + 1), 0)
-        e = fill(T(1), prod(Np))
-        L = [L e; e' 0]
-        L = sparseadapt(backend, L)
-        viewrange = 1:prod(Np)
-    end
-    function psolve!(p)
-        copyto!(view(ftemp, viewrange), view(view(p, Ip), :))
-        cg!(ptemp, L, ftemp; kwargs...)
-        copyto!(view(view(p, Ip), :), view(ptemp, viewrange))
         p
     end
 end
@@ -400,6 +373,169 @@ function psolver_spectral(setup)
 
         # Inverse Fourier transform
         ldiv!(pI, plan, phat)
+
+        # Put results in full size array
+        copyto!(view(p, Ip), pI)
+
+        p
+    end
+end
+
+"""
+FFT/tri-diagonal Poisson solver for channel-like setups:
+one wall-bounded direction (`DirichletBC` on both sides) and
+periodic boundary conditions in the other direction(s).
+FFTs in the periodic directions decouple the Poisson equation into an
+independent tri-diagonal system along the wall-normal direction for each
+Fourier mode. The systems are solved in a batched Thomas-algorithm kernel
+(one mode per thread), so the solver works on the GPU as well.
+
+The periodic directions require uniform grid spacing, but the wall-normal
+direction may be arbitrarily stretched. This makes this solver a fast direct
+method for channel flows on stretched wall-normal grids, where
+[`psolver_transform`](@ref) (fully uniform grids) does not apply.
+
+The wall-normal direction is inferred from the boundary conditions.
+It can also be chosen explicitly with `dir` (it must still be wall-bounded).
+"""
+function psolver_tridiagonal(setup; dir = nothing)
+    (; dimension, Δ, Δu, Np, Ip, x, boundary_conditions, backend, workgroupsize) = setup
+    D = dimension()
+    T = eltype(x[1])
+
+    iswall =
+        map(bc -> bc[1] isa DirichletBC && bc[2] isa DirichletBC, boundary_conditions.u)
+    isperiodic =
+        map(bc -> bc[1] isa PeriodicBC && bc[2] isa PeriodicBC, boundary_conditions.u)
+    if isnothing(dir)
+        dir = findfirst(iswall)
+        isnothing(dir) && error(
+            "psolver_tridiagonal: no wall-bounded direction " *
+            "(DirichletBC on both sides) found",
+        )
+    end
+    iswall[dir] || error(
+        "psolver_tridiagonal: direction $dir is not wall-bounded " *
+        "(needs DirichletBC on both sides)",
+    )
+    all(β -> β == dir || isperiodic[β], 1:D) ||
+        error("psolver_tridiagonal: all directions except $dir must be periodic")
+
+    # Do coefficient assembly on the CPU
+    Δcpu = adapt(Array, Δ)
+    Δucpu = adapt(Array, Δu)
+
+    # Uniform grid spacing in the periodic directions
+    h = ntuple(β -> Δcpu[β][Ip.indices[β][1]], D)
+    for β = 1:D
+        β == dir && continue
+        all(≈(h[β]), Δcpu[β][Ip.indices[β]]) || error(
+            "psolver_tridiagonal: periodic direction $β must have uniform grid spacing",
+        )
+    end
+
+    # Tri-diagonal wall-normal Laplacian (`a`: subdiagonal, `b`: diagonal,
+    # `c`: superdiagonal). The one-sided terms drop out at the walls
+    # (homogeneous Neumann pressure BC, see `laplacian!`).
+    n = Np[dir]
+    iw = Ip.indices[dir]
+    a = zeros(T, n)
+    b = zeros(T, n)
+    c = zeros(T, n)
+    for j = 1:n
+        i = iw[j]
+        j == 1 || (a[j] = 1 / (Δcpu[dir][i] * Δucpu[dir][i-1]))
+        j == n || (c[j] = 1 / (Δcpu[dir][i] * Δucpu[dir][i]))
+        b[j] = -(a[j] + c[j])
+    end
+
+    # Eigenvalues of the periodic Laplacian stencils (modified wavenumbers)
+    lam = ntuple(D) do β
+        if β == dir
+            zeros(T, 1) # Unused placeholder
+        else
+            k = T.(0:(Np[β]-1))
+            @. -4 * sinpi(k / Np[β])^2 / h[β]^2
+        end
+    end
+
+    # The right hand side comes volume-scaled (`W M u`); strip the scaling
+    hper = prod(β -> β == dir ? one(T) : h[β], 1:D)
+    invΩ = map(j -> 1 / (hper * Δcpu[dir][iw[j]]), 1:n)
+    invΩ = reshape(invΩ, ntuple(β -> β == dir ? n : 1, D))
+
+    (; a, b, c, lam, invΩ) = adapt(backend, (; a, b, c, lam, invΩ))
+
+    # Buffers and FFT plans (one plan per periodic direction)
+    pI = similar(x[1], Np)
+    phat = similar(x[1], Complex{T}, Np)
+    thomas_w = similar(x[1], Np)
+    plans = ntuple(D) do β
+        β == dir ? nothing : (plan_fft!(phat, β), plan_bfft!(phat, β))
+    end
+    fftscale = T(prod(β -> β == dir ? 1 : Np[β], 1:D))
+
+    # Thomas algorithm, one tri-diagonal system per Fourier mode.
+    # The zero mode is singular (pure Neumann): pin `phat[1] = 0` there.
+    @kernel function tridiagonal!(phat, w, a, b, c, lam, ::Val{dir}) where {dir}
+        K = @index(Global, Cartesian)
+        nj = size(phat, dir)
+        mode = ntuple(β -> β < dir ? K[β] : β == dir ? 1 : K[β-1], Val(ndims(phat)))
+        idx(j) = CartesianIndex(ntuple(β -> β == dir ? j : mode[β], Val(ndims(phat))))
+        λ = zero(eltype(a))
+        for β = 1:ndims(phat)
+            β == dir || (λ += lam[β][mode[β]])
+        end
+        if iszero(λ)
+            w[idx(1)] = 0
+            phat[idx(1)] = 0
+        else
+            w[idx(1)] = c[1] / (b[1] + λ)
+            phat[idx(1)] = phat[idx(1)] / (b[1] + λ)
+        end
+        for j = 2:nj
+            denom = b[j] + λ - a[j] * w[idx(j-1)]
+            w[idx(j)] = c[j] / denom
+            phat[idx(j)] = (phat[idx(j)] - a[j] * phat[idx(j-1)]) / denom
+        end
+        for j = (nj-1):-1:1
+            phat[idx(j)] -= w[idx(j)] * phat[idx(j+1)]
+        end
+    end
+    ndrange = ntuple(β -> β < dir ? Np[β] : Np[β+1], D - 1)
+
+    function psolve!(p)
+        # Buffer of the right size (cannot work on view directly)
+        copyto!(pI, view(p, Ip))
+        phat .= pI .* invΩ
+
+        # Fourier transform in the periodic directions
+        for β = 1:D
+            β == dir || plans[β][1] * phat
+        end
+
+        # Wall-normal tri-diagonal solve for each Fourier mode
+        tridiagonal!(backend, workgroupsize)(
+            phat,
+            thomas_w,
+            a,
+            b,
+            c,
+            lam,
+            Val(dir);
+            ndrange,
+        )
+
+        # Pressure is determined up to a constant: give the zero mode a
+        # zero mean, like the other solvers
+        mode0 = view(phat, ntuple(β -> β == dir ? Colon() : 1, D)...)
+        mode0 .-= sum(mode0) / n
+
+        # Inverse transform (unnormalized; `fftscale` is divided out below)
+        for β = 1:D
+            β == dir || plans[β][2] * phat
+        end
+        @. pI = real(phat) / fftscale
 
         # Put results in full size array
         copyto!(view(p, Ip), pI)

@@ -20,6 +20,10 @@ appropriate solver matters:
   directions.
 - [`psolver_transform`](@ref): FFT/DCT-based solver for uniform grids with
   periodic and Dirichlet boundary conditions.
+- [`psolver_tridiagonal`](@ref): FFT/tri-diagonal solver for channel-like
+  setups (one wall-bounded direction, periodic otherwise). The periodic
+  directions must be uniform, but the wall-normal direction may be
+  stretched. Works on the GPU.
 - [`psolver_direct`](@ref): sparse direct solver (factorize once, solve every
   step). Works for all grids and boundary conditions, but the factorization
   only supports `Float64` on the CPU, and memory usage can be prohibitive for
@@ -34,7 +38,34 @@ appropriate solver matters:
   [AMGX](https://github.com/NVIDIA/AMGX) (requires CUDA and AMGX.jl).
 
 The default ([`default_psolver`](@ref)) selects the spectral solver for
-uniform periodic setups and the direct solver otherwise.
+uniform periodic setups, the tri-diagonal solver for channel-like setups,
+and the direct solver otherwise.
+
+## Preconditioning the matrix-free CG solver
+
+[`psolver_cg`](@ref) is matrix-free: it only applies the Laplacian stencil
+([`laplacian!`](@ref)), so it runs on any backend. It currently uses a
+diagonal (Jacobi) preconditioner, which parallelizes trivially but does not
+improve the mesh-dependent conditioning. GPU-friendly upgrades, roughly in
+order of implementation effort:
+
+- **Polynomial preconditioning** (Chebyshev or truncated Neumann series):
+  applies the same Laplacian kernel a few times per iteration; no setup
+  phase, no extra storage, fully matrix-free.
+- **Fast-solver preconditioning**: use an FFT-based solver
+  ([`psolver_spectral`](@ref), [`psolver_transform`](@ref), or
+  [`psolver_tridiagonal`](@ref)) for a nearby constant-coefficient problem
+  as the preconditioner. One FFT round-trip per iteration, and typically a
+  mesh-independent iteration count when the grid is a smooth deformation of
+  a uniform one.
+- **Geometric multigrid**: matrix-free smoothers (damped Jacobi/Chebyshev)
+  plus coarsening kernels; mesh-independent convergence for all supported
+  grids and boundary conditions.
+- **Algebraic multigrid**: needs the assembled matrix; on CUDA this already
+  exists as [`psolver_cg_AMGX`](@ref).
+
+Incomplete factorizations (IC(0)/ILU) are *not* a good fit: the triangular
+solves are inherently sequential and perform poorly on GPUs.
 
 ## API
 
