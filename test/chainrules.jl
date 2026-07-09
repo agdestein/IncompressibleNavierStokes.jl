@@ -140,13 +140,13 @@ end
         diffusion,
         Case.D2.u,
         Case.D2.setup ⊢ NoTangent(),
-        Case.D2.params.viscosity ⊢ NoTangent(),
+        Case.D2.params.viscosity,
     )
     test_rrule_named(
         diffusion,
         Case.D3.u,
         Case.D3.setup ⊢ NoTangent(),
-        Case.D2.params.viscosity ⊢ NoTangent(),
+        Case.D3.params.viscosity,
     )
 end
 
@@ -160,7 +160,7 @@ end
             temp,
             setup ⊢ NoTangent(),
             Case.D2.params.gdir ⊢ NoTangent(),
-            Case.D2.params.gravity ⊢ NoTangent(),
+            Case.D2.params.gravity,
         )
 
         @test_broken 1 == 2 # Just to identify location for broken rrule test
@@ -172,7 +172,7 @@ end
             u,
             temp,
             setup ⊢ NoTangent(),
-            case.params.conductivity ⊢ NoTangent(),
+            case.params.conductivity,
         )
     end
 end
@@ -185,7 +185,7 @@ end
     for case in (Case.D2, Case.D3)
         (; u, temp, setup, params) = case
         (; viscosity, conductivity, gdir, gravity) = params
-        loss(u, temp) = begin
+        loss(u, temp, viscosity, conductivity, gravity) = begin
             f = boussinesq(
                 (; u, temp),
                 zero(eltype(u));
@@ -199,15 +199,52 @@ end
             )
             sum(abs2, f.u) + sum(abs2, f.temp)
         end
-        gu, gtemp = Zygote.gradient(loss, u, temp)
+        gu, gtemp, gvisc, gcond, ggrav =
+            Zygote.gradient(loss, u, temp, viscosity, conductivity, gravity)
 
         # Compare with central finite differences in random directions
         h = cbrt(eps(eltype(u)))
         vu = randn!(rng, zero(u))
         vtemp = randn!(rng, zero(temp))
-        dloss_u = (loss(u .+ h .* vu, temp) - loss(u .- h .* vu, temp)) / 2h
-        dloss_temp = (loss(u, temp .+ h .* vtemp) - loss(u, temp .- h .* vtemp)) / 2h
+        l(u, temp; visc = viscosity, cond = conductivity, grav = gravity) =
+            loss(u, temp, visc, cond, grav)
+        dloss_u = (l(u .+ h .* vu, temp) - l(u .- h .* vu, temp)) / 2h
+        dloss_temp = (l(u, temp .+ h .* vtemp) - l(u, temp .- h .* vtemp)) / 2h
+        dloss_visc =
+            (l(u, temp; visc = viscosity + h) - l(u, temp; visc = viscosity - h)) / 2h
+        dloss_cond =
+            (l(u, temp; cond = conductivity + h) - l(u, temp; cond = conductivity - h)) / 2h
+        dloss_grav = (l(u, temp; grav = gravity + h) - l(u, temp; grav = gravity - h)) / 2h
         @test dot(gu, vu) ≈ dloss_u rtol = 1e-6
         @test dot(gtemp, vtemp) ≈ dloss_temp rtol = 1e-6
+        @test gvisc ≈ dloss_visc rtol = 1e-6
+        @test gcond ≈ dloss_cond rtol = 1e-6
+        @test ggrav ≈ dloss_grav rtol = 1e-6
     end
+end
+
+# https://github.com/agdestein/IncompressibleNavierStokes.jl/issues/179
+@testitem "Viscosity gradient through create_right_hand_side" begin
+    using Random
+    using Zygote
+    T = Float64
+    rng = Xoshiro(123)
+    n = 8
+    ax = range(T(0), T(2π), n + 1)
+    setup = Setup(;
+        x = (ax, ax),
+        boundary_conditions = (;
+            u = ((PeriodicBC(), PeriodicBC()), (PeriodicBC(), PeriodicBC())),
+        ),
+    )
+    psolver = psolver_spectral(setup)
+    rhs = create_right_hand_side(setup, psolver)
+    u = randn(rng, T, setup.N..., 2)
+    viscosity = T(0.01)
+    f(u, viscosity) = sum(abs2, rhs(u, (; viscosity), T(0)))
+    gu, gvisc = Zygote.gradient(f, u, viscosity)
+    @test any(!iszero, gu)
+    h = cbrt(eps(T))
+    fd = (f(u, viscosity + h) - f(u, viscosity - h)) / 2h
+    @test gvisc ≈ fd rtol = 1e-6
 end
