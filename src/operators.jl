@@ -526,15 +526,17 @@ end
 "Compute diffusive term (differentiable version)."
 diffusion(u, setup, viscosity) = diffusion!(zero.(u), u, setup, viscosity)
 
-ChainRulesCore.rrule(::typeof(diffusion), u, setup, viscosity) = (
-    diffusion(u, setup, viscosity),
-    φ -> (
-        NoTangent(),
-        diffusion_adjoint!(zero(u), φ, setup, viscosity),
-        NoTangent(),
-        NoTangent(),
-    ),
-)
+function ChainRulesCore.rrule(::typeof(diffusion), u, setup, viscosity)
+    d = diffusion(u, setup, viscosity)
+    function diffusion_pullback(φ)
+        φ = unthunk(φ)
+        ubar = diffusion_adjoint!(zero(u), φ, setup, viscosity)
+        # The diffusive term is linear in the scalar viscosity
+        viscositybar = dot(diffusion(u, setup, one(viscosity)), φ)
+        (NoTangent(), ubar, NoTangent(), viscositybar)
+    end
+    (d, diffusion_pullback)
+end
 
 """
 Compute diffusive term (in-place version).
@@ -650,7 +652,11 @@ function ChainRulesCore.rrule(
             setup,
             conductivity,
         )
-        (NoTangent(), ubar, tempbar, NoTangent(), NoTangent())
+        # The convective part vanishes at zero velocity, and the diffusive
+        # part is linear in the scalar conductivity
+        conductivitybar =
+            dot(convection_diffusion_temp(zero(u), temp, setup, one(conductivity)), φ)
+        (NoTangent(), ubar, tempbar, NoTangent(), conductivitybar)
     end
     (c, convection_diffusion_temp_pullback)
 end
@@ -781,9 +787,12 @@ applygravity(temp, setup, gdir, gravity) =
 ChainRulesCore.rrule(::typeof(applygravity), temp, setup, gdir, gravity) =
     applygravity(temp, setup, gdir, gravity),
     function gravity_pullback(φbar)
+        φbar = unthunk(φbar)
         tempbar = zero(temp)
         applygravity_adjoint!(tempbar, φbar, setup, gdir, gravity)
-        NoTangent(), tempbar, NoTangent(), NoTangent(), NoTangent()
+        # The gravity term is linear in the scalar gravity
+        gravitybar = dot(applygravity(temp, setup, gdir, one(gravity)), φbar)
+        NoTangent(), tempbar, NoTangent(), NoTangent(), gravitybar
     end
 
 """
