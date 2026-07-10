@@ -6,10 +6,11 @@ Introduces fast CG method for Poisson solver using AMGX.
 module AMGXExt
 
 using AMGX
+using CUDA
+using CUDA.CUSPARSE
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: PressureBC, laplacian_mat
 using SparseArrays
-using AMGX.CUDA
 
 function IncompressibleNavierStokes.amgx_setup()
     AMGX.initialize()
