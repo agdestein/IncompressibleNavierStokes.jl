@@ -5,11 +5,14 @@ abstract type AbstractBC end
 struct PeriodicBC <: AbstractBC end
 
 """
-Dirichlet boundary conditions for the velocity, where `u[1] = (x..., t) ->
-u1_BC` up to `u[d] = (x..., t) -> ud_BC`, where `d` is the dimension.
+Dirichlet boundary conditions for the velocity. The value `u` is one of:
 
-When `u` is `nothing`, then the boundary conditions are
-no slip boundary conditions, where all velocity components are zero.
+- `nothing` (default): no-slip boundary conditions, where all velocity
+  components are zero;
+- a tuple of `d` constants `(u1_BC, ..., ud_BC)`, one per velocity component,
+  where `d` is the dimension;
+- a function `(dim, x..., t) -> u_BC` returning the boundary value of velocity
+  component `dim` at the point `x...` and time `t`.
 """
 struct DirichletBC{U} <: AbstractBC
     "Boundary condition"

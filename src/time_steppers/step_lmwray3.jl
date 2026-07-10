@@ -52,11 +52,14 @@ function timestep!(
     #    | b1 b2 b3  ⋯ bn-1 an
     #
     # Note the definition of (ai)i.
-    # They are shifted to simplify the for-loop.
+    # Both the (ai)i and the stage times (ci)i are shifted to simplify the
+    # for-loop: iteration `i` produces the stage state at time `t + c[i] * Δt`
+    # (same convention as `runge_kutta_method`, which shifts via
+    # `c = [c[2:end]; 1]`). The unshifted stage times are 0, 8/15, 2/3.
     # TODO: Make generic by passing a, b, c as inputs
     a = T(8 / 15), T(5 / 12), T(3 / 4)
     b = T(1 / 4), T(0)
-    c = T(0), T(8 / 15), T(2 / 3)
+    c = T(8 / 15), T(2 / 3), T(1)
     nstage = length(a)
 
     for i = 1:nstage
@@ -80,9 +83,10 @@ function timestep!(
     # Full time step
     t = tstart + Δt
 
-    # This is redundant, but Neumann BC need to have _exact_ copies
-    # since we divide by an infinitely thin (eps(T)) volume width in the
-    # diffusion term
+    # The last stage already produced the state at t = tstart + Δt (c[nstage] = 1),
+    # so this re-application is redundant for the DOFs. We keep it because
+    # Neumann BC need to have _exact_ copies, since we divide by an infinitely
+    # thin (eps(T)) volume width in the diffusion term.
     apply_bc_u!(state.u, t, setup)
     dotemp && apply_bc_temp!(state.temp, t, setup)
 
@@ -112,11 +116,14 @@ function timestep(method::LMWray3, force, stepper, Δt; params = nothing)
     #    | b1 b2 b3  ⋯ bn-1 an
     #
     # Note the definition of (ai)i.
-    # They are shifted to simplify the for-loop.
+    # Both the (ai)i and the stage times (ci)i are shifted to simplify the
+    # for-loop: iteration `i` produces the stage state at time `t + c[i] * Δt`
+    # (same convention as `runge_kutta_method`, which shifts via
+    # `c = [c[2:end]; 1]`). The unshifted stage times are 0, 8/15, 2/3.
     # TODO: Make generic by passing a, b, c as inputs
     a = T(8 / 15), T(5 / 12), T(3 / 4)
     b = T(1 / 4), T(0)
-    c = T(0), T(8 / 15), T(2 / 3)
+    c = T(8 / 15), T(2 / 3), T(1)
     nstage = length(a)
 
     for i = 1:nstage
@@ -151,9 +158,8 @@ function timestep(method::LMWray3, force, stepper, Δt; params = nothing)
     # Full time step
     t = tstart + Δt
 
-    # This is redundant, but Neumann BC need to have _exact_ copies
-    # since we divide by an infinitely thin (eps(T)) volume width in the
-    # diffusion term
+    # The last stage already applied the boundary conditions at
+    # t = tstart + Δt (c[nstage] = 1), so no re-application is needed here.
 
     create_stepper(method; setup, psolver, state, t, n = n + 1)
 end
