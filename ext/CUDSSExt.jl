@@ -7,8 +7,8 @@ This makes `psolver_direct` use a CUDSS decomposition for `CuArray`s.
 module CUDSSExt
 
 using CUDSS
-using CUDSS.CUDA
-using CUDSS.CUDA.CUSPARSE
+using CUDA
+using CUDA.CUSPARSE
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: PressureBC, laplacian_mat
 using SparseArrays

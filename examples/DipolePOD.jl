@@ -15,8 +15,8 @@
 
 using Adapt
 using CairoMakie
-using CUDA
-using CUDSS
+## using CUDA
+## using CUDSS
 using JLD2
 using LinearAlgebra
 using ProgressMeter
@@ -70,13 +70,10 @@ end
 # Output directory (for saving plots and snapshots)
 output() = mkpath(joinpath(@__DIR__, "output/DipolePOD"))
 
-# If a CUDA-compatible GPU is available, use it. Otherwise, use CPU.
-getbackend() =
-    if CUDA.functional()
-        CUDABackend()
-    else
-        NS.KernelAbstractions.CPU()
-    end
+# Use the CPU by default. To run on a CUDA-compatible GPU, uncomment the
+# `using CUDA` and `using CUDSS` lines above and use the GPU definition below.
+getbackend() = NS.KernelAbstractions.CPU()
+## getbackend() = CUDA.functional() ? CUDABackend() : NS.KernelAbstractions.CPU()
 
 # Domain setup
 function getsetup()
