@@ -51,7 +51,8 @@ Offset(D) = Offset{D}()
 @inline (::Offset{D})(i) where {D} = CartesianIndex(ntuple(j -> j == i ? 1 : 0, D))
 
 "Get tuple of all unit vectors as Cartesian indices."
-unit_cartesian_indices(D) = ntuple(i -> Offset(D)(i), D)
+@inline unit_cartesian_indices(::Val{D}) where {D} = ntuple(i -> Offset(D)(i), Val(D))
+@inline unit_cartesian_indices(D) = unit_cartesian_indices(Val(D))
 
 "Left index `n` times away in direction `i`."
 @inline left(I::CartesianIndex{D}, i, n = 1) where {D} =
